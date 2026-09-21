@@ -1,0 +1,7 @@
+{
+  "attempt": "pos0-complete-payload-r4",
+  "authored_at": "2026-09-21T15:00:00Z",
+  "generated_position": 0,
+  "schema": "inferswarm.r8h.observation-authority/1",
+  "selection": "prospective complete-execution-payload attempt; prior pos0 retained as superseded and non-authoritative"
+}

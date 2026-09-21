@@ -1,0 +1,256 @@
+{
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "corrected_campaign_note": "R8-D is an external historical anchor only; the matched A/B/C arms are the terminal authority (control 31).",
+ "external_anchor_outputs": {
+  "case-1024": {
+   "generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "prompt_len": 1022,
+   "stop_type": "limit"
+  },
+  "case-256": {
+   "generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "prompt_len": 256,
+   "stop_type": "limit"
+  },
+  "case-3072": {
+   "generated_tokens": [
+    328,
+    760,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030
+   ],
+   "prompt_len": 3077,
+   "stop_type": "limit"
+  },
+  "case-4096": {
+   "generated_tokens": [
+    328,
+    760,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030
+   ],
+   "prompt_len": 4097,
+   "stop_type": "limit"
+  }
+ },
+ "fixture_ladder": {
+  "case_ids": [
+   "case-256",
+   "case-1024",
+   "case-3072",
+   "case-4096"
+  ],
+  "prompt_lengths": {
+   "case-1024": 1022,
+   "case-256": 256,
+   "case-3072": 3077,
+   "case-4096": 4097
+  },
+  "sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db"
+ },
+ "matched_geometry": {
+  "context": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ladder_cases": [
+   "case-256",
+   "case-1024",
+   "case-3072",
+   "case-4096"
+  ],
+  "ngl": 1,
+  "repeats_per_case": 3
+ },
+ "model_authority": {
+  "members": [
+   {
+    "bytes": 10946624,
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+   },
+   {
+    "bytes": 49990818368,
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+   },
+   {
+    "bytes": 22544696352,
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+   }
+  ],
+  "official_qwen_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
+  "representation": "UD-IQ1_S",
+  "total_bytes": 72546461344,
+  "unsloth_revision": "38bb39ee97821de2c9009abb7e93950eec396e66"
+ },
+ "nonclaims": [
+  "This document binds intended identity only; it authorizes no physical execution.",
+  "Historical BDFs/selectors are not current authority after hardware movement or reboot.",
+  "R8-D token streams are an external historical anchor, never the sole Vulkan PASS/FAIL oracle."
+ ],
+ "predecessor_files": {
+  "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json": {
+   "bytes": 167925,
+   "sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db"
+  },
+  "docs/investigations/qwen38-flash-next-r8-b/evidence/split-identity/split-verification.json": {
+   "bytes": 2654,
+   "sha256": "03d829efd259311d5319ae243910183c7efa557d1a76f3386e3c16c45a9bcbd8"
+  },
+  "docs/investigations/qwen38-flash-next-r8-d/evidence/reference/frozen-reference.json": {
+   "bytes": 1501,
+   "sha256": "5cc8dd047aa32a3e42a730d9a02edd7fa6b58034d007522381730279138e9890"
+  },
+  "docs/investigations/qwen38-flash-next-r8-d/evidence/split-identity/split-rehash.json": {
+   "bytes": 856,
+   "sha256": "ac2ecd0f2893a987ebe172e9b9a97058ee40d1669469c8eeaf900e6f398e5c18"
+  },
+  "docs/investigations/qwen38-flash-next-r8-d/terminal-reduction.json": {
+   "bytes": 3084,
+   "sha256": "5aba7a7d86b404580a9d78b4eebcdeeadcf7263e98fca572d744f98f5ebf23b8"
+  },
+  "docs/investigations/qwen38-flash-next-r8-e/README.md": {
+   "bytes": 13757,
+   "sha256": "03afbcecbd8a295ea9d0bfbc6d89c69d93ca320e52ebf76dd87aa89ec50863a5"
+  },
+  "docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/applied-source.patch": {
+   "bytes": 4013,
+   "sha256": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659"
+  },
+  "docs/investigations/qwen38-flash-next-r8-e/terminal-reduction.json": {
+   "bytes": 24511,
+   "sha256": "625ead90d6cd7c57e1c1de40afffea89a21b1b7e09cb5545a1e61adfb1a2a6db"
+  },
+  "docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/TERMINAL.json": {
+   "bytes": 1250,
+   "sha256": "5815870eb5616ff44fc5ab58b93c6ddb228d56299e0116044854068754581c08"
+  },
+  "docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/TERMINAL.json": {
+   "bytes": 3155,
+   "sha256": "35f726c3b6cd7f6a06b61c5cd9fdd6249dc2116200c84016f7f5b55171ec7d65"
+  }
+ },
+ "predecessor_merges": {
+  "r8a": "938af774878f562314e920007846f9f2bb611ec2",
+  "r8d": "f142a0d9",
+  "r8f": "affa26cc",
+  "r8g": "267b983de1249cad9c516e5c5c3cf86ed4a5a252",
+  "start_main": "8862adaaa78cfa6a091b10af461d7b6021e359f9",
+  "superseded_original_campaign_head": "df0cf4348e993628344919424a0515c6b485c3b7",
+  "v2e": "78a91de435ffc9e1678574a754bbdd49d67dbd7a",
+  "v2f": "c21840e4a1e5b5c81c366dd23b18ff582f9670b1",
+  "v2g": "8862adaaa78cfa6a091b10af461d7b6021e359f9"
+ },
+ "runtime_authority": {
+  "builds": {
+   "cuda": {
+    "GGML_CUDA": "ON",
+    "GGML_VULKAN": "OFF"
+   },
+   "vulkan": {
+    "GGML_CUDA": "OFF",
+    "GGML_VULKAN": "ON"
+   }
+  },
+  "llama_cpp_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "request_contract": {
+   "cache_prompt": false,
+   "n_predict": 8,
+   "return_tokens": true,
+   "samplers": [
+    "top_k"
+   ],
+   "seed": 0,
+   "stream": false,
+   "temperature": 0.0,
+   "top_k": 1
+  }
+ },
+ "schema": "inferswarm.r8h.authority/2",
+ "superseded_preservation": {
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/PHYSICAL-AUTHORITY.json": {
+   "bytes": 4369,
+   "sha256": "90af4c5e91427acebb4e828c62e2d3590e5fa29c61c792f9e1a48ba7e3576154"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/TERMINAL.json": {
+   "bytes": 1598,
+   "sha256": "919e193b81fd69644c87dc9b04bdcbfaa0f19c559520df976690d7bbd193206b"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/backing/backing-verification.json": {
+   "bytes": 874,
+   "sha256": "90d9303b844615bfee906eee1b5ac475af51d806e83ff8cf0d0fbe30f34e5287"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/candidate/backing-verification.txt": {
+   "bytes": 426,
+   "sha256": "0b8a65e419998936eeb68afd1fe563b5b2e75875888de3d3fa0c8df3c8eba805"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/candidate/ladder-server.log": {
+   "bytes": 3930,
+   "sha256": "6452f30b50fbd83569aff6ea44e41dbd3055b067ee4f6687f7fa0e0d5588c7e6"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/candidate/ladder.json": {
+   "bytes": 22100,
+   "sha256": "fc2d68223fe5bf881564284c4e82a235d2e1a867d3da13fa5a390d8f575b918e"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/candidate/placement.json": {
+   "bytes": 4787,
+   "sha256": "6f8a05d50896a285e08bac5e2a8d2ee8691fcb8f79cef54d24c2cc645be4c594"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/host-inventory/INCIDENT-authorized-keys-20260920.md": {
+   "bytes": 1624,
+   "sha256": "62098bff5c4a8b14a7951326e6bdf3757b66dc39337ee55e7607fc6fd5af50c1"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/host-inventory/census.json": {
+   "bytes": 284660,
+   "sha256": "cccf6d4628247ab16caf25fe0c52b27472ce3fe527019989a19f19f06b953a76"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/host-inventory/runtime-qualification.json": {
+   "bytes": 23079,
+   "sha256": "bda5db25b706ac75f28b4df7e2a7ea64d65f8c10ff2bf8b2627cbec57b62d6a7"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/placement.json": {
+   "bytes": 4787,
+   "sha256": "6f8a05d50896a285e08bac5e2a8d2ee8691fcb8f79cef54d24c2cc645be4c594"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/placement/placement.json": {
+   "bytes": 4787,
+   "sha256": "6f8a05d50896a285e08bac5e2a8d2ee8691fcb8f79cef54d24c2cc645be4c594"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/runtime-qualification.json": {
+   "bytes": 23079,
+   "sha256": "bda5db25b706ac75f28b4df7e2a7ea64d65f8c10ff2bf8b2627cbec57b62d6a7"
+  },
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/superseded-20260920-original-comparator/runtime/runtime-qualification.json": {
+   "bytes": 23079,
+   "sha256": "bda5db25b706ac75f28b4df7e2a7ea64d65f8c10ff2bf8b2627cbec57b62d6a7"
+  }
+ }
+}

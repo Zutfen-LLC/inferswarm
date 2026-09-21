@@ -1,0 +1,461 @@
+{
+ "arm": "B",
+ "backend_lines": [],
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "fixture_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1,
+  "request": {
+   "cache_prompt": false,
+   "n_predict": 8,
+   "return_tokens": true,
+   "samplers": [
+    "top_k"
+   ],
+   "seed": 0,
+   "stream": false,
+   "temperature": 0.0,
+   "top_k": 1
+  }
+ },
+ "journal_before_classes": [],
+ "mem_before": {
+  "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099": {
+   "mem_used_mib": 1
+  },
+  "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+   "mem_used_mib": 1
+  }
+ },
+ "model_members": [
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+ ],
+ "pid": 388161,
+ "post_exit": {
+  "correctable_rxerr_lines": 0,
+  "exit_code": 0,
+  "journal_final_stop_classes": [],
+  "memory_after": {
+   "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099": {
+    "mem_used_mib": 1
+   },
+   "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+    "mem_used_mib": 1
+   }
+  }
+ },
+ "prompt_len": 256,
+ "repeats": [
+  {
+   "excluded_residency": {
+    "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+     "post": {
+      "mem_used_mib": 2
+     },
+     "pre": {
+      "mem_used_mib": 2
+     }
+    }
+   },
+   "generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "health_window": {
+    "correctable_rxerr_lines": 0,
+    "stop_classes": []
+   },
+   "raw_response": {
+    "content": " The lighthouse keeper counted\n\n<think>\n\n",
+    "generation_settings": {
+     "adaptive_decay": 0.8999999761581421,
+     "adaptive_target": -1.0,
+     "backend_sampling": false,
+     "chat_format": "Content-only",
+     "dry_allowed_length": 2,
+     "dry_base": 1.75,
+     "dry_multiplier": 0.0,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "dynatemp_exponent": 1.0,
+     "dynatemp_range": 0.0,
+     "frequency_penalty": 0.0,
+     "generation_prompt": "",
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "ignore_eos": false,
+     "logit_bias": [],
+     "lora": [],
+     "max_tokens": 8,
+     "min_keep": 0,
+     "min_p": 0.05000000074505806,
+     "mirostat": 0,
+     "mirostat_eta": 0.10000000149011612,
+     "mirostat_tau": 5.0,
+     "n_discard": 0,
+     "n_keep": 0,
+     "n_predict": 8,
+     "n_probs": 0,
+     "post_sampling_probs": false,
+     "presence_penalty": 0.0,
+     "preserved_tokens": [],
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "repeat_last_n": 64,
+     "repeat_penalty": 1.0,
+     "samplers": [
+      "top_k"
+     ],
+     "seed": 0,
+     "speculative.types": "none",
+     "stop": [],
+     "stream": false,
+     "temperature": 0.0,
+     "timings_per_token": false,
+     "top_k": 1,
+     "top_n_sigma": -1.0,
+     "top_p": 0.949999988079071,
+     "typical_p": 1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612
+    },
+    "has_new_line": true,
+    "id_slot": 3,
+    "index": 0,
+    "model": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "prompt": "You are recording a tide log. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:",
+    "stop": true,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "timings": {
+     "cache_n": 0,
+     "predicted_ms": 4639.313,
+     "predicted_n": 8,
+     "predicted_per_second": 1.5088440896313742,
+     "predicted_per_token_ms": 662.759,
+     "prompt_ms": 74977.845,
+     "prompt_n": 256,
+     "prompt_per_second": 3.4143419299394373,
+     "prompt_per_token_ms": 292.88220703125
+    },
+    "tokens": [
+     561,
+     324,
+     55965,
+     51624,
+     29014,
+     271,
+     248068,
+     271
+    ],
+    "tokens_cached": 263,
+    "tokens_evaluated": 256,
+    "tokens_predicted": 8,
+    "truncated": false
+   },
+   "repeat": 1,
+   "selected_residency": {
+    "post": {
+     "mem_used_mib": 1047
+    },
+    "pre": {
+     "mem_used_mib": 1034
+    }
+   },
+   "stop_type": "limit",
+   "stop_word": "",
+   "wall_s": 79.62
+  },
+  {
+   "excluded_residency": {
+    "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+     "post": {
+      "mem_used_mib": 2
+     },
+     "pre": {
+      "mem_used_mib": 2
+     }
+    }
+   },
+   "generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "health_window": {
+    "correctable_rxerr_lines": 0,
+    "stop_classes": []
+   },
+   "raw_response": {
+    "content": " The lighthouse keeper counted\n\n<think>\n\n",
+    "generation_settings": {
+     "adaptive_decay": 0.8999999761581421,
+     "adaptive_target": -1.0,
+     "backend_sampling": false,
+     "chat_format": "Content-only",
+     "dry_allowed_length": 2,
+     "dry_base": 1.75,
+     "dry_multiplier": 0.0,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "dynatemp_exponent": 1.0,
+     "dynatemp_range": 0.0,
+     "frequency_penalty": 0.0,
+     "generation_prompt": "",
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "ignore_eos": false,
+     "logit_bias": [],
+     "lora": [],
+     "max_tokens": 8,
+     "min_keep": 0,
+     "min_p": 0.05000000074505806,
+     "mirostat": 0,
+     "mirostat_eta": 0.10000000149011612,
+     "mirostat_tau": 5.0,
+     "n_discard": 0,
+     "n_keep": 0,
+     "n_predict": 8,
+     "n_probs": 0,
+     "post_sampling_probs": false,
+     "presence_penalty": 0.0,
+     "preserved_tokens": [],
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "repeat_last_n": 64,
+     "repeat_penalty": 1.0,
+     "samplers": [
+      "top_k"
+     ],
+     "seed": 0,
+     "speculative.types": "none",
+     "stop": [],
+     "stream": false,
+     "temperature": 0.0,
+     "timings_per_token": false,
+     "top_k": 1,
+     "top_n_sigma": -1.0,
+     "top_p": 0.949999988079071,
+     "typical_p": 1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612
+    },
+    "has_new_line": true,
+    "id_slot": 3,
+    "index": 0,
+    "model": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "prompt": "You are recording a tide log. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:",
+    "stop": true,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "timings": {
+     "cache_n": 0,
+     "predicted_ms": 4618.264,
+     "predicted_n": 8,
+     "predicted_per_second": 1.5157210588221028,
+     "predicted_per_token_ms": 659.7520000000001,
+     "prompt_ms": 9400.541,
+     "prompt_n": 256,
+     "prompt_per_second": 27.232475237329428,
+     "prompt_per_token_ms": 36.72086328125
+    },
+    "tokens": [
+     561,
+     324,
+     55965,
+     51624,
+     29014,
+     271,
+     248068,
+     271
+    ],
+    "tokens_cached": 263,
+    "tokens_evaluated": 256,
+    "tokens_predicted": 8,
+    "truncated": false
+   },
+   "repeat": 2,
+   "selected_residency": {
+    "post": {
+     "mem_used_mib": 1047
+    },
+    "pre": {
+     "mem_used_mib": 1047
+    }
+   },
+   "stop_type": "limit",
+   "stop_word": "",
+   "wall_s": 14.021
+  },
+  {
+   "excluded_residency": {
+    "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+     "post": {
+      "mem_used_mib": 2
+     },
+     "pre": {
+      "mem_used_mib": 2
+     }
+    }
+   },
+   "generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "health_window": {
+    "correctable_rxerr_lines": 0,
+    "stop_classes": []
+   },
+   "raw_response": {
+    "content": " The lighthouse keeper counted\n\n<think>\n\n",
+    "generation_settings": {
+     "adaptive_decay": 0.8999999761581421,
+     "adaptive_target": -1.0,
+     "backend_sampling": false,
+     "chat_format": "Content-only",
+     "dry_allowed_length": 2,
+     "dry_base": 1.75,
+     "dry_multiplier": 0.0,
+     "dry_penalty_last_n": 64,
+     "dry_sequence_breakers": [
+      "\n",
+      ":",
+      "\"",
+      "*"
+     ],
+     "dynatemp_exponent": 1.0,
+     "dynatemp_range": 0.0,
+     "frequency_penalty": 0.0,
+     "generation_prompt": "",
+     "grammar": "",
+     "grammar_lazy": false,
+     "grammar_triggers": [],
+     "ignore_eos": false,
+     "logit_bias": [],
+     "lora": [],
+     "max_tokens": 8,
+     "min_keep": 0,
+     "min_p": 0.05000000074505806,
+     "mirostat": 0,
+     "mirostat_eta": 0.10000000149011612,
+     "mirostat_tau": 5.0,
+     "n_discard": 0,
+     "n_keep": 0,
+     "n_predict": 8,
+     "n_probs": 0,
+     "post_sampling_probs": false,
+     "presence_penalty": 0.0,
+     "preserved_tokens": [],
+     "reasoning_format": "deepseek",
+     "reasoning_in_content": false,
+     "repeat_last_n": 64,
+     "repeat_penalty": 1.0,
+     "samplers": [
+      "top_k"
+     ],
+     "seed": 0,
+     "speculative.types": "none",
+     "stop": [],
+     "stream": false,
+     "temperature": 0.0,
+     "timings_per_token": false,
+     "top_k": 1,
+     "top_n_sigma": -1.0,
+     "top_p": 0.949999988079071,
+     "typical_p": 1.0,
+     "xtc_probability": 0.0,
+     "xtc_threshold": 0.10000000149011612
+    },
+    "has_new_line": true,
+    "id_slot": 3,
+    "index": 0,
+    "model": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "prompt": "You are recording a tide log. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:",
+    "stop": true,
+    "stop_type": "limit",
+    "stopping_word": "",
+    "timings": {
+     "cache_n": 0,
+     "predicted_ms": 4630.807,
+     "predicted_n": 8,
+     "predicted_per_second": 1.5116155780191227,
+     "predicted_per_token_ms": 661.5438571428571,
+     "prompt_ms": 9139.172,
+     "prompt_n": 256,
+     "prompt_per_second": 28.011290300696825,
+     "prompt_per_token_ms": 35.699890625
+    },
+    "tokens": [
+     561,
+     324,
+     55965,
+     51624,
+     29014,
+     271,
+     248068,
+     271
+    ],
+    "tokens_cached": 263,
+    "tokens_evaluated": 256,
+    "tokens_predicted": 8,
+    "truncated": false
+   },
+   "repeat": 3,
+   "selected_residency": {
+    "post": {
+     "mem_used_mib": 1047
+    },
+    "pre": {
+     "mem_used_mib": 1047
+    }
+   },
+   "stop_type": "limit",
+   "stop_word": "",
+   "wall_s": 13.772
+  }
+ ],
+ "schema": "inferswarm.r8h.ladder-arm-case/2",
+ "selector": {
+  "cuda": null,
+  "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+  "vk": "0"
+ },
+ "server_log_tail": "0.00.267.291 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.267.968 W srv  llama_server: -----------------\n0.00.267.972 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set\n0.00.267.972 W srv  llama_server: this can be a security risk (cross-origin attacks)\n0.00.267.973 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655\n0.00.267.973 W srv  llama_server: -----------------\n0.00.269.313 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'\n0.04.204.341 I cmn          init: llama threadpool init, n_threads = 14\n0.06.582.290 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'\n0.06.594.308 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)\n0.06.594.373 I srv  llama_server: model loaded\n0.06.594.379 I srv  llama_server: listening on http://127.0.0.1:18491\n0.15.057.309 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1\n0.15.057.398 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0\n1.27.907.357 I slot print_timing: id  3 | task 0 | prompt processing, n_tokens =    252, progress = 0.98, t =  72.85 s / 3.46 tokens per second\n1.34.674.715 I slot print_timing: id  3 | task 0 | prompt eval time =   74977.85 ms /   256 tokens (  292.88 ms per token,     3.41 tokens per second)\n1.34.674.722 I slot print_timing: id  3 | task 0 |        eval time =    4639.31 ms /     8 tokens (  662.76 ms per token,     1.51 tokens per second)\n1.34.674.724 I slot print_timing: id  3 | task 0 |       total time =   79617.16 ms /   264 tokens\n1.34.674.730 I slot print_timing: id  3 | task 0 |    graphs reused =          7\n1.34.674.779 I slot      release: id  3 | task 0 | stop processing: n_tokens = 263, truncated = 0\n1.34.784.092 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.973\n1.34.784.153 I slot launch_slot_: id  3 | task 10 | processing task, is_child = 0\n1.42.047.295 I slot print_timing: id  3 | task 10 | prompt processing, n_tokens =    252, progress = 0.98, t =   7.26 s / 34.70 tokens per second\n1.48.803.062 I slot print_timing: id  3 | task 10 | prompt eval time =    9400.54 ms /   256 tokens (   36.72 ms per token,    27.23 tokens per second)\n1.48.803.070 I slot print_timing: id  3 | task 10 |        eval time =    4618.26 ms /     8 tokens (  659.75 ms per token,     1.52 tokens per second)\n1.48.803.071 I slot print_timing: id  3 | task 10 |       total time =   14018.81 ms /   264 tokens\n1.48.803.073 I slot print_timing: id  3 | task 10 |    graphs reused =         13\n1.48.803.104 I slot      release: id  3 | task 10 | stop processing: n_tokens = 263, truncated = 0\n1.48.920.319 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.973\n1.48.920.379 I slot launch_slot_: id  3 | task 20 | processing task, is_child = 0\n1.55.937.676 I slot print_timing: id  3 | task 20 | prompt processing, n_tokens =    252, progress = 0.98, t =   7.02 s / 35.91 tokens per second\n2.02.690.454 I slot print_timing: id  3 | task 20 | prompt eval time =    9139.17 ms /   256 tokens (   35.70 ms per token,    28.01 tokens per second)\n2.02.690.461 I slot print_timing: id  3 | task 20 |        eval time =    4630.81 ms /     8 tokens (  661.54 ms per token,     1.51 tokens per second)\n2.02.690.463 I slot print_timing: id  3 | task 20 |       total time =   13769.98 ms /   264 tokens\n2.02.690.464 I slot print_timing: id  3 | task 20 |    graphs reused =         19\n2.02.690.496 I slot      release: id  3 | task 20 | stop processing: n_tokens = 263, truncated = 0\n2.02.761.669 I srv    operator(): operator(): cleaning up before exit...\n",
+ "t_start": "2026-09-20 23:08:34"
+}

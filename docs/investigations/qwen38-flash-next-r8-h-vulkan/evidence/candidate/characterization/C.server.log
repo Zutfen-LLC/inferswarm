@@ -1,0 +1,21 @@
+0.00.391.203 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.393.895 W srv  llama_server: -----------------
+0.00.393.899 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.393.899 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.393.899 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.393.899 W srv  llama_server: -----------------
+0.00.396.066 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.54.019.494 I cmn          init: llama threadpool init, n_threads = 2
+1.33.477.342 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'
+1.33.502.841 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
+1.33.503.197 I srv  llama_server: model loaded
+1.33.503.384 I srv  llama_server: listening on http://127.0.0.1:18493
+1.40.659.912 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+1.40.659.955 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+3.48.745.030 I slot print_timing: id  3 | task 0 | prompt processing, n_tokens =    252, progress = 0.98, t = 128.08 s / 1.97 tokens per second
+5.18.141.384 I slot print_timing: id  3 | task 0 | prompt eval time =  163010.14 ms /   256 tokens (  636.76 ms per token,     1.57 tokens per second)
+5.18.141.392 I slot print_timing: id  3 | task 0 |        eval time =   54470.42 ms /     8 tokens ( 7781.49 ms per token,     0.13 tokens per second)
+5.18.141.393 I slot print_timing: id  3 | task 0 |       total time =  217480.57 ms /   264 tokens
+5.18.141.548 I slot print_timing: id  3 | task 0 |    graphs reused =          7
+5.18.148.849 I slot      release: id  3 | task 0 | stop processing: n_tokens = 263, truncated = 0
+5.18.685.948 I srv    operator(): operator(): cleaning up before exit...

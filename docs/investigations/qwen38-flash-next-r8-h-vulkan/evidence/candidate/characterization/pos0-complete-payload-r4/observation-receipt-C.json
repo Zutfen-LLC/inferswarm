@@ -1,0 +1,480 @@
+{
+ "arm": "C",
+ "artifacts": {
+  "observation_jsonl": "757f4aeec7f172d3648f602b28903f11d29c9788d4e1b2c5f2ff15543b5e0dc2",
+  "pos0_f32": "720021d666ae7071d191e595f334f42090636e891d580c271468143a09fffb48",
+  "request_payload": "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3",
+  "response": "359fc2e8d881d430f9261dfa2f520ce8bd8466e77a3ab306b95443ddd9768965",
+  "server_log": "f68256cd2b983446c7d63a65b950034f0c00a3c7e2bb60105a057a1f041b7ea6"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "collector": {
+  "dependencies": {
+   "issue234_receipt.py": "68e62a6904b74046730dce4bbb2ffecf0e651face875857aeadbdd51811f0ab3"
+  },
+  "path": "/tmp/is234r/producers/scripts/issue234_observe.py",
+  "sha256": "5bc1e658b07ef0928f2ac4d836b4709941a13431fdc321a423c84e8fa03da831"
+ },
+ "cpu_fallback": {
+  "devices_listed_under_launch_env": true,
+  "fallback": false,
+  "no_usable_gpu_warning_present": false,
+  "selected_model_scale_residency": true
+ },
+ "device_proof": {
+  "backend": "vulkan",
+  "excluded": [
+   {
+    "bdf": "00000000:09:00.0",
+    "deviceUUID": "00000000-0900-0000-0000-000000000000",
+    "identity_source": "vulkaninfo GPU1 RADV UUID"
+   }
+  ],
+  "list_devices": {
+   "parsed": [
+    {
+     "label": "Vulkan0",
+     "mib": "8176",
+     "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+    }
+   ],
+   "raw": "Available devices:\n  Vulkan0: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n"
+  },
+  "list_devices_attempts": {
+   "0": {
+    "parsed": [
+     {
+      "label": "Vulkan0",
+      "mib": "8176",
+      "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+     }
+    ],
+    "raw": "Available devices:\n  Vulkan0: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n"
+   },
+   "1": {
+    "parsed": [
+     {
+      "label": "Vulkan0",
+      "mib": "8176",
+      "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+     }
+    ],
+    "raw": "Available devices:\n  Vulkan0: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n"
+   }
+  },
+  "nvidia_uuid_bdf_table": null,
+  "selected": {
+   "bdf": "00000000:06:00.0",
+   "deviceUUID": "00000000-0600-0000-0000-000000000000",
+   "identity_source": "vulkaninfo GPU0 RADV BDF-encoded UUID"
+  },
+  "vulkan_physical_devices": [
+   {
+    "bdf": "00000000:06:00.0",
+    "deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "deviceUUID": "00000000-0600-0000-0000-000000000000",
+    "driverID": "DRIVER_ID_MESA_RADV",
+    "driverName": "radv",
+    "gpu_index": "GPU0"
+   },
+   {
+    "bdf": "00000000:09:00.0",
+    "deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "deviceUUID": "00000000-0900-0000-0000-000000000000",
+    "driverID": "DRIVER_ID_MESA_RADV",
+    "driverName": "radv",
+    "gpu_index": "GPU1"
+   }
+  ],
+  "vulkaninfo": {
+   "gpus": {
+    "GPU0": {
+     "apiVersion": "1.4.305",
+     "conformanceVersion": "1.4.0.0",
+     "deviceID": "0x6864",
+     "deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+     "deviceUUID": "00000000-0600-0000-0000-000000000000",
+     "driverID": "DRIVER_ID_MESA_RADV",
+     "driverInfo": "Mesa 25.0.7-2+deb13u1",
+     "driverName": "radv",
+     "driverUUID": "414d442d-4d45-5341-2d44-525600000000",
+     "driverVersion": "25.0.7",
+     "vendorID": "0x1002"
+    },
+    "GPU1": {
+     "apiVersion": "1.4.305",
+     "conformanceVersion": "1.4.0.0",
+     "deviceID": "0x6864",
+     "deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+     "deviceUUID": "00000000-0900-0000-0000-000000000000",
+     "driverID": "DRIVER_ID_MESA_RADV",
+     "driverInfo": "Mesa 25.0.7-2+deb13u1",
+     "driverName": "radv",
+     "driverUUID": "414d442d-4d45-5341-2d44-525600000000",
+     "driverVersion": "25.0.7",
+     "vendorID": "0x1002"
+    }
+   },
+   "raw": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_headless_surface                : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.351  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.351  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.305\n\tdriverVersion      = 25.0.7\n\tvendorID           = 0x1002\n\tdeviceID           = 0x6864\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = AMD Radeon Pro V340 (RADV VEGA10)\n\tdriverID           = DRIVER_ID_MESA_RADV\n\tdriverName         = radv\n\tdriverInfo         = Mesa 25.0.7-2+deb13u1\n\tconformanceVersion = 1.4.0.0\n\tdeviceUUID         = 00000000-0600-0000-0000-000000000000\n\tdriverUUID         = 414d442d-4d45-5341-2d44-525600000000\nGPU1:\n\tapiVersion         = 1.4.305\n\tdriverVersion      = 25.0.7\n\tvendorID           = 0x1002\n\tdeviceID           = 0x6864\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = AMD Radeon Pro V340 (RADV VEGA10)\n\tdriverID           = DRIVER_ID_MESA_RADV\n\tdriverName         = radv\n\tdriverInfo         = Mesa 25.0.7-2+deb13u1\n\tconformanceVersion = 1.4.0.0\n\tdeviceUUID         = 00000000-0900-0000-0000-000000000000\n\tdriverUUID         = 414d442d-4d45-5341-2d44-525600000000\n'DISPLAY' environment variable not set... skipping surface info\nerror: XDG_RUNTIME_DIR is invalid or not set in the environment.\n"
+  }
+ },
+ "digest": "6b52763c2bbbec212d70fc05df2eca9ba1efb5c238478baa86118d9a8a44bcca",
+ "exit": {
+  "returncode": 0,
+  "terminated_by_driver": true
+ },
+ "generated_position": 0,
+ "generated_tokens": [
+  561,
+  324,
+  55965,
+  51624,
+  29014,
+  34227,
+  18030,
+  16382
+ ],
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1
+ },
+ "host": {
+  "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+  "hostname": "inferswarm02"
+ },
+ "in_process_backends": {
+  "mapped_libggml": [
+   "libggml-base.so.0.24.0",
+   "libggml-cpu.so.0.24.0",
+   "libggml-vulkan.so.0.24.0",
+   "libggml.so.0.24.0"
+  ],
+  "mapped_objects": [
+   {
+    "bytes": 891624,
+    "name": "libggml-base.so.0.24.0",
+    "path": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+    "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+    "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+   },
+   {
+    "bytes": 975376,
+    "name": "libggml-cpu.so.0.24.0",
+    "path": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+    "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+    "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+   },
+   {
+    "bytes": 42347200,
+    "name": "libggml-vulkan.so.0.24.0",
+    "path": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+    "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+    "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+   },
+   {
+    "bytes": 55712,
+    "name": "libggml.so.0.24.0",
+    "path": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+    "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+    "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+   }
+  ]
+ },
+ "launch": {
+  "argv": [
+   "/tmp/is234r/obs-vk-bin/llama-server",
+   "--model",
+   "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "--n-gpu-layers",
+   "1",
+   "--ctx-size",
+   "8192",
+   "--batch-size",
+   "512",
+   "--port",
+   "18493",
+   "--host",
+   "127.0.0.1"
+  ],
+  "env": {
+   "CUDA_VISIBLE_DEVICES": "-1",
+   "GGML_VK_VISIBLE_DEVICES": "0",
+   "LD_LIBRARY_PATH": "/tmp/is234r/obs-vk-bin",
+   "LLAMA_OBSERVE_FOCUS": "328,561,271,34227,12188,248068",
+   "LLAMA_OBSERVE_LOGITS": "/tmp/is234r/obs-pos0-r4/C.jsonl",
+   "LLAMA_OBSERVE_POS": "0",
+   "PATH": "/usr/bin:/bin",
+   "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json"
+  },
+  "env_present_keys": [
+   "CUDA_VISIBLE_DEVICES",
+   "GGML_VK_VISIBLE_DEVICES",
+   "LD_LIBRARY_PATH",
+   "LLAMA_OBSERVE_FOCUS",
+   "LLAMA_OBSERVE_LOGITS",
+   "LLAMA_OBSERVE_POS",
+   "PATH",
+   "VK_ICD_FILENAMES"
+  ],
+  "icd": {
+   "library_path": "libvulkan_radeon.so",
+   "path": "/usr/share/vulkan/icd.d/radeon_icd.json",
+   "sha256": "3ed98fea4666d3e45577422eb20fee22820c85b087333f3528e5e9f0e8dc78d2"
+  },
+  "pid": 221733
+ },
+ "model": {
+  "backing_receipt": "armC-backing.json",
+  "first_member": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "members": [
+   {
+    "bytes": 10946624,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+   },
+   {
+    "bytes": 49990818368,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+   },
+   {
+    "bytes": 22544696352,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+   }
+  ],
+  "path": "/srv/models/qwen38-ud-iq1-s",
+  "total_bytes": 72546461344
+ },
+ "observation_binary": {
+  "bin_dir": {
+   "libggml-base.so": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0.24.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-cpu.so": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-cpu.so.0": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-cpu.so.0.24.0": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-vulkan.so": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml-vulkan.so.0": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml-vulkan.so.0.24.0": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml.so": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "libggml.so.0": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "libggml.so.0.24.0": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "libllama-common.so": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6",
+   "libllama-common.so.0": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6",
+   "libllama-common.so.0.4.1": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6",
+   "libllama-server-impl.so": "d604ec0dc9f5afbba7f8c87fbd488af1a24230886197a41189b892ca53ebecc7",
+   "libllama.so": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b",
+   "libllama.so.0": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b",
+   "libllama.so.0.4.1": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b",
+   "libmtmd.so": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19",
+   "libmtmd.so.0": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19",
+   "libmtmd.so.0.4.1": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19",
+   "llama-server": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+  },
+  "package": {
+   "objects": {
+    "libggml-base.so": {
+     "bytes": 891624,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+     "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+    },
+    "libggml-base.so.0": {
+     "bytes": 891624,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+     "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+    },
+    "libggml-base.so.0.24.0": {
+     "bytes": 891624,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+     "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+    },
+    "libggml-cpu.so": {
+     "bytes": 975376,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+     "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+    },
+    "libggml-cpu.so.0": {
+     "bytes": 975376,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+     "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+    },
+    "libggml-cpu.so.0.24.0": {
+     "bytes": 975376,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+     "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+    },
+    "libggml-vulkan.so": {
+     "bytes": 42347200,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+     "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+    },
+    "libggml-vulkan.so.0": {
+     "bytes": 42347200,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+     "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+    },
+    "libggml-vulkan.so.0.24.0": {
+     "bytes": 42347200,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+     "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+    },
+    "libggml.so": {
+     "bytes": 55712,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+     "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+    },
+    "libggml.so.0": {
+     "bytes": 55712,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+     "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+    },
+    "libggml.so.0.24.0": {
+     "bytes": 55712,
+     "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+     "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+    },
+    "libllama-common.so": {
+     "bytes": 5773640,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+     "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+    },
+    "libllama-common.so.0": {
+     "bytes": 5773640,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+     "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+    },
+    "libllama-common.so.0.4.1": {
+     "bytes": 5773640,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+     "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+    },
+    "libllama-server-impl.so": {
+     "bytes": 6853096,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama-server-impl.so",
+     "sha256": "d604ec0dc9f5afbba7f8c87fbd488af1a24230886197a41189b892ca53ebecc7"
+    },
+    "libllama.so": {
+     "bytes": 4587232,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+     "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+    },
+    "libllama.so.0": {
+     "bytes": 4587232,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+     "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+    },
+    "libllama.so.0.4.1": {
+     "bytes": 4587232,
+     "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+     "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+    },
+    "libmtmd.so": {
+     "bytes": 1915992,
+     "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+     "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+    },
+    "libmtmd.so.0": {
+     "bytes": 1915992,
+     "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+     "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+    },
+    "libmtmd.so.0.4.1": {
+     "bytes": 1915992,
+     "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+     "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+    },
+    "llama-server": {
+     "bytes": 17920,
+     "realpath": "/tmp/is234r/obs-vk-bin/llama-server",
+     "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+    }
+   },
+   "root": "/tmp/is234r/obs-vk-bin"
+  },
+  "path": "/tmp/is234r/obs-vk-bin/llama-server",
+  "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+ },
+ "request": {
+  "contract": {
+   "cache_prompt": false,
+   "n_predict": 8,
+   "return_tokens": true,
+   "samplers": [
+    "top_k"
+   ],
+   "seed": 0,
+   "stream": false,
+   "temperature": 0.0,
+   "top_k": 1
+  },
+  "payload": {
+   "bytes": 1496,
+   "path": "C.request.json",
+   "sha256": "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3"
+  },
+  "prompt_len": 256,
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5"
+ },
+ "residency": {
+  "compute_apps_bound_to_pid": [],
+  "excluded": [
+   {
+    "bdf": "00000000:09:00.0",
+    "peak_delta_bytes": 24576,
+    "pre": {
+     "mem_info_gtt_used": 14454784,
+     "mem_info_vis_vram_used": 8327168,
+     "mem_info_vram_used": 8327168
+    },
+    "uuid": null
+   }
+  ],
+  "n_samples": 64,
+  "sampler_interval_s": 5,
+  "selected_delta_bytes": 1054797824,
+  "selected_delta_loaded": {
+   "mem_info_gtt_used": 46817280,
+   "mem_info_vis_vram_used": 1050365952,
+   "mem_info_vram_used": 1050365952
+  },
+  "selected_delta_post": {
+   "mem_info_gtt_used": 58998784,
+   "mem_info_vis_vram_used": 1054797824,
+   "mem_info_vram_used": 1054797824
+  },
+  "selected_during_peak_delta_bytes": 1054797824,
+  "selected_loaded": {
+   "mem_info_gtt_used": 61272064,
+   "mem_info_vis_vram_used": 1058693120,
+   "mem_info_vram_used": 1058693120
+  },
+  "selected_post": {
+   "mem_info_gtt_used": 73453568,
+   "mem_info_vis_vram_used": 1063124992,
+   "mem_info_vram_used": 1063124992
+  },
+  "selected_post_exit": {
+   "mem_info_gtt_used": 14454784,
+   "mem_info_vis_vram_used": 8339456,
+   "mem_info_vram_used": 8339456
+  },
+  "selected_pre": {
+   "mem_info_gtt_used": 14454784,
+   "mem_info_vis_vram_used": 8327168,
+   "mem_info_vram_used": 8327168
+  }
+ },
+ "schema": "inferswarm.r8h.observation-execution-receipt/2",
+ "source": {
+  "provenance": "byte_identity_to_arm_B_binary"
+ },
+ "t_end": "2026-09-21T13:10:59-0400",
+ "t_start": "2026-09-21T13:05:32-0400"
+}

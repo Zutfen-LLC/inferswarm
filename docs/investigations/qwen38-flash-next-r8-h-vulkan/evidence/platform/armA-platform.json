@@ -1,0 +1,26 @@
+{
+ "vendor": "nvidia",
+ "nvidia": {
+  "gpus": [
+   {
+    "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "mem_used_mib": 1,
+    "bdf": "00000000:02:00.0"
+   },
+   {
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "mem_used_mib": 1,
+    "bdf": "00000000:03:00.0"
+   }
+  ],
+  "compute_apps_raw": ""
+ },
+ "selected_aer": {},
+ "selected_link": {
+  "current_link_speed": "2.5 GT/s PCIe",
+  "current_link_width": "16",
+  "max_link_speed": "16.0 GT/s PCIe",
+  "max_link_width": "16"
+ },
+ "excluded_aer::00000000:03:00.0": {}
+}

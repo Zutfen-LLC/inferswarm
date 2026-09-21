@@ -1,0 +1,14 @@
+{
+ "campaign": "qwen38-flash-next-r8-h-vulkan",
+ "note": "physical producers frozen at e7d822a; receipt/host/runtime/placement/ladder/health; runtime qualification receipts at this pin already exist for A/B/C",
+ "producer_commit": "e7d822adf0e5aa1754d75b7b995ba81cd6d4f3db",
+ "producers": {
+  "issue234_health.py": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0",
+  "issue234_host.py": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2",
+  "issue234_ladder.py": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41",
+  "issue234_placement.py": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa",
+  "issue234_receipt.py": "6ff3421da6ab1145120489fdef3578eff7a5179ed2c69eea35a5d6bbc2624c4a",
+  "issue234_runtime.py": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
+ },
+ "schema": "inferswarm.r8h.producer-pin/1"
+}

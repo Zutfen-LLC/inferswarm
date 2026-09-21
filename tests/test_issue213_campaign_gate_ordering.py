@@ -1298,7 +1298,14 @@ class PreservationTests(unittest.TestCase):
                             # main.
                             "scripts/issue232_",
                             "tests/test_issue232_",
-                            "docs/investigations/vulkan-v2-g-pcie-path-remediation/")
+                            "docs/investigations/vulkan-v2-g-pcie-path-remediation/",
+                            # Issue #234 R8-H: additive matched
+                            # backend/device parity campaign surface
+                            # (evidence namespace, producers, focused
+                            # regression module) pending on main.
+                            "scripts/issue234_",
+                            "tests/test_issue234_",
+                            "docs/investigations/qwen38-flash-next-r8-h-vulkan/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

@@ -1,0 +1,63 @@
+{
+ "arm": "C",
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1
+ },
+ "loaded": true,
+ "model_members": [
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+ ],
+ "pid": 130648,
+ "post_exit": {
+  "exit_code": 0,
+  "memory_after": {
+   "00000000:06:00.0": {
+    "mem_info_vis_vram_used": 8339456,
+    "mem_info_vram_used": 8339456
+   },
+   "00000000:09:00.0": {
+    "mem_info_vis_vram_used": 8339456,
+    "mem_info_vram_used": 8339456
+   }
+  },
+  "released": null
+ },
+ "residency": {
+  "excluded": {
+   "00000000:09:00.0": {
+    "mem_info_vis_vram_used": 12288,
+    "mem_info_vram_used": 12288
+   }
+  },
+  "selected": {
+   "before": {
+    "mem_info_vis_vram_used": 8339456,
+    "mem_info_vram_used": 8339456
+   },
+   "delta": {
+    "mem_info_vis_vram_used": 1050353664,
+    "mem_info_vram_used": 1050353664
+   },
+   "during": {
+    "mem_info_vis_vram_used": 1058693120,
+    "mem_info_vram_used": 1058693120
+   },
+   "key": "00000000:06:00.0"
+  }
+ },
+ "schema": "inferswarm.r8h.placement/2",
+ "selector": {
+  "cuda": null,
+  "icd": "/usr/share/vulkan/icd.d/radeon_icd.json",
+  "vk": "0"
+ },
+ "server_log_tail": "0.00.192.086 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.194.270 W srv  llama_server: -----------------\n0.00.194.275 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set\n0.00.194.276 W srv  llama_server: this can be a security risk (cross-origin attacks)\n0.00.194.276 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655\n0.00.194.276 W srv  llama_server: -----------------\n0.00.196.214 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'\n0.45.907.960 I cmn          init: llama threadpool init, n_threads = 2\n1.30.560.953 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'\n1.30.605.778 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)\n1.30.606.383 I srv  llama_server: model loaded\n1.30.606.744 I srv  llama_server: listening on http://127.0.0.1:18492\n1.55.044.310 I srv    operator(): operator(): cleaning up before exit...\n",
+ "t_start": "2026-09-20 22:48:43"
+}

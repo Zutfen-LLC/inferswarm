@@ -1,0 +1,111 @@
+{
+ "attempts": [
+  {
+   "campaign": "issue234-r8h-vulkan-single-die-qualification",
+   "cmd": [
+    "/home/hermes/code/llama.cpp-b29c606e/build-vulkan/bin/llama-server",
+    "--model",
+    "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "--n-gpu-layers",
+    "1",
+    "--ctx-size",
+    "8192",
+    "--batch-size",
+    "512",
+    "--port",
+    "18433",
+    "--host",
+    "127.0.0.1"
+   ],
+   "excluded_die_mem_delta_bytes": {
+    "card2.gtt_used": 0,
+    "card2.vis_vram_used": 12288,
+    "card2.vram_used": 12288
+   },
+   "exit_code": null,
+   "loaded": true,
+   "log_excerpt": "0.00.607.678 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.608.156 W srv  llama_server: -----------------\n0.00.608.159 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set\n0.00.608.160 W srv  llama_server: this can be a security risk (cross-origin attacks)\n0.00.608.160 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655\n0.00.608.160 W srv  llama_server: -----------------\n0.00.609.921 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'\n0.50.130.181 I cmn          init: llama threadpool init, n_threads = 2\n1.32.295.198 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'\n1.32.350.271 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)\n1.32.351.502 I srv  llama_server: model loaded\n",
+   "ngl": 1,
+   "placement": {
+    "cpu_buffers_mib": {},
+    "offloaded_layers": null,
+    "total_layers": null,
+    "vulkan_buffers_mib": {}
+   },
+   "schema": "inferswarm.r8h.placement-preflight/1",
+   "selected_die_mem_after_exit_bytes": {
+    "card1.gtt_used": 14454784,
+    "card1.vis_vram_used": 8327168,
+    "card1.vram_used": 8327168
+   },
+   "selected_die_mem_delta_bytes": {
+    "card1.gtt_used": 46817280,
+    "card1.vis_vram_used": 1050275840,
+    "card1.vram_used": 1050275840
+   },
+   "selected_die_released": true,
+   "selector": {
+    "GGML_VK_VISIBLE_DEVICES": "1",
+    "PATH": "/usr/bin:/bin"
+   }
+  }
+ ],
+ "campaign": "issue234-r8h-vulkan-single-die-qualification",
+ "schema": "inferswarm.r8h.placement/1",
+ "selection": {
+  "basis_attempt": {
+   "campaign": "issue234-r8h-vulkan-single-die-qualification",
+   "cmd": [
+    "/home/hermes/code/llama.cpp-b29c606e/build-vulkan/bin/llama-server",
+    "--model",
+    "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "--n-gpu-layers",
+    "1",
+    "--ctx-size",
+    "8192",
+    "--batch-size",
+    "512",
+    "--port",
+    "18433",
+    "--host",
+    "127.0.0.1"
+   ],
+   "excluded_die_mem_delta_bytes": {
+    "card2.gtt_used": 0,
+    "card2.vis_vram_used": 12288,
+    "card2.vram_used": 12288
+   },
+   "exit_code": null,
+   "loaded": true,
+   "log_excerpt": "0.00.607.678 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.608.156 W srv  llama_server: -----------------\n0.00.608.159 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set\n0.00.608.160 W srv  llama_server: this can be a security risk (cross-origin attacks)\n0.00.608.160 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655\n0.00.608.160 W srv  llama_server: -----------------\n0.00.609.921 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'\n0.50.130.181 I cmn          init: llama threadpool init, n_threads = 2\n1.32.295.198 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'\n1.32.350.271 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)\n1.32.351.502 I srv  llama_server: model loaded\n",
+   "ngl": 1,
+   "placement": {
+    "cpu_buffers_mib": {},
+    "offloaded_layers": null,
+    "total_layers": null,
+    "vulkan_buffers_mib": {}
+   },
+   "schema": "inferswarm.r8h.placement-preflight/1",
+   "selected_die_mem_after_exit_bytes": {
+    "card1.gtt_used": 14454784,
+    "card1.vis_vram_used": 8327168,
+    "card1.vram_used": 8327168
+   },
+   "selected_die_mem_delta_bytes": {
+    "card1.gtt_used": 46817280,
+    "card1.vis_vram_used": 1050275840,
+    "card1.vram_used": 1050275840
+   },
+   "selected_die_released": true,
+   "selector": {
+    "GGML_VK_VISIBLE_DEVICES": "1",
+    "PATH": "/usr/bin:/bin"
+   }
+  },
+  "excluded_die_model_bytes": 12288,
+  "headroom_bytes": 8589934592,
+  "rule": "smallest-ngl-nonzero-residency",
+  "selected_die_model_bytes": 1050275840,
+  "selected_ngl": 1
+ }
+}

@@ -1,0 +1,91 @@
+{
+ "arm": "C",
+ "binaries": {
+  "bin_dir": {
+   "libggml-base.so": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0.24.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-cpu.so": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-cpu.so.0": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-cpu.so.0.24.0": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-vulkan.so": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml-vulkan.so.0": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml-vulkan.so.0.24.0": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml.so": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "libggml.so.0": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "libggml.so.0.24.0": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "llama-server": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  },
+  "llama-server": {
+   "sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  }
+ },
+ "build": {
+  "cmake_flags": {
+   "CMAKE_BUILD_TYPE": "Release",
+   "CMAKE_CXX_COMPILER": "/usr/bin/c++",
+   "GGML_CUDA": "OFF",
+   "GGML_VULKAN": "ON"
+  },
+  "cmake_version": "cmake version 3.31.6",
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "deployed": {
+  "ldd": "\tlinux-vdso.so.1 (0x00007fb60244e000)\n\tlibllama-server-impl.so => /tmp/is234r/vk-bin/libllama-server-impl.so (0x00007fb601e72000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fb601c00000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fb601bd3000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb6019df000)\n\tlibllama-common.so.0 => /tmp/is234r/vk-bin/libllama-common.so.0 (0x00007fb601579000)\n\tlibmtmd.so.0 => /tmp/is234r/vk-bin/libmtmd.so.0 (0x00007fb6013cc000)\n\tlibllama.so.0 => /tmp/is234r/vk-bin/libllama.so.0 (0x00007fb60100f000)\n\tlibggml.so.0 => /tmp/is234r/vk-bin/libggml.so.0 (0x00007fb601002000)\n\tlibggml-base.so.0 => /tmp/is234r/vk-bin/libggml-base.so.0 (0x00007fb600f38000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fb600e48000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fb602450000)\n\tlibggml-cpu.so.0 => /tmp/is234r/vk-bin/libggml-cpu.so.0 (0x00007fb600ce1000)\n\tlibggml-vulkan.so.0 => /tmp/is234r/vk-bin/libggml-vulkan.so.0 (0x00007fb5fe4ca000)\n\tlibgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007fb5fe475000)\n\tlibvulkan.so.1 => /lib/x86_64-linux-gnu/libvulkan.so.1 (0x00007fb5fe3f2000)\n",
+  "path": "/tmp/is234r/vk-bin/llama-server"
+ },
+ "raw": {
+  "list_devices_all": "Available devices:\n  Vulkan0: Intel(R) HD Graphics 510 (SKL GT1) (7953 MiB, 7158 MiB free)\n  Vulkan1: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n  Vulkan2: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n",
+  "list_devices_restricted": ""
+ },
+ "schema": "inferswarm.r8h.runtime-vulkan/2",
+ "selector": {
+  "attempts": [
+   {
+    "devices": [
+     {
+      "label": "Vulkan0",
+      "mib": 8176,
+      "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+     }
+    ],
+    "idx": 0,
+    "raw": "Available devices:\n  Vulkan0: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n"
+   }
+  ],
+  "chosen_device": {
+   "label": "Vulkan0",
+   "mib": 8176,
+   "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+  },
+  "die_level_proof": "positional under ICD (identical die names); selector->BDF proven by sysfs residency delta in the placement receipt",
+  "icd": "/usr/share/vulkan/icd.d/radeon_icd.json",
+  "icd_census_order": [
+   "00000000:06:00.0",
+   "00000000:09:00.0"
+  ],
+  "icd_restricted_devices": [
+   {
+    "label": "Vulkan0",
+    "mib": 8176,
+    "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+   },
+   {
+    "label": "Vulkan1",
+    "mib": 8176,
+    "name": "AMD Radeon Pro V340 (RADV VEGA10)"
+   }
+  ],
+  "mechanism": "GGML_VK_VISIBLE_DEVICES+VK_ICD_FILENAMES",
+  "target_bdf": "00000000:06:00.0",
+  "value": "0"
+ },
+ "source": {
+  "build_dir": "/tmp/is234r/buildcache",
+  "clean": true,
+  "revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "worktree": "/tmp/is234r/llama-src"
+ },
+ "version_output": "version: 0.4.1-dev (build 10964, commit b29c606e2)\nbuilt with GNU 14.2.0 for Linux x86_64"
+}

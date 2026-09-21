@@ -1,0 +1,57 @@
+{
+ "arm": "A",
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1
+ },
+ "loaded": true,
+ "model_members": [
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+  "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+ ],
+ "pid": 375667,
+ "post_exit": {
+  "exit_code": 0,
+  "memory_after": {
+   "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099": {
+    "mem_used_mib": 1
+   },
+   "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+    "mem_used_mib": 1
+   }
+  },
+  "released": true
+ },
+ "residency": {
+  "excluded": {
+   "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": {
+    "mem_used_mib": 0
+   }
+  },
+  "selected": {
+   "before": {
+    "mem_used_mib": 1
+   },
+   "delta": {
+    "mem_used_mib": 1134
+   },
+   "during": {
+    "mem_used_mib": 1135
+   },
+   "key": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+  }
+ },
+ "schema": "inferswarm.r8h.placement/2",
+ "selector": {
+  "cuda": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+  "icd": null,
+  "vk": null
+ },
+ "server_log_tail": "0.00.151.338 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.152.093 W srv  llama_server: -----------------\n0.00.152.097 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set\n0.00.152.097 W srv  llama_server: this can be a security risk (cross-origin attacks)\n0.00.152.098 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655\n0.00.152.098 W srv  llama_server: -----------------\n0.00.153.552 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'\n0.03.944.737 I cmn          init: llama threadpool init, n_threads = 14\n0.04.885.289 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'\n0.04.897.385 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)\n0.04.897.445 I srv  llama_server: model loaded\n0.04.897.450 I srv  llama_server: listening on http://127.0.0.1:18492\n0.24.968.279 I srv    operator(): operator(): cleaning up before exit...\n",
+ "t_start": "2026-09-20 22:44:50"
+}

@@ -1,0 +1,260 @@
+{
+ "arms": {
+  "A": {
+   "canonical_tokens": [
+    328,
+    760,
+    40554,
+    1,
+    271,
+    12188,
+    279,
+    1727
+   ],
+   "f32_row_floats": 248320,
+   "focal_pair_328_561_margin": 0.118303299,
+   "focal_tokens": {
+    "12188": {
+     "logit": 6.1813249588012695,
+     "rank": 545
+    },
+    "248068": {
+     "logit": 5.79320764541626,
+     "rank": 703
+    },
+    "271": {
+     "logit": 14.34280014038086,
+     "rank": 3
+    },
+    "328": {
+     "logit": 15.190742492675781,
+     "rank": 1
+    },
+    "34227": {
+     "logit": 6.394911766052246,
+     "rank": 474
+    },
+    "561": {
+     "logit": 15.072439193725586,
+     "rank": 2
+    }
+   },
+   "generated_position": 0,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "cuda",
+    "binary": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+    "host": "inferswarm01",
+    "selector": "CUDA_VISIBLE_DEVICES=GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+   },
+   "observation_execution_receipt": {
+    "note": "round-3 identity-bound collection; the terminal reducer (reduce_observation_execution_truth) validates every identity relation from the receipt bytes independently of this summary",
+    "path": "evidence/candidate/characterization/pos0/observation-receipt-A.json",
+    "sha256": "2d0773b61542e9a86d947392de616f03a488d1d2d3e4bce1c7035e0f4d1a8a51"
+   },
+   "observed_tokens": [
+    328,
+    760,
+    40554,
+    1,
+    271,
+    12188,
+    279,
+    1727
+   ],
+   "raw_sidecar_sha256": {
+    "f32_pos0": "50e2e990002e9852c6f7292d798f3c22c44f84b6098b21cc359eb9cf574229ae",
+    "jsonl": "b00fdf5d155b1d8a3ad0ac9ab9de2a2079bf24531cb6139233d7e74dee67b35f",
+    "observation_execution_receipt": "2d0773b61542e9a86d947392de616f03a488d1d2d3e4bce1c7035e0f4d1a8a51"
+   },
+   "repeat_binding": "single observation pass under the prospective pos0-observation-pin /2 with mechanically-captured execution receipts; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "top_k": {
+    "1": {
+     "logit": 15.190742492675781,
+     "token": 328
+    },
+    "2": {
+     "logit": 15.072439193725586,
+     "token": 561
+    }
+   },
+   "winner_token": 328,
+   "winner_vs_runner_up_margin": 0.118303299
+  },
+  "B": {
+   "canonical_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "f32_row_floats": 248320,
+   "focal_pair_328_561_margin": 0.234203339,
+   "focal_tokens": {
+    "12188": {
+     "logit": 5.600666046142578,
+     "rank": 805
+    },
+    "248068": {
+     "logit": 5.220813751220703,
+     "rank": 1053
+    },
+    "271": {
+     "logit": 13.901132583618164,
+     "rank": 4
+    },
+    "328": {
+     "logit": 15.03003215789795,
+     "rank": 2
+    },
+    "34227": {
+     "logit": 6.488531112670898,
+     "rank": 443
+    },
+    "561": {
+     "logit": 15.264235496520996,
+     "rank": 1
+    }
+   },
+   "generated_position": 0,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "vulkan",
+    "binary": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+    "host": "inferswarm01",
+    "selector": "GGML_VK_VISIBLE_DEVICES=0+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   },
+   "observation_execution_receipt": {
+    "note": "round-3 identity-bound collection; the terminal reducer (reduce_observation_execution_truth) validates every identity relation from the receipt bytes independently of this summary",
+    "path": "evidence/candidate/characterization/pos0/observation-receipt-B.json",
+    "sha256": "86156b39840bc4bc980f5e153e201f5ac6b6d5c5637eb88d74f00e4c27e70332"
+   },
+   "observed_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "raw_sidecar_sha256": {
+    "f32_pos0": "c0f216d38f38fb9d9804f10356fc60c9d35928948ca65baac304775a82ed23cb",
+    "jsonl": "4d21645fc57c3f0e1424c32a2d6c4863a903486141caaae4b9f86210d20b87e7",
+    "observation_execution_receipt": "86156b39840bc4bc980f5e153e201f5ac6b6d5c5637eb88d74f00e4c27e70332"
+   },
+   "repeat_binding": "single observation pass under the prospective pos0-observation-pin /2 with mechanically-captured execution receipts; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "top_k": {
+    "1": {
+     "logit": 15.264235496520996,
+     "token": 561
+    },
+    "2": {
+     "logit": 15.03003215789795,
+     "token": 328
+    }
+   },
+   "winner_token": 561,
+   "winner_vs_runner_up_margin": 0.234203339
+  },
+  "C": {
+   "canonical_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "f32_row_floats": 248320,
+   "focal_pair_328_561_margin": 0.599080086,
+   "focal_tokens": {
+    "12188": {
+     "logit": 4.637186050415039,
+     "rank": 1641
+    },
+    "248068": {
+     "logit": 5.322388172149658,
+     "rank": 1054
+    },
+    "271": {
+     "logit": 14.907905578613281,
+     "rank": 3
+    },
+    "328": {
+     "logit": 14.74167251586914,
+     "rank": 4
+    },
+    "34227": {
+     "logit": 7.4216179847717285,
+     "rank": 241
+    },
+    "561": {
+     "logit": 15.340752601623535,
+     "rank": 1
+    }
+   },
+   "generated_position": 0,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "vulkan",
+    "binary": "/tmp/is234r/obs-vk-bin/llama-server (01-built, deployed)",
+    "host": "inferswarm02",
+    "selector": "GGML_VK_VISIBLE_DEVICES=0+VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   },
+   "observation_execution_receipt": {
+    "note": "round-3 identity-bound collection; the terminal reducer (reduce_observation_execution_truth) validates every identity relation from the receipt bytes independently of this summary",
+    "path": "evidence/candidate/characterization/pos0/observation-receipt-C.json",
+    "sha256": "7c6843d7a23ba7d80e8fadc77f18ac7227a229bd6e6af468e7be8d9651afb0e9"
+   },
+   "observed_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "raw_sidecar_sha256": {
+    "f32_pos0": "720021d666ae7071d191e595f334f42090636e891d580c271468143a09fffb48",
+    "jsonl": "757f4aeec7f172d3648f602b28903f11d29c9788d4e1b2c5f2ff15543b5e0dc2",
+    "observation_execution_receipt": "7c6843d7a23ba7d80e8fadc77f18ac7227a229bd6e6af468e7be8d9651afb0e9"
+   },
+   "repeat_binding": "single observation pass under the prospective pos0-observation-pin /2 with mechanically-captured execution receipts; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "top_k": {
+    "1": {
+     "logit": 15.340752601623535,
+     "token": 561
+    },
+    "2": {
+     "logit": 14.96580982208252,
+     "token": 359
+    }
+   },
+   "winner_token": 561,
+   "winner_vs_runner_up_margin": 0.37494278
+  }
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "characterization_class": "canonical_first_divergence",
+ "generated_position": 0,
+ "key_finding": "At case-256 generated position 0 \u2014 the global earliest pairwise divergence \u2014 A/CUDA selects 328 (561 runner-up, margin 0.118303) while BOTH Vulkan arms select 561 (B/NVIDIA margin over 328 0.234203; C/AMD 0.599080). The first divergence A<->B is backend-associated at position 0: same GPU, same prompt, different backend, opposite winners. B and C agree on the first token and first diverge at position 5 (see secondary characterization).",
+ "methodology": "R8-E observation-only hook (Issue #199) at the same pin b29c606e; reads llama_get_logits_ith after sampling; no model state writes. Full-vocab float32 rows are the score authority; hook JSONL rows are cross-checks. Collected under evidence/candidate/characterization/pos0/pos0-observation-pin.json (prospective pin BEFORE collection).",
+ "schema": "inferswarm.r8h.score-characterization/3"
+}
