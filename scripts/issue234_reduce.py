@@ -702,8 +702,16 @@ def characterization_ok(evidence: Path, case_id: str,
                 arm_identities.get(arm))
         except ReduceError as e:
             problems.append(f"arm{arm}:{str(e)[:160]}")
-    # -- summary consistency (authored fields must agree or fail) ----
+    # -- summary consistency -------------------------------------------
+    # Round-2 doctrine (spec): authored summary fields are NEVER
+    # authority. A mutated winner/logit/rank leaves the terminal
+    # unchanged (raw bytes win; the disagreement is recorded, the
+    # derived values in the terminal doc are the truth). A mutated
+    # raw-sidecar digest or generated_position REJECTS: those are the
+    # bindings between the summary and the raw bytes / the divergence
+    # structure, and a broken binding must fail closed.
     summary_status = "ABSENT"
+    disagreements: list[str] = []
     if summary_present:
         doc = _load(p)
         summary_status = "PRESENT"
@@ -721,13 +729,10 @@ def characterization_ok(evidence: Path, case_id: str,
                 continue
             if a.get("winner_token") is not None and \
                     a.get("winner_token") != d["winner_token"]:
-                problems.append(f"summary:arm{arm}:winner_mismatch")
+                disagreements.append(f"summary:arm{arm}:winner_mismatch")
             side = a.get("raw_sidecar_sha256") or {}
-            if side.get("f32_pos0") and \
-                    side.get("f32_pos0") != d["f32_sha256"]:
-                problems.append(f"summary:arm{arm}:f32_digest_mismatch")
-            if side.get("f32_pos5") and required_position == 5 and \
-                    side.get("f32_pos5") != d["f32_sha256"]:
+            dig = side.get(f"f32_pos{required_position}")
+            if dig is not None and dig != d["f32_sha256"]:
                 problems.append(f"summary:arm{arm}:f32_digest_mismatch")
     # -- secondary (position-5 B/C) retention -------------------------
     secondary = _secondary_characterization(evidence, case_id)
@@ -738,6 +743,7 @@ def characterization_ok(evidence: Path, case_id: str,
         "problems": problems,
         "required_position": required_position,
         "summary_status": summary_status,
+        "summary_disagreements": disagreements,
         "derived": derived,
         "secondary": secondary,
     }
