@@ -1,6 +1,10 @@
 {
-  "authored_at": "2026-09-21T15:00:00Z",
+  "authored_at": "2026-09-21T16:24:37Z",
   "campaign": "issue234-r8h-matched-backend-device-parity",
+  "producer_closure": {
+    "producer_head": "7a0c454fe2705161f71bd5e06e63975cc1625ec1",
+    "closure_digest": "97ecde6b6aa7c10a0d12de5950950c451cf5876dba9a386799ba891fadb7d41a"
+  },
   "collector": {
     "commit": "c155e1bd867a18c8aef9128323602ff910acc824",
     "path": "scripts/issue234_observe.py",
