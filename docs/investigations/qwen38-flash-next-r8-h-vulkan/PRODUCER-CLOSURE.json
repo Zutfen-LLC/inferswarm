@@ -1,7 +1,7 @@
 {
  "campaign": "issue234-r8h-matched-backend-device-parity",
- "closure_digest": "7670c5768efa6f36a21ac826d4fa0062a76da6a1f06100a253466cba47d9657d",
- "producer_head": "49fdbc266a2d7abb8aa7a75d716dd75657915168",
+ "closure_digest": "1b4965cbe845cbd49fc67c1a8f6741ef1ab194f40f217af6113e42ef90afd5a0",
+ "producer_head": "6aaf17117081a1a1842606002703bed153216f87",
  "schema": "inferswarm.r8h.producer-closure/2",
  "sources": {
   "scripts/issue234_assemble.py": {
@@ -53,10 +53,10 @@
    "sha256": "90dfe7afd966eaa004424f01830073782cc0f14b81ed97d3e0f9a300ec3d060e"
   },
   "scripts/issue234_observe.py": {
-   "bytes": 31770,
+   "bytes": 31885,
    "class": "physical",
-   "git_blob": "56a4b6255df05ac0fcf99a5fa8ef4857faab0f8d",
-   "sha256": "54749be599152ca961d6424ce53b588ce6847f90aaf89e3e02b679ec6609e343"
+   "git_blob": "313b5722831becdaa3f584771960827fe70b9607",
+   "sha256": "5bc1e658b07ef0928f2ac4d836b4709941a13431fdc321a423c84e8fa03da831"
   },
   "scripts/issue234_placement.py": {
    "bytes": 10535,
