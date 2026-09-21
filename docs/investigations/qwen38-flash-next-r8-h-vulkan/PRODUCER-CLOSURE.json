@@ -1,14 +1,14 @@
 {
  "campaign": "issue234-r8h-matched-backend-device-parity",
- "closure_digest": "74ef7b877d85dc01cbc01ea54ec985df15685719fc119c766d659c5884addcd4",
- "producer_head": "42b482e24f57bc6cb7685d415afb9464f5dee4d6",
+ "closure_digest": "130243fcaa99af4c45b2b0f62b4ec3c718dd1a80bb9193fa2639e1c5a0e02364",
+ "producer_head": "88a96f54803564daf89cd16f6debae34af691bb5",
  "schema": "inferswarm.r8h.producer-closure/2",
  "sources": {
   "scripts/issue234_assemble.py": {
-   "bytes": 23038,
+   "bytes": 23229,
    "class": "reduction",
-   "git_blob": "228e0fd5aa159d3a517ab1a90ff79a7dd7a1ee8c",
-   "sha256": "58e22bfc2757c70483ca4f01a4e8b91c806f0be7b457681a66dd114b7f92043b"
+   "git_blob": "947c7bf826982d177aea4200b87a8d463647352b",
+   "sha256": "587a191739487fb5734bf43f4f74dc93aa5fe579322f877fc8e52d1b7c39c66b"
   },
   "scripts/issue234_authority.py": {
    "bytes": 10401,
