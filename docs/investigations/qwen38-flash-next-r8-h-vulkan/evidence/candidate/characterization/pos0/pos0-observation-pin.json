@@ -1,0 +1,63 @@
+{
+ "authored_at": "2026-09-21",
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "match_geometry": {
+  "batch-size": 512,
+  "ctx-size": 8192,
+  "model_member_1_sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+  "ngl": 1
+ },
+ "non_perturbation_contract": "The observation response tokens MUST equal the retained canonical arm ladder token stream exactly (A: 328 760 40554 1 271 12188 279 1727; B: 561 324 55965 51624 29014 271 248068 271; C: 561 324 55965 51624 29014 34227 18030 16382). Any deviation stops collection and quarantines the observation; the canonical ladder is NEVER rerun.",
+ "observation_producer": {
+  "hook": "R8-E observation-only hook (Issue #199): 85 added lines in tools/server/server-context.cpp; inert unless LLAMA_OBSERVE_LOGITS set; reads llama_get_logits_ith after common_sampler_sample; no llama/ggml state writes",
+  "hook_env": {
+   "LLAMA_OBSERVE_FOCUS": "328,561,271,34227,12188,248068",
+   "LLAMA_OBSERVE_POS": "0"
+  },
+  "hook_source_sha256_of_diff": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659",
+  "llama_cpp_source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "observation_binaries": {
+   "A_cuda_inferswarm01": {
+    "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+    "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+   },
+   "B_vulkan_inferswarm01": {
+    "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   },
+   "C_vulkan_inferswarm02": {
+    "note": "byte-identical to B's binary (01-built, deployed)",
+    "path": "/tmp/is234r/obs-vk-bin/llama-server",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   }
+  },
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5",
+  "request_contract": "identical to the frozen canonical request (samplers=[top_k], top_k=1, temperature=0.0, seed=0, cache_prompt=false, stream=false, return_tokens=true, n_predict=8)",
+  "selectors": {
+   "A": "CUDA_VISIBLE_DEVICES=GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "B": "GGML_VK_VISIBLE_DEVICES=0 + VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json",
+   "C": "GGML_VK_VISIBLE_DEVICES=0 + VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json"
+  }
+ },
+ "pin_note": "Binaries are the SAME pinned observation builds used for the retained position-5 characterization (hashes re-verified on both hosts immediately before this pin was authored: 2026-09-21). No new build, no source change, no canonical rerun.",
+ "purpose": "Round-2 correction (maintainer NO-GO on cfd86f11): the retained score characterization binds generated position 5 only, but the global earliest pairwise divergence is position 0 (A-B and A-C diverge there). Issue #234 requires bounded pre-choice numerical characterization at the FIRST divergent generated position. This pin prospectively authorizes the minimum bounded observation-only position-0 recollection before any collection occurs.",
+ "quarantine_record": {
+  "incident": "first B launch used a RELATIVE VK_ICD_FILENAMES (nvidia_icd.json); the loader found no device and the server fell back to CPU (server log: no usable GPU found). Response tokens deviated from canonical B - non-perturbation contract tripped; run stopped and quarantined at inferswarm01:/tmp/is234r/quarantine-pos0-CPU-run/ BEFORE any use. No retained evidence was affected; arm A collection (identical launcher, CUDA selector) was unaffected and its non-perturbation check PASSED.",
+  "quarantine_dir": "inferswarm01:/tmp/is234r/quarantine-pos0-CPU-run"
+ },
+ "schema": "inferswarm.r8h.pos0-observation-pin/1",
+ "scope": {
+  "arms": [
+   "A",
+   "B",
+   "C"
+  ],
+  "canonical_ladder_rerun": false,
+  "case": "case-256",
+  "generated_position": 0,
+  "later_rungs": "none authorized - case-256 already diverged",
+  "n_predict": 8,
+  "repeats_per_arm": 1
+ },
+ "superseded_position5_disposition": "The retained position-5 characterization is reclassified as secondary_device_axis_characterization (B and C share their generated prefix through positions 0-4; position 5 is their first divergence). It remains retained evidence."
+}
