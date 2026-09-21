@@ -124,13 +124,16 @@ def verify_deployed_producers(deployed: dict[str, Any],
         # derived truth wins, but record the disagreement
         problems.append("authored_all_hosts_match_pin_disagrees")
         derived_all_match = derived_all_match  # noqa: PLW0127
-    # stale-authority resolution (round 2): the retained
-    # closure_producer_head field names a SUPERSEDED closure pin
-    # (377d2ff, the pre-6357c8a re-pin). Rename semantics are applied
-    # by the freeze producer; here we mechanically validate it against
-    # the closure lineage so a contradictory authority field can never
-    # pass uninterpreted.
-    stale_pin = deployed.get("closure_producer_head")
+    # stale-authority resolution (round 2): the round-1 field
+    # `closure_producer_head` named a SUPERSEDED closure pin (377d2ff,
+    # the pin current when the deployed hashes were collected). The
+    # /3 schema renames it to `closure_producer_head_at_collection`
+    # with explicit semantics; the legacy spelling is still validated
+    # for lineage when present so a contradictory authority field can
+    # never pass uninterpreted. An unresolvable name is a failure,
+    # never a pass.
+    stale_pin = deployed.get("closure_producer_head_at_collection") \
+        or deployed.get("closure_producer_head")
     if stale_pin is not None:
         # must be an ancestor of the ACTIVE closure pin (i.e. a real
         # predecessor in the closure lineage, not a foreign SHA)
@@ -143,7 +146,7 @@ def verify_deployed_producers(deployed: dict[str, Any],
                 capture_output=True)
             if proc.returncode != 0:
                 problems.append(
-                    f"closure_producer_head_not_in_lineage:{stale_pin[:12]}")
+                    f"closure_pin_not_in_lineage:{stale_pin[:12]}")
     result = {
         "derived_all_hosts_match_pin": derived_all_match,
         "per_host": per_host,

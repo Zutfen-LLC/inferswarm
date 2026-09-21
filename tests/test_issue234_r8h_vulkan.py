@@ -640,6 +640,21 @@ class TestDeployedProducerVerification(unittest.TestCase):
                 d["hosts"].pop("inferswarm01")
             self._expect_fail(ev, mut, "forged boolean")
 
+    def test_renamed_collection_pin_out_of_lineage_fails(self):
+        # /3 schema: closure_producer_head_at_collection must be in the
+        # closure lineage; a foreign SHA fails closed under BOTH the
+        # renamed and the legacy spelling.
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            for key in ("closure_producer_head_at_collection",
+                        "closure_producer_head"):
+                d = self._deployed(ev)
+                d.pop("closure_producer_head_at_collection", None)
+                d.pop("closure_producer_head", None)
+                d[key] = "f" * 40
+                with self.assertRaises(asm.AssembleError, msg=key):
+                    asm.verify_deployed_producers(d, self.CLOSURE_PHYS)
+
     def test_stale_closure_pin_out_of_lineage_fails(self):
         with tempfile.TemporaryDirectory() as t:
             ev = make_evidence(Path(t))

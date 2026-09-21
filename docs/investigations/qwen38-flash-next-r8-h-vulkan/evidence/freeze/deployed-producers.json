@@ -1,7 +1,8 @@
 {
  "all_hosts_match_pin": true,
  "campaign": "qwen38-flash-next-r8-h-vulkan",
- "closure_producer_head": "377d2ff3343e74c674ac5dd19fdee41baa9053f0",
+ "closure_producer_head_at_collection": "377d2ff3343e74c674ac5dd19fdee41baa9053f0",
+ "closure_producer_head_semantics": "the closure pin current WHEN the deployed hashes were collected (2026-09-21T00:10:52, round 1); superseded by later reduction-only re-pins. Mechanically validated by the assembler: this value must be an ancestor of the ACTIVE closure pin (377d2ff is an ancestor of every later pin in the closure lineage), and the deployed hashes themselves must equal the frozen physical-producer pin e7d822a blobs independent of any closure re-pin.",
  "hosts": {
   "inferswarm01": {
    "hashes": {
@@ -25,6 +26,6 @@
   }
  },
  "note": "hashes read live from /tmp/is234r/producers/scripts on each execution host after canonical execution",
- "schema": "inferswarm.r8h.deployed-producers/2",
+ "schema": "inferswarm.r8h.deployed-producers/3",
  "verified_at": "2026-09-21T00:10:52"
 }
