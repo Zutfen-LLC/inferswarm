@@ -1,0 +1,409 @@
+{
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "checks": {
+  "authority_ok": true,
+  "backing": {
+   "A": {
+    "host": "inferswarm01",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   },
+   "B": {
+    "host": "inferswarm01",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   },
+   "C": {
+    "host": "inferswarm02",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   }
+  },
+  "execution_truth": {
+   "A": {
+    "backend": "cuda",
+    "problems": [],
+    "status": "OK"
+   },
+   "B": {
+    "backend": "vulkan",
+    "problems": [],
+    "status": "OK"
+   },
+   "C": {
+    "backend": "vulkan",
+    "problems": [],
+    "status": "OK"
+   }
+  },
+  "health": {
+   "A": {
+    "sources": [
+     "ladder-A-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   },
+   "B": {
+    "sources": [
+     "ladder-B-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   },
+   "C": {
+    "sources": [
+     "ladder-C-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   }
+  },
+  "ladder": {
+   "case-1024": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   },
+   "case-256": {
+    "all_deterministic": true,
+    "all_repeats_ok": true,
+    "classification": "MULTI_AXIS",
+    "executed": true
+   },
+   "case-3072": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   },
+   "case-4096": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   }
+  },
+  "placement": {
+   "A": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1189085184,
+    "status": "LEGAL"
+   },
+   "B": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1083179008,
+    "status": "LEGAL"
+   },
+   "C": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1050353664,
+    "status": "LEGAL"
+   }
+  },
+  "runtime": {
+   "A": {
+    "binary_sha256": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03",
+    "problems": [],
+    "status": "QUALIFIED"
+   },
+   "B": {
+    "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+    "problems": [],
+    "status": "QUALIFIED"
+   },
+   "C": {
+    "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+    "problems": [],
+    "status": "QUALIFIED"
+   }
+  },
+  "score_characterization": {
+   "problems": [],
+   "status": "OK"
+  }
+ },
+ "closure": {
+  "closure_digest": "e7a4091505f160933da36aae6d4bd828324621373546c408034ebdf3f72a6e2e",
+  "producer_head": "377d2ff3343e74c674ac5dd19fdee41baa9053f0"
+ },
+ "controls_receipt": {
+  "all_ok": false,
+  "baseline_terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
+  "campaign": "issue234-r8h-matched-backend-device-parity",
+  "control_ids": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   36
+  ],
+  "controls": {
+   "1": {
+    "d": "wrong official Qwen revision",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "10": {
+    "d": "aggregate 16-GiB capacity treated as one resource",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "11": {
+    "d": "CPU-only fallback labeled device execution",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "12": {
+    "d": "NVIDIA/CUDA participation hidden in candidate arm",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "13": {
+    "d": "zero-byte GPU residency labeled nonzero offload",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "14": {
+    "d": "offload geometry changed after candidate output",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "15": {
+    "d": "PLE/backing bytes mislabeled accelerator residency",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "16": {
+    "d": "local backing existence mislabeled active materialization",
+    "expect": "R8H_QWEN38_BACKING_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_BACKING_PREREQUISITE"
+   },
+   "17": {
+    "d": "reference regenerated after seeing candidate output",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "18": {
+    "d": "wrong accepted R8-D fixture/prompt identity",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "19": {
+    "d": "legacy samplers=[greedy] accepted as true greedy",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "2": {
+    "d": "wrong Unsloth conversion revision",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "20": {
+    "d": "top_k != 1 accepted as canonical true greedy",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "21": {
+    "d": "candidate token mismatch omitted from terminal",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "22": {
+    "d": "failed repeat dropped from deterministic comparison",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "23": {
+    "d": "later ladder rung executed after earlier stop",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "24": {
+    "d": "device fault omitted from terminal",
+    "expect": "R8H_QWEN38_VULKAN_PLATFORM_FAIL",
+    "ok": true,
+    "terminal": "R8H_QWEN38_VULKAN_PLATFORM_FAIL"
+   },
+   "25": {
+    "d": "second-die result substituted for primary die",
+    "expect": "error",
+    "ok": false,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "26": {
+    "d": "runtime upgrade to turn prerequisite into PASS",
+    "expect": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE"
+   },
+   "27": {
+    "d": "authored terminal contradicting deterministic reduction",
+    "expect": "unchanged",
+    "ok": true,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "28": {
+    "d": "Arm A and B using different RTX 3060 UUID/BDF",
+    "expect": "error",
+    "ok": false,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "29": {
+    "d": "CUDA arm containing Vulkan execution or vice versa",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "3": {
+    "d": "wrong UD-IQ1_S member hash",
+    "expect": "R8H_QWEN38_BACKING_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_BACKING_PREREQUISITE"
+   },
+   "30": {
+    "d": "A/B/C differ in ngl/context/batch/model/prompt/request",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "31": {
+    "d": "historical R8-D output used as sole Vulkan PASS/FAIL oracle",
+    "expect": "unchanged",
+    "ok": true,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "32": {
+    "d": "B == C interpreted as proof of common root cause",
+    "expect": "unchanged",
+    "ok": true,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "33": {
+    "d": "divergence classified without required score characterization",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "34": {
+    "d": "an arm missing one of exactly 3 repeats",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   },
+   "35": {
+    "d": "later rung executed after deterministic pair divergence",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "36": {
+    "d": "unmatched placement/residency geometry as matched comparison",
+    "expect": "error",
+    "ok": true,
+    "terminal": "ReduceError"
+   },
+   "4": {
+    "d": "wrong llama.cpp source revision",
+    "expect": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE"
+   },
+   "5": {
+    "d": "binary built from unpinned/dirty source",
+    "expect": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE"
+   },
+   "6": {
+    "d": "wrong ICD/loader identity substituted after freeze",
+    "expect": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE",
+    "ok": true,
+    "terminal": "R8H_QWEN38_VULKAN_RUNTIME_PREREQUISITE"
+   },
+   "7": {
+    "d": "stale V340L selector-UUID/BDF mapping",
+    "expect": "error",
+    "ok": false,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "8": {
+    "d": "die A/B swap after freeze",
+    "expect": "error",
+    "ok": false,
+    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+   },
+   "9": {
+    "d": "both V340L dies carrying active model residency",
+    "expect": "error",
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
+   }
+  },
+  "count": 36,
+  "schema": "inferswarm.r8h.controls/2"
+ },
+ "external_anchor_note": "R8-D streams retained as external anchor; they did not participate in terminal derivation.",
+ "pairwise_map": {
+  "case-1024": null,
+  "case-256": "MULTI_AXIS",
+  "case-3072": null,
+  "case-4096": null
+ },
+ "schema": "inferswarm.r8h.terminal-reduction/2",
+ "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
+ "terminal_basis": [
+  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; score characterization retained"
+ ]
+}

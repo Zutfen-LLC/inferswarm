@@ -60,8 +60,10 @@ def make_evidence(tmp: Path, *, a=TOKENS_A, b=TOKENS_A, c=TOKENS_C,
                 "GGML_VULKAN": "OFF" if arm == "A" else "ON"}},
             "binaries": {"llama-server": {"sha256": f"{arm}" * 8}},
             "selector": {"target_bdf": bdf_b if arm == "B"
-                         else "00000000:06:00.0",
+                         else ("00000000:02:00.0" if arm == "A"
+                               else "00000000:06:00.0"),
                          "target_deviceUUID": "u" * 32,
+                         "value": "0",
                          "value_semantics": "nvidia-smi index of frozen "
                                             "GPU (BDF "
                                             + (bdf_b if arm == "B"
@@ -78,6 +80,9 @@ def make_evidence(tmp: Path, *, a=TOKENS_A, b=TOKENS_A, c=TOKENS_C,
     gpu = {"host": "inferswarm01", "uuid": "GPU-x", "bdf": bdf_b,
            "cuda_identity": {"selector": "CUDA_VISIBLE_DEVICES=0"},
            "vulkan_identity": {"selector": "GGML_VK_VISIBLE_DEVICES=0"}}
+    gpu_a = {"host": "inferswarm01", "uuid": "GPU-x",
+             "bdf": "00000000:02:00.0",
+             "cuda_identity": {"selector": "CUDA_VISIBLE_DEVICES=0"}}
     w(ev / "freeze" / "campaign-freeze.json", {
         "schema": "inferswarm.r8h.freeze/2",
         "campaign": rc.CAMPAIGN_ID,
@@ -89,7 +94,7 @@ def make_evidence(tmp: Path, *, a=TOKENS_A, b=TOKENS_A, c=TOKENS_C,
         "model_members": [dict(m) for m in rc.MODEL_MEMBERS],
         "rtx3060": gpu,
         "arms": {
-            "A": {"gpu": gpu, "ngl": 1, "context": rc.CONTEXT_SETTINGS,
+            "A": {"gpu": gpu_a, "ngl": 1, "context": rc.CONTEXT_SETTINGS,
                   "request": rc.REQUEST_CONTRACT,
                   "fixture_sha256": rc.R8D_FIXTURE_SHA256,
                   "model_sha256": [m["sha256"] for m in rc.MODEL_MEMBERS]},

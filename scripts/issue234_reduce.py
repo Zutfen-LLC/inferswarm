@@ -385,8 +385,21 @@ def reduce_execution_truth(evidence: Path) -> dict[str, Any]:
             f_gpu = (freeze.get("arms", {}).get(arm, {})
                      .get("gpu", {}))
             want_bdf = f_gpu.get("bdf")
-            if want_bdf and want_bdf not in json.dumps(sel):
-                problems.append("selector_not_bound_to_frozen_gpu")
+            # exact-field binding, never substring over the whole
+            # selector doc (icd_census_order legitimately carries BOTH
+            # die BDFs, so a substring test cannot catch a swap)
+            got_bdf = sel.get("target_bdf") or sel.get("bdf")
+            if got_bdf is None and arm == "A":
+                # CUDA selector doc binds by smi index semantics; the
+                # freeze's cuda_identity.selector carries the binding
+                cuda_sel = f_gpu.get("cuda_identity", {}).get("selector")
+                got_bdf = want_bdf if (
+                    cuda_sel and
+                    sel.get("value") == cuda_sel.split("=")[-1]) else None
+            if want_bdf and got_bdf != want_bdf:
+                problems.append(
+                    f"selector_not_bound_to_frozen_gpu:"
+                    f"{got_bdf}!={want_bdf}")
         case_docs = sorted((evidence / "candidate").glob(
             f"ladder-{arm}-*.json"))
         sel_res_ok = False
