@@ -1,52 +1,33 @@
 {
- "campaign": "issue234-r8h-vulkan-single-die-qualification",
- "closure_digest": "0839bad3c850212c8b0ec12eb8430415c2d8925e9e4e838fdab654fa5d37f816",
- "producer_head": "d31a52d59ce876585a152978cf14916fc9d979fa",
- "schema": "inferswarm.r8h.producer-closure/1",
- "sources": {
-  "scripts/issue234_assemble.py": {
-   "bytes": 4236,
-   "sha256": "af96667fcbb1484b194b4f204ba053484b8ccd3473f76a5300f1a76f8bbb4e73"
-  },
-  "scripts/issue234_authority.py": {
-   "bytes": 8883,
-   "sha256": "1bc7d998944e71df516776fd10abd69c77e2bc9392d93e0043627eda6dfaaa50"
-  },
-  "scripts/issue234_freeze.py": {
-   "bytes": 2540,
-   "sha256": "b88840f4ec86998ff5efa7a1ff6ec9640915315e512df6b91c6c0a418d5a6c65"
-  },
-  "scripts/issue234_health.py": {
-   "bytes": 5914,
-   "sha256": "b5f1d25a13ec280b0f029532b5a25dc7be9acf9abec6b329d5797d14d63278f2"
-  },
-  "scripts/issue234_host.py": {
-   "bytes": 12347,
-   "sha256": "8d81d0be90d0b13553647a6f7896e9ac8ae13070f9d97966ea7d8a021828f056"
-  },
-  "scripts/issue234_ladder.py": {
-   "bytes": 10854,
-   "sha256": "ec1732cb9c277057ca668f1d389de3c0cc033b08052708060706003fc86bf0aa"
-  },
-  "scripts/issue234_manifest.py": {
-   "bytes": 891,
-   "sha256": "90dfe7afd966eaa004424f01830073782cc0f14b81ed97d3e0f9a300ec3d060e"
-  },
-  "scripts/issue234_placement.py": {
-   "bytes": 8664,
-   "sha256": "c63e7be0dde99446aee630bbec36263166eb2511b4c05d242f5ecf41b96207a0"
-  },
-  "scripts/issue234_receipt.py": {
-   "bytes": 11701,
-   "sha256": "1c828688027255a2fa64632187c1ab5e7a78b6616e58b257433adca42194bc26"
-  },
-  "scripts/issue234_reduce.py": {
-   "bytes": 15401,
-   "sha256": "b170697919e16ee0a30880c313c2985d7d89b5a8951a06b056496b8234258b5b"
-  },
-  "scripts/issue234_runtime.py": {
-   "bytes": 8126,
-   "sha256": "4cd6d3c6dfe7865be6da217a576914b18bc4fac4bfda5036d6d76c178e2985bb"
-  }
- }
+ "campaign": "qwen38-flash-next-r8-h-vulkan",
+ "closure_commit": "bb2b6afed45b7495a765221a09010219fbca7ea9",
+ "closure_verified_at": "bb2b6afed45b7495a765221a09010219fbca7ea9",
+ "doctrine": {
+  "1": "closure pins the exact committed producer SHA set",
+  "2": "closure source hashes are computed from blobs at the pin",
+  "3": "the pinned producer commit must be an ancestor of final PR HEAD",
+  "4": "physical producers must be byte-identical from pin to final HEAD",
+  "5": "evidence/docs/tests/reduction-only commits may follow without invalidating the physical producer",
+  "6": "any physical-producer modification after execution fails closed",
+  "7": "reduction-only amendment cannot conceal physical-producer drift",
+  "8": "closure verifies successfully at the eventual final PR head"
+ },
+ "physical_producers": {
+  "issue234_health.py": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0",
+  "issue234_host.py": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2",
+  "issue234_ladder.py": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41",
+  "issue234_placement.py": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa",
+  "issue234_receipt.py": "6ff3421da6ab1145120489fdef3578eff7a5179ed2c69eea35a5d6bbc2624c4a",
+  "issue234_runtime.py": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
+ },
+ "producer_pin_commit": "e7d822adf0e5aa1754d75b7b995ba81cd6d4f3db",
+ "reduction_producers": [
+  "issue234_reduce.py",
+  "issue234_assemble.py",
+  "issue234_manifest.py",
+  "issue234_authority.py",
+  "issue234_characterize.py",
+  "issue234_freeze.py"
+ ],
+ "schema": "inferswarm.r8h.producer-closure/2"
 }
