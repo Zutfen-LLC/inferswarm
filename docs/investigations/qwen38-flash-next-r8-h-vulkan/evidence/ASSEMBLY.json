@@ -308,8 +308,8 @@
   }
  },
  "closure": {
-  "closure_digest": "74ef7b877d85dc01cbc01ea54ec985df15685719fc119c766d659c5884addcd4",
-  "producer_head": "42b482e24f57bc6cb7685d415afb9464f5dee4d6"
+  "closure_digest": "130243fcaa99af4c45b2b0f62b4ec3c718dd1a80bb9193fa2639e1c5a0e02364",
+  "producer_head": "88a96f54803564daf89cd16f6debae34af691bb5"
  },
  "controls_receipt": {
   "all_ok": true,
