@@ -395,10 +395,11 @@ def _mut_divergence_without_characterization(b: Path) -> None:
 
 
 def _mut_raw_characterization_missing(b: Path) -> None:
-    # control 33 (round-2 strengthened): the divergent ladder evidence
-    # is fully intact but the ENTIRE raw characterization corpus
-    # (observation jsonl + float32 rows + responses + prospective pin
-    # + summaries) is absent — divergence WITHOUT the required score
+    # control 33 (round-2 strengthened, round-3: receipts too): the
+    # divergent ladder evidence is fully intact but the ENTIRE raw
+    # characterization corpus (observation jsonl + float32 rows +
+    # responses + prospective pin + execution receipts + summaries) is
+    # absent — divergence WITHOUT the required identity-bound score
     # characterization must block, not classify.
     import shutil as _sh
     char_root = b / "candidate" / "characterization"
@@ -408,6 +409,16 @@ def _mut_raw_characterization_missing(b: Path) -> None:
     c = b / "candidate" / f"score-characterization-{case}.json"
     if c.is_file():
         c.unlink()
+
+
+def _mut_observation_receipts_missing(b: Path) -> None:
+    # control 33 companion (round-3): ONLY the execution receipts are
+    # removed while every raw observation byte stays — an unbound
+    # observation corpus must block exactly like a missing one.
+    pos0 = b / "candidate" / "characterization" / "pos0"
+    if pos0.is_dir():
+        for p in pos0.glob("observation-receipt-*.json"):
+            p.unlink()
 
 
 # expectation vocabulary
@@ -494,7 +505,8 @@ CONTROLS: dict[int, dict[str, Any]] = {
          "fn": _mut_authored_status, "expect": "unchanged"},
     32: {"d": "B == C interpreted as proof of common root cause",
          "fn": _mut_authored_status, "expect": "unchanged"},
-    33: {"d": "divergence classified without required score characterization",
+    33: {"d": "divergence classified without required score characterization "
+             "(raw corpus OR execution receipts absent)",
          "fn": _mut_raw_characterization_missing,
          "expect": "error"},
     34: {"d": "an arm missing one of exactly 3 repeats",
