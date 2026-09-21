@@ -1,0 +1,319 @@
+{
+ "arms": {
+  "A": {
+   "backend": "cuda",
+   "binary_sha256": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03",
+   "context": {
+    "batch-size": 512,
+    "ctx-size": 8192
+   },
+   "fixture_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+   "gpu": {
+    "bdf": "00000000:02:00.0",
+    "cuda_identity": {
+     "driver": "610.57.04",
+     "name": "NVIDIA GeForce RTX 3060",
+     "selector": "CUDA_VISIBLE_DEVICES=0",
+     "smi_index": 0
+    },
+    "foreign_processes_at_freeze": "",
+    "host": "inferswarm01",
+    "memory_total_mib": 12288,
+    "sibling_3060": {
+     "bdf": "00000000:03:00.0",
+     "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    },
+    "topology": "16",
+    "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "vulkan_identity": {
+     "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+     "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+     "selector": "GGML_VK_VISIBLE_DEVICES=0",
+     "vulkan_key": "gpu0"
+    }
+   },
+   "model_sha256": [
+    "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+    "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+    "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+   ],
+   "ngl": 1,
+   "request": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+     "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+   }
+  },
+  "B": {
+   "backend": "vulkan",
+   "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+   "context": {
+    "batch-size": 512,
+    "ctx-size": 8192
+   },
+   "fixture_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+   "gpu": {
+    "bdf": "00000000:02:00.0",
+    "cuda_identity": {
+     "driver": "610.57.04",
+     "name": "NVIDIA GeForce RTX 3060",
+     "selector": "CUDA_VISIBLE_DEVICES=0",
+     "smi_index": 0
+    },
+    "foreign_processes_at_freeze": "",
+    "host": "inferswarm01",
+    "memory_total_mib": 12288,
+    "sibling_3060": {
+     "bdf": "00000000:03:00.0",
+     "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    },
+    "topology": "16",
+    "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "vulkan_identity": {
+     "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+     "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+     "selector": "GGML_VK_VISIBLE_DEVICES=0",
+     "vulkan_key": "gpu0"
+    }
+   },
+   "model_sha256": [
+    "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+    "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+    "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+   ],
+   "ngl": 1,
+   "request": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+     "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+   }
+  },
+  "C": {
+   "backend": "vulkan",
+   "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+   "context": {
+    "batch-size": 512,
+    "ctx-size": 8192
+   },
+   "excluded_die": {
+    "bdf": "00000000:09:00.0",
+    "deviceUUID": "00000000-0900-0000-0000-000000000000"
+   },
+   "fixture_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+   "gpu": {
+    "bdf": "00000000:06:00.0",
+    "deviceUUID": "00000000-0600-0000-0000-000000000000",
+    "driver": "RADV 25.0.7",
+    "host": "inferswarm02",
+    "selector": "GGML_VK_VISIBLE_DEVICES=0",
+    "vulkan_key": "gpu1"
+   },
+   "model_sha256": [
+    "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+    "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+    "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+   ],
+   "ngl": 1,
+   "request": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+     "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+   }
+  }
+ },
+ "backing": {
+  "A": {
+   "all_ok": true,
+   "host": "inferswarm01",
+   "members": [
+    {
+     "bytes": 10946624,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+     "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+     "sha256_ok": true,
+     "wall_s": 0.0
+    },
+    {
+     "bytes": 49990818368,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+     "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+     "sha256_ok": true,
+     "wall_s": 218.6
+    },
+    {
+     "bytes": 22544696352,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+     "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+     "sha256_ok": true,
+     "wall_s": 93.4
+    }
+   ],
+   "schema": "inferswarm.r8h.backing/2",
+   "total_bytes": 72546461344
+  },
+  "B": {
+   "all_ok": true,
+   "host": "inferswarm01",
+   "members": [
+    {
+     "bytes": 10946624,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+     "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+     "sha256_ok": true,
+     "wall_s": 0.0
+    },
+    {
+     "bytes": 49990818368,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+     "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+     "sha256_ok": true,
+     "wall_s": 218.6
+    },
+    {
+     "bytes": 22544696352,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+     "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+     "sha256_ok": true,
+     "wall_s": 93.4
+    }
+   ],
+   "schema": "inferswarm.r8h.backing/2",
+   "total_bytes": 72546461344
+  },
+  "C": {
+   "all_ok": true,
+   "host": "inferswarm02",
+   "members": [
+    {
+     "bytes": 10946624,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+     "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+     "sha256_ok": true,
+     "wall_s": 0.8
+    },
+    {
+     "bytes": 49990818368,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+     "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+     "sha256_ok": true,
+     "wall_s": 272.9
+    },
+    {
+     "bytes": 22544696352,
+     "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+     "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+     "sha256_ok": true,
+     "wall_s": 123.9
+    }
+   ],
+   "schema": "inferswarm.r8h.backing/2",
+   "total_bytes": 72546461344
+  }
+ },
+ "binaries": {
+  "cuda_01": {
+   "sha256": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03"
+  },
+  "vulkan_01": {
+   "sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  },
+  "vulkan_02": {
+   "sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  }
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "census_boot_ids": {
+  "amd_host": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+  "nvidia_host": "90210fe4-ea0c-469b-b889-f9b93df44ba1"
+ },
+ "context": {
+  "batch-size": 512,
+  "ctx-size": 8192
+ },
+ "fixture_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+ "llama_cpp_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+ "model_members": [
+  {
+   "bytes": 10946624,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+  },
+  {
+   "bytes": 49990818368,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+   "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+  },
+  {
+   "bytes": 22544696352,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+   "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+  }
+ ],
+ "ngl": 1,
+ "producer_hashes_at_freeze": {
+  "issue234_health.py": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0",
+  "issue234_host.py": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2",
+  "issue234_ladder.py": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41",
+  "issue234_placement.py": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa",
+  "issue234_receipt.py": "6ff3421da6ab1145120489fdef3578eff7a5179ed2c69eea35a5d6bbc2624c4a",
+  "issue234_runtime.py": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
+ },
+ "request_contract": {
+  "cache_prompt": false,
+  "n_predict": 8,
+  "return_tokens": true,
+  "samplers": [
+   "top_k"
+  ],
+  "seed": 0,
+  "stream": false,
+  "temperature": 0.0,
+  "top_k": 1
+ },
+ "rtx3060": {
+  "bdf": "00000000:02:00.0",
+  "cuda_identity": {
+   "driver": "610.57.04",
+   "name": "NVIDIA GeForce RTX 3060",
+   "selector": "CUDA_VISIBLE_DEVICES=0",
+   "smi_index": 0
+  },
+  "foreign_processes_at_freeze": "",
+  "host": "inferswarm01",
+  "memory_total_mib": 12288,
+  "sibling_3060": {
+   "bdf": "00000000:03:00.0",
+   "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+  },
+  "topology": "16",
+  "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+  "vulkan_identity": {
+   "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+   "selector": "GGML_VK_VISIBLE_DEVICES=0",
+   "vulkan_key": "gpu0"
+  }
+ },
+ "schema": "inferswarm.r8h.freeze/2"
+}

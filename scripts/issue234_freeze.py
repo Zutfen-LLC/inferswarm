@@ -56,13 +56,18 @@ def build(nvidia_census: dict, amd_census: dict,
             "share binary bytes")
     cuda_sha = cuda_runtime["binaries"]["llama-server"]["sha256"]
 
+    # driver/vram join: census rtx3060 rows carry nvidia-smi bdf/uuid,
+    # the driver + totals live in the nvidia.gpus section
+    nv_by_uuid = {g["uuid"]: g for g in nvidia_census["nvidia"]["gpus"]}
+    nv_frozen = nv_by_uuid[frozen["nvidia_uuid"]]
+
     gpu_obj = {
         "host": nvidia_census["host"]["hostname"],
         "uuid": frozen["nvidia_uuid"],
         "bdf": frozen["bdf_smi"],
         "cuda_identity": {
             "name": frozen["name"],
-            "driver": frozen["driver"],
+            "driver": nv_frozen["driver_version"],
             "smi_index": frozen["smi_index"],
             "selector": f"CUDA_VISIBLE_DEVICES={frozen['smi_index']}",
         },
@@ -73,8 +78,7 @@ def build(nvidia_census: dict, amd_census: dict,
                          f"{vk_runtime_01['selector']['value']}"),
             "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
         },
-        "memory_total_mib": frozen.get("sysfs", {})
-        .get("drm", {}) and None,
+        "memory_total_mib": nv_frozen["memory_total_mib"],
         "topology": frozen.get("sysfs", {}).get("current_link_width"),
         "foreign_processes_at_freeze":
             nvidia_census["nvidia"]["compute_apps_raw"].strip(),
