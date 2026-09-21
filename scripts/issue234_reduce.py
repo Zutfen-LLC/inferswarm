@@ -816,6 +816,12 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
         problems.append(f"arm{arm}:host:{host.get('hostname')}")
     if not host.get("boot_id"):
         problems.append(f"arm{arm}:boot_id")
+    collector = doc.get("collector") or {}
+    pin_collector = (pin or {}).get("collector") or {}
+    if collector.get("sha256") != pin_collector.get("sha256"):
+        problems.append(f"arm{arm}:collector_sha256")
+    if collector.get("dependencies") != pin_collector.get("dependencies"):
+        problems.append(f"arm{arm}:collector_dependencies")
 
     # ---- binary identity --------------------------------------------
     ob = doc.get("observation_binary", {})

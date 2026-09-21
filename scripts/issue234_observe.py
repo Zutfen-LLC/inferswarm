@@ -654,6 +654,9 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
         "collector": {
             "path": str(Path(__file__).resolve()),
             "sha256": sha(Path(__file__).resolve()),
+            "dependencies": {
+                "issue234_receipt.py": sha(Path(rc.__file__).resolve()),
+            },
         },
         "observation_binary": {
             "path": str(server),

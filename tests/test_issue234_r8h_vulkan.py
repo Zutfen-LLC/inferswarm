@@ -100,6 +100,12 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
             "scope": {"generated_position": position,
                       "canonical_ladder_rerun": False,
                       "execution_receipts_required": True},
+            "collector": {
+                "path": "scripts/issue234_observe.py",
+                "sha256": rc.digest_file(REPO / "scripts" / "issue234_observe.py"),
+                "dependencies": {"issue234_receipt.py": rc.digest_file(
+                    REPO / "scripts" / "issue234_receipt.py")},
+            },
             "observation_producer": {
                 "llama_cpp_source_pin": rc.LLAMA_CPP_PIN,
                 "hook_source_sha256_of_diff": rc.OBSERVATION_HOOK_DIFF_SHA256,
@@ -244,6 +250,10 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
         "arm": arm,
         "host": {"hostname": rc.ARMS[arm]["host"],
                  "boot_id": "b" * 8 + "-0000-0000-0000-" + "0" * 12},
+        "collector": {"path": "/tmp/is234r/producers/scripts/issue234_observe.py",
+                      "sha256": rc.digest_file(REPO / "scripts" / "issue234_observe.py"),
+                      "dependencies": {"issue234_receipt.py": rc.digest_file(
+                          REPO / "scripts" / "issue234_receipt.py")}},
         "observation_binary": {
             "path": f"/opt/obs/{arm}/llama-server",
             "sha256": bin_meta["sha256"],
