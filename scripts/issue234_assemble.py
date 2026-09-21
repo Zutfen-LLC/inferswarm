@@ -51,9 +51,6 @@ class AssembleError(RuntimeError):
 #: (issue234_observe.py) to the matrix: it is a physical producer
 #: (it executes the observation runs) deployed to BOTH execution
 #: hosts, and its deployed bytes are verified like every other.
-#: The collector imports issue234_receipt.py at execution time; treat that
-#: closure-bound module as a deployed execution dependency rather than letting
-#: an unverified remote copy define model/request authority.
 DEPLOYED_PRODUCER_BASENAMES: tuple[str, ...] = (
     "issue234_host.py",
     "issue234_runtime.py",
@@ -61,7 +58,6 @@ DEPLOYED_PRODUCER_BASENAMES: tuple[str, ...] = (
     "issue234_ladder.py",
     "issue234_health.py",
     "issue234_observe.py",
-    "issue234_receipt.py",
 )
 EXPECTED_DEPLOYED_HOSTS: dict[str, tuple[str, ...]] = {
     "inferswarm01": DEPLOYED_PRODUCER_BASENAMES,
@@ -112,9 +108,7 @@ def verify_deployed_producers(deployed: dict[str, Any],
         for name in sorted(want_set & got_set):
             rel = f"scripts/{name}"
             meta = closure["sources"].get(rel)
-            permitted_classes = ({"physical", "reduction"}
-                                 if name == "issue234_receipt.py" else {"physical"})
-            if meta is None or meta.get("class") not in permitted_classes:
+            if meta is None or meta.get("class") != "physical":
                 problems.append(f"{host}:not_closure_bound:{rel}")
                 continue
             if hashes[name] != meta["sha256"]:
