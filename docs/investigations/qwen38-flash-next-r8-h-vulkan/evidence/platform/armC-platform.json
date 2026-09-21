@@ -1,0 +1,27 @@
+{
+ "vendor": "amd",
+ "selected_aer": {},
+ "selected_link": {
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16"
+ },
+ "selected_mem": {
+  "card1.mem_info_vram_used": 8339456,
+  "card1.mem_info_vis_vram_used": 8339456,
+  "card1.mem_info_gtt_used": 14454784
+ },
+ "excluded_aer::00000000:09:00.0": {},
+ "excluded_mem::00000000:09:00.0": {
+  "card2.mem_info_vram_used": 8339456,
+  "card2.mem_info_vis_vram_used": 8339456,
+  "card2.mem_info_gtt_used": 14454784
+ },
+ "excluded_link::00000000:09:00.0": {
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16"
+ }
+}

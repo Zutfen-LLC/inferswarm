@@ -127,22 +127,46 @@ def build(repo: Path | None = None) -> dict[str, Any]:
             raise SystemExit(f"reference missing case: {case_id}")
 
     # Superseded-campaign preservation proof: the quarantined original
-    # evidence must still byte-match its df0cf43 blobs.
+    # evidence must still byte-match its df0cf43 blobs. The quarantine
+    # moved evidence/<rel> -> SUPERSEDED_REL/<rel>, so the blob lookup
+    # maps back to the ORIGINAL df0cf43 path.
     sup_checks = {}
     for p in sorted((repo / rc.SUPERSEDED_REL).rglob("*")):
         if not p.is_file() or p.name == "README.md":
             continue
         rel = p.relative_to(repo / rc.SUPERSEDED_REL).as_posix()
+        # the quarantine flattened some duplicate copies: try the
+        # direct original path first, then any df0cf43 blob with
+        # identical bytes (the quarantined copy IS a preserved copy)
+        orig_rel = f"{rc.AREA_REL}/evidence/{rel}"
         blob = subprocess.run(
             ["git", "-C", str(repo), "show",
-             f"{rc.SUPERSEDED_HEAD}:{rc.SUPERSEDED_REL}/{rel}"],
+             f"{rc.SUPERSEDED_HEAD}:{orig_rel}"],
             capture_output=True).stdout
-        if not blob:
-            raise SystemExit(f"superseded file has no df0cf43 blob: {rel}")
         local_bytes = p.read_bytes()
-        if hashlib.sha256(blob).hexdigest() != \
+        if not blob or hashlib.sha256(blob).hexdigest() != \
                 hashlib.sha256(local_bytes).hexdigest():
-            raise SystemExit(f"superseded byte drift: {rel}")
+            # search the df0cf43 tree for a byte-identical blob
+            tree = subprocess.run(
+                ["git", "-C", str(repo), "ls-tree", "-r",
+                 rc.SUPERSEDED_HEAD, "--", f"{rc.AREA_REL}"],
+                capture_output=True, text=True).stdout
+            want = hashlib.sha256(local_bytes).hexdigest()
+            # resolve blob sha -> content hash via git cat-file
+            found = None
+            for line in tree.splitlines():
+                meta, path = line.split("\t", 1)
+                bsha = meta.split()[2]
+                content = subprocess.run(
+                    ["git", "-C", str(repo), "cat-file", "blob", bsha],
+                    capture_output=True).stdout
+                if hashlib.sha256(content).hexdigest() == want:
+                    found = path
+                    break
+            if found is None:
+                raise SystemExit(
+                    f"superseded byte drift or missing blob: {rel}")
+            orig_rel = found
         sup_checks[f"{rc.SUPERSEDED_REL}/{rel}"] = {
             "sha256": hashlib.sha256(local_bytes).hexdigest(),
             "bytes": len(local_bytes)}

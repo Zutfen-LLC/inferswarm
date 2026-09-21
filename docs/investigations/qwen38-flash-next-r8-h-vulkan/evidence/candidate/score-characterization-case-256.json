@@ -1,0 +1,323 @@
+{
+ "arms": {
+  "A": {
+   "canonical_tokens": [
+    328,
+    760,
+    40554,
+    1,
+    271,
+    12188,
+    279,
+    1727
+   ],
+   "f32_row_floats": 248320,
+   "focal_tokens": {
+    "12188": {
+     "logit": 17.1143093,
+     "rank": 1
+    },
+    "248068": {
+     "logit": 14.9266596,
+     "rank": 7
+    },
+    "271": {
+     "logit": 10.9688921,
+     "rank": 79
+    },
+    "328": {
+     "logit": 8.49968338,
+     "rank": 264
+    },
+    "34227": {
+     "logit": 1.28363955,
+     "rank": 21184
+    },
+    "561": {
+     "logit": 7.7361393,
+     "rank": 389
+    }
+   },
+   "generated_position": 5,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "cuda",
+    "binary": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+    "host": "inferswarm01",
+    "selector": "CUDA_VISIBLE_DEVICES=GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+   },
+   "observed_tokens": [
+    328,
+    760,
+    40554,
+    1,
+    271,
+    12188,
+    279,
+    1727
+   ],
+   "pairwise_rank_compare": {
+    "B": {
+     "12188": [
+      1,
+      2050
+     ],
+     "248068": [
+      7,
+      146
+     ],
+     "271": [
+      79,
+      1
+     ],
+     "328": [
+      264,
+      85
+     ],
+     "34227": [
+      21184,
+      2
+     ],
+     "561": [
+      389,
+      27
+     ]
+    },
+    "C": {
+     "12188": [
+      1,
+      5517
+     ],
+     "248068": [
+      7,
+      150
+     ],
+     "271": [
+      79,
+      2
+     ],
+     "328": [
+      264,
+      85
+     ],
+     "34227": [
+      21184,
+      1
+     ],
+     "561": [
+      389,
+      54
+     ]
+    }
+   },
+   "raw_sidecar_sha256": {
+    "f32_pos5": "074d3b76be93bc1375db3bf3f3c31f52fe1a1a00c08d5ce0b0986139851de535",
+    "jsonl": "b00fdf5d155b1d8a3ad0ac9ab9de2a2079bf24531cb6139233d7e74dee67b35f"
+   },
+   "repeat_binding": "single observation pass; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "same_focal_rank1_rank2": null,
+   "top_k": {
+    "1": {
+     "logit": 17.1143093,
+     "token": 12188
+    },
+    "2": {
+     "logit": 16.348814,
+     "token": 760
+    }
+   },
+   "winner_token": 12188,
+   "winner_vs_runner_up_margin": 0.7654953
+  },
+  "B": {
+   "canonical_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "f32_row_floats": 248320,
+   "focal_tokens": {
+    "12188": {
+     "logit": 3.45972109,
+     "rank": 2050
+    },
+    "248068": {
+     "logit": 7.12371254,
+     "rank": 146
+    },
+    "271": {
+     "logit": 16.6822834,
+     "rank": 1
+    },
+    "328": {
+     "logit": 8.00572968,
+     "rank": 85
+    },
+    "34227": {
+     "logit": 15.9960079,
+     "rank": 2
+    },
+    "561": {
+     "logit": 10.4886084,
+     "rank": 27
+    }
+   },
+   "generated_position": 5,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "vulkan",
+    "binary": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+    "host": "inferswarm01",
+    "selector": "GGML_VK_VISIBLE_DEVICES=0+VK_ICD_FILENAMES=nvidia_icd.json",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   },
+   "observed_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+   ],
+   "pairwise_rank_compare": {
+    "C": {
+     "12188": [
+      2050,
+      5517
+     ],
+     "248068": [
+      146,
+      150
+     ],
+     "271": [
+      1,
+      2
+     ],
+     "328": [
+      85,
+      85
+     ],
+     "34227": [
+      2,
+      1
+     ],
+     "561": [
+      27,
+      54
+     ]
+    }
+   },
+   "raw_sidecar_sha256": {
+    "f32_pos5": "51d615732f22d55a743ad5749c44afee58bc7237ced4918a217268f00c417e26",
+    "jsonl": "4d21645fc57c3f0e1424c32a2d6c4863a903486141caaae4b9f86210d20b87e7"
+   },
+   "repeat_binding": "single observation pass; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "same_focal_rank1_rank2": null,
+   "top_k": {
+    "1": {
+     "logit": 16.6822834,
+     "token": 271
+    },
+    "2": {
+     "logit": 15.9960079,
+     "token": 34227
+    }
+   },
+   "winner_token": 271,
+   "winner_vs_runner_up_margin": 0.6862755
+  },
+  "C": {
+   "canonical_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "f32_row_floats": 248320,
+   "focal_tokens": {
+    "12188": {
+     "logit": 2.31869483,
+     "rank": 5517
+    },
+    "248068": {
+     "logit": 7.24770498,
+     "rank": 150
+    },
+    "271": {
+     "logit": 16.2066383,
+     "rank": 2
+    },
+    "328": {
+     "logit": 8.3585186,
+     "rank": 85
+    },
+    "34227": {
+     "logit": 16.4760342,
+     "rank": 1
+    },
+    "561": {
+     "logit": 9.57465172,
+     "rank": 54
+    }
+   },
+   "generated_position": 5,
+   "n_nonfinite": 0,
+   "non_perturbation_identical": true,
+   "observation_build": {
+    "backend": "vulkan",
+    "binary": "/tmp/is234r/obs-vk-bin/llama-server (01-built, deployed)",
+    "host": "inferswarm02",
+    "selector": "GGML_VK_VISIBLE_DEVICES=0+VK_ICD_FILENAMES=radeon_icd.json",
+    "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+   },
+   "observed_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "raw_sidecar_sha256": {
+    "f32_pos5": "5c9b6a4d7e59d1b4b5d13302d90ca7b2dc7208a364ce0bf62b9d4570eae18b42",
+    "jsonl": "757f4aeec7f172d3648f602b28903f11d29c9788d4e1b2c5f2ff15543b5e0dc2"
+   },
+   "repeat_binding": "single observation pass; canonical arm evidence is the 3-repeat ladder receipt (ladder-{arm}-case-256.json); the observation pass is non-perturbing",
+   "same_focal_rank1_rank2": null,
+   "top_k": {
+    "1": {
+     "logit": 16.4760342,
+     "token": 34227
+    },
+    "2": {
+     "logit": 16.2066383,
+     "token": 271
+    }
+   },
+   "winner_token": 34227,
+   "winner_vs_runner_up_margin": 0.2693959
+  }
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "generated_position": 5,
+ "key_finding": "At case-256 generated position 5 the three arms produce THREE DIFFERENT WINNERS from materially different score structures: A/CUDA winner 12188 (271 at rank 79, 34227 at rank 21184); B/NVIDIA-Vulkan winner 271 (runner-up 34227, margin 0.686); C/AMD-Vulkan winner 34227 (runner-up 271, margin 0.269). Not a single shared near-tie across backends/devices.",
+ "methodology": "R8-E observation-only hook (Issue #199) at the same pin b29c606e; reads llama_get_logits_ith after sampling; no model state writes",
+ "schema": "inferswarm.r8h.score-characterization/2"
+}
