@@ -398,7 +398,13 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue234_reduce.py",
             "scripts/issue234_assemble.py",
             "scripts/issue234_manifest.py",
-            "scripts/issue234_characterize.py")
+            "scripts/issue234_characterize.py",
+            # Round-3 addition: the observation execution-identity
+            # collector (physical producer for the identity-bound pos-0
+            # recollection), pinned by the round-3 producer closure
+            # and the R8-H evidence manifest like every other #234
+            # producer.
+            "scripts/issue234_observe.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
