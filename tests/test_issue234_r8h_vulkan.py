@@ -92,6 +92,9 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
     (d / f"{arm}.server.log").write_bytes(b"synthetic server log\n")
     if pin and dir_name == "pos0" and not (d / "pos0-observation-pin.json"
                                            ).is_file():
+        w(d.parent / "observation-authority.json", {
+            "schema": "inferswarm.r8h.observation-authority/1",
+            "generated_position": position, "attempt": dir_name})
         pin_doc = {
             "schema": "inferswarm.r8h.pos0-observation-pin/2",
             "scope": {"generated_position": position,

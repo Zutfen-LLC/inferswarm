@@ -623,9 +623,30 @@ def _package_byte_identity(package: dict[str, Any] | None) -> dict[str, dict[str
             for name, meta in objects.items() if isinstance(meta, dict)}
 
 
+OBSERVATION_AUTHORITY_NAME = "observation-authority.json"
+
+
+def _observation_base(evidence: Path, position: int) -> Path | None:
+    """Resolve the immutable selected observation attempt; never overwrite prior rows."""
+    authority_path = evidence / "candidate" / "characterization" / OBSERVATION_AUTHORITY_NAME
+    try:
+        authority = json.loads(authority_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    rel = authority.get("attempt")
+    if (authority.get("schema") != "inferswarm.r8h.observation-authority/1"
+            or authority.get("generated_position") != position
+            or not isinstance(rel, str) or not rel.startswith(f"pos{position}")
+            or "/" in rel or rel in (".", "..")):
+        return None
+    return authority_path.parent / rel
+
+
 def _observation_pin(evidence: Path, position: int) -> dict[str, Any] | None:
-    p = evidence / "candidate" / "characterization" / f"pos{position}" / \
-        "pos0-observation-pin.json"
+    base = _observation_base(evidence, position)
+    if base is None:
+        return None
+    p = base / "pos0-observation-pin.json"
     try:
         return json.loads(p.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -641,8 +662,10 @@ def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
     authority (round-3: the pin previously carried selector strings
     that nothing mechanically enforced) BEFORE any characterization
     derived from observation bytes can be accepted."""
-    p = evidence / "candidate" / "characterization" / "pos0" / \
-        "pos0-observation-pin.json"
+    base = _observation_base(evidence, position)
+    if base is None:
+        return ["observation_authority:missing_or_invalid"]
+    p = base / "pos0-observation-pin.json"
     if not p.is_file():
         return ["observation_pin:absent"]
     try:
@@ -1142,8 +1165,11 @@ def reduce_observation_execution_truth(
     Returns {arm: {status: OK|FAIL|ABSENT, problems, ...}}; the score
     characterization terminal gate requires status == OK for all
     three arms, else R8H_EVIDENCE_BLOCKED."""
-    base = evidence / "candidate" / "characterization" / f"pos{position}"
+    base = _observation_base(evidence, position)
     out: dict[str, Any] = {}
+    if base is None:
+        return {arm: {"status": "ABSENT", "problems": [
+            "observation_authority:missing_or_invalid"]} for arm in ("A", "B", "C")}
     pin = _observation_pin(evidence, position)
     for arm in ("A", "B", "C"):
         p = base / f"observation-receipt-{arm}.json"
