@@ -64,6 +64,104 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 # -----------------------------------------------------------------------
+# Accepted case-256 prompt authority (reduction-only exact-prompt
+# binding): the retained A/B/C observation request payloads must carry
+# EXACTLY the accepted fixture case-256 prompt token sequence —
+# not merely a prompt of the accepted length. Length-only validation
+# admitted a forged retained-input mutation (swap the 256-token list,
+# recompute every dependent digest); the frozen prompt identity is now
+# derived independently from the accepted fixture authority.
+# -----------------------------------------------------------------------
+
+#: Accepted fixture authority (R8-B ladder, authority-pinned bytes).
+FIXTURE_LADDER_REL = ("docs/investigations/qwen38-flash-next-r8-b"
+                      "/evidence/reference/fixture-ladder.json")
+#: The case whose frozen prompt the retained request payloads must
+#: carry verbatim; its accepted rendered length is verified against
+#  rc.PROMPT_CASE256_LENGTH (never trusted from the fixture alone).
+PROMPT_AUTHORITY_CASE_ID = "case-256"
+
+_PROMPT_TOKEN_IDS_CACHE: dict[Path, list[int]] = {}
+
+
+def _resolve_fixture_authority() -> Path:
+    """Resolve the accepted fixture file from repository authority.
+
+    The reducer honors the AREA/REPO environment overrides (sandboxed
+    negative controls mutate a COPY of the fixture, never the accepted
+    bytes), then falls back to rc.ROOT. Returns the resolved path;
+    existence is checked by the caller (fail closed when absent)."""
+    import os
+    repo = None
+    for env in ("AREA", "REPO"):
+        root = os.environ.get(env)
+        if root:
+            repo = Path(root)
+            break
+    base = repo if repo is not None else rc.ROOT
+    return base / FIXTURE_LADDER_REL
+
+
+def accepted_case256_prompt_token_ids() -> list[int]:
+    """Derive the accepted case-256 prompt token sequence from the
+    accepted fixture authority (issue #234 final correction).
+
+    Fails closed (ReduceError) when: the fixture is absent; its SHA-256
+    differs from rc.R8D_FIXTURE_SHA256; the JSON is malformed; the
+    case-256 entry is missing or duplicated; or the prompt token field
+    is absent/malformed or not exactly the accepted rendered length.
+    Never falls back to a constant copied from observation evidence."""
+    fixture_path = _resolve_fixture_authority()
+    if not fixture_path.is_file():
+        raise ReduceError(
+            f"accepted fixture authority missing: {fixture_path}")
+    cached = _PROMPT_TOKEN_IDS_CACHE.get(fixture_path)
+    if cached is not None:
+        return cached
+    raw = fixture_path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != rc.R8D_FIXTURE_SHA256:
+        raise ReduceError(
+            f"fixture authority sha256 drift: {digest} != "
+            f"{rc.R8D_FIXTURE_SHA256}")
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise ReduceError(f"fixture authority unparsable: {e}") from e
+    cases = doc.get("cases") if isinstance(doc, dict) else None
+    if not isinstance(cases, list):
+        raise ReduceError("fixture authority lacks a cases list")
+    entries = [c for c in cases
+               if isinstance(c, dict)
+               and c.get("case_id") == PROMPT_AUTHORITY_CASE_ID]
+    if not entries:
+        raise ReduceError(
+            f"fixture authority missing {PROMPT_AUTHORITY_CASE_ID}")
+    if len(entries) != 1:
+        raise ReduceError(
+            f"fixture authority carries {len(entries)} "
+            f"{PROMPT_AUTHORITY_CASE_ID} entries")
+    entry = entries[0]
+    tokens = entry.get("prompt_token_ids")
+    if not isinstance(tokens, list) or not tokens:
+        raise ReduceError(
+            f"{PROMPT_AUTHORITY_CASE_ID} prompt token field absent or "
+            "malformed")
+    for tok in tokens:
+        if not isinstance(tok, int) or isinstance(tok, bool):
+            raise ReduceError(
+                f"{PROMPT_AUTHORITY_CASE_ID} prompt carries a "
+                "non-integer token")
+    if len(tokens) != rc.PROMPT_CASE256_LENGTH:
+        raise ReduceError(
+            f"{PROMPT_AUTHORITY_CASE_ID} prompt length {len(tokens)} != "
+            f"accepted rendered length {rc.PROMPT_CASE256_LENGTH}")
+    frozen: list[int] = tokens
+    _PROMPT_TOKEN_IDS_CACHE[fixture_path] = frozen
+    return frozen
+
+
+# -----------------------------------------------------------------------
 # Raw-observation extraction (never authored summaries)
 # -----------------------------------------------------------------------
 
@@ -937,6 +1035,27 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
                 problems.append(f"arm{arm}:request_payload_contract")
             if not isinstance(prompt, (str, list)) or len(prompt) != expected_prompt_len:
                 problems.append(f"arm{arm}:request_payload_prompt")
+            else:
+                # exact-prompt binding (final reduction-only correction):
+                # the retained payload must carry the accepted frozen
+                # case-256 token sequence VERBATIM. Digest consistency,
+                # the request contract, and prompt length alone admit a
+                # forged retained-input mutation (swap the 256-token
+                # list, recompute every dependent digest); only exact
+                # list equality against the fixture authority closes it.
+                # A fixture-authority failure (absent / sha drift /
+                # malformed / case missing or duplicated) fails closed
+                # as a receipt problem so R8H_EVIDENCE_BLOCKED stays
+                # reachable through the real terminal path.
+                try:
+                    accepted = accepted_case256_prompt_token_ids()
+                except ReduceError as e:
+                    problems.append(
+                        f"arm{arm}:fixture_prompt_authority:{str(e)[:160]}")
+                else:
+                    if prompt != accepted:
+                        problems.append(
+                            f"arm{arm}:request_payload_prompt_identity")
 
     # the /proc/PID/environ capture must carry the EXACT frozen
     # selector/ICD environment (mutation of the actual execution

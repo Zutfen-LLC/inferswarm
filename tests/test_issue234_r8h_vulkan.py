@@ -25,6 +25,11 @@ import issue234_reduce as red          # noqa: E402
 import issue234_assemble as asm        # noqa: E402
 import issue234_observe as obs         # noqa: E402
 
+#: Accepted frozen case-256 prompt, derived independently from the
+#: accepted fixture authority (final exact-prompt-binding correction);
+#: synthetic payloads must carry these EXACT tokens.
+FIXTURE_PROMPT: list[int] = red.accepted_case256_prompt_token_ids()
+
 
 def w(p: Path, doc) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -234,7 +239,7 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
          "realpath": meta["realpath"], "bytes": meta["bytes"],
          "sha256": meta["sha256"]}
         for name, meta in package["objects"].items() if name.startswith("libggml")]
-    prompt = [0] * 256
+    prompt = list(FIXTURE_PROMPT)
     request_body = {**rc.REQUEST_CONTRACT, "prompt": prompt}
     request_raw = rc.canonical(request_body)
     request_path = jsonl.parent / f"{arm}.request.json"
@@ -1242,6 +1247,168 @@ class TestObservationPinSelectors(unittest.TestCase):
                 .__setitem__("B", "0" * 64))
             problems = red._validate_observation_pin(ev, 0)
             self.assertTrue(any("icd_sha256" in p for p in problems))
+
+
+class TestExactPromptIdentityBinding(unittest.TestCase):
+    """Final reduction-only correction: the retained A/B/C request
+    payloads must carry the accepted frozen case-256 prompt token
+    sequence VERBATIM. Every forged same-length prompt below recomputes
+    EVERY dependent binding (payload digest, receipt payload fields,
+    artifacts entry, receipt self-digest) — a competent forgery — and
+    must still fail closed through the real terminal path."""
+
+    def _receipts_dir(self, ev: Path) -> Path:
+        return ev / "candidate" / "characterization" / "pos0"
+
+    def _forge_prompt(self, ev: Path, arm: str, forged: list[int]) -> None:
+        """Simulate the competent retained-input forgery: swap the
+        prompt in {arm}.request.json with a same-length foreign
+        sequence and recompute every dependent binding. Response,
+        jsonl, f32, and canonical ladder evidence are NOT touched."""
+        pos0 = self._receipts_dir(ev)
+        request_path = pos0 / f"{arm}.request.json"
+        request_path.write_bytes(
+            rc.canonical({**rc.REQUEST_CONTRACT, "prompt": forged}))
+        raw = request_path.read_bytes()
+        receipt_path = pos0 / f"observation-receipt-{arm}.json"
+        doc = json.loads(receipt_path.read_text())
+        doc["request"]["payload"]["bytes"] = len(raw)
+        doc["request"]["payload"]["sha256"] = rc.sha256_bytes(raw)
+        doc["artifacts"]["request_payload"] = rc.sha256_bytes(raw)
+        doc["digest"] = "PENDING"
+        doc["digest"] = rc.sha256_bytes(rc.canonical(doc))
+        receipt_path.write_text(
+            json.dumps(doc, indent=1, sort_keys=True) + "\n")
+
+    def _assert_forgery_blocked(self, ev: Path, arm: str):
+        doc = red.derive_terminal(ev, closure=CLOSURE)
+        self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+        ot = (doc["checks"]["score_characterization"]
+              ["observation_execution_truth"])
+        # the ONLY arm problem is the prompt-identity binding: no stale
+        # digest, no artifact mismatch — the forgery was internally
+        # consistent and the exact-prompt check alone caught it
+        self.assertEqual(
+            ot[arm]["problems"],
+            [f"arm{arm}:request_payload_prompt_identity"],
+            f"{arm}: {ot[arm]['problems']}")
+
+    def test_authority_prompt_is_derived_not_copied(self):
+        tokens = red.accepted_case256_prompt_token_ids()
+        self.assertEqual(len(tokens), rc.PROMPT_CASE256_LENGTH)
+        self.assertEqual(tokens, FIXTURE_PROMPT)
+        self.assertNotEqual(tokens, [tokens[0]] * len(tokens))
+
+    def test_forged_same_length_prompt_blocks(self):
+        # the required attack: one token swapped in B.request.json,
+        # length preserved, every dependent binding recomputed
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            forged = list(FIXTURE_PROMPT)
+            forged[200] = (forged[200] + 1) % 100000
+            self.assertNotEqual(forged, FIXTURE_PROMPT)
+            self.assertEqual(len(forged), 256)
+            self._forge_prompt(ev, "B", forged)
+            self._assert_forgery_blocked(ev, "B")
+
+    def test_forged_first_token_mutation_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            forged = list(FIXTURE_PROMPT)
+            forged[0] = (forged[0] + 1) % 100000
+            self._forge_prompt(ev, "A", forged)
+            self._assert_forgery_blocked(ev, "A")
+
+    def test_forged_middle_token_mutation_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            forged = list(FIXTURE_PROMPT)
+            forged[128] = (forged[128] + 1) % 100000
+            self._forge_prompt(ev, "C", forged)
+            self._assert_forgery_blocked(ev, "C")
+
+    def test_foreign_same_length_prompt_blocks(self):
+        # a completely foreign 256-token list (not a near-miss)
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            forged = [(7 * i + 11) % 151931 for i in range(256)]
+            self.assertNotEqual(forged, FIXTURE_PROMPT)
+            self._forge_prompt(ev, "B", forged)
+            self._assert_forgery_blocked(ev, "B")
+
+    def test_forged_payload_without_redigest_also_blocks(self):
+        # the lazy forger (stale digest) must equally fail — via the
+        # digest check AND the identity check together
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            forged = list(FIXTURE_PROMPT)
+            forged[42] = (forged[42] + 1) % 100000
+            pos0 = self._receipts_dir(ev)
+            (pos0 / "B.request.json").write_bytes(
+                rc.canonical({**rc.REQUEST_CONTRACT, "prompt": forged}))
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def _sandboxed_env(self, t: str) -> Path:
+        sandbox = Path(t) / "sandbox-repo"
+        return sandbox
+
+    def test_fixture_authority_sha_mismatch_blocks(self):
+        # sandbox a copy of the fixture with one prompt token mutated;
+        # under AREA override the authority SHA no longer verifies
+        import os
+        with tempfile.TemporaryDirectory() as t:
+            sandbox = self._sandboxed_env(t)
+            rel = Path(red.FIXTURE_LADDER_REL)
+            target = sandbox / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            fixture = json.loads(
+                (REPO / rel).read_text(encoding="utf-8"))
+            for case in fixture["cases"]:
+                if case["case_id"] == red.PROMPT_AUTHORITY_CASE_ID:
+                    case["prompt_token_ids"][0] += 1
+            target.write_text(json.dumps(fixture), encoding="utf-8")
+            with tempfile.TemporaryDirectory() as t2:
+                ev = make_evidence(Path(t2))
+                with mock.patch.dict(os.environ,
+                                     {"AREA": str(sandbox)}):
+                    red._PROMPT_TOKEN_IDS_CACHE.clear()
+                    doc = red.derive_terminal(ev, closure=CLOSURE)
+                self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+                ot = (doc["checks"]["score_characterization"]
+                      ["observation_execution_truth"])
+                self.assertIn("fixture authority sha256 drift",
+                              "".join(ot["A"]["problems"]))
+
+    def test_fixture_authority_absent_blocks(self):
+        import os
+        with tempfile.TemporaryDirectory() as t:
+            sandbox = self._sandboxed_env(t)
+            sandbox.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory() as t2:
+                ev = make_evidence(Path(t2))
+                with mock.patch.dict(os.environ,
+                                     {"AREA": str(sandbox)}):
+                    red._PROMPT_TOKEN_IDS_CACHE.clear()
+                    doc = red.derive_terminal(ev, closure=CLOSURE)
+                self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+                ot = (doc["checks"]["score_characterization"]
+                      ["observation_execution_truth"])
+                self.assertIn("fixture authority missing",
+                              "".join(ot["A"]["problems"]))
+
+    def test_real_retained_payloads_match_fixture(self):
+        # execution-truth confirmation: the REAL retained Round-4 A/B/C
+        # request payloads carry the accepted fixture prompt verbatim
+        base = (REPO / rc.AREA_REL / "evidence" / "candidate" /
+                "characterization")
+        authority = json.loads(
+            (base / "observation-authority.json").read_text())
+        attempt = authority["attempt"]
+        for arm in ("A", "B", "C"):
+            payload = json.loads(
+                (base / attempt / f"{arm}.request.json").read_text())
+            self.assertEqual(payload["prompt"], FIXTURE_PROMPT, arm)
 
 
 class TestReducerTerminals(unittest.TestCase):
