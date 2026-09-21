@@ -1,7 +1,7 @@
 {
  "campaign": "issue234-r8h-matched-backend-device-parity",
- "closure_digest": "88e33783fc84713c034d7d1ab22c018fa67eff075af54d765e0aab7173d4990d",
- "producer_head": "8ce69c1faf597779324ddb8103576f27c42591e6",
+ "closure_digest": "6f2bd4ed03fdefbc963171275886abb00252c42bff036f72063ff48bbdddf943",
+ "producer_head": "3c1bfc89b02c7b7c6a6c187ac4d2078f14cf08e6",
  "schema": "inferswarm.r8h.producer-closure/2",
  "sources": {
   "scripts/issue234_assemble.py": {
@@ -53,10 +53,10 @@
    "sha256": "90dfe7afd966eaa004424f01830073782cc0f14b81ed97d3e0f9a300ec3d060e"
   },
   "scripts/issue234_observe.py": {
-   "bytes": 28720,
+   "bytes": 31652,
    "class": "physical",
-   "git_blob": "38065a7bab101ab49aa90e7cfcbee580ff02263a",
-   "sha256": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1"
+   "git_blob": "1b8f79cec52f4c37311eac66bd594a667e669188",
+   "sha256": "38fad9b7e459458cb409e1aba45157239e87f7deed5a8056ba28e21955795a7b"
   },
   "scripts/issue234_placement.py": {
    "bytes": 10535,
@@ -65,16 +65,16 @@
    "sha256": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa"
   },
   "scripts/issue234_receipt.py": {
-   "bytes": 22879,
+   "bytes": 23050,
    "class": "reduction",
-   "git_blob": "6ab0b116113bdcfa0bd103aacfec8149c190cfb8",
-   "sha256": "cd7a032ce6d1631fe7ee88589ed9edb132a786d61a6c9fab9e355831eaa4b13f"
+   "git_blob": "390ce5a85c718ab42dc6ee997b6bfbe582a4de37",
+   "sha256": "68e62a6904b74046730dce4bbb2ffecf0e651face875857aeadbdd51811f0ab3"
   },
   "scripts/issue234_reduce.py": {
-   "bytes": 64369,
+   "bytes": 73419,
    "class": "reduction",
-   "git_blob": "908d06074d90a05d0456e9f2a85f45c72be3ba06",
-   "sha256": "80473deb9e1248deb188196b85e42dba7a822ff0c60edf17850612260a034511"
+   "git_blob": "705a3e0a80a688636e6a855765dcc7921e078e94",
+   "sha256": "0058fb25c27215b8291ff52b766873479f948559d00265b98744e6c7ca604ed2"
   },
   "scripts/issue234_runtime.py": {
    "bytes": 19784,
