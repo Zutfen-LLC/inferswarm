@@ -1,17 +1,17 @@
 {
-  "authored_at": "2026-09-21T16:27:12Z",
+  "authored_at": "2026-09-21T16:46:39Z",
   "campaign": "issue234-r8h-matched-backend-device-parity",
   "producer_closure": {
-    "producer_head": "49fdbc266a2d7abb8aa7a75d716dd75657915168",
-    "closure_digest": "7670c5768efa6f36a21ac826d4fa0062a76da6a1f06100a253466cba47d9657d"
+    "producer_head": "6aaf17117081a1a1842606002703bed153216f87",
+    "closure_digest": "1b4965cbe845cbd49fc67c1a8f6741ef1ab194f40f217af6113e42ef90afd5a0"
   },
   "collector": {
-    "commit": "49fdbc266a2d7abb8aa7a75d716dd75657915168",
+    "commit": "6aaf17117081a1a1842606002703bed153216f87",
     "dependencies": {
       "issue234_receipt.py": "68e62a6904b74046730dce4bbb2ffecf0e651face875857aeadbdd51811f0ab3"
     },
     "path": "scripts/issue234_observe.py",
-    "sha256": "54749be599152ca961d6424ce53b588ce6847f90aaf89e3e02b679ec6609e343"
+    "sha256": "5bc1e658b07ef0928f2ac4d836b4709941a13431fdc321a423c84e8fa03da831"
   },
   "non_perturbation_contract": "Each observation response token stream must equal its retained canonical ladder stream exactly; mismatches quarantine the observation and never cause a ladder replay.",
   "observation_producer": {
