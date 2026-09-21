@@ -1,80 +1,91 @@
 #!/usr/bin/env python3
-"""Issue #234 — R8-H raw-receipt protocol: campaign identity + envelope.
+"""Issue #234 — R8-H raw-receipt protocol, corrected campaign (schema /2).
 
-Qualify ONE independently addressed Radeon Pro V340L Vega10 die as a
-truthful local Vulkan execution resource for the exact accepted
-Qwen3.8-Flash-Next UD-IQ1_S subject under the pinned llama.cpp runtime
-(b29c606e), before authorizing any Vulkan RPC, mixed AMD/NVIDIA,
-multi-die, or ordinary InferSwarm serving experiment.
+CORRECTED CAMPAIGN (maintainer amendment 2026-09-20): matched
+backend/device parity, three arms on the exact same Qwen subject and
+matched minimal placement:
 
-A prerequisite/fail terminal is a valid result. No runtime upgrade, no
-representation change, no cross-die execution, no mixed-vendor
-execution, no Vulkan RPC, no planner policy, no ordinary serving.
+  Arm A — one frozen RTX 3060 12 GB / CUDA-only build / local;
+  Arm B — the EXACT SAME physical RTX 3060 / Vulkan-only build / local;
+  Arm C — one independently addressed V340L Vega10 die / the same
+          Vulkan-only binary bytes as Arm B / local.
 
-Every correctness-bearing R8-H observation is a PRIMARY RAW RECEIPT
-whose payload derives from retained command bytes (stdout/stderr/exit
-code/sysfs/journal/HTTP bodies), never from authored summaries.
+No RPC. No mixed simultaneous AMD/NVIDIA model execution. No cross-die
+V340L memory. No llama.cpp revision change. No alternate quantization.
+The historical R8-D output is an EXTERNAL ANCHOR ONLY and never the
+sole Vulkan PASS/FAIL oracle (control 31).
 
-Separate state dimensions (never conflated, in every artifact):
-  RUNTIME_AUTHORITY    — pinned llama.cpp source/build/binary identity;
-  SUBJECT_IDENTITY     — exact accepted UD-IQ1_S member bytes + fresh
-                         census of the selected V340L die;
-  PLACEMENT            — prospectively frozen nonzero single-die Vulkan
-                         offload geometry (output-blind selection rule);
-  EXECUTION_TRUTH      — proof of actual Vulkan die execution vs
-                         silent CPU fallback (residency + backend
-                         activity + process association);
-  CORRECTNESS          — exact token/stop equality against the frozen
-                         accepted R8-D true-greedy reference ladder;
-  PLATFORM_HEALTH      — amdgpu/AER/PCIe/device-loss deltas around
-                         model execution.
+The original single-arm campaign (df0cf43) and its terminal
+R8H_QWEN38_VULKAN_CORRECTNESS_FAIL are RETIRED; its physical bytes are
+preserved under evidence/superseded-20260920-original-comparator/.
+
+Producer-closure doctrine (corrected):
+  * closure pins an exact committed producer SHA (the "producer pin");
+  * source hashes are calculated from GIT BLOBS AT THAT PIN;
+  * the pin must be an ANCESTOR of the final PR HEAD;
+  * PHYSICAL producers must be byte-identical from pin to final HEAD
+    (docs/evidence/tests/reduction-only commits may follow freely, and
+    any amendment re-pins through a new closure);
+  * verification recomputes blob identity at HEAD, worktree
+    cleanliness, and deployed-hash equality, and fails closed on any
+    physical-producer modification after execution — including when a
+    reduction-only amendment tries to conceal it.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-CAMPAIGN_ID = "issue234-r8h-vulkan-single-die-qualification"
+CAMPAIGN_ID = "issue234-r8h-matched-backend-device-parity"
 AREA_REL = "docs/investigations/qwen38-flash-next-r8-h-vulkan"
 NS = "qwen38-flash-next-r8-h-vulkan"
+SUPERSEDED_REL = f"{AREA_REL}/evidence/superseded-20260920-original-comparator"
 
-RECEIPT_SCHEMA = "inferswarm.r8h.receipt/1"
+RECEIPT_SCHEMA = "inferswarm.r8h.receipt/2"
 CLOSURE_NAME = "PRODUCER-CLOSURE.json"
+FREEZE_REL = f"{AREA_REL}/evidence/freeze/campaign-freeze.json"
 
-# Every producer module whose bytes are part of the correctness-bearing
-# closure (the closure file itself is excluded — binding, not a bound
-# source).
-CLOSURE_SOURCES = (
-    "scripts/issue234_receipt.py",
-    "scripts/issue234_freeze.py",
-    "scripts/issue234_authority.py",
+# ---- producer classification (corrected closure doctrine) --------------
+# PHYSICAL_PRODUCERS: execution receipt/helpers materially affecting
+# physical evidence. Must be byte-identical from producer pin to final
+# PR HEAD and must hash-match the bytes deployed on execution hosts.
+PHYSICAL_PRODUCERS: tuple[str, ...] = (
     "scripts/issue234_host.py",
     "scripts/issue234_runtime.py",
     "scripts/issue234_placement.py",
     "scripts/issue234_ladder.py",
     "scripts/issue234_health.py",
+)
+# REDUCTION/AUTHORITY PRODUCERS: may be amended after the pin by
+# reduction-only commits, but never to conceal physical-producer drift;
+# any amendment re-pins through a new closure commit.
+REDUCTION_PRODUCERS: tuple[str, ...] = (
+    "scripts/issue234_receipt.py",
+    "scripts/issue234_freeze.py",
+    "scripts/issue234_authority.py",
     "scripts/issue234_reduce.py",
     "scripts/issue234_assemble.py",
     "scripts/issue234_manifest.py",
 )
+CLOSURE_SOURCES: tuple[str, ...] = PHYSICAL_PRODUCERS + REDUCTION_PRODUCERS
 
 # -----------------------------------------------------------------------
-# Frozen campaign authorities (issue #234 "Accepted predecessor
-# authority" — consumed, never re-derived and never reopened here).
+# Frozen campaign authorities (issue #234 binding — consumed, never
+# reopened here).
 # -----------------------------------------------------------------------
-
-#: Accepted R8 model/runtime authority (issue #234 binding).
 R8A_MERGE = "938af774878f562314e920007846f9f2bb611ec2"      # #189/PR #190
-R8D_MERGE = "f142a0d9"                                       # #195/PR #197 (short pin per issue; full sha asserted via evidence bytes)
+R8D_MERGE = "f142a0d9"                                       # #195/PR #197
+R8E_CAMPAIGN_NS = "qwen38-flash-next-r8-e"                   # #199 observation methodology
 R8F_MERGE = "affa26cc"                                       # #200/PR #206
 R8G_MERGE = "267b983de1249cad9c516e5c5c3cf86ed4a5a252"       # #207/PR #208
 START_MAIN = "8862adaaa78cfa6a091b10af461d7b6021e359f9"      # V2-G merge, issue-mandated start
+SUPERSEDED_HEAD = "df0cf4348e993628344919424a0515c6b485c3b7"  # original comparator campaign
 
-#: V2-series hardware authority merges.
 V2E_MERGE = "78a91de435ffc9e1678574a754bbdd49d67dbd7a"       # #228/PR #229
 V2F_MERGE = "c21840e4a1e5b5c81c366dd23b18ff582f9670b1"       # #230/PR #231
 V2G_MERGE = "8862adaaa78cfa6a091b10af461d7b6021e359f9"       # #232/PR #233
@@ -84,8 +95,6 @@ UNSLOTH_REVISION = "38bb39ee97821de2c9009abb7e93950eec396e66"
 REPRESENTATION = "UD-IQ1_S"
 TOTAL_MODEL_BYTES = 72_546_461_344
 
-#: Exact accepted UD-IQ1_S split-set member identity (R8-B
-#: split-verification bytes, re-verified fresh at R8-H freeze).
 MODEL_MEMBERS: tuple[dict[str, Any], ...] = (
     {
         "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
@@ -99,16 +108,16 @@ MODEL_MEMBERS: tuple[dict[str, Any], ...] = (
     },
     {
         "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
-        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
         "bytes": 22_544_696_352,
+        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
     },
 )
 
 LLAMA_CPP_PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"   # v0.4.1
 
 #: Canonical true-greedy request contract (accepted R8-D; controls
-#: 19/20/21 — legacy samplers=["greedy"] and top_k != 1 can never be
-#: labeled true greedy).
+#: 19/20). Legacy samplers=["greedy"] and top_k != 1 can never be
+#: labeled true greedy.
 REQUEST_CONTRACT: dict[str, Any] = {
     "samplers": ["top_k"],
     "top_k": 1,
@@ -120,53 +129,47 @@ REQUEST_CONTRACT: dict[str, Any] = {
     "n_predict": 8,
 }
 
-#: Accepted R8-D fixture ladder identity (frozen reference authority —
-#: controls 17/18: never regenerated after candidate output; exact
-#: retained prompt/token identities only).
 R8D_FIXTURE_SHA256 = "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db"
 R8D_FIXTURE_REL = "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
 R8D_FROZEN_REFERENCE_REL = "docs/investigations/qwen38-flash-next-r8-d/evidence/reference/frozen-reference.json"
 
-#: Bounded candidate ladder, prospectively frozen from the accepted
-#: fixture set (issue Phase 3): case-256 -> case-1024 -> case-3072 ->
-#: case-4096, escalating only on exact-token/exact-stop PASS + clean
-#: platform health.
+#: Matched ladder (prospective freeze): case-256 first; a rung may be
+#: executed only after every arm completed the previous rung and the
+#: reducer adjudicated equality (control 35).
 LADDER_CASES: tuple[str, ...] = ("case-256", "case-1024", "case-3072", "case-4096")
 REPEATS_PER_CASE = 3
+REQUIRED_REPEAT_IDS: tuple[int, ...] = (1, 2, 3)
 
-#: Prospectively frozen single-die placement selection rule
-#: (output-blind; issue Phase 2 "smallest nonzero --n-gpu-layers value
-#: that produces measured >0 model-buffer residency on the selected
-#: die", established by load-only preflight with NO correctness output,
-#: every attempted geometry retained).
-PLACEMENT_RULE = "smallest-ngl-nonzero-residency"
-NGL_CANDIDATE_LADDER: tuple[int, ...] = (1, 2, 4, 8, 16, 24, 32, 40, 48, 49)
+#: Matched minimal placement geometry, frozen prospectively for ALL
+#: THREE arms: --n-gpu-layers 1 (smallest nonzero offload; legality
+#: re-proven per arm by issue234_placement.py load-only preflight
+#: before any tokens are emitted).
+MATCHED_NGL = 1
 CONTEXT_SETTINGS: dict[str, Any] = {
     "ctx-size": 8192,
-    # CLI flag at pin b29c606e is --batch-size (common/arg.cpp:1666,
-    # {"-b", "--batch-size"}); plain --batch is rejected by the server.
-    "batch-size": 512,
+    "batch-size": 512,   # CLI flag at pin b29c606e is --batch-size
 }
 
-#: V340L single-die capacity contract: one die == one 8-GiB Memory
-#: Resource (control 10: aggregate 16-GiB capacity may never be treated
-#: as one resource). Prospectively frozen safety headroom: model
-#: buffers on the die must leave >= 512 MiB below the die's reported
-#: heap budget for runtime/KV/workspace allocations.
-DIE_HEAP_BYTES = 8 * 1024**3
+#: Excluded-device noise bounds. Vulkan instance creation initializes
+#: drivers on sibling devices; model-tensor residency at IQ1_S is
+#: MiB-scale at minimum. Mechanical rules:
+#:   * Arm C excluded V340L die: < 1 MiB vram delta;
+#:   * Arm A/B sibling 3060: < 1 MiB memory-used delta AND no compute
+#:     process bound to it (control 36: unmatched residency geometry
+#:     may not be presented as a matched comparison).
+EXCLUDED_DEVICE_MAX_BYTES = 1024 * 1024
 
-#: Excluded-die noise bound for placement selection. Vulkan instance
-#: creation initializes the amdgpu driver on BOTH dies (observed
-#: 12288-byte sysfs delta even when the server exits before loading
-#: any model bytes), so byte-exact zero is not achievable. Model tensor
-#: residency at IQ1_S is MiB-scale at minimum; KiB-scale deltas are
-#: enumeration noise. Mechanical rule: excluded die is "unused" iff its
-#: vram delta stays below 1 MiB (no model-scale residency possible).
-EXCLUDED_DIE_MAX_BYTES = 1024 * 1024
-SAFETY_HEADROOM_BYTES = 512 * 1024**2
+ARMS: dict[str, dict[str, str]] = {
+    "A": {"backend": "cuda", "host": "inferswarm01",
+          "description": "frozen RTX 3060 / CUDA-only build"},
+    "B": {"backend": "vulkan", "host": "inferswarm01",
+          "description": "the SAME physical RTX 3060 / Vulkan-only build"},
+    "C": {"backend": "vulkan", "host": "inferswarm02",
+          "description": "one V340L Vega10 die / same Vulkan binary bytes"},
+}
 
 # -----------------------------------------------------------------------
-# Receipt primitives (same envelope discipline as accepted #230/#232).
+# Receipt primitives.
 # -----------------------------------------------------------------------
 
 def canonical(value: Any) -> bytes:
@@ -186,7 +189,7 @@ def emit_receipt(out_dir: Path, receipt: dict[str, Any]) -> Path:
     """Write one raw receipt with its self-digest envelope."""
     if receipt.get("schema") != RECEIPT_SCHEMA:
         raise ValueError(f"receipt schema mismatch: {receipt.get('schema')!r}")
-    if not receipt.get("campaign") == CAMPAIGN_ID:
+    if receipt.get("campaign") != CAMPAIGN_ID:
         raise ValueError(f"receipt campaign mismatch: {receipt.get('campaign')!r}")
     name = receipt.get("name")
     if not isinstance(name, str) or not name or "/" in name:
@@ -213,24 +216,141 @@ def load_receipt(path: Path) -> dict[str, Any]:
     return doc
 
 
-def closure_document(repo: Path | None = None) -> dict[str, Any]:
-    """Producer closure: exact bytes being executed for every source."""
+# -----------------------------------------------------------------------
+# Campaign freeze record (identity authority for the matched arms;
+# written from the fresh census BEFORE canonical output and committed
+# with the producer closure).
+# -----------------------------------------------------------------------
+
+class FreezeError(RuntimeError):
+    pass
+
+
+def load_freeze(repo: Path | None = None) -> dict[str, Any]:
     repo = (repo or ROOT).resolve()
-    sources = {}
+    path = repo / FREEZE_REL
+    if not path.is_file():
+        raise FreezeError(f"campaign freeze record missing: {path}")
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("campaign") != CAMPAIGN_ID:
+        raise FreezeError("freeze campaign mismatch")
+    if doc.get("schema") != "inferswarm.r8h.freeze/2":
+        raise FreezeError(f"freeze schema mismatch: {doc.get('schema')!r}")
+    return doc
+
+
+def verify_freeze_binding(doc: dict[str, Any]) -> None:
+    """Structural checks that do not depend on host state."""
+    if doc.get("llama_cpp_pin") != LLAMA_CPP_PIN:
+        raise FreezeError("freeze runtime pin drift")
+    if doc.get("request_contract") != REQUEST_CONTRACT:
+        raise FreezeError("freeze request contract drift")
+    if doc.get("fixture_sha256") != R8D_FIXTURE_SHA256:
+        raise FreezeError("freeze fixture identity drift")
+    if doc.get("ngl") != MATCHED_NGL:
+        raise FreezeError("freeze ngl drift")
+    if doc.get("context") != CONTEXT_SETTINGS:
+        raise FreezeError("freeze context/batch drift")
+    members = doc.get("model_members", [])
+    if len(members) != len(MODEL_MEMBERS):
+        raise FreezeError("freeze model member set drift")
+    for want, got in zip(MODEL_MEMBERS, members):
+        if (got.get("member") != want["member"]
+                or got.get("sha256") != want["sha256"]
+                or got.get("bytes") != want["bytes"]):
+            raise FreezeError(f"freeze model member drift: {want['member']}")
+    g3060 = doc.get("rtx3060", {})
+    for key in ("host", "uuid", "bdf", "cuda_identity", "vulkan_identity"):
+        if not g3060.get(key):
+            raise FreezeError(f"freeze rtx3060 missing {key}")
+    a, b = doc.get("arms", {}).get("A", {}), doc.get("arms", {}).get("B", {})
+    if not a or not b:
+        raise FreezeError("freeze missing arm A/B definitions")
+    if a.get("gpu", {}) != b.get("gpu", {}):
+        raise FreezeError("freeze arms A/B do not pin the identical GPU")
+    for arm in ("A", "B", "C"):
+        d = doc.get("arms", {}).get(arm)
+        if not d or d.get("ngl") != MATCHED_NGL \
+                or d.get("context") != CONTEXT_SETTINGS \
+                or d.get("request") != REQUEST_CONTRACT \
+                or d.get("fixture_sha256") != R8D_FIXTURE_SHA256:
+            raise FreezeError(f"freeze arm {arm} geometry mismatch")
+        if d.get("model_sha256") != [m["sha256"] for m in MODEL_MEMBERS]:
+            raise FreezeError(f"freeze arm {arm} model bytes mismatch")
+    c = doc["arms"]["C"]
+    if not c.get("gpu", {}).get("bdf") or not c.get("gpu", {}).get("deviceUUID"):
+        raise FreezeError("freeze arm C die identity incomplete")
+    if not c.get("excluded_die", {}).get("bdf"):
+        raise FreezeError("freeze arm C excluded-die identity incomplete")
+
+
+# -----------------------------------------------------------------------
+# Producer closure (corrected doctrine).
+# -----------------------------------------------------------------------
+
+def _git(repo: Path, *args: str) -> str:
+    proc = subprocess.run(["git", "-C", str(repo), *args],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args)} failed ({proc.returncode}): "
+            f"{proc.stderr[-500:]}")
+    return proc.stdout
+
+
+def blob_sha(repo: Path, revision: str, rel: str) -> str:
+    """Blob hash of `rel` at `revision` (git hash-object semantics)."""
+    out = _git(repo, "rev-parse", f"{revision}:{rel}")
+    return out.strip()
+
+
+def blob_bytes(repo: Path, revision: str, rel: str) -> bytes:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "cat-file", "blob", f"{revision}:{rel}"],
+        capture_output=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"cat-file failed for {revision}:{rel}")
+    return proc.stdout
+
+
+def is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "merge-base", "--is-ancestor",
+         ancestor, descendant],
+        capture_output=True, text=True)
+    return proc.returncode == 0
+
+
+def closure_document(repo: Path | None = None,
+                     producer_head: str | None = None) -> dict[str, Any]:
+    """Closure over GIT BLOBS at the producer pin.
+
+    Source hashes are calculated from the blobs AT THE PIN (never from
+    mutable worktree bytes). If `producer_head` is omitted, HEAD is
+    pinned — used when creating the closure at the producer commit.
+    """
+    repo = (repo or ROOT).resolve()
+    head = producer_head or _git(repo, "rev-parse", "HEAD").strip()
+    sources: dict[str, dict[str, Any]] = {}
     for rel in CLOSURE_SOURCES:
-        path = repo / rel
-        if not path.is_file():
-            raise FileNotFoundError(f"closure source missing: {rel}")
+        try:
+            blob = blob_sha(repo, head, rel)
+            raw = blob_bytes(repo, head, rel)
+        except RuntimeError:
+            raise FileNotFoundError(f"closure source missing at {head}: {rel}")
         sources[rel] = {
-            "sha256": digest_file(path),
-            "bytes": path.stat().st_size,
+            "git_blob": blob,
+            "sha256": sha256_bytes(raw),
+            "bytes": len(raw),
+            "class": ("physical" if rel in PHYSICAL_PRODUCERS
+                      else "reduction"),
         }
-    import subprocess
-    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
-                          capture_output=True, text=True, check=True
-                          ).stdout.strip()
+    n_phys = sum(1 for v in sources.values() if v["class"] == "physical")
+    n_red = sum(1 for v in sources.values() if v["class"] == "reduction")
+    if n_phys != len(PHYSICAL_PRODUCERS) or n_red != len(REDUCTION_PRODUCERS):
+        raise ClosureError("closure classification count mismatch")
     doc = {
-        "schema": "inferswarm.r8h.producer-closure/1",
+        "schema": "inferswarm.r8h.producer-closure/2",
         "campaign": CAMPAIGN_ID,
         "producer_head": head,
         "sources": sources,
@@ -240,25 +360,56 @@ def closure_document(repo: Path | None = None) -> dict[str, Any]:
     return doc
 
 
-def verify_closure(repo: Path | None = None,
-                   expected_head: str | None = None) -> dict[str, Any]:
-    """Fail closed unless every closure source byte-matches the worktree."""
+class ClosureError(RuntimeError):
+    pass
+
+
+def verify_closure(repo: Path | None = None) -> dict[str, Any]:
+    """Fail closed unless the corrected closure contract holds at HEAD.
+
+    1. the committed closure pins an exact producer SHA;
+    2. the pin is an ANCESTOR of current HEAD;
+    3. every closure source is BYTE-IDENTICAL from pin to HEAD (blob
+       equality) — physical AND reduction sources alike (a drifted
+       reduction producer must re-pin through a new closure, never
+       silently continue);
+    4. worktree bytes of every closure source match the pin blob (no
+       dirty or substituted producer);
+    5. deployed physical-producer hashes (evidence tree) match the
+       pin's blobs — checked by the assembler against runtime receipts.
+    """
     repo = (repo or ROOT).resolve()
     path = repo / AREA_REL / CLOSURE_NAME
     if not path.is_file():
-        raise FileNotFoundError(f"closure missing: {path}")
+        raise ClosureError(f"closure missing: {path}")
     committed = json.loads(path.read_text(encoding="utf-8"))
-    live = closure_document(repo)
-    if committed.get("closure_digest") != live["closure_digest"]:
-        # Distinguish producer drift from a damaged closure file.
-        drift = [rel for rel in CLOSURE_SOURCES
-                 if committed["sources"][rel]["sha256"] !=
-                 live["sources"][rel]["sha256"]]
-        raise RuntimeError(
-            f"producer closure mismatch (drifted sources: {drift})")
-    if expected_head is not None and committed["producer_head"] != expected_head:
-        raise RuntimeError(
-            f"closure head {committed['producer_head']} != expected {expected_head}")
+    if committed.get("schema") != "inferswarm.r8h.producer-closure/2":
+        raise ClosureError(
+            f"closure schema {committed.get('schema')!r} is not the "
+            "corrected /2 doctrine")
+    pin = committed.get("producer_head")
+    if not pin:
+        raise ClosureError("closure pins no producer head")
+    head = _git(repo, "rev-parse", "HEAD").strip()
+    if not is_ancestor(repo, pin, head):
+        raise ClosureError(
+            f"producer pin {pin} is NOT an ancestor of HEAD {head}")
+    problems = []
+    for rel, meta in committed.get("sources", {}).items():
+        pin_blob = meta.get("git_blob")
+        head_blob = blob_sha(repo, head, rel)
+        if pin_blob is None or head_blob != pin_blob:
+            problems.append(f"blob drift pin->HEAD: {rel}")
+            continue
+        wt = repo / rel
+        if not wt.is_file():
+            problems.append(f"missing from worktree: {rel}")
+            continue
+        if digest_file(wt) != meta.get("sha256"):
+            problems.append(f"worktree bytes != pin blob: {rel}")
+    if problems:
+        raise ClosureError(
+            "producer closure violated: " + "; ".join(problems))
     return committed
 
 

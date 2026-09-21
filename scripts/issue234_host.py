@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Issue #234 — R8-H fresh host/device census collector (runs on
-inferswarm02 as hermes with sudo -n for read-only privileged reads).
+"""Issue #234 — R8-H fresh host/device census collector (schema /2).
 
-Derives the CURRENT-boot identity of both V340L dies from raw bytes
-only: lspci, sysfs, vulkaninfo. Binds each Vulkan physical device to a
-PCI BDF through the RADV deviceUUID encoding (V2-E #228 established the
-UUID->BDF join; both sides use the 16-char domain-prefixed BDF form).
+Runs on inferswarm01 (RTX 3060 pair) and inferswarm02 (V340L pair) as
+hermes with sudo -n for read-only privileged reads. Derives CURRENT-boot
+identity from raw bytes only: lspci, sysfs, vulkaninfo, nvidia-smi.
 
-The census never assumes historical BDFs: after V2-G's physical
-intervention the current chain is re-derived from live lspci bytes and
-bound by bus chaining from the CPU root port.
+Bindings (never ordinal assumptions):
+  * AMD/RADV Vulkan deviceUUID encodes the PCI BDF (V2-E #228 join);
+  * NVIDIA Vulkan deviceUUID == nvidia-smi GPU UUID (driver contract);
+    both sides normalized to 16-char domain-prefixed BDFs;
+  * CUDA_VISIBLE_DEVICES maps by nvidia-smi index/UUID, never by
+    enumeration order alone.
 """
 from __future__ import annotations
 
@@ -28,9 +29,14 @@ class CensusError(RuntimeError):
     """A census read failed; no identity may be assumed."""
 
 
-def _run(cmd: list[str], sudo: bool = False) -> str:
+def _run(cmd: list[str], sudo: bool = False, env: dict | None = None) -> str:
+    import os
+    full_env = dict(os.environ)
+    if env:
+        full_env.update(env)
     full = (["sudo", "-n"] if sudo else []) + cmd
-    proc = subprocess.run(full, capture_output=True, text=True)
+    proc = subprocess.run(full, capture_output=True, text=True,
+                          env=full_env)
     if proc.returncode != 0:
         raise CensusError(
             f"command failed ({proc.returncode}): {' '.join(full)}\n"
@@ -39,9 +45,7 @@ def _run(cmd: list[str], sudo: bool = False) -> str:
 
 
 def bdf16(short: str) -> str:
-    """Normalize any BDF spelling to the 16-char domain-prefixed form
-    (00000000:06:00.0). nvidia/amdgpu tooling and the RADV UUID both
-    use this form; a 12-char fixture silently fails equality."""
+    """Normalize any BDF spelling to 16-char domain-prefixed form."""
     s = short.strip().lower()
     parts = s.split(":")
     if len(parts) == 3:
@@ -55,16 +59,20 @@ def bdf16(short: str) -> str:
     raise CensusError(f"unparseable BDF: {short!r}")
 
 
+def sysfs_name(bdf16_form: str) -> str:
+    """16-char 00000000:06:00.0 -> sysfs 0000:06:00.0 (4-hex domain)."""
+    domain, bus, devfn = bdf16_form.split(":")
+    return f"{domain[-4:]}:{bus}:{devfn}"
+
+
 def uuid_bdf(device_uuid: str) -> str:
-    """RADV encodes the BDF in the first 8 bytes of deviceUUID:
-    00000000-0600-0000-... => domain 00000000, bus 06, dev 00, fn 0."""
+    """RADV deviceUUID -> BDF (first 8 bytes encode domain/bus/dev/fn)."""
     m = re.fullmatch(
         r"([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})",
         device_uuid.strip().lower())
     if not m:
         raise CensusError(f"unparseable deviceUUID: {device_uuid!r}")
     blob = (m.group(1) + m.group(2) + m.group(3) + m.group(4) + m.group(5))
-    # RADV layout: bytes = domain(4) bus(1) dev(1) fn(1) padded
     domain = blob[0:8]
     bus = blob[8:10]
     dev = blob[10:12]
@@ -72,127 +80,55 @@ def uuid_bdf(device_uuid: str) -> str:
     return f"{domain}:{bus}:{dev}.{int(fn, 16) & 7}"
 
 
-def collect_lspci() -> dict[str, Any]:
-    raw = _run(["lspci", "-D", "-nn", "-vv", "-d", "1002::0300"])
-    display_raw = _run(["lspci", "-D", "-nn"])
-    bridges = {}
-    dies = {}
-    for line in display_raw.splitlines():
-        mm = re.match(r"^([0-9a-f:.]+) (.*)$", line)
-        if not mm:
+# -----------------------------------------------------------------------
+# NVIDIA
+# -----------------------------------------------------------------------
+
+def collect_nvidia() -> dict[str, Any]:
+    """nvidia-smi CSV census (identity, topology, foreign processes)."""
+    q = ("index,uuid,name,pci.bus_id,memory.total,memory.used,"
+         "driver_version,compute_mode")
+    out = _run(["nvidia-smi", f"--query-gpu={q}", "--format=csv,noheader"])
+    gpus = []
+    for line in out.splitlines():
+        f = [x.strip() for x in line.split(",")]
+        if len(f) < 8:
             continue
-        bdf, desc = mm.group(1), mm.group(2)
-        if "Vega 10" in desc:
-            dies[bdf16(bdf)] = desc
-        if "PCI bridge" in desc and "AMD" in desc:
-            bridges[bdf16(bdf)] = desc
-    # Root-port ancestry from verbose tree output
-    tree = _run(["lspci", "-D", "-t"])
-    return {
-        "dies": dies,
-        "amd_bridges": bridges,
-        "tree": tree,
-        "display_controllers_verbose": raw,
-    }
+        gpus.append({
+            "smi_index": int(f[0]),
+            "uuid": f[1],
+            "name": f[2],
+            "bdf": bdf16(f[3]),
+            "memory_total_mib": int(f[4].split()[0]),
+            "memory_used_mib": int(f[5].split()[0]),
+            "driver_version": f[6],
+            "compute_mode": f[7],
+        })
+    topo = _run(["nvidia-smi", "topo", "-m"])
+    apps = _run(["nvidia-smi", "--query-compute-apps=gpu_uuid,pid,"
+                 "process_name,used_memory",
+                 "--format=csv,noheader"])
+    return {"gpus": gpus, "topo_matrix": topo, "compute_apps_raw": apps,
+            "kernel_module": _nvidia_kernel_module()}
 
 
-def collect_sysfs(die_bdf: str) -> dict[str, Any]:
-    # sysfs names are the 12-char 4-hex-domain form (0000:06:00.0);
-    # canonicalize to the 16-char form (00000000:06:00.0) for receipts
-    # and try both spellings for the lookup.
-    # BDF = domain:bus:dev.fn (2 colons, e.g. 00000000:06:00.0) in the
-    # 16-char form, or bus:dev.fn (1 colon, e.g. 06:00.0) in the short
-    # form; sysfs uses the 4-hex-domain 13-char form (0000:06:00.0).
-    # Canonical 16-char form: 00000000:06:00.0 (8-hex domain). sysfs
-    # names use a 4-hex domain: 0000:06:00.0. Map between them.
-    candidates = [die_bdf]
-    parts = die_bdf.split(":")
-    if len(parts) == 3:
-        domain, bus, devfn = parts
-        candidates.append(f"{domain[-4:]}:{bus}:{devfn}")   # 4-hex domain
-        candidates.append(f"{bus}:{devfn}")                  # no domain
-    elif len(parts) == 2:
-        candidates.append(f"0000:{die_bdf}")                 # 4-hex domain
-        candidates.append(f"00000000:{die_bdf}")             # 8-hex domain
-    p = None
-    for c in candidates:
-        q = Path(f"/sys/bus/pci/devices/{c}")
-        if q.is_dir():
-            p = q
-            break
-    if p is None:
-        raise CensusError(f"sysfs device missing: {die_bdf}")
-    out: dict[str, Any] = {"bdf": die_bdf}
-    for attr in ("vendor", "device", "subsystem_vendor", "subsystem_device",
-                 "revision", "class", "modalias", "numa_node", "dma_mask_bits"):
-        f = p / attr
-        if f.is_file():
-            out[attr] = f.read_text().strip()
-    # driver identity
-    drv = p / "driver"
-    out["driver"] = drv.resolve().name if drv.exists() else None
-    # DRM identity: card*/device minor + GPU device UUID if exposed
-    drm: dict[str, Any] = {}
-    for card in sorted(p.glob("drm/card*")):
-        info: dict[str, Any] = {"card": card.name}
-        dev = card / "device"
-        if dev.exists():
-            info["device"] = dev.resolve().name if dev.is_symlink() else dev.read_text().strip()
-        gpu_id = card / "gpu_id"
-        if gpu_id.is_file():
-            info["gpu_id"] = gpu_id.read_text().strip()
-        unique = card / "device" / "unique"
-        if unique.is_file():
-            info["unique"] = unique.read_text().strip()
-        # amdgpu memory info
-        mem = card / "device" / "mem_info_vram_total"
-        if mem.is_file():
-            info["mem_info_vram_total"] = int(mem.read_text().strip())
-        drm[card.name] = info
-    out["drm"] = drm
-    # resource sizes (BARs)
-    out["resource_sizes"] = {}
-    for i in range(0, 16):
-        f = p / f"resource{int(i*1):d}" if False else p / f"resource"
-        break
-    res = (p / "resource").read_text().splitlines()
-    for idx, line in enumerate(res):
-        parts = line.split()
-        if len(parts) == 3:
-            start, end, flags = parts
-            try:
-                size = int(end, 16) - int(start, 16) + 1
-            except ValueError:
-                continue
-            if size > 0:
-                out["resource_sizes"][f"resource{idx}"] = size
-    # current link state
-    try:
-        out["current_link_speed"] = (p / "current_link_speed").read_text().strip()
-        out["current_link_width"] = (p / "current_link_width").read_text().strip()
-        out["max_link_speed"] = (p / "max_link_speed").read_text().strip()
-        out["max_link_width"] = (p / "max_link_width").read_text().strip()
-    except FileNotFoundError:
-        pass
-    # AER counters
-    aer = p / "aer_devcorrectable"
-    if aer.is_file():
-        out["aer_correctable_raw"] = aer.read_text().strip()
-    aer_unc = p / "aer_devuncorrectable"
-    if aer_unc.is_file():
-        out["aer_uncorrectable_raw"] = aer_unc.read_text().strip()
-    return out
+def _nvidia_kernel_module() -> str | None:
+    p = Path("/proc/driver/nvidia/version")
+    if not p.is_file():
+        return None
+    return p.read_text().splitlines()[0]
 
 
-def collect_vulkan() -> dict[str, Any]:
-    """Full vulkaninfo; parse per-GPU identity from GPU<N>: blocks."""
-    raw = _run(["vulkaninfo"])
+# -----------------------------------------------------------------------
+# Vulkan
+# -----------------------------------------------------------------------
+
+def collect_vulkan(icd_filter: str | None = None) -> dict[str, Any]:
+    """vulkaninfo census restricted to one ICD when asked."""
+    env = {"VK_ICD_FILENAMES": icd_filter} if icd_filter else None
+    raw = _run(["vulkaninfo"], env=env)
     gpus: dict[str, dict[str, Any]] = {}
-    # Per-device sections start at "GPU<N>:" and each field is taken
-    # only from within its own block (split before the next GPU header
-    # or EOF).
     blocks = re.split(r"^GPU(\d+):\s*$", raw, flags=re.M)
-    # blocks: [pre, id1, body1, id2, body2, ...]
     it = iter(blocks[1:])
     for gpu_id, body in zip(it, it):
         info: dict[str, Any] = {"gpu_index": int(gpu_id)}
@@ -209,7 +145,6 @@ def collect_vulkan() -> dict[str, Any]:
         info["vendorID"] = g(r"vendorID\s+=\s+(0x[0-9a-f]+)")
         info["deviceID"] = g(r"deviceID\s+=\s+(0x[0-9a-f]+)")
         info["deviceType"] = g(r"deviceType\s+=\s+(\w+)")
-        # heap census: VkPhysicalDeviceMemoryProperties heaps
         heaps = []
         for hm in re.finditer(
             r"heap index\s+=\s+(\d+).*?device local.*?size\s+=\s+(\d+)",
@@ -219,7 +154,53 @@ def collect_vulkan() -> dict[str, Any]:
                           "size": int(hm.group(2))})
         info["device_local_heaps"] = heaps
         gpus[f"gpu{gpu_id}"] = info
-    return {"raw_length": len(raw), "gpus": gpus, "raw": raw}
+    return {"raw_length": len(raw), "gpus": gpus, "raw": raw,
+            "icd_filter": icd_filter}
+
+
+# -----------------------------------------------------------------------
+# sysfs per-device detail
+# -----------------------------------------------------------------------
+
+def collect_sysfs(bdf: str) -> dict[str, Any]:
+    p = None
+    for cand in (bdf, sysfs_name(bdf)):
+        q = Path(f"/sys/bus/pci/devices/{cand}")
+        if q.is_dir():
+            p = q
+            break
+    if p is None:
+        raise CensusError(f"sysfs device missing: {bdf}")
+    out: dict[str, Any] = {"bdf": bdf}
+    for attr in ("vendor", "device", "subsystem_vendor", "subsystem_device",
+                 "revision", "class", "numa_node", "dma_mask_bits"):
+        f = p / attr
+        if f.is_file():
+            out[attr] = f.read_text().strip()
+    drv = p / "driver"
+    out["driver"] = drv.resolve().name if drv.exists() else None
+    drm: dict[str, Any] = {}
+    for card in sorted(p.glob("drm/card*")):
+        info: dict[str, Any] = {"card": card.name}
+        for key in ("mem_info_vram_total", "mem_info_vram_used",
+                    "mem_info_gtt_used", "mem_info_vis_vram_used"):
+            f = card / "device" / key
+            if f.is_file():
+                info[key] = int(f.read_text().strip())
+        drm[card.name] = info
+    out["drm"] = drm
+    out["current_link_speed"] = (p / "current_link_speed").read_text().strip() \
+        if (p / "current_link_speed").is_file() else None
+    out["current_link_width"] = (p / "current_link_width").read_text().strip() \
+        if (p / "current_link_width").is_file() else None
+    out["max_link_width"] = (p / "max_link_width").read_text().strip() \
+        if (p / "max_link_width").is_file() else None
+    for aer, key in (("aer_devcorrectable", "aer_correctable_raw"),
+                     ("aer_devuncorrectable", "aer_uncorrectable_raw")):
+        f = p / aer
+        if f.is_file():
+            out[key] = f.read_text().strip()
+    return out
 
 
 def collect_host() -> dict[str, Any]:
@@ -229,84 +210,109 @@ def collect_host() -> dict[str, Any]:
         "boot_id": boot_id,
         "uname": _run(["uname", "-a"]).strip(),
         "kernel_cmdline": Path("/proc/cmdline").read_text().strip(),
-        "uptime": Path("/proc/uptime").read_text().split()[0],
-        "memory": _run(["free", "-b"]).splitlines()[1].split(),
-        "cpu": _run(["lscpu"]),
-        "dmidecode_bios": _run(["dmidecode", "-t", "bios", "-q"], sudo=True),
-        "dmidecode_board": _run(["dmidecode", "-t", "baseboard", "-q"], sudo=True),
         "vulkan_loader": _run(["dpkg-query", "-W", "-f=${Version}",
                                "libvulkan1"]),
         "vulkan_icds": sorted(
             p.name for p in Path("/usr/share/vulkan/icd.d").iterdir()),
-        "mesa": _run(["dpkg-query", "-W", "-f=${Version}",
-                      "mesa-vulkan-drivers"]),
-        "gpu_pci_bdfs": [l for l in _run(["lspci", "-D"]).splitlines()
-                         if "Vega 10" in l or "Display controller" in l
-                         or "VGA compatible" in l],
     }
 
 
-def census() -> dict[str, Any]:
+# -----------------------------------------------------------------------
+# Composite censuses
+# -----------------------------------------------------------------------
+
+def census_nvidia_host() -> dict[str, Any]:
+    """inferswarm01: join nvidia-smi UUID/BDF <-> NVIDIA Vulkan UUID."""
     host = collect_host()
-    lspci = collect_lspci()
-    vulkan = collect_vulkan()
-    # Bind Vulkan devices to BDFs via UUID
+    nv = collect_nvidia()
+    vk_all = collect_vulkan()  # unrestricted: both ICDs may enumerate
+    nvidia_vk = {}
+    for key, info in vk_all["gpus"].items():
+        if info.get("vendorID") == "0x10de":
+            nvidia_vk[key] = info
+    # UUID join: nvidia-smi GPU-<uuid> vs Vulkan deviceUUID (no dashes)
+    joins = []
+    for g in nv["gpus"]:
+        smi_u = g["uuid"].removeprefix("GPU-").replace("-", "").lower()
+        match = None
+        for key, info in nvidia_vk.items():
+            vk_u = (info.get("deviceUUID") or "").replace("-", "").lower()
+            if vk_u == smi_u:
+                match = key
+                break
+        joins.append({
+            "smi_index": g["smi_index"],
+            "nvidia_uuid": g["uuid"],
+            "bdf_smi": g["bdf"],
+            "name": g["name"],
+            "vulkan_key": match,
+            "vulkan_deviceUUID": nvidia_vk[match]["deviceUUID"] if match else None,
+            "heap_mib": (max((h["size"] for h in
+                              nvidia_vk[match]["device_local_heaps"]),
+                             default=0) // (1024 * 1024)) if match else None,
+        })
+    r3060 = [j for j in joins if "3060" in j["name"]]
+    if len(r3060) != 2:
+        raise CensusError(f"expected exactly 2 RTX 3060, found {len(r3060)}")
+    for j in r3060:
+        if j["vulkan_key"] is None:
+            raise CensusError(
+                f"3060 {j['nvidia_uuid']} has no NVIDIA Vulkan device join")
+        j["sysfs"] = collect_sysfs(j["bdf_smi"])
+    return {
+        "schema": "inferswarm.r8h.census-nvidia/2",
+        "campaign": rc.CAMPAIGN_ID,
+        "host": host,
+        "nvidia": nv,
+        "rtx3060": r3060,
+        "raw": {"vulkaninfo_all": vk_all["raw"]},
+    }
+
+
+def census_amd_host() -> dict[str, Any]:
+    """inferswarm02: join RADV deviceUUID <-> BDF for both V340L dies."""
+    host = collect_host()
+    vk = collect_vulkan()
     bindings = []
-    for key, info in vulkan["gpus"].items():
-        entry = {"vulkan_key": key, "vulkan_name": info.get("name"),
-                 **{k: v for k, v in info.items() if k != "gpu_index"}}
-        uuid = info.get("deviceUUID")
-        if uuid and "RADV" in (info.get("name") or ""):
-            entry["bdf"] = uuid_bdf(uuid)
+    for key, info in vk["gpus"].items():
+        entry = dict(info)
+        entry["vulkan_key"] = key
+        if info.get("vendorID") == "0x1002" and "RADV" in (info.get("name") or ""):
+            entry["bdf"] = uuid_bdf(info["deviceUUID"])
         bindings.append(entry)
-    v340l = [b for b in bindings
-             if b.get("vendorID") == "0x1002" and "V340" in (b.get("vulkan_name") or "")]
+    v340l = [b for b in bindings if b.get("vendorID") == "0x1002"
+             and "V340" in (b.get("name") or "")]
     if len(v340l) != 2:
         raise CensusError(
             f"expected exactly 2 V340L Vulkan devices, found {len(v340l)}: "
-            f"{[b.get('vulkan_name') for b in bindings]}")
+            f"{[b.get('name') for b in bindings]}")
     dies = {}
     for b in v340l:
-        bdf = b["bdf"]
-        dies[bdf] = {**b, "sysfs": collect_sysfs(bdf)}
-        # cross-check: lspci display controller at same BDF
-        if bdf not in lspci["dies"]:
-            raise CensusError(
-                f"Vulkan die {bdf} not present in lspci display set: "
-                f"{sorted(lspci['dies'])}")
-    doc = {
-        "schema": "inferswarm.r8h.census/1",
+        b["sysfs"] = collect_sysfs(b["bdf"])
+        dies[b["bdf"]] = b
+    return {
+        "schema": "inferswarm.r8h.census-amd/2",
         "campaign": rc.CAMPAIGN_ID,
         "host": host,
-        "lspci_summary": {
-            "dies": lspci["dies"],
-            "amd_bridges": lspci["amd_bridges"],
-            "tree": lspci["tree"],
-        },
         "vulkan_devices": bindings,
         "v340l_dies": dies,
-        "raw": {
-            "vulkaninfo": vulkan["raw"],
-        },
+        "raw": {"vulkaninfo": vk["raw"]},
     }
-    return doc
 
 
 def main() -> int:
     import argparse
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--kind", choices=("nvidia", "amd"), required=True)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
-    doc = census()
+    doc = census_nvidia_host() if args.kind == "nvidia" else census_amd_host()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n",
                         encoding="utf-8")
     print(json.dumps({
         "boot_id": doc["host"]["boot_id"],
-        "dies": {b: {"uuid": d["deviceUUID"],
-                     "vram_bytes": next(iter(d["sysfs"]["drm"].values()), {})
-                     .get("mem_info_vram_total")}
-                 for b, d in doc["v340l_dies"].items()},
+        "kind": args.kind,
     }, indent=1))
     return 0
 

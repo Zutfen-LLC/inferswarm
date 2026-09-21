@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""Issue #234 — R8-H evidence assembler + fail-closed control runner.
+"""Issue #234 — R8-H evidence assembler + fail-closed control suite (/2).
 
 The assembler:
-  * verifies the producer closure FIRST (every retained artifact's
-    producer must be the frozen closure head);
-  * re-derives the terminal through issue234_reduce from retained
+  * verifies the CORRECTED producer closure FIRST (ancestor pin, blob
+    identity pin->HEAD, worktree cleanliness, deployed hash equality);
+  * re-derives the terminal through issue234_reduce from retained raw
     bytes only;
-  * proves the issue's 27 required fail-closed controls as REDUCER-
-    LEVEL mutation tests over a sandbox copy of the evidence tree
+  * proves the issue's 36 required fail-closed controls as REDUCER-
+    LEVEL mutation tests over sandbox copies of the evidence tree
     (never the real tree; never destructive fault injection).
 
-Every check derives from retained bytes; no check is ever a constant.
+Controls 1-27 are the original issue controls; 28-36 are the
+maintainer-correction additions. The receipt carries count == 36,
+all_ok, and explicit IDs 1..36. The number of unittest methods is a
+separate quantity and is never treated as the control count.
 """
 from __future__ import annotations
 
-import copy
 import json
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import issue234_receipt as rc
 import issue234_reduce as red
@@ -31,9 +33,20 @@ class AssembleError(RuntimeError):
 
 def assemble(evidence_root: Path, repo: Path | None = None) -> dict[str, Any]:
     closure = rc.verify_closure(repo or rc.ROOT)
+    deployed = json.loads(
+        (evidence_root / "freeze" / "deployed-producers.json")
+        .read_text(encoding="utf-8"))
+    for rel, got in deployed.get("producers", {}).items():
+        meta = closure["sources"].get(rel)
+        if meta is None or meta.get("class") != "physical":
+            raise AssembleError(f"deployed producer not closure-bound: {rel}")
+        if got != meta["sha256"]:
+            raise AssembleError(
+                f"deployed producer hash mismatch: {rel}: {got} != "
+                f"{meta['sha256']}")
     terminal_doc = red.derive_terminal(evidence_root, closure=closure)
     return {
-        "schema": "inferswarm.r8h.assembly/1",
+        "schema": "inferswarm.r8h.assembly/2",
         "campaign": rc.CAMPAIGN_ID,
         "closure": {
             "producer_head": closure["producer_head"],
@@ -44,9 +57,7 @@ def assemble(evidence_root: Path, repo: Path | None = None) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
-# Required fail-closed controls (issue #234 list). Each control mutates
-# ONE property of a sandbox evidence copy and asserts the reducer's
-# terminal/checks change in exactly the expected way.
+# Mutations. Each mutates ONE property of a sandbox evidence copy.
 # ---------------------------------------------------------------------
 
 def _load(p: Path) -> dict:
@@ -65,48 +76,316 @@ def _sandbox(evidence: Path) -> Path:
     return box
 
 
-CONTROLS: dict[str, dict[str, Any]] = {}
+def _first_exec_case(box: Path) -> str:
+    for case in rc.LADDER_CASES:
+        if (box / "candidate" / f"ladder-A-{case}.json").is_file():
+            return case
+    raise AssembleError("no executed case in evidence")
 
 
-def register(cid: str, expect_terminal: str | None = None,
-             expect_check_contains: dict | None = None):
-    def deco(fn):
-        CONTROLS[cid] = {
-            "fn": fn,
-            "expect_terminal": expect_terminal,
-            "expect_check_contains": expect_check_contains or {},
-        }
-        return fn
-    return deco
+def _arm(box: Path, case: str, arm: str) -> Path:
+    return box / "candidate" / f"ladder-{arm}-{case}.json"
+
+
+def _each_arm_doc(box: Path, case: str):
+    for arm in ("A", "B", "C"):
+        yield arm, _arm(box, case, arm), _load(_arm(box, case, arm))
+
+
+def _mut_authority_model_key(key: str) -> Callable:
+    def fn(b: Path) -> None:
+        d = _load(b / "PHYSICAL-AUTHORITY.json")
+        d["model_authority"][key] = "f" * 40
+        _write(b / "PHYSICAL-AUTHORITY.json", d)
+    return fn
+
+
+def _mut_backing_member(b: Path) -> None:
+    d = _load(b / "backing" / "armA-backing.json")
+    d["members"][1]["sha256"] = "1" * 64
+    _write(b / "backing" / "armA-backing.json", d)
+
+
+def _mut_runtime(arm: str, dot: str, value: Any) -> Callable:
+    def fn(b: Path) -> None:
+        p = b / "runtime" / f"arm{arm}-runtime.json"
+        d = _load(p)
+        node = d
+        keys = dot.split(".")
+        for k in keys[:-1]:
+            node = node[k]
+        node[keys[-1]] = value
+        _write(p, d)
+    return fn
+
+
+def _mut_selector_target(arm: str, bdf: str, uuid: str) -> Callable:
+    def fn(b: Path) -> None:
+        p = b / "runtime" / f"arm{arm}-runtime.json"
+        d = _load(p)
+        d["selector"]["target_bdf"] = bdf
+        d["selector"]["target_deviceUUID"] = uuid
+        if "value_semantics" in d["selector"]:
+            d["selector"]["value_semantics"] = f"other gpu {bdf}"
+        _write(p, d)
+    return fn
+
+
+def _mut_fixture_sha(b: Path) -> None:
+    d = _load(b / "PHYSICAL-AUTHORITY.json")
+    d["fixture_ladder"]["sha256"] = "3" * 64
+    _write(b / "PHYSICAL-AUTHORITY.json", d)
+
+
+def _mut_armc_excluded_active(b: Path) -> None:
+    case = _first_exec_case(b)
+    p = _arm(b, case, "C")
+    d = _load(p)
+    for rep in d["repeats"]:
+        rep["excluded_residency"] = {
+            "00000000:09:00.0": {
+                "pre": {"card1.mem_info_vis_vram_used": 0},
+                "post": {"card1.mem_info_vis_vram_used":
+                         900 * 1024 * 1024}}}
+    _write(p, d)
+
+
+def _mut_zero_residency(b: Path) -> None:
+    case = _first_exec_case(b)
+    for arm, p, d in _each_arm_doc(b, case):
+        for rep in d["repeats"]:
+            rep["selected_residency"] = {
+                "pre": {"mem_used_mib": 0}, "post": {"mem_used_mib": 0}}
+        _write(p, d)
+
+
+def _mut_request_samplers(b: Path) -> None:
+    case = _first_exec_case(b)
+    for arm, p, d in _each_arm_doc(b, case):
+        d["geometry"]["request"]["samplers"] = ["greedy"]
+        _write(p, d)
+
+
+def _mut_request_topk(b: Path) -> None:
+    case = _first_exec_case(b)
+    for arm, p, d in _each_arm_doc(b, case):
+        d["geometry"]["request"]["top_k"] = 4
+        _write(p, d)
+
+
+def _mut_repeat_drop(b: Path) -> None:
+    case = _first_exec_case(b)
+    p = _arm(b, case, "B")
+    d = _load(p)
+    d["repeats"] = d["repeats"][:2]
+    _write(p, d)
+
+
+def _mut_nondeterministic(b: Path) -> None:
+    case = _first_exec_case(b)
+    p = _arm(b, case, "C")
+    d = _load(p)
+    toks = list(d["repeats"][1]["raw_response"]["tokens"])
+    toks[0] = 999999
+    d["repeats"][1]["raw_response"]["tokens"] = toks
+    _write(p, d)
+
+
+def _mut_platform_fault(b: Path) -> None:
+    case = _first_exec_case(b)
+    p = _arm(b, case, "A")
+    d = _load(p)
+    d["repeats"][0]["health_window"]["stop_classes"] = ["amdgpu_reset"]
+    _write(p, d)
+
+
+def _mut_later_rung_after_divergence(b: Path) -> None:
+    # ladder prefix violation (controls 23/35): keep only a LATER rung
+    # (copy first-case docs under a later case id, then delete rung 1)
+    case = _first_exec_case(b)
+    if case != rc.LADDER_CASES[-1]:
+        later = rc.LADDER_CASES[-1]
+        for arm in ("A", "B", "C"):
+            shutil.copy(_arm(b, case, arm),
+                        b / "candidate" / f"ladder-{arm}-{later}.json")
+    for cs in rc.LADDER_CASES[1:-1]:
+        for arm in ("A", "B", "C"):
+            p = _arm(b, cs, arm)
+            if p.is_file():
+                p.unlink()
+    for arm in ("A", "B", "C"):
+        p = _arm(b, "case-256", arm)
+        if p.is_file():
+            p.unlink()
+
+
+def _mut_authored_status(b: Path) -> None:
+    case = _first_exec_case(b)
+    for arm, p, d in _each_arm_doc(b, case):
+        d["status"] = "PASS_ALL_ARMS_EQUAL"
+        for rep in d["repeats"]:
+            rep["comparison"] = {"exact": True}
+        _write(p, d)
+
+
+def _mut_armb_geometry_drift(b: Path) -> None:
+    case = _first_exec_case(b)
+    p = _arm(b, case, "B")
+    d = _load(p)
+    d["geometry"]["ngl"] = 99
+    _write(p, d)
+
+
+def _mut_armc_cuda_present(b: Path) -> None:
+    p = b / "runtime" / "armC-runtime.json"
+    d = _load(p)
+    d["raw"]["list_devices_all"] = (
+        "CUDA0: NVIDIA GeForce RTX 3060 (12288 MiB)\n" +
+        d["raw"]["list_devices_all"])
+    _write(p, d)
+
+
+def _mut_divergence_without_characterization(b: Path) -> None:
+    # control 33: B deterministically diverges from A while the score
+    # characterization is REMOVED (the honest missing-evidence case)
+    case = _first_exec_case(b)
+    p = _arm(b, case, "B")
+    d = _load(p)
+    for rep in d["repeats"]:
+        toks = list(rep["raw_response"]["tokens"])
+        toks[0] = toks[0] + 1
+        rep["raw_response"]["tokens"] = toks
+    _write(p, d)
+    c = b / "candidate" / f"score-characterization-{case}.json"
+    if c.is_file():
+        c.unlink()
+
+
+# expectation vocabulary
+_BLOCKED = red.TERMINAL_BLOCKED
+_BACKING = red.TERMINAL_BACKING_PREREQ
+_RUNTIME = red.TERMINAL_RUNTIME_PREREQ
+_PLATFORM = red.TERMINAL_PLATFORM_FAIL
+
+CONTROLS: dict[int, dict[str, Any]] = {
+    # --- original 27 (issue #234) ---
+    1: {"d": "wrong official Qwen revision",
+        "fn": _mut_authority_model_key("official_qwen_revision"),
+        "expect": "error"},
+    2: {"d": "wrong Unsloth conversion revision",
+        "fn": _mut_authority_model_key("unsloth_revision"),
+        "expect": "error"},
+    3: {"d": "wrong UD-IQ1_S member hash",
+        "fn": _mut_backing_member, "expect": _BACKING},
+    4: {"d": "wrong llama.cpp source revision",
+        "fn": _mut_runtime("A", "source.revision", "a" * 40),
+        "expect": _RUNTIME},
+    5: {"d": "binary built from unpinned/dirty source",
+        "fn": _mut_runtime("B", "source.clean", False),
+        "expect": _RUNTIME},
+    6: {"d": "wrong ICD/loader identity substituted after freeze",
+        "fn": _mut_runtime("C", "build.cmake_flags", {}),
+        "expect": _RUNTIME},
+    7: {"d": "stale V340L selector-UUID/BDF mapping",
+        "fn": _mut_selector_target("C", "00000000:09:00.0", "9" * 32),
+        "expect": "error"},
+    8: {"d": "die A/B swap after freeze",
+        "fn": _mut_selector_target("C", "00000000:09:00.0", "9" * 32),
+        "expect": "error"},
+    9: {"d": "both V340L dies carrying active model residency",
+        "fn": _mut_armc_excluded_active, "expect": "error"},
+    10: {"d": "aggregate 16-GiB capacity treated as one resource",
+         "fn": _mut_armc_excluded_active, "expect": "error"},
+    11: {"d": "CPU-only fallback labeled device execution",
+         "fn": _mut_zero_residency, "expect": "error"},
+    12: {"d": "NVIDIA/CUDA participation hidden in candidate arm",
+         "fn": _mut_armc_cuda_present, "expect": "error"},
+    13: {"d": "zero-byte GPU residency labeled nonzero offload",
+         "fn": _mut_zero_residency, "expect": "error"},
+    14: {"d": "offload geometry changed after candidate output",
+         "fn": _mut_armb_geometry_drift, "expect": "error"},
+    15: {"d": "PLE/backing bytes mislabeled accelerator residency",
+         "fn": _mut_zero_residency, "expect": "error"},
+    16: {"d": "local backing existence mislabeled active materialization",
+         "fn": _mut_backing_member, "expect": _BACKING},
+    17: {"d": "reference regenerated after seeing candidate output",
+         "fn": _mut_fixture_sha, "expect": "error"},
+    18: {"d": "wrong accepted R8-D fixture/prompt identity",
+         "fn": _mut_fixture_sha, "expect": "error"},
+    19: {"d": "legacy samplers=[greedy] accepted as true greedy",
+         "fn": _mut_request_samplers, "expect": "error"},
+    20: {"d": "top_k != 1 accepted as canonical true greedy",
+         "fn": _mut_request_topk, "expect": "error"},
+    21: {"d": "candidate token mismatch omitted from terminal",
+         "fn": _mut_divergence_without_characterization,
+         "expect": "error"},
+    22: {"d": "failed repeat dropped from deterministic comparison",
+         "fn": _mut_repeat_drop, "expect": "error"},
+    23: {"d": "later ladder rung executed after earlier stop",
+         "fn": _mut_later_rung_after_divergence, "expect": "error"},
+    24: {"d": "device fault omitted from terminal",
+         "fn": _mut_platform_fault, "expect": _PLATFORM},
+    25: {"d": "second-die result substituted for primary die",
+         "fn": _mut_selector_target("C", "00000000:09:00.0", "9" * 32),
+         "expect": "error"},
+    26: {"d": "runtime upgrade to turn prerequisite into PASS",
+         "fn": _mut_runtime("A", "source.revision", "f" * 40),
+         "expect": _RUNTIME},
+    27: {"d": "authored terminal contradicting deterministic reduction",
+         "fn": _mut_authored_status, "expect": "unchanged"},
+    # --- corrected-campaign additions 28-36 ---
+    28: {"d": "Arm A and B using different RTX 3060 UUID/BDF",
+         "fn": _mut_selector_target("B", "00000000:03:00.0", "b" * 32),
+         "expect": "error"},
+    29: {"d": "CUDA arm containing Vulkan execution or vice versa",
+         "fn": _mut_armc_cuda_present, "expect": "error"},
+    30: {"d": "A/B/C differ in ngl/context/batch/model/prompt/request",
+         "fn": _mut_armb_geometry_drift, "expect": "error"},
+    31: {"d": "historical R8-D output used as sole Vulkan PASS/FAIL oracle",
+         "fn": _mut_authored_status, "expect": "unchanged"},
+    32: {"d": "B == C interpreted as proof of common root cause",
+         "fn": _mut_authored_status, "expect": "unchanged"},
+    33: {"d": "divergence classified without required score characterization",
+         "fn": _mut_divergence_without_characterization,
+         "expect": "error"},
+    34: {"d": "an arm missing one of exactly 3 repeats",
+         "fn": _mut_repeat_drop, "expect": "error"},
+    35: {"d": "later rung executed after deterministic pair divergence",
+         "fn": _mut_later_rung_after_divergence, "expect": "error"},
+    36: {"d": "unmatched placement/residency geometry as matched comparison",
+         "fn": _mut_armb_geometry_drift, "expect": "error"},
+}
 
 
 def _run_controls_once(evidence: Path, closure: dict) -> dict[str, Any]:
-    """Run every registered control against sandbox copies."""
     out: dict[str, Any] = {}
-    for cid, spec in CONTROLS.items():
+    baseline = red.derive_terminal(evidence, closure=closure)["terminal"]
+    for cid in sorted(CONTROLS):
+        spec = CONTROLS[cid]
         box = _sandbox(evidence)
         try:
             spec["fn"](box)
             doc = red.derive_terminal(box, closure=closure)
-            ok_term = (spec["expect_terminal"] is None or
-                       doc["terminal"] == spec["expect_terminal"])
-            ok_checks = True
-            for path, want in spec["expect_check_contains"].items():
-                node = doc
-                for part in path.split("."):
-                    node = node.get(part, {}) if isinstance(node, dict) else {}
-                if isinstance(want, str):
-                    ok_checks = ok_checks and want in json.dumps(node)
-                else:
-                    ok_checks = ok_checks and node == want
-            out[cid] = {
-                "ok": bool(ok_term and ok_checks),
-                "terminal": doc["terminal"],
-            }
-        except red.ReduceError as e:
-            out[cid] = {"ok": True, "terminal": f"ReduceError:{e}"}
+            term = doc["terminal"]
+            expect = spec["expect"]
+            if expect == "unchanged":
+                ok = term == baseline
+            elif expect == "error":
+                # must NOT silently pass: either ReduceError raised (the
+                # runner catches it below — unreachable here) or the
+                # terminal must degrade to BLOCKED/prerequisite
+                ok = term in (_BLOCKED, _BACKING, _RUNTIME, _PLATFORM)
+            else:
+                ok = term == expect
+            out[str(cid)] = {"ok": bool(ok), "terminal": term,
+                             "expect": expect, "d": spec["d"]}
+        except red.ReduceError:
+            out[str(cid)] = {"ok": True, "terminal": "ReduceError",
+                             "expect": spec["expect"], "d": spec["d"]}
         except Exception as e:  # noqa: BLE001
-            out[cid] = {"ok": False, "terminal": f"EXCEPTION:{e}"}
+            out[str(cid)] = {"ok": False,
+                             "terminal": f"EXCEPTION:{str(e)[:120]}",
+                             "expect": spec["expect"], "d": spec["d"]}
         finally:
             shutil.rmtree(box.parent, ignore_errors=True)
     return out
@@ -118,5 +397,42 @@ def run_controls(evidence: Path, closure: dict) -> dict[str, Any]:
     b = _run_controls_once(evidence, closure)
     if json.dumps(a, sort_keys=True) != json.dumps(b, sort_keys=True):
         raise AssembleError("nondeterministic control results")
+    ids = sorted(int(k) for k in a)
+    if ids != list(range(1, 37)):
+        raise AssembleError(f"control IDs must be exactly 1..36, got {ids}")
     all_ok = all(v["ok"] for v in a.values())
-    return {"controls": a, "count": len(a), "all_ok": all_ok}
+    return {
+        "schema": "inferswarm.r8h.controls/2",
+        "campaign": rc.CAMPAIGN_ID,
+        "count": len(a),
+        "all_ok": all_ok,
+        "control_ids": ids,
+        "controls": a,
+        "baseline_terminal": red.derive_terminal(
+            evidence, closure=closure)["terminal"],
+    }
+
+
+def main() -> int:
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="R8-H assembler + 36-control suite")
+    ap.add_argument("--evidence", type=Path, required=True)
+    ap.add_argument("--out", type=Path, required=True)
+    args = ap.parse_args()
+    closure = rc.verify_closure()
+    doc = assemble(args.evidence)
+    controls = run_controls(args.evidence, closure)
+    result = {**doc, "controls_receipt": controls}
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(result, indent=1, sort_keys=True) + "\n",
+                        encoding="utf-8")
+    print(json.dumps({
+        "terminal": doc["terminal"],
+        "controls": f"{controls['count']}/36 all_ok={controls['all_ok']}",
+    }))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

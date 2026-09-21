@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
-"""Issue #234 — R8-H immutable intended-identity authority builder.
+"""Issue #234 — R8-H immutable intended-identity authority builder (/2).
 
-`build` derives R8-H's authority exclusively from accepted predecessor
-BYTES in this repository (paths/sha pinned through each predecessor's
-own accepted MANIFEST.sha256 row, every file re-hashed at build — a
-hand-copied digest always drifts):
+Derives R8-H's authority exclusively from accepted predecessor BYTES in
+this repository (paths/sha pinned through each predecessor's own
+accepted MANIFEST.sha256 row, every file re-hashed at build):
 
-  R8-D (#195/PR #197) — the frozen true-greedy reference + fixture
-       ladder this campaign's candidate ladder must reproduce;
-  R8-A (#189/PR #190) — model/representation identity authority;
-  V2-G (#232/PR #233) — V340L platform/path predecessor (hardware
-       authority context; no execution permission flows from it);
-  V2-F (#230/PR #231) — historical amdgpu platform-fault context.
+  R8-D (#195/PR #197) — frozen true-greedy reference (EXTERNAL
+       HISTORICAL ANCHOR ONLY in the corrected campaign — never the
+       sole Vulkan PASS/FAIL oracle; control 31);
+  R8-B — fixture ladder + split identity;
+  R8-E (#199) — observation-only divergence-characterization
+       methodology reused for the first-divergence score capture;
+  V2-F/V2-G — V340L platform predecessors.
 
 Nonclaims: this document authorizes NO physical execution by itself.
-It binds intended identity only; every physical observation requires a
-fresh census receipt on the current boot, bound by Vulkan
-physical-device UUID -> BDF -> switch ancestry (historical BDFs never
-authorize anything after hardware movement or reboot).
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,7 +41,6 @@ def _manifest_rows(ns_dir: Path) -> dict[str, str]:
             continue
         digest, _, rel = line.partition(" ")
         rel = rel.strip()
-        # accept both repo-root-relative and ns-relative spellings
         if rel.startswith(prefix):
             rows[rel] = digest
         else:
@@ -53,18 +49,13 @@ def _manifest_rows(ns_dir: Path) -> dict[str, str]:
 
 
 def _verify_against_manifest(ns_dir: Path, rels: list[str]) -> dict[str, dict]:
-    """Re-hash each predecessor file and compare with its accepted
-    MANIFEST row. Any drift is fatal (predecessor bytes are immutable)."""
     rows = _manifest_rows(ns_dir)
     out: dict[str, dict] = {}
     for rel in rels:
-        full_rel = rels and (ns_dir.name + "/" + rel if not rel.startswith(ns_dir.name) else rel)
-        path = ns_dir / rel if not rel.startswith("..") else None
-        # rels are given relative to the investigation dir
         target = ns_dir / rel
         if not target.is_file():
             raise SystemExit(f"authority input missing: {target}")
-        manifest_rel = f"{ns_dir.relative_to(ROOT)}/{rel}".replace("\\", "/")
+        manifest_rel = f"{ns_dir.relative_to(ROOT)}/{rel}"
         expected = rows.get(manifest_rel)
         if expected is None:
             raise SystemExit(f"not pinned in accepted MANIFEST: {manifest_rel}")
@@ -84,16 +75,19 @@ def build(repo: Path | None = None) -> dict[str, Any]:
     r8d_files = _verify_against_manifest(
         inv / "qwen38-flash-next-r8-d",
         ["evidence/reference/frozen-reference.json",
-         "terminal-reduction.json"],
+         "terminal-reduction.json",
+         "evidence/split-identity/split-rehash.json"],
     )
-    r8b_fixture = _verify_against_manifest(
+    r8b_files = _verify_against_manifest(
         inv / "qwen38-flash-next-r8-b",
         ["evidence/reference/fixture-ladder.json",
          "evidence/split-identity/split-verification.json"],
     )
-    r8d_split = _verify_against_manifest(
-        inv / "qwen38-flash-next-r8-d",
-        ["evidence/split-identity/split-rehash.json"],
+    r8e_files = _verify_against_manifest(
+        inv / "qwen38-flash-next-r8-e",
+        ["README.md",
+         "evidence/instrumentation/applied-source.patch",
+         "terminal-reduction.json"],
     )
     v2g_files = _verify_against_manifest(
         inv / "vulkan-v2-g-pcie-path-remediation",
@@ -105,44 +99,60 @@ def build(repo: Path | None = None) -> dict[str, Any]:
     )
 
     # Cross-bind the fixture ladder identity the issue text pins.
-    fixture = json.loads((inv / "qwen38-flash-next-r8-b" /
-                          "evidence/reference/fixture-ladder.json")
-                         .read_text(encoding="utf-8"))
-    fixture_bytes = (inv / "qwen38-flash-next-r8-b" /
-                     "evidence/reference/fixture-ladder.json").read_bytes()
+    fixture_path = (inv / "qwen38-flash-next-r8-b" /
+                    "evidence/reference/fixture-ladder.json")
+    fixture_bytes = fixture_path.read_bytes()
     fixture_sha = hashlib.sha256(fixture_bytes).hexdigest()
     if fixture_sha != rc.R8D_FIXTURE_SHA256:
         raise SystemExit(
             f"fixture ladder identity drift: {fixture_sha} != "
             f"{rc.R8D_FIXTURE_SHA256}")
+    fixture = json.loads(fixture_bytes.decode("utf-8"))
     case_ids = [c["case_id"] for c in fixture["cases"]]
     if tuple(case_ids) != rc.LADDER_CASES:
         raise SystemExit(f"fixture case set mismatch: {case_ids}")
 
-    # Cross-bind the frozen reference per-case expected outputs.
-    reference = json.loads((inv / "qwen38-flash-next-r8-d" /
-                            "evidence/reference/frozen-reference.json")
-                           .read_text(encoding="utf-8"))
+    reference = json.loads(
+        (inv / "qwen38-flash-next-r8-d" /
+         "evidence/reference/frozen-reference.json").read_text("utf-8"))
     r8d_terminal = json.loads(
-        (inv / "qwen38-flash-next-r8-d" / "terminal-reduction.json")
-        .read_text(encoding="utf-8"))
+        (inv / "qwen38-flash-next-r8-d" /
+         "terminal-reduction.json").read_text("utf-8"))
     if r8d_terminal.get("terminal") != \
             "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL":
         raise SystemExit(
             f"R8-D terminal drift: {r8d_terminal.get('terminal')!r}")
-
-    # The comparison domain: the REFERENCE arm outputs (the accepted
-    # R8-D same-model/same-runtime true-greedy reference), NOT the R8-D
-    # candidate (RPC) outputs — the issue asks whether the Vulkan
-    # candidate reproduces "the accepted R8-D same-model/same-runtime
-    # true-greedy reference outputs".
     for case_id in rc.LADDER_CASES:
         if case_id not in reference["cases"]:
             raise SystemExit(f"reference missing case: {case_id}")
 
+    # Superseded-campaign preservation proof: the quarantined original
+    # evidence must still byte-match its df0cf43 blobs.
+    sup_checks = {}
+    for p in sorted((repo / rc.SUPERSEDED_REL).rglob("*")):
+        if not p.is_file() or p.name == "README.md":
+            continue
+        rel = p.relative_to(repo / rc.SUPERSEDED_REL).as_posix()
+        blob = subprocess.run(
+            ["git", "-C", str(repo), "show",
+             f"{rc.SUPERSEDED_HEAD}:{rc.SUPERSEDED_REL}/{rel}"],
+            capture_output=True).stdout
+        if not blob:
+            raise SystemExit(f"superseded file has no df0cf43 blob: {rel}")
+        local_bytes = p.read_bytes()
+        if hashlib.sha256(blob).hexdigest() != \
+                hashlib.sha256(local_bytes).hexdigest():
+            raise SystemExit(f"superseded byte drift: {rel}")
+        sup_checks[f"{rc.SUPERSEDED_REL}/{rel}"] = {
+            "sha256": hashlib.sha256(local_bytes).hexdigest(),
+            "bytes": len(local_bytes)}
+
     authority = {
-        "schema": "inferswarm.r8h.authority/1",
+        "schema": "inferswarm.r8h.authority/2",
         "campaign": rc.CAMPAIGN_ID,
+        "corrected_campaign_note": (
+            "R8-D is an external historical anchor only; the matched "
+            "A/B/C arms are the terminal authority (control 31)."),
         "predecessor_merges": {
             "r8a": rc.R8A_MERGE,
             "r8d": rc.R8D_MERGE,
@@ -152,6 +162,7 @@ def build(repo: Path | None = None) -> dict[str, Any]:
             "v2f": rc.V2F_MERGE,
             "v2g": rc.V2G_MERGE,
             "start_main": rc.START_MAIN,
+            "superseded_original_campaign_head": rc.SUPERSEDED_HEAD,
         },
         "model_authority": {
             "official_qwen_revision": rc.OFFICIAL_QWEN_REVISION,
@@ -159,49 +170,55 @@ def build(repo: Path | None = None) -> dict[str, Any]:
             "representation": rc.REPRESENTATION,
             "total_bytes": rc.TOTAL_MODEL_BYTES,
             "members": list(rc.MODEL_MEMBERS),
-            "split_verification_bytes":
-                r8b_fixture["docs/investigations/qwen38-flash-next-r8-b/"
-                            "evidence/split-identity/"
-                            "split-verification.json"],
-            "r8d_rehash_bytes":
-                r8d_split["docs/investigations/qwen38-flash-next-r8-d/"
-                          "evidence/split-identity/split-rehash.json"],
         },
         "runtime_authority": {
             "llama_cpp_pin": rc.LLAMA_CPP_PIN,
+            "builds": {
+                "cuda": {"GGML_CUDA": "ON", "GGML_VULKAN": "OFF"},
+                "vulkan": {"GGML_VULKAN": "ON", "GGML_CUDA": "OFF"},
+            },
             "request_contract": rc.REQUEST_CONTRACT,
+        },
+        "matched_geometry": {
+            "ngl": rc.MATCHED_NGL,
+            "context": rc.CONTEXT_SETTINGS,
+            "ladder_cases": list(rc.LADDER_CASES),
+            "repeats_per_case": rc.REPEATS_PER_CASE,
         },
         "fixture_ladder": {
             "sha256": fixture_sha,
-            "cases": case_ids,
+            "case_ids": case_ids,
             "prompt_lengths": {
-                c["case_id"]: len(c["prompt_token_ids"]) for c in fixture["cases"]
-            },
+                c["case_id"]: len(c["prompt_token_ids"])
+                for c in fixture["cases"]},
         },
-        "reference_outputs": {
+        "external_anchor_outputs": {
             case_id: {
-                "generated_tokens": reference["cases"][case_id]["generated_tokens"],
+                "generated_tokens":
+                    reference["cases"][case_id]["generated_tokens"],
                 "stop_type": reference["cases"][case_id]["stop_type"],
                 "prompt_len": reference["cases"][case_id]["prompt_len"],
             }
             for case_id in rc.LADDER_CASES
         },
-        "predecessor_files": {**r8d_files, **r8b_fixture,
+        "superseded_preservation": sup_checks,
+        "predecessor_files": {**r8d_files, **r8b_files, **r8e_files,
                               **v2g_files, **v2f_files},
         "nonclaims": [
-            "This document binds intended identity only; it authorizes no "
-            "physical execution.",
+            "This document binds intended identity only; it authorizes "
+            "no physical execution.",
             "Historical BDFs/selectors are not current authority after "
             "hardware movement or reboot.",
-            "R8-G divergence characterization is diagnostic context, not a "
-            "Vulkan defect claim or repair authorization.",
+            "R8-D token streams are an external historical anchor, "
+            "never the sole Vulkan PASS/FAIL oracle.",
         ],
     }
     return authority
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    desc = (__doc__ or "").splitlines()
+    ap = argparse.ArgumentParser(description=desc[0] if desc else "authority")
     ap.add_argument("--out", type=Path,
                     default=rc.ROOT / rc.AREA_REL / "PHYSICAL-AUTHORITY.json")
     args = ap.parse_args(argv)
@@ -209,7 +226,9 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n",
                         encoding="utf-8")
-    print(f"wrote {args.out} ({len(doc['predecessor_files'])} pinned files)")
+    print(f"wrote {args.out} "
+          f"({len(doc['predecessor_files'])} pinned files, "
+          f"{len(doc['superseded_preservation'])} superseded-preservised)")
     return 0
 
 

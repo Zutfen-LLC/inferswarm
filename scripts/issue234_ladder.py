@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Issue #234 — R8-H correctness ladder runner (inferswarm02).
+"""Issue #234 — R8-H matched-arm ladder runner (schema /2).
 
-Launches the frozen single-die Vulkan llama-server once, then walks the
-frozen candidate ladder (case-256 -> 1024 -> 3072 -> 4096) with 3
-repeats per case under the canonical true-greedy request contract,
-comparing exact token IDs + stop semantics against the frozen accepted
-R8-D reference (loaded from the repository fixture bytes, never
-regenerated). Escalation only on exact-token/exact-stop PASS + clean
-platform health; hard stop on any health stop-class between cases.
+Runs ONE (arm, case) rung: 3 repeats of the canonical true-greedy
+request against the arm's frozen server, sampling execution truth
+DURING generation. Invoked per rung by the controller in frozen order
+(case-256 first; arm A, then B, then C). The reducer — never this
+runner — adjudicates rung equality and ladder escalation (control 35).
 
-Execution-truth evidence is captured per case window: both dies' VRAM
-counters, server log backend lines, and the process/drm association.
+Execution-truth binding per repeat (issue #11):
+  * request/response raw bytes retained verbatim (tokens from
+    response["tokens"] only);
+  * per-repeat device residency samples taken DURING generation
+    (selected device must carry model-scale residency; excluded
+    devices must stay under the frozen noise bound);
+  * process identity (pid, start time), server log window, backend
+    lines from the server log;
+  * platform health window per repeat and post-exit cleanup.
+
+Emits raw observation receipts only; no authored status is trusted by
+the reducer (issue #9).
 """
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 import sys
 import time
@@ -26,13 +33,14 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue234_receipt as rc
 import issue234_health as health
+import issue234_placement as placement
 
 
 class LadderError(RuntimeError):
     pass
 
 
-def http_json(url: str, payload: dict, timeout: int = 600) -> dict:
+def http_json(url: str, payload: dict, timeout: int = 3600) -> dict:
     req = urllib.request.Request(
         url, data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"}, method="POST")
@@ -40,7 +48,7 @@ def http_json(url: str, payload: dict, timeout: int = 600) -> dict:
         return json.loads(r.read().decode())
 
 
-def wait_server(port: int, deadline_s: int = 7200) -> None:
+def wait_server(port: int, deadline_s: int = 14400) -> None:
     deadline = time.time() + deadline_s
     while time.time() < deadline:
         try:
@@ -49,215 +57,177 @@ def wait_server(port: int, deadline_s: int = 7200) -> None:
                 if r.status == 200:
                     return
         except Exception:
-            time.sleep(5)
+            time.sleep(10)
     raise LadderError("server did not become healthy before deadline")
 
 
-def server_log_tail(proc) -> str:
-    # server launched with stdout to a file; caller passes nothing here
-    return ""
+def _mem_sampler(arm: str):
+    if arm in ("A", "B"):
+        return placement.gpu_mem_nvidia
+    return placement.gpu_mem_amd
 
 
-def run_case(port: int, prompt_token_ids: list[int]) -> dict[str, Any]:
+def run_arm_case(arm: str, server: Path, model_dir: Path, out_dir: Path,
+                 case_id: str, prompt_token_ids: list[int],
+                 cuda_selector: str | None = None,
+                 vk_selector: str | None = None, icd: Path | None = None,
+                 selected_key: str | None = None,
+                 excluded_keys: list[str] | None = None,
+                 port: int = 18491) -> dict[str, Any]:
+    import os
+    if selected_key is None or excluded_keys is None:
+        raise LadderError("selected/excluded device keys required")
+    model_files = sorted(model_dir.glob("*.gguf"))
+    if len(model_files) != len(rc.MODEL_MEMBERS):
+        raise LadderError(f"model dir member count {len(model_files)}")
+    model_arg = model_files[0]
+
+    env = dict(os.environ)
+    env["PATH"] = "/usr/bin:/bin:" + env.get("PATH", "")
+    if arm == "A":
+        env["CUDA_VISIBLE_DEVICES"] = cuda_selector or ""
+        env.pop("GGML_VK_VISIBLE_DEVICES", None)
+    else:
+        env["GGML_VK_VISIBLE_DEVICES"] = vk_selector or ""
+        env["CUDA_VISIBLE_DEVICES"] = "-1"
+        if icd is not None:
+            env["VK_ICD_FILENAMES"] = str(icd)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    log_path = out_dir / f"ladder-{arm}-{case_id}-server.log"
+    sampler = _mem_sampler(arm)
     body = dict(rc.REQUEST_CONTRACT)
     body["prompt"] = prompt_token_ids
-    t0 = time.time()
-    resp = http_json(f"http://127.0.0.1:{port}/completion", body)
-    dt = time.time() - t0
-    tokens = resp.get("tokens")
-    if tokens is None and resp.get("return_tokens"):
-        tokens = resp.get("tokens")
-    stop = resp.get("stop_type", resp.get("stop_type"))
-    return {
-        "wall_s": round(dt, 3),
-        "generated_tokens": tokens if tokens is not None else
-        resp.get("completion_tokens"),
-        "stop_type": stop,
-        "stop_word": resp.get("stopping_word", ""),
-        "raw": resp,
-    }
 
+    mem_before = sampler()
+    j_before = health.journal_kernel()
+    j_before_classes = health.classify_journal(j_before)
+    t_start = time.strftime("%Y-%m-%d %H:%M:%S")
 
-def compare(candidate: dict[str, Any], reference: dict[str, Any]) -> dict:
-    tok_ok = candidate["generated_tokens"] == reference["generated_tokens"]
-    stop_ok = candidate["stop_type"] == reference["stop_type"]
-    first_div = None
-    if not tok_ok:
-        ct = candidate["generated_tokens"] or []
-        rt = reference["generated_tokens"]
-        for i, (c, r) in enumerate(zip(ct, rt)):
-            if c != r:
-                first_div = {"position": i, "candidate": c, "reference": r}
-                break
-        if first_div is None:
-            first_div = {"position": min(len(ct), len(rt)),
-                         "candidate": ct[len(rt):] if len(ct) > len(rt) else None,
-                         "reference": rt[len(ct):] if len(rt) > len(ct) else None}
-    return {"tokens_equal": tok_ok, "stop_equal": stop_ok,
-            "exact": tok_ok and stop_ok, "first_divergence": first_div}
-
-
-def launch_server(server: Path, model: Path, ngl: int, port: int,
-                  log_path: Path) -> subprocess.Popen:
-    import os
-    env = dict(os.environ)
-    env["GGML_VK_VISIBLE_DEVICES"] = "1"
-    env["PATH"] = "/usr/bin:/bin:" + env.get("PATH", "")
     log = open(log_path, "w")
-    return subprocess.Popen(
-        [str(server), "--model", str(model),
-         "--n-gpu-layers", str(ngl),
+    proc = subprocess.Popen(
+        [str(server), "--model", str(model_arg),
+         "--n-gpu-layers", str(rc.MATCHED_NGL),
          "--ctx-size", str(rc.CONTEXT_SETTINGS["ctx-size"]),
          "--batch-size", str(rc.CONTEXT_SETTINGS["batch-size"]),
          "--port", str(port), "--host", "127.0.0.1"],
         stdout=log, stderr=subprocess.STDOUT, env=env)
+    doc: dict[str, Any] = {
+        "schema": "inferswarm.r8h.ladder-arm-case/2",
+        "campaign": rc.CAMPAIGN_ID,
+        "arm": arm,
+        "case_id": case_id,
+        "geometry": {"ngl": rc.MATCHED_NGL,
+                     "ctx": dict(rc.CONTEXT_SETTINGS),
+                     "request": dict(rc.REQUEST_CONTRACT)},
+        "fixture_sha256": rc.R8D_FIXTURE_SHA256,
+        "prompt_len": len(prompt_token_ids),
+        "model_members": [m.name for m in model_files],
+        "selector": {"cuda": cuda_selector, "vk": vk_selector,
+                     "icd": str(icd) if icd else None},
+        "pid": proc.pid,
+        "t_start": t_start,
+        "mem_before": mem_before,
+        "journal_before_classes": j_before_classes["stop_classes"],
+        "repeats": [],
+    }
+    repeats = []
+    try:
+        wait_server(port)
+        time.sleep(5)
+        for rep in rc.REQUIRED_REPEAT_IDS:
+            mem_pre = sampler()
+            t0 = time.time()
+            resp = http_json(f"http://127.0.0.1:{port}/completion", body)
+            dt = time.time() - t0
+            mem_post = sampler()
+            tokens = resp.get("tokens")
+            if not isinstance(tokens, list):
+                raise LadderError(
+                    f"repeat {rep}: response carries no token array")
+            sel_pre = mem_pre.get(selected_key, {})
+            sel_post = mem_post.get(selected_key, {})
+            exc = {}
+            for ex in excluded_keys:
+                exc[ex] = {"pre": mem_pre.get(ex, {}),
+                           "post": mem_post.get(ex, {})}
+            jraw = health.journal_kernel(since=t_start)
+            jwin = health.classify_journal(jraw)
+            repeats.append({
+                "repeat": rep,
+                "wall_s": round(dt, 3),
+                "generated_tokens": tokens,
+                "stop_type": resp.get("stop_type"),
+                "stop_word": resp.get("stopping_word", ""),
+                "raw_response": resp,
+                "selected_residency": {"pre": sel_pre, "post": sel_post},
+                "excluded_residency": exc,
+                "health_window": {
+                    "stop_classes": jwin["stop_classes"],
+                    "correctable_rxerr_lines":
+                        jwin["correctable_rxerr_lines"],
+                },
+            })
+            stops = jwin["stop_classes"]
+            if stops:
+                doc["halted"] = f"repeat{rep}:{'+'.join(stops)}"
+                break
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        time.sleep(10)
+        mem_after = sampler()
+        jraw = health.journal_kernel(since=t_start)
+        jfinal = health.classify_journal(jraw)
+        log_text = log_path.read_text(errors="replace") or ""
+        doc["post_exit"] = {
+            "memory_after": mem_after,
+            "exit_code": proc.returncode,
+            "journal_final_stop_classes": jfinal["stop_classes"],
+            "correctable_rxerr_lines": jfinal["correctable_rxerr_lines"],
+        }
+        doc["server_log_tail"] = log_text[-20000:]
+        doc["backend_lines"] = [l for l in log_text.splitlines()
+                                if "vulkan" in l.lower()
+                                or "cuda" in l.lower()][:80]
+    doc["repeats"] = repeats
+    out = out_dir / f"ladder-{arm}-{case_id}.json"
+    out.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n",
+                   encoding="utf-8")
+    print(json.dumps({
+        "arm": arm, "case_id": case_id,
+        "repeats": len(repeats),
+        "halted": doc.get("halted"),
+        "exit_code": doc["post_exit"]["exit_code"],
+    }))
+    return doc
 
 
 def main() -> int:
     import argparse
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--arm", choices=("A", "B", "C"), required=True)
     ap.add_argument("--server", type=Path, required=True)
-    ap.add_argument("--model", type=Path, required=True)
-    ap.add_argument("--ngl", type=int, required=True)
-    ap.add_argument("--fixture", type=Path, required=True,
-                    help="accepted R8-B fixture-ladder.json copy")
-    ap.add_argument("--reference", type=Path, required=True,
-                    help="accepted R8-D frozen-reference.json copy")
+    ap.add_argument("--model-dir", type=Path, required=True)
     ap.add_argument("--out-dir", type=Path, required=True)
-    ap.add_argument("--selected-sysfs", default="0000:06:00.0")
-    ap.add_argument("--excluded-sysfs", default="0000:09:00.0")
-    ap.add_argument("--port", type=int, default=18434)
+    ap.add_argument("--case", required=True)
+    ap.add_argument("--prompt-token-ids", required=True,
+                    help="path to JSON list of prompt token ids")
+    ap.add_argument("--cuda-selector")
+    ap.add_argument("--vk-selector")
+    ap.add_argument("--icd", type=Path)
+    ap.add_argument("--selected-key", required=True)
+    ap.add_argument("--excluded-keys", nargs="+", required=True)
+    ap.add_argument("--port", type=int, default=18491)
     args = ap.parse_args()
-
-    import hashlib
-    fixture_bytes = args.fixture.read_bytes()
-    if hashlib.sha256(fixture_bytes).hexdigest() != rc.R8D_FIXTURE_SHA256:
-        raise LadderError("fixture ladder identity drift (control 18)")
-    reference = json.loads(args.reference.read_text())
-    fixture = json.loads(fixture_bytes)
-    prompts = {c["case_id"]: c["prompt_token_ids"] for c in fixture["cases"]}
-
-    args.out_dir.mkdir(parents=True, exist_ok=True)
-    log_path = args.out_dir / "ladder-server.log"
-    health_before = health.snapshot(args.selected_sysfs, args.excluded_sysfs)
-    t_start = time.strftime("%Y-%m-%d %H:%M:%S")
-
-    proc = launch_server(args.server, args.model, args.ngl, args.port,
-                         log_path)
-    try:
-        wait_server(args.port)
-        results: dict[str, Any] = {}
-        halted = None
-        for case_id in rc.LADDER_CASES:
-            if halted:
-                results[case_id] = {"status": "NOT_EXECUTED",
-                                    "reason": f"halted after {halted}"}
-                continue
-            case_repeats = []
-            for rep in range(1, rc.REPEATS_PER_CASE + 1):
-                obs = run_case(args.port, prompts[case_id])
-                cmp = compare(obs, reference["cases"][case_id])
-                case_repeats.append({"repeat": rep, "observation": obs,
-                                     "comparison": cmp})
-            # Determinism evidence: repeats must be self-consistent
-            # (identical token ids AND stop type) regardless of whether
-            # they match the reference. The CORRECTNESS_FAIL terminal
-            # requires a DETERMINISTIC difference from the reference;
-            # nondeterministic repeats are a distinct failure class.
-            rep_tokens = [r["observation"]["generated_tokens"]
-                          for r in case_repeats]
-            rep_stops = [r["observation"]["stop_type"]
-                         for r in case_repeats]
-            deterministic = (len(set(map(str, rep_tokens))) == 1 and
-                             len(set(map(str, rep_stops))) == 1)
-            any_exact = any(r["comparison"]["exact"] for r in case_repeats)
-            all_exact = all(r["comparison"]["exact"] for r in case_repeats)
-            if all_exact:
-                case_status = "PASS"
-            elif deterministic:
-                case_status = "FAIL_DETERMINISTIC"
-            else:
-                case_status = "FAIL_NONDETERMINISTIC"
-            results[case_id] = {
-                "status": case_status,
-                "deterministic": deterministic,
-                "any_exact": any_exact,
-                "repeats": case_repeats,
-                "reference": reference["cases"][case_id],
-            }
-            # health gate between cases
-            jraw = health.journal_amdgpu(since=t_start)
-            jwin = health.classify_journal(
-                jraw, args.selected_sysfs, args.excluded_sysfs)
-            results[case_id]["health_window"] = {
-                "stop_classes": jwin["stop_classes"],
-                "rxerr_lines": jwin["correctable_rxerr_lines"],
-            }
-            stops = health.stop_now({"journal": jwin})
-            if stops:
-                halted = f"{case_id}:{'+'.join(stops)}"
-                results[case_id]["status"] = (
-                    "FAIL" if not all_exact else "PASS_BUT_HALTED")
-            elif case_status != "PASS":
-                halted = (f"{case_id}:"
-                          f"{'deterministic' if deterministic else 'nondeterministic'}"
-                          "_mismatch")
-        # final snapshot after all cases
-        health_after = health.snapshot(args.selected_sysfs,
-                                       args.excluded_sysfs)
-        jfinal = health.classify_journal(
-            health.journal_amdgpu(since=t_start),
-            args.selected_sysfs, args.excluded_sysfs)
-        doc = {
-            "schema": "inferswarm.r8h.ladder/1",
-            "campaign": rc.CAMPAIGN_ID,
-            "server": {
-                "binary": str(args.server),
-                "model": str(args.model),
-                "ngl": args.ngl,
-                "ctx": rc.CONTEXT_SETTINGS,
-                "port": args.port,
-                "selector": "GGML_VK_VISIBLE_DEVICES=1",
-            },
-            "fixture_sha256": rc.R8D_FIXTURE_SHA256,
-            "request_contract": rc.REQUEST_CONTRACT,
-            "t_start": t_start,
-            "results": results,
-            "halted": halted,
-            "health": {
-                "before": health_before,
-                "after": health_after,
-                "delta": health.delta(health_before, health_after),
-                "journal_final": jfinal,
-            },
-            "server_log_tail": log_path.read_text()[-20000:],
-        }
-    finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            proc.kill(); proc.wait()
-        time.sleep(5)
-        post = health.snapshot(args.selected_sysfs, args.excluded_sysfs)
-        release_ok = all(
-            v <= 8 * 1024 * 1024 for k, v in post["selected_mem"].items()
-            if "vram" in k)
-        doc_final = doc if 'doc' in dir() else {}
-        doc_final.setdefault("health", {})["post_exit"] = {
-            "snapshot": post,
-            "vram_released": release_ok,
-            "server_exit_code": proc.returncode,
-        }
-        out = args.out_dir / "ladder.json"
-        out.write_text(json.dumps(doc_final, indent=1, sort_keys=True) + "\n",
-                       encoding="utf-8")
-        print(json.dumps({
-            "cases": {k: v.get("status") for k, v in
-                      doc_final.get("results", {}).items()},
-            "halted": doc_final.get("halted"),
-            "vram_released": release_ok,
-        }))
+    prompt = json.loads(Path(args.prompt_token_ids).read_text())
+    run_arm_case(args.arm, args.server, args.model_dir, args.out_dir,
+                 args.case, prompt, args.cuda_selector, args.vk_selector,
+                 args.icd, args.selected_key, args.excluded_keys, args.port)
     return 0
 
 
