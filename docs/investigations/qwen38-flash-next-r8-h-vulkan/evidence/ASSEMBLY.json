@@ -128,11 +128,11 @@
   }
  },
  "closure": {
-  "closure_digest": "e7a4091505f160933da36aae6d4bd828324621373546c408034ebdf3f72a6e2e",
-  "producer_head": "377d2ff3343e74c674ac5dd19fdee41baa9053f0"
+  "closure_digest": "af4feaaf1a10b392ec76955283d3819889b825d89f0f930599f322fc3e366cfd",
+  "producer_head": "6357c8afd4552ca3293ed2e9896461c9c1081066"
  },
  "controls_receipt": {
-  "all_ok": false,
+  "all_ok": true,
   "baseline_terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
   "campaign": "issue234-r8h-matched-backend-device-parity",
   "control_ids": [
@@ -279,8 +279,8 @@
    "25": {
     "d": "second-die result substituted for primary die",
     "expect": "error",
-    "ok": false,
-    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
    },
    "26": {
     "d": "runtime upgrade to turn prerequisite into PASS",
@@ -297,8 +297,8 @@
    "28": {
     "d": "Arm A and B using different RTX 3060 UUID/BDF",
     "expect": "error",
-    "ok": false,
-    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
    },
    "29": {
     "d": "CUDA arm containing Vulkan execution or vice versa",
@@ -375,14 +375,14 @@
    "7": {
     "d": "stale V340L selector-UUID/BDF mapping",
     "expect": "error",
-    "ok": false,
-    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
    },
    "8": {
     "d": "die A/B swap after freeze",
     "expect": "error",
-    "ok": false,
-    "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
+    "ok": true,
+    "terminal": "R8H_EVIDENCE_BLOCKED"
    },
    "9": {
     "d": "both V340L dies carrying active model residency",
