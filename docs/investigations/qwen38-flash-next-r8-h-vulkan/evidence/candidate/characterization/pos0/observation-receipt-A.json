@@ -1,0 +1,239 @@
+{
+ "arm": "A",
+ "artifacts": {
+  "observation_jsonl": "b00fdf5d155b1d8a3ad0ac9ab9de2a2079bf24531cb6139233d7e74dee67b35f",
+  "pos0_f32": "50e2e990002e9852c6f7292d798f3c22c44f84b6098b21cc359eb9cf574229ae",
+  "response": "3b3cdc1a8fc93cc050e4c8123f79f3d51aa23622425048582584ccf45050704c",
+  "server_log": "53e3a6f17e1a19dd053c88579be78695a3b8b5dae25a63bedc6d36491e7837b0"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "collector": {
+  "path": "/tmp/is234r/producers/scripts/issue234_observe.py",
+  "sha256": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1"
+ },
+ "cpu_fallback": {
+  "devices_listed_under_launch_env": true,
+  "fallback": false,
+  "no_usable_gpu_warning_present": false,
+  "selected_model_scale_residency": true
+ },
+ "device_proof": {
+  "backend": "cuda",
+  "excluded": [
+   {
+    "bdf": "00000000:03:00.0",
+    "identity_source": "nvidia-smi uuid/pci.bus_id table",
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+   }
+  ],
+  "list_devices": {
+   "parsed": [
+    {
+     "label": "CUDA0",
+     "mib": "11907",
+     "name": "NVIDIA GeForce RTX 3060"
+    }
+   ],
+   "raw": "Available devices:\n  CUDA0: NVIDIA GeForce RTX 3060 (11907 MiB, 11794 MiB free)\n"
+  },
+  "selected": {
+   "bdf": "00000000:02:00.0",
+   "identity_source": "nvidia-smi uuid/pci.bus_id table",
+   "name": "NVIDIA GeForce RTX 3060",
+   "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+  }
+ },
+ "digest": "52f834bcff9952995cd8bb8d799eed5410ef76c810517af2abd9e5f84eaeb675",
+ "exit": {
+  "returncode": 0,
+  "terminated_by_driver": true
+ },
+ "generated_position": 0,
+ "generated_tokens": [
+  328,
+  760,
+  40554,
+  1,
+  271,
+  12188,
+  279,
+  1727
+ ],
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1
+ },
+ "host": {
+  "boot_id": "90210fe4-ea0c-469b-b889-f9b93df44ba1",
+  "hostname": "inferswarm01"
+ },
+ "in_process_backends": {
+  "mapped_libggml": [
+   "libggml-base.so.0.24.0",
+   "libggml-cpu.so.0.24.0",
+   "libggml-cuda.so.0.24.0",
+   "libggml.so.0.24.0"
+  ]
+ },
+ "launch": {
+  "argv": [
+   "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+   "--model",
+   "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "--n-gpu-layers",
+   "1",
+   "--ctx-size",
+   "8192",
+   "--batch-size",
+   "512",
+   "--port",
+   "18493",
+   "--host",
+   "127.0.0.1"
+  ],
+  "env": {
+   "CUDA_VISIBLE_DEVICES": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "LLAMA_OBSERVE_FOCUS": "328,561,271,34227,12188,248068",
+   "LLAMA_OBSERVE_LOGITS": "/tmp/is234r/obs-pos0-r3/A.jsonl",
+   "LLAMA_OBSERVE_POS": "0",
+   "PATH": "/usr/bin:/bin"
+  },
+  "env_present_keys": [
+   "CUDA_VISIBLE_DEVICES",
+   "LLAMA_OBSERVE_FOCUS",
+   "LLAMA_OBSERVE_LOGITS",
+   "LLAMA_OBSERVE_POS",
+   "PATH"
+  ],
+  "icd": null,
+  "pid": 909379
+ },
+ "model": {
+  "backing_receipt": "armA-backing.json",
+  "first_member": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "member_1_sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+  "members": [
+   {
+    "bytes": 10946624,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf"
+   },
+   {
+    "bytes": 49990818368,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf"
+   },
+   {
+    "bytes": 22544696352,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+   }
+  ],
+  "path": "/srv/models/qwen38-ud-iq1-s"
+ },
+ "observation_binary": {
+  "bin_dir": {
+   "libggml-base.so": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0.24.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-cpu.so": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed",
+   "libggml-cpu.so.0": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed",
+   "libggml-cpu.so.0.24.0": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed",
+   "libggml-cuda.so": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6",
+   "libggml-cuda.so.0": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6",
+   "libggml-cuda.so.0.24.0": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6",
+   "libggml.so": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c",
+   "libggml.so.0": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c",
+   "libggml.so.0.24.0": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c",
+   "llama-server": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+  },
+  "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+  "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+ },
+ "request": {
+  "contract": {
+   "cache_prompt": false,
+   "n_predict": 8,
+   "return_tokens": true,
+   "samplers": [
+    "top_k"
+   ],
+   "seed": 0,
+   "stream": false,
+   "temperature": 0.0,
+   "top_k": 1
+  },
+  "prompt_len": 256,
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5"
+ },
+ "residency": {
+  "compute_apps_bound_to_pid": [
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "loaded",
+    "pid": 909379,
+    "t": 1789999280.8093097,
+    "used_memory": "1126 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909379,
+    "t": 1789999285.9056373,
+    "used_memory": "1150 MiB"
+   }
+  ],
+  "excluded": [
+   {
+    "bdf": "00000000:03:00.0",
+    "peak_delta_bytes": 0,
+    "pre": {
+     "bdf": "00000000:03:00.0",
+     "mem_used_mib": 1
+    },
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+   }
+  ],
+  "n_samples": 3,
+  "sampler_interval_s": 5,
+  "selected_delta_bytes": 1214251008,
+  "selected_delta_loaded": {
+   "mem_used_mib": 1134
+  },
+  "selected_delta_post": {
+   "mem_used_mib": 1158
+  },
+  "selected_during_peak_delta_bytes": 1214251008,
+  "selected_loaded": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1135
+  },
+  "selected_post": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1159
+  },
+  "selected_post_exit": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1
+  },
+  "selected_pre": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1
+  }
+ },
+ "schema": "inferswarm.r8h.observation-execution-receipt/1",
+ "source": {
+  "clean_excluding_hook": true,
+  "hook_diff_lines": 103,
+  "hook_diff_sha256": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659",
+  "llama_cpp_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "modified_paths": [
+   " M tools/server/server-context.cpp"
+  ],
+  "provenance": "local_r8h_obs_worktree",
+  "worktree": "/home/hermes/llama.cpp/r8h-obs"
+ },
+ "t_end": "2026-09-21T10:01:40-0400",
+ "t_start": "2026-09-21T10:01:15-0400"
+}

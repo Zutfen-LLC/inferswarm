@@ -76,6 +76,8 @@ def derive_arm(arm: str, position: int, src_dir: Path) -> dict:
     jsonl = src_dir / f"{arm}.jsonl"
     f32 = src_dir / f"{arm}.jsonl.pos{position}.f32"
     resp = json.loads((src_dir / f"{arm}.resp.json").read_text())
+    receipt = src_dir / f"observation-receipt-{arm}.json"
+    receipt_sha = (sha(receipt) if receipt.is_file() else None)
     rows = [json.loads(l) for l in jsonl.read_text().splitlines()]
     row = next(r for r in rows if r["pos"] == position)
     n_vocab = row["n_vocab"]
@@ -102,15 +104,26 @@ def derive_arm(arm: str, position: int, src_dir: Path) -> dict:
         "raw_sidecar_sha256": {
             "jsonl": sha(jsonl),
             f"f32_pos{position}": sha(f32),
+            "observation_execution_receipt": receipt_sha,
         },
         "f32_row_floats": n_vocab,
         "n_nonfinite": row["n_nonfinite"],
         "observation_build": OBS_BUILDS[arm],
+        "observation_execution_receipt": {
+            "path": f"evidence/candidate/characterization/pos0/"
+                    f"observation-receipt-{arm}.json",
+            "sha256": receipt_sha,
+            "note": ("round-3 identity-bound collection; the terminal "
+                     "reducer (reduce_observation_execution_truth) "
+                     "validates every identity relation from the "
+                     "receipt bytes independently of this summary"),
+        },
         "repeat_binding": ("single observation pass under the prospective "
-                           "pos0-observation-pin; canonical arm evidence is "
-                           "the 3-repeat ladder receipt (ladder-{arm}-"
-                           "case-256.json); the observation pass is "
-                           "non-perturbing"),
+                           "pos0-observation-pin /2 with mechanically-"
+                           "captured execution receipts; canonical arm "
+                           "evidence is the 3-repeat ladder receipt "
+                           "(ladder-{arm}-case-256.json); the observation "
+                           "pass is non-perturbing"),
         "non_perturbation_identical": obs_tokens == CANONICAL[arm],
         "observed_tokens": obs_tokens,
         "canonical_tokens": CANONICAL[arm],

@@ -1,0 +1,431 @@
+{
+ "arm": "B",
+ "artifacts": {
+  "observation_jsonl": "4d21645fc57c3f0e1424c32a2d6c4863a903486141caaae4b9f86210d20b87e7",
+  "pos0_f32": "c0f216d38f38fb9d9804f10356fc60c9d35928948ca65baac304775a82ed23cb",
+  "response": "3c151eb6f6ffb40bc0996999c7d54456d52f93766ddddae11c971b8211333e60",
+  "server_log": "77bb9f19463cbdf82f75a305b4110811c520c4ab58849df08d7a9416a53a47d3"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "case_id": "case-256",
+ "collector": {
+  "path": "/tmp/is234r/producers/scripts/issue234_observe.py",
+  "sha256": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1"
+ },
+ "cpu_fallback": {
+  "devices_listed_under_launch_env": true,
+  "fallback": false,
+  "no_usable_gpu_warning_present": false,
+  "selected_model_scale_residency": true
+ },
+ "device_proof": {
+  "backend": "vulkan",
+  "excluded": [
+   {
+    "bdf": "00000000:03:00.0",
+    "identity_source": "vulkaninfo GPU1 + smi join",
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+   }
+  ],
+  "list_devices": {
+   "parsed": [
+    {
+     "label": "Vulkan0",
+     "mib": "12534",
+     "name": "NVIDIA GeForce RTX 3060"
+    }
+   ],
+   "raw": "Available devices:\n  Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB, 12136 MiB free)\n"
+  },
+  "list_devices_attempts": {
+   "0": {
+    "parsed": [
+     {
+      "label": "Vulkan0",
+      "mib": "12534",
+      "name": "NVIDIA GeForce RTX 3060"
+     }
+    ],
+    "raw": "Available devices:\n  Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB, 12136 MiB free)\n"
+   },
+   "1": {
+    "parsed": [
+     {
+      "label": "Vulkan0",
+      "mib": "12534",
+      "name": "NVIDIA GeForce RTX 3060"
+     }
+    ],
+    "raw": "Available devices:\n  Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB, 12150 MiB free)\n"
+   }
+  },
+  "nvidia_uuid_bdf_table": {
+   "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099": "00000000:02:00.0",
+   "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55": "00000000:03:00.0"
+  },
+  "selected": {
+   "bdf": "00000000:02:00.0",
+   "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "identity_source": "vulkaninfo GPU0 + nvidia-smi join",
+   "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+  },
+  "vulkan_physical_devices": [
+   {
+    "bdf": "00000000:02:00.0",
+    "deviceName": "NVIDIA GeForce RTX 3060",
+    "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "driverID": "DRIVER_ID_NVIDIA_PROPRIETARY",
+    "driverName": "NVIDIA",
+    "gpu_index": "GPU0"
+   },
+   {
+    "bdf": "00000000:03:00.0",
+    "deviceName": "NVIDIA GeForce RTX 3060",
+    "deviceUUID": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "driverID": "DRIVER_ID_NVIDIA_PROPRIETARY",
+    "driverName": "NVIDIA",
+    "gpu_index": "GPU1"
+   }
+  ],
+  "vulkaninfo": {
+   "gpus": {
+    "GPU0": {
+     "apiVersion": "1.4.341",
+     "conformanceVersion": "1.4.3.3",
+     "deviceID": "0x2504",
+     "deviceName": "NVIDIA GeForce RTX 3060",
+     "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+     "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+     "driverID": "DRIVER_ID_NVIDIA_PROPRIETARY",
+     "driverInfo": "610.57.04",
+     "driverName": "NVIDIA",
+     "driverUUID": "9992f558-9329-580d-a9f3-a38ee24bc64d",
+     "driverVersion": "610.57.4.0",
+     "vendorID": "0x10de"
+    },
+    "GPU1": {
+     "apiVersion": "1.4.341",
+     "conformanceVersion": "1.4.3.3",
+     "deviceID": "0x2504",
+     "deviceName": "NVIDIA GeForce RTX 3060",
+     "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+     "deviceUUID": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+     "driverID": "DRIVER_ID_NVIDIA_PROPRIETARY",
+     "driverInfo": "610.57.04",
+     "driverName": "NVIDIA",
+     "driverUUID": "9992f558-9329-580d-a9f3-a38ee24bc64d",
+     "driverVersion": "610.57.4.0",
+     "vendorID": "0x10de"
+    }
+   },
+   "raw": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\nVK_NV_display_stereo                   : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.341\n\tdriverVersion      = 610.57.4.0\n\tvendorID           = 0x10de\n\tdeviceID           = 0x2504\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = NVIDIA GeForce RTX 3060\n\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n\tdriverName         = NVIDIA\n\tdriverInfo         = 610.57.04\n\tconformanceVersion = 1.4.3.3\n\tdeviceUUID         = 1fc28f83-1d45-926e-54d0-ba1e835ef099\n\tdriverUUID         = 9992f558-9329-580d-a9f3-a38ee24bc64d\nGPU1:\n\tapiVersion         = 1.4.341\n\tdriverVersion      = 610.57.4.0\n\tvendorID           = 0x10de\n\tdeviceID           = 0x2504\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = NVIDIA GeForce RTX 3060\n\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n\tdriverName         = NVIDIA\n\tdriverInfo         = 610.57.04\n\tconformanceVersion = 1.4.3.3\n\tdeviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n\tdriverUUID         = 9992f558-9329-580d-a9f3-a38ee24bc64d\n'DISPLAY' environment variable not set... skipping surface info\nerror: XDG_RUNTIME_DIR is invalid or not set in the environment.\n"
+  }
+ },
+ "digest": "2a48cd587299140cd84dc64764594e84f7bfe6cbd26097e8b8ba27e52640f864",
+ "exit": {
+  "returncode": 0,
+  "terminated_by_driver": true
+ },
+ "generated_position": 0,
+ "generated_tokens": [
+  561,
+  324,
+  55965,
+  51624,
+  29014,
+  271,
+  248068,
+  271
+ ],
+ "geometry": {
+  "ctx": {
+   "batch-size": 512,
+   "ctx-size": 8192
+  },
+  "ngl": 1
+ },
+ "host": {
+  "boot_id": "90210fe4-ea0c-469b-b889-f9b93df44ba1",
+  "hostname": "inferswarm01"
+ },
+ "in_process_backends": {
+  "mapped_libggml": [
+   "libggml-base.so.0.24.0",
+   "libggml-cpu.so.0.24.0",
+   "libggml-vulkan.so.0.24.0",
+   "libggml.so.0.24.0"
+  ]
+ },
+ "launch": {
+  "argv": [
+   "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+   "--model",
+   "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "--n-gpu-layers",
+   "1",
+   "--ctx-size",
+   "8192",
+   "--batch-size",
+   "512",
+   "--port",
+   "18493",
+   "--host",
+   "127.0.0.1"
+  ],
+  "env": {
+   "CUDA_VISIBLE_DEVICES": "-1",
+   "GGML_VK_VISIBLE_DEVICES": "0",
+   "LD_LIBRARY_PATH": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin",
+   "LLAMA_OBSERVE_FOCUS": "328,561,271,34227,12188,248068",
+   "LLAMA_OBSERVE_LOGITS": "/tmp/is234r/obs-pos0-r3/B.jsonl",
+   "LLAMA_OBSERVE_POS": "0",
+   "PATH": "/usr/bin:/bin",
+   "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+  },
+  "env_present_keys": [
+   "CUDA_VISIBLE_DEVICES",
+   "GGML_VK_VISIBLE_DEVICES",
+   "LD_LIBRARY_PATH",
+   "LLAMA_OBSERVE_FOCUS",
+   "LLAMA_OBSERVE_LOGITS",
+   "LLAMA_OBSERVE_POS",
+   "PATH",
+   "VK_ICD_FILENAMES"
+  ],
+  "icd": {
+   "library_path": "libGLX_nvidia.so.0",
+   "path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+   "sha256": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1"
+  },
+  "pid": 909803
+ },
+ "model": {
+  "backing_receipt": "armB-backing.json",
+  "first_member": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+  "member_1_sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+  "members": [
+   {
+    "bytes": 10946624,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf"
+   },
+   {
+    "bytes": 49990818368,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf"
+   },
+   {
+    "bytes": 22544696352,
+    "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+   }
+  ],
+  "path": "/srv/models/qwen38-ud-iq1-s"
+ },
+ "observation_binary": {
+  "bin_dir": {
+   "libggml-base.so": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-base.so.0.24.0": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b",
+   "libggml-cpu.so": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-cpu.so.0": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-cpu.so.0.24.0": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63",
+   "libggml-vulkan.so": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml-vulkan.so.0": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml-vulkan.so.0.24.0": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9",
+   "libggml.so": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "libggml.so.0": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "libggml.so.0.24.0": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e",
+   "llama-server": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+  },
+  "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+  "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+ },
+ "request": {
+  "contract": {
+   "cache_prompt": false,
+   "n_predict": 8,
+   "return_tokens": true,
+   "samplers": [
+    "top_k"
+   ],
+   "seed": 0,
+   "stream": false,
+   "temperature": 0.0,
+   "top_k": 1
+  },
+  "prompt_len": 256,
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5"
+ },
+ "residency": {
+  "compute_apps_bound_to_pid": [
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "pre",
+    "pid": 909803,
+    "t": 1789999314.221738,
+    "used_memory": "1008 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999319.3260527,
+    "used_memory": "1008 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999324.4250488,
+    "used_memory": "1014 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999329.5288482,
+    "used_memory": "1014 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999334.6360683,
+    "used_memory": "1016 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999339.7376344,
+    "used_memory": "1016 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999344.8460078,
+    "used_memory": "1018 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999349.9472861,
+    "used_memory": "1018 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999355.0483568,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999360.1496491,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999365.2497008,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999370.3505864,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999375.449213,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999380.5563443,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999385.653623,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999390.7547832,
+    "used_memory": "1022 MiB"
+   },
+   {
+    "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "phase": "generation",
+    "pid": 909803,
+    "t": 1789999395.8687873,
+    "used_memory": "1022 MiB"
+   }
+  ],
+  "excluded": [
+   {
+    "bdf": "00000000:03:00.0",
+    "peak_delta_bytes": 1048576,
+    "pre": {
+     "bdf": "00000000:03:00.0",
+     "mem_used_mib": 1
+    },
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+   }
+  ],
+  "n_samples": 18,
+  "sampler_interval_s": 5,
+  "selected_delta_bytes": 1096810496,
+  "selected_delta_loaded": {
+   "mem_used_mib": 1033
+  },
+  "selected_delta_post": {
+   "mem_used_mib": 1046
+  },
+  "selected_during_peak_delta_bytes": 1096810496,
+  "selected_loaded": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1034
+  },
+  "selected_post": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1047
+  },
+  "selected_post_exit": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1
+  },
+  "selected_pre": {
+   "bdf": "00000000:02:00.0",
+   "mem_used_mib": 1
+  }
+ },
+ "schema": "inferswarm.r8h.observation-execution-receipt/1",
+ "source": {
+  "clean_excluding_hook": true,
+  "hook_diff_lines": 103,
+  "hook_diff_sha256": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659",
+  "llama_cpp_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "modified_paths": [
+   " M tools/server/server-context.cpp"
+  ],
+  "provenance": "local_r8h_obs_worktree",
+  "worktree": "/home/hermes/llama.cpp/r8h-obs"
+ },
+ "t_end": "2026-09-21T10:03:30-0400",
+ "t_start": "2026-09-21T10:01:49-0400"
+}

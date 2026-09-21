@@ -791,18 +791,22 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
             problems.append(f"arm{arm}:icd_not_absolute")
 
     # ---- in-process backend participation ----------------------------
+    # NOTE: /proc/PID/maps shows the VERSIONED object names
+    # (libggml-cuda.so.0.24.0), so participation is a prefix/substring
+    # match on the libggml backend object, never an exact filename.
     mapped = set((doc.get("in_process_backends") or {})
                  .get("mapped_libggml") or [])
+    has_cuda = any(m.startswith("libggml-cuda.so") for m in mapped)
+    has_vulkan = any(m.startswith("libggml-vulkan.so") for m in mapped)
     if arm == "A":
-        if "libggml-cuda.so" not in mapped and \
-                "libggml-cuda.so.0" not in mapped:
+        if not has_cuda:
             problems.append(f"arm{arm}:cuda_backend_not_mapped")
-        if any("vulkan" in m for m in mapped):
+        if has_vulkan:
             problems.append(f"arm{arm}:vulkan_backend_in_cuda_arm")
     else:
-        if not any("vulkan" in m for m in mapped):
+        if not has_vulkan:
             problems.append(f"arm{arm}:vulkan_backend_not_mapped")
-        if any("cuda" in m for m in mapped):
+        if has_cuda:
             problems.append(f"arm{arm}:cuda_backend_in_vulkan_arm")
 
     # ---- device proof -------------------------------------------------
@@ -862,8 +866,11 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
                 if gpu0.get("bdf") != frozen["C_selected_die"]["bdf"]:
                     problems.append(
                         f"arm{arm}:vk_gpu0_bdf:{gpu0.get('bdf')}")
-                if "RADV" not in (gpu0.get("driverName") or "") \
-                        and "radv" not in (gpu0.get("driverID") or ""):
+                # RADV identifies as lowercase driverName 'radv' with
+                # DRIVER_ID_MESA_RADV (case-insensitive match on both)
+                dn = (gpu0.get("driverName") or "").upper()
+                did = (gpu0.get("driverID") or "").upper()
+                if "RADV" not in dn and "RADV" not in did:
                     problems.append(f"arm{arm}:vk_gpu0_not_radv")
         # wrong ICD vendor: the OTHER vendor's devices must be absent
         # under the restricted census
