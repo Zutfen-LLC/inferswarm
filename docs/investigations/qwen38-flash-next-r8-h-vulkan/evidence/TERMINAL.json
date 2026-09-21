@@ -123,8 +123,188 @@
    }
   },
   "score_characterization": {
+   "derived": {
+    "A": {
+     "f32_sha256": "50e2e990002e9852c6f7292d798f3c22c44f84b6098b21cc359eb9cf574229ae",
+     "focal_pair_328_561_margin": 0.118303299,
+     "focal_tokens": {
+      "12188": {
+       "logit": 6.1813249588012695,
+       "rank": 545
+      },
+      "248068": {
+       "logit": 5.79320764541626,
+       "rank": 703
+      },
+      "271": {
+       "logit": 14.34280014038086,
+       "rank": 3
+      },
+      "328": {
+       "logit": 15.190742492675781,
+       "rank": 1
+      },
+      "34227": {
+       "logit": 6.394911766052246,
+       "rank": 474
+      },
+      "561": {
+       "logit": 15.072439193725586,
+       "rank": 2
+      }
+     },
+     "identity_problems": [],
+     "jsonl_sha256": "b00fdf5d155b1d8a3ad0ac9ab9de2a2079bf24531cb6139233d7e74dee67b35f",
+     "n_vocab": 248320,
+     "non_perturbation_identical": true,
+     "observed_tokens": [
+      328,
+      760,
+      40554,
+      1,
+      271,
+      12188,
+      279,
+      1727
+     ],
+     "top_2": [
+      {
+       "logit": 15.190742492675781,
+       "token": 328
+      },
+      {
+       "logit": 15.072439193725586,
+       "token": 561
+      }
+     ],
+     "winner_token": 328,
+     "winner_vs_runner_up_margin": 0.118303299
+    },
+    "B": {
+     "f32_sha256": "c0f216d38f38fb9d9804f10356fc60c9d35928948ca65baac304775a82ed23cb",
+     "focal_pair_328_561_margin": 0.234203339,
+     "focal_tokens": {
+      "12188": {
+       "logit": 5.600666046142578,
+       "rank": 805
+      },
+      "248068": {
+       "logit": 5.220813751220703,
+       "rank": 1053
+      },
+      "271": {
+       "logit": 13.901132583618164,
+       "rank": 4
+      },
+      "328": {
+       "logit": 15.03003215789795,
+       "rank": 2
+      },
+      "34227": {
+       "logit": 6.488531112670898,
+       "rank": 443
+      },
+      "561": {
+       "logit": 15.264235496520996,
+       "rank": 1
+      }
+     },
+     "identity_problems": [],
+     "jsonl_sha256": "4d21645fc57c3f0e1424c32a2d6c4863a903486141caaae4b9f86210d20b87e7",
+     "n_vocab": 248320,
+     "non_perturbation_identical": true,
+     "observed_tokens": [
+      561,
+      324,
+      55965,
+      51624,
+      29014,
+      271,
+      248068,
+      271
+     ],
+     "top_2": [
+      {
+       "logit": 15.264235496520996,
+       "token": 561
+      },
+      {
+       "logit": 15.03003215789795,
+       "token": 328
+      }
+     ],
+     "winner_token": 561,
+     "winner_vs_runner_up_margin": 0.234203339
+    },
+    "C": {
+     "f32_sha256": "720021d666ae7071d191e595f334f42090636e891d580c271468143a09fffb48",
+     "focal_pair_328_561_margin": 0.599080086,
+     "focal_tokens": {
+      "12188": {
+       "logit": 4.637186050415039,
+       "rank": 1641
+      },
+      "248068": {
+       "logit": 5.322388172149658,
+       "rank": 1054
+      },
+      "271": {
+       "logit": 14.907905578613281,
+       "rank": 3
+      },
+      "328": {
+       "logit": 14.74167251586914,
+       "rank": 4
+      },
+      "34227": {
+       "logit": 7.4216179847717285,
+       "rank": 241
+      },
+      "561": {
+       "logit": 15.340752601623535,
+       "rank": 1
+      }
+     },
+     "identity_problems": [],
+     "jsonl_sha256": "757f4aeec7f172d3648f602b28903f11d29c9788d4e1b2c5f2ff15543b5e0dc2",
+     "n_vocab": 248320,
+     "non_perturbation_identical": true,
+     "observed_tokens": [
+      561,
+      324,
+      55965,
+      51624,
+      29014,
+      34227,
+      18030,
+      16382
+     ],
+     "top_2": [
+      {
+       "logit": 15.340752601623535,
+       "token": 561
+      },
+      {
+       "logit": 14.96580982208252,
+       "token": 359
+      }
+     ],
+     "winner_token": 561,
+     "winner_vs_runner_up_margin": 0.37494278
+    }
+   },
    "problems": [],
-   "status": "OK"
+   "required_position": 0,
+   "secondary": {
+    "classification": "secondary_device_axis_characterization",
+    "document_sha256": "ab8df4bf0739feb695a24d6b32d5d1572f7ccab89274b0291ecc8f9dc36fe047",
+    "generated_position": 5,
+    "note": "retained secondary evidence; binds the B/C device axis divergence only and does not satisfy the global first-divergence characterization gate",
+    "status": "RETAINED"
+   },
+   "status": "OK",
+   "summary_disagreements": [],
+   "summary_status": "PRESENT"
   }
  },
  "external_anchor_note": "R8-D streams retained as external anchor; they did not participate in terminal derivation.",
@@ -137,6 +317,6 @@
  "schema": "inferswarm.r8h.terminal-reduction/2",
  "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
  "terminal_basis": [
-  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; score characterization retained"
+  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; earliest divergence position 0 (A<->B and A<->C diverge at 0; B<->C at 5); position-0 characterization re-derived from raw float32 bytes; position-5 retained as secondary_device_axis_characterization"
  ]
 }

@@ -381,7 +381,24 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue232_assemble.py",
             "scripts/issue232_manifest.py",
             "scripts/issue232_coldproof.py",
-            "scripts/issue232_bootproof.py")
+            "scripts/issue232_bootproof.py",
+            # Issue #234 R8-H: additive matched backend/device parity
+            # campaign producers, independently pinned by the R8-H
+            # evidence manifest and the issue234 producer closure
+            # (physical pin e7d822a byte-frozen; reduction producers
+            # closure-bound at each amendment).
+            "scripts/issue234_host.py",
+            "scripts/issue234_runtime.py",
+            "scripts/issue234_placement.py",
+            "scripts/issue234_ladder.py",
+            "scripts/issue234_health.py",
+            "scripts/issue234_receipt.py",
+            "scripts/issue234_freeze.py",
+            "scripts/issue234_authority.py",
+            "scripts/issue234_reduce.py",
+            "scripts/issue234_assemble.py",
+            "scripts/issue234_manifest.py",
+            "scripts/issue234_characterize.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
