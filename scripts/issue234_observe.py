@@ -122,8 +122,10 @@ def amd_state() -> dict[str, Any]:
     res: dict[str, Any] = {}
     for dev in sorted(Path("/sys/bus/pci/devices").iterdir()):
         name = dev.name
-        if len(name) == 12:  # short form -> 16-char domain-prefixed
-            name = "0000:" + name
+        if len(name) == 12:
+            # short PCI form "0000:06:00.0" -> 16-char domain form
+            # "00000000:06:00.0" (8-hex domain field)
+            name = "00000000:" + name[5:]
         drm = sorted(dev.glob("drm/card*"))
         if not drm:
             continue
