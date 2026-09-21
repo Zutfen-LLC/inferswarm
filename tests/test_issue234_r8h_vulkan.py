@@ -1115,6 +1115,23 @@ class TestControlSuite(unittest.TestCase):
                    if not v["ok"]}
             self.assertEqual(bad, {}, f"failing controls: {bad}")
 
+    def test_control33_receipts_only_missing_blocks(self):
+        # round-3 companion: raw bytes intact but execution receipts
+        # absent — an unbound observation corpus blocks
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            pos0 = ev / "candidate" / "characterization" / "pos0"
+            for p in pos0.glob("observation-receipt-*.json"):
+                p.unlink()
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertEqual(ot["A"]["status"], "ABSENT")
+            self.assertIn("observation_execution_truth",
+                          "".join(doc["checks"]["score_characterization"]
+                                  ["problems"]))
+
     def test_control33_proves_all_blocked_paths(self):
         # focused re-check of the five required control-33 outcomes
         outcomes = {}
