@@ -419,7 +419,12 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue237_thresholds.py",
             "scripts/issue237_semantic_adjudication.py",
             "scripts/issue237_unseal_preflight.py",
-            "scripts/issue237_schemas.py")
+            "scripts/issue237_schemas.py",
+            # Issue #237 correction pass: the R8-B fixture-ladder length-band
+            # derivation authority (bands mechanically derived, never
+            # transcribed; pinned by the qwen38-vulkan-v1 evidence MANIFEST
+            # like every other #237 producer).
+            "scripts/issue237_length_bands.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
