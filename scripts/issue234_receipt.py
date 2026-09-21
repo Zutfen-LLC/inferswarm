@@ -152,12 +152,16 @@ CONTEXT_SETTINGS: dict[str, Any] = {
 
 #: Excluded-device noise bounds. Vulkan instance creation initializes
 #: drivers on sibling devices; model-tensor residency at IQ1_S is
-#: MiB-scale at minimum. Mechanical rules:
-#:   * Arm C excluded V340L die: < 1 MiB vram delta;
-#:   * Arm A/B sibling 3060: < 1 MiB memory-used delta AND no compute
+#: MiB-scale at minimum (measured ~1.0-1.2 GB at ngl=1). nvidia-smi
+#: reports whole MiB, so a 1 MiB delta is counter granularity, not
+#: residency. Mechanical rule: an excluded device is "active" only at
+#: model scale — >= 8 MiB (one-ninth of the smallest observed arm
+#: residency, still two orders below any partial-layer footprint).
+#:   * Arm C excluded V340L die: < 8 MiB vram delta;
+#:   * Arm A/B sibling 3060: < 8 MiB memory-used delta AND no compute
 #:     process bound to it (control 36: unmatched residency geometry
 #:     may not be presented as a matched comparison).
-EXCLUDED_DEVICE_MAX_BYTES = 1024 * 1024
+EXCLUDED_DEVICE_MAX_BYTES = 8 * 1024 * 1024
 
 ARMS: dict[str, dict[str, str]] = {
     "A": {"backend": "cuda", "host": "inferswarm01",

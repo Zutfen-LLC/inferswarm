@@ -108,6 +108,10 @@ def preflight(arm: str, server: Path, model_dir: Path, out_dir: Path,
 
     env = dict(os.environ)
     env["PATH"] = "/usr/bin:/bin:" + env.get("PATH", "")
+    if arm in ("B", "C"):
+        # deployed launcher needs its co-packaged libs (01-built bin dir)
+        env["LD_LIBRARY_PATH"] = (str(server.parent) + ":" +
+                                  env.get("LD_LIBRARY_PATH", ""))
     if arm == "A":
         env["CUDA_VISIBLE_DEVICES"] = cuda_selector or ""
         env.pop("GGML_VK_VISIBLE_DEVICES", None)

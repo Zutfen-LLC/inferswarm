@@ -146,13 +146,18 @@ def collect_vulkan(icd_filter: str | None = None) -> dict[str, Any]:
         info["deviceID"] = g(r"deviceID\s+=\s+(0x[0-9a-f]+)")
         info["deviceType"] = g(r"deviceType\s+=\s+(\w+)")
         heaps = []
-        for hm in re.finditer(
-            r"heap index\s+=\s+(\d+).*?device local.*?size\s+=\s+(\d+)",
-                body, flags=re.S):
-            heaps.append({"index": int(hm.group(1)),
-                          "device_local": True,
-                          "size": int(hm.group(2))})
-        info["device_local_heaps"] = heaps
+        # vulkaninfo layout: memoryHeaps[N]: size = <bytes> ... flags:
+        # ... MEMORY_HEAP_DEVICE_LOCAL_BIT (possibly multiline)
+        heap_blocks = re.split(r"memoryHeaps\[\d+\]:", body)
+        for hb in heap_blocks[1:]:
+            ms = re.search(r"size\s+=\s+(\d+)", hb)
+            if not ms:
+                continue
+            device_local = "MEMORY_HEAP_DEVICE_LOCAL_BIT" in hb
+            heaps.append({"size": int(ms.group(1)),
+                          "device_local": device_local})
+        info["device_local_heaps"] = [h for h in heaps if h["device_local"]]
+        info["all_heaps"] = heaps
         gpus[f"gpu{gpu_id}"] = info
     return {"raw_length": len(raw), "gpus": gpus, "raw": raw,
             "icd_filter": icd_filter}

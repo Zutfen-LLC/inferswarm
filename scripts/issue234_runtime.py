@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -148,7 +149,9 @@ def qualify_cuda_build(worktree: Path, build_dir: str, census: dict,
             bin_hashes[f.name] = sha(f)
     rc_r, rest_out, rest_err = _run(
         [str(server), "--list-devices"],
-        env={"CUDA_VISIBLE_DEVICES": str(selector_idx)})
+        env={"CUDA_VISIBLE_DEVICES": "GPU-" + frozen_uuid.removeprefix("GPU-")
+             if not str(selector_idx).isdigit() else
+             str(selector_idx)})
     if rc_r != 0:
         raise RuntimeQualError("CUDA-restricted --list-devices failed")
     rest = parse_devices(rest_out + rest_err)
@@ -184,7 +187,8 @@ def qualify_cuda_build(worktree: Path, build_dir: str, census: dict,
 def qualify_vulkan_build(worktree: Path, build_dir: str, census: dict,
                          arm: str, frozen_bdf: str,
                          vulkan_binary_sha: str | None = None,
-                         deployed_path: Path | None = None) -> dict[str, Any]:
+                         deployed_path: Path | None = None,
+                         icd: str | None = None) -> dict[str, Any]:
     """Arm B (01, NVIDIA ICD) or Arm C (02, RADV) Vulkan runtime."""
     revision = check_source(worktree)
     build = check_build_flags(worktree, build_dir, "vulkan")
@@ -206,21 +210,30 @@ def qualify_vulkan_build(worktree: Path, build_dir: str, census: dict,
         raise RuntimeQualError(
             f"deployed Vulkan binary sha {binary_sha} != source-of-truth "
             f"{vulkan_binary_sha}")
-    rc_v, ver_out, ver_err = _run([str(server), "--version"])
+    # the deployed launcher resolves libllama-server-impl.so & libggml*
+    # from its own dir (01-built bin dir copied to 02); bind LD_LIBRARY_PATH
+    run_env = {"LD_LIBRARY_PATH":
+               str(server.parent) + ":" + os.environ.get("LD_LIBRARY_PATH",
+                                                         "")}
+    rc_v, ver_out, ver_err = _run([str(server), "--version"], env=run_env)
     if rc_v != 0 or rc.LLAMA_CPP_PIN[:8] not in ver_out + ver_err:
         raise RuntimeQualError(
             f"--version does not carry pin: {(ver_out + ver_err)[:200]!r}")
-    rc_a, all_out, all_err = _run([str(server), "--list-devices"])
+    rc_a, all_out, all_err = _run([str(server), "--list-devices"],
+                                  env=run_env)
     devs = parse_devices(all_out + all_err)
     cuda_devs = [d for d in devs if d["label"].startswith("CUDA")]
     if cuda_devs:
         raise RuntimeQualError(
             f"Vulkan build lists CUDA devices (control 29): {cuda_devs}")
     # bind restricted selector to the frozen BDF through the census join
-    sel = bind_vulkan_selector(server, census, arm, frozen_bdf)
+    sel = bind_vulkan_selector(server, census, arm, frozen_bdf,
+                               icd=icd)
     ldd = None
     if deployed_path is not None:
-        rc_l, ldd_out, _ = _run(["ldd", str(server)])
+        # ldd resolves DT_RUNPATH-less co-packaged libs only when the
+        # bin dir is on the loader path — same binding the arm uses
+        rc_l, ldd_out, _ = _run(["ldd", str(server)], env=run_env)
         ldd = ldd_out
         missing = [l for l in ldd_out.splitlines() if "not found" in l]
         if missing:
@@ -244,9 +257,73 @@ def qualify_vulkan_build(worktree: Path, build_dir: str, census: dict,
 
 
 def bind_vulkan_selector(server: Path, census: dict, arm: str,
-                         frozen_bdf: str) -> dict[str, Any]:
+                         frozen_bdf: str,
+                         icd: str | None = None) -> dict[str, Any]:
     """Find the GGML_VK_VISIBLE_DEVICES index that uniquely selects the
-    frozen BDF, proven by UUID join against the census."""
+    frozen BDF, proven by UUID join against the census.
+
+    When icd is given the enumerator runs under the SAME ICD
+    restriction the arm will use (llama.cpp GGML_VK_VISIBLE_DEVICES
+    indexes the loader-visible device list, which the ICD set defines);
+    the census's gpuN key (full-system enumeration order) is then only
+    a cross-check, not the index source."""
+    if icd is not None:
+        # ICD-restricted enumeration defines the selector index space.
+        # GGML_VK_VISIBLE_DEVICES=k keeps only the k-th loader-visible
+        # device. Both V340L dies share one device name, so positional
+        # identity under the ICD cannot be distinguished by
+        # --list-devices; the index is derived from the census loader
+        # order (raw bytes) and the die-level selector->BDF proof is
+        # the placement sysfs residency delta (issue234_placement).
+        sel_env = {"LD_LIBRARY_PATH":
+                   str(server.parent) + ":" + os.environ.get(
+                       "LD_LIBRARY_PATH", "")}
+        sel_env["VK_ICD_FILENAMES"] = icd
+        rc0, out0, err0 = _run([str(server), "--list-devices"],
+                               env=sel_env)
+        devs = parse_devices(out0 + err0)
+        # census full loader order restricted to this vendor's V340s
+        order = [b["bdf"] for b in census.get("vulkan_devices", [])
+                 if b.get("vendorID") == "0x1002"
+                 and "V340" in (b.get("name") or "")]
+        if frozen_bdf not in order:
+            raise RuntimeQualError(
+                f"frozen BDF {frozen_bdf} not in census ICD order "
+                f"{order}")
+        want_pos = order.index(frozen_bdf)
+        attempts = []
+        chosen = None
+        for idx in range(0, max(len(devs), 1)):
+            e = dict(sel_env)
+            e["GGML_VK_VISIBLE_DEVICES"] = str(idx)
+            rc_r, out, err = _run([str(server), "--list-devices"], env=e)
+            if rc_r != 0:
+                continue
+            rdevs = parse_devices(out + err)
+            attempts.append({"idx": idx, "devices": rdevs,
+                             "raw": (out + err)[:2000]})
+            if len(rdevs) == 1 and idx == want_pos:
+                chosen = {"index": idx, "device": rdevs[0]}
+                break
+        if chosen is None:
+            raise RuntimeQualError(
+                f"could not bind ICD-restricted selector for {frozen_bdf} "
+                f"(census position {want_pos}): "
+                f"{[a['devices'] for a in attempts]}")
+        return {
+            "mechanism": "GGML_VK_VISIBLE_DEVICES+VK_ICD_FILENAMES",
+            "value": str(chosen["index"]),
+            "target_bdf": frozen_bdf,
+            "icd": icd,
+            "icd_census_order": order,
+            "chosen_device": chosen["device"],
+            "icd_restricted_devices": devs,
+            "die_level_proof": ("positional under ICD (identical die "
+                                "names); selector->BDF proven by sysfs "
+                                "residency delta in the placement "
+                                "receipt"),
+            "attempts": attempts,
+        }
     if arm == "B":
         # census: nvidia-host census; Vulkan devices joined by uuid
         cands = census["rtx3060"]
@@ -278,9 +355,14 @@ def bind_vulkan_selector(server: Path, census: dict, arm: str,
     attempts = []
     chosen = None
     for idx in range(0, 6):
+        # bind restricted selector to the frozen BDF through the census
+        # join; also bind LD_LIBRARY_PATH for the deployed launcher
+        sel_env = {"GGML_VK_VISIBLE_DEVICES": str(idx),
+                   "LD_LIBRARY_PATH":
+                   str(server.parent) + ":" + os.environ.get(
+                       "LD_LIBRARY_PATH", "")}
         rc_r, out, err = _run(
-            [str(server), "--list-devices"],
-            env={"GGML_VK_VISIBLE_DEVICES": str(idx)})
+            [str(server), "--list-devices"], env=sel_env)
         if rc_r != 0:
             continue
         devs = parse_devices(out + err)
@@ -332,6 +414,8 @@ def main() -> int:
     ap.add_argument("--census", type=Path, required=True)
     ap.add_argument("--frozen-uuid", help="Arm A/B: nvidia-smi UUID")
     ap.add_argument("--frozen-bdf", help="Arm B/C: 16-char BDF")
+    ap.add_argument("--icd", help="Arm C: VK_ICD_FILENAMES restriction "
+                    "the arm will run under")
     ap.add_argument("--vulkan-binary-sha",
                     help="Arm C: sha256 the deployed binary must match")
     ap.add_argument("--deployed-path", type=Path,
@@ -345,7 +429,8 @@ def main() -> int:
     else:
         doc = qualify_vulkan_build(
             args.worktree, args.build_dir, census, args.arm,
-            args.frozen_bdf, args.vulkan_binary_sha, args.deployed_path)
+            args.frozen_bdf, args.vulkan_binary_sha, args.deployed_path,
+            icd=args.icd)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n",
                         encoding="utf-8")

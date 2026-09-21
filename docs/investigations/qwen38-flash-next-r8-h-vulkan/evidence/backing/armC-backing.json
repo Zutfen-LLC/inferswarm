@@ -1,0 +1,29 @@
+{
+ "all_ok": true,
+ "host": "inferswarm02",
+ "members": [
+  {
+   "bytes": 10946624,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+   "sha256_ok": true,
+   "wall_s": 0.8
+  },
+  {
+   "bytes": 49990818368,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+   "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+   "sha256_ok": true,
+   "wall_s": 272.9
+  },
+  {
+   "bytes": 22544696352,
+   "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+   "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+   "sha256_ok": true,
+   "wall_s": 123.9
+  }
+ ],
+ "schema": "inferswarm.r8h.backing/2",
+ "total_bytes": 72546461344
+}
