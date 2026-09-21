@@ -278,3 +278,61 @@ No RPC, no mixed simultaneous AMD/NVIDIA execution, no cross-die
 V340L use, no runtime upgrade past the pin, no alternate
 quantization, no planner policy change, no ordinary serving traffic,
 no canonical ladder rerun in round 3.
+
+## 8. Final reduction-only correction — exact retained-prompt binding
+
+Maintainer review of the Round-4 complete-payload state found one
+remaining reduction gap: `_receipt_problems()` validated each retained
+`A/B/C.request.json` by payload digest, request contract, prompt type,
+and prompt length == 256 — but never mechanically proved the payload
+carried the accepted frozen `case-256` prompt token sequence. The
+receipt's `request.prompt_sha256` is not derived from the retained
+payload during reduction, so a forged retained-input mutation (swap
+the 256-token list, recompute the payload digest, update
+`receipt.request.payload.*` and `receipt.artifacts.request_payload`,
+re-digest the receipt, keep all response/jsonl/f32 bytes) satisfied
+the reducer. Canonical output equality is not proof of the prompt
+actually sent.
+
+The correction (reduction-only; NO physical campaign, ladder,
+observation, or collection was rerun; every physical-producer hash
+unchanged):
+
+- **Independent prompt authority**: `accepted_case256_prompt_token_ids()`
+  derives the accepted prompt from the accepted fixture authority
+  (`docs/investigations/qwen38-flash-next-r8-b/evidence/reference/
+  fixture-ladder.json`, SHA-256 verified against `R8D_FIXTURE_SHA256`),
+  requiring exactly one `case-256` entry, an integer
+  `prompt_token_ids` list of the accepted rendered length 256. It
+  fails closed on fixture absence, SHA drift, malformed JSON, missing
+  or duplicate case, or a malformed prompt field, and never falls
+  back to a constant copied from observation evidence.
+- **Exact retained-payload binding**: `_receipt_problems()` now
+  requires `decoded_payload["prompt"] ==
+  accepted_case256_prompt_token_ids()` — exact list equality — in
+  addition to every pre-existing check (payload digest, request
+  contract, prompt length, receipt prompt SHA, argv, model members,
+  package manifest, device/backend identity, non-perturbation).
+  Prompt length alone is no longer sufficient. A mismatch at any
+  position emits `arm{X}:request_payload_prompt_identity`; a
+  fixture-authority failure emits `arm{X}:fixture_prompt_authority`;
+  both fail closed to `R8H_EVIDENCE_BLOCKED` through the real
+  terminal path.
+- **Adversarial coverage**: the focused suite gained
+  `TestExactPromptIdentityBinding` — competent same-length forgeries
+  that recompute EVERY dependent binding (B position-200 mutation,
+  first-token mutation, middle-token mutation, foreign 256-token
+  list), a lazy stale-digest forgery, fixture-authority SHA-mismatch
+  and absence controls (sandboxed fixture copies under the AREA
+  override), and an execution-truth check that the REAL retained
+  Round-4 A/B/C payloads carry the fixture prompt verbatim (they do;
+  all three payloads are byte-identical at sha256 `16c315a6…`).
+  Synthetic harness payloads now build from the fixture authority.
+
+Mechanically re-derived terminal at the corrected head:
+`R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED` (unchanged; the real
+retained evidence was never mutated), 36/36 controls all_ok,
+observation execution truth A/B/C all OK with A/B same frozen RTX
+3060 and B/C same authorized Vulkan package. Closure re-pinned
+through the reduction-amendment commit; `MANIFEST.sha256` regenerated
+LAST.
