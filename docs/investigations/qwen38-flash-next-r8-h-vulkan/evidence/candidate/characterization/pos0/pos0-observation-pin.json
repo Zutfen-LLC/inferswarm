@@ -1,27 +1,26 @@
 {
- "schema": "inferswarm.r8h.pos0-observation-pin/2",
  "authored_at": "2026-09-21",
  "campaign": "issue234-r8h-matched-backend-device-parity",
- "purpose": "Round-3 correction (maintainer finding on c1ac7237): the retained position-0 observation corpus proves token/logit output but NOT the GPU/backend execution identity behind it. Observation tokens equal to the canonical stream cannot prove the intended GPU/backend was used (the quarantined relative-ICD CPU-fallback incident shows wrong-environment execution is real; token equality is not identity proof). This pin prospectively authorizes the minimum bounded observation-only position-0 recollection WITH mechanically-captured execution receipts BEFORE any collection occurs. The round-2 pin (schema /1, bytes retained under pos0/) did not carry selector authority — it is superseded by this pin; the round-2 pos0 raw bytes remain retained under pos0/ as superseded-unbound evidence.",
  "collector": {
-  "path": "scripts/issue234_observe.py",
-  "role": "observation execution-identity collector (physical producer)",
-  "sha256": "595070787c8428eee7b1b0662a79114cd5327a60009ccf9dab551cbacd8802bd",
   "deployment": "deployed to BOTH execution hosts (inferswarm01, inferswarm02) under /tmp/is234r/producers/scripts/ before collection; deployed bytes verified in the round-3 deployed-producers receipt",
-  "receipt_schema": "inferswarm.r8h.observation-execution-receipt/1",
+  "path": "scripts/issue234_observe.py",
   "receipt_proves": [
    "launch host (hostname + kernel boot id)",
    "exact observation binary path + sha256 + bin-dir object hashes",
    "llama.cpp source pin + tree state + observation-hook diff digest (arms A/B from the local r8h-obs worktree; arm C through byte-identity to arm B's binary)",
-   "exact launch argv (from /proc/PID/cmdline) and exact environment (from /proc/PID/environ, captured at exec — cannot drift)",
+   "exact launch argv (from /proc/PID/cmdline) and exact environment (from /proc/PID/environ, captured at exec \u2014 cannot drift)",
    "in-process backend participation (/proc/PID/maps libggml objects)",
    "device identity under the EXACT launch environment (--list-devices, vulkaninfo GPU0/GPU1 UUIDs joined to BDF via nvidia-smi or RADV BDF-encoded deviceUUID)",
    "pre/during/post accelerator residency + nvidia-smi compute-apps binding of the server PID to the frozen GPU UUID",
    "CPU-fallback rejection (no-usable-GPU warning absent, devices listed under launch env, model-scale residency present)",
    "artifact digests binding the receipt to the retained jsonl/f32/resp/server-log bytes",
    "non-perturbation (generated tokens MUST equal the canonical arm ladder stream; any deviation quarantines the run before a receipt exists)"
-  ]
+  ],
+  "receipt_schema": "inferswarm.r8h.observation-execution-receipt/1",
+  "role": "observation execution-identity collector (physical producer)",
+  "sha256": "9c5029e23741ba063473f613f6844c9bad0dc6fdf9c37296658f1459a306c131"
  },
+ "non_perturbation_contract": "The observation response tokens MUST equal the retained canonical arm ladder token stream exactly (A: 328 760 40554 1 271 12188 279 1727; B: 561 324 55965 51624 29014 271 248068 271; C: 561 324 55965 51624 29014 34227 18030 16382). Any deviation stops collection and quarantines the observation; the canonical ladder is NEVER rerun.",
  "observation_producer": {
   "hook": "R8-E observation-only hook (Issue #199): 85 added lines in tools/server/server-context.cpp; inert unless LLAMA_OBSERVE_LOGITS set; reads llama_get_logits_ith after common_sampler_sample; no llama/ggml state writes",
   "hook_env": {
@@ -29,6 +28,10 @@
    "LLAMA_OBSERVE_POS": "0"
   },
   "hook_source_sha256_of_diff": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659",
+  "icd_sha256": {
+   "B": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1",
+   "C": "3ed98fea4666d3e45577422eb20fee22820c85b087333f3528e5e9f0e8dc78d2"
+  },
   "llama_cpp_source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
   "observation_binaries": {
    "A_cuda_inferswarm01": {
@@ -52,35 +55,36 @@
     "CUDA_VISIBLE_DEVICES": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
    },
    "B": {
+    "CUDA_VISIBLE_DEVICES": "-1",
     "GGML_VK_VISIBLE_DEVICES": "0",
-    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json",
-    "CUDA_VISIBLE_DEVICES": "-1"
+    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
    },
    "C": {
+    "CUDA_VISIBLE_DEVICES": "-1",
     "GGML_VK_VISIBLE_DEVICES": "0",
-    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json",
-    "CUDA_VISIBLE_DEVICES": "-1"
+    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json"
    }
-  },
-  "icd_sha256": {
-   "B": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1",
-   "C": "3ed98fea4666d3e45577422eb20fee22820c85b087333f3528e5e9f0e8dc78d2"
   }
  },
- "non_perturbation_contract": "The observation response tokens MUST equal the retained canonical arm ladder token stream exactly (A: 328 760 40554 1 271 12188 279 1727; B: 561 324 55965 51624 29014 271 248068 271; C: 561 324 55965 51624 29014 34227 18030 16382). Any deviation stops collection and quarantines the observation; the canonical ladder is NEVER rerun.",
- "scope": {
-  "arms": ["A", "B", "C"],
-  "case": "case-256",
-  "generated_position": 0,
-  "n_predict": 8,
-  "repeats_per_arm": 1,
-  "canonical_ladder_rerun": false,
-  "later_rungs": "none authorized - case-256 already diverged",
-  "execution_receipts_required": true
- },
- "superseded_round2_disposition": "The round-2 pos0 corpus (A/B/C jsonl+f32+resp+server logs collected 2026-09-21 under the /1 pin) remains retained; its rows are byte-identical to the round-3 recollection when the recollection reproduces them, and it is reclassified superseded-unbound (no execution identity). Only execution-receipt-bound observation bytes feed terminal authority.",
+ "purpose": "Round-3 correction (maintainer finding on c1ac7237): the retained position-0 observation corpus proves token/logit output but NOT the GPU/backend execution identity behind it. Observation tokens equal to the canonical stream cannot prove the intended GPU/backend was used (the quarantined relative-ICD CPU-fallback incident shows wrong-environment execution is real; token equality is not identity proof). This pin prospectively authorizes the minimum bounded observation-only position-0 recollection WITH mechanically-captured execution receipts BEFORE any collection occurs. The round-2 pin (schema /1, bytes retained under pos0/) did not carry selector authority \u2014 it is superseded by this pin; the round-2 pos0 raw bytes remain retained under pos0/ as superseded-unbound evidence.",
  "quarantine_record": {
   "incident": "first round-2 B launch used a RELATIVE VK_ICD_FILENAMES (nvidia_icd.json); the loader found no device and the server fell back to CPU (server log: no usable GPU found). Response tokens deviated from canonical B - non-perturbation contract tripped; run stopped and quarantined at inferswarm01:/tmp/is234r/quarantine-pos0-CPU-run/ BEFORE any use. This incident is the demonstrated risk class motivating the execution-receipt requirement.",
   "quarantine_dir": "inferswarm01:/tmp/is234r/quarantine-pos0-CPU-run"
- }
+ },
+ "schema": "inferswarm.r8h.pos0-observation-pin/2",
+ "scope": {
+  "arms": [
+   "A",
+   "B",
+   "C"
+  ],
+  "canonical_ladder_rerun": false,
+  "case": "case-256",
+  "execution_receipts_required": true,
+  "generated_position": 0,
+  "later_rungs": "none authorized - case-256 already diverged",
+  "n_predict": 8,
+  "repeats_per_arm": 1
+ },
+ "superseded_round2_disposition": "The round-2 pos0 corpus (A/B/C jsonl+f32+resp+server logs collected 2026-09-21 under the /1 pin) remains retained; its rows are byte-identical to the round-3 recollection when the recollection reproduces them, and it is reclassified superseded-unbound (no execution identity). Only execution-receipt-bound observation bytes feed terminal authority."
 }
