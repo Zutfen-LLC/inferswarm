@@ -18,7 +18,7 @@
   ],
   "receipt_schema": "inferswarm.r8h.observation-execution-receipt/1",
   "role": "observation execution-identity collector (physical producer)",
-  "sha256": "9c5029e23741ba063473f613f6844c9bad0dc6fdf9c37296658f1459a306c131"
+  "sha256": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1"
  },
  "non_perturbation_contract": "The observation response tokens MUST equal the retained canonical arm ladder token stream exactly (A: 328 760 40554 1 271 12188 279 1727; B: 561 324 55965 51624 29014 271 248068 271; C: 561 324 55965 51624 29014 34227 18030 16382). Any deviation stops collection and quarantines the observation; the canonical ladder is NEVER rerun.",
  "observation_producer": {
