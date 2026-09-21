@@ -9,6 +9,7 @@
     "issue234_health.py": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0",
     "issue234_host.py": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2",
     "issue234_ladder.py": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41",
+    "issue234_observe.py": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1",
     "issue234_placement.py": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa",
     "issue234_runtime.py": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
    },
@@ -19,13 +20,15 @@
     "issue234_health.py": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0",
     "issue234_host.py": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2",
     "issue234_ladder.py": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41",
+    "issue234_observe.py": "ddbe8d3ca151b051afd9aa3cd240fab263f34893df6963aa4eafe425ad59b6f1",
     "issue234_placement.py": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa",
     "issue234_runtime.py": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
    },
    "matches_pin": true
   }
  },
- "note": "hashes read live from /tmp/is234r/producers/scripts on each execution host after canonical execution",
- "schema": "inferswarm.r8h.deployed-producers/3",
- "verified_at": "2026-09-21T00:10:52"
+ "note": "hashes read live from /tmp/is234r/producers/scripts on each execution host; round-3 read 2026-09-21T10:20 after the collector deployment, before recollection",
+ "round3_note": "round-3: observation execution-identity collector issue234_observe.py added to the deployed matrix (physical producer; deployed to BOTH execution hosts before the identity-bound pos-0 recollection; hashes read live from /tmp/is234r/producers/scripts on each host). The five e7d822a physical producers remain byte-identical; issue234_receipt.py rides along as a reduction producer import of the collector.",
+ "schema": "inferswarm.r8h.deployed-producers/4",
+ "verified_at": "2026-09-21T10:20:00"
 }
