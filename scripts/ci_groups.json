@@ -195,6 +195,7 @@
     "test_issue230_v2f_vk_contract",
     "test_issue232_v2g_pcie_remediation",
     "test_issue234_r8h_vulkan",
+    "test_issue237_r8i_methodology",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -438,6 +439,9 @@
   ],
   "docs/qualification/post-v4-statistical-metric-doctrine/": [
    "issue-109-110"
+  ],
+  "docs/qualification/qwen38-vulkan-v1/": [
+   "vulkan-v0-b"
   ],
   "docs/status-maintenance.md": [
    "repo-integrity"
@@ -1210,6 +1214,39 @@
   "scripts/issue234_runtime.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue237_build_exclusion_inventory.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_freeze_tooling.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_generate_corpora.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_length_bands.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_methodology.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_reconstruct_tokenizer.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_schemas.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_seal_holdout.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_semantic_adjudication.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_thresholds.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue237_unseal_preflight.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1487,6 +1524,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue234_r8h_vulkan.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue237_r8i_methodology.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [

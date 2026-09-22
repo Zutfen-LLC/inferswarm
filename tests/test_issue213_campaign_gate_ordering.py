@@ -1305,7 +1305,17 @@ class PreservationTests(unittest.TestCase):
                             # regression module) pending on main.
                             "scripts/issue234_",
                             "tests/test_issue234_",
-                            "docs/investigations/qwen38-flash-next-r8-h-vulkan/")
+                            "docs/investigations/qwen38-flash-next-r8-h-vulkan/",
+                            # Issue #237 R8-I: additive repository-only
+                            # qualification-methodology surface (frozen
+                            # evidence namespace, producers, focused
+                            # regression module, registry READMEs)
+                            # pending on main.
+                            "scripts/issue237_",
+                            "tests/test_issue237_",
+                            "docs/qualification/qwen38-vulkan-v1/",
+                            "docs/qualification/README.md",
+                            "scripts/README.md")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

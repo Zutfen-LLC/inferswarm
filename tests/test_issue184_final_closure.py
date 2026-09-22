@@ -404,7 +404,27 @@ class Issue184PreservationTests(unittest.TestCase):
             # recollection), pinned by the round-3 producer closure
             # and the R8-H evidence manifest like every other #234
             # producer.
-            "scripts/issue234_observe.py")
+            "scripts/issue234_observe.py",
+            # Issue #237 R8-I: additive repository-only CPU/static
+            # qualification-methodology producers for the first
+            # heterogeneous-Vulkan Qwen contract, independently pinned
+            # by the qwen38-vulkan-v1 evidence MANIFEST and covered by
+            # its own registered CI group entries (vulkan-v0-b).
+            "scripts/issue237_methodology.py",
+            "scripts/issue237_reconstruct_tokenizer.py",
+            "scripts/issue237_build_exclusion_inventory.py",
+            "scripts/issue237_generate_corpora.py",
+            "scripts/issue237_seal_holdout.py",
+            "scripts/issue237_freeze_tooling.py",
+            "scripts/issue237_thresholds.py",
+            "scripts/issue237_semantic_adjudication.py",
+            "scripts/issue237_unseal_preflight.py",
+            "scripts/issue237_schemas.py",
+            # Issue #237 correction pass: the R8-B fixture-ladder length-band
+            # derivation authority (bands mechanically derived, never
+            # transcribed; pinned by the qwen38-vulkan-v1 evidence MANIFEST
+            # like every other #237 producer).
+            "scripts/issue237_length_bands.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
