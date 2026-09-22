@@ -97,18 +97,6 @@ def _finite_nonnegative(values: Sequence[float], label: str) -> list[float]:
     return out
 
 
-def _hex_float(value: Any, label: str) -> float:
-    if not isinstance(value, str):
-        raise DerivationError(f"{label} must be a hex-float string")
-    try:
-        f = float.fromhex(value)
-    except ValueError:
-        raise DerivationError(f"{label} is not a parseable hex float") from None
-    if not math.isfinite(f) or f < 0.0:
-        raise DerivationError(f"{label} must be finite and nonnegative")
-    return f
-
-
 # ---------------------------------------------------------------------------
 # input-document validation (complete retained evidence, exact identities)
 

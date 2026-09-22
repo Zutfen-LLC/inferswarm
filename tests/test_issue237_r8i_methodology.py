@@ -14,7 +14,16 @@ contracts, including the correction-pass controls:
 - a superseded seal SHA cannot satisfy active-holdout validation;
 - lifecycle (SEALED_NOT_CONSUMED) and custody (INCOMPLETE) are independent
   axes;
-- no private key / plaintext holdout / secret seed exists anywhere in Git.
+- no private key / plaintext holdout / secret seed exists anywhere in Git;
+- the maintainer-unseal authorization is REALIZABLE with ordinary Git:
+  a dedicated authorization commit binding the exact frozen
+  campaign/evidence parent (positive real-Git integration test through
+  the production preflight), with the complete mutation control set
+  (wrong/ancestor evidence head, untracked, dirty, extra and forbidden
+  paths in the authorization commit, post-authorization commit, merge
+  commit, wrong ciphertext/threshold/comparator/contract, non-affirmative,
+  legacy schema) and a mechanical regression proving the replaced
+  same-commit self-SHA contract had no realizable positive path.
 
 CPU-only; no physical execution, no SSH, no accelerator queries. Holdout
 content tests use the PUBLIC commitment only (no decrypt path exists in
@@ -26,11 +35,13 @@ import hashlib
 import json
 import math
 import random
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
@@ -1340,10 +1351,10 @@ class PreflightContractTests(unittest.TestCase):
 
     def _auth(self, fixture: dict[str, Any], **overrides: Any) -> dict[str, Any]:
         auth = {
-            "schema": "inferswarm.issue237.maintainer-unseal-authorization/1",
+            "schema": "inferswarm.issue237.maintainer-unseal-authorization/2",
             "authorized": True,
             "authorized_by": "maintainer",
-            "campaign_head": "0" * 40,
+            "authorized_campaign_head": "0" * 40,
             "holdout_ciphertext_sha256": fixture["active_ciphertext_sha"],
             "core_threshold_manifest_sha256": sha256_bytes(
                 fixture["threshold_path"].read_bytes()
@@ -1356,12 +1367,6 @@ class PreflightContractTests(unittest.TestCase):
             canonical_json_bytes(auth)
         )
         return auth
-
-    def _git_head(self) -> str:
-        return subprocess.run(
-            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
-            capture_output=True, text=True,
-        ).stdout.strip()
 
     def test_preflight_blocks_today_missing_evidence(self):
         proc = subprocess.run(
@@ -1379,7 +1384,7 @@ class PreflightContractTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             fixture = self._fixture(Path(tmpdir))
-            self._auth(fixture, campaign_head=self._git_head())
+            self._auth(fixture, authorized_campaign_head="0" * 40)
             report = _preflight_in(fixture["docs"])
             self.assertEqual(report["decision"], "BLOCKED")
             self.assertIn("git-tracked", report["reason"])
@@ -1402,22 +1407,24 @@ class PreflightContractTests(unittest.TestCase):
     def test_control_authorization_wrong_head_blocked(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fixture = self._fixture(Path(tmpdir))
-            # authorization bound to a DIFFERENT (stale) head than the
-            # live campaign HEAD the preflight would derive
-            self._auth(fixture, campaign_head="1" * 40)
+            # authorization bound to a DIFFERENT (stale) evidence head
+            # than the exact frozen campaign/evidence parent
+            self._auth(fixture, authorized_campaign_head="1" * 40)
             problems = validate_auth_for_fixture(
-                fixture, head=self._git_head()
+                fixture, authorized_campaign_head="9" * 40
             )
-            self.assertTrue(any("stale head" in x for x in problems))
+            self.assertTrue(any("stale evidence state" in x for x in problems))
 
     def test_control_authorization_wrong_ciphertext_blocked(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fixture = self._fixture(Path(tmpdir))
             self._auth(
                 fixture, holdout_ciphertext_sha256="a" * 64,
-                campaign_head=self._git_head(),
+                authorized_campaign_head="9" * 40,
             )
-            problems = validate_auth_for_fixture(fixture, head=self._git_head())
+            problems = validate_auth_for_fixture(
+                fixture, authorized_campaign_head="9" * 40
+            )
             self.assertTrue(any("ciphertext" in x for x in problems))
 
     def test_control_authorization_wrong_threshold_identity_blocked(self):
@@ -1426,26 +1433,40 @@ class PreflightContractTests(unittest.TestCase):
             self._auth(
                 fixture,
                 core_threshold_manifest_sha256="b" * 64,
-                campaign_head=self._git_head(),
+                authorized_campaign_head="9" * 40,
             )
-            problems = validate_auth_for_fixture(fixture, head=self._git_head())
+            problems = validate_auth_for_fixture(
+                fixture, authorized_campaign_head="9" * 40
+            )
             self.assertTrue(any("threshold" in x for x in problems))
 
     def test_control_authorization_malformed_and_untracked(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fixture = self._fixture(Path(tmpdir))
             # malformed: not affirmative
-            self._auth(fixture, authorized=False, campaign_head=self._git_head())
-            problems = validate_auth_for_fixture(fixture, head=self._git_head())
+            self._auth(fixture, authorized=False, authorized_campaign_head="9" * 40)
+            problems = validate_auth_for_fixture(
+                fixture, authorized_campaign_head="9" * 40
+            )
             self.assertTrue(any("affirmative" in x for x in problems))
-            # stale-head authorization bound to the prior campaign head
-            self._auth(fixture, campaign_head="2" * 40)
-            problems = validate_auth_for_fixture(fixture, head=self._git_head())
-            self.assertTrue(any("stale head" in x for x in problems))
+            # stale-evidence authorization bound to a prior evidence head
+            self._auth(fixture, authorized_campaign_head="2" * 40)
+            problems = validate_auth_for_fixture(
+                fixture, authorized_campaign_head="9" * 40
+            )
+            self.assertTrue(any("stale evidence state" in x for x in problems))
+            # malformed: legacy /1 schema with the old campaign_head field
+            self._auth(fixture, schema="inferswarm.issue237."
+                             "maintainer-unseal-authorization/1",
+                       campaign_head="9" * 40)
+            problems = validate_auth_for_fixture(
+                fixture, authorized_campaign_head="9" * 40
+            )
+            self.assertTrue(any("schema drift" in x for x in problems))
 
 
 def validate_auth_for_fixture(
-    fixture: dict[str, Any], *, head: str,
+    fixture: dict[str, Any], *, authorized_campaign_head: str,
 ) -> list[str]:
     import issue237_unseal_preflight as p
 
@@ -1456,12 +1477,514 @@ def validate_auth_for_fixture(
     )
     return p.validate_maintainer_authorization(
         auth,
-        campaign_head=head,
+        authorized_campaign_head=authorized_campaign_head,
         active_ciphertext_sha256=fixture["active_ciphertext_sha"],
         frozen_threshold_sha256=sha256_bytes(
             fixture["threshold_path"].read_bytes()
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Real-Git authorization realization (correction of the impossible
+# same-commit self-SHA contract)
+# ---------------------------------------------------------------------------
+
+def _git_in(repo: Path, *args: str) -> str:
+    """Run git in a sandbox repository, isolated from host/user config."""
+    import os
+
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
+    }
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True,
+        env=env,
+    )
+    assert proc.returncode == 0, (args, proc.stderr)
+    return proc.stdout
+
+
+def _regenerate_manifest(repo: Path, docs: Path) -> None:
+    """Mechanically required MANIFEST refresh (repo-rooted rows)."""
+    rows = []
+    for path in sorted(docs.rglob("*")):
+        if not path.is_file() or path.name == "MANIFEST.sha256":
+            continue
+        rows.append(
+            f"{sha256_bytes(path.read_bytes())}  "
+            f"{path.relative_to(repo).as_posix()}"
+        )
+    (docs / "MANIFEST.sha256").write_text("\n".join(rows) + "\n")
+
+
+class RealGitAuthorizationTests(unittest.TestCase):
+    """Positive real-Git realizability of the maintainer-unseal
+    authorization, plus the complete mutation control set.
+
+    The replaced contract required the COMMITTED authorization record to
+    contain the SHA of the SAME commit that contains the record —
+    mechanically unrealizable with ordinary Git, because the record is
+    part of the tree over which the commit SHA is computed. The corrected
+    contract uses a DEDICATED AUTHORIZATION COMMIT: the record binds the
+    exact frozen campaign/evidence commit (HEAD's immediate one-parent
+    parent), HEAD must be a linear commit touching only the allowlisted
+    authorization paths, and any later commit invalidates the
+    authorization. Every test below drives a REAL throwaway Git
+    repository through the PRODUCTION git-binding and preflight logic —
+    no mocked commit graph, no arbitrary SHA strings.
+    """
+
+    AUTH_REL = (
+        "docs/qualification/qwen38-vulkan-v1/manifests/"
+        "maintainer-unseal-authorization.json"
+    )
+    MANIFEST_REL = "docs/qualification/qwen38-vulkan-v1/MANIFEST.sha256"
+
+    # -- sandbox campaign repository ------------------------------------
+
+    def _build_campaign_repo(
+        self, tmp: Path, *, split_evidence: bool = False,
+    ) -> dict[str, Any]:
+        repo = tmp / "campaign-repo"
+        repo.mkdir()
+        _git_in(repo, "init", "-q", "-b", "main")
+        _git_in(repo, "config", "user.email", "sandbox@invalid")
+        _git_in(repo, "config", "user.name", "Sandbox Campaign")
+        (repo / "README.md").write_text("sandbox campaign repository\n")
+        _git_in(repo, "add", "README.md")
+        _git_in(repo, "commit", "-q", "-m", "sandbox: repository scaffolding")
+
+        fixture = _sandbox_fixture(tmp)
+        docs = repo / "docs/qualification/qwen38-vulkan-v1"
+        shutil.copytree(fixture["docs"], docs)
+        # representative frozen comparator/contract authority documents
+        # (the preflight requires these paths tracked + HEAD-clean)
+        (docs / "manifests/comparator-identity.json").write_bytes(
+            canonical_json_bytes({
+                "schema": "inferswarm.issue237.comparator-identity/1",
+                "comparator_id": m.COMPARATOR_ID,
+            })
+        )
+        (docs / "manifests/layer1-integrity-contract.json").write_bytes(
+            canonical_json_bytes({
+                "schema": "inferswarm.issue237.layer1-integrity/1",
+                "contract_id": m.CONTRACT_ID,
+            })
+        )
+        ancestor: str | None = None
+        corpus_rel = (
+            "docs/qualification/qwen38-vulkan-v1/manifests/"
+            "calibration-corpus.json"
+        )
+        pool_rel = (
+            "docs/qualification/qwen38-vulkan-v1/manifests/stress-pool.json"
+        )
+        if split_evidence:
+            _git_in(repo, "add", corpus_rel, pool_rel)
+            _git_in(repo, "commit", "-q", "-m", "campaign: evidence part 1")
+            ancestor = _git_in(repo, "rev-parse", "HEAD").strip()
+        _regenerate_manifest(repo, docs)  # no authorization record yet
+        _git_in(repo, "add", "-A", "docs")
+        _git_in(repo, "commit", "-q", "-m", "campaign: frozen evidence state")
+        evidence_head = _git_in(repo, "rev-parse", "HEAD").strip()
+        return {
+            "repo": repo,
+            "docs": docs,
+            "fixture": fixture,
+            "evidence_head": evidence_head,
+            "ancestor_head": ancestor,
+        }
+
+    def _record(self, sandbox: dict[str, Any], **overrides: Any) -> dict[str, Any]:
+        record = {
+            "schema": "inferswarm.issue237.maintainer-unseal-authorization/2",
+            "authorized": True,
+            "authorized_by": "maintainer",
+            "authorized_campaign_head": sandbox["evidence_head"],
+            "holdout_ciphertext_sha256": sandbox["fixture"]["active_ciphertext_sha"],
+            "core_threshold_manifest_sha256": sha256_bytes(
+                (sandbox["docs"] / "manifests/core-threshold-manifest.json")
+                .read_bytes()
+            ),
+            "comparator_id": m.COMPARATOR_ID,
+            "contract_id": m.CONTRACT_ID,
+        }
+        record.update(overrides)
+        return record
+
+    def _write_record(
+        self, sandbox: dict[str, Any], record: dict[str, Any],
+    ) -> None:
+        (sandbox["docs"] / "manifests/maintainer-unseal-authorization.json"
+         ).write_bytes(canonical_json_bytes(record))
+
+    def _commit_authorization(
+        self, sandbox: dict[str, Any], record: dict[str, Any],
+        *, include_manifest: bool = True, extra_files: tuple[tuple[str, str], ...] = (),
+        also_add: tuple[str, ...] = (),
+    ) -> None:
+        repo = sandbox["repo"]
+        self._write_record(sandbox, record)
+        for rel, text in extra_files:
+            target = repo / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
+        if include_manifest:
+            _regenerate_manifest(repo, sandbox["docs"])
+            _git_in(repo, "add", self.AUTH_REL, self.MANIFEST_REL)
+        else:
+            _git_in(repo, "add", self.AUTH_REL)
+        for rel, _text in extra_files:
+            _git_in(repo, "add", rel)
+        for rel in also_add:
+            _git_in(repo, "add", rel)
+        _git_in(
+            repo, "commit", "-q", "-m",
+            "maintainer: dedicated unseal authorization",
+        )
+
+    def _preflight(self, sandbox: dict[str, Any]) -> dict[str, Any]:
+        """Run the PRODUCTION preflight bound to the sandbox repository."""
+        import issue237_unseal_preflight as p
+
+        with mock.patch.object(p, "REPO", sandbox["repo"]), \
+                mock.patch.object(p, "DOCS", sandbox["docs"]), \
+                mock.patch.object(ft, "DOCS", sandbox["docs"]), \
+                mock.patch.object(ft, "REPO", sandbox["repo"]), \
+                mock.patch.object(seal, "DOCS", sandbox["docs"]), \
+                mock.patch.object(
+                    seal, "SUPERSEDED_DIR",
+                    sandbox["docs"] / "sealed/superseded",
+                ):
+            return p.preflight()
+
+    def _assert_blocked(self, report: dict[str, Any], *fragments: str) -> None:
+        self.assertEqual(report["decision"], "BLOCKED")
+        self.assertFalse(report["decrypt_performed"])
+        for fragment in fragments:
+            self.assertIn(fragment, report["reason"])
+
+    def _perturb_thresholds_coherently(self, sandbox: dict[str, Any]) -> None:
+        """Competent in-commit evidence mutation.
+
+        Rewrites the statistical case E_D coherently across the summary
+        AND the observation manifest, then re-derives the threshold/band
+        artifacts through the PRODUCTION derivation — so every content
+        and threshold preflight stage passes and ONLY the
+        authorization-commit path allowlist can catch the change.
+        """
+        docs = sandbox["docs"]
+        summary = json.loads(
+            (docs / "manifests/calibration-summary.json").read_text())
+        manifest = json.loads(
+            (docs / "manifests/observation-manifest.json").read_text())
+        new_val = (float.fromhex(summary["case_e_d_hex"][0]) + 0.5).hex()
+        summary["case_e_d_hex"][0] = new_val
+        manifest["calibration_cases"][0]["case_e_d_hex"] = new_val
+        (docs / "manifests/calibration-summary.json").write_bytes(
+            canonical_json_bytes(summary))
+        (docs / "manifests/observation-manifest.json").write_bytes(
+            canonical_json_bytes(manifest))
+        corpus = json.loads(
+            (docs / "manifests/calibration-corpus.json").read_text())
+        pool = json.loads((docs / "manifests/stress-pool.json").read_text())
+        selected = json.loads(
+            (docs / "manifests/selected-stress.json").read_text())
+        threshold, bands = thr.derive_threshold_artifacts(
+            calibration_summary=summary,
+            calibration_corpus=corpus,
+            stress_pool=pool,
+            selected_stress=selected,
+            observation_manifest=manifest,
+        )
+        (docs / "manifests/core-threshold-manifest.json").write_bytes(
+            canonical_json_bytes(threshold))
+        (docs / "manifests/telemetry-reference-bands.json").write_bytes(
+            canonical_json_bytes(bands))
+
+    # -- the mandatory positive path -------------------------------------
+
+    def test_positive_real_git_authorization_realization(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            # 1. create and commit representative frozen campaign evidence
+            sandbox = self._build_campaign_repo(tmp)
+            # 2. the frozen evidence commit SHA is recorded as the
+            #    authorized campaign/evidence head
+            evidence_head = sandbox["evidence_head"]
+            self.assertTrue(evidence_head)
+            # 3. a valid authorization record naming that SHA and the
+            #    frozen artifact identities
+            record = self._record(sandbox)
+            self.assertEqual(record["authorized_campaign_head"], evidence_head)
+            # 4. commit ONLY the authorization record plus the explicitly
+            #    permitted mechanically required MANIFEST update
+            self._commit_authorization(sandbox, record)
+            changed = [
+                line for line in _git_in(
+                    sandbox["repo"], "diff-tree", "--no-commit-id",
+                    "-r", "--name-only", "HEAD",
+                ).splitlines() if line
+            ]
+            self.assertEqual(
+                sorted(changed), sorted([self.AUTH_REL, self.MANIFEST_REL]))
+            # 5. run the production authorization/git-binding logic
+            report = self._preflight(sandbox)
+            # 6. prove it PASSES
+            self.assertEqual(
+                report["decision"], "READY_FOR_MAINTAINER_UNSEAL_DECISION")
+            self.assertFalse(report["decrypt_performed"])
+            self.assertEqual(
+                report["authorized_campaign_head"], evidence_head)
+            self.assertEqual(
+                report["authorization_head"],
+                _git_in(sandbox["repo"], "rev-parse", "HEAD").strip())
+            self.assertEqual(
+                report["checks"]["maintainer_authorization"], "BOUND")
+
+    # -- negative controls ------------------------------------------------
+
+    def test_control_wrong_authorized_parent_sha_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox,
+                self._record(sandbox, authorized_campaign_head="1" * 40),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "stale evidence state")
+
+    def test_control_bound_to_older_ancestor_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(
+                Path(tmpdir), split_evidence=True)
+            assert sandbox["ancestor_head"] is not None
+            self._commit_authorization(
+                sandbox,
+                self._record(
+                    sandbox,
+                    authorized_campaign_head=sandbox["ancestor_head"],
+                ),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "stale evidence state")
+
+    def test_control_untracked_authorization_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            # record written and manifest refreshed but NEVER committed:
+            # HEAD is still the evidence commit, which does not carry the
+            # record, and the record is untracked
+            self._write_record(sandbox, self._record(sandbox))
+            _regenerate_manifest(sandbox["repo"], sandbox["docs"])
+            self._assert_blocked(
+                self._preflight(sandbox),
+                "maintainer authorization invalid",
+            )
+
+    def test_control_dirty_authorization_bytes_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(sandbox, self._record(sandbox))
+            # locally-modified (dirty) replacement bytes for a tracked
+            # authorization record
+            dirty = self._record(sandbox, authorized_by="attacker")
+            self._write_record(sandbox, dirty)
+            self._assert_blocked(
+                self._preflight(sandbox), "dirty")
+
+    def test_control_extra_unauthorized_file_in_authorization_commit(self):
+        for rel, fragment in (
+            ("scripts/rogue_producer.py",
+             "forbidden campaign-evidence path"),
+            ("README.md", "unauthorized path"),
+        ):
+            with self.subTest(path=rel):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    sandbox = self._build_campaign_repo(Path(tmpdir))
+                    self._commit_authorization(
+                        sandbox,
+                        self._record(sandbox),
+                        extra_files=((rel, "rogue content\n"),),
+                    )
+                    self._assert_blocked(
+                        self._preflight(sandbox), fragment, rel)
+
+    def test_control_threshold_artifact_changed_in_authorization_commit(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            # competent mutation: coherent statistical-E_D rewrite with
+            # production-rederived threshold/band artifacts, smuggled
+            # INTO the dedicated authorization commit itself — every
+            # content stage passes (the worktree bytes are the committed
+            # bytes) and only the commit path allowlist can reject
+            self._perturb_thresholds_coherently(sandbox)
+            record = self._record(sandbox)
+            # the record binds the mutated (rederived) threshold bytes
+            record["core_threshold_manifest_sha256"] = sha256_bytes(
+                (sandbox["docs"] / "manifests/core-threshold-manifest.json")
+                .read_bytes()
+            )
+            docs_rel = "docs/qualification/qwen38-vulkan-v1/manifests"
+            self._commit_authorization(
+                sandbox, record,
+                also_add=(
+                    f"{docs_rel}/calibration-summary.json",
+                    f"{docs_rel}/observation-manifest.json",
+                    f"{docs_rel}/core-threshold-manifest.json",
+                    f"{docs_rel}/telemetry-reference-bands.json",
+                ),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox),
+                "forbidden campaign-evidence path",
+                "core-threshold-manifest.json",
+            )
+
+    def test_control_commit_after_authorization_requires_reauthorization(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(sandbox, self._record(sandbox))
+            self.assertEqual(
+                self._preflight(sandbox)["decision"],
+                "READY_FOR_MAINTAINER_UNSEAL_DECISION",
+            )
+            # ANY later commit moves HEAD: the record still binds the
+            # original evidence parent and is now stale
+            (sandbox["repo"] / "README.md").write_text(
+                "post-authorization change\n")
+            _git_in(sandbox["repo"], "add", "README.md")
+            _git_in(sandbox["repo"], "commit", "-q", "-m", "later work")
+            self._assert_blocked(
+                self._preflight(sandbox), "stale evidence state")
+
+    def test_control_merge_commit_cannot_carry_authorization(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(sandbox, self._record(sandbox))
+            repo = sandbox["repo"]
+            _git_in(repo, "checkout", "-q", "-b", "side")
+            (repo / "side.txt").write_text("side\n")
+            _git_in(repo, "add", "side.txt")
+            _git_in(repo, "commit", "-q", "-m", "side")
+            _git_in(repo, "checkout", "-q", "main")
+            _git_in(repo, "merge", "--no-ff", "-q", "-m", "merge side", "side")
+            self._assert_blocked(
+                self._preflight(sandbox), "linear one-parent")
+
+    def test_control_wrong_ciphertext_sha_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox,
+                self._record(sandbox, holdout_ciphertext_sha256="a" * 64),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "ciphertext")
+
+    def test_control_wrong_threshold_sha_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox,
+                self._record(sandbox, core_threshold_manifest_sha256="b" * 64),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "threshold")
+
+    def test_control_wrong_comparator_identity_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox,
+                self._record(sandbox, comparator_id="rogue-comparator/9"),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "comparator identity drift")
+
+    def test_control_wrong_contract_identity_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox,
+                self._record(sandbox, contract_id="rogue-contract/9"),
+            )
+            self._assert_blocked(
+                self._preflight(sandbox), "contract identity drift")
+
+    def test_control_non_affirmative_authorization_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            self._commit_authorization(
+                sandbox, self._record(sandbox, authorized=False))
+            self._assert_blocked(
+                self._preflight(sandbox), "affirmative")
+
+    def test_control_legacy_v1_schema_record_rejected(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sandbox = self._build_campaign_repo(Path(tmpdir))
+            record = self._record(sandbox)
+            record["schema"] = (
+                "inferswarm.issue237.maintainer-unseal-authorization/1")
+            record["campaign_head"] = record.pop("authorized_campaign_head")
+            self._commit_authorization(sandbox, record)
+            self._assert_blocked(
+                self._preflight(sandbox), "schema drift")
+
+    # -- the old impossible relation, mechanically demonstrated ----------
+
+    def test_old_defect_same_commit_self_sha_is_unrealizable(self):
+        """Focused regression for the replaced contract.
+
+        The old design required ``authorization['campaign_head'] ==
+        git rev-parse HEAD`` while ``_git_tracked_clean`` required the
+        record to be tracked with bytes equal to ``HEAD:<path>`` — the
+        record had to contain the SHA of the very commit whose tree
+        includes the record. Ordinary Git can never satisfy that:
+        committing a record naming the pre-commit HEAD produces a NEW
+        HEAD, and re-binding to the new HEAD requires another commit,
+        forever (no fixed point).
+
+        The old tests never established a realizable committed
+        authorization path: they passed the head as an arbitrary string
+        straight into ``validate_maintainer_authorization()`` with no
+        Git binding in the loop at all.
+        """
+        import inspect
+
+        import issue237_unseal_preflight as p
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir) / "repo"
+            repo.mkdir()
+            _git_in(repo, "init", "-q", "-b", "main")
+            _git_in(repo, "config", "user.email", "sandbox@invalid")
+            _git_in(repo, "config", "user.name", "Sandbox")
+            (repo / "evidence.txt").write_text("frozen evidence\n")
+            _git_in(repo, "add", "evidence.txt")
+            _git_in(repo, "commit", "-q", "-m", "evidence")
+            for _round in range(3):
+                bound = _git_in(repo, "rev-parse", "HEAD").strip()
+                (repo / "auth.json").write_text(
+                    json.dumps({"campaign_head": bound}))
+                _git_in(repo, "add", "auth.json")
+                _git_in(repo, "commit", "-q", "-m", "authorize")
+                head_now = _git_in(repo, "rev-parse", "HEAD").strip()
+                # the committed record is tracked and clean, yet the head
+                # it names can never equal the head that contains it
+                self.assertNotEqual(bound, head_now)
+                blob = _git_in(
+                    repo, "cat-file", "blob", "HEAD:auth.json").strip()
+                self.assertIn(bound, blob)  # always binds the PARENT
+        # the impossible entrypoint is gone from production
+        self.assertNotIn(
+            "campaign_head",
+            inspect.signature(
+                p.validate_maintainer_authorization).parameters,
+        )
 
 
 class CustodyReceiptTests(unittest.TestCase):

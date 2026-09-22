@@ -265,9 +265,43 @@ authorization (`scripts/issue237_unseal_preflight.py` enforces every
 precondition mechanically — lifecycle state, custody status with
 receipt-verified custodians, complete calibration evidence with freshly
 recomputed byte-identical thresholds, git-tracked HEAD-clean authority
-artifacts, exact-head maintainer authorization bound to the active
-ciphertext/threshold/comparator identities — and still stops at the
-decision boundary).
+artifacts, and maintainer authorization bound to the EXACT frozen
+campaign/evidence commit through a DEDICATED AUTHORIZATION COMMIT —
+and still stops at the decision boundary).
+
+### 9.1 Maintainer-unseal authorization protocol (corrected)
+
+The authorization record does not — and cannot — bind the SHA of the
+commit that contains it: a committed record is part of the tree over
+which that commit's SHA is computed, so a same-commit self-SHA contract
+has no realizable fixed point under ordinary Git. The realizable
+contract is:
+
+- the maintainer creates a DEDICATED AUTHORIZATION COMMIT on top of the
+  frozen campaign/evidence state;
+- the record's `authorized_campaign_head` names that exact evidence
+  commit — HEAD's immediate parent — and additionally binds the ACTIVE
+  holdout ciphertext SHA, the committed frozen core-threshold manifest
+  SHA, the comparator identity, and the contract identity, with an
+  affirmative `authorized` flag and a nonempty maintainer identity;
+- the authorization commit must be a linear one-parent commit whose
+  changed paths are exactly within the authorization allowlist
+  (`manifests/maintainer-unseal-authorization.json`, plus
+  `MANIFEST.sha256` only when mechanically required by finalization);
+  any execution-, evidence-, threshold-, holdout-, corpus-, comparator-,
+  or methodology-bearing path changed in that commit fails closed;
+- the record must be Git-tracked with worktree bytes equal to the HEAD
+  blob bytes;
+- ANY commit after the dedicated authorization commit moves HEAD and
+  invalidates the authorization — reauthorization is required; no
+  descendant/ancestor tolerance exists.
+
+The preflight derives `authorization_head = HEAD` and
+`authorized_campaign_head = HEAD^` itself; it never trusts a
+caller-supplied head. Realizability is proven by an integration test
+that performs the genuine Git commit sequence (evidence commit →
+record naming it → dedicated authorization commit → production
+preflight → authorization-cleared state) in a temporary repository.
 
 ## 10. Corpus / semantic replay profile
 
@@ -302,6 +336,10 @@ reference/candidate observations: `schemas/` +
 - `scripts/issue237_semantic_adjudication.py` — frozen decision-stability
   gate application;
 - `scripts/issue237_unseal_preflight.py` — stops before decrypt;
+  enforces the dedicated-authorization-commit contract of §9.1
+  (exact frozen-evidence parent binding, linear one-parent commit,
+  authorization-path allowlist, tracked/HEAD-clean record; any
+  post-authorization commit invalidates and requires reauthorization);
 - `scripts/issue237_freeze_tooling.py` — prerequisite/methodology/corpus/
   holdout validation + freeze report.
 

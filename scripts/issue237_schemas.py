@@ -421,18 +421,27 @@ def schema_documents() -> dict[str, Any]:
         "maintainer-unseal-authorization.schema.json": {
             "type": "object",
             "required": ["schema", "authorized", "authorized_by",
-                         "campaign_head", "holdout_ciphertext_sha256",
+                         "authorized_campaign_head",
+                         "holdout_ciphertext_sha256",
                          "core_threshold_manifest_sha256",
                          "comparator_id", "contract_id"],
             "properties": {
                 "schema": {
                     "const": (
-                        "inferswarm.issue237.maintainer-unseal-authorization/1"
+                        "inferswarm.issue237.maintainer-unseal-authorization/2"
                     ),
                 },
                 "authorized": {"const": True},
                 "authorized_by": {"type": "string", "minLength": 1},
-                "campaign_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "authorized_campaign_head": {
+                    "type": "string", "pattern": "^[0-9a-f]{40}$",
+                    "description": (
+                        "the exact frozen campaign/evidence commit the "
+                        "record authorizes: the immediate one-parent "
+                        "parent of the dedicated authorization commit "
+                        "carrying this record"
+                    ),
+                },
                 "holdout_ciphertext_sha256": {
                     "type": "string", "pattern": "^[0-9a-f]{64}$",
                 },

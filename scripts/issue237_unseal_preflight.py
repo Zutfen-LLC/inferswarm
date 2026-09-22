@@ -31,9 +31,19 @@ file-existence-only checks). Exit-code 0 with
    custodians, each carrying a mechanically valid public verification
    receipt bound to the live active identities;
 9. maintainer authorization record that is affirmative AND bound to the
-   EXACT campaign HEAD, the ACTIVE holdout ciphertext, the committed
-   frozen threshold-manifest identity, and the comparator/contract
-   identities — tracked in Git with clean bytes.
+   EXACT frozen campaign/evidence commit through a DEDICATED
+   AUTHORIZATION COMMIT: HEAD must be a linear one-parent commit whose
+   only repository changes are the authorization record itself (plus a
+   mechanically required MANIFEST.sha256 refresh), the record must name
+   HEAD's immediate parent as `authorized_campaign_head`, the ACTIVE
+   holdout ciphertext, the committed frozen threshold-manifest identity,
+   and the comparator/contract identities — and be tracked in Git with
+   clean bytes. The same-commit self-SHA design (record must contain the
+   SHA of the commit that contains the record) is mechanically
+   unrealizable with ordinary Git and is replaced by this parent-binding
+   contract; any commit after the dedicated authorization commit moves
+   HEAD and invalidates the authorization (fresh reauthorization is
+   required — no descendant/ancestor tolerance).
 
 The preflight still performs NO decrypt: the actual unseal is executed
 only by the maintainer-authorized physical successor campaign.
@@ -66,7 +76,34 @@ REPO = Path(__file__).resolve().parents[1]
 DOCS = REPO / "docs/qualification/qwen38-vulkan-v1"
 
 PREFLIGHT_SCHEMA = "inferswarm.issue237.unseal-preflight/2"
-AUTHORIZATION_SCHEMA = "inferswarm.issue237.maintainer-unseal-authorization/1"
+AUTHORIZATION_SCHEMA = "inferswarm.issue237.maintainer-unseal-authorization/2"
+
+# Exact allowlist of repository paths a dedicated authorization commit may
+# change. The authorization record itself is always required; MANIFEST.sha256
+# is the only mechanically-required companion when repository finalization
+# must register the new record. Everything else — evidence, thresholds,
+# corpora, seals, methodology, tooling — fails closed.
+AUTHORIZATION_RECORD_REL = (
+    "docs/qualification/qwen38-vulkan-v1/manifests/"
+    "maintainer-unseal-authorization.json"
+)
+AUTHORIZATION_COMMIT_ALLOWLIST = frozenset({
+    AUTHORIZATION_RECORD_REL,
+    "docs/qualification/qwen38-vulkan-v1/MANIFEST.sha256",
+})
+# Any path matched by these prefixes is execution-/evidence-/threshold-/
+# holdout-/corpus-/comparator-/methodology-bearing authority: a change to
+# it inside the authorization commit voids the authorization outright,
+# with an explicit problem line (not a silent allowlist miss).
+AUTHORIZATION_FORBIDDEN_PREFIXES = (
+    "docs/qualification/qwen38-vulkan-v1/manifests/",
+    "docs/qualification/qwen38-vulkan-v1/sealed/",
+    "docs/qualification/qwen38-vulkan-v1/schemas/",
+    "docs/qualification/qwen38-vulkan-v1/assets/",
+    "docs/qualification/qwen38-vulkan-v1/METHODOLOGY.md",
+    "scripts/",
+    "tests/",
+)
 
 
 class PreflightError(RuntimeError):
@@ -124,24 +161,31 @@ def _git_head() -> str:
     return _git(["rev-parse", "HEAD"]).strip()
 
 
-def _blocked(checks: dict[str, Any], reason: str) -> dict[str, Any]:
-    return {
-        "schema": PREFLIGHT_SCHEMA,
-        "decision": "BLOCKED",
-        "checks": checks,
-        "reason": reason,
-        "decrypt_performed": False,
-    }
+def _git_commit_changed_paths(rev: str) -> list[str]:
+    """Repository-rooted paths changed by the commit `rev` (vs its parent)."""
+    return sorted({
+        line.split("\t", 1)[-1]
+        for line in _git(
+            ["diff-tree", "--no-commit-id", "-r", "--name-only", "-z", rev]
+        ).split("\0")
+        if line
+    })
 
 
 def validate_maintainer_authorization(
     authorization: dict[str, Any],
     *,
-    campaign_head: str,
+    authorized_campaign_head: str,
     active_ciphertext_sha256: str,
     frozen_threshold_sha256: str,
 ) -> list[str]:
-    """Exact-head maintainer-authorization binding (fail-closed list)."""
+    """Exact-evidence-head maintainer-authorization binding (fail-closed list).
+
+    The authorization record binds the exact FROZEN CAMPAIGN/EVIDENCE
+    commit it authorizes, which must be the immediate one-parent parent of
+    the dedicated authorization commit that carries the record (see
+    validate_authorization_commit for the git-graph side of the contract).
+    """
     problems: list[str] = []
     if authorization.get("schema") != AUTHORIZATION_SCHEMA:
         problems.append("authorization schema drift")
@@ -150,13 +194,14 @@ def validate_maintainer_authorization(
     by = authorization.get("authorized_by")
     if not isinstance(by, str) or not by.strip():
         problems.append("authorization author identity missing")
-    bound_head = authorization.get("campaign_head")
+    bound_head = authorization.get("authorized_campaign_head")
     if not isinstance(bound_head, str) or len(bound_head) != 40:
-        problems.append("authorization campaign_head malformed")
-    elif bound_head != campaign_head:
+        problems.append("authorization authorized_campaign_head malformed")
+    elif bound_head != authorized_campaign_head:
         problems.append(
-            f"authorization bound to head {bound_head[:12]}, not this "
-            f"campaign HEAD {campaign_head[:12]} (stale head)"
+            f"authorization bound to evidence head {bound_head[:12]}, not "
+            f"the exact frozen campaign/evidence head "
+            f"{authorized_campaign_head[:12]} (stale evidence state)"
         )
     if authorization.get("holdout_ciphertext_sha256") != active_ciphertext_sha256:
         problems.append(
@@ -174,6 +219,71 @@ def validate_maintainer_authorization(
     if authorization.get("contract_id") != m.CONTRACT_ID:
         problems.append("authorization contract identity drift")
     return problems
+
+
+def validate_authorization_commit(*, authorization_head: str) -> list[str]:
+    """Git-graph contract of the dedicated authorization commit.
+
+    The commit carrying the authorization record must be a linear
+    one-parent commit whose sole purpose is authorization: its changed
+    paths must fall inside AUTHORIZATION_COMMIT_ALLOWLIST (the record plus
+    any mechanically required MANIFEST refresh), it must actually add or
+    modify the record, and it must not touch any execution-/evidence-/
+    threshold-/holdout-/corpus-/comparator-/methodology-bearing path (an
+    allowlist miss inside those trees is reported as a forbidden
+    authority change, not silently). Returns a fail-closed problem list.
+    """
+    problems: list[str] = []
+    # linear one-parent commit (a merge commit has 2+ parents)
+    parents = _git_parents_at(authorization_head)
+    if len(parents) != 1:
+        problems.append(
+            f"authorization commit {authorization_head[:12]} is not a "
+            f"linear one-parent commit ({len(parents)} parents)"
+        )
+        return problems
+    changed = _git_commit_changed_paths(authorization_head)
+    if not changed:
+        problems.append(
+            "authorization commit changes no repository path (record absent)"
+        )
+        return problems
+    if AUTHORIZATION_RECORD_REL not in changed:
+        problems.append(
+            "authorization commit does not add/modify the authorization "
+            "record itself"
+        )
+    for path in changed:
+        if path in AUTHORIZATION_COMMIT_ALLOWLIST:
+            continue
+        if path.startswith(AUTHORIZATION_FORBIDDEN_PREFIXES):
+            problems.append(
+                f"authorization commit changes forbidden campaign-evidence "
+                f"path {path}"
+            )
+        else:
+            problems.append(
+                f"authorization commit changes unauthorized path {path}"
+            )
+    return problems
+
+
+def _git_parents_at(rev: str) -> list[str]:
+    return [
+        line
+        for line in _git(["rev-list", "--parents", "-n", "1", rev]).split()
+        if line
+    ][1:]
+
+
+def _blocked(checks: dict[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        "schema": PREFLIGHT_SCHEMA,
+        "decision": "BLOCKED",
+        "checks": checks,
+        "reason": reason,
+        "decrypt_performed": False,
+    }
 
 
 def preflight() -> dict[str, Any]:
@@ -358,7 +468,8 @@ def preflight() -> dict[str, Any]:
     checks["custody"] = "SATISFIED"
 
     # ------------------------------------------------------------------
-    # 9. exact-head maintainer authorization
+    # 9. exact-evidence-head maintainer authorization on a dedicated
+    #    authorization commit
     # ------------------------------------------------------------------
     auth_path = DOCS / "manifests/maintainer-unseal-authorization.json"
     if not auth_path.exists():
@@ -370,11 +481,29 @@ def preflight() -> dict[str, Any]:
     frozen_threshold_sha = sha256_bytes(
         evidence_paths["core-threshold-manifest"].read_bytes()
     )
+    authorization_head = _git_head()
+    # the authorized evidence state is EXACTLY the one-parent parent of
+    # the dedicated authorization commit (HEAD). Any later commit moves
+    # HEAD, so a stale authorization can never validate silently: the
+    # derived parent changes and the record's bound evidence head no
+    # longer matches.
+    parents = _git_parents_at(authorization_head)
+    if len(parents) != 1:
+        return _blocked(
+            checks,
+            "maintainer authorization requires HEAD to be a dedicated "
+            "linear one-parent authorization commit; HEAD has "
+            f"{len(parents)} parents",
+        )
+    authorized_campaign_head = parents[0]
     auth_problems = validate_maintainer_authorization(
         authorization,
-        campaign_head=_git_head(),
+        authorized_campaign_head=authorized_campaign_head,
         active_ciphertext_sha256=active_ciphertext_sha,
         frozen_threshold_sha256=frozen_threshold_sha,
+    )
+    auth_problems.extend(
+        validate_authorization_commit(authorization_head=authorization_head)
     )
     # authorization must itself be tracked + HEAD-clean
     auth_rel = str(auth_path.relative_to(REPO))
@@ -392,7 +521,8 @@ def preflight() -> dict[str, Any]:
         "schema": PREFLIGHT_SCHEMA,
         "decision": "READY_FOR_MAINTAINER_UNSEAL_DECISION",
         "checks": checks,
-        "campaign_head": _git_head(),
+        "authorization_head": authorization_head,
+        "authorized_campaign_head": authorized_campaign_head,
         "active_ciphertext_sha256": active_ciphertext_sha,
         "decrypt_performed": False,
         "note": (
