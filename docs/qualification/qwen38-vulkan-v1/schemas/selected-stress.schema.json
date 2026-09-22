@@ -1,0 +1,1 @@
+{"properties":{"schema":{"const":"inferswarm.issue237.selected-stress/1"},"selected":{"items":{"properties":{"case_id":{"type":"string"}},"required":["case_id"],"type":"object"},"maxItems":8,"minItems":8,"type":"array"}},"required":["schema","selected"],"type":"object"}

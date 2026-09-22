@@ -61,7 +61,10 @@ from issue237_length_bands import (  # noqa: E402
     length_regimes_provenance,
     validate_frozen_bands,
 )
-from issue237_seal_holdout import superseded_ciphertext_shas  # noqa: E402
+from issue237_seal_holdout import (  # noqa: E402
+    custody_receipt_failures,
+    superseded_ciphertext_shas,
+)
 from issue74_methodology import canonical_json_bytes, sha256_bytes  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
@@ -391,6 +394,62 @@ def validate_corpora(*, retokenize: bool = False) -> dict[str, Any]:
     return result
 
 
+def _certificate_pubkey_sha256(certificate_path: Path) -> str:
+    run = subprocess.run(
+        ["openssl", "x509", "-in", str(certificate_path), "-noout", "-pubkey"],
+        capture_output=True, text=True,
+    )
+    require(run.returncode == 0, "recipient certificate does not parse")
+    return sha256_bytes(run.stdout.encode("ascii"))
+
+
+def _certificate_recipient_identity(certificate_path: Path) -> dict[str, str]:
+    """Issuer + serial of the retained recipient certificate (the CMS
+    recipientInfos must name EXACTLY this pair)."""
+    serial = subprocess.run(
+        ["openssl", "x509", "-in", str(certificate_path), "-noout", "-serial"],
+        capture_output=True, text=True,
+    )
+    subject = subprocess.run(
+        ["openssl", "x509", "-in", str(certificate_path), "-noout", "-subject",
+         "-nameopt", "RFC2253"],
+        capture_output=True, text=True,
+    )
+    require(serial.returncode == 0 and subject.returncode == 0,
+            "recipient certificate identity extraction failed")
+    serial_hex = serial.stdout.strip().removeprefix("serial=").lower()
+    issuer = subject.stdout.strip().removeprefix("subject=")
+    return {"serial_hex": serial_hex, "issuer_dn": issuer}
+
+
+def _cms_recipient_identity(ciphertext_path: Path) -> dict[str, str]:
+    """The issuerAndSerialNumber named by the CMS recipientInfos."""
+    cms = subprocess.run(
+        ["openssl", "cms", "-cmsout", "-print", "-in", str(ciphertext_path)],
+        capture_output=True, text=True,
+    )
+    require(cms.returncode == 0, "holdout.cms is not a parseable CMS structure")
+    text_lines = [line.strip() for line in cms.stdout.splitlines()]
+    issuer = None
+    serial = None
+    for index, stripped in enumerate(text_lines):
+        if stripped.startswith("d.issuerAndSerialNumber:"):
+            for candidate in text_lines[index:index + 4]:
+                if candidate.startswith("issuer:"):
+                    issuer = candidate.removeprefix("issuer:").strip()
+                if candidate.startswith("serialNumber:"):
+                    serial = (
+                        candidate.removeprefix("serialNumber:")
+                        .strip()
+                        .removeprefix("0x")
+                        .lower()
+                    )
+            break
+    require(issuer is not None and serial is not None,
+            "CMS recipientInfos carry no issuerAndSerialNumber")
+    return {"serial_hex": str(serial), "issuer_dn": str(issuer)}
+
+
 def validate_holdout_commitment() -> dict[str, Any]:
     commitment_path = DOCS / "manifests/sealed-holdout-commitment.json"
     custody_path = DOCS / "manifests/holdout-custody-record.json"
@@ -438,6 +497,36 @@ def validate_holdout_commitment() -> dict[str, Any]:
         commitment["recipient_certificate_sha256"] == sha256_file(certificate_path),
         "certificate hash mismatch",
     )
+    # --- correction-pass cross-bindings (mechanical, no decrypt) ---------
+    # (a) custody seed commitment == active commitment seed commitment
+    custody_raw = json.loads(custody_path.read_text())
+    require(
+        custody_raw.get("secret_seed_sha256") == commitment["secret_seed_sha256"],
+        "custody secret_seed_sha256 does not match the active commitment",
+    )
+    # (b) the CMS recipient corresponds to the RETAINED certificate — the
+    #     ciphertext names this certificate's issuer+serial, not merely a
+    #     parseable pair of files
+    cert_identity = _certificate_recipient_identity(certificate_path)
+    cms_identity = _cms_recipient_identity(ciphertext_path)
+    require(
+        cms_identity["serial_hex"] == cert_identity["serial_hex"]
+        and cms_identity["issuer_dn"] == cert_identity["issuer_dn"],
+        "CMS recipient identity does not correspond to the retained "
+        "recipient certificate",
+    )
+    # (c) receipt-level custody coherence against LIVE active identities
+    active_pubkey_sha = _certificate_pubkey_sha256(certificate_path)
+    receipt_failures = custody_receipt_failures(
+        custody_raw,
+        active_certificate_pubkey_sha256=active_pubkey_sha,
+        active_seed_sha256=commitment["secret_seed_sha256"],
+        active_ciphertext_sha256=active_ciphertext_sha,
+    )
+    require(
+        not receipt_failures,
+        "custody receipts invalid: " + "; ".join(receipt_failures[:4]),
+    )
     # no plaintext holdout anywhere in the repository
     for draw in commitment["draws"]:
         require("prompt_text" not in draw and "token_ids" not in draw,
@@ -472,7 +561,10 @@ def validate_holdout_commitment() -> dict[str, Any]:
         custody["schema"] == m.HOLDOUT_CUSTODY_SCHEMA,
         "custody schema drift",
     )
-    # Custody axis: independent field, honest verification counts.
+    # Custody axis: independent field, honest verification counts. The
+    # verified count is receipt-aware: only receipt-verified custodians
+    # count (custody_receipt_failures already ran above against the LIVE
+    # active identities and would have failed on invalid receipts).
     require(
         custody["custody_status"] in (m.CUSTODY_STATUS_INCOMPLETE,
                                       m.CUSTODY_STATUS_COMPLETE),
@@ -481,6 +573,19 @@ def validate_holdout_commitment() -> dict[str, Any]:
     require(
         custody["holdout_state"] == commitment["state"],
         "custody/commitment lifecycle state mismatch",
+    )
+    receipt_verified = sum(
+        1
+        for c in custody.get("custodians", [])
+        if isinstance(c, dict)
+        and c.get("verified") is True
+        and isinstance(c.get("verification_receipt"), dict)
+    )
+    require(
+        receipt_verified == len(
+            [c for c in custody.get("custodians", []) if c.get("verified")]
+        ),
+        "verified custodian count includes rows without receipts",
     )
     verified = [c for c in custody.get("custodians", []) if c.get("verified")]
     complete = (

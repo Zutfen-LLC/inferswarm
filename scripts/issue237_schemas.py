@@ -161,6 +161,35 @@ def validate_calibration_summary(doc: dict[str, Any]) -> None:
         )
         for v in values:
             _require(_is_hex_float(v), f"{family} values must be hex floats")
+    # correction-pass binding: the summary names its complete case
+    # population and carries the statistical case-E_D arm
+    case_ids = doc.get("case_ids")
+    _require(
+        isinstance(case_ids, list) and len(case_ids) == m.CALIBRATION_CASES,
+        "calibration summary case_ids must list the complete population",
+    )
+    for case_id in case_ids:
+        _require(
+            isinstance(case_id, str) and case_id.startswith("c237-"),
+            "calibration summary case id drift",
+        )
+    case_e_d = doc.get("case_e_d_hex")
+    _require(
+        isinstance(case_e_d, list) and len(case_e_d) == m.CALIBRATION_CASES,
+        "calibration summary requires exactly "
+        f"{m.CALIBRATION_CASES} statistical case E_D values",
+    )
+    for v in case_e_d:
+        _require(_is_hex_float(v), "case E_D values must be hex floats")
+
+
+THRESHOLD_INPUT_DIGEST_KEYS = (
+    "calibration_corpus_sha256",
+    "stress_pool_sha256",
+    "selected_stress_sha256",
+    "calibration_summary_sha256",
+    "observation_manifest_sha256",
+)
 
 
 def validate_threshold_manifest(doc: dict[str, Any]) -> None:
@@ -180,11 +209,11 @@ def validate_threshold_manifest(doc: dict[str, Any]) -> None:
     derived = doc.get("derived_from")
     if not isinstance(derived, dict):
         raise SchemaError("derived_from must be an object")
-    _require(
-        _is_sha256(derived.get("calibration_corpus_sha256"))
-        and _is_sha256(derived.get("observation_manifest_sha256")),
-        "threshold manifest input digests missing",
-    )
+    for key in THRESHOLD_INPUT_DIGEST_KEYS:
+        _require(
+            _is_sha256(derived.get(key)),
+            f"threshold manifest input digest missing: {key}",
+        )
 
 
 def schema_documents() -> dict[str, Any]:
@@ -292,17 +321,126 @@ def schema_documents() -> dict[str, Any]:
         },
         "core-threshold-manifest.schema.json": {
             "type": "object",
-            "required": ["schema", "comparator_id", "limits", "e_d_hex", "derived_from"],
+            "required": ["schema", "comparator_id", "limits", "e_d_hex",
+                         "e_d_derivation", "derived_from"],
             "properties": {
                 "schema": {"const": "inferswarm.issue237.core-threshold-manifest/1"},
                 "comparator_id": {"const": m.COMPARATOR_ID},
                 "limits": {"type": "object"},
                 "e_d_hex": {"type": "string"},
+                "e_d_derivation": {
+                    "type": "object",
+                    "required": ["rule", "statistical_case_count",
+                                 "stress_case_count"],
+                    "properties": {
+                        "rule": {"type": "string"},
+                        "statistical_case_count": {"const": m.CALIBRATION_CASES},
+                        "stress_case_count": {"const": m.STRESS_SELECTED_CASES},
+                    },
+                },
+                "derived_from": {
+                    "type": "object",
+                    "required": list(THRESHOLD_INPUT_DIGEST_KEYS),
+                },
+            },
+        },
+        "telemetry-reference-bands.schema.json": {
+            "type": "object",
+            "required": ["schema", "comparator_id", "bands", "derived_from"],
+            "properties": {
+                "schema": {
+                    "const": "inferswarm.issue237.telemetry-reference-bands/1",
+                },
+                "comparator_id": {"const": m.COMPARATOR_ID},
+                "bands": {"type": "object"},
                 "derived_from": {
                     "type": "object",
                     "required": ["calibration_corpus_sha256",
+                                 "calibration_summary_sha256",
                                  "observation_manifest_sha256"],
                 },
+            },
+        },
+        "selected-stress.schema.json": {
+            "type": "object",
+            "required": ["schema", "selected"],
+            "properties": {
+                "schema": {
+                    "const": "inferswarm.issue237.selected-stress/1",
+                },
+                "selected": {
+                    "type": "array",
+                    "minItems": m.STRESS_SELECTED_CASES,
+                    "maxItems": m.STRESS_SELECTED_CASES,
+                    "items": {
+                        "type": "object",
+                        "required": ["case_id"],
+                        "properties": {
+                            "case_id": {"type": "string"},
+                        },
+                    },
+                },
+            },
+        },
+        "observation-manifest.schema.json": {
+            "type": "object",
+            "required": ["schema", "contract_id", "comparator_id",
+                         "calibration_corpus_sha256", "calibration_cases",
+                         "selected_stress_cases"],
+            "properties": {
+                "schema": {
+                    "const": "inferswarm.issue237.observation-manifest/1",
+                },
+                "contract_id": {"const": m.CONTRACT_ID},
+                "comparator_id": {"const": m.COMPARATOR_ID},
+                "calibration_corpus_sha256": {
+                    "type": "string", "pattern": "^[0-9a-f]{64}$",
+                },
+                "calibration_cases": {
+                    "type": "array",
+                    "minItems": m.CALIBRATION_CASES,
+                    "maxItems": m.CALIBRATION_CASES,
+                    "items": {
+                        "type": "object",
+                        "required": ["case_id", "reference_sha256",
+                                     "candidate_sha256", "case_e_d_hex"],
+                    },
+                },
+                "selected_stress_cases": {
+                    "type": "array",
+                    "minItems": m.STRESS_SELECTED_CASES,
+                    "maxItems": m.STRESS_SELECTED_CASES,
+                    "items": {
+                        "type": "object",
+                        "required": ["case_id", "reference_sha256",
+                                     "candidate_sha256", "case_e_d_hex"],
+                    },
+                },
+            },
+        },
+        "maintainer-unseal-authorization.schema.json": {
+            "type": "object",
+            "required": ["schema", "authorized", "authorized_by",
+                         "campaign_head", "holdout_ciphertext_sha256",
+                         "core_threshold_manifest_sha256",
+                         "comparator_id", "contract_id"],
+            "properties": {
+                "schema": {
+                    "const": (
+                        "inferswarm.issue237.maintainer-unseal-authorization/1"
+                    ),
+                },
+                "authorized": {"const": True},
+                "authorized_by": {"type": "string", "minLength": 1},
+                "campaign_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "holdout_ciphertext_sha256": {
+                    "type": "string", "pattern": "^[0-9a-f]{64}$",
+                },
+                "core_threshold_manifest_sha256": {
+                    "type": "string", "pattern": "^[0-9a-f]{64}$",
+                },
+                "comparator_id": {"const": m.COMPARATOR_ID},
+                "contract_id": {"const": m.CONTRACT_ID},
             },
         },
         "holdout-result.schema.json": {

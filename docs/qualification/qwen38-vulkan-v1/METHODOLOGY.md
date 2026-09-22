@@ -222,12 +222,20 @@ Lifecycle and custody are TWO INDEPENDENT axes:
   `INCOMPLETE` until at least two INDEPENDENTLY VERIFIED custodian copies
   of the recipient private key + secret seed exist
   (`required_independently_verified_custodians: 2`). A custodian row is
-  verified only with a mechanical verification receipt — a byte-level
-  copy whose availability/comparison can be re-derived against the public
-  key/seed commitments without exposing secret material. The current
-  record carries one UNVERIFIED local sealing-host custodian (verified:
-  false, with an explicit no-receipt note); the honest verified count is
-  zero and the prose claims none. `unseal_authorized = false`.
+  verified only with a MECHANICAL PUBLIC VERIFICATION RECEIPT: a small
+  public document (schema
+  `inferswarm.issue237.custodian-verification-receipt/1`) built next to
+  the custodian's copies by deriving the public key from the private-key
+  copy (openssl pkey) and hashing the seed copy, proving correspondence
+  to the ACTIVE certificate public key, the ACTIVE seed commitment, and
+  the ACTIVE ciphertext SHA, and carrying a canonical self-digest. The
+  validators re-bind every receipt field to the LIVE active bytes;
+  duplicate custodian labels, duplicate receipts, seed mismatches,
+  key/certificate mismatches, and bare `verified: true` booleans without
+  a receipt all fail closed. The current record carries one UNVERIFIED
+  local sealing-host custodian (verified: false, with an explicit
+  no-receipt note); the honest verified count is zero and the prose
+  claims none. `unseal_authorized = false`.
 
 The ACTIVE ciphertext/certificate identity is never hand-written here or
 in any generated authority: it is mechanically derived from the
@@ -253,10 +261,13 @@ No decrypt occurred in this issue (structural CMS checks only). The
 future campaign may open the active seal only after complete valid
 calibration evidence, mechanically derived limits, frozen
 threshold/contract artifacts, COMPLETED custody, and maintainer
-authorization (`scripts/issue237_unseal_preflight.py` checks all six
-preconditions — lifecycle state, custody status, verified custodians,
-calibration completeness, frozen thresholds, maintainer authorization —
-and still stops at the decision boundary).
+authorization (`scripts/issue237_unseal_preflight.py` enforces every
+precondition mechanically — lifecycle state, custody status with
+receipt-verified custodians, complete calibration evidence with freshly
+recomputed byte-identical thresholds, git-tracked HEAD-clean authority
+artifacts, exact-head maintainer authorization bound to the active
+ciphertext/threshold/comparator identities — and still stops at the
+decision boundary).
 
 ## 10. Corpus / semantic replay profile
 
@@ -285,7 +296,9 @@ reference/candidate observations: `schemas/` +
   custody (never commits plaintext/private key);
 - `scripts/issue237_thresholds.py` — frozen threshold/band derivation
   algorithm (max over complete calibration evidence; hex-float; no manual
-  editing representable);
+  editing representable — the manifest builder takes raw observation
+  documents only, derives every digest and value mechanically, and has no
+  caller-supplied semantic parameter);
 - `scripts/issue237_semantic_adjudication.py` — frozen decision-stability
   gate application;
 - `scripts/issue237_unseal_preflight.py` — stops before decrypt;
