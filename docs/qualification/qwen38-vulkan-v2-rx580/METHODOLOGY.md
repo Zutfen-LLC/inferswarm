@@ -137,15 +137,20 @@ exactly 8 returned integer token ids (each in [0, 248320)), canonically
 encoded as little-endian unsigned 32-bit words (struct.pack("<8I",
 *tokens)), and SHA-256-hashed over exactly those 32 bytes. Rung
 determinism holds iff all retained repeats share one identical canonical
-token digest. Measured timings, wall time, throughput, process/telemetry
+token digest. An honestly retained repeat with a different canonical output
+or without a sane canonical output makes only that rung INVALID; the
+complete ladder is judged and the largest rung valid on BOTH arms is
+selected (or Phase-3 linkage refuses when no common valid rung remains).
+Measured timings, wall time, throughput, process/telemetry
 and other incidental response metadata are NEVER part of the digest (they
 legitimately differ between otherwise deterministic executions); the raw
 responses themselves are NOT required to be byte-identical across
 repeats. `issue241_physical._selected_receipt` independently re-reads
 every retained raw response, verifies its custody SHA, re-derives the
-canonical encoding and digest, requires the recomputed digest to equal
-the repeat receipt claim, and requires all repeats' digests equal — a
-summary `deterministic=true` field is never trusted.
+canonical encoding and digest, and requires each claimed digest and token
+summary to match the same raw response. A forged claim or custody defect
+hard-fails; honest output-quality failure stays in the rung verdict and
+selection falls back. A summary `deterministic=true` field is never trusted.
 
 Per-repeat subject-identity custody (correction pass 5): every retained
 execution unit is bracketed by its own raw identity observation

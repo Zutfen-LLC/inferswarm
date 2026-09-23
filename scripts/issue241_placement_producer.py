@@ -317,6 +317,8 @@ def _sane_completion(response_body: bytes) -> tuple[bool, list[int] | None]:
         doc = json.loads(response_body)
     except (ValueError, TypeError):
         return False, None
+    if not isinstance(doc, dict):
+        return False, None
     tokens = doc.get("tokens")
     if not isinstance(tokens, list) or len(tokens) != C.REQUEST_CONTRACT["n_predict"]:
         return False, None

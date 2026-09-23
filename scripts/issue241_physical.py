@@ -210,6 +210,7 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(rows, list) or len(rows) != len(C.LADDER_NGLS) * 2:
         raise ValueError("Phase-2 must measure both arms at all five rungs")
     by_arm: dict[str, list[dict[str, Any]]] = {"B": [], "C": []}
+    seen_repeat_responses: set[str] = set()
     for i, row in enumerate(rows):
         ngl, arm = C.LADDER_NGLS[i // 2], ("C", "B")[i % 2]
         if row.get("ngl") != ngl or row.get("arm") != arm:
@@ -264,35 +265,32 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                 or rung.get("arm") != arm or rung.get("ngl") != ngl
                 or row.get("verdict") != placement.judge_rung(rung)):
             raise ValueError("Phase-2 measurement not derived from raw evidence")
-        # INDEPENDENT re-derivation of determinism/identity/health from
-        # digest-bound raw artifacts (never the summary booleans):
-        #  * every retained repeat's raw response is re-read, re-hashed,
-        #    required to equal its claimed custody digest, parsed to its
-        #    exactly-8 in-vocabulary token ids, re-encoded canonically
-        #    (little-endian u32) and re-hashed; the recomputed
-        #    deterministic-output digest must equal the repeat receipt
-        #    claim. Different verified outputs are honest nondeterminism:
-        #    judge_rung invalidates that rung so selection can fall back.
-        #    The raw responses themselves are NOT required to be
-        #    byte-identical (measured timings legitimately differ);
-        #  * every repeat's pre/post RAW identity artifact is located
-        #    through custody-safe relative paths, re-hashed, parsed, and
-        #    the identity is INDEPENDENTLY re-derived from the raw source
-        #    values and run through the frozen identity_problems
-        #    predicate; the derived identity must equal the repeat
-        #    receipt's summary, and the health disposition is re-derived
-        #    and cross-checked the same way;
-        #  * per-rung aggregate identity/health fields must agree with
-        #    the per-repeat observations.
+        # Re-read every repeat independently; only a mismatch between a
+        # claimed summary/digest and its own raw bytes is an integrity error.
+        # Distinct, honestly retained outputs are rung-quality evidence for
+        # judge_rung(), not a reason to stop reconstructing the ladder.
         repeats = row.get("repeats")
         if not isinstance(repeats, list) or len(repeats) != place_producer.RUNG_REPEATS:
             raise ValueError("Phase-2 rung lacks the bounded repeat evidence")
+        if (not isinstance(repeats[0], dict)
+                or any(row.get(parent) != repeats[0].get(child)
+                       for parent, child in (
+                           ("raw_response", "response_raw"),
+                           ("raw_response_sha256", "response_raw_sha256"),
+                           ("raw_log", "raw_log"),
+                           ("raw_log_sha256", "raw_log_sha256"),
+                           ("raw_telemetry", "raw_telemetry"),
+                           ("raw_telemetry_sha256", "raw_telemetry_sha256")))):
+            raise ValueError("Phase-2 primary raw response binding differs from repeat 0")
         for rep_index, rep in enumerate(repeats):
             if not isinstance(rep, dict) or rep.get("index") != rep_index:
                 raise ValueError("Phase-2 repeat evidence malformed or misindexed")
             rep_rel = rep.get("response_raw")
             if not isinstance(rep_rel, str) or Path(rep_rel).name != rep_rel:
                 raise ValueError("Phase-2 repeat raw response path invalid")
+            if rep_rel in seen_repeat_responses:
+                raise ValueError("Phase-2 aliased repeat raw response path")
+            seen_repeat_responses.add(rep_rel)
             rep_path = path.parent / rep_rel
             if rep_path.is_symlink() or not rep_path.is_file():
                 raise ValueError("Phase-2 repeat raw response missing/aliased")

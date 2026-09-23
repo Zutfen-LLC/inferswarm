@@ -588,41 +588,118 @@ class PhaseLinkageControls(unittest.TestCase):
         selected = self.check()
         self.assertEqual(selected["selected"]["matched_ngl"], C.LADDER_NGLS[-1])
 
-    def test_honest_nondeterministic_high_rung_falls_back(self):
-        # Repeat 1 genuinely produced a different token. Preserve the raw
-        # response and refresh only its truthful custody/summary claims.
-        row_index = len(self.rows) - 2  # candidate arm at highest rung
-        row, repeats = self._repeat_paths(row_index)
-        rep = repeats[1]
-        tokens = [99] + list(rep["response_tokens"])[1:]
+    def _honest_repeat_output(self, arm, ngl, tokens):
+        """Retain a different output and refresh every legitimate derived claim."""
+        index = 2 * C.LADDER_NGLS.index(ngl) + (arm == "B")
+        row = self.rows[index]
+        rep = row["repeats"][1]
         response_path = self.root / rep["response_raw"]
         response = json.loads(response_path.read_text())
         response["tokens"] = tokens
         raw = json.dumps(response).encode()
         response_path.write_bytes(raw)
         rep["response_raw_sha256"] = hashlib.sha256(raw).hexdigest()
-        rep["response_tokens"] = tokens
-        rep["deterministic_output_sha256"] = placement.deterministic_output_sha256(tokens)
-        self._refresh_verdict(row_index)
+        rep["sane_completion"], rep["response_tokens"] = (
+            place_producer._sane_completion(raw))
+        rep["deterministic_output_sha256"] = (
+            placement.deterministic_output_sha256(rep["response_tokens"]))
+        self._refresh_verdict(index)
         self.doc["selected"] = placement.select_matched_rung(self.doc["rungs"])
-        self.assertFalse(row["verdict"]["valid"])
+        return index
+
+    def test_one_changed_token_falls_back_to_next_common_rung(self):
+        top, lower = C.LADDER_NGLS[-1], C.LADDER_NGLS[-2]
+        index = self._honest_repeat_output("C", top, [99, 22, 33, 44, 55, 66, 77, 88])
+        self.assertFalse(self.rows[index]["verdict"]["valid"])
         self.assertTrue(any("repeat token mismatch" in problem
-                            for problem in row["verdict"]["problems"]))
-        self.assertEqual(self.doc["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
+                            for problem in self.rows[index]["verdict"]["problems"]))
+        self.assertEqual(self.doc["selected"]["matched_ngl"], lower)
+        self.assertEqual(self.check()["selected"]["matched_ngl"], lower)
+
+    def test_one_arm_nondeterministic_top_rung_falls_back(self):
+        top = C.LADDER_NGLS[-1]
+        self._honest_repeat_output("B", top, [99, 22, 33, 44, 55, 66, 77, 88])
+        self.assertTrue(self.rows[-2]["verdict"]["valid"])
+        self.assertFalse(self.rows[-1]["verdict"]["valid"])
         self.assertEqual(self.check()["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
 
-    def test_refreshed_token_summary_with_tampered_raw_sha_rejected(self):
-        row, repeats = self._repeat_paths()
-        rep = repeats[1]
-        tokens = [99] + list(rep["response_tokens"])[1:]
-        response_path = self.root / rep["response_raw"]
-        response = json.loads(response_path.read_text())
-        response["tokens"] = tokens
-        response_path.write_bytes(json.dumps(response).encode())
-        rep["response_tokens"] = tokens
-        rep["deterministic_output_sha256"] = placement.deterministic_output_sha256(tokens)
-        self._refresh_verdict()
-        with self.assertRaisesRegex(ValueError, "repeat raw response digest mismatch"):
+    def test_multiple_upper_rungs_invalid_select_largest_remaining(self):
+        for ngl in C.LADDER_NGLS[-2:]:
+            self._honest_repeat_output("C", ngl, [99, 22, 33, 44, 55, 66, 77, 88])
+        self.assertEqual(self.check()["selected"]["matched_ngl"], C.LADDER_NGLS[-3])
+
+    def test_no_valid_common_rung_blocks_phase3_linkage(self):
+        for ngl in C.LADDER_NGLS:
+            self._honest_repeat_output("C", ngl, [99, 22, 33, 44, 55, 66, 77, 88])
+        self.assertTrue(self.doc["selected"]["placement_blocked"])
+        with self.assertRaisesRegex(ValueError, "selected ngl missing|placement blocked"):
+            self.check()
+
+    def test_honest_noncanonical_output_falls_back(self):
+        self._honest_repeat_output("C", C.LADDER_NGLS[-1], [11, 22, 33])
+        self.assertFalse(self.rows[-2]["verdict"]["valid"])
+        self.assertEqual(self.check()["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
+
+    def test_honest_nonobject_json_output_falls_back(self):
+        row = self.rows[-2]
+        rep = row["repeats"][1]
+        raw = b"[11,22,33,44,55,66,77,88]"
+        (self.root / rep["response_raw"]).write_bytes(raw)
+        rep["response_raw_sha256"] = hashlib.sha256(raw).hexdigest()
+        rep["sane_completion"] = False
+        rep["response_tokens"] = None
+        rep["deterministic_output_sha256"] = None
+        self._refresh_verdict(len(self.rows) - 2)
+        self.doc["selected"] = placement.select_matched_rung(self.doc["rungs"])
+        self.assertEqual(self.check()["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
+
+    def test_missing_repeat_raw_response_hard_fails(self):
+        rep = self.rows[-2]["repeats"][1]
+        (self.root / rep["response_raw"]).unlink()
+        with self.assertRaisesRegex(ValueError, "raw response missing/aliased"):
+            self.check()
+
+    def test_aliased_repeat_raw_response_hard_fails(self):
+        rep = self.rows[-2]["repeats"][1]
+        target = self.root / rep["response_raw"]
+        original = target.read_bytes()
+        alias = self.root / "alias.response.json"
+        alias.write_bytes(original)
+        target.unlink()
+        target.symlink_to(alias)
+        self.assertEqual(original, target.read_bytes())
+        with self.assertRaisesRegex(ValueError, "raw response missing/aliased"):
+            self.check()
+
+    def test_primary_response_must_bind_first_repeat(self):
+        row = self.rows[-2]
+        first, second = row["repeats"]
+        first_response = json.loads((self.root / first["response_raw"]).read_text())
+        second_path = self.root / second["response_raw"]
+        second_response = json.loads(second_path.read_text())
+        second_response["timings"] = first_response["timings"]
+        second_path.write_text(json.dumps(second_response))
+        second["response_raw_sha256"] = hashlib.sha256(second_path.read_bytes()).hexdigest()
+        row["raw_response"] = second["response_raw"]
+        row["raw_response_sha256"] = second["response_raw_sha256"]
+        with self.assertRaisesRegex(ValueError, "primary raw response binding"):
+            self.check()
+
+    def test_reused_repeat_raw_response_path_hard_fails(self):
+        row = self.rows[-2]
+        first, second = row["repeats"]
+        second["response_raw"] = first["response_raw"]
+        second["response_raw_sha256"] = first["response_raw_sha256"]
+        second["response_tokens"] = list(first["response_tokens"])
+        second["deterministic_output_sha256"] = first["deterministic_output_sha256"]
+        self._refresh_verdict(len(self.rows) - 2)
+        with self.assertRaisesRegex(ValueError, "aliased repeat raw response"):
+            self.check()
+
+    def test_repeat_raw_response_sha_mismatch_hard_fails(self):
+        rep = self.rows[-2]["repeats"][1]
+        rep["response_raw_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "raw response digest mismatch"):
             self.check()
 
     def test_forged_deterministic_output_claim_rejected(self):
