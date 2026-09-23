@@ -19,7 +19,7 @@ producer head (phrase `R8I3 PHYSICAL DISPATCH #241`).
 - comparator/2 validation reducer: `scripts/issue241_comparator.py`
 - Practicality projection: `scripts/issue241_practicality.py`
 - Supersession builder: `scripts/issue241_supersession.py`
-- Focused tests: `tests/test_issue241_r8i3_rx580.py` (119 tests)
+- Focused tests: `tests/test_issue241_r8i3_rx580.py` (161 tests)
 
 ## Dormancy contract
 

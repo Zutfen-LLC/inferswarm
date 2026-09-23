@@ -129,6 +129,50 @@ accepted. Because both arms share the high-RAM host and page cache,
 repeated inference must not devolve into page thrash; persistent
 physical model reads trigger diagnosis before proceeding.
 
+Determinism contract (correction pass 5): each arm/rung executes exactly
+two retained repeats. The complete raw HTTP response of every repeat is
+retained and SHA-256-bound for custody. The acceptance-bearing
+deterministic output of a repeat is DERIVED from that raw response:
+exactly 8 returned integer token ids (each in [0, 248320)), canonically
+encoded as little-endian unsigned 32-bit words (struct.pack("<8I",
+*tokens)), and SHA-256-hashed over exactly those 32 bytes. Rung
+determinism holds iff all retained repeats share one identical canonical
+token digest. Measured timings, wall time, throughput, process/telemetry
+and other incidental response metadata are NEVER part of the digest (they
+legitimately differ between otherwise deterministic executions); the raw
+responses themselves are NOT required to be byte-identical across
+repeats. `issue241_physical._selected_receipt` independently re-reads
+every retained raw response, verifies its custody SHA, re-derives the
+canonical encoding and digest, requires the recomputed digest to equal
+the repeat receipt claim, and requires all repeats' digests equal — a
+summary `deterministic=true` field is never trusted.
+
+Per-repeat subject-identity custody (correction pass 5): every retained
+execution unit is bracketed by its own raw identity observation
+immediately before and after that unit — sysfs vendor/device/subsystem
+vendor/subsystem device/revision/current+max link width/speed, driver
+symlink; the NVIDIA UUID/BDF observation for arm B; the Vulkan
+`--summary` output under the arm's exact ICD; the AMD `mem_info_vram_total`
+observation for arm C. Each observation is stored as its own no-clobber
+artifact under the external campaign evidence root (schema
+`inferswarm.issue241.phase2-identity-observation/1`, carrying arm, ngl,
+repeat index, capture stage, exact raw source values, the derived
+identity, and on post-execution captures the derived health state) and
+SHA-256-bound into the repeat receipt alongside the derived frozen-subject
+identity and health disposition. The identity is a pure mechanical
+derivation of the retained raw values (`derive_identity_from_raw`), so a
+forged parsed identity with no supporting raw bytes cannot pass
+production or independent verification. `_selected_receipt` locates each
+repeat's identity artifacts through custody-safe relative paths (absolute
+/ traversal / symlink / aliased paths are rejected), recomputes their
+SHA-256, re-derives the identity from the raw values, runs the frozen
+`identity_problems()` predicate on that derivation, and re-derives the
+health disposition — drift on ANY one repeat fails closed, and a later
+good observation can never hide an earlier drifted one. Kernel sysfs
+link-speed spellings carry a trailing " PCIe" suffix; observations are
+normalized to the frozen canonical spelling before comparison, and the
+frozen identity constants themselves are unchanged.
+
 ## 5. Phase 3 — comparator/2 historical-only validation (physical, dormant)
 
 `inferswarm.qwen38-vulkan-comparator/2` — physical semantics of real
