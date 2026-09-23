@@ -14,6 +14,53 @@ from scripts import issue241_placement_producer as producer
 
 ROOT = Path(__file__).resolve().parents[1]
 
+VULKAN_SUMMARY = {
+    "B": ("GPU0:\n"
+          "        apiVersion         = 1.4.341\n"
+          "        deviceName         = NVIDIA GeForce RTX 3060\n"
+          "        deviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n"),
+    "C": ("GPU0:\n"
+          "        apiVersion         = 1.4.305\n"
+          "        deviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)\n"
+          "        deviceUUID         = 00000000-0200-0000-0000-000000000000\n"),
+}
+
+
+def raw_identity_sources(arm, **overrides):
+    """RAW per-repeat identity source values (kernel spellings) for the
+    frozen subject — the same shape _observe_arm_identity reads live."""
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    raw = {"sysfs_present": True, "sysfs": {
+        "vendor": "0x" + cfg["vendor_id"],
+        "device": "0x" + cfg["device_id"],
+        "subsystem_vendor": "0x" + cfg["subsystem_vendor_id"],
+        "subsystem_device": "0x" + cfg["subsystem_device_id"],
+        "revision": "0x" + cfg["revision"],
+        "current_link_width": cfg["link_width"][1:],
+        "current_link_speed": "2.5 GT/s PCIe" if arm == "B" else "8.0 GT/s PCIe",
+        "max_link_width": cfg["max_link_width"][1:],
+        "max_link_speed": cfg["max_link_speed"] + " PCIe",
+        "driver": cfg["kernel_driver"]},
+        "nvidia_smi": (f"{cfg['gpu_uuid']}, {cfg['bdf']}\n" if arm == "B" else ""),
+        "vulkaninfo_summary": VULKAN_SUMMARY[arm]}
+    if arm == "C":
+        raw["amd_vram_total_bytes"] = C.CANDIDATE_VRAM_CENSUS_MIB * 1024 * 1024
+    raw["sysfs"].update(overrides)
+    return raw
+
+
+def identity_observer(arm):
+    """Observer seam double returning {raw, identity} with the identity
+    mechanically derived from the raw sources (satisfies the frozen
+    predicate; same contract as the live _observe_arm_identity)."""
+    raw = raw_identity_sources(arm)
+    return {"raw": raw, "identity": producer.derive_identity_from_raw(arm, raw)}
+
+
+def fake_identity(arm):
+    """Derived identity observation satisfying the frozen predicate."""
+    return identity_observer(arm)["identity"]
+
 
 def authority():
     return {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
@@ -22,38 +69,25 @@ def authority():
             "dispatch_phrase": dispatch.DISPATCH_PHRASE}
 
 
-def fake_identity(arm):
-    """Identity observation satisfying the frozen predicate."""
-    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
-    ident = {k: cfg[k] for k in (
-        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
-        "subsystem_device_id", "revision", "link_width", "max_link_width",
-        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
-    ident["vulkan_icd"] = cfg["icd"]
-    ident["driver_in_use"] = cfg["kernel_driver"]
-    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
-    ident["selected_device_present"] = True
-    if arm == "B":
-        ident["gpu_uuid"] = cfg["gpu_uuid"]
-    else:
-        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
-    return ident
-
-
 class PlacementProducerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def measured(self, arm, ngl):
+    def measured(self, arm, ngl, repeat_index=0):
         bdf = next(iter(C.EXCLUDED_BY_ARM[arm]))
         tokens = [11, 22, 33, 44, 55, 66, 77, 88]
+        # Timings DELIBERATELY DIFFER between repeats: they are measured
+        # quantities and must not feed the determinism predicate.
+        prompt_ms = 12.0 + repeat_index * 7.5
+        decode_ms = 34.0 + repeat_index * 11.25
         return {"pid": 100 + ngl, "returncode": 0, "http_status": 200,
-                "response_raw": json.dumps({"timings": {"prompt_ms": 12.0,
-                                                        "predicted_ms": 34.0},
-                                            "tokens": tokens}).encode(),
-                "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
+                "response_raw": json.dumps({"timings": {"prompt_ms": prompt_ms,
+                                                        "predicted_ms": decode_ms},
+                                            "tokens": tokens,
+                                            "extra_incidental": {"served": repeat_index}}).encode(),
+                "request_timings": {"prompt_ms": prompt_ms, "decode_ms": decode_ms},
                 "proc_status": ["VmRSS: 400 kB\nRssFile: 150 kB\nRssAnon: 200 kB\nVmSwap: 3 kB"],
                 "proc_io": ["read_bytes: 1024\nrchar: 2048"],
                 "process_measurements": {"rss_file_kib": 150, "rss_anon_kib": 200,
@@ -63,15 +97,17 @@ class PlacementProducerTests(unittest.TestCase):
                 "excluded_device_residency_mib": {bdf: 4}}
 
     def fake(self, events, *, excluded=4):
+        state = {"repeat": 0}
         def runner(argv, *, arm, ngl, log_path, authority, **kwargs):
             events.append((arm, ngl, authority["head_sha"]))
             log_path.write_text(
                 "load_tensors: layer 0 assigned to device Vulkan0\n"
                 f"offloaded {ngl}/49 layers to GPU\n"
                 f"Vulkan0 model buffer size = {300 if arm == 'C' else 200} MiB\n")
-            result = self.measured(arm, ngl)
+            result = self.measured(arm, ngl, repeat_index=state["repeat"])
             result["excluded_device_residency_mib"] = {
                 next(iter(C.EXCLUDED_BY_ARM[arm])): excluded}
+            state["repeat"] += 1
             return result
         return runner
 
@@ -80,7 +116,7 @@ class PlacementProducerTests(unittest.TestCase):
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("/srv/fake-server"), authority(),
             runner=self.fake(events), revalidate_authority=lambda a: a,
-            identity_observer=fake_identity)
+            identity_observer=identity_observer)
         self.assertEqual([(arm, ngl) for arm, ngl, _ in events],
                          [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")
                           for _ in range(producer.RUNG_REPEATS)])
@@ -100,7 +136,7 @@ class PlacementProducerTests(unittest.TestCase):
     def test_excluded_residency_over_noise_invalidates_rung(self):
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=self.fake([], excluded=9),
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertTrue(receipt["selected"]["placement_blocked"])
         self.assertIsNone(receipt["selected"]["matched_ngl"])
 
@@ -119,7 +155,7 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertEqual([(arm, ngl) for arm, ngl, _ in events],
                          [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")
                           for _ in range(producer.RUNG_REPEATS)])
@@ -147,7 +183,7 @@ class PlacementProducerTests(unittest.TestCase):
             return self.fake(events)(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertEqual(len(events), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         row = next(r for r in receipt["rung_receipts"] if r["arm"] == "C" and r["ngl"] == C.LADDER_NGLS[-1])
@@ -172,7 +208,7 @@ class PlacementProducerTests(unittest.TestCase):
             return self.fake(events)(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertEqual(len(events), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         self.assertIsNone(receipt["rung_receipts"][-2]["process"]["pid"])
@@ -186,7 +222,7 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         self.assertFalse(receipt["rungs"]["B"][-1]["loaded"])
         with mock.patch.object(physical, "_head", return_value="a" * 40):
@@ -203,7 +239,7 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+            revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertFalse(receipt["rungs"]["C"][0]["loaded"])
         self.assertEqual(receipt["rung_receipts"][0]["raw_log_sha256"], hashlib.sha256(b"").hexdigest())
         with tempfile.TemporaryDirectory() as other:
@@ -212,7 +248,7 @@ class PlacementProducerTests(unittest.TestCase):
                 raise KeyError("unexpected fake runner defect")
             with self.assertRaisesRegex(KeyError, "unexpected fake runner defect"):
                 producer.run_phase2_producer(ROOT, Path(other), Path("fake"), authority(),
-                    runner=broken, revalidate_authority=lambda a: a, identity_observer=fake_identity)
+                    runner=broken, revalidate_authority=lambda a: a, identity_observer=identity_observer)
             self.assertFalse((Path(other) / "phase2-placement-receipt.json").exists())
 
     def test_missing_excluded_and_process_measurements_fail_closed(self):
@@ -228,7 +264,7 @@ class PlacementProducerTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "excluded|measurement|fault"):
                     producer.run_phase2_producer(ROOT, Path(d), Path("fake"), authority(),
                         runner=runner, revalidate_authority=lambda a: a,
-            identity_observer=fake_identity)
+            identity_observer=identity_observer)
 
     def test_authority_revalidated_before_each_arm_and_drift_stops(self):
         events = []
@@ -252,7 +288,7 @@ class PlacementProducerTests(unittest.TestCase):
                 with self.assertRaisesRegex((ValueError, RuntimeError), "authority|dispatch"):
                     producer.run_phase2_producer(ROOT, self.root, Path("fake"), auth,
                         runner=self.fake(called), revalidate_authority=check,
-                        identity_observer=fake_identity)
+                        identity_observer=identity_observer)
                 self.assertEqual(called, [])
 
     def test_missing_raw_log_and_synthetic_measurement_rejected(self):
@@ -260,14 +296,14 @@ class PlacementProducerTests(unittest.TestCase):
             return {**self.measured("C", 1), "synthetic": True}
         with self.assertRaisesRegex(ValueError, "synthetic|log"):
             producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
-                runner=no_log, revalidate_authority=lambda a: a, identity_observer=fake_identity)
+                runner=no_log, revalidate_authority=lambda a: a, identity_observer=identity_observer)
 
     def test_receipt_is_no_clobber_and_no_partial_summary(self):
         target = self.root / "phase2-placement-receipt.json"
         target.write_text("prior")
         with self.assertRaisesRegex(ValueError, "overwrite|exists|receipt"):
             producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
-                runner=self.fake([]), revalidate_authority=lambda a: a, identity_observer=fake_identity)
+                runner=self.fake([]), revalidate_authority=lambda a: a, identity_observer=identity_observer)
         self.assertEqual(target.read_text(), "prior")
 
     def test_runner_receives_hash_verified_historical_prompt_not_generic_text(self):
@@ -277,7 +313,7 @@ class PlacementProducerTests(unittest.TestCase):
             return self.fake([])(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
             runner=runner, revalidate_authority=lambda a: a,
-            identity_observer=fake_identity)
+            identity_observer=identity_observer)
         fixture = C.load_fixtures(ROOT)["case-256"]["prompt_token_ids"]
         self.assertEqual(len(seen), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertTrue(all(tokens == fixture for tokens in seen))

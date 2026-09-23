@@ -33,6 +33,26 @@ PCIID_RE = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 BDF16_RE = re.compile(r"^[0-9a-f]{8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$")
 
 
+def normalize_link_speed(value: Any) -> str:
+    """Canonical link-speed spelling shared by every identity boundary.
+
+    The subject host's kernel spells sysfs link speeds with a trailing
+    `` PCIe`` suffix (``8.0 GT/s PCIe`` — see the retained raw identity
+    observation evidence/identity-observation-2026-09-23.txt), while the
+    frozen constants use the canonical ``8.0 GT/s`` form. Observations
+    are normalized to the frozen canonical spelling BEFORE comparison;
+    the frozen constants themselves and every retained raw artifact stay
+    exactly as accepted."""
+    if not isinstance(value, str):
+        raise TypeError(f"link speed must be a string, got {value!r}")
+    text = value.strip()
+    if text.endswith(" PCIe"):
+        text = text[:-len(" PCIe")]
+    if not text:
+        raise ValueError("empty link speed")
+    return text
+
+
 def _require(cond: bool, message: str) -> None:
     if not cond:
         raise ValueError(f"census validation failed: {message}")
@@ -76,7 +96,7 @@ def identity_problems(arm: str, observed: Any) -> list[str]:
     eq("bdf")
     eq("link_width")
     eq("max_link_width")
-    eq("max_link_speed")
+    eq("max_link_speed", normalize_link_speed)
     eq("driver_in_use", lambda v: v)
     eq("vulkan_icd")
     eq("vulkan_device_name")

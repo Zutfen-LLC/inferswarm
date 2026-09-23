@@ -13,6 +13,7 @@ from scripts import issue241_placement as placement
 from scripts import issue241_placement_producer as p2
 from scripts import issue241_dispatch as dispatch
 from scripts import issue241_practicality as practicality
+from tests.test_issue241_placement_producer import identity_observer
 
 AUTH = {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
         "dispatch_phrase": dispatch.DISPATCH_PHRASE,
@@ -28,8 +29,8 @@ def phase2():
         "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
         "device_identity": identity(arm),
         "post_execution_device_identity": identity(arm),
-        "device_health": {"fatal_states": [], "observed": identity(arm)},
-        "repeats": repeats()} for n in C.LADDER_NGLS] for arm in ("B", "C")}
+        "device_health": p2._device_health(arm, identity(arm)),
+        "repeats": repeats(arm)} for n in C.LADDER_NGLS] for arm in ("B", "C")}
     selected = placement.select_matched_rung(arms)
     receipts = [{"ngl": n, "arm": arm, "raw_log": f"{arm}-{n}.log",
                  "raw_log_sha256": "b" * 64} for n in C.LADDER_NGLS for arm in ("C", "B")]
@@ -39,40 +40,35 @@ def phase2():
 
 
 def identity(arm):
-    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
-    ident = {k: cfg[k] for k in (
-        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
-        "subsystem_device_id", "revision", "link_width", "max_link_width",
-        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
-    ident["vulkan_icd"] = cfg["icd"]
-    ident["driver_in_use"] = cfg["kernel_driver"]
-    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
-    ident["selected_device_present"] = True
-    if arm == "B":
-        ident["gpu_uuid"] = cfg["gpu_uuid"]
-    else:
-        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
-    return ident
+    return identity_observer(arm)["identity"]
 
 
-def repeats(tokens=None, sha=None):
+def repeats(arm=None, tokens=None, sha=None):
+    arm = arm or "C"
     toks = tokens if tokens is not None else [11, 22, 33, 44, 55, 66, 77, 88]
+    det_sha = placement.deterministic_output_sha256(toks)
+    ident = identity(arm)
+    health = p2._device_health(arm, ident)
     return [{
         "index": i,
         "sane_completion": True,
         "response_tokens": list(toks),
-        "response_raw": f"{arm_of(sha, i)}{'' if i == 0 else f'.repeat{i}'}.response.json",
+        "deterministic_output_sha256": det_sha,
+        "response_raw": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.response.json",
         "response_raw_sha256": sha or ("d" * 64),
         "raw_log": f"stub{'' if i == 0 else f'.repeat{i}'}.server.log",
         "raw_log_sha256": "e" * 64,
         "raw_telemetry": f"stub{'' if i == 0 else f'.repeat{i}'}.telemetry.json",
         "raw_telemetry_sha256": "f" * 64,
-        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "identity_pre": ident,
+        "raw_identity_pre": f"stub{'' if i == 0 else f'.repeat{i}'}.identity-pre.json",
+        "raw_identity_pre_sha256": "1" * 64,
+        "identity_post": ident,
+        "raw_identity_post": f"stub{'' if i == 0 else f'.repeat{i}'}.identity-post.json",
+        "raw_identity_post_sha256": "2" * 64,
+        "identity_post_health": health,
+        "request_timings": {"prompt_ms": 1.0 + i, "decode_ms": 2.0 + i},
         "failure": None} for i in range(placement.RUNG_REPEATS)]
-
-
-def arm_of(sha, i):
-    return "arm"
 
 
 class FakeRunner:

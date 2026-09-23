@@ -21,8 +21,10 @@ Selection = max valid rung; matched placement = that rung on BOTH arms.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import struct
 import sys
 from pathlib import Path
 from typing import Any
@@ -32,12 +34,55 @@ import issue241_census as census
 import issue241_constants as C
 
 SCHEMA = "inferswarm.issue241.phase2-matched-placement/1"
-RUNG_SCHEMA = "inferswarm.issue241.placement-rung/2"
+RUNG_SCHEMA = "inferswarm.issue241.placement-rung/3"
+# FROZEN deterministic-output encoding (correction pass 5): the
+# acceptance-bearing deterministic output of a Phase-2 repeat is the
+# canonical little-endian unsigned 32-bit encoding of the exactly
+# C.DECISIONS returned token ids — struct.pack("<8I", *tokens) — and its
+# SHA-256. Measured timings, wall time, throughput, process/telemetry
+# and any other incidental response metadata are deliberately NOT part
+# of this digest: they are measurements and legitimately differ between
+# otherwise deterministic executions. The retained raw HTTP response of
+# every repeat stays SHA-256-bound for custody, but the raw responses
+# themselves are NOT required to be byte-identical across repeats.
+TOKEN_ENCODING = f"<{C.DECISIONS}I"
+
+
+def canonical_token_bytes(tokens: Any) -> bytes | None:
+    """Prospectively fixed canonical encoding of a repeat's deterministic
+    output: exactly C.DECISIONS integer (non-bool) token ids, each in
+    [0, C.N_VOCAB), packed as little-endian unsigned 32-bit words.
+    Returns None when the tokens cannot form that encoding."""
+    if (not isinstance(tokens, list) or len(tokens) != C.DECISIONS
+            or any(not isinstance(t, int) or isinstance(t, bool) for t in tokens)):
+        return None
+    if any(not 0 <= t < C.N_VOCAB for t in tokens):
+        return None
+    return struct.pack(TOKEN_ENCODING, *tokens)
+
+
+def deterministic_output_sha256(tokens: Any) -> str | None:
+    """SHA-256 of the canonical token encoding (None when unencodable)."""
+    canonical = canonical_token_bytes(tokens)
+    if canonical is None:
+        return None
+    return hashlib.sha256(canonical).hexdigest()
+
+
+# Identity-evidence fields every retained Phase-2 repeat must carry: the
+# derived frozen-subject identity observed immediately around THAT
+# repeat, its SHA-256-bound raw source observation, and the health
+# disposition derived from the repeat's post-execution observation.
+REPEAT_IDENTITY_FIELDS = (
+    ("identity_pre", "raw_identity_pre", "raw_identity_pre_sha256"),
+    ("identity_post", "raw_identity_post", "raw_identity_post_sha256"),
+)
 # Bounded prospectively defined repeat count per arm/rung: two executions
 # (primary + repeat) are the minimum sufficient to mechanically establish
-# byte-determinism of the retained raw response for that arm/rung under
-# the frozen return_tokens request contract; further repeats add no new
-# deterministic predicate. Frozen BEFORE any retained execution unit.
+# determinism of the acceptance-bearing canonical token output for that
+# arm/rung under the frozen return_tokens request contract; further
+# repeats add no new deterministic predicate. Frozen BEFORE any retained
+# execution unit.
 RUNG_REPEATS = 2
 # Fatal device/driver health states (closed vocabulary; a rung carrying
 # any of these cannot be valid regardless of every other field).
@@ -85,21 +130,42 @@ def parse_placement(log_text: str) -> dict[str, Any]:
 def _identity_problems(arm: str, rung: dict[str, Any]) -> list[str]:
     """Exact frozen subject identity from the rung's per-rung device
     telemetry observation, checked BOTH before and after execution
-    (hardware drift during Phase 2 fails closed, not just vs Phase 1)."""
+    (hardware drift during Phase 2 fails closed, not just vs the Phase 1
+    census). Correction pass 5: EVERY retained repeat additionally
+    carries its own pre/post identity observation around that exact
+    execution unit — drift on any ONE repeat fails the rung, and a later
+    good observation can never hide an earlier drifted one."""
     problems: list[str] = []
     for field in ("device_identity", "post_execution_device_identity"):
         observed = rung.get(field) or {}
         problems.extend(
             f"{field}: {p}" for p in census.identity_problems(arm, observed))
+    repeats = rung.get("repeats")
+    if isinstance(repeats, list):
+        for i, rep in enumerate(repeats):
+            if not isinstance(rep, dict):
+                continue
+            for ident_field in ("identity_pre", "identity_post"):
+                observed = rep.get(ident_field) or {}
+                problems.extend(
+                    f"repeat {i} {ident_field}: {p}"
+                    for p in census.identity_problems(arm, observed))
     return problems
 
 
 def _determinism_problems(rung: dict[str, Any]) -> list[str]:
-    """Mechanically frozen determinism predicate: the rung must carry the
-    prospectively bounded repeat count, each repeat's raw response must be
-    digest-bound, and every independently computed digest must be equal
-    (byte-deterministic output). C-vs-B numerical agreement is never
-    consulted here."""
+    """Mechanically frozen determinism predicate (correction pass 5):
+    the rung must carry the prospectively bounded repeat count; each
+    repeat must be sane under the frozen return_tokens contract, carry
+    exactly C.DECISIONS in-vocabulary integer tokens, its own
+    independently derived canonical token encoding
+    (struct.pack("<8I", *tokens)) and the SHA-256 of those exact bytes;
+    determinism holds iff all retained repeats share ONE identical
+    canonical token digest. The digest-bound raw HTTP responses are
+    custody evidence and are deliberately NOT required to be
+    byte-identical (they carry measured timings and other incidental
+    metadata that legitimately differ). C-vs-B numerical agreement is
+    never consulted here."""
     problems: list[str] = []
     repeats = rung.get("repeats") or []
     if not isinstance(repeats, list) or len(repeats) != RUNG_REPEATS:
@@ -112,24 +178,34 @@ def _determinism_problems(rung: dict[str, Any]) -> list[str]:
         if not isinstance(rep, dict):
             problems.append(f"repeat {i} malformed")
             return problems
-        ok = rep.get("sane_completion")
-        tokens = rep.get("response_tokens")
-        if ok is not True:
+        if rep.get("sane_completion") is not True:
             problems.append(f"repeat {i} lacks sane completion evidence")
-        if (not isinstance(tokens, list) or len(tokens) != C.DECISIONS
-                or any(not isinstance(t, int) or isinstance(t, bool) for t in tokens)):
+        tokens = rep.get("response_tokens")
+        canonical = canonical_token_bytes(tokens)
+        if canonical is None:
             problems.append(
                 f"repeat {i} response tokens != exact expected count/type "
                 f"under the frozen return_tokens contract")
+            continue
         raw = rep.get("response_raw_sha256")
         if not isinstance(raw, str) or len(raw) != 64:
             problems.append(f"repeat {i} raw response digest missing")
             continue
-        digests.append(raw)
+        # the claimed deterministic-output digest must equal the SHA-256
+        # of the canonical encoding independently derived from the
+        # claimed token summary itself
+        claimed = rep.get("deterministic_output_sha256")
+        derived = hashlib.sha256(canonical).hexdigest()
+        if claimed != derived:
+            problems.append(
+                f"repeat {i} deterministic_output_sha256 != sha256 of the "
+                f"canonical token encoding derived from its own tokens")
+            continue
+        digests.append(derived)
     if len(set(digests)) > 1:
         problems.append(
-            "repeat token mismatch: independently retained raw responses "
-            "differ (non-deterministic output at this rung)")
+            "repeat token mismatch: independently derived canonical token "
+            "digests differ (non-deterministic output at this rung)")
     return problems
 
 
@@ -171,6 +247,38 @@ def _health_problems(rung: dict[str, Any]) -> list[str]:
         if field in observed and observed[field] is not None and not isinstance(
                 observed[field], (int, float, str)):
             problems.append(f"health observation {field} malformed")
+    # per-repeat health observations (correction pass 5): every retained
+    # repeat carries its own health disposition derived from that
+    # repeat's post-execution observation; a drifted or forged one fails
+    # the rung, and the last observation cannot hide an earlier problem.
+    repeats = rung.get("repeats")
+    if isinstance(repeats, list):
+        for i, rep in enumerate(repeats):
+            if not isinstance(rep, dict):
+                continue
+            rep_health = rep.get("identity_post_health")
+            if not isinstance(rep_health, dict):
+                problems.append(
+                    f"repeat {i} missing per-repeat health disposition")
+                continue
+            if rep_health.get("fatal_states"):
+                problems.append(
+                    f"repeat {i} fatal device/driver health state: "
+                    f"{rep_health.get('fatal_states')}")
+            rep_observed = rep_health.get("observed") or {}
+            for field in ("selected_device_present", "driver_in_use",
+                          "vulkan_icd", "bdf"):
+                if field not in rep_observed:
+                    problems.append(
+                        f"repeat {i} missing mandatory health evidence: {field}")
+            if rep_observed.get("selected_device_present") is False:
+                problems.append(
+                    f"repeat {i} forged health summary: observed "
+                    "selected_device_present=false without fatal state")
+            if rep_observed.get("driver_in_use") not in (None, arm_cfg["kernel_driver"]):
+                problems.append(f"repeat {i} forged health summary: driver drift")
+            if rep_observed.get("bdf") not in (None, arm_cfg["bdf"]):
+                problems.append(f"repeat {i} forged health summary: bdf drift")
     return problems
 
 

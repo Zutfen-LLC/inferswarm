@@ -264,21 +264,32 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                 or rung.get("arm") != arm or rung.get("ngl") != ngl
                 or row.get("verdict") != placement.judge_rung(rung)):
             raise ValueError("Phase-2 measurement not derived from raw evidence")
-        # INDEPENDENT re-derivation of determinism/health/identity from
+        # INDEPENDENT re-derivation of determinism/identity/health from
         # digest-bound raw artifacts (never the summary booleans):
         #  * every retained repeat's raw response is re-read, re-hashed,
-        #    and required to equal its claimed digest, to carry exactly the
-        #    expected token count/type, and to be byte-identical across
-        #    repeats (independently computed digests equal);
-        #  * per-rung device identity and health observations must be
-        #    present and identical pre/post execution and must satisfy the
-        #    frozen subject identity predicate;
-        #  * the health artifact must carry the mandatory observed fields.
+        #    required to equal its claimed custody digest, parsed to its
+        #    exactly-8 in-vocabulary token ids, re-encoded canonically
+        #    (little-endian u32) and re-hashed; the recomputed
+        #    deterministic-output digest must equal the repeat receipt
+        #    claim, and all repeats' canonical digests must be equal.
+        #    The raw responses themselves are NOT required to be
+        #    byte-identical (measured timings legitimately differ);
+        #  * every repeat's pre/post RAW identity artifact is located
+        #    through custody-safe relative paths, re-hashed, parsed, and
+        #    the identity is INDEPENDENTLY re-derived from the raw source
+        #    values and run through the frozen identity_problems
+        #    predicate; the derived identity must equal the repeat
+        #    receipt's summary, and the health disposition is re-derived
+        #    and cross-checked the same way;
+        #  * per-rung aggregate identity/health fields must agree with
+        #    the per-repeat observations.
         repeats = row.get("repeats")
         if not isinstance(repeats, list) or len(repeats) != place_producer.RUNG_REPEATS:
             raise ValueError("Phase-2 rung lacks the bounded repeat evidence")
-        repeat_digests: list[str] = []
-        for rep in repeats:
+        repeat_output_digests: list[str | None] = []
+        for rep_index, rep in enumerate(repeats):
+            if not isinstance(rep, dict) or rep.get("index") != rep_index:
+                raise ValueError("Phase-2 repeat evidence malformed or misindexed")
             rep_rel = rep.get("response_raw")
             if not isinstance(rep_rel, str) or Path(rep_rel).name != rep_rel:
                 raise ValueError("Phase-2 repeat raw response path invalid")
@@ -289,7 +300,7 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
             if hashlib.sha256(rep_bytes).hexdigest() != rep.get("response_raw_sha256"):
                 raise ValueError("Phase-2 repeat raw response digest mismatch")
             sane, tokens = place_producer._sane_completion(rep_bytes)
-            # Summary-vs-raw CONSISTENCY: the retained summary booleans must
+            # Summary-vs-raw CONSISTENCY: the retained summary values must
             # match what the digest-bound raw response actually shows. A
             # legitimately-failed/nondeterministic rung is simply invalid
             # (judge_rung records the problem and selection falls back); a
@@ -297,8 +308,17 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
             # integrity failure and stops the campaign.
             if sane != (rep.get("sane_completion") is True) or tokens != rep.get("response_tokens"):
                 raise ValueError(
-                    "Phase-2 repeat sane-completion summary differs from "
-                    "the retained raw response")
+                    "Phase-2 repeat sane-completion/token summary differs "
+                    "from the retained raw response")
+            canonical = placement.canonical_token_bytes(tokens)
+            recomputed = (hashlib.sha256(canonical).hexdigest()
+                          if canonical is not None else None)
+            if rep.get("deterministic_output_sha256") != recomputed:
+                raise ValueError(
+                    "Phase-2 repeat deterministic-output digest claim "
+                    "differs from the canonical re-derivation of the raw "
+                    "response tokens")
+            repeat_output_digests.append(recomputed)
             rep_log_rel = rep.get("raw_log")
             if not isinstance(rep_log_rel, str) or Path(rep_log_rel).name != rep_log_rel:
                 raise ValueError("Phase-2 repeat raw log path invalid")
@@ -315,14 +335,70 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                 raise ValueError("Phase-2 repeat raw telemetry missing/aliased")
             if hashlib.sha256(rep_tel.read_bytes()).hexdigest() != rep.get("raw_telemetry_sha256"):
                 raise ValueError("Phase-2 repeat raw telemetry digest mismatch")
-            repeat_digests.append(hashlib.sha256(rep_bytes).hexdigest())
-        if len(set(repeat_digests)) != 1:
+            # per-repeat RAW identity/health custody (correction pass 5)
+            for stage, raw_field, sha_field, ident_field in (
+                    ("pre", "raw_identity_pre", "raw_identity_pre_sha256", "identity_pre"),
+                    ("post", "raw_identity_post", "raw_identity_post_sha256", "identity_post")):
+                raw_rel = rep.get(raw_field)
+                if not isinstance(raw_rel, str) or Path(raw_rel).name != raw_rel or not raw_rel:
+                    raise ValueError(f"Phase-2 repeat {stage} identity path invalid")
+                raw_path = path.parent / raw_rel
+                if raw_path.is_symlink() or not raw_path.is_file():
+                    raise ValueError(
+                        f"Phase-2 repeat {stage} identity evidence missing/aliased")
+                raw_bytes = raw_path.read_bytes()
+                if hashlib.sha256(raw_bytes).hexdigest() != rep.get(sha_field):
+                    raise ValueError(
+                        f"Phase-2 repeat {stage} identity artifact digest mismatch")
+                observation = json.loads(raw_bytes)
+                if (not isinstance(observation, dict)
+                        or observation.get("schema") != place_producer.IDENTITY_OBSERVATION_SCHEMA
+                        or observation.get("arm") != arm
+                        or observation.get("ngl") != ngl
+                        or observation.get("repeat_index") != rep_index
+                        or observation.get("capture_stage") != (
+                            "pre-execution" if stage == "pre" else "post-execution")):
+                    raise ValueError(
+                        f"Phase-2 repeat {stage} identity artifact binding invalid")
+                derived = place_producer.derive_identity_from_raw(
+                    arm, observation.get("raw"))
+                if derived != observation.get("derived_identity"):
+                    raise ValueError(
+                        f"Phase-2 repeat {stage} derived identity differs "
+                        "from the raw source values")
+                problems = census.identity_problems(arm, derived)
+                if problems:
+                    raise ValueError(
+                        f"Phase-2 repeat {rep_index} {stage} frozen-subject "
+                        f"drift: {problems}")
+                if derived != rep.get(ident_field):
+                    raise ValueError(
+                        f"Phase-2 repeat {stage} identity summary differs "
+                        "from the re-derived raw observation")
+                if stage == "post":
+                    derived_health = place_producer._device_health(arm, derived)
+                    if derived_health != observation.get("derived_health"):
+                        raise ValueError(
+                            "Phase-2 repeat post identity artifact health "
+                            "differs from the re-derived disposition")
+                    if derived_health != rep.get("identity_post_health"):
+                        raise ValueError(
+                            "Phase-2 repeat health summary differs from "
+                            "the re-derived disposition")
+                    if derived_health.get("fatal_states"):
+                        raise ValueError(
+                            f"Phase-2 fatal device/driver health state at "
+                            f"{arm} ngl={ngl} repeat {rep_index}: "
+                            f"{derived_health['fatal_states']}")
+        if len(set(repeat_output_digests)) != 1 or not repeat_output_digests:
             raise ValueError(
-                "Phase-2 retained repeats are not byte-identical — "
-                "determinism does not hold at this rung")
+                "Phase-2 retained repeats differ in canonical token "
+                "output — determinism does not hold at this rung")
         if rung.get("repeats") != repeats:
             raise ValueError("Phase-2 rung repeat evidence differs from receipts")
-        for identity_field in ("device_identity", "post_execution_device_identity"):
+        for identity_field, repeat_field in (
+                ("device_identity", "identity_pre"),
+                ("post_execution_device_identity", "identity_post")):
             observed = row.get(identity_field)
             if not isinstance(observed, dict) or not observed:
                 raise ValueError(f"Phase-2 {identity_field} observation missing")
@@ -330,12 +406,18 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
             if problems:
                 raise ValueError(
                     f"Phase-2 {identity_field} frozen-subject drift: {problems}")
+            if observed != repeats[0 if repeat_field == "identity_pre" else -1][repeat_field]:
+                raise ValueError(
+                    f"Phase-2 rung {identity_field} differs from its "
+                    "per-repeat observation")
         if row.get("device_identity") != rung.get("device_identity") or \
                 row.get("post_execution_device_identity") != rung.get("post_execution_device_identity"):
             raise ValueError("Phase-2 rung identity differs from receipt observation")
         health = row.get("device_health")
         if not isinstance(health, dict) or health != rung.get("device_health"):
             raise ValueError("Phase-2 device-health artifact missing or divergent")
+        if health != repeats[-1]["identity_post_health"]:
+            raise ValueError("Phase-2 rung health differs from per-repeat disposition")
         observed_health = health.get("observed")
         if not isinstance(observed_health, dict) or not {
                 "selected_device_present", "driver_in_use", "vulkan_icd",

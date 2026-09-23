@@ -47,9 +47,13 @@ import issue241_dispatch as dispatch
 import issue241_observer_patch as opatch
 import issue241_physical as physical
 import issue241_placement as placement
+import issue241_placement_producer as place_producer
 import issue241_practicality as prac
 import issue241_supersession as supersession
 from issue241_phase0 import audit_phase0
+from tests.test_issue241_placement_producer import raw_identity_sources
+
+RAW_IDENTITY_SOURCES = raw_identity_sources
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -133,20 +137,30 @@ def valid_device_health(arm: str) -> dict:
     return {"fatal_states": [], "observed": dict(valid_device_identity(arm))}
 
 
-def valid_repeats(response_tokens: list[int] | None = None,
+def valid_repeats(arm: str = "C", response_tokens: list[int] | None = None,
                   sha: str | None = None) -> list[dict]:
     tokens = response_tokens if response_tokens is not None else list(WINNERS)
+    det_sha = placement.deterministic_output_sha256(tokens)
     return [{
         "index": i,
         "sane_completion": True,
         "response_tokens": list(tokens),
+        "deterministic_output_sha256": det_sha,
         "response_raw": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.response.json",
         "response_raw_sha256": sha or ("d" * 64),
         "raw_log": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.server.log",
         "raw_log_sha256": "e" * 64,
         "raw_telemetry": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.telemetry.json",
         "raw_telemetry_sha256": "f" * 64,
-        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "identity_pre": valid_device_identity(arm),
+        "raw_identity_pre": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.identity-pre.json",
+        "raw_identity_pre_sha256": "1" * 64,
+        "identity_post": valid_device_identity(arm),
+        "raw_identity_post": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.identity-post.json",
+        "raw_identity_post_sha256": "2" * 64,
+        "identity_post_health": {"fatal_states": [],
+                                 "observed": valid_device_identity(arm)},
+        "request_timings": {"prompt_ms": 1.0 + i, "decode_ms": 2.0 + i},
         "failure": None,
     } for i in range(placement.RUNG_REPEATS)]
 
@@ -176,7 +190,7 @@ def make_rung(arm: str, ngl: int, **overrides) -> dict:
         "device_identity": valid_device_identity(arm),
         "post_execution_device_identity": valid_device_identity(arm),
         "device_health": valid_device_health(arm),
-        "repeats": valid_repeats(),
+        "repeats": valid_repeats(arm),
     }
     doc.update(overrides)
     return doc
@@ -555,11 +569,18 @@ class TestPlacement(unittest.TestCase):
     def test_repeat_token_mismatch_rejects_rung(self):
         rung = make_rung("C", 4)
         rung["repeats"] = valid_repeats(response_tokens=[1] * 8)
+        # competent forgery: change repeat 1's tokens AND its claimed
+        # deterministic-output digest so the surviving problem is exactly
+        # the non-determinism of the rung's output
         rung["repeats"][1]["response_tokens"] = [2] * 8
+        rung["repeats"][1]["deterministic_output_sha256"] = (
+            placement.deterministic_output_sha256([2] * 8))
         rung["repeats"][1]["response_raw_sha256"] = "a" * 64
         verdict = placement.judge_rung(rung)
         self.assertFalse(verdict["valid"])
         self.assertTrue(any("non-deterministic" in p for p in verdict["problems"]))
+        self.assertFalse(any("deterministic_output_sha256 !=" in p
+                             for p in verdict["problems"]))
 
     def test_missing_repeat_rejects_rung(self):
         rung = make_rung("C", 4)
@@ -657,8 +678,10 @@ class TestPlacement(unittest.TestCase):
         }
         # poison ngl=8 on BOTH arms with non-deterministic repeats
         for arm in ("B", "C"):
-            bad = valid_repeats()
+            bad = valid_repeats(arm)
             bad[1]["response_tokens"] = [99] * 8
+            bad[1]["deterministic_output_sha256"] = (
+                placement.deterministic_output_sha256([99] * 8))
             bad[1]["response_raw_sha256"] = "b" * 64
             rungs[arm][-1]["repeats"] = bad
         verdict = placement.select_matched_rung(rungs)
@@ -669,8 +692,10 @@ class TestPlacement(unittest.TestCase):
             "B": [make_rung("B", n) for n in C.LADDER_NGLS],
             "C": [make_rung("C", n) for n in C.LADDER_NGLS],
         }
-        bad = valid_repeats()
+        bad = valid_repeats("C")
         bad[1]["response_tokens"] = [99] * 8
+        bad[1]["deterministic_output_sha256"] = (
+            placement.deterministic_output_sha256([99] * 8))
         bad[1]["response_raw_sha256"] = "b" * 64
         rungs["C"][-1]["repeats"] = bad
         verdict = placement.select_matched_rung(rungs)
@@ -765,6 +790,230 @@ class TestPlacement(unittest.TestCase):
         verdict = placement.judge_rung(rung)
         self.assertFalse(verdict["valid"])
         self.assertTrue(any("placement mismatch" in p for p in verdict["problems"]))
+
+
+# ---------------------------------------------------------------------------
+# correction pass 5 — Phase-2 determinism semantics + per-repeat identity
+# custody negative controls
+# ---------------------------------------------------------------------------
+
+class TestDeterminismSemantics(unittest.TestCase):
+    """Variable-timing/same-token determinism + digest forgery controls."""
+
+    def test_same_tokens_different_timings_still_deterministic(self):
+        rung = make_rung("C", 4)
+        # raw responses differ (different bytes => different custody
+        # digests); the canonical token output is identical
+        rung["repeats"][1]["response_raw_sha256"] = "e" * 64
+        verdict = placement.judge_rung(rung)
+        self.assertTrue(verdict["valid"], verdict["problems"])
+        self.assertEqual(len({r["deterministic_output_sha256"]
+                              for r in rung["repeats"]}), 1)
+        # the repeats carry deliberately different timings/metadata and
+        # different raw-response digests — determinism must still hold
+        self.assertNotEqual(rung["repeats"][0]["request_timings"],
+                            rung["repeats"][1]["request_timings"])
+        self.assertNotEqual(rung["repeats"][0]["response_raw_sha256"],
+                            rung["repeats"][1]["response_raw_sha256"])
+
+    def test_same_tokens_different_irrelevant_metadata_deterministic(self):
+        rung = make_rung("B", 2)
+        # extra incidental response metadata (fields the digest ignores)
+        for rep in rung["repeats"]:
+            rep["response_metadata"] = {"wall_s": 1.5, "throughput": 99.0}
+        rung["repeats"][1]["response_metadata"]["wall_s"] = 2.5
+        verdict = placement.judge_rung(rung)
+        self.assertTrue(verdict["valid"], verdict["problems"])
+
+    def test_one_changed_token_is_nondeterministic(self):
+        rung = make_rung("C", 4)
+        tokens = list(rung["repeats"][1]["response_tokens"])
+        tokens[3] += 1
+        rung["repeats"][1]["response_tokens"] = tokens
+        rung["repeats"][1]["deterministic_output_sha256"] = (
+            placement.deterministic_output_sha256(tokens))
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("non-deterministic" in p for p in verdict["problems"]))
+
+    def test_forged_deterministic_output_sha256_rejected(self):
+        rung = make_rung("C", 4)
+        rung["repeats"][1]["deterministic_output_sha256"] = "a" * 64
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("deterministic_output_sha256 !=" in p
+                            for p in verdict["problems"]))
+
+    def test_canonical_encoding_is_frozen_little_endian_u32(self):
+        tokens = [1, 2, 3, 4, 5, 6, 7, 8]
+        self.assertEqual(placement.TOKEN_ENCODING, "<8I")
+        canonical = placement.canonical_token_bytes(tokens)
+        self.assertEqual(canonical, struct.pack("<8I", *tokens))
+        self.assertEqual(len(canonical), 32)
+        self.assertEqual(placement.deterministic_output_sha256(tokens),
+                         hashlib.sha256(canonical).hexdigest())
+        # a u64 encoding would differ — the encoding is mechanically fixed
+        self.assertNotEqual(canonical, struct.pack("<8Q", *tokens))
+        # big-endian differs — endianness is frozen
+        self.assertNotEqual(canonical, struct.pack(">8I", *tokens))
+
+    def test_out_of_vocabulary_or_malformed_tokens_rejected(self):
+        for bad in ([11] * 7,                      # wrong count
+                    [11] * 7 + [True],             # bool is not an int token
+                    [11] * 7 + [C.N_VOCAB],        # == vocab size (out)
+                    [11] * 7 + [-1],               # negative
+                    [11] * 7 + [1.5],              # float
+                    None, "tokens", [None] * 8):
+            with self.subTest(bad=bad):
+                self.assertIsNone(placement.canonical_token_bytes(bad))
+                rung = make_rung("C", 4)
+                for rep in rung["repeats"]:
+                    rep["response_tokens"] = bad
+                    rep["deterministic_output_sha256"] = (
+                        placement.deterministic_output_sha256(bad))
+                verdict = placement.judge_rung(rung)
+                self.assertFalse(verdict["valid"])
+                self.assertTrue(any("expected count/type" in p
+                                    for p in verdict["problems"]))
+
+    def test_high_rung_token_nondeterminism_falls_back_to_next_common(self):
+        rungs = {"B": [make_rung("B", n) for n in C.LADDER_NGLS],
+                 "C": [make_rung("C", n) for n in C.LADDER_NGLS]}
+        for arm in ("B", "C"):
+            rep = rungs[arm][-1]["repeats"][1]
+            tokens = list(rep["response_tokens"])
+            tokens[0] += 1
+            rep["response_tokens"] = tokens
+            rep["deterministic_output_sha256"] = (
+                placement.deterministic_output_sha256(tokens))
+        verdict = placement.select_matched_rung(rungs)
+        self.assertEqual(verdict["matched_ngl"], 6)
+
+    def test_c_vs_b_agreement_irrelevant_to_selection(self):
+        # arms produce entirely different tokens; selection is unchanged
+        rungs = {"B": [make_rung("B", n) for n in C.LADDER_NGLS],
+                 "C": [make_rung("C", n) for n in C.LADDER_NGLS]}
+        for rep in rungs["B"][0]["repeats"]:
+            rep["response_tokens"] = [248319 - i for i in range(8)]
+            rep["deterministic_output_sha256"] = (
+                placement.deterministic_output_sha256(rep["response_tokens"]))
+        verdict = placement.select_matched_rung(rungs)
+        self.assertEqual(verdict["matched_ngl"], C.LADDER_NGLS[-1])
+
+
+class TestPerRepeatIdentityCustody(unittest.TestCase):
+    """Per-repeat raw identity/health evidence controls (pass 5 §2)."""
+
+    def _rung_with_stage(self, stage, **derive_overrides):
+        rung = make_rung("C", 4)
+        raw = dict(RAW_IDENTITY_SOURCES("C"))
+        raw["sysfs"] = dict(raw["sysfs"])
+        raw["sysfs"].update(derive_overrides)
+        derived = place_producer.derive_identity_from_raw("C", raw)
+        rung["repeats"][1][f"identity_{stage}"] = derived
+        return rung, raw, derived
+
+    def test_missing_per_repeat_identity_evidence_rejects_rung(self):
+        for stage in ("pre", "post"):
+            with self.subTest(stage=stage):
+                rung = make_rung("C", 4)
+                for field in (f"identity_{stage}", f"raw_identity_{stage}",
+                              f"raw_identity_{stage}_sha256"):
+                    for rep in rung["repeats"]:
+                        rep.pop(field)
+                verdict = placement.judge_rung(rung)
+                self.assertFalse(verdict["valid"])
+                # the missing derived identity is reported as drift
+                self.assertTrue(any(f"{stage}: C frozen-identity drift" in p
+                                    for p in verdict["problems"]))
+
+    def test_missing_first_repeat_identity_second_exists_rejects(self):
+        rung = make_rung("C", 4)
+        for field in ("identity_pre", "raw_identity_pre",
+                      "raw_identity_pre_sha256"):
+            rung["repeats"][0].pop(field)
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 0 identity_pre" in p
+                            for p in verdict["problems"]))
+
+    def test_identity_drift_first_repeat_correct_second_rejected(self):
+        rung = make_rung("C", 4)
+        drifted = valid_device_identity("C")
+        drifted["subsystem_device_id"] = "e387"
+        rung["repeats"][0]["identity_pre"] = drifted
+        # the rung-level aggregate still shows the correct first-repeat
+        # identity would be wrong to trust — judge must fail on repeat 0
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 0 identity_pre" in p
+                            for p in verdict["problems"]))
+
+    def test_wrong_subsystem_in_one_repeat_only_rejected(self):
+        rung, raw, derived = self._rung_with_stage("pre", subsystem_device="0xe387")
+        # derived now differs from frozen; judge must reject on repeat 1
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 1 identity_pre" in p
+                            for p in verdict["problems"]))
+
+    def test_wrong_link_width_in_one_repeat_only_rejected(self):
+        rung, _, _ = self._rung_with_stage("post", current_link_width="4")
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 1 identity_post" in p
+                            for p in verdict["problems"]))
+
+    def test_wrong_revision_in_one_repeat_only_rejected(self):
+        rung, _, _ = self._rung_with_stage("pre", revision="0xe6")
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 1 identity_pre" in p
+                            for p in verdict["problems"]))
+
+    def test_missing_per_repeat_health_disposition_rejected(self):
+        rung = make_rung("C", 4)
+        rung["repeats"][1].pop("identity_post_health")
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 1 missing per-repeat health" in p
+                            for p in verdict["problems"]))
+
+    def test_forged_healthy_repeat_summary_rejected(self):
+        rung = make_rung("C", 4)
+        forged_observed = valid_device_identity("C")
+        forged_observed["selected_device_present"] = False
+        rung["repeats"][1]["identity_post_health"] = {
+            "fatal_states": [], "observed": forged_observed}
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("repeat 1 forged health summary" in p
+                            for p in verdict["problems"]))
+
+    def test_forged_parsed_identity_with_no_raw_support_rejected(self):
+        # production-time observer contract: identity != derivation of raw
+        with self.assertRaisesRegex(ValueError, "raw-source derivation"):
+            place_producer._verified_identity_observation(
+                lambda arm: {"raw": RAW_IDENTITY_SOURCES(arm),
+                             "identity": {**valid_device_identity(arm),
+                                          "revision": "e9"}}, "C")
+
+    def test_derivation_is_pure_function_of_raw_sources(self):
+        raw = RAW_IDENTITY_SOURCES("B")
+        derived = place_producer.derive_identity_from_raw("B", raw)
+        self.assertEqual(derived["gpu_uuid"], C.REFERENCE_ARM["gpu_uuid"])
+        self.assertEqual(derived["vulkan_device_uuid"],
+                         C.REFERENCE_ARM["vulkan_device_uuid"])
+        # kernel speed spelling normalizes to the frozen canonical form
+        self.assertEqual(derived["max_link_speed"], "16.0 GT/s")
+        # absent device => selected_device_present False (never a crash)
+        missing = place_producer.derive_identity_from_raw(
+            "B", {"sysfs_present": False})
+        self.assertIs(missing.get("selected_device_present"), False)
+        # missing required raw source => hard failure, not silence
+        with self.assertRaises(ValueError):
+            place_producer.derive_identity_from_raw(
+                "B", {"sysfs_present": True, "sysfs": {"vendor": "0x10de"}})
 
 
 # ---------------------------------------------------------------------------

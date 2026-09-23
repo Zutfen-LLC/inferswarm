@@ -21,10 +21,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 try:
+    from . import issue241_census as census
     from . import issue241_constants as C
     from . import issue241_dispatch as dispatch
     from . import issue241_placement as placement
 except ImportError:  # direct script import from scripts/ used by older callers
+    import issue241_census as census
     import issue241_constants as C
     import issue241_dispatch as dispatch
     import issue241_placement as placement
@@ -32,6 +34,7 @@ except ImportError:  # direct script import from scripts/ used by older callers
 RUNG_REPEATS = placement.RUNG_REPEATS
 
 SCHEMA = "inferswarm.issue241.phase2-producer-receipt/1"
+IDENTITY_OBSERVATION_SCHEMA = "inferswarm.issue241.phase2-identity-observation/1"
 SERVER_TIMEOUT_S = 900
 HEALTH_TIMEOUT_S = 300
 REQUEST_TIMEOUT_S = 300
@@ -139,17 +142,39 @@ def _residency(device: dict[str, Any], bdf: str) -> float:
     raise RuntimeError(f"excluded physical device {bdf} not observed")
 
 
-def _arm_device_identity(arm: str) -> dict[str, Any]:
-    """Live per-rung device identity observation for the EXECUTING arm,
-    captured from the same independent sources the census uses (sysfs PCI
-    attrs, driver link, nvidia-smi / DRM VRAM, per-ICD vulkaninfo)."""
+def _vulkan_devices(text: str) -> list[dict[str, str]]:
+    """Parse ``vulkaninfo --summary`` GPU blocks into key/value dicts."""
+    gpus: list[dict[str, str]] = []
+    for line in text.splitlines():
+        s = line.strip()
+        if re.fullmatch(r"GPU\d+:", s):
+            gpus.append({})
+        elif gpus and "=" in s:
+            k, _, v = s.partition("=")
+            gpus[-1][k.strip()] = v.strip()
+    return gpus
+
+
+def derive_identity_from_raw(arm: str, raw: Any) -> dict[str, Any]:
+    """Mechanically derive the identity observation fields from the
+    retained RAW source values (pure function; no host access). The
+    same derivation backs the live observer, the rung receipts, and the
+    independent Phase-3 re-verification, so a forged parsed identity
+    with no supporting raw bytes cannot pass anywhere."""
+    if arm not in ("B", "C"):
+        raise ValueError(f"unsupported arm {arm!r}")
     cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
     bdf = cfg["bdf"]
-    sysfs = Path("/sys/bus/pci/devices") / (f"{int(bdf[:8],16):04x}" + bdf[8:])
-    if not sysfs.is_dir():
+    if not isinstance(raw, dict) or raw.get("sysfs_present") is not True:
         return {"bdf": bdf, "selected_device_present": False}
+    sysfs = raw.get("sysfs")
+    if not isinstance(sysfs, dict):
+        raise ValueError("raw identity observation lacks sysfs source values")
     def attr(name: str) -> str:
-        return (sysfs / name).read_text().strip()
+        value = sysfs.get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"raw identity sysfs source missing {name}")
+        return value.strip()
     identity: dict[str, Any] = {
         "bdf": bdf,
         "vendor_id": attr("vendor").lower().removeprefix("0x"),
@@ -159,16 +184,19 @@ def _arm_device_identity(arm: str) -> dict[str, Any]:
         "revision": attr("revision").lower().removeprefix("0x"),
         "link_width": "x" + attr("current_link_width"),
         "max_link_width": "x" + attr("max_link_width"),
-        "max_link_speed": attr("max_link_speed"),
-        "link_speed": attr("current_link_speed"),
-        "driver_in_use": (sysfs / "driver").resolve().name,
+        # canonical spelling (kernel sysfs spells "8.0 GT/s PCIe"; the
+        # frozen constants and every downstream identity field use the
+        # normalized form; the retained raw artifact keeps the kernel text)
+        "max_link_speed": census.normalize_link_speed(attr("max_link_speed")),
+        "link_speed": census.normalize_link_speed(attr("current_link_speed")),
+        "driver_in_use": attr("driver"),
     }
     identity["pci_id"] = f"{identity['vendor_id']}:{identity['device_id']}"
-    try:
-        proc = subprocess.run(["nvidia-smi", "--query-gpu=uuid,pci.bus_id",
-                               "--format=csv,noheader,nounits"], capture_output=True,
-                              text=True, timeout=5, check=True)
-        for line in proc.stdout.splitlines():
+    if arm == "B":
+        text = raw.get("nvidia_smi")
+        if not isinstance(text, str):
+            raise ValueError("raw NVIDIA UUID/BDF observation missing")
+        for line in text.splitlines():
             fields = [x.strip() for x in line.split(",")]
             if len(fields) == 2:
                 uuid, bus = fields
@@ -176,9 +204,49 @@ def _arm_device_identity(arm: str) -> dict[str, Any]:
                     bus = "00000000:" + bus[5:]
                 if bus == bdf:
                     identity["gpu_uuid"] = uuid
+    text = raw.get("vulkaninfo_summary")
+    if not isinstance(text, str):
+        raise ValueError("raw Vulkan summary observation missing")
+    gpus = _vulkan_devices(text)
+    if gpus:
+        identity["vulkan_device_name"] = gpus[0].get("deviceName")
+        identity["vulkan_device_uuid"] = gpus[0].get("deviceUUID")
+        identity["vulkan_api_version"] = gpus[0].get("apiVersion")
+        identity["vulkan_icd"] = cfg["icd"]
+    if arm == "C":
+        vram = raw.get("amd_vram_total_bytes")
+        if isinstance(vram, int) and not isinstance(vram, bool) and vram > 0:
+            identity["vram_mib"] = vram // (1024 * 1024)
+    return identity
+
+
+def _observe_arm_identity(arm: str) -> dict[str, Any]:
+    """Live per-repeat device-identity observation for the EXECUTING arm:
+    read the RAW source values (sysfs PCI attrs, driver symlink,
+    nvidia-smi UUID/BDF, per-ICD vulkaninfo summary, AMD VRAM total)
+    and derive the identity mechanically from exactly those values. The
+    returned raw block is what gets retained and SHA-bound per repeat."""
+    if arm not in ("B", "C"):
+        raise ValueError(f"unsupported arm {arm!r}")
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    bdf = cfg["bdf"]
+    sysfs_dir = Path("/sys/bus/pci/devices") / (f"{int(bdf[:8],16):04x}" + bdf[8:])
+    if not sysfs_dir.is_dir():
+        return {"raw": {"sysfs_present": False},
+                "identity": {"bdf": bdf, "selected_device_present": False}}
+    raw: dict[str, Any] = {"sysfs_present": True, "sysfs": {
+        name: (sysfs_dir / name).read_text().strip()
+        for name in ("vendor", "device", "subsystem_vendor", "subsystem_device",
+                     "revision", "current_link_width", "current_link_speed",
+                     "max_link_width", "max_link_speed")}}
+    raw["sysfs"]["driver"] = (sysfs_dir / "driver").resolve().name
+    try:
+        proc = subprocess.run(["nvidia-smi", "--query-gpu=uuid,pci.bus_id",
+                               "--format=csv,noheader,nounits"], capture_output=True,
+                              text=True, timeout=5, check=True)
+        raw["nvidia_smi"] = proc.stdout
     except (OSError, subprocess.SubprocessError):
-        pass
-    # Vulkan physical-device identity under the arm's exact ICD
+        raw["nvidia_smi"] = ""
     env = dict(os.environ)
     env.update(cfg["selector"])
     env["VK_ICD_FILENAMES"] = cfg["icd"]
@@ -186,28 +254,33 @@ def _arm_device_identity(arm: str) -> dict[str, Any]:
     try:
         proc = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
                               text=True, timeout=15, env=env)
-        gpus: list[dict[str, str]] = []
-        for line in proc.stdout.splitlines():
-            s = line.strip()
-            if re.fullmatch(r"GPU\d+:", s):
-                gpus.append({})
-            elif gpus and "=" in s:
-                k, _, v = s.partition("=")
-                gpus[-1][k.strip()] = v.strip()
-        if gpus:
-            identity["vulkan_device_name"] = gpus[0].get("deviceName")
-            identity["vulkan_device_uuid"] = gpus[0].get("deviceUUID")
-            identity["vulkan_api_version"] = gpus[0].get("apiVersion")
-            identity["vulkan_icd"] = cfg["icd"]
+        raw["vulkaninfo_summary"] = proc.stdout
     except (OSError, subprocess.SubprocessError):
-        pass
+        raw["vulkaninfo_summary"] = ""
     if arm == "C":
-        for card in sorted(sysfs.glob("drm/card[0-9]*")):
+        for card in sorted(sysfs_dir.glob("drm/card[0-9]*")):
             total = card / "device/mem_info_vram_total"
             if total.is_file():
-                identity["vram_mib"] = int(total.read_text().strip()) // (1024 * 1024)
+                raw["amd_vram_total_bytes"] = int(total.read_text().strip())
                 break
-    return identity
+    return {"raw": raw, "identity": derive_identity_from_raw(arm, raw)}
+
+
+def _verified_identity_observation(observe: Callable[[str], dict[str, Any]],
+                                    arm: str) -> dict[str, Any]:
+    """Observer seam contract: the returned identity must equal the
+    mechanical derivation from the returned raw source values — a
+    claimed parsed identity with no supporting raw bytes fails closed
+    here, at production time, before any execution unit is retained."""
+    observation = observe(arm)
+    if (not isinstance(observation, dict) or "raw" not in observation
+            or "identity" not in observation):
+        raise ValueError("identity observer must return {raw, identity}")
+    derived = derive_identity_from_raw(arm, observation["raw"])
+    if observation["identity"] != derived:
+        raise ValueError(
+            "observer identity differs from raw-source derivation")
+    return observation
 
 
 def _device_health(arm: str, identity: dict[str, Any],
@@ -238,7 +311,8 @@ def _device_health(arm: str, identity: dict[str, Any],
 
 def _sane_completion(response_body: bytes) -> tuple[bool, list[int] | None]:
     """Sane completion evidence under the frozen return_tokens contract:
-    HTTP JSON carrying exactly n_predict integer tokens."""
+    HTTP JSON carrying exactly n_predict integer tokens, each a valid
+    vocabulary id (0 <= token < C.N_VOCAB)."""
     try:
         doc = json.loads(response_body)
     except (ValueError, TypeError):
@@ -247,6 +321,8 @@ def _sane_completion(response_body: bytes) -> tuple[bool, list[int] | None]:
     if not isinstance(tokens, list) or len(tokens) != C.REQUEST_CONTRACT["n_predict"]:
         return False, None
     if any(not isinstance(t, int) or isinstance(t, bool) for t in tokens):
+        return False, None
+    if any(not 0 <= t < C.N_VOCAB for t in tokens):
         return False, None
     return True, tokens
 
@@ -463,16 +539,26 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
     """Execute all five rungs C then B; no receipt until raw custody is complete.
 
     Each retained execution unit at each rung is REPEATED RUNG_REPEATS
-    times (bounded prospectively); every raw response is retained
-    separately and determinism is judged from independently computed
-    byte digests. Per-rung device identity is observed live before and
-    after execution (default observer reads the real host; tests inject
-    a fake)."""
+    times (bounded prospectively). Per repeat (correction pass 5):
+      * the exact-head dispatch authority is revalidated BEFORE the unit;
+      * a raw device-identity observation (sysfs PCI attrs, driver,
+        nvidia-smi, per-ICD vulkaninfo, AMD VRAM) is captured immediately
+        BEFORE execution, retained as its own SHA-256-bound artifact, and
+        the identity is mechanically derived from exactly those raw
+        values;
+      * the complete raw HTTP response is retained and SHA-256-bound
+        (custody); the acceptance-bearing deterministic output is the
+        canonical little-endian u32 encoding of its exactly-8 in-vocabulary
+        token ids and its SHA-256 — timings/metadata never enter it;
+      * a second raw identity/health observation is captured immediately
+        AFTER execution and bound the same way.
+    The rung-level identity/health fields are aggregates of the per-repeat
+    observations, so no later good observation can hide an earlier drift."""
     if not callable(revalidate_authority):
         raise ValueError("required live dispatch authority revalidator missing")
     initial = _authority(authority)
     authority = _authority(revalidate_authority(initial), initial)
-    observe_identity = identity_observer or _arm_device_identity
+    observe_identity = identity_observer or _observe_arm_identity
     root, out = Path(repo_root).resolve(), Path(out_root)
     if not root.is_dir():
         raise ValueError("repo_root must be an existing directory")
@@ -488,7 +574,6 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
         raise ValueError("invalid frozen historical placement prompt tokens")
     by_arm: dict[str, list[dict[str, Any]]] = {"C": [], "B": []}
     receipts: list[dict[str, Any]] = []
-    device_identity: dict[str, Any] = {}
     for ngl in C.LADDER_NGLS:
         for arm in ("C", "B"):
             repeats: list[dict[str, Any]] = []
@@ -499,15 +584,25 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
                 # Revalidate exact-head dispatch BEFORE each retained
                 # execution unit (each repeat is a retained unit).
                 authority = _authority(revalidate_authority(authority), initial)
-                # Live exact subject-identity observation for the executing
-                # arm, BEFORE the execution unit (drift vs Phase 1 fails
-                # closed in judge_rung via identity_problems).
-                device_identity = observe_identity(arm)
                 suffix = "" if repeat_index == 0 else f".repeat{repeat_index}"
                 log_path = out / f"{arm}-ngl{ngl}{suffix}.server.log"
                 telemetry_path = out / f"{arm}-ngl{ngl}{suffix}.telemetry.json"
-                if any(p.exists() or p.is_symlink() for p in (log_path, telemetry_path)):
+                ident_pre_path = out / f"{arm}-ngl{ngl}{suffix}.identity-pre.json"
+                ident_post_path = out / f"{arm}-ngl{ngl}{suffix}.identity-post.json"
+                if any(p.exists() or p.is_symlink() for p in
+                       (log_path, telemetry_path, ident_pre_path, ident_post_path)):
                     raise ValueError("refusing to overwrite raw placement evidence")
+                # Live exact subject-identity observation for the executing
+                # arm, IMMEDIATELY BEFORE this execution unit, from raw
+                # sources that are retained and SHA-bound (drift vs the
+                # frozen subject fails closed in judge_rung via
+                # identity_problems, on EVERY repeat).
+                pre = _verified_identity_observation(observe_identity, arm)
+                _atomic_json(ident_pre_path, {
+                    "schema": IDENTITY_OBSERVATION_SCHEMA,
+                    "campaign": C.CAMPAIGN_ID, "arm": arm, "ngl": ngl,
+                    "repeat_index": repeat_index, "capture_stage": "pre-execution",
+                    "raw": pre["raw"], "derived_identity": pre["identity"]})
                 argv = [str(Path(server)), "--n-gpu-layers", str(ngl)]
                 if model is not None:
                     argv += ["--model", str(model)]
@@ -530,17 +625,38 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
                     raise ValueError(f"missing raw server log for {arm} ngl={ngl}")
                 # Preserve complete sampled process/device telemetry before deriving summary.
                 _atomic_json(telemetry_path, result)
+                # Second identity/health observation IMMEDIATELY AFTER this
+                # same execution unit, retained and bound the same way.
+                post = _verified_identity_observation(observe_identity, arm)
+                post_health = _device_health(arm, post["identity"])
+                _atomic_json(ident_post_path, {
+                    "schema": IDENTITY_OBSERVATION_SCHEMA,
+                    "campaign": C.CAMPAIGN_ID, "arm": arm, "ngl": ngl,
+                    "repeat_index": repeat_index, "capture_stage": "post-execution",
+                    "raw": post["raw"], "derived_identity": post["identity"],
+                    "derived_health": post_health})
                 sane, tokens = _sane_completion(response_bytes)
+                canonical = placement.canonical_token_bytes(tokens)
+                det_sha = (hashlib.sha256(canonical).hexdigest()
+                           if canonical is not None else None)
                 repeats.append({
                     "index": repeat_index,
                     "sane_completion": sane,
                     "response_tokens": tokens,
+                    "deterministic_output_sha256": det_sha,
                     "response_raw": response_path.name,
                     "response_raw_sha256": _sha(response_path),
                     "raw_log": log_path.name,
                     "raw_log_sha256": _sha(log_path),
                     "raw_telemetry": telemetry_path.name,
                     "raw_telemetry_sha256": _sha(telemetry_path),
+                    "identity_pre": pre["identity"],
+                    "raw_identity_pre": ident_pre_path.name,
+                    "raw_identity_pre_sha256": _sha(ident_pre_path),
+                    "identity_post": post["identity"],
+                    "raw_identity_post": ident_post_path.name,
+                    "raw_identity_post_sha256": _sha(ident_post_path),
+                    "identity_post_health": post_health,
                     "request_timings": result.get("request_timings"),
                     "failure": result.get("failure"),
                 })
@@ -550,10 +666,6 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
             primary = exec_results[0]
             log_path = log_paths[0]
             parsed = placement.parse_placement(log_path.read_text(errors="replace"))
-            # post-execution identity re-observation: hardware drift DURING
-            # Phase 2 must fail closed, not just vs the Phase-1 census
-            post_identity = observe_identity(arm)
-            device_health = _device_health(arm, post_identity)
             record = {"schema": placement.RUNG_SCHEMA, "arm": arm, "ngl": ngl,
                       "loaded": (primary["returncode"] == 0 and primary.get("http_status") == 200
                                  and not primary.get("failure")),
@@ -561,9 +673,9 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
                       "excluded_device_residency_mib": primary["excluded_device_residency_mib"],
                       "process_measurements": primary.get("process_measurements"),
                       "request_timings": primary.get("request_timings"),
-                      "device_identity": device_identity,
-                      "post_execution_device_identity": post_identity,
-                      "device_health": device_health,
+                      "device_identity": repeats[0]["identity_pre"],
+                      "post_execution_device_identity": repeats[-1]["identity_post"],
+                      "device_health": repeats[-1]["identity_post_health"],
                       "repeats": repeats}
             verdict = placement.judge_rung(record)
             by_arm[arm].append(record)
@@ -575,9 +687,9 @@ def run_phase2_producer(repo_root: Path, out_root: Path, server: Path,
                              "raw_telemetry": repeats[0]["raw_telemetry"],
                              "raw_telemetry_sha256": repeats[0]["raw_telemetry_sha256"],
                              "repeats": repeats,
-                             "device_identity": device_identity,
-                             "post_execution_device_identity": post_identity,
-                             "device_health": device_health,
+                             "device_identity": repeats[0]["identity_pre"],
+                             "post_execution_device_identity": repeats[-1]["identity_post"],
+                             "device_health": repeats[-1]["identity_post_health"],
                              "process": primary, "verdict": verdict})
     selected = placement.select_matched_rung(by_arm)
     doc = {"schema": SCHEMA, "campaign": C.CAMPAIGN_ID,
