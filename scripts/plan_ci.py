@@ -268,6 +268,7 @@ GROUP_TEST_MODULES = {
         "test_issue232_v2g_pcie_remediation",
         "test_issue234_r8h_vulkan",
         "test_issue237_r8i_methodology",
+        "test_issue241_r8i3_rx580",
         "test_issue35_link_probe",
         "test_issue35_role_sweep",
         "test_issue35_envelope",
@@ -797,6 +798,20 @@ PATH_GROUPS = {
     # freeze: CPU/static methodology area + tooling + focused tests share the
     # Vulkan evidence-lifecycle family.
     "docs/qualification/qwen38-vulkan-v1/": ["vulkan-v0-b"],
+    # Issue #241 (R8-I3) RX 580 comparator/2 prospective freeze: same
+    # Vulkan evidence-lifecycle family; additive v2 area.
+    "docs/qualification/qwen38-vulkan-v2-rx580/": ["vulkan-v0-b"],
+    "scripts/issue241_constants.py": ["vulkan-v0-b"],
+    "scripts/issue241_dispatch.py": ["vulkan-v0-b"],
+    "scripts/issue241_observer_patch.py": ["vulkan-v0-b"],
+    "scripts/issue241_census.py": ["vulkan-v0-b"],
+    "scripts/issue241_placement.py": ["vulkan-v0-b"],
+    "scripts/issue241_practicality.py": ["vulkan-v0-b"],
+    "scripts/issue241_comparator.py": ["vulkan-v0-b"],
+    "scripts/issue241_supersession.py": ["vulkan-v0-b"],
+    "scripts/issue241_phase0.py": ["vulkan-v0-b"],
+    "scripts/issue241_campaign.py": ["vulkan-v0-b"],
+    "tests/test_issue241_r8i3_rx580.py": ["vulkan-v0-b"],
     "scripts/issue237_methodology.py": ["vulkan-v0-b"],
     "scripts/issue237_reconstruct_tokenizer.py": ["vulkan-v0-b"],
     "scripts/issue237_build_exclusion_inventory.py": ["vulkan-v0-b"],
