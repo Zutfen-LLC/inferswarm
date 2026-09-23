@@ -196,6 +196,7 @@
     "test_issue232_v2g_pcie_remediation",
     "test_issue234_r8h_vulkan",
     "test_issue237_r8i_methodology",
+    "test_issue244_r8i5_v340l_import",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -261,6 +262,9 @@
   ],
   "docs/hardware/current-inventory/": [
    "repo-integrity"
+  ],
+  "docs/hardware/pcie-slot-ledger.md": [
+   "vulkan-v0-b"
   ],
   "docs/implementation/artifact-locality-transition-planning-103/": [
    "issue-99-103",
@@ -343,6 +347,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/qwen38-flash-next-r8-h-vulkan/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-a/": [
@@ -1527,6 +1534,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue237_r8i_methodology.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue244_r8i5_v340l_import.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [

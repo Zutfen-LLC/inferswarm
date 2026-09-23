@@ -1,0 +1,348 @@
+{
+ "schema": "inferswarm.issue243.rung/1",
+ "campaign": "issue243-r8i4-v340l-z440-characterization",
+ "vk_idx": 0,
+ "ngl": 6,
+ "port": 18500,
+ "geometry": {
+  "ngl": 6,
+  "ctx": {
+   "ctx-size": 8192,
+   "batch-size": 512
+  },
+  "request": {
+   "samplers": [
+    "top_k"
+   ],
+   "top_k": 1,
+   "temperature": 0.0,
+   "seed": 0,
+   "cache_prompt": false,
+   "stream": false,
+   "return_tokens": true,
+   "n_predict": 8
+  }
+ },
+ "server_pid": 16199,
+ "t0": "2026-09-23T20:50:44Z",
+ "vram_before": {
+  "0000:07:00.0": 8339456,
+  "0000:0b:00.0": 8339456
+ },
+ "runs": [
+  {
+   "wall_s": 13.824,
+   "timings": {
+    "cache_n": 0,
+    "prompt_n": 256,
+    "prompt_ms": 10575.751,
+    "prompt_per_token_ms": 41.31152734375,
+    "prompt_per_second": 24.206318775848636,
+    "predicted_n": 8,
+    "predicted_ms": 3246.155,
+    "predicted_per_token_ms": 463.7364285714286,
+    "predicted_per_second": 2.156397337773458
+   },
+   "tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "stop_type": "limit",
+   "case": "case-256",
+   "rep": 1,
+   "vram_post": {
+    "0000:07:00.0": 5791219712,
+    "0000:0b:00.0": 8351744
+   },
+   "gpu_post": {
+    "0000:07:00.0": {
+     "gpu_busy_percent": "67",
+     "mem_info_vram_used": "5791219712",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 33.0,
+     "temp_junction": 35.0,
+     "temp_mem": 35.0,
+     "power_w": 27.0,
+     "sclk_current": "300Mhz"
+    },
+    "0000:0b:00.0": {
+     "gpu_busy_percent": "0",
+     "mem_info_vram_used": "8351744",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 37.0,
+     "temp_junction": 38.0,
+     "temp_mem": 38.0,
+     "power_w": 4.0,
+     "sclk_current": "300Mhz"
+    }
+   },
+   "host": {
+    "iowait_frac": 0.0,
+    "meminfo": {
+     "MemFree": "56664444 kB",
+     "MemAvailable": "128722700 kB",
+     "Cached": "71208772 kB",
+     "SwapTotal": "6454268 kB",
+     "SwapFree": "6454012 kB",
+     "Dirty": "8 kB",
+     "Writeback": "0 kB",
+     "WritebackTmp": "0 kB"
+    }
+   },
+   "proc_post": {
+    "majflt": 54,
+    "utime_ticks": 9964,
+    "stime_ticks": 396,
+    "starttime_ticks": 1050610,
+    "VmSize": "74547632 kB",
+    "VmRSS": "28629208 kB",
+    "VmData": "2059216 kB",
+    "VmSwap": "0 kB",
+    "rchar": "25449074",
+    "wchar": "6660",
+    "read_bytes": "0",
+    "write_bytes": "40960",
+    "Rss": "28629208 kB",
+    "Pss": "28626456 kB",
+    "Anonymous": "863168 kB"
+   }
+  },
+  {
+   "wall_s": 13.314,
+   "timings": {
+    "cache_n": 0,
+    "prompt_n": 256,
+    "prompt_ms": 10077.169,
+    "prompt_per_token_ms": 39.36394140625,
+    "prompt_per_second": 25.403960179689356,
+    "predicted_n": 8,
+    "predicted_ms": 3235.544,
+    "predicted_per_token_ms": 462.2205714285714,
+    "predicted_per_second": 2.1634692651374854
+   },
+   "tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "stop_type": "limit",
+   "case": "case-256",
+   "rep": 2,
+   "vram_post": {
+    "0000:07:00.0": 5791219712,
+    "0000:0b:00.0": 8351744
+   },
+   "gpu_post": {
+    "0000:07:00.0": {
+     "gpu_busy_percent": "70",
+     "mem_info_vram_used": "5791219712",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 34.0,
+     "temp_junction": 37.0,
+     "temp_mem": 35.0,
+     "power_w": 25.0,
+     "sclk_current": "300Mhz"
+    },
+    "0000:0b:00.0": {
+     "gpu_busy_percent": "0",
+     "mem_info_vram_used": "8351744",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 37.0,
+     "temp_junction": 39.0,
+     "temp_mem": 38.0,
+     "power_w": 4.0,
+     "sclk_current": "300Mhz"
+    }
+   },
+   "host": {
+    "iowait_frac": 0.0,
+    "meminfo": {
+     "MemFree": "56665596 kB",
+     "MemAvailable": "128723876 kB",
+     "Cached": "71208776 kB",
+     "SwapTotal": "6454268 kB",
+     "SwapFree": "6454012 kB",
+     "Dirty": "256 kB",
+     "Writeback": "0 kB",
+     "WritebackTmp": "0 kB"
+    }
+   },
+   "proc_post": {
+    "majflt": 54,
+    "utime_ticks": 17509,
+    "stime_ticks": 516,
+    "starttime_ticks": 1050610,
+    "VmSize": "74613168 kB",
+    "VmRSS": "28629284 kB",
+    "VmData": "2059348 kB",
+    "VmSwap": "0 kB",
+    "rchar": "25449074",
+    "wchar": "7609",
+    "read_bytes": "0",
+    "write_bytes": "45056",
+    "Rss": "28629284 kB",
+    "Pss": "28626532 kB",
+    "Anonymous": "863244 kB"
+   }
+  },
+  {
+   "wall_s": 13.337,
+   "timings": {
+    "cache_n": 0,
+    "prompt_n": 256,
+    "prompt_ms": 10086.299,
+    "prompt_per_token_ms": 39.39960546875,
+    "prompt_per_second": 25.380964811770895,
+    "predicted_n": 8,
+    "predicted_ms": 3249.314,
+    "predicted_per_token_ms": 464.18771428571426,
+    "predicted_per_second": 2.154300877046663
+   },
+   "tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    34227,
+    18030,
+    16382
+   ],
+   "stop_type": "limit",
+   "case": "case-256",
+   "rep": 3,
+   "vram_post": {
+    "0000:07:00.0": 5791219712,
+    "0000:0b:00.0": 8351744
+   },
+   "gpu_post": {
+    "0000:07:00.0": {
+     "gpu_busy_percent": "72",
+     "mem_info_vram_used": "5791219712",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 34.0,
+     "temp_junction": 38.0,
+     "temp_mem": 35.0,
+     "power_w": 25.0,
+     "sclk_current": "300Mhz"
+    },
+    "0000:0b:00.0": {
+     "gpu_busy_percent": "0",
+     "mem_info_vram_used": "8351744",
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "temp_edge": 37.0,
+     "temp_junction": 38.0,
+     "temp_mem": 38.0,
+     "power_w": 5.0,
+     "sclk_current": "300Mhz"
+    }
+   },
+   "host": {
+    "iowait_frac": 0.0,
+    "meminfo": {
+     "MemFree": "56670344 kB",
+     "MemAvailable": "128728648 kB",
+     "Cached": "71208776 kB",
+     "SwapTotal": "6454268 kB",
+     "SwapFree": "6454012 kB",
+     "Dirty": "348 kB",
+     "Writeback": "0 kB",
+     "WritebackTmp": "0 kB"
+    }
+   },
+   "proc_post": {
+    "majflt": 54,
+    "utime_ticks": 25063,
+    "stime_ticks": 653,
+    "starttime_ticks": 1050610,
+    "VmSize": "74678704 kB",
+    "VmRSS": "28630356 kB",
+    "VmData": "2059480 kB",
+    "VmSwap": "0 kB",
+    "rchar": "25449074",
+    "wchar": "8558",
+    "read_bytes": "0",
+    "write_bytes": "49152",
+    "Rss": "28630356 kB",
+    "Pss": "28627604 kB",
+    "Anonymous": "864316 kB"
+   }
+  }
+ ],
+ "load_to_healthy_s": 10.0,
+ "vram_loaded": {
+  "0000:07:00.0": 5772570624,
+  "0000:0b:00.0": 8351744
+ },
+ "proc_loaded": {
+  "majflt": 54,
+  "utime_ticks": 2399,
+  "stime_ticks": 214,
+  "starttime_ticks": 1050610,
+  "VmSize": "74268108 kB",
+  "VmRSS": "21040640 kB",
+  "VmData": "1940764 kB",
+  "VmSwap": "0 kB",
+  "rchar": "24205584",
+  "wchar": "3976",
+  "read_bytes": "0",
+  "write_bytes": "20480",
+  "Rss": "21040640 kB",
+  "Pss": "21037888 kB",
+  "Anonymous": "744892 kB"
+ },
+ "gpu_loaded": {
+  "0000:07:00.0": {
+   "gpu_busy_percent": "0",
+   "mem_info_vram_used": "5772570624",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "temp_edge": 32.0,
+   "temp_junction": 35.0,
+   "temp_mem": 32.0,
+   "power_w": 4.0,
+   "sclk_current": "300Mhz"
+  },
+  "0000:0b:00.0": {
+   "gpu_busy_percent": "0",
+   "mem_info_vram_used": "8351744",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "temp_edge": 37.0,
+   "temp_junction": 38.0,
+   "temp_mem": 38.0,
+   "power_w": 4.0,
+   "sclk_current": "300Mhz"
+  }
+ },
+ "kernel_window": {
+  "matching_lines": [
+   "[Wed Sep 23 13:55:39 2026] acpi PNP0A08:00: _OSC: OS now controls [AER PCIeCapability]",
+   "[Wed Sep 23 13:55:39 2026] pcieport 0000:00:01.0: AER: enabled with IRQ 24",
+   "[Wed Sep 23 13:55:39 2026] pcieport 0000:00:02.0: AER: enabled with IRQ 25",
+   "[Wed Sep 23 13:55:39 2026] pcieport 0000:00:03.0: AER: enabled with IRQ 26"
+  ],
+  "count": 4
+ },
+ "vram_final": {
+  "0000:07:00.0": 5791219712,
+  "0000:0b:00.0": 8351744
+ }
+}

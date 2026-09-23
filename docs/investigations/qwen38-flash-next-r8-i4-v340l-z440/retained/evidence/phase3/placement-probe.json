@@ -1,0 +1,136 @@
+{
+ "schema": "inferswarm.issue243.placement-probe/1",
+ "campaign": "issue243-r8i4-v340l-z440-characterization",
+ "started_at": "2026-09-23T19:38:59Z",
+ "probes": [
+  {
+   "vk_idx": 0,
+   "ngl": 1,
+   "vram_before": {
+    "0000:07:00.0": 8339456,
+    "0000:0b:00.0": 8339456
+   },
+   "vram_after": {
+    "0000:07:00.0": 1060388864,
+    "0000:0b:00.0": 8351744
+   },
+   "delta": {
+    "0000:07:00.0": 1052049408,
+    "0000:0b:00.0": 12288
+   },
+   "log_buffers_mib": {},
+   "load_to_healthy_s": 5.0,
+   "pid": 12216
+  },
+  {
+   "vk_idx": 1,
+   "ngl": 1,
+   "vram_before": {
+    "0000:07:00.0": 8339456,
+    "0000:0b:00.0": 8339456
+   },
+   "vram_after": {
+    "0000:07:00.0": 8351744,
+    "0000:0b:00.0": 1060388864
+   },
+   "delta": {
+    "0000:07:00.0": 12288,
+    "0000:0b:00.0": 1052049408
+   },
+   "log_buffers_mib": {},
+   "load_to_healthy_s": 5.0,
+   "pid": 12281
+  },
+  {
+   "vk_idx": 0,
+   "ngl": 1,
+   "vram_before": {
+    "0000:07:00.0": 8339456,
+    "0000:0b:00.0": 8339456
+   },
+   "vram_after": {
+    "0000:07:00.0": 1060388864,
+    "0000:0b:00.0": 8351744
+   },
+   "delta": {
+    "0000:07:00.0": 1052049408,
+    "0000:0b:00.0": 12288
+   },
+   "log_buffers_mib": {},
+   "load_to_healthy_s": 5.0,
+   "pid": 12331
+  },
+  {
+   "vk_idx": 0,
+   "ngl": 2,
+   "vram_before": {
+    "0000:07:00.0": 8339456,
+    "0000:0b:00.0": 8339456
+   },
+   "vram_after": {
+    "0000:07:00.0": 2045702144,
+    "0000:0b:00.0": 8351744
+   },
+   "delta": {
+    "0000:07:00.0": 2037362688,
+    "0000:0b:00.0": 12288
+   },
+   "log_buffers_mib": {},
+   "load_to_healthy_s": 5.0,
+   "pid": 12381
+  },
+  {
+   "vk_idx": 0,
+   "ngl": 3,
+   "vram_before": {
+    "0000:07:00.0": 8339456,
+    "0000:0b:00.0": 8339456
+   },
+   "vram_after": {
+    "0000:07:00.0": 3029757952,
+    "0000:0b:00.0": 8351744
+   },
+   "delta": {
+    "0000:07:00.0": 3021418496,
+    "0000:0b:00.0": 12288
+   },
+   "log_buffers_mib": {},
+   "load_to_healthy_s": 10.0,
+   "pid": 12431
+  }
+ ],
+ "placement_law": {
+  "ngl1_buffer_mib": 1003.3125,
+  "ngl2_buffer_mib": 1942.98046875,
+  "per_layer_mib": 939.068359375,
+  "output_head_mib": 1003.3125,
+  "hbm_total_mib": 8176.0,
+  "hbm_reserve_mib": 1024.0,
+  "budget_mib": 7152.0,
+  "max_ngl_mechanical": 7,
+  "ladder_rungs": [
+   1,
+   2,
+   4,
+   6
+  ],
+  "derivation": "buffer(ngl)=head+(ngl-1)*per_layer; largest ngl with buffer<=budget; rungs are the frozen monotone subset (1,2,4,6,8,12,16) capped at max"
+ },
+ "binding": {
+  "0": {
+   "selected_bdf": "0000:07:00.0",
+   "delta_bytes": 1052049408,
+   "excluded_deltas": {
+    "0000:0b:00.0": 12288
+   }
+  },
+  "1": {
+   "selected_bdf": "0000:0b:00.0",
+   "delta_bytes": 1052049408,
+   "excluded_deltas": {
+    "0000:07:00.0": 12288
+   }
+  }
+ },
+ "finished_at": "2026-09-23T19:39:31Z"
+}

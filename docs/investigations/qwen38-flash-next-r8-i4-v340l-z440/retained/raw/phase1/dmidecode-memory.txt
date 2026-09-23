@@ -1,0 +1,100 @@
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 2.8 present.
+
+Handle 0x0007, DMI type 16, 23 bytes
+Physical Memory Array
+	Location: System Board Or Motherboard
+	Use: System Memory
+	Error Correction Type: Multi-bit ECC
+	Maximum Capacity: 512 GB
+	Error Information Handle: Not Provided
+	Number Of Devices: 8
+
+Handle 0x000A, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0007
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 16 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: CPU0-DIMM1
+	Bank Locator: CPU0
+	Type: DDR4
+	Type Detail: Synchronous Registered (Buffered)
+	Speed: 2133 MT/s
+	Manufacturer: Micron
+	Serial Number: 12A7CE99
+	Asset Tag: Not Specified
+	Part Number: 36ASF2G72PZ-2G1B1
+	Rank: 2
+	Configured Memory Speed: 2133 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: Unknown
+
+Handle 0x000C, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0007
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 8 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: CPU0-DIMM2
+	Bank Locator: CPU0
+	Type: DDR4
+	Type Detail: Synchronous Registered (Buffered)
+	Speed: 3200 MT/s
+	Manufacturer: Micron
+	Serial Number: 306122BD
+	Asset Tag: Not Specified
+	Part Number: 9ASF1G72PZ-3G2R1
+	Rank: 1
+	Configured Memory Speed: 2133 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: Unknown
+
+Handle 0x000E, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0007
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 32 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: CPU0-DIMM3
+	Bank Locator: CPU0
+	Type: DDR4
+	Type Detail: Synchronous Registered (Buffered)
+	Speed: 2400 MT/s
+	Manufacturer: Hynix
+	Serial Number: 27314C53
+	Asset Tag: Not Specified
+	Part Number: HMA84GR7MFR4N-UH
+	Rank: 2
+	Configured Memory Speed: 2133 MT/s
+	Minimum Voltage: Unknown
+	Maximum Voltage: Unknown
+	Configured Voltage: Unknown
+
+Handle 0x0010, DMI type 17, 40 bytes
+Memory Device
+	Array Handle: 0x0007
+	Error Information Handle: Not Provided
+	Total Width: 72 bits
+	Data Width: 64 bits
+	Size: 8 GB
+	Form Factor: DIMM
+	Set: None
+	Locator: CPU0-DIMM4
+	Bank Locator: CPU0
+	Type: DDR4
+	Type Detail: Synchronous Registered (Buffered)
+	Speed: 3200 MT/s
+	Manufacturer: Micron

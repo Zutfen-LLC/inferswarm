@@ -1315,7 +1315,14 @@ class PreservationTests(unittest.TestCase):
                             "tests/test_issue237_",
                             "docs/qualification/qwen38-vulkan-v1/",
                             "docs/qualification/README.md",
-                            "scripts/README.md")
+                            "scripts/README.md",
+                            # Issue #244 R8-I5: additive durable #243
+                            # V340L/Z440 evidence import and investigation
+                            # index registration; raw historic bytes remain
+                            # isolated in the new namespace.
+                            "tests/test_issue244_",
+                            "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/",
+                            "docs/investigations/README.md")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

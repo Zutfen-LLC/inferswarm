@@ -1,0 +1,52 @@
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 2.8 present.
+
+Handle 0x0002, DMI type 2, 17 bytes
+Base Board Information
+	Manufacturer: Hewlett-Packard
+	Product Name: 212B
+	Version: 1.01
+	Serial Number:  
+	Asset Tag:  
+	Features:
+		Board is a hosting board
+		Board is removable
+		Board is replaceable
+	Location In Chassis: Not Specified
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x0045, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: HD Audio
+	Type: Sound
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:1b.0
+
+Handle 0x0046, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: LAN (AMT)
+	Type: Ethernet
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:19.0
+
+Handle 0x0047, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: sSATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:11.4
+
+Handle 0x0048, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: SATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 2
+	Bus Address: 0000:00:1f.2
+
