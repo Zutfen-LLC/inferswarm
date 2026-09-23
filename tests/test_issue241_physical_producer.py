@@ -588,23 +588,41 @@ class PhaseLinkageControls(unittest.TestCase):
         selected = self.check()
         self.assertEqual(selected["selected"]["matched_ngl"], C.LADDER_NGLS[-1])
 
-    def test_one_changed_token_fails_selected_receipt(self):
-        # competent token forgery: mutate repeat 1's tokens, refresh the
-        # claimed digest AND the retained response bytes
-        row, _ = self._repeat_paths()
-        rep = self.doc["rung_receipts"][0]["repeats"][1]
+    def test_honest_nondeterministic_high_rung_falls_back(self):
+        # Repeat 1 genuinely produced a different token. Preserve the raw
+        # response and refresh only its truthful custody/summary claims.
+        row_index = len(self.rows) - 2  # candidate arm at highest rung
+        row, repeats = self._repeat_paths(row_index)
+        rep = repeats[1]
         tokens = [99] + list(rep["response_tokens"])[1:]
-        rep["response_tokens"] = tokens
-        rep["deterministic_output_sha256"] = placement.deterministic_output_sha256(tokens)
         response_path = self.root / rep["response_raw"]
-        doc = json.loads(response_path.read_text())
-        doc["tokens"] = tokens
-        raw = json.dumps(doc).encode()
+        response = json.loads(response_path.read_text())
+        response["tokens"] = tokens
+        raw = json.dumps(response).encode()
         response_path.write_bytes(raw)
         rep["response_raw_sha256"] = hashlib.sha256(raw).hexdigest()
+        rep["response_tokens"] = tokens
+        rep["deterministic_output_sha256"] = placement.deterministic_output_sha256(tokens)
+        self._refresh_verdict(row_index)
+        self.doc["selected"] = placement.select_matched_rung(self.doc["rungs"])
+        self.assertFalse(row["verdict"]["valid"])
+        self.assertTrue(any("repeat token mismatch" in problem
+                            for problem in row["verdict"]["problems"]))
+        self.assertEqual(self.doc["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
+        self.assertEqual(self.check()["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
+
+    def test_refreshed_token_summary_with_tampered_raw_sha_rejected(self):
+        row, repeats = self._repeat_paths()
+        rep = repeats[1]
+        tokens = [99] + list(rep["response_tokens"])[1:]
+        response_path = self.root / rep["response_raw"]
+        response = json.loads(response_path.read_text())
+        response["tokens"] = tokens
+        response_path.write_bytes(json.dumps(response).encode())
+        rep["response_tokens"] = tokens
+        rep["deterministic_output_sha256"] = placement.deterministic_output_sha256(tokens)
         self._refresh_verdict()
-        with self.assertRaisesRegex(
-                ValueError, "determinism does not hold|canonical token"):
+        with self.assertRaisesRegex(ValueError, "repeat raw response digest mismatch"):
             self.check()
 
     def test_forged_deterministic_output_claim_rejected(self):

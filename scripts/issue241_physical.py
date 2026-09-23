@@ -271,7 +271,8 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
         #    exactly-8 in-vocabulary token ids, re-encoded canonically
         #    (little-endian u32) and re-hashed; the recomputed
         #    deterministic-output digest must equal the repeat receipt
-        #    claim, and all repeats' canonical digests must be equal.
+        #    claim. Different verified outputs are honest nondeterminism:
+        #    judge_rung invalidates that rung so selection can fall back.
         #    The raw responses themselves are NOT required to be
         #    byte-identical (measured timings legitimately differ);
         #  * every repeat's pre/post RAW identity artifact is located
@@ -286,7 +287,6 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
         repeats = row.get("repeats")
         if not isinstance(repeats, list) or len(repeats) != place_producer.RUNG_REPEATS:
             raise ValueError("Phase-2 rung lacks the bounded repeat evidence")
-        repeat_output_digests: list[str | None] = []
         for rep_index, rep in enumerate(repeats):
             if not isinstance(rep, dict) or rep.get("index") != rep_index:
                 raise ValueError("Phase-2 repeat evidence malformed or misindexed")
@@ -318,7 +318,6 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                     "Phase-2 repeat deterministic-output digest claim "
                     "differs from the canonical re-derivation of the raw "
                     "response tokens")
-            repeat_output_digests.append(recomputed)
             rep_log_rel = rep.get("raw_log")
             if not isinstance(rep_log_rel, str) or Path(rep_log_rel).name != rep_log_rel:
                 raise ValueError("Phase-2 repeat raw log path invalid")
@@ -390,10 +389,6 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                             f"Phase-2 fatal device/driver health state at "
                             f"{arm} ngl={ngl} repeat {rep_index}: "
                             f"{derived_health['fatal_states']}")
-        if len(set(repeat_output_digests)) != 1 or not repeat_output_digests:
-            raise ValueError(
-                "Phase-2 retained repeats differ in canonical token "
-                "output — determinism does not hold at this rung")
         if rung.get("repeats") != repeats:
             raise ValueError("Phase-2 rung repeat evidence differs from receipts")
         for identity_field, repeat_field in (
