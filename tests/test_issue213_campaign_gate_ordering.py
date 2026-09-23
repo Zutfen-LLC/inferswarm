@@ -1314,6 +1314,14 @@ class PreservationTests(unittest.TestCase):
                             "scripts/issue237_",
                             "tests/test_issue237_",
                             "docs/qualification/qwen38-vulkan-v1/",
+                            # Issue #241 R8-I3: additive repository-only
+                            # prospective-freeze surface for the RX 580
+                            # same-host comparator/2 pivot (frozen
+                            # evidence namespace, producers, focused
+                            # regression module) pending on main.
+                            "scripts/issue241_",
+                            "tests/test_issue241_",
+                            "docs/qualification/qwen38-vulkan-v2-rx580/",
                             "docs/qualification/README.md",
                             "scripts/README.md")
         for path in changed:

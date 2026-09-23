@@ -424,7 +424,22 @@ class Issue184PreservationTests(unittest.TestCase):
             # derivation authority (bands mechanically derived, never
             # transcribed; pinned by the qwen38-vulkan-v1 evidence MANIFEST
             # like every other #237 producer).
-            "scripts/issue237_length_bands.py")
+            "scripts/issue237_length_bands.py",
+            # Issue #241 R8-I3: additive repository-only CPU/static
+            # prospective-freeze producers for the RX 580 same-host
+            # comparator/2 pivot, independently pinned by the
+            # qwen38-vulkan-v2-rx580 evidence MANIFEST and covered by
+            # its own registered CI group entries (vulkan-v0-b).
+            "scripts/issue241_constants.py",
+            "scripts/issue241_dispatch.py",
+            "scripts/issue241_observer_patch.py",
+            "scripts/issue241_census.py",
+            "scripts/issue241_placement.py",
+            "scripts/issue241_practicality.py",
+            "scripts/issue241_comparator.py",
+            "scripts/issue241_supersession.py",
+            "scripts/issue241_phase0.py",
+            "scripts/issue241_campaign.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
