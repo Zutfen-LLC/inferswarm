@@ -425,11 +425,9 @@ class Issue184PreservationTests(unittest.TestCase):
             # transcribed; pinned by the qwen38-vulkan-v1 evidence MANIFEST
             # like every other #237 producer).
             "scripts/issue237_length_bands.py",
-            # Issue #241 R8-I3: additive repository-only CPU/static
-            # prospective-freeze producers for the RX 580 same-host
-            # comparator/2 pivot, independently pinned by the
-            # qwen38-vulkan-v2-rx580 evidence MANIFEST and covered by
-            # its own registered CI group entries (vulkan-v0-b).
+            # Issue #241 R8-I3: additive prospective producer source. These
+            # paths are dormant until a fresh exact-head physical dispatch;
+            # listing them here does not authorize or certify a host run.
             "scripts/issue241_constants.py",
             "scripts/issue241_dispatch.py",
             "scripts/issue241_observer_patch.py",
@@ -443,7 +441,10 @@ class Issue184PreservationTests(unittest.TestCase):
             # Correction pass: the committed bounded physical execution
             # path (dormant; every entrypoint gates on live exact-head
             # dispatch before any physical/device/model operation).
-            "scripts/issue241_physical.py")
+            "scripts/issue241_physical.py",
+            "scripts/issue241_host_producer.py",
+            "scripts/issue241_placement_producer.py",
+            "scripts/issue241_comparator_producer.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 

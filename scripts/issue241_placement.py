@@ -52,7 +52,7 @@ def parse_placement(log_text: str) -> dict[str, Any]:
         buffer_records.append({"device": device, "kind": kind, "mib": value})
     return {
         "devices_layer_counts": {k: len(v) for k, v in dev_layers.items()},
-        "offloaded_layers": offloaded[-1] if offloaded else None,
+        "offloaded_layers": list(offloaded[-1]) if offloaded else None,
         "buffer_mib": buffers,
         "buffer_records": buffer_records,
         "alloc_failures": len(re.findall(r"failed to allocate", log_text)),

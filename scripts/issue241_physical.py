@@ -1,238 +1,344 @@
 #!/usr/bin/env python3
-"""Issue #241 — BOUNDED PHYSICAL EXECUTION PATH (Phases 1-3, DORMANT).
+"""Exact-head-gated #241 physical producer; dormant until maintainer dispatch.
 
-This module is the committed orchestration path required to execute
-physical Phases 1-3 (census/bounded historical-fixture runs, matched
-placement ladder, comparator/2 historical-only validation) from this
-frozen head AFTER maintainer authorization. It exists so exact-head
-prospective authorization is real: the dispatch gate is bound into the
-committed entrypoints themselves, not deferred to a future commit.
-
-ORDER OF OPERATIONS (mechanically enforced and structurally tested):
-
-  every physical entrypoint:
-    1. require_live_dispatch(repo_root, pr_number)  <- FIRST, before
-       anything else: clean-worktree HEAD, live GitHub PR #242 OPEN and
-       unmerged, Issue #241 OPEN, and a current OWNER/MEMBER APPROVED
-       review on the exact 40-char HEAD containing the two exact lines
-       `R8I3 PHYSICAL DISPATCH #241` and `head=<exact-head-sha>`;
-    2. only then (and never before): fixture-content load for
-       execution, Vulkan/CUDA device probing or initialization,
-       qualification-server build/launch, model-byte reads for
-       execution, vulkaninfo/GPU telemetry/placement/model probes, or
-       model inference.
-
-NO code path in this module may be imported-and-run around the gate:
-the physical functions refuse to proceed without the validated
-dispatch-authority record and bind it into every receipt they emit.
-
-Execution is bounded: ONLY the four excluded historical fixtures
-(case-256/1024/3072/4096) may run; predictive namespaces (c237-*/h237-*/
-p237-*) fail closed at corpus-load time; no holdout decrypt path
-exists in this module graph; no selected-stress candidate output is
-consumed. This module NEVER EXECUTES during the #241 correction slice:
-it is frozen source with tests that prove the gate ordering — actually
-running physical work still requires the maintainer's live exact-head
-dispatch (which this session cannot and does not provide).
+Evidence lives outside the Git checkout, allowing fresh clean-HEAD and live
+PR/review validation before every retained execution unit.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue241_constants as C
+import issue241_census as census
 import issue241_dispatch as dispatch
+import issue241_host_producer as host
+import issue241_placement as placement
+import issue241_placement_producer as place_producer
+import issue241_comparator_producer as cmp_producer
 
-PHYSICAL_SCHEMA = "inferswarm.issue241.physical-campaign-receipt/1"
-
+PHYSICAL_SCHEMA = "inferswarm.issue241.physical-campaign-receipt/2"
 PR_NUMBER = 242
-
-# The bounded case namespace: the four excluded historical fixtures are
-# the ONLY cases any physical producer in this module may execute.
-AUTHORIZED_CASES = frozenset(C.FIXTURE_CASES)
-
-# Operations that count as physical/device/model work; the structural
-# test asserts none of these module attributes is touched before the
-# dispatch gate runs.
-GATED_OPERATION_ATTRS = (
-    "_load_fixture_content",          # historical fixture content load
-    "_probe_devices",                 # Vulkan/CUDA device probe/init
-    "_build_server",                  # qualification server build
-    "_read_model_bytes",              # model byte reads for execution
-    "_run_inference",                 # model inference
-    "_placement_probe",               # placement/model probe
-    "_gpu_telemetry",                 # vulkaninfo/GPU telemetry
-)
-
-_pending_authority: dict[str, Any] | None = None
+GATED_OPERATION_ATTRS = ("_load_fixture_content", "_probe_devices",
+                         "_build_server", "_placement_probe", "_run_inference")
 
 
-def _gate() -> dict[str, Any]:
-    """Return the validated dispatch authority or raise (fail closed)."""
-    global _pending_authority
-    if _pending_authority is None:
-        raise RuntimeError(
-            "dispatch gate not satisfied: require_live_dispatch must run "
-            "before any physical/device/model operation")
-    return _pending_authority
+def _head(authority: dict[str, Any] | None) -> str:
+    if not isinstance(authority, dict) or authority.get("schema") != dispatch.AUTHORITY_SCHEMA:
+        raise RuntimeError("explicit validated dispatch authority required")
+    head = authority.get("head_sha")
+    if not isinstance(head, str) or not dispatch.SHA40.fullmatch(head):
+        raise RuntimeError("exact dispatch head required")
+    if (authority.get("review_commit_id") != head
+            or authority.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE
+            or authority.get("pr_number") != PR_NUMBER
+            or authority.get("issue_number") != C.ISSUE):
+        raise RuntimeError("dispatch review binding invalid")
+    return head
 
 
 def require_dispatch_authority(repo_root: Path, pr_number: int = PR_NUMBER,
-                               fetch: Callable[..., Any] | None = None,
-                               ) -> dict[str, Any]:
-    """Exact-head dispatch gate — the FIRST call of every entrypoint."""
-    global _pending_authority
-    if fetch is not None:
-        saved = dispatch.fetch_dispatch_authority
-        dispatch.fetch_dispatch_authority = fetch  # test seam only
-        try:
-            authority = dispatch.require_live_dispatch(repo_root, pr_number)
-        finally:
-            dispatch.fetch_dispatch_authority = saved
-    else:
+                               fetch: Callable[..., Any] | None = None) -> dict[str, Any]:
+    if pr_number != PR_NUMBER:
+        raise ValueError("physical execution restricted to PR #242")
+    if fetch is None:
         authority = dispatch.require_live_dispatch(repo_root, pr_number)
-    _pending_authority = authority
+    else:
+        head = dispatch.current_clean_git_head(repo_root)
+        authority = fetch(pr_number, head)
+    _head(authority)
     return authority
 
 
-def _authorized_case(case_id: str) -> str:
-    """Fail closed unless the case is one of the four frozen fixtures."""
+def _revalidate(repo_root: Path, authority: dict[str, Any]) -> dict[str, Any]:
+    head = _head(authority)
+    fresh = require_dispatch_authority(repo_root)
+    if fresh != authority or fresh["head_sha"] != head:
+        raise RuntimeError("dispatch revoked or producer HEAD moved")
+    return fresh
+
+
+def _out(repo_root: Path, evidence_root: Path | None) -> Path:
+    if evidence_root is None:
+        raise ValueError("external evidence_root required")
+    root, out = Path(repo_root).resolve(), Path(evidence_root).absolute()
+    if out == root or root in out.parents:
+        raise ValueError("evidence must stay outside clean producer worktree")
+    if out.is_symlink() or any(p.is_symlink() for p in out.parents):
+        raise ValueError("evidence root alias rejected")
+    return out
+
+
+def _atomic_json(path: Path, receipt: dict[str, Any]) -> None:
+    if path.exists() or path.is_symlink():
+        raise ValueError(f"refusing to overwrite evidence: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + ".pending")
+    with temp.open("xb") as stream:
+        stream.write((json.dumps(receipt, sort_keys=True, indent=2) + "\n").encode())
+        stream.flush()
+        os.fsync(stream.fileno())
+    temp.replace(path)
+
+
+def _receipt(kind: str, authority: dict[str, Any], **fields: Any) -> dict[str, Any]:
+    return {"schema": PHYSICAL_SCHEMA, "campaign": C.CAMPAIGN_ID,
+            "kind": kind, "dispatch_authority": authority,
+            "dispatch_head_sha": _head(authority),
+            "physical_execution_performed": True, **fields}
+
+
+def _phase1_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Phase-1 census receipt missing or aliased")
+    receipt = json.loads(path.read_bytes())
+    if (receipt.get("schema") != PHYSICAL_SCHEMA
+            or receipt.get("kind") != "phase1-census"
+            or receipt.get("dispatch_authority") != authority
+            or receipt.get("dispatch_head_sha") != _head(authority)):
+        raise ValueError("Phase-1 census authority mismatch")
+    observed = receipt.get("census")
+    if not isinstance(observed, dict) or not isinstance(observed.get("census"), dict):
+        raise ValueError("Phase-1 measured census missing")
+    if observed.get("verdict") != census.validate_census(observed["census"]):
+        raise ValueError("Phase-1 census verdict not derived from measured fields")
+    captured = observed["census"].get("raw")
+    hashes = observed["census"].get("raw_artifact_sha256")
+    raw_root = path.parent / "census" / "raw"
+    if (observed["census"].get("out_dir") != str(path.parent / "census")
+            or not isinstance(captured, dict) or not captured
+            or not isinstance(hashes, dict) or set(captured) != set(hashes)):
+        raise ValueError("Phase-1 raw command custody missing")
+    for key, command in captured.items():
+        if not isinstance(key, str) or not key or "/" in key or key in (".", ".."):
+            raise ValueError("Phase-1 raw command key invalid")
+        artifact = raw_root / (key + ".json")
+        if artifact.is_symlink() or not artifact.is_file():
+            raise ValueError("Phase-1 raw command artifact missing/aliased")
+        data = artifact.read_bytes()
+        if hashlib.sha256(data).hexdigest() != hashes[key] or json.loads(data) != command:
+            raise ValueError("Phase-1 raw command artifact differs from receipt")
+    return receipt
+
+
+def _build_receipt(path: Path, authority: dict[str, Any], server: Path) -> dict[str, Any]:
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Phase-2 comparator build receipt missing/aliased")
+    doc = json.loads(path.read_bytes())
+    binary = doc.get("binary")
+    if (doc.get("schema") != "inferswarm.issue241.comparator-v2-build/1"
+            or doc.get("dispatch_authority") != authority
+            or doc.get("producer_head_sha") != _head(authority)
+            or doc.get("source_pin") != C.LLAMA_CPP_PIN
+            or doc.get("source_head") != C.LLAMA_CPP_PIN
+            or doc.get("patched_source_sha256") != C.OBSERVER_PATCHED_SOURCE_SHA256
+            or doc.get("cmake_flags") != C.OBSERVER_BUILD_FLAGS
+            or not isinstance(binary, dict)
+            or binary.get("path") != str(server)):
+        raise ValueError("Phase-2 build/dispatch identity mismatch")
+    server = Path(server)
+    if server.is_symlink() or not server.is_file():
+        raise ValueError("Phase-3 executable missing/aliased")
+    if hashlib.sha256(server.read_bytes()).hexdigest() != binary.get("sha256"):
+        raise ValueError("Phase-3 executable differs from Phase-2 built binary")
+    source = Path(doc.get("worktree", "")) / "tools/server/server-context.cpp"
+    if source.is_symlink() or not source.is_file():
+        raise ValueError("patched source custody missing/aliased")
+    if hashlib.sha256(source.read_bytes()).hexdigest() != doc["patched_source_sha256"]:
+        raise ValueError("built patched source differs from frozen source")
+    package = doc.get("package")
+    if not isinstance(package, dict):
+        raise ValueError("build package identity missing")
+    package_file = Path(package.get("path", ""))
+    if package_file.is_symlink() or not package_file.is_file():
+        raise ValueError("build package missing/aliased")
+    if hashlib.sha256(package_file.read_bytes()).hexdigest() != package.get("sha256"):
+        raise ValueError("build package digest mismatch")
+    return doc
+
+
+def _load_fixture_content(case_id: str, *, authority: dict[str, Any]) -> dict[str, Any]:
+    _head(authority)
     C.assert_historical_only(case_id)
-    if case_id not in AUTHORIZED_CASES:
-        raise RuntimeError(
-            f"physical case {case_id!r} is outside the bounded historical "
-            f"fixture set {sorted(AUTHORIZED_CASES)}")
-    return case_id
+    if case_id not in C.FIXTURE_CASES:
+        raise RuntimeError("case outside bounded historical fixtures")
+    return C.load_fixtures(C.ROOT)[case_id]
 
 
-def _receipt(kind: str, **fields: Any) -> dict[str, Any]:
-    """Build a physical campaign receipt bound to the dispatch authority."""
-    authority = _gate()
-    return {
-        "schema": PHYSICAL_SCHEMA,
-        "campaign": C.CAMPAIGN_ID,
-        "kind": kind,
-        "dispatch_authority": authority,
-        "dispatch_head_sha": authority.get("head_sha"),
-        "physical_execution_performed": True,
-        **fields,
-    }
+def _probe_devices(*, authority: dict[str, Any], runner: Any,
+                   repo_root: Path, evidence_root: Path) -> dict[str, Any]:
+    _head(authority)
+    return host.collect_census(repo_root, runner, authority,
+                               out_dir=evidence_root / "phase1" / "census")
 
 
-# ---------------------------------------------------------------------------
-# Physical operations — each is launch-guarded and NEVER defined to run
-# without the gate. They are the bounded Phase 1-3 execution steps.
-# ---------------------------------------------------------------------------
-
-def _load_fixture_content(case_id: str) -> dict[str, Any]:
-    """Load one historical fixture's content FOR EXECUTION (gated)."""
-    _gate()
-    _authorized_case(case_id)
-    fixtures = C.load_fixtures(C.ROOT)
-    return fixtures[case_id]
+def _build_server(*, authority: dict[str, Any], runner: Any,
+                  source_tree: Path, repo_root: Path) -> dict[str, Any]:
+    _head(authority)
+    patch = repo_root / "docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/applied-source.patch"
+    return host.build_comparator(source_tree, patch, runner, authority)
 
 
-def _probe_devices(arm: str) -> dict[str, Any]:
-    """Probe/init the arm's Vulkan device (gated; physical)."""
-    _gate()
-    arm_const = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
-    return {"arm": arm, "bdf": arm_const["bdf"], "icd": arm_const["icd"]}
+def _placement_probe(*, authority: dict[str, Any], repo_root: Path,
+                     evidence_root: Path, server: Path, runner: Any) -> dict[str, Any]:
+    _head(authority)
+    return place_producer.run_phase2_producer(
+        repo_root, evidence_root / "phase2", server, authority,
+        runner=runner, model=C.MODEL_DIR / C.MODEL_MEMBERS[0],
+        revalidate_authority=lambda old: _revalidate(repo_root, old))
 
 
-def _build_server(arm: str) -> dict[str, Any]:
-    """Build the arm's qualification server (gated; physical)."""
-    _gate()
-    arm_const = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
-    return {"arm": arm, "build_flags": list(C.OBSERVER_BUILD_FLAGS)}
+def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
+    """Re-derive matched ngl from both arms' digest-bound raw server logs."""
+    _head(authority)
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Phase-2 selected placement receipt missing/aliased")
+    doc = json.loads(path.read_bytes())
+    if (doc.get("schema") != place_producer.SCHEMA
+            or doc.get("authority") != authority
+            or doc.get("campaign") != C.CAMPAIGN_ID):
+        raise ValueError("Phase-2 selected placement authority mismatch")
+    rows = doc.get("rung_receipts")
+    if not isinstance(rows, list) or len(rows) != len(C.LADDER_NGLS) * 2:
+        raise ValueError("Phase-2 must measure both arms at all five rungs")
+    by_arm: dict[str, list[dict[str, Any]]] = {"B": [], "C": []}
+    for i, row in enumerate(rows):
+        ngl, arm = C.LADDER_NGLS[i // 2], ("C", "B")[i % 2]
+        if row.get("ngl") != ngl or row.get("arm") != arm:
+            raise ValueError("Phase-2 arms must share rung C then B")
+        rel = row.get("raw_log")
+        if not isinstance(rel, str) or Path(rel).name != rel:
+            raise ValueError("Phase-2 raw log path invalid")
+        log_path = path.parent / rel
+        if log_path.is_symlink() or not log_path.is_file():
+            raise ValueError("Phase-2 raw server log missing")
+        raw = log_path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != row.get("raw_log_sha256"):
+            raise ValueError("Phase-2 server log digest mismatch")
+        telemetry_rel = row.get("raw_telemetry")
+        if not isinstance(telemetry_rel, str) or Path(telemetry_rel).name != telemetry_rel:
+            raise ValueError("Phase-2 raw telemetry path invalid")
+        telemetry_path = path.parent / telemetry_rel
+        if telemetry_path.is_symlink() or not telemetry_path.is_file():
+            raise ValueError("Phase-2 raw process/device telemetry missing")
+        telemetry_bytes = telemetry_path.read_bytes()
+        if hashlib.sha256(telemetry_bytes).hexdigest() != row.get("raw_telemetry_sha256"):
+            raise ValueError("Phase-2 raw telemetry digest mismatch")
+        if row.get("process") != json.loads(telemetry_bytes):
+            raise ValueError("Phase-2 summarized process differs from raw telemetry")
+        recorded = doc.get("rungs", {}).get(arm, [])
+        if len(recorded) <= i // 2:
+            raise ValueError("Phase-2 rung measurement missing")
+        process = row.get("process")
+        if not isinstance(process, dict) or process.get("synthetic") is True:
+            raise ValueError("Phase-2 unmeasured/synthetic process refused")
+        response_rel = row.get("raw_response")
+        if not isinstance(response_rel, str) or Path(response_rel).name != response_rel:
+            raise ValueError("Phase-2 raw response path invalid")
+        response_path = path.parent / response_rel
+        if response_path.is_symlink() or not response_path.is_file():
+            raise ValueError("Phase-2 raw response missing/aliased")
+        response_raw = response_path.read_bytes()
+        if hashlib.sha256(response_raw).hexdigest() != row.get("raw_response_sha256"):
+            raise ValueError("Phase-2 raw response digest mismatch")
+        place_producer._measurement({**process, "response_raw": response_raw}, arm)
+        succeeded = (process.get("returncode") == 0
+                     and process.get("http_status") == 200
+                     and not process.get("failure"))
+        if succeeded and (not process.get("proc_status") or not process.get("proc_io")
+                          or not process.get("gpu_telemetry", {}).get("samples")):
+            raise ValueError("Phase-2 successful rung missing process/device samples")
+        rung = recorded[i // 2]
+        if (rung.get("excluded_device_residency_mib") != process.get("excluded_device_residency_mib")
+                or rung.get("loaded") is not succeeded):
+            raise ValueError("Phase-2 rung differs from measured telemetry")
+        if (rung.get("placement") != json.loads(json.dumps(placement.parse_placement(raw.decode(errors="replace"))))
+                or rung.get("arm") != arm or rung.get("ngl") != ngl
+                or row.get("verdict") != placement.judge_rung(rung)):
+            raise ValueError("Phase-2 measurement not derived from raw evidence")
+        by_arm[arm].append(rung)
+    selected = placement.select_matched_rung(by_arm)
+    if (doc.get("selected") != selected or selected.get("placement_blocked")
+            or selected.get("matched_ngl") is None):
+        raise ValueError("Phase-2 selected ngl missing or forged")
+    return doc
 
 
-def _read_model_bytes() -> dict[str, Any]:
-    """Read/hash model members for execution (gated; physical)."""
-    _gate()
-    return {"model_dir": str(C.MODEL_DIR),
-            "members": dict(C.MODEL_MEMBER_SHA256)}
+def _run_inference(*, authority: dict[str, Any], repo_root: Path,
+                   evidence_root: Path, server: Path, selected: dict[str, Any],
+                   runner: Any, canonical_server: Path) -> dict[str, Any]:
+    _head(authority)
+    return cmp_producer.run_phase3_producer(
+        repo_root, evidence_root / "phase3", server, selected, authority, runner,
+        canonical_server=canonical_server,
+        revalidate_authority=lambda old: _revalidate(repo_root, old))
 
-
-def _run_inference(case_id: str, arm: str, ngl: int) -> dict[str, Any]:
-    """Model inference on the arm's device (gated; physical)."""
-    _gate()
-    _authorized_case(case_id)
-    return {"case_id": case_id, "arm": arm, "ngl": ngl}
-
-
-def _placement_probe(arm: str, ngl: int) -> dict[str, Any]:
-    """Placement/model probe at one rung (gated; physical)."""
-    _gate()
-    return {"arm": arm, "ngl": ngl}
-
-
-def _gpu_telemetry() -> dict[str, Any]:
-    """vulkaninfo/GPU telemetry capture (gated; physical)."""
-    _gate()
-    return {"telemetry": "captured"}
-
-
-# ---------------------------------------------------------------------------
-# Bounded phase entrypoints (each gates FIRST, then orchestrates)
-# ---------------------------------------------------------------------------
 
 def run_phase1(repo_root: Path, pr_number: int = PR_NUMBER,
-               fetch: Callable[..., Any] | None = None) -> dict[str, Any]:
-    """Phase 1: fresh same-host precheck — census + bounded runs.
-
-    Gated BEFORE fixture load, device probing, server build, model-byte
-    reads, telemetry, and any inference.
-    """
+               fetch: Callable[..., Any] | None = None, *,
+               evidence_root: Path | None = None, runner: Any = None) -> dict[str, Any]:
     authority = require_dispatch_authority(repo_root, pr_number, fetch)
-    fixtures = _load_fixture_content(C.FIXTURE_CASES[0])
-    _probe_devices("B")
-    _probe_devices("C")
-    _gpu_telemetry()
-    return _receipt("phase1-precheck", fixtures_loaded=[fixtures["case_id"]])
+    out = _out(repo_root, evidence_root)
+    runner = runner if runner is not None else host.SubprocessRunner()
+    authority = _revalidate(repo_root, authority)
+    observed = _probe_devices(authority=authority, runner=runner,
+                              repo_root=Path(repo_root), evidence_root=out)
+    receipt = _receipt("phase1-census", authority, census=observed)
+    _atomic_json(out / "phase1" / "census-receipt.json", receipt)
+    return receipt
 
 
 def run_phase2(repo_root: Path, pr_number: int = PR_NUMBER,
-               fetch: Callable[..., Any] | None = None) -> dict[str, Any]:
-    """Phase 2: matched-placement ladder (gated first)."""
+               fetch: Callable[..., Any] | None = None, *,
+               evidence_root: Path | None = None, source_tree: Path | None = None,
+               build_runner: Any = None, run_runner: Any = None) -> dict[str, Any]:
     authority = require_dispatch_authority(repo_root, pr_number, fetch)
-    _probe_devices("C")
-    _build_server("C")
-    _read_model_bytes()
-    ladder = C.derive_ladder()
-    rungs = []
-    for ngl in ladder:
-        rungs.append(_placement_probe("C", ngl))
-    return _receipt("phase2-placement", matched_ngl_candidates=ladder,
-                    rungs=rungs)
+    out = _out(repo_root, evidence_root)
+    if source_tree is None:
+        raise ValueError("pinned source tree required")
+    build_runner = build_runner if build_runner is not None else host.SubprocessRunner()
+    _phase1_receipt(out / "phase1" / "census-receipt.json", authority)
+    authority = _revalidate(repo_root, authority)
+    build = _build_server(authority=authority, runner=build_runner,
+                          source_tree=source_tree, repo_root=Path(repo_root))
+    _atomic_json(out / "phase2" / "build-receipt.json", build)
+    authority = _revalidate(repo_root, authority)
+    placed = _placement_probe(authority=authority, repo_root=Path(repo_root),
+                              evidence_root=out, server=Path(build["binary"]["path"]),
+                              runner=run_runner)
+    return _receipt("phase2-placement", authority, build=build, selected=placed["selected"])
 
 
 def run_phase3(repo_root: Path, pr_number: int = PR_NUMBER,
-               fetch: Callable[..., Any] | None = None) -> dict[str, Any]:
-    """Phase 3: comparator/2 historical-only validation (gated first)."""
+               fetch: Callable[..., Any] | None = None, *,
+               evidence_root: Path | None = None, selected_path: Path | None = None,
+               server: Path | None = None, canonical_server: Path | None = None,
+               runner: Any = None) -> dict[str, Any]:
     authority = require_dispatch_authority(repo_root, pr_number, fetch)
-    for case_id in C.FIXTURE_CASES:
-        _load_fixture_content(case_id)
-    _probe_devices("B")
-    _build_server("B")
-    _read_model_bytes()
-    for case_id in C.FIXTURE_CASES:
-        _run_inference(case_id, "B", ngl=1)
-        _run_inference(case_id, "C", ngl=1)
-    return _receipt(
-        "phase3-comparator-v2",
-        cases=list(C.FIXTURE_CASES),
-        comparator_id=C.COMPARATOR_V2_ID)
+    if selected_path is None or server is None or canonical_server is None:
+        raise ValueError("Phase-3 requires Phase-2 selection, executable, and canonical no-hook binary")
+    out = _out(repo_root, evidence_root)
+    expected_selected = out / "phase2" / "phase2-placement-receipt.json"
+    if Path(selected_path).absolute() != expected_selected:
+        raise ValueError("Phase-3 selection must be the campaign Phase-2 artifact")
+    _build_receipt(out / "phase2" / "build-receipt.json", authority, server)
+    selected = _selected_receipt(expected_selected, authority)
+    authority = _revalidate(repo_root, authority)
+    result = _run_inference(authority=authority, repo_root=Path(repo_root),
+                            evidence_root=out, server=server, selected=selected,
+                            runner=runner, canonical_server=canonical_server)
+    return _receipt("phase3-comparator-v2", authority,
+                    matched_ngl=selected["selected"]["matched_ngl"],
+                    measurements=result.get("measurements"), result=result)
 
 
 def physical_entrypoints() -> tuple[str, ...]:
-    """Every physical entrypoint name (for the structural gate test)."""
     return ("run_phase1", "run_phase2", "run_phase3")
-
-
-def reset_gate_for_tests() -> None:
-    """Test-only: clear the cached authority (never used in production)."""
-    global _pending_authority
-    _pending_authority = None

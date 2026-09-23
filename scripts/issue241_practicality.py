@@ -23,9 +23,11 @@ arithmetic. Emits exactly one disposition from the frozen vocabulary:
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,12 +47,12 @@ def project_arm(measured_wall_s_by_case: dict[str, float]) -> dict[str, Any]:
 
     comparator/2: ONE request per case; 8 decisions per request.
     """
-    missing = [c for c in C.FIXTURE_CASES if c not in measured_wall_s_by_case]
-    if missing:
-        raise ValueError(f"measured walls missing for {missing}")
+    if set(measured_wall_s_by_case) != set(C.FIXTURE_CASES):
+        raise ValueError("measured walls must cover exactly four historical cases")
     for case_id, wall in measured_wall_s_by_case.items():
-        if not isinstance(wall, (int, float)) or wall <= 0:
-            raise ValueError(f"measured wall for {case_id} must be positive")
+        if (not isinstance(wall, (int, float)) or isinstance(wall, bool)
+                or not math.isfinite(wall) or wall <= 0):
+            raise ValueError(f"measured wall for {case_id} must be finite and positive")
     total = 0.0
     per_regime: dict[str, Any] = {}
     for regime, count in C.R8J_REALIZED_REGIME_COUNTS.items():
@@ -89,6 +91,82 @@ def project_stress(measured_wall_s_by_case: dict[str, float]) -> dict[str, Any]:
         "measured_wall_s_per_request": wall,
         "projected_s": round(total, 1),
     }
+
+
+def _custody_bytes(root: Path, rel: Any) -> bytes:
+    """Read a regular raw artifact without allowing aliases or traversal."""
+    if not isinstance(rel, str) or not rel or PurePosixPath(rel).is_absolute():
+        raise ValueError("measurement path must be relative")
+    parts = PurePosixPath(rel).parts
+    if any(p in (".", "..") for p in parts):
+        raise ValueError("measurement path traversal")
+    path = root
+    for part in parts:
+        path = path / part
+        if path.is_symlink():
+            raise ValueError("measurement symlink/alias forbidden")
+    if not path.is_file():
+        raise ValueError("measurement raw file missing")
+    return path.read_bytes()
+
+
+def project_from_measurements(receipt_path: Path) -> dict[str, Any]:
+    """Project from digest-bound timing files; never perform Phase-4 physical work."""
+    receipt_path = Path(receipt_path)
+    if receipt_path.is_symlink() or not receipt_path.is_file():
+        raise ValueError("measured wall-time receipt missing or aliased")
+    receipt = json.loads(receipt_path.read_bytes())
+    if (receipt.get("schema") != "inferswarm.issue241.measured-wall-times/1"
+            or receipt.get("campaign") != C.CAMPAIGN_ID
+            or receipt.get("matched_ngl") not in C.LADDER_NGLS):
+        raise ValueError("measured wall-time authority invalid")
+    authority = receipt.get("dispatch_authority")
+    if (not isinstance(authority, dict)
+            or authority.get("schema") != "inferswarm.issue241.dispatch-authority/1"
+            or not isinstance(authority.get("head_sha"), str)
+            or len(authority["head_sha"]) != 40
+            or authority.get("review_commit_id") != authority["head_sha"]):
+        raise ValueError("measured walls missing exact-head dispatch authority")
+    measurements = receipt.get("measurements")
+    if not isinstance(measurements, dict) or set(measurements) != {"B", "C"}:
+        raise ValueError("both measured arms required")
+    walls: dict[str, dict[str, float]] = {}
+    for arm in ("B", "C"):
+        entries = measurements[arm]
+        if not isinstance(entries, dict) or set(entries) != set(C.FIXTURE_CASES):
+            raise ValueError("exact historical case coverage required")
+        walls[arm] = {}
+        for case_id, entry in entries.items():
+            if not isinstance(entry, dict):
+                raise ValueError("measurement entry invalid")
+            raw = _custody_bytes(receipt_path.parent, entry.get("timing_raw_path"))
+            if hashlib.sha256(raw).hexdigest() != entry.get("timing_raw_sha256"):
+                raise ValueError("raw timing digest mismatch")
+            run_bytes = _custody_bytes(receipt_path.parent, entry.get("run_receipt_path"))
+            if hashlib.sha256(run_bytes).hexdigest() != entry.get("run_receipt_sha256"):
+                raise ValueError("comparator run receipt digest mismatch")
+            run_receipt = json.loads(run_bytes)
+            if (run_receipt.get("schema") != "inferswarm.issue241.comparator-v2-run/2"
+                    or run_receipt.get("arm") != arm
+                    or run_receipt.get("case_id") != case_id
+                    or run_receipt.get("ngl") != receipt["matched_ngl"]
+                    or run_receipt.get("dispatch_authority") != authority):
+                raise ValueError("measured wall not bound to comparator run and dispatch")
+            observed = json.loads(raw)
+            wall = observed.get("wall_s")
+            if (not isinstance(wall, (int, float)) or isinstance(wall, bool)
+                    or not math.isfinite(wall) or wall <= 0
+                    or observed.get("arm") != arm or observed.get("case_id") != case_id
+                    or entry.get("wall_s") != wall
+                    or run_receipt.get("wall_time_s") != wall):
+                raise ValueError("claimed wall does not equal raw comparator run wall")
+            walls[arm][case_id] = float(wall)
+    reference = project_arm(walls["B"])
+    candidate = project_arm(walls["C"])
+    return {"reference": reference, "candidate": candidate,
+            "selected_stress": project_stress(walls["C"]),
+            "sequential_total_s": round(reference["central_s"] + candidate["central_s"], 1),
+            "matched_ngl": receipt["matched_ngl"]}
 
 
 def derive_disposition(*, census_valid: bool,

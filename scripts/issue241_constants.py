@@ -76,7 +76,7 @@ MODEL_MEMBER_SHA256 = {
     "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf":
         "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
     "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf":
-        "0e25ceaeb89b8a80aa9736b0c7448943622f7408c2855b2ebd016b7643a861a",
+        "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
 }
 
 # --- frozen request contract (unchanged v1 §2 / R8-H authority) ---

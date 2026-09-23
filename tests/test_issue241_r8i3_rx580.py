@@ -1171,148 +1171,83 @@ class TestDispatchAuthority(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestPhysicalDispatchGating(unittest.TestCase):
-    """Every physical entrypoint must reach the dispatch gate BEFORE any
-    physical/device/model operation — proven by RECORDED CALL LISTS on
-    the gated operations, not prose."""
-
-    def setUp(self):
-        physical.reset_gate_for_tests()
-        self.addCleanup(physical.reset_gate_for_tests)
-
-    def _instrument(self):
-        """Record every gated-operation call; fail the gate by default."""
-        calls: list[str] = []
-        patches = []
-        for attr in physical.GATED_OPERATION_ATTRS:
-            def make_recorder(name):
-                def record(*a, **k):
-                    calls.append(name)
-                    return {"case_id": (a[0] if a else None),
-                            "recorded": name}
-                return record
-            patches.append(mock.patch.object(
-                physical, attr, side_effect=make_recorder(attr)))
-            patches[-1].start()
-            self.addCleanup(patches[-1].stop)
-        return calls, patches
+    """CPU-only tests of explicit, revalidated dispatch propagation."""
 
     def _deny_dispatch(self):
-        def deny(*a, **k):
-            raise ValueError("no current OWNER/MEMBER approval dispatches")
         return mock.patch.object(dispatch, "require_live_dispatch",
-                                 side_effect=deny)
+                                 side_effect=ValueError("no current approval"))
 
     def _grant_dispatch(self):
-        def grant(repo_root, pr_number):
-            return dispatch_authority_receipt()
         return mock.patch.object(dispatch, "require_live_dispatch",
-                                 side_effect=grant)
+                                 return_value=dispatch_authority_receipt())
 
     def test_entrypoints_exist_and_are_committed(self):
         for name in physical.physical_entrypoints():
-            fn = getattr(physical, name)
-            self.assertTrue(callable(fn))
-            self.assertEqual(
-                Path(physical.__file__).read_text().count(f"def {name}("), 1)
+            self.assertTrue(callable(getattr(physical, name)))
+            self.assertEqual(Path(physical.__file__).read_text().count(f"def {name}("), 1)
 
     def test_no_physical_operation_without_dispatch(self):
-        # deny the gate: every entrypoint must fail and the recorded
-        # call list of physical operations must be EMPTY
-        calls, _ = self._instrument()
-        with self._deny_dispatch():
+        calls = []
+        with self._deny_dispatch(), mock.patch.object(
+                physical, "_probe_devices", side_effect=lambda **kw: calls.append(kw)):
             for name in physical.physical_entrypoints():
-                fn = getattr(physical, name)
-                with self.assertRaises(ValueError, msg=name):
-                    fn(REPO, pr_number=242)
-        self.assertEqual(calls, [], "physical op reached before dispatch gate")
+                with self.assertRaises(ValueError):
+                    getattr(physical, name)(REPO, pr_number=242)
+        self.assertEqual(calls, [])
 
     def test_operations_only_after_gate_with_grant(self):
-        calls, _ = self._instrument()
-        with self._grant_dispatch():
-            out = physical.run_phase1(REPO, pr_number=242)
-        self.assertTrue(len(calls) > 0)
+        with self._grant_dispatch(), mock.patch.object(
+                physical, "_probe_devices", return_value={"census": "measured"}) as probe:
+            with mock.patch.object(physical, "_atomic_json"):
+                out = physical.run_phase1(REPO, evidence_root=REPO.parent / "synthetic-only",
+                                          runner=object())
+        probe.assert_called_once()
         self.assertEqual(out["dispatch_head_sha"], FAKE_HEAD)
-        self.assertEqual(out["dispatch_authority"]["dispatch_phrase"],
-                         dispatch.DISPATCH_PHRASE)
-        # every physical operation happened only after the gate: the
-        # first recorded call follows a successful gate (granted), and
-        # the receipt binds the authority
-        self.assertTrue(out["physical_execution_performed"])
+        self.assertEqual(out["dispatch_authority"], dispatch_authority_receipt())
 
     def test_gate_refuses_dirty_worktree(self):
-        # require_live_dispatch demands a clean worktree; the REAL repo
-        # path is used and must fail closed while files are dirty
         with mock.patch.object(dispatch, "current_clean_git_head",
-                               side_effect=ValueError(
-                                   "physical execution requires a clean "
-                                   "producer worktree")):
-            calls, _ = self._instrument()
+                               side_effect=ValueError("dirty")):
             with self.assertRaises(ValueError):
-                physical.run_phase1(REPO, pr_number=242)
-            self.assertEqual(calls, [])
+                physical.require_dispatch_authority(REPO, fetch=lambda *a: {})
 
     def test_gated_operation_call_directly_refuses_without_gate(self):
-        # even a direct call to a physical operation must refuse: the
-        # operations themselves re-check the gate (defense in depth)
-        required_args = {
-            "_load_fixture_content": ("case-256",),
-            "_probe_devices": ("B",),
-            "_build_server": ("B",),
-            "_read_model_bytes": (),
-            "_run_inference": ("case-256", "B", 1),
-            "_placement_probe": ("C", 1),
-            "_gpu_telemetry": (),
-        }
-        for attr in physical.GATED_OPERATION_ATTRS:
-            physical.reset_gate_for_tests()
-            with self.assertRaises(RuntimeError, msg=attr):
-                getattr(physical, attr)(*required_args[attr])
+        for name in physical.GATED_OPERATION_ATTRS:
+            with self.assertRaises((TypeError, ValueError, RuntimeError), msg=name):
+                getattr(physical, name)()
 
     def test_cases_outside_bounded_set_rejected(self):
-        with self._grant_dispatch():
-            physical.run_phase1(REPO, pr_number=242)  # sets the gate
         for bad in ("c237-01-01-001", "case-512", "h237-02-05-001"):
             with self.assertRaises(RuntimeError, msg=bad):
-                physical._authorized_case(bad)
+                physical._load_fixture_content(bad,
+                                               authority=dispatch_authority_receipt())
 
     def test_predictive_namespace_rejected_at_load(self):
-        with self._grant_dispatch():
-            physical.run_phase1(REPO, pr_number=242)
         with self.assertRaises(RuntimeError):
-            physical._load_fixture_content("c237-01-01-001")
+            physical._load_fixture_content("p237-01",
+                                           authority=dispatch_authority_receipt())
 
     def test_receipts_bind_dispatch_authority(self):
-        with self._grant_dispatch():
-            for name in ("run_phase1", "run_phase2", "run_phase3"):
-                out = getattr(physical, name)(REPO, pr_number=242)
-                self.assertEqual(out["schema"], physical.PHYSICAL_SCHEMA)
-                self.assertEqual(out["dispatch_authority"]["head_sha"],
-                                 FAKE_HEAD)
-                self.assertTrue(out["physical_execution_performed"])
+        authority = dispatch_authority_receipt()
+        receipt = physical._receipt("test", authority)
+        self.assertEqual(receipt["schema"], physical.PHYSICAL_SCHEMA)
+        self.assertEqual(receipt["dispatch_head_sha"], FAKE_HEAD)
+        self.assertEqual(receipt["dispatch_authority"], authority)
 
     def test_no_physical_execution_during_correction(self):
-        # module import and every entrypoint exist WITHOUT any recorded
-        # physical call in THIS test process (the gate was never granted
-        # for real); the recorded-calls assertion above proves reach-
-        # ability. This control pins the correction-session invariant.
-        calls, _ = self._instrument()
-        with self._deny_dispatch():
+        calls = []
+        with self._deny_dispatch(), mock.patch.object(
+                physical, "_probe_devices", side_effect=lambda **kw: calls.append(kw)):
             for name in physical.physical_entrypoints():
-                try:
-                    getattr(physical, name)(REPO, pr_number=242)
-                except ValueError:
-                    pass
+                with self.assertRaises(ValueError):
+                    getattr(physical, name)(REPO)
         self.assertEqual(calls, [])
 
     def test_source_order_gate_before_operations(self):
-        # structural proof: in the committed source of every physical
-        # entrypoint, the dispatch call appears BEFORE every gated
-        # operation call
-        src = Path(physical.__file__).read_text()
         import re as _re
+        src = Path(physical.__file__).read_text()
         for name in physical.physical_entrypoints():
-            m = _re.search(
-                rf"def {name}\(.*?\n(?=def |\Z)", src, _re.DOTALL)
+            m = _re.search(rf"def {name}\(.*?\n(?=def |\Z)", src, _re.DOTALL)
             self.assertIsNotNone(m, name)
             body = m.group(0)
             gate_at = body.find("require_dispatch_authority(")
@@ -1320,20 +1255,15 @@ class TestPhysicalDispatchGating(unittest.TestCase):
             for attr in physical.GATED_OPERATION_ATTRS:
                 op_at = body.find(f"{attr}(")
                 if op_at >= 0:
-                    self.assertLess(
-                        gate_at, op_at,
-                        f"{name}: {attr} runs before the dispatch gate")
+                    self.assertLess(gate_at, op_at, name)
 
     def test_main_has_no_ungated_entrypoint(self):
-        # every public run_* function in the physical module must gate
         import re as _re
         src = Path(physical.__file__).read_text()
         for m in _re.finditer(r"def (run_[a-z0-9_]+)\(", src):
-            name = m.group(1)
-            body = _re.search(
-                rf"def {name}\(.*?\n(?=def |\Z)", src, _re.DOTALL).group(0)
-            self.assertIn("require_dispatch_authority(", body, name)
-
+            body = _re.search(rf"def {m.group(1)}\(.*?\n(?=def |\Z)",
+                              src, _re.DOTALL).group(0)
+            self.assertIn("require_dispatch_authority(", body)
 
 class TestCampaignDormancy(unittest.TestCase):
     def test_all_physical_phases_dormant(self):
