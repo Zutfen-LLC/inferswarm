@@ -168,9 +168,9 @@ change forced by comparator/2 semantics is maintainer-adjudicated,
 never auto-applied), decision-stability theorem structure, exact model
 bytes, historical exclusions, sealed holdout bytes subject to the
 applicability-binding check. The committed seal
-(`contract_id inferswarm.qwen38-vulkan-heterogeneous-qualification/1`,
-ciphertext sha256 `3786bfcd…`) mechanically carries NO superseded
-identity marker; the v1-area applicability manifests that DO carry them
+(`contract_id` string and ciphertext sha256 `3786bfcd…`) mechanically
+carries NO superseded identity marker; the v1-area applicability
+manifests that DO carry them
 stay frozen as accepted v1 history and are surfaced ADVISORILY. If any
 committed applicability key is found to mechanically include the
 superseded V340L identity or comparator/1 such that reuse is invalid,
