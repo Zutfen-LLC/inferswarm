@@ -268,6 +268,23 @@ def validate_arm_receipt(receipt: dict[str, Any], arm: str,
         if not isinstance(name, str) or "RADV POLARIS10" not in name:
             problems.append(
                 f"candidate Vulkan device identity mismatch: {name!r}")
+    # full frozen subject identity (subsystem/revision/link/driver/ICD/
+    # Vulkan-UUID): mechanically validated against the constants, never
+    # prose. A different [1002:67df] board at the same BDF cannot satisfy
+    # this predicate merely because vendor/device and VRAM match.
+    subject = receipt.get("subject_identity")
+    if not isinstance(subject, dict):
+        problems.append("run receipt lacks the frozen subject-identity block")
+    else:
+        expected = C.frozen_identity(arm)
+        for field, want in expected.items():
+            if field in ("bdf", "kernel_driver", "icd", "vulkan_device_name"):
+                continue  # bound elsewhere at top level
+            got = subject.get(field)
+            if got != want:
+                problems.append(
+                    f"{arm} frozen subject-identity drift {field}: "
+                    f"{got!r} != {want!r}")
     ngl = receipt.get("ngl")
     if not isinstance(ngl, int) or isinstance(ngl, bool) or \
             ngl not in C.LADDER_NGLS:

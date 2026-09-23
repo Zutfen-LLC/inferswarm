@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue241_constants as C
 
 CENSUS_SCHEMA = "inferswarm.issue241.host-census/1"
@@ -34,6 +36,65 @@ BDF16_RE = re.compile(r"^[0-9a-f]{8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$")
 def _require(cond: bool, message: str) -> None:
     if not cond:
         raise ValueError(f"census validation failed: {message}")
+
+
+def identity_problems(arm: str, observed: Any) -> list[str]:
+    """Mechanical frozen-subject-identity predicate for one arm's census
+    gpu entry. Returns one stable problem string per drifted field (no
+    exception, so callers can surface every drift at once)."""
+    if arm not in ("B", "C"):
+        return [f"identity check requires arm 'B' or 'C', got {arm!r}"]
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    problems: list[str] = []
+    if not isinstance(observed, dict):
+        return [f"{arm} census gpu entry missing (not an object)"]
+
+    # observed field name -> constants key (observed documents use
+    # sysfs/census spellings; the constants use arm-config spellings)
+    _CFG_KEY = {"driver_in_use": "kernel_driver", "vulkan_icd": "icd"}
+
+    def eq(field: str, transform=None) -> None:
+        expected = cfg[_CFG_KEY.get(field, field)]
+        value = observed.get(field)
+        if transform is not None:
+            try:
+                value = transform(value)
+            except (TypeError, ValueError, AttributeError):
+                problems.append(
+                    f"{arm} {field} unparseable: {value!r}")
+                return
+        if value != expected:
+            problems.append(
+                f"{arm} frozen-identity drift {field}: "
+                f"observed {value!r} != frozen {expected!r}")
+
+    eq("vendor_id")
+    eq("device_id")
+    eq("subsystem_vendor_id")
+    eq("subsystem_device_id")
+    eq("revision")
+    eq("bdf")
+    eq("link_width")
+    eq("max_link_width")
+    eq("max_link_speed")
+    eq("driver_in_use", lambda v: v)
+    eq("vulkan_icd")
+    eq("vulkan_device_name")
+    eq("vulkan_device_uuid")
+    if arm == "B":
+        eq("gpu_uuid")
+        eq("pci_id")
+    else:
+        eq("pci_id")
+        vram = observed.get("vram_mib")
+        if vram != C.CANDIDATE_VRAM_CENSUS_MIB:
+            problems.append(
+                f"C frozen-identity drift vram_mib: observed {vram!r} "
+                f"!= frozen {C.CANDIDATE_VRAM_CENSUS_MIB!r}")
+    # speed is OBSERVED, never frozen (power-management downtraining)
+    if "link_speed" in observed and not isinstance(observed.get("link_speed"), str):
+        problems.append(f"{arm} link_speed malformed: {observed.get('link_speed')!r}")
+    return problems
 
 
 def validate_census(census: dict[str, Any]) -> dict[str, Any]:
@@ -71,35 +132,17 @@ def validate_census(census: dict[str, Any]) -> dict[str, Any]:
     _require(cand["bdf"] in by_bdf, f"candidate BDF {cand['bdf']} absent")
 
     nv = by_bdf[ref["bdf"]]
-    _require(nv.get("vendor_id") == "10de", "reference vendor must be NVIDIA 10de")
-    _require(nv.get("device_id") == "2504", "reference device must be GA106 [2504]")
-    _require(nv.get("driver_in_use") == "nvidia",
-             "reference kernel driver must be nvidia")
-    _require(nv.get("gpu_uuid") == ref["gpu_uuid"],
-             f"reference GPU UUID drift: {nv.get('gpu_uuid')!r}")
-    _require(nv.get("vulkan_icd") == ref["icd"], "reference ICD mismatch")
-    _require(nv.get("vulkan_device_name") == "NVIDIA GeForce RTX 3060",
-             "reference Vulkan device name mismatch")
-
     amd = by_bdf[cand["bdf"]]
-    _require(amd.get("vendor_id") == "1002", "candidate vendor must be AMD 1002")
-    _require(amd.get("device_id") == "67df",
-             "candidate device must be Ellesmere [67df] (RX 470/480/570/580 class)")
+    # Mechanical frozen-subject-identity predicate (fail-closed on ANY
+    # subsystem/revision/BDF/UUID/driver/ICD/Vulkan/link drift; the old
+    # "one of x1/x4/x8/x16" link acceptance is replaced by the exact
+    # frozen expected-width predicate inside identity_problems).
+    problems = [*identity_problems("B", nv), *identity_problems("C", amd)]
+    _require(not problems, "; ".join(problems))
     _require(PCIID_RE.fullmatch(amd.get("pci_id") or "") is not None,
              "candidate pci_id must be present as vendor:device")
-    _require(amd.get("driver_in_use") == "amdgpu",
-             "candidate kernel driver must be amdgpu (radeon legacy is rejected)")
     _require(isinstance(amd.get("vram_mib"), int) and amd.get("vram_mib") == 8192,
              "candidate VRAM census must be 8192 MiB")
-    _require(amd.get("vulkan_icd") == cand["icd"], "candidate ICD mismatch")
-    _require(isinstance(amd.get("vulkan_device_name"), str)
-             and "RADV POLARIS10" in amd["vulkan_device_name"],
-             "candidate Vulkan device must be RADV POLARIS10")
-    link = amd.get("link_width") or ""
-    _require(isinstance(link, str) and link in ("x16", "x8", "x4", "x1"),
-             f"candidate PCIe link width {link!r} malformed")
-    _require(nv.get("link_width") in ("x16", "x8", "x4", "x1"),
-             "reference PCIe link width malformed")
 
     model = census.get("model_backing")
     _require(isinstance(model, dict), "model backing census missing")

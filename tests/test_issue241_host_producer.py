@@ -100,9 +100,10 @@ class HostProducerTests(unittest.TestCase):
                 elif command[:2] == ['lspci', '-Dnnvv']: value = 'verbose PCI evidence\n'
                 elif 'nvidia-smi' in joined: value = '0, ' + C.REFERENCE_ARM['gpu_uuid'] + ', 00000000:03:00.0, NVIDIA GeForce RTX 3060, 610.57.04, 12288 MiB, 40, 20.5 W, 170.0 W\n'
                 elif 'vulkaninfo' in joined:
-                    name = 'RADV POLARIS10' if C.CANDIDATE_ARM['icd'] in joined else 'NVIDIA GeForce RTX 3060'
+                    name = 'AMD Radeon RX 580 Series (RADV POLARIS10)' if C.CANDIDATE_ARM['icd'] in joined else 'NVIDIA GeForce RTX 3060'
                     vendor, device = ('0x1002', '0x67df') if 'RADV' in name else ('0x10de', '0x2504')
-                    value = f'GPU0:\n deviceName = {name}\n vendorID = {vendor}\n deviceID = {device}\n deviceUUID = abc123\n'
+                    uuid = C.CANDIDATE_ARM['vulkan_device_uuid'] if 'RADV' in name else C.REFERENCE_ARM['vulkan_device_uuid']
+                    value = f'GPU0:\n deviceName = {name}\n vendorID = {vendor}\n deviceID = {device}\n deviceUUID = {uuid}\n'
                 elif command[:1] == ['readlink']: value = '/sys/bus/pci/drivers/' + ('amdgpu' if '02:00.0' in joined else 'nvidia')
                 elif command[:1] == ['cat']:
                     key = command[-1].rsplit('/', 1)[-1]
@@ -110,7 +111,10 @@ class HostProducerTests(unittest.TestCase):
                         'subsystem_device':'0xe353','revision':'0xe7','current_link_width':'8',
                         'current_link_speed':'8.0 GT/s','max_link_width':'16',
                         'max_link_speed':'8.0 GT/s','mem_info_vram_total':str(8*1024**3)}.get(key, '1')
-                    if '03:00.0' in joined: value = {'vendor':'0x10de','device':'0x2504','revision':'0xa1'}.get(key, value)
+                    if '03:00.0' in joined: value = {'vendor':'0x10de','device':'0x2504','revision':'0xa1',
+                        'subsystem_vendor':'0x1458','subsystem_device':'0x4074',
+                        'current_link_width':'16','current_link_speed':'2.5 GT/s',
+                        'max_link_width':'16','max_link_speed':'16.0 GT/s'}.get(key, value)
                 elif command[:1] == ['sha256sum']: value = C.MODEL_MEMBER_SHA256[command[-1].rsplit('/', 1)[-1]] + '  ' + command[-1]
                 elif command[:1] == ['stat']: value = '24346461344' if C.MODEL_MEMBERS[2] in joined else '24100000000'
                 elif command[:1] == ['python3']:

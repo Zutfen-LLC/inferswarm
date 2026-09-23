@@ -112,6 +112,32 @@ OBSERVER_PATCHED_SOURCE_SHA256 = (
 # Identities below are the PROSPECTIVE frozen subject, derived from the
 # post-swap fresh census (2026-09-23). Physical Phase 1 must re-observe
 # every field read-only and fail closed on drift.
+#
+# Machine-readable frozen subject identity (R8-I3 correction pass): every
+# identity field required by issue #241 is a constant here, never prose
+# alone. Sources (already-authoritative pre-campaign observations only):
+#   * the retained 2026-09-23 post-swap census observations (session
+#     outputs: lspci -nn/-k, nvidia-smi UUID/bus-id, dmesg amdgpu VRAM,
+#     ICD inventory, per-ICD vulkaninfo summaries incl. NVIDIA deviceUUID
+#     and RADV POLARIS10 deviceName/apiVersion/Mesa version);
+#   * the accepted fleet hardware census of 2026-09-15
+#     (docs/investigations/qwen38-flash-next-r8-a/hardware-census.json +
+#     raw-hardware/inv-inferswarm01.txt), which recorded the 03:00.0 slot
+#     as 10de:2504 subsystem 1458:4074 rev a1, LnkCap x16;
+#   * a read-only sysfs/lspci -vv/nvidia-smi/vulkaninfo observation of
+#     inferswarm01 taken 2026-09-23 for the subsystem/link-width fields
+#     the post-swap session had not retained (identity-observation raw
+#     retained at docs/qualification/qwen38-vulkan-v2-rx580/
+#     identity-observation-2026-09-23.txt; sha256 recorded in the area
+#     MANIFEST). No GPU compute, model read, or dispatch machinery was
+#     involved.
+# LINK IDENTITY POLICY: negotiated link SPEED is downtrainable by normal
+# PCIe power management (observed 2.5 GT/s at idle on the reference) and
+# is therefore recorded, never frozen. The frozen link identity is the
+# negotiated WIDTH plus the max-link WIDTH capability (and, for the
+# candidate, the max-link speed capability that distinguishes a Gen3
+# slot from slot/device drift). Measured current speeds are retained in
+# census receipts as observations.
 REFERENCE_ARM = {
     "arm": "B",
     "role": "reference",
@@ -119,7 +145,23 @@ REFERENCE_ARM = {
     "device": "NVIDIA GeForce RTX 3060 12GiB",
     "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
     "bdf": "00000000:03:00.0",  # 16-char domain-prefixed form
+    "pci_id": "10de:2504",
+    "vendor_id": "10de",
+    "device_id": "2504",
+    "subsystem_vendor_id": "1458",   # Gigabyte
+    "subsystem_device_id": "4074",
+    "revision": "a1",
+    "link_width": "x16",            # negotiated width (frozen identity)
+    "max_link_width": "x16",        # slot/device capability (frozen)
+    "max_link_speed": "16.0 GT/s",  # Gen4 capability (frozen; slot drift
+    #                                   discriminator; observed speed may
+    #                                   downtrain to 2.5 GT/s at idle)
     "icd": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+    "kernel_driver": "nvidia",
+    "nvidia_driver_version": "610.57.04",
+    "vulkan_device_name": "NVIDIA GeForce RTX 3060",
+    "vulkan_device_uuid": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "vulkan_api_version": "1.4.341",
     "vulkan_driver": "NVIDIA proprietary 610.57.04",
     "selector": {"GGML_VK_VISIBLE_DEVICES": "0", "CUDA_VISIBLE_DEVICES": "-1"},
     "non_oracle": (
@@ -133,13 +175,55 @@ CANDIDATE_ARM = {
     "device": "AMD Radeon RX 580 Series (RADV POLARIS10), Ellesmere "
               "[1002:67df] rev e7, Sapphire Radeon RX 570 Pulse 4GB "
               "subsystem (8192 MiB VRAM per amdgpu census)",
-    "gpu_uuid": None,  # RADV Polaris exposes no stable UUID; bound by BDF+PCIID
+    "gpu_uuid": None,  # RADV Polaris exposes no per-card UUID; bound below
     "bdf": "00000000:02:00.0",
     "pci_id": "1002:67df",
+    "vendor_id": "1002",
+    "device_id": "67df",
+    "subsystem_vendor_id": "1da2",   # Sapphire Technology Limited
+    "subsystem_device_id": "e353",   # "Radeon RX 570 Pulse 4GB" label
+    "revision": "e7",
+    "link_width": "x8",              # negotiated width (frozen identity;
+    #                                   observed downgraded from x16 LnkCap)
+    "max_link_width": "x16",         # device capability (frozen)
+    "max_link_speed": "8.0 GT/s",    # Gen3 capability (frozen; Gen3-vs-Gen1
+    #                                   slot drift discriminator)
     "icd": "/usr/share/vulkan/icd.d/radeon_icd.json",
+    "kernel_driver": "amdgpu",
+    "vulkan_device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+    "vulkan_device_uuid": "00000000-0200-0000-0000-000000000000",
+    "vulkan_api_version": "1.4.305",
     "vulkan_driver": "RADV (Mesa 25.0.7-2+deb13u1), apiVersion 1.4.305",
     "selector": {"GGML_VK_VISIBLE_DEVICES": "0", "CUDA_VISIBLE_DEVICES": "-1"},
 }
+# RADV Polaris10 deviceUUID is bus-derived, not card-unique: it encodes
+# the BDF (domain 0000, bus 02, slot 00), which is exactly why it is
+# retained as a frozen identity field (a different physical card in the
+# same slot shares it, but a card at a different BDF does not) and why
+# subsystem vendor/device/revision are additionally frozen.
+
+# Frozen subject-identity predicate keys per arm role. Any drift in these
+# fields must fail every acceptance-bearing boundary closed (census,
+# Phase-2 telemetry, Phase-3 device identity, comparator validation).
+IDENTITY_FIELDS = (
+    "bdf", "vendor_id", "device_id", "subsystem_vendor_id",
+    "subsystem_device_id", "revision", "link_width", "max_link_width",
+    "kernel_driver", "icd", "vulkan_device_name", "vulkan_device_uuid",
+)
+
+
+def frozen_identity(arm: str) -> dict[str, str]:
+    """Machine-readable frozen identity subset for an arm ('B' or 'C')."""
+    if arm not in ("B", "C"):
+        raise ValueError(f"unknown arm {arm!r}")
+    cfg = REFERENCE_ARM if arm == "B" else CANDIDATE_ARM
+    identity = {field: cfg[field] for field in IDENTITY_FIELDS}
+    if arm == "B":
+        identity["gpu_uuid"] = cfg["gpu_uuid"]
+    else:
+        identity["pci_id"] = cfg["pci_id"]
+        identity["max_link_speed"] = cfg["max_link_speed"]
+    return identity
 # The excluded device set on this host: the non-participating GPU of each
 # arm. Sequential single-GPU execution: during arm B only 03:00.0 may hold
 # model residency; during arm C only 02:00.0 may.

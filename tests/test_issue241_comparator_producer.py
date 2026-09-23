@@ -23,13 +23,56 @@ def phase2():
     arms = {arm: [{"schema": placement.RUNG_SCHEMA, "arm": arm, "ngl": n,
         "loaded": True, "placement": {"offloaded_layers": [str(n), "99"],
         "alloc_failures": 0, "fallback_markers": 0, "buffer_records": []},
-        "excluded_device_residency_mib": {}} for n in C.LADDER_NGLS] for arm in ("B", "C")}
+        "excluded_device_residency_mib": {},
+        "process_measurements": {key: 1 for key in p2.MEASURED_FIELDS},
+        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "device_identity": identity(arm),
+        "post_execution_device_identity": identity(arm),
+        "device_health": {"fatal_states": [], "observed": identity(arm)},
+        "repeats": repeats()} for n in C.LADDER_NGLS] for arm in ("B", "C")}
     selected = placement.select_matched_rung(arms)
     receipts = [{"ngl": n, "arm": arm, "raw_log": f"{arm}-{n}.log",
                  "raw_log_sha256": "b" * 64} for n in C.LADDER_NGLS for arm in ("C", "B")]
     return {"schema": p2.SCHEMA, "campaign": C.CAMPAIGN_ID, "authority": AUTH,
             "rungs": arms, "rung_receipts": receipts,
             "selected": selected, "digest": "c" * 64}
+
+
+def identity(arm):
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    ident = {k: cfg[k] for k in (
+        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
+        "subsystem_device_id", "revision", "link_width", "max_link_width",
+        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
+    ident["vulkan_icd"] = cfg["icd"]
+    ident["driver_in_use"] = cfg["kernel_driver"]
+    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
+    ident["selected_device_present"] = True
+    if arm == "B":
+        ident["gpu_uuid"] = cfg["gpu_uuid"]
+    else:
+        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
+    return ident
+
+
+def repeats(tokens=None, sha=None):
+    toks = tokens if tokens is not None else [11, 22, 33, 44, 55, 66, 77, 88]
+    return [{
+        "index": i,
+        "sane_completion": True,
+        "response_tokens": list(toks),
+        "response_raw": f"{arm_of(sha, i)}{'' if i == 0 else f'.repeat{i}'}.response.json",
+        "response_raw_sha256": sha or ("d" * 64),
+        "raw_log": f"stub{'' if i == 0 else f'.repeat{i}'}.server.log",
+        "raw_log_sha256": "e" * 64,
+        "raw_telemetry": f"stub{'' if i == 0 else f'.repeat{i}'}.telemetry.json",
+        "raw_telemetry_sha256": "f" * 64,
+        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "failure": None} for i in range(placement.RUNG_REPEATS)]
+
+
+def arm_of(sha, i):
+    return "arm"
 
 
 class FakeRunner:
@@ -58,10 +101,7 @@ class FakeRunner:
                 "process_attribution": {"server_pid": 1000 + len(self.calls),
                     "server_argv": argv, "server_env": {**env},
                     "server_exe_sha256": hashlib.sha256(Path(argv[0]).read_bytes()).hexdigest()},
-                "device_identity": {"bdf": (C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM)["bdf"],
-                    "gpu_uuid": C.REFERENCE_ARM["gpu_uuid"] if arm == "B" else None,
-                    "pci_id": C.CANDIDATE_ARM["pci_id"] if arm == "C" else None,
-                    "vulkan_device_name": "NVIDIA GeForce RTX 3060" if arm == "B" else "AMD Radeon RX 580 Series (RADV POLARIS10)"},
+                "device_identity": identity(arm),
                 "device_samples": [{"stage": stage, "residency_mib": {
                     bdf: (1 if stage == "during" else 0) for bdf in C.EXCLUDED_BY_ARM[arm]}}
                     for stage in ("before", "during", "after")],

@@ -264,6 +264,87 @@ def _selected_receipt(path: Path, authority: dict[str, Any]) -> dict[str, Any]:
                 or rung.get("arm") != arm or rung.get("ngl") != ngl
                 or row.get("verdict") != placement.judge_rung(rung)):
             raise ValueError("Phase-2 measurement not derived from raw evidence")
+        # INDEPENDENT re-derivation of determinism/health/identity from
+        # digest-bound raw artifacts (never the summary booleans):
+        #  * every retained repeat's raw response is re-read, re-hashed,
+        #    and required to equal its claimed digest, to carry exactly the
+        #    expected token count/type, and to be byte-identical across
+        #    repeats (independently computed digests equal);
+        #  * per-rung device identity and health observations must be
+        #    present and identical pre/post execution and must satisfy the
+        #    frozen subject identity predicate;
+        #  * the health artifact must carry the mandatory observed fields.
+        repeats = row.get("repeats")
+        if not isinstance(repeats, list) or len(repeats) != place_producer.RUNG_REPEATS:
+            raise ValueError("Phase-2 rung lacks the bounded repeat evidence")
+        repeat_digests: list[str] = []
+        for rep in repeats:
+            rep_rel = rep.get("response_raw")
+            if not isinstance(rep_rel, str) or Path(rep_rel).name != rep_rel:
+                raise ValueError("Phase-2 repeat raw response path invalid")
+            rep_path = path.parent / rep_rel
+            if rep_path.is_symlink() or not rep_path.is_file():
+                raise ValueError("Phase-2 repeat raw response missing/aliased")
+            rep_bytes = rep_path.read_bytes()
+            if hashlib.sha256(rep_bytes).hexdigest() != rep.get("response_raw_sha256"):
+                raise ValueError("Phase-2 repeat raw response digest mismatch")
+            sane, tokens = place_producer._sane_completion(rep_bytes)
+            # Summary-vs-raw CONSISTENCY: the retained summary booleans must
+            # match what the digest-bound raw response actually shows. A
+            # legitimately-failed/nondeterministic rung is simply invalid
+            # (judge_rung records the problem and selection falls back); a
+            # FORGED summary that disagrees with the raw evidence is a hard
+            # integrity failure and stops the campaign.
+            if sane != (rep.get("sane_completion") is True) or tokens != rep.get("response_tokens"):
+                raise ValueError(
+                    "Phase-2 repeat sane-completion summary differs from "
+                    "the retained raw response")
+            rep_log_rel = rep.get("raw_log")
+            if not isinstance(rep_log_rel, str) or Path(rep_log_rel).name != rep_log_rel:
+                raise ValueError("Phase-2 repeat raw log path invalid")
+            rep_log = path.parent / rep_log_rel
+            if rep_log.is_symlink() or not rep_log.is_file():
+                raise ValueError("Phase-2 repeat raw log missing/aliased")
+            if hashlib.sha256(rep_log.read_bytes()).hexdigest() != rep.get("raw_log_sha256"):
+                raise ValueError("Phase-2 repeat raw log digest mismatch")
+            rep_tel_rel = rep.get("raw_telemetry")
+            if not isinstance(rep_tel_rel, str) or Path(rep_tel_rel).name != rep_tel_rel:
+                raise ValueError("Phase-2 repeat raw telemetry path invalid")
+            rep_tel = path.parent / rep_tel_rel
+            if rep_tel.is_symlink() or not rep_tel.is_file():
+                raise ValueError("Phase-2 repeat raw telemetry missing/aliased")
+            if hashlib.sha256(rep_tel.read_bytes()).hexdigest() != rep.get("raw_telemetry_sha256"):
+                raise ValueError("Phase-2 repeat raw telemetry digest mismatch")
+            repeat_digests.append(hashlib.sha256(rep_bytes).hexdigest())
+        if len(set(repeat_digests)) != 1:
+            raise ValueError(
+                "Phase-2 retained repeats are not byte-identical — "
+                "determinism does not hold at this rung")
+        if rung.get("repeats") != repeats:
+            raise ValueError("Phase-2 rung repeat evidence differs from receipts")
+        for identity_field in ("device_identity", "post_execution_device_identity"):
+            observed = row.get(identity_field)
+            if not isinstance(observed, dict) or not observed:
+                raise ValueError(f"Phase-2 {identity_field} observation missing")
+            problems = census.identity_problems(arm, observed)
+            if problems:
+                raise ValueError(
+                    f"Phase-2 {identity_field} frozen-subject drift: {problems}")
+        if row.get("device_identity") != rung.get("device_identity") or \
+                row.get("post_execution_device_identity") != rung.get("post_execution_device_identity"):
+            raise ValueError("Phase-2 rung identity differs from receipt observation")
+        health = row.get("device_health")
+        if not isinstance(health, dict) or health != rung.get("device_health"):
+            raise ValueError("Phase-2 device-health artifact missing or divergent")
+        observed_health = health.get("observed")
+        if not isinstance(observed_health, dict) or not {
+                "selected_device_present", "driver_in_use", "vulkan_icd",
+                "bdf"}.issubset(observed_health):
+            raise ValueError("Phase-2 device health lacks mandatory evidence")
+        if health.get("fatal_states"):
+            raise ValueError(
+                f"Phase-2 fatal device/driver health state at {arm} ngl={ngl}: "
+                f"{health['fatal_states']}")
         by_arm[arm].append(rung)
     selected = placement.select_matched_rung(by_arm)
     if (doc.get("selected") != selected or selected.get("placement_blocked")

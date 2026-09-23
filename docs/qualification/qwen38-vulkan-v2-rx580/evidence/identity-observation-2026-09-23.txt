@@ -1,0 +1,35 @@
+=== 0000:02:00.0
+vendor=0x1002
+device=0x67df
+subsystem_vendor=0x1da2
+subsystem_device=0xe353
+revision=0xe7
+current_link_width=8
+current_link_speed=8.0 GT/s PCIe
+max_link_width=16
+max_link_speed=8.0 GT/s PCIe
+driver=amdgpu
+=== 0000:03:00.0
+vendor=0x10de
+device=0x2504
+subsystem_vendor=0x1458
+subsystem_device=0x4074
+revision=0xa1
+current_link_width=16
+current_link_speed=2.5 GT/s PCIe
+max_link_width=16
+max_link_speed=16.0 GT/s PCIe
+driver=nvidia
+===LSPCI_SUB
+	Subsystem: Sapphire Technology Limited Radeon RX 570 Pulse 4GB
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+		LnkSta:	Speed 8GT/s, Width x8 (downgraded)
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkSta2: Current De-emphasis Level: -6dB, EqualizationComplete+ EqualizationPhase1+
+===NV
+GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 00000000:03:00.0
+===RADV
+	apiVersion         = 1.4.305
+	deviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)
+	driverInfo         = Mesa 25.0.7-2+deb13u1
+	deviceUUID         = 00000000-0200-0000-0000-000000000000

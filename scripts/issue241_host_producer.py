@@ -260,7 +260,10 @@ def collect_census(root: Path, runner: Any,
             if len(matches) != 1:
                 raise ProducerError(f"Vulkan physical device/ICD ambiguous or absent for {gpu['bdf']}")
             gpu.update(vulkan_icd=matches[0][0], vulkan_device_name=matches[0][1].get("deviceName"),
-                       vulkan_device_uuid=matches[0][1].get("deviceUUID"))
+                       vulkan_device_uuid=matches[0][1].get("deviceUUID"),
+                       vulkan_api_version=matches[0][1].get("apiVersion"),
+                       vulkan_driver_name=matches[0][1].get("driverName"),
+                       vulkan_driver_info=matches[0][1].get("driverInfo"))
         cpus = json.loads(cpuinfo)
         mem_total = json.loads(meminfo)["mem_total_kib"]
         memory_state = json.loads(memory_state_text)

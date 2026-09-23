@@ -18,6 +18,50 @@ from scripts import issue241_dispatch as dispatch
 REPO = Path(__file__).resolve().parents[1]
 
 
+def fake_identity(arm):
+    """Identity observation satisfying the frozen predicate (test double)."""
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    ident = {k: cfg[k] for k in (
+        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
+        "subsystem_device_id", "revision", "link_width", "max_link_width",
+        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
+    ident["vulkan_icd"] = cfg["icd"]
+    ident["driver_in_use"] = cfg["kernel_driver"]
+    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
+    ident["selected_device_present"] = True
+    if arm == "B":
+        ident["gpu_uuid"] = cfg["gpu_uuid"]
+    else:
+        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
+    return ident
+
+
+def telemetry_stub():
+    return {"pid": 1234, "proc_status": ["VmRSS: 100 kB"],
+            "proc_io": ["read_bytes: 1"],
+            "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
+            "process_measurements": {key: 1 for key in place_producer.MEASURED_FIELDS},
+            "gpu_telemetry": {"source": "fake-runner", "samples": [{"raw": "sampled"}]},
+            "excluded_device_residency_mib": {},
+            "http_status": 200, "returncode": 0}
+
+
+def valid_repeats(response_tokens=None, sha=None):
+    tokens = response_tokens if response_tokens is not None else [11, 22, 33, 44, 55, 66, 77, 88]
+    return [{
+        "index": i,
+        "sane_completion": True,
+        "response_tokens": list(tokens),
+        "response_raw": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.response.json",
+        "response_raw_sha256": sha or ("d" * 64),
+        "raw_log": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.server.log",
+        "raw_log_sha256": "e" * 64,
+        "raw_telemetry": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.telemetry.json",
+        "raw_telemetry_sha256": "f" * 64,
+        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "failure": None} for i in range(place_producer.RUNG_REPEATS)]
+
+
 class PhysicalProducerControls(unittest.TestCase):
     def test_no_ambient_dispatch_authority(self):
         self.assertFalse(hasattr(physical, "_pending_authority"))
@@ -197,26 +241,68 @@ class PhaseLinkageControls(unittest.TestCase):
                        "Vulkan0 model buffer size = 393.43 MiB\n").encode()
                 name = f"{arm}-ngl{ngl}.server.log"
                 (self.root / name).write_bytes(raw)
-                rung = {"schema": placement.RUNG_SCHEMA, "arm": arm,
-                        "ngl": ngl, "loaded": True,
-                        "placement": placement.parse_placement(raw.decode()),
-                        "excluded_device_residency_mib": {
-                            bdf: 0 for bdf in C.EXCLUDED_BY_ARM[arm]}}
-                by_arm[arm].append(rung)
+                identity = fake_identity(arm)
+                health = {"fatal_states": [], "observed": dict(identity)}
                 telemetry = {"pid": 1234, "proc_status": ["VmRSS: 100 kB"],
                              "proc_io": ["read_bytes: 1"],
                              "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
                              "process_measurements": {key: 1 for key in place_producer.MEASURED_FIELDS},
                              "gpu_telemetry": {"source": "fake-runner", "samples": [{"raw": "sampled"}]},
-                             "excluded_device_residency_mib": rung["excluded_device_residency_mib"],
+                             "excluded_device_residency_mib": {
+                                 bdf: 0 for bdf in C.EXCLUDED_BY_ARM[arm]},
                              "http_status": 200, "returncode": 0}
                 telemetry_name = f"{arm}-ngl{ngl}.telemetry.json"
-                response_name = f"{arm}-ngl{ngl}.response.json"
-                response_raw = json.dumps({"timings": {"prompt_ms": 12.0,
-                                                         "predicted_ms": 34.0}}).encode()
-                (self.root / response_name).write_bytes(response_raw)
                 telemetry_raw = (json.dumps(telemetry, sort_keys=True) + "\n").encode()
                 (self.root / telemetry_name).write_bytes(telemetry_raw)
+                response_name = f"{arm}-ngl{ngl}.response.json"
+                response_raw = json.dumps({"timings": {"prompt_ms": 12.0,
+                                                      "predicted_ms": 34.0},
+                                           "tokens": [11, 22, 33, 44, 55, 66, 77, 88]}).encode()
+                (self.root / response_name).write_bytes(response_raw)
+                repeats = []
+                for repeat_index in range(place_producer.RUNG_REPEATS):
+                    suffix = "" if repeat_index == 0 else f".repeat{repeat_index}"
+                    if suffix:
+                        rep_log_name = f"{arm}-ngl{ngl}{suffix}.server.log"
+                        rep_tel_name = f"{arm}-ngl{ngl}{suffix}.telemetry.json"
+                        (self.root / rep_log_name).write_bytes(raw)
+                        (self.root / rep_tel_name).write_bytes(
+                            (json.dumps(telemetry_stub(), sort_keys=True) + "\n").encode())
+                        rep_log_sha = hashlib.sha256(raw).hexdigest()
+                        rep_tel_sha = hashlib.sha256(
+                            (self.root / rep_tel_name).read_bytes()).hexdigest()
+                    else:
+                        rep_log_name = name
+                        rep_tel_name = telemetry_name
+                        rep_log_sha = hashlib.sha256(raw).hexdigest()
+                        rep_tel_sha = hashlib.sha256(telemetry_raw).hexdigest()
+                    repeats.append({
+                        "index": repeat_index,
+                        "sane_completion": True,
+                        "response_tokens": [11, 22, 33, 44, 55, 66, 77, 88],
+                        "response_raw": response_name if not suffix else f"{arm}-ngl{ngl}{suffix}.response.json",
+                        "response_raw_sha256": hashlib.sha256(response_raw).hexdigest(),
+                        "raw_log": rep_log_name,
+                        "raw_log_sha256": rep_log_sha,
+                        "raw_telemetry": rep_tel_name,
+                        "raw_telemetry_sha256": rep_tel_sha,
+                        "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
+                        "failure": None})
+                    if suffix:
+                        rep_resp_name = f"{arm}-ngl{ngl}{suffix}.response.json"
+                        (self.root / rep_resp_name).write_bytes(response_raw)
+                rung = {"schema": placement.RUNG_SCHEMA, "arm": arm,
+                        "ngl": ngl, "loaded": True,
+                        "placement": placement.parse_placement(raw.decode()),
+                        "excluded_device_residency_mib": {
+                            bdf: 0 for bdf in C.EXCLUDED_BY_ARM[arm]},
+                        "process_measurements": {key: 1 for key in place_producer.MEASURED_FIELDS},
+                        "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
+                        "device_identity": identity,
+                        "post_execution_device_identity": fake_identity(arm),
+                        "device_health": health,
+                        "repeats": repeats}
+                by_arm[arm].append(rung)
                 self.rows.append({"arm": arm, "ngl": ngl, "raw_log": name,
                                   "raw_log_sha256": hashlib.sha256(raw).hexdigest(),
                                   "raw_telemetry": telemetry_name,
@@ -224,6 +310,10 @@ class PhaseLinkageControls(unittest.TestCase):
                                   "raw_response": response_name,
                                   "raw_response_sha256": hashlib.sha256(response_raw).hexdigest(),
                                   "process": telemetry,
+                                  "repeats": repeats,
+                                  "device_identity": identity,
+                                  "post_execution_device_identity": rung["post_execution_device_identity"],
+                                  "device_health": health,
                                   "verdict": placement.judge_rung(rung)})
         self.doc = {"schema": place_producer.SCHEMA,
                     "campaign": C.CAMPAIGN_ID, "authority": self.authority,
@@ -241,7 +331,13 @@ class PhaseLinkageControls(unittest.TestCase):
         rung = {"schema": placement.RUNG_SCHEMA, "arm": "C", "ngl": 4,
                 "loaded": True, "placement": parsed,
                 "excluded_device_residency_mib": {
-                    bdf: 0 for bdf in C.EXCLUDED_BY_ARM["C"]}}
+                    bdf: 0 for bdf in C.EXCLUDED_BY_ARM["C"]},
+                "process_measurements": {key: 1 for key in place_producer.MEASURED_FIELDS},
+                "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
+                "device_identity": fake_identity("C"),
+                "post_execution_device_identity": fake_identity("C"),
+                "device_health": {"fatal_states": [], "observed": fake_identity("C")},
+                "repeats": valid_repeats()}
         self.assertTrue(placement.judge_rung(rung)["valid"])
 
     def test_largest_common_rung_derived_from_measured_both_arms(self):

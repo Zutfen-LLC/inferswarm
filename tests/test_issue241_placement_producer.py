@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import mock
 
 from scripts import issue241_constants as C
+from scripts import issue241_census as census
 from scripts import issue241_dispatch as dispatch
 from scripts import issue241_physical as physical
 from scripts import issue241_placement_producer as producer
@@ -21,6 +22,24 @@ def authority():
             "dispatch_phrase": dispatch.DISPATCH_PHRASE}
 
 
+def fake_identity(arm):
+    """Identity observation satisfying the frozen predicate."""
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    ident = {k: cfg[k] for k in (
+        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
+        "subsystem_device_id", "revision", "link_width", "max_link_width",
+        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
+    ident["vulkan_icd"] = cfg["icd"]
+    ident["driver_in_use"] = cfg["kernel_driver"]
+    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
+    ident["selected_device_present"] = True
+    if arm == "B":
+        ident["gpu_uuid"] = cfg["gpu_uuid"]
+    else:
+        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
+    return ident
+
+
 class PlacementProducerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -29,9 +48,11 @@ class PlacementProducerTests(unittest.TestCase):
 
     def measured(self, arm, ngl):
         bdf = next(iter(C.EXCLUDED_BY_ARM[arm]))
+        tokens = [11, 22, 33, 44, 55, 66, 77, 88]
         return {"pid": 100 + ngl, "returncode": 0, "http_status": 200,
                 "response_raw": json.dumps({"timings": {"prompt_ms": 12.0,
-                                                          "predicted_ms": 34.0}}).encode(),
+                                                        "predicted_ms": 34.0},
+                                            "tokens": tokens}).encode(),
                 "request_timings": {"prompt_ms": 12.0, "decode_ms": 34.0},
                 "proc_status": ["VmRSS: 400 kB\nRssFile: 150 kB\nRssAnon: 200 kB\nVmSwap: 3 kB"],
                 "proc_io": ["read_bytes: 1024\nrchar: 2048"],
@@ -58,9 +79,11 @@ class PlacementProducerTests(unittest.TestCase):
         events = []
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("/srv/fake-server"), authority(),
-            runner=self.fake(events), revalidate_authority=lambda a: a)
+            runner=self.fake(events), revalidate_authority=lambda a: a,
+            identity_observer=fake_identity)
         self.assertEqual([(arm, ngl) for arm, ngl, _ in events],
-                         [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")])
+                         [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")
+                          for _ in range(producer.RUNG_REPEATS)])
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-1])
         for row in receipt["rung_receipts"]:
             self.assertEqual(set(receipt["rungs"][row["arm"]][C.LADDER_NGLS.index(row["ngl"])][
@@ -77,7 +100,7 @@ class PlacementProducerTests(unittest.TestCase):
     def test_excluded_residency_over_noise_invalidates_rung(self):
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=self.fake([], excluded=9),
-            revalidate_authority=lambda a: a)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
         self.assertTrue(receipt["selected"]["placement_blocked"])
         self.assertIsNone(receipt["selected"]["matched_ngl"])
 
@@ -96,9 +119,10 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
         self.assertEqual([(arm, ngl) for arm, ngl, _ in events],
-                         [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")])
+                         [(arm, ngl) for ngl in C.LADDER_NGLS for arm in ("C", "B")
+                          for _ in range(producer.RUNG_REPEATS)])
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-3])
         for row in receipt["rung_receipts"]:
             if (row["arm"], row["ngl"]) in failures:
@@ -123,8 +147,8 @@ class PlacementProducerTests(unittest.TestCase):
             return self.fake(events)(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a)
-        self.assertEqual(len(events), len(C.LADDER_NGLS) * 2)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+        self.assertEqual(len(events), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         row = next(r for r in receipt["rung_receipts"] if r["arm"] == "C" and r["ngl"] == C.LADDER_NGLS[-1])
         self.assertEqual(row["process"]["process_measurements"], {})
@@ -148,8 +172,8 @@ class PlacementProducerTests(unittest.TestCase):
             return self.fake(events)(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a)
-        self.assertEqual(len(events), len(C.LADDER_NGLS) * 2)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
+        self.assertEqual(len(events), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         self.assertIsNone(receipt["rung_receipts"][-2]["process"]["pid"])
 
@@ -162,7 +186,7 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
         self.assertEqual(receipt["selected"]["matched_ngl"], C.LADDER_NGLS[-2])
         self.assertFalse(receipt["rungs"]["B"][-1]["loaded"])
         with mock.patch.object(physical, "_head", return_value="a" * 40):
@@ -179,7 +203,7 @@ class PlacementProducerTests(unittest.TestCase):
             return result
         receipt = producer.run_phase2_producer(
             ROOT, self.root, Path("fake"), authority(), runner=runner,
-            revalidate_authority=lambda a: a)
+            revalidate_authority=lambda a: a, identity_observer=fake_identity)
         self.assertFalse(receipt["rungs"]["C"][0]["loaded"])
         self.assertEqual(receipt["rung_receipts"][0]["raw_log_sha256"], hashlib.sha256(b"").hexdigest())
         with tempfile.TemporaryDirectory() as other:
@@ -188,7 +212,7 @@ class PlacementProducerTests(unittest.TestCase):
                 raise KeyError("unexpected fake runner defect")
             with self.assertRaisesRegex(KeyError, "unexpected fake runner defect"):
                 producer.run_phase2_producer(ROOT, Path(other), Path("fake"), authority(),
-                    runner=broken, revalidate_authority=lambda a: a)
+                    runner=broken, revalidate_authority=lambda a: a, identity_observer=fake_identity)
             self.assertFalse((Path(other) / "phase2-placement-receipt.json").exists())
 
     def test_missing_excluded_and_process_measurements_fail_closed(self):
@@ -203,7 +227,8 @@ class PlacementProducerTests(unittest.TestCase):
                     return original
                 with self.assertRaisesRegex(ValueError, "excluded|measurement|fault"):
                     producer.run_phase2_producer(ROOT, Path(d), Path("fake"), authority(),
-                        runner=runner, revalidate_authority=lambda a: a)
+                        runner=runner, revalidate_authority=lambda a: a,
+            identity_observer=fake_identity)
 
     def test_authority_revalidated_before_each_arm_and_drift_stops(self):
         events = []
@@ -226,7 +251,8 @@ class PlacementProducerTests(unittest.TestCase):
                 called = []
                 with self.assertRaisesRegex((ValueError, RuntimeError), "authority|dispatch"):
                     producer.run_phase2_producer(ROOT, self.root, Path("fake"), auth,
-                        runner=self.fake(called), revalidate_authority=check)
+                        runner=self.fake(called), revalidate_authority=check,
+                        identity_observer=fake_identity)
                 self.assertEqual(called, [])
 
     def test_missing_raw_log_and_synthetic_measurement_rejected(self):
@@ -234,14 +260,14 @@ class PlacementProducerTests(unittest.TestCase):
             return {**self.measured("C", 1), "synthetic": True}
         with self.assertRaisesRegex(ValueError, "synthetic|log"):
             producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
-                runner=no_log, revalidate_authority=lambda a: a)
+                runner=no_log, revalidate_authority=lambda a: a, identity_observer=fake_identity)
 
     def test_receipt_is_no_clobber_and_no_partial_summary(self):
         target = self.root / "phase2-placement-receipt.json"
         target.write_text("prior")
         with self.assertRaisesRegex(ValueError, "overwrite|exists|receipt"):
             producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
-                runner=self.fake([]), revalidate_authority=lambda a: a)
+                runner=self.fake([]), revalidate_authority=lambda a: a, identity_observer=fake_identity)
         self.assertEqual(target.read_text(), "prior")
 
     def test_runner_receives_hash_verified_historical_prompt_not_generic_text(self):
@@ -250,9 +276,10 @@ class PlacementProducerTests(unittest.TestCase):
             seen.append(prompt_tokens)
             return self.fake([])(argv, arm=arm, ngl=ngl, log_path=log_path, **kwargs)
         producer.run_phase2_producer(ROOT, self.root, Path("fake"), authority(),
-            runner=runner, revalidate_authority=lambda a: a)
+            runner=runner, revalidate_authority=lambda a: a,
+            identity_observer=fake_identity)
         fixture = C.load_fixtures(ROOT)["case-256"]["prompt_token_ids"]
-        self.assertEqual(len(seen), len(C.LADDER_NGLS) * 2)
+        self.assertEqual(len(seen), len(C.LADDER_NGLS) * 2 * producer.RUNG_REPEATS)
         self.assertTrue(all(tokens == fixture for tokens in seen))
 
     def test_residency_uses_measured_device_bdf_and_fails_when_missing(self):

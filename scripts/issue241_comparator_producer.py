@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue241_comparator as comparator
 import issue241_constants as C
+import issue241_census as census_mod
 import issue241_dispatch as dispatch
 import issue241_placement as placement
 import issue241_placement_producer as phase2_producer
@@ -66,6 +67,10 @@ def _device_identity(arm: str, env: dict[str, str]) -> dict[str, Any]:
         raise ValueError("ICD must expose exactly one named Vulkan GPU")
     gpu = gpus[0]
     result = {"bdf": bdf, "vulkan_device_name": gpu["deviceName"],
+              "vulkan_device_uuid": gpu.get("deviceUUID"),
+              "vulkan_api_version": gpu.get("apiVersion"),
+              "vulkan_driver_name": gpu.get("driverName"),
+              "vulkan_driver_info": gpu.get("driverInfo"),
               "vulkan_summary": text}
     if arm == "B":
         nv = _nvidia()
@@ -78,7 +83,7 @@ def _device_identity(arm: str, env: dict[str, str]) -> dict[str, Any]:
             raise ValueError("RADV deviceUUID absent or malformed")
         mapped = _bdf(f"{uuid[:8]}:{uuid[8:10]}:{uuid[10:12]}.{int(uuid[12:14],16)&7}")
         if mapped != bdf: raise ValueError("RADV UUID does not map to selected BDF")
-        result.update(pci_id=amd["pci_id"], vulkan_device_uuid=gpu["deviceUUID"])
+        result.update(pci_id=amd["pci_id"])
     return result
 
 def _device_sample(arm: str, stage: str) -> dict[str, Any]:
@@ -263,6 +268,12 @@ def run_phase3_producer(repo_root: Path, out_root: Path, server: Path,
         name = identity.get("vulkan_device_name")
         if (arm == "B" and name != "NVIDIA GeForce RTX 3060") or (arm == "C" and (not isinstance(name, str) or "RADV POLARIS10" not in name)):
             raise ValueError(f"{tag}: Vulkan device identity mismatch")
+        # Full frozen-subject identity carried through acceptance-bearing
+        # execution: subsystem/revision/link/driver/ICD/Vulkan-UUID drift
+        # fails closed here too (same predicate as census/Phase-2).
+        identity_drift = census_mod.identity_problems(arm, identity)
+        if identity_drift:
+            raise ValueError(f"{tag}: frozen subject identity drift: {identity_drift}")
         samples = result.get("device_samples")
         if not isinstance(samples, list) or not {"before", "during", "after"}.issubset({s.get("stage") for s in samples if isinstance(s, dict)}):
             raise ValueError(f"{tag}: before/during/after device samples required")
@@ -357,7 +368,12 @@ def run_phase3_producer(repo_root: Path, out_root: Path, server: Path,
         return {"schema":comparator.RUN_SCHEMA,"campaign":C.CAMPAIGN_ID,"comparator_id":C.COMPARATOR_V2_ID,
             "case_id":case,"host":cfg["host"],"arm":arm,"selector":cfg["selector"],"icd":cfg["icd"],
             "cuda_visible_devices":"-1","bdf":runrec["device_identity"]["bdf"],"gpu_uuid":runrec["device_identity"].get("gpu_uuid"),"pci_id":runrec["device_identity"].get("pci_id"),
-            "vulkan_device_name":runrec["device_identity"]["vulkan_device_name"],"ngl":ngl,"fixture_ladder_sha256":C.FIXTURE_LADDER_SHA256,
+            "vulkan_device_name":runrec["device_identity"]["vulkan_device_name"],
+            "subject_identity":{k:runrec["device_identity"].get(k) for k in (
+                "vendor_id","device_id","subsystem_vendor_id","subsystem_device_id",
+                "revision","link_width","max_link_width","max_link_speed",
+                "driver_in_use","vulkan_device_uuid","gpu_uuid","pci_id")},
+            "ngl":ngl,"fixture_ladder_sha256":C.FIXTURE_LADDER_SHA256,
             "prompt_token_ids":fixtures[case]["prompt_token_ids"],"prompt_len":fixtures[case]["rendered_length"],
             "prompt_text_sha256":_sha(fixtures[case]["prompt_text"].encode()),"model_members":model_hashes,
             "llama_cpp_pin":C.LLAMA_CPP_PIN,"patched_source_sha256":C.OBSERVER_PATCHED_SOURCE_SHA256,

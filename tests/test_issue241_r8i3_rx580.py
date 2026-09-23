@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import inspect
 import json
 import os
 import struct
@@ -65,22 +66,39 @@ def make_census(**overrides) -> dict:
         "gpus": [
             {
                 "bdf": C.REFERENCE_ARM["bdf"],
-                "vendor_id": "10de", "device_id": "2504",
+                "vendor_id": C.REFERENCE_ARM["vendor_id"],
+                "device_id": C.REFERENCE_ARM["device_id"],
+                "pci_id": C.REFERENCE_ARM["pci_id"],
+                "subsystem_vendor_id": C.REFERENCE_ARM["subsystem_vendor_id"],
+                "subsystem_device_id": C.REFERENCE_ARM["subsystem_device_id"],
+                "revision": C.REFERENCE_ARM["revision"],
+                "link_width": C.REFERENCE_ARM["link_width"],
+                "max_link_width": C.REFERENCE_ARM["max_link_width"],
+                "max_link_speed": C.REFERENCE_ARM["max_link_speed"],
+                "link_speed": "2.5 GT/s",  # observed, never frozen
                 "driver_in_use": "nvidia",
                 "gpu_uuid": C.REFERENCE_ARM["gpu_uuid"],
                 "vulkan_icd": C.REFERENCE_ARM["icd"],
-                "vulkan_device_name": "NVIDIA GeForce RTX 3060",
-                "link_width": "x16",
+                "vulkan_device_name": C.REFERENCE_ARM["vulkan_device_name"],
+                "vulkan_device_uuid": C.REFERENCE_ARM["vulkan_device_uuid"],
             },
             {
                 "bdf": C.CANDIDATE_ARM["bdf"],
-                "vendor_id": "1002", "device_id": "67df",
-                "pci_id": "1002:67df",
+                "vendor_id": C.CANDIDATE_ARM["vendor_id"],
+                "device_id": C.CANDIDATE_ARM["device_id"],
+                "pci_id": C.CANDIDATE_ARM["pci_id"],
+                "subsystem_vendor_id": C.CANDIDATE_ARM["subsystem_vendor_id"],
+                "subsystem_device_id": C.CANDIDATE_ARM["subsystem_device_id"],
+                "revision": C.CANDIDATE_ARM["revision"],
+                "link_width": C.CANDIDATE_ARM["link_width"],
+                "max_link_width": C.CANDIDATE_ARM["max_link_width"],
+                "max_link_speed": C.CANDIDATE_ARM["max_link_speed"],
+                "link_speed": "8.0 GT/s",  # observed, never frozen
                 "driver_in_use": "amdgpu",
                 "vram_mib": 8192,
                 "vulkan_icd": C.CANDIDATE_ARM["icd"],
-                "vulkan_device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
-                "link_width": "x16",
+                "vulkan_device_name": C.CANDIDATE_ARM["vulkan_device_name"],
+                "vulkan_device_uuid": C.CANDIDATE_ARM["vulkan_device_uuid"],
             },
         ],
         "model_backing": {
@@ -91,6 +109,46 @@ def make_census(**overrides) -> dict:
     }
     doc.update(overrides)
     return doc
+
+
+def valid_device_identity(arm: str) -> dict:
+    """A rung/health identity observation satisfying the frozen predicate."""
+    cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    ident = {k: cfg[k] for k in (
+        "bdf", "vendor_id", "device_id", "pci_id", "subsystem_vendor_id",
+        "subsystem_device_id", "revision", "link_width", "max_link_width",
+        "max_link_speed", "vulkan_device_name", "vulkan_device_uuid")}
+    ident["vulkan_icd"] = cfg["icd"]
+    ident["driver_in_use"] = cfg["kernel_driver"]
+    ident["link_speed"] = "2.5 GT/s" if arm == "B" else "8.0 GT/s"
+    ident["selected_device_present"] = True
+    if arm == "B":
+        ident["gpu_uuid"] = cfg["gpu_uuid"]
+    else:
+        ident["vram_mib"] = C.CANDIDATE_VRAM_CENSUS_MIB
+    return ident
+
+
+def valid_device_health(arm: str) -> dict:
+    return {"fatal_states": [], "observed": dict(valid_device_identity(arm))}
+
+
+def valid_repeats(response_tokens: list[int] | None = None,
+                  sha: str | None = None) -> list[dict]:
+    tokens = response_tokens if response_tokens is not None else list(WINNERS)
+    return [{
+        "index": i,
+        "sane_completion": True,
+        "response_tokens": list(tokens),
+        "response_raw": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.response.json",
+        "response_raw_sha256": sha or ("d" * 64),
+        "raw_log": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.server.log",
+        "raw_log_sha256": "e" * 64,
+        "raw_telemetry": f"arm-ngl1{'' if i == 0 else f'.repeat{i}'}.telemetry.json",
+        "raw_telemetry_sha256": "f" * 64,
+        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "failure": None,
+    } for i in range(placement.RUNG_REPEATS)]
 
 
 def make_rung(arm: str, ngl: int, **overrides) -> dict:
@@ -111,6 +169,14 @@ def make_rung(arm: str, ngl: int, **overrides) -> dict:
         "excluded_device_residency_mib": {
             bdf: 1 for bdf in C.EXCLUDED_BY_ARM[arm]
         },
+        "process_measurements": {
+            "rss_file_kib": 1, "rss_anon_kib": 1, "swap_kib": 0,
+            "physical_read_bytes": 1, "major_faults": 1},
+        "request_timings": {"prompt_ms": 1.0, "decode_ms": 2.0},
+        "device_identity": valid_device_identity(arm),
+        "post_execution_device_identity": valid_device_identity(arm),
+        "device_health": valid_device_health(arm),
+        "repeats": valid_repeats(),
     }
     doc.update(overrides)
     return doc
@@ -186,9 +252,17 @@ def make_run_receipt(arm: str, case_id: str = "case-256",
         "cuda_visible_devices": "-1",
         "bdf": authority["bdf"],
         "gpu_uuid": authority.get("gpu_uuid") if arm == "B" else None,
-        "vulkan_device_name": ("NVIDIA GeForce RTX 3060" if arm == "B"
-                               else "AMD Radeon RX 580 Series (RADV POLARIS10)"),
+        "vulkan_device_name": (C.REFERENCE_ARM["vulkan_device_name"] if arm == "B"
+                               else C.CANDIDATE_ARM["vulkan_device_name"]),
         "pci_id": authority.get("pci_id") if arm == "C" else None,
+        "subject_identity": {k: authority[k] for k in (
+            "vendor_id", "device_id", "subsystem_vendor_id",
+            "subsystem_device_id", "revision", "link_width",
+            "max_link_width", "max_link_speed", "vulkan_device_uuid")
+            if k in authority} | {
+            "driver_in_use": authority.get("kernel_driver"),
+            **({"gpu_uuid": authority["gpu_uuid"]} if arm == "B" else
+               {"pci_id": authority["pci_id"]})},
         "fixture_ladder_sha256": C.FIXTURE_LADDER_SHA256,
         "prompt_token_ids": list(fx["prompt_token_ids"]),
         "prompt_len": fx["rendered_length"],
@@ -403,6 +477,68 @@ class TestCensus(unittest.TestCase):
         with self.assertRaises(ValueError):
             census.validate_census(doc)
 
+    # --- frozen subject-identity negative controls (correction pass) ---
+
+    def _candidate_field(self, field, value):
+        doc = make_census()
+        doc["gpus"][1][field] = value
+        return doc
+
+    def test_wrong_amd_subsystem_vendor_rejected(self):
+        # A different [1002:67df] board (e.g. another vendor's RX 580) at
+        # the same BDF must not satisfy the frozen candidate identity.
+        with self.assertRaisesRegex(ValueError, "subsystem_vendor_id"):
+            census.validate_census(
+                self._candidate_field("subsystem_vendor_id", "174b"))
+
+    def test_wrong_amd_subsystem_device_rejected(self):
+        with self.assertRaisesRegex(ValueError, "subsystem_device_id"):
+            census.validate_census(
+                self._candidate_field("subsystem_device_id", "e387"))
+
+    def test_wrong_amd_revision_rejected(self):
+        with self.assertRaisesRegex(ValueError, "revision"):
+            census.validate_census(self._candidate_field("revision", "e6"))
+
+    def test_wrong_candidate_link_width_rejected(self):
+        # x16 would mean the board moved to a different slot/link: the
+        # frozen predicate is exact (x8 negotiated / x16 max), not a set.
+        with self.assertRaisesRegex(ValueError, "link_width"):
+            census.validate_census(self._candidate_field("link_width", "x16"))
+
+    def test_wrong_reference_link_width_rejected(self):
+        doc = make_census()
+        doc["gpus"][0]["link_width"] = "x8"
+        with self.assertRaisesRegex(ValueError, "link_width"):
+            census.validate_census(doc)
+
+    def test_reference_subsystem_drift_rejected(self):
+        doc = make_census()
+        doc["gpus"][0]["subsystem_device_id"] = "8a98"
+        with self.assertRaisesRegex(ValueError, "subsystem"):
+            census.validate_census(doc)
+
+    def test_reference_vulkan_uuid_drift_rejected(self):
+        doc = make_census()
+        doc["gpus"][0]["vulkan_device_uuid"] = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+        with self.assertRaisesRegex(ValueError, "vulkan_device_uuid"):
+            census.validate_census(doc)
+
+    def test_candidate_max_link_capability_drift_rejected(self):
+        with self.assertRaisesRegex(ValueError, "max_link"):
+            census.validate_census(
+                self._candidate_field("max_link_width", "x8"))
+
+    def test_candidate_driver_drift_rejected(self):
+        with self.assertRaisesRegex(ValueError, "driver"):
+            census.validate_census(
+                self._candidate_field("driver_in_use", "radeon"))
+
+    def test_candidate_icd_drift_rejected(self):
+        with self.assertRaisesRegex(ValueError, "vulkan_icd"):
+            census.validate_census(self._candidate_field(
+                "vulkan_icd", "/usr/share/vulkan/icd.d/nvidia_icd.json"))
+
 
 class TestPlacement(unittest.TestCase):
     def test_matched_rung_selection(self):
@@ -413,6 +549,154 @@ class TestPlacement(unittest.TestCase):
         verdict = placement.select_matched_rung(rungs)
         self.assertEqual(verdict["matched_ngl"], 8)
         self.assertFalse(verdict["placement_blocked"])
+
+    # --- Phase-2 determinism/health negative controls (correction pass) ---
+
+    def test_repeat_token_mismatch_rejects_rung(self):
+        rung = make_rung("C", 4)
+        rung["repeats"] = valid_repeats(response_tokens=[1] * 8)
+        rung["repeats"][1]["response_tokens"] = [2] * 8
+        rung["repeats"][1]["response_raw_sha256"] = "a" * 64
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("non-deterministic" in p for p in verdict["problems"]))
+
+    def test_missing_repeat_rejects_rung(self):
+        rung = make_rung("C", 4)
+        rung["repeats"] = valid_repeats()[:1]
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("missing repeat" in p for p in verdict["problems"]))
+
+    def test_non_eight_token_response_rejects_rung(self):
+        rung = make_rung("C", 4)
+        rung["repeats"] = valid_repeats(response_tokens=[1] * 7)
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("expected count/type" in p for p in verdict["problems"]))
+
+    def test_insane_completion_rejects_rung(self):
+        rung = make_rung("C", 4)
+        rung["repeats"] = valid_repeats()
+        rung["repeats"][0]["sane_completion"] = False
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("sane completion" in p for p in verdict["problems"]))
+
+    def test_missing_health_artifact_rejects_rung(self):
+        rung = make_rung("C", 4)
+        rung["device_health"] = None
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("health artifact" in p for p in verdict["problems"]))
+
+    def test_fatal_health_state_rejects_rung(self):
+        for state in ("selected_device_disappeared", "driver_drift",
+                      "bdf_drift", "icd_drift", "device_reset_or_error",
+                      "missing_health_evidence"):
+            with self.subTest(state=state):
+                rung = make_rung("C", 4)
+                rung["device_health"] = {
+                    "fatal_states": [state],
+                    "observed": valid_device_identity("C")}
+                verdict = placement.judge_rung(rung)
+                self.assertFalse(verdict["valid"])
+                self.assertTrue(any("fatal" in p for p in verdict["problems"]))
+
+    def test_missing_mandatory_health_evidence_rejects_rung(self):
+        rung = make_rung("C", 4)
+        observed = valid_device_identity("C")
+        del observed["driver_in_use"]
+        rung["device_health"] = {"fatal_states": [], "observed": observed}
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("mandatory health evidence" in p for p in verdict["problems"]))
+
+    def test_unknown_health_state_fails_closed(self):
+        rung = make_rung("C", 4)
+        rung["device_health"] = {"fatal_states": ["gpu_on_fire"],
+                                 "observed": valid_device_identity("C")}
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("unknown health state" in p for p in verdict["problems"]))
+
+    def test_rung_identity_drift_after_phase1_rejects_rung(self):
+        rung = make_rung("C", 4)
+        drifted = valid_device_identity("C")
+        drifted["subsystem_device_id"] = "e387"  # different [1002:67df] board
+        rung["device_identity"] = drifted
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("frozen-identity drift" in p for p in verdict["problems"]))
+
+    def test_post_execution_identity_drift_rejects_rung(self):
+        rung = make_rung("C", 4)
+        drifted = valid_device_identity("C")
+        drifted["revision"] = "e6"
+        rung["post_execution_device_identity"] = drifted
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+        self.assertTrue(any("frozen-identity drift" in p for p in verdict["problems"]))
+
+    def test_forged_health_summary_differing_from_raw_evidence_rejected(self):
+        # health.observed carries the RAW identity observation; a summary
+        # claiming no fatal drift while the observed device disappeared is
+        # mechanically impossible — _device_health derives the fatal state
+        # FROM the observation. Simulate the forged artifact directly:
+        rung = make_rung("C", 4)
+        observed = valid_device_identity("C")
+        observed["selected_device_present"] = False
+        rung["device_health"] = {"fatal_states": [], "observed": observed}
+        verdict = placement.judge_rung(rung)
+        self.assertFalse(verdict["valid"])
+
+    def test_highest_rung_fails_determinism_next_common_rung_selected(self):
+        rungs = {
+            "B": [make_rung("B", n) for n in C.LADDER_NGLS],
+            "C": [make_rung("C", n) for n in C.LADDER_NGLS],
+        }
+        # poison ngl=8 on BOTH arms with non-deterministic repeats
+        for arm in ("B", "C"):
+            bad = valid_repeats()
+            bad[1]["response_tokens"] = [99] * 8
+            bad[1]["response_raw_sha256"] = "b" * 64
+            rungs[arm][-1]["repeats"] = bad
+        verdict = placement.select_matched_rung(rungs)
+        self.assertEqual(verdict["matched_ngl"], 6)
+
+    def test_one_arm_nondeterministic_rejects_rung(self):
+        rungs = {
+            "B": [make_rung("B", n) for n in C.LADDER_NGLS],
+            "C": [make_rung("C", n) for n in C.LADDER_NGLS],
+        }
+        bad = valid_repeats()
+        bad[1]["response_tokens"] = [99] * 8
+        bad[1]["response_raw_sha256"] = "b" * 64
+        rungs["C"][-1]["repeats"] = bad
+        verdict = placement.select_matched_rung(rungs)
+        self.assertEqual(verdict["matched_ngl"], 6)
+
+    def test_agreement_fields_cannot_influence_selection(self):
+        rungs = {
+            "B": [make_rung("B", n) for n in C.LADDER_NGLS],
+            "C": [make_rung("C", n) for n in C.LADDER_NGLS],
+        }
+        # inject performance/agreement-looking fields; selection must not
+        # change (judge/select never read them)
+        for arm in ("B", "C"):
+            for rung in rungs[arm]:
+                rung["candidate_reference_agreement"] = 1.0
+                rung["performance_ms"] = 0.1
+        verdict = placement.select_matched_rung(rungs)
+        self.assertEqual(verdict["matched_ngl"], 8)
+        # the judging/selection code paths never read agreement or
+        # performance fields (source-level control)
+        for function in (placement.judge_rung, placement.select_matched_rung,
+                         placement._determinism_problems,
+                         placement._health_problems):
+            source = inspect.getsource(function)
+            self.assertNotIn('rung.get("candidate_reference_agreement")', source)
+            self.assertNotIn('rung.get("performance_ms")', source)
 
     def test_reference_must_match_candidate_placement(self):
         rungs = {

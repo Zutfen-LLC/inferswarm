@@ -53,10 +53,35 @@ mixed-vendor execution):
   (NVIDIA ICD, proprietary driver 610.57.04), `GGML_VK_VISIBLE_DEVICES=0`,
   `CUDA_VISIBLE_DEVICES=-1`.
 - Arm C (candidate): AMD Radeon RX 580 Series (RADV POLARIS10), Ellesmere
-  `[1002:67df]` rev e7 @ `00000000:02:00.0` (radeon ICD, RADV Mesa
+  `[1002:67df]` rev e7 @ `0000:02:00.0` (radeon ICD, RADV Mesa
   25.0.7-2+deb13u1, apiVersion 1.4.305, amdgpu kernel driver, 8192 MiB
   VRAM census), same selectors. RADV Polaris exposes no stable device
   UUID; the candidate is bound by BDF + PCI ID + Vulkan device name.
+
+Frozen subject-identity constants (machine-readable in
+`scripts/issue241_constants.py`, mechanically enforced by
+`scripts/issue241_census.identity_problems()`): beyond the fields above,
+the candidate is additionally bound by subsystem `1da2:e353` and exact
+negotiated/max link identity x8/x16 @ 8.0 GT/s max capability, and the
+reference by subsystem `1458:4074`, x16/x16 @ 16.0 GT/s max capability,
+and Vulkan physical-device UUID `d5c05739-96c1-7e49-89b6-bf54c2121c55`.
+Current link SPEED is an observation (power-management downtraining) and
+is never frozen; negotiated WIDTH and max capability are the frozen link
+identity. A different `[1002:67df]` board at the same BDF cannot satisfy
+the predicate on subsystem/revision alone.
+
+Authority for the frozen values: the accepted 2026-09-15 fleet inventory
+(reference subsystem/revision/max-link at the same BDF), the retained
+2026-09-23 post-swap census session outputs (UUIDs/ICDs/driver/VRAM/
+apiVersion), and one read-only sysfs/lspci/vulkaninfo observation of
+inferswarm01 taken 2026-09-23 (pre-dispatch, no GPU compute, no model
+reads) capturing the candidate's subsystem hex `1da2:e353`, revision
+`e7`, negotiated width x8 / max x16 @ 8.0 GT/s; raw observation retained
+at `evidence/identity-observation-2026-09-23.txt` (sha256
+`6119e79925c1db7ea8d3cfb828c4e99e6ab1979bd42aa053e190a88c1fcc982c`)
+and cross-checked against the retained session
+outputs before freezing. No hardware fact was invented; no campaign was
+executed to discover one.
 - Exclusion rule (sequential arms): during arm B the RX 580 must stay at
   idle/noise-floor residency; during arm C the RTX 3060 must (≤ 8 MiB
   over idle baseline in every retained placement record).

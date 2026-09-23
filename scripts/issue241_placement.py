@@ -28,10 +28,27 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import issue241_census as census
 import issue241_constants as C
 
 SCHEMA = "inferswarm.issue241.phase2-matched-placement/1"
-RUNG_SCHEMA = "inferswarm.issue241.placement-rung/1"
+RUNG_SCHEMA = "inferswarm.issue241.placement-rung/2"
+# Bounded prospectively defined repeat count per arm/rung: two executions
+# (primary + repeat) are the minimum sufficient to mechanically establish
+# byte-determinism of the retained raw response for that arm/rung under
+# the frozen return_tokens request contract; further repeats add no new
+# deterministic predicate. Frozen BEFORE any retained execution unit.
+RUNG_REPEATS = 2
+# Fatal device/driver health states (closed vocabulary; a rung carrying
+# any of these cannot be valid regardless of every other field).
+FATAL_HEALTH_STATES = (
+    "selected_device_disappeared",   # arm BDF absent from live device obs
+    "driver_drift",                  # kernel driver != frozen identity
+    "bdf_drift",                     # selected BDF changed
+    "icd_drift",                     # Vulkan ICD identity changed
+    "device_reset_or_error",         # reset/GPU-side error observed
+    "missing_health_evidence",       # no mandatory health observation
+)
 
 
 def parse_placement(log_text: str) -> dict[str, Any]:
@@ -63,6 +80,98 @@ def parse_placement(log_text: str) -> dict[str, Any]:
         "fallback_markers": len(re.findall(
             r"preferred buffer type Vulkan[0-9](?!_Host)", log_text)),
     }
+
+
+def _identity_problems(arm: str, rung: dict[str, Any]) -> list[str]:
+    """Exact frozen subject identity from the rung's per-rung device
+    telemetry observation, checked BOTH before and after execution
+    (hardware drift during Phase 2 fails closed, not just vs Phase 1)."""
+    problems: list[str] = []
+    for field in ("device_identity", "post_execution_device_identity"):
+        observed = rung.get(field) or {}
+        problems.extend(
+            f"{field}: {p}" for p in census.identity_problems(arm, observed))
+    return problems
+
+
+def _determinism_problems(rung: dict[str, Any]) -> list[str]:
+    """Mechanically frozen determinism predicate: the rung must carry the
+    prospectively bounded repeat count, each repeat's raw response must be
+    digest-bound, and every independently computed digest must be equal
+    (byte-deterministic output). C-vs-B numerical agreement is never
+    consulted here."""
+    problems: list[str] = []
+    repeats = rung.get("repeats") or []
+    if not isinstance(repeats, list) or len(repeats) != RUNG_REPEATS:
+        problems.append(
+            f"missing repeat: {len(repeats) if isinstance(repeats, list) else 0} "
+            f"repeats retained, {RUNG_REPEATS} required")
+        return problems
+    digests: list[str] = []
+    for i, rep in enumerate(repeats):
+        if not isinstance(rep, dict):
+            problems.append(f"repeat {i} malformed")
+            return problems
+        ok = rep.get("sane_completion")
+        tokens = rep.get("response_tokens")
+        if ok is not True:
+            problems.append(f"repeat {i} lacks sane completion evidence")
+        if (not isinstance(tokens, list) or len(tokens) != C.DECISIONS
+                or any(not isinstance(t, int) or isinstance(t, bool) for t in tokens)):
+            problems.append(
+                f"repeat {i} response tokens != exact expected count/type "
+                f"under the frozen return_tokens contract")
+        raw = rep.get("response_raw_sha256")
+        if not isinstance(raw, str) or len(raw) != 64:
+            problems.append(f"repeat {i} raw response digest missing")
+            continue
+        digests.append(raw)
+    if len(set(digests)) > 1:
+        problems.append(
+            "repeat token mismatch: independently retained raw responses "
+            "differ (non-deterministic output at this rung)")
+    return problems
+
+
+def _health_problems(rung: dict[str, Any]) -> list[str]:
+    """Objective device/driver health from retained observations only."""
+    problems: list[str] = []
+    health = rung.get("device_health")
+    if not isinstance(health, dict):
+        return ["missing health artifact: no device/driver health observation"]
+    states = health.get("fatal_states") or []
+    if not isinstance(states, list):
+        return ["device_health fatal_states malformed"]
+    for state in states:
+        if state in FATAL_HEALTH_STATES:
+            problems.append(f"fatal device/driver health state: {state}")
+        else:
+            problems.append(f"unknown health state {state!r}")
+    observed = health.get("observed") or {}
+    for field in ("selected_device_present", "driver_in_use",
+                  "vulkan_icd", "bdf"):
+        if field not in observed:
+            problems.append(
+                f"missing mandatory health evidence: {field}")
+    # the summary must agree with the retained RAW observation: a health
+    # artifact claiming no fatal drift while the observed device vanished
+    # or drifted is forged and fails closed here.
+    if observed.get("selected_device_present") is False:
+        problems.append(
+            "forged health summary: observed selected_device_present=false "
+            "without the corresponding fatal state")
+    arm_cfg = C.REFERENCE_ARM if rung.get("arm") == "B" else C.CANDIDATE_ARM
+    if observed.get("driver_in_use") not in (None, arm_cfg["kernel_driver"]):
+        problems.append("forged health summary: driver drift in observation")
+    if observed.get("bdf") not in (None, arm_cfg["bdf"]):
+        problems.append("forged health summary: bdf drift in observation")
+    # thermal/power values are RETAINED where available but never judged
+    # against an invented threshold (none exists in accepted authority).
+    for field in ("temperature_c", "power_draw_w"):
+        if field in observed and observed[field] is not None and not isinstance(
+                observed[field], (int, float, str)):
+            problems.append(f"health observation {field} malformed")
+    return problems
 
 
 def judge_rung(rung: dict[str, Any]) -> dict[str, Any]:
@@ -100,6 +209,19 @@ def judge_rung(rung: dict[str, Any]) -> dict[str, Any]:
         if used > C.EXCLUDED_RESIDENCY_NOISE_MIB:
             problems.append(
                 f"excluded device {bdf} residency {used} MiB over noise floor")
+    # required process/I/O counters must be present on a loaded rung
+    if rung.get("loaded"):
+        from issue241_placement_producer import MEASURED_FIELDS
+        measured = rung.get("process_measurements") or {}
+        for field in MEASURED_FIELDS:
+            if not isinstance(measured.get(field), int):
+                problems.append(f"required process counter missing: {field}")
+        if not rung.get("request_timings"):
+            problems.append("request wall/prompt/decode timings missing")
+    if arm in ("B", "C"):
+        problems.extend(_identity_problems(arm, rung))
+        problems.extend(_determinism_problems(rung))
+        problems.extend(_health_problems(rung))
     return {
         "schema": "inferswarm.issue241.rung-verdict/1",
         "arm": arm, "ngl": ngl,
