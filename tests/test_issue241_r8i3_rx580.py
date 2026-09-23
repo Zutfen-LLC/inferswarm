@@ -2,18 +2,35 @@
 """Focused CPU-only Issue #241 (R8-I3) campaign tests.
 
 Covers the mandatory negative controls and positive contracts of the
-dormant R8-I3 slice. No physical execution, no SSH, no accelerator
-queries, no holdout decrypt (no decrypt path exists in this import
-graph). Holdout content assertions use PUBLIC committed bytes only.
+dormant R8-I3 slice, INCLUDING the correction-pass controls:
+
+  * dispatch gate ordering (no physical/device/model operation is
+    reachable before live exact-head dispatch — recorded-probe call
+    lists, not prose);
+  * comparator/2 RAW-ROW BYTE-BINDING (same-size finite bytes changed
+    while the claimed receipt sha stays unchanged => FAIL; identical
+    claimed shas with different raw bytes across repeats => FAIL);
+  * row-path custody (traversal, absolute, escape, symlink, missing,
+    non-regular);
+  * reference/candidate SAME-CASE/SUBJECT/PLACEMENT/RUNTIME cross
+    binding (case, ngl, bdf, gpu identity, pci id, icd, device name,
+    binary hash, patched-source hash, model members, fixture digest,
+    request contract, meta-vs-receipt arrays).
+
+No physical execution, no SSH, no accelerator queries, no holdout
+decrypt (no decrypt path exists in this import graph). Holdout content
+assertions use PUBLIC committed bytes only.
 """
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
+import os
 import struct
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -27,6 +44,7 @@ import issue241_comparator as cmp2
 import issue241_constants as C
 import issue241_dispatch as dispatch
 import issue241_observer_patch as opatch
+import issue241_physical as physical
 import issue241_placement as placement
 import issue241_practicality as prac
 import issue241_supersession as supersession
@@ -98,28 +116,113 @@ def make_rung(arm: str, ngl: int, **overrides) -> dict:
     return doc
 
 
-def make_run_receipt(arm: str, case_id: str = "case-256",
-                     rows_digest: str | None = None) -> dict:
-    authority = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
-    winners = [11, 22, 33, 44, 55, 66, 77, 88]
+# ---------------------------------------------------------------------------
+# comparator/2 run receipts (schema /2, fully cross-bound)
+# ---------------------------------------------------------------------------
+
+WINNERS = [11, 22, 33, 44, 55, 66, 77, 88]
+VALID_SERVER_SHA = "e" * 64
+FAKE_HEAD = "f" * 40
+
+
+def dispatch_authority_receipt() -> dict:
     return {
+        "schema": dispatch.AUTHORITY_SCHEMA,
+        "repository": dispatch.REPO,
+        "issue_number": 241,
+        "pr_number": 242,
+        "head_sha": FAKE_HEAD,
+        "review_id": 55,
+        "reviewer": "maintainer",
+        "reviewer_association": "OWNER",
+        "review_commit_id": FAKE_HEAD,
+        "dispatch_phrase": dispatch.DISPATCH_PHRASE,
+    }
+
+
+def make_run_receipt(arm: str, case_id: str = "case-256",
+                     ngl: int = 1, row_value: float = 0.5,
+                     receipt_id: str = "") -> tuple:
+    """Build a valid /2 receipt + a staged-rows writer.
+
+    Returns (receipt, stage_rows(tmp)) where stage_rows writes finite
+    FP32 rows whose real sha256s populate the receipt. `receipt_id`
+    gives repeats distinct row paths (same receipt claim shape).
+    """
+    authority = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+    fixtures = C.load_fixtures(REPO)
+    if case_id in fixtures:
+        fx = fixtures[case_id]
+    else:
+        # adversarial receipts (predictive namespaces) never reach the
+        # fixture authority: synthesize a minimal prompt identity so
+        # the predictive-namespace gate is what fires
+        fx = {"prompt_token_ids": [1, 2, 3], "rendered_length": 3,
+              "prompt_text": "x", "case_id": case_id}
+
+    prefix = f"{arm}{receipt_id}"
+    def stage(tmp: Path, value: float = row_value) -> None:
+        for d in range(C.DECISIONS):
+            raw = struct.pack(f"<{C.N_VOCAB}f", *([value] * C.N_VOCAB))
+            (tmp / f"{prefix}-{d}.f32").write_bytes(raw)
+
+    rows = {}
+    for d in range(C.DECISIONS):
+        raw = struct.pack(f"<{C.N_VOCAB}f", *([row_value] * C.N_VOCAB))
+        rows[str(d)] = {
+            "path": f"{prefix}-{d}.f32", "bytes": C.ROW_BYTES,
+            "sha256": sha256_bytes(raw),
+        }
+    receipt = {
         "schema": cmp2.RUN_SCHEMA,
-        "campaign": C.CAMPAIGN_ID, "arm": arm,
-        "host": "inferswarm01", "case_id": case_id,
+        "campaign": C.CAMPAIGN_ID,
+        "comparator_id": C.COMPARATOR_V2_ID,
+        "arm": arm,
+        "host": "inferswarm01",
+        "case_id": case_id,
+        "ngl": ngl,
         "selector": dict(authority["selector"]),
         "icd": authority["icd"],
         "cuda_visible_devices": "-1",
-        "sampled_winners": list(winners),
-        "forced_tokens": list(winners) if arm == "C" else [],
-        "meta_rows": [{"pos": d, "forced_token": (winners[d] if arm == "C" else -1)}
-                      for d in range(8)],
-        "rows": {
-            str(d): {"path": f"{arm}-{d}.f32", "bytes": C.ROW_BYTES,
-                     "sha256": rows_digest or sha256_bytes(struct.pack(
-                         f"<{C.N_VOCAB}f", *([0.5] * C.N_VOCAB)))}
-            for d in range(8)
+        "bdf": authority["bdf"],
+        "gpu_uuid": authority.get("gpu_uuid") if arm == "B" else None,
+        "vulkan_device_name": ("NVIDIA GeForce RTX 3060" if arm == "B"
+                               else "AMD Radeon RX 580 Series (RADV POLARIS10)"),
+        "pci_id": authority.get("pci_id") if arm == "C" else None,
+        "fixture_ladder_sha256": C.FIXTURE_LADDER_SHA256,
+        "prompt_token_ids": list(fx["prompt_token_ids"]),
+        "prompt_len": fx["rendered_length"],
+        "prompt_text_sha256": sha256_bytes(fx["prompt_text"].encode()),
+        "model_members": dict(C.MODEL_MEMBER_SHA256),
+        "llama_cpp_pin": C.LLAMA_CPP_PIN,
+        "patched_source_sha256": C.OBSERVER_PATCHED_SOURCE_SHA256,
+        "server_sha256": VALID_SERVER_SHA,
+        "build_flags": list(C.OBSERVER_BUILD_FLAGS),
+        "request_contract": dict(C.REQUEST_CONTRACT),
+        "excluded_device_residency_mib": {
+            bdf: 1 for bdf in C.EXCLUDED_BY_ARM[arm]},
+        "process_attribution": {
+            "server_pid": 4242,
+            "server_argv": ["llama-server", "-m", str(C.MODEL_DIR),
+                            "-ngl", str(ngl)],
+            "server_env": {
+                "GGML_VK_VISIBLE_DEVICES": authority["selector"][
+                    "GGML_VK_VISIBLE_DEVICES"],
+                "CUDA_VISIBLE_DEVICES": "-1",
+                "VK_ICD_FILENAMES": authority["icd"],
+            },
         },
+        "dispatch_authority": dispatch_authority_receipt(),
+        "sampled_winners": list(WINNERS),
+        "forced_tokens": list(WINNERS) if arm == "C" else [],
+        "meta_rows": [
+            {"pos": d,
+             "sampled_winner": WINNERS[d],
+             "forced_token": (WINNERS[d] if arm == "C" else -1)}
+            for d in range(C.DECISIONS)],
+        "rows": rows,
     }
+    return receipt, stage
 
 
 class TestConstants(unittest.TestCase):
@@ -180,6 +283,18 @@ class TestConstants(unittest.TestCase):
                          "inferswarm.qwen38-vulkan-comparator/2")
         self.assertEqual(C.V2_OBSERVER["requests_per_case"], 1)
         self.assertEqual(C.V2_OBSERVER["decisions"], 8)
+
+    def test_observer_patched_source_sha_is_real_derivation(self):
+        # The frozen comparator/2 patched-source identity must equal the
+        # real derivation from the pinned base + accepted R8-E patch.
+        base = Path("/tmp/is241-src/w/tools/server/server-context.cpp")
+        if not base.is_file():
+            self.skipTest("derivation scratch absent")
+        r8e = base.read_text()
+        self.assertEqual(sha256_bytes(r8e.encode()),
+                         "17da5724cea9debe97323701ccb10335fb98e0b68af45a648011b8e64320ea8c")
+        self.assertEqual(opatch.patched_source_sha256(r8e),
+                         C.OBSERVER_PATCHED_SOURCE_SHA256)
 
     def test_r8h_sentinels_are_diagnostic_only(self):
         # The remaining 3060 is a DIFFERENT physical card from R8-H's
@@ -368,123 +483,237 @@ class TestPlacement(unittest.TestCase):
         self.assertTrue(any("placement mismatch" in p for p in verdict["problems"]))
 
 
-class TestComparatorV2(unittest.TestCase):
-    def _reader(self, receipts_dir: Path, receipt: dict):
-        def read(path: str) -> bytes:
-            data = (receipts_dir / path).read_bytes()
-            self.assertEqual(len(data), C.ROW_BYTES)
-            return data
-        return read
+# ---------------------------------------------------------------------------
+# comparator/2 validation — byte custody + cross-binding (correction pass)
+# ---------------------------------------------------------------------------
 
-    def _stage_rows(self, tmp: Path, receipt: dict, value: float = 0.5) -> None:
-        for d, entry in receipt["rows"].items():
-            raw = struct.pack(f"<{C.N_VOCAB}f", *([value] * C.N_VOCAB))
-            (tmp / entry["path"]).write_bytes(raw)
+class ComparatorTestBase(unittest.TestCase):
+    def staged_pair(self, case_id="case-256", ngl=1,
+                    ref_value=0.25, cand_value=0.5):
+        ref, stage_ref = make_run_receipt("B", case_id, ngl, ref_value)
+        cand, stage_cand = make_run_receipt("C", case_id, ngl, cand_value)
+        return ref, cand, stage_ref, stage_cand
+
+
+class TestComparatorV2(ComparatorTestBase):
+    def _reader(self, tmp: Path):
+        return cmp2.custody_row_reader(tmp)
 
     def test_valid_pair_passes(self):
-        ref = make_run_receipt("B")
-        cand = make_run_receipt("C")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref, 0.25)
-            self._stage_rows(t, cand, 0.5)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertTrue(out["validated"], out["problems"])
-            self.assertEqual(len(out["reference"]["problems"]), 0)
-            self.assertEqual(len(out["candidate"]["problems"]), 0)
+            self.assertTrue(out["reference"]["row_digests_independent"])
+            self.assertTrue(out["candidate"]["row_digests_independent"])
 
+    # --- RAW-ROW CUSTODY: byte binding (spec control 1) ---
+    def test_same_size_row_bytes_changed_claim_unchanged_fails(self):
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage_ref(t)
+            stage_cand(t)
+            # mutate row 3's FIRST float in place: same size, finite,
+            # claimed sha unchanged
+            p = t / ref["rows"]["3"]["path"]
+            raw = bytearray(p.read_bytes())
+            struct.pack_into("<f", raw, 0, 0.75)
+            p.write_bytes(bytes(raw))
+            out = cmp2.validate_arm_receipt(ref, "B", self._reader(t))
+            self.assertFalse(out["valid"])
+            self.assertTrue(any("digest mismatch" in q
+                                for q in out["problems"]),
+                            out["problems"])
+
+    def test_repeat_identical_claimed_sha_different_bytes_fails(self):
+        # two repeats claiming the same sha256 but different raw bytes
+        a, stage_a = make_run_receipt("C", row_value=0.5, receipt_id="r1")
+        b, stage_b = make_run_receipt("C", row_value=0.6, receipt_id="r2")
+        # make claimed shas identical (same claim) while bytes differ
+        for d in range(C.DECISIONS):
+            b["rows"][str(d)]["sha256"] = a["rows"][str(d)]["sha256"]
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage_a(t)
+            stage_b(t)
+            out = cmp2.validate_determinism(a, b, self._reader(t))
+            self.assertFalse(out["deterministic"], out["problems"])
+            self.assertTrue(any("claimed digest" in q or "differ" in q
+                                for q in out["problems"]))
+
+    def test_determinism_detects_real_byte_change(self):
+        a, stage_a = make_run_receipt("C", row_value=0.5, receipt_id="r1")
+        b, stage_b = make_run_receipt("C", row_value=0.5, receipt_id="r2")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage_a(t)
+            stage_b(t)
+            raw = bytearray((t / b["rows"]["2"]["path"]).read_bytes())
+            struct.pack_into("<f", raw, 8, 0.125)
+            (t / b["rows"]["2"]["path"]).write_bytes(bytes(raw))
+            out = cmp2.validate_determinism(a, b, self._reader(t))
+            self.assertFalse(out["deterministic"])
+            self.assertTrue(any("differ" in q for q in out["problems"]),
+                            out["problems"])
+
+    def test_determinism_positive_on_identical_bytes(self):
+        a, stage_a = make_run_receipt("C", row_value=0.5, receipt_id="r1")
+        b, stage_b = make_run_receipt("C", row_value=0.5, receipt_id="r2")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage_a(t)
+            stage_b(t)
+            out = cmp2.validate_determinism(a, b, self._reader(t))
+            self.assertTrue(out["deterministic"], out["problems"])
+
+    # --- ROW-PATH CUSTODY (spec controls: traversal, symlink, ...) ---
+    def test_traversal_row_path_fails(self):
+        ref, _ = make_run_receipt("B")
+        for d, entry in ref["rows"].items():
+            entry["path"] = "../outside.f32"
+        out = cmp2.validate_arm_receipt(ref, "B", self._reader(Path("/tmp")))
+        self.assertFalse(out["valid"])
+        self.assertTrue(any("traversal" in q or "row path" in q
+                            for q in out["problems"]))
+
+    def test_absolute_row_path_fails(self):
+        ref, _ = make_run_receipt("B")
+        for d, entry in ref["rows"].items():
+            entry["path"] = "/etc/passwd"
+        out = cmp2.validate_arm_receipt(ref, "B", self._reader(Path("/tmp")))
+        self.assertFalse(out["valid"])
+        self.assertTrue(any("absolute" in q for q in out["problems"]))
+
+    def test_escape_from_run_root_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            (t / "outside.f32").write_bytes(b"x" * C.ROW_BYTES)
+            reader = cmp2.custody_row_reader(t / "run")
+            with self.assertRaises(ValueError):
+                reader("../outside.f32")
+
+    def test_symlink_row_fails(self):
+        ref, stage = make_run_receipt("B")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage(t)
+            victim = t / ref["rows"]["0"]["path"]
+            victim.unlink()
+            os.symlink(t / "alias-target.f32", victim)
+            (t / "alias-target.f32").write_bytes(b"y" * C.ROW_BYTES)
+            out = cmp2.validate_arm_receipt(ref, "B", self._reader(t))
+            self.assertFalse(out["valid"])
+            self.assertTrue(any("symlink" in q or "custody read failed" in q
+                                for q in out["problems"]),
+                            out["problems"])
+
+    def test_missing_row_file_fails(self):
+        ref, stage = make_run_receipt("B")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage(t)
+            (t / ref["rows"]["5"]["path"]).unlink()
+            out = cmp2.validate_arm_receipt(ref, "B", self._reader(t))
+            self.assertFalse(out["valid"])
+            self.assertTrue(any("custody read failed" in q or "missing" in q
+                                for q in out["problems"]))
+
+    def test_nonregular_row_fails(self):
+        ref, stage = make_run_receipt("B")
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage(t)
+            victim = t / ref["rows"]["1"]["path"]
+            victim.unlink()
+            victim.mkdir()
+            out = cmp2.validate_arm_receipt(ref, "B", self._reader(t))
+            self.assertFalse(out["valid"])
+            self.assertTrue(any("not a regular file" in q or
+                                "custody read failed" in q
+                                for q in out["problems"]))
+
+    # --- original controls, upgraded to the /2 schema ---
     def test_missing_decision_fails(self):
-        ref = make_run_receipt("B")
-        cand = make_run_receipt("C")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
         del cand["rows"]["7"]
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertFalse(out["validated"])
             self.assertTrue(any("row decisions" in p or "!= 8" in p
                                 for p in out["problems"]))
 
     def test_candidate_prefix_must_be_reference_winners(self):
-        ref = make_run_receipt("B")
-        cand = make_run_receipt("C")
-        cand["forced_tokens"][3] = 999  # candidate token enters prefix
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
+        cand["forced_tokens"][3] = 999
+        cand["meta_rows"][3]["forced_token"] = 999
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertFalse(out["validated"])
             self.assertTrue(any("forced prefix" in p for p in out["problems"]))
 
     def test_reference_arm_must_not_force(self):
-        ref = make_run_receipt("B")
-        ref["forced_tokens"] = [11, 22, 33, 44, 55, 66, 77, 88]
-        cand = make_run_receipt("C")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
+        ref["forced_tokens"] = list(WINNERS)
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertFalse(out["validated"])
             self.assertTrue(any("must not force" in p for p in out["problems"]))
 
     def test_cuda_participation_fails(self):
-        ref = make_run_receipt("B")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
         ref["cuda_visible_devices"] = "0"
-        cand = make_run_receipt("C")
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertFalse(out["validated"])
             self.assertTrue(any("CUDA" in p for p in out["problems"]))
 
     def test_predictive_case_fails(self):
-        ref = make_run_receipt("B", case_id="c237-01-01-001")
-        cand = make_run_receipt("C", case_id="c237-01-01-001")
-        with tempfile.TemporaryDirectory() as tmp:
-            t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            with self.assertRaises(RuntimeError):
-                cmp2.validate_pair(ref, cand, self._reader(t, ref))
+        ref, _ = make_run_receipt("B", case_id="c237-01-01-001")
+        with self.assertRaises(RuntimeError):
+            cmp2.validate_arm_receipt(ref, "B", self._reader(Path("/tmp")))
 
     def test_nonfinite_row_fails(self):
-        ref = make_run_receipt("B")
-        cand = make_run_receipt("C")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            raw = bytearray(struct.pack(f"<{C.N_VOCAB}f", *([0.5] * C.N_VOCAB)))
+            stage_ref(t)
+            stage_cand(t)
+            raw = bytearray((t / ref["rows"]["3"]["path"]).read_bytes())
             struct.pack_into("<f", raw, 400, float("nan"))
+            # keep the claimed sha consistent (attack: claim matches the
+            # NaN bytes) so the ONLY catcher must be finiteness
+            ref["rows"]["3"]["sha256"] = sha256_bytes(bytes(raw))
             (t / ref["rows"]["3"]["path"]).write_bytes(bytes(raw))
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
-            self.assertFalse(out["validated"])
-            self.assertTrue(any("non-finite" in p for p in out["problems"]))
+            out = cmp2.validate_arm_receipt(ref, "B", self._reader(t))
+            self.assertFalse(out["valid"])
+            self.assertTrue(any("non-finite" in q for q in out["problems"]))
 
     def test_wrong_host_fails(self):
-        ref = make_run_receipt("B")
+        ref, cand, stage_ref, stage_cand = self.staged_pair()
         ref["host"] = "inferswarm02"
-        cand = make_run_receipt("C")
         with tempfile.TemporaryDirectory() as tmp:
             t = Path(tmp)
-            self._stage_rows(t, ref)
-            self._stage_rows(t, cand)
-            out = cmp2.validate_pair(ref, cand, self._reader(t, ref))
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, self._reader(t))
             self.assertFalse(out["validated"])
             self.assertTrue(any("same host" in p for p in out["problems"]))
-
-    def test_determinism(self):
-        a = make_run_receipt("C")
-        b = make_run_receipt("C")
-        self.assertTrue(cmp2.validate_determinism(a, b)["deterministic"])
-        b["rows"]["5"]["sha256"] = "0" * 64
-        verdict = cmp2.validate_determinism(a, b)
-        self.assertFalse(verdict["deterministic"])
 
     def test_inertness(self):
         tokens = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -494,6 +723,191 @@ class TestComparatorV2(unittest.TestCase):
 
     def test_row_bytes_constant(self):
         self.assertEqual(C.ROW_BYTES, 248320 * 4)
+
+
+class TestComparatorCrossBinding(ComparatorTestBase):
+    """Spec item 3: cross-bind comparator/2 to the exact case, subject,
+    placement, and runtime — one mutation per control, each tampered
+    coherently (recomputing nothing else) so the intended gate fires."""
+
+    def _pair(self, **kw):
+        return self.staged_pair(**kw)
+
+    def _run(self, ref, cand):
+        with tempfile.TemporaryDirectory() as tmp:
+            return cmp2.validate_pair(ref, cand, cmp2.custody_row_reader(Path(tmp)))
+
+    def test_different_case_ids_fail(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["case_id"] = "case-1024"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("case mismatch" in p for p in out["problems"]))
+
+    def test_different_ngl_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["ngl"] = 2
+        cand["process_attribution"]["server_argv"][
+            cand["process_attribution"]["server_argv"].index("-ngl") + 1] = "2"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("ngl mismatch" in p for p in out["problems"]))
+
+    def test_wrong_bdf_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        ref["bdf"] = "00000000:02:00.0"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("bdf mismatch" in p for p in out["problems"]))
+
+    def test_wrong_gpu_uuid_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        ref["gpu_uuid"] = "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("reference GPU uuid mismatch" in p
+                            for p in out["problems"]))
+
+    def test_wrong_amd_pci_identity_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["pci_id"] = "1002:67dfx"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("AMD PCI identity" in p for p in out["problems"]))
+
+    def test_wrong_icd_device_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["icd"] = "/usr/share/vulkan/icd.d/nvidia_icd.json"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("ICD" in p for p in out["problems"]))
+
+    def test_wrong_vulkan_device_name_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["vulkan_device_name"] = "llvmpipe (LLVM 19.1.7)"
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("Vulkan device identity" in p
+                            for p in out["problems"]))
+
+    def test_wrong_binary_hash_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["server_sha256"] = "a" * 64
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("server_sha256" in p or "server/binary" in p
+                            for p in out["problems"]))
+
+    def test_wrong_patched_source_hash_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["patched_source_sha256"] = "b" * 64
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("patched-source" in p for p in out["problems"]))
+
+    def test_wrong_model_member_identity_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        tampered = dict(cand["model_members"])
+        tampered[C.MODEL_MEMBERS[0]] = "0" * 64
+        cand["model_members"] = tampered
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("model member" in p for p in out["problems"]))
+
+    def test_wrong_fixture_or_prompt_digest_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["fixture_ladder_sha256"] = "0" * 64
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("fixture ladder" in p for p in out["problems"]))
+
+    def test_wrong_prompt_token_ids_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        tampered = list(cand["prompt_token_ids"])
+        tampered[0] += 1
+        cand["prompt_token_ids"] = tampered
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("prompt token ids" in p for p in out["problems"]))
+
+    def test_prompt_text_digest_swap_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["prompt_text_sha256"] = "0" * 64
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("prompt text digest" in p for p in out["problems"]))
+
+    def test_meta_row_disagreeing_with_receipt_arrays_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["meta_rows"][5]["sampled_winner"] = \
+            cand["meta_rows"][5]["sampled_winner"] + 1
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("meta row 5 sampled_winner" in p
+                            for p in out["problems"]))
+
+    def test_meta_row_forced_token_disagreeing_with_array_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        cand["meta_rows"][2]["forced_token"] = 424242
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("meta row 2 forced_token" in p
+                            for p in out["problems"]))
+
+    def test_meta_positions_not_0_to_7_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        ref["meta_rows"] = ref["meta_rows"][:7]
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("positions 0..7" in p for p in out["problems"]))
+
+    def test_meta_forced_token_must_be_reference_winner(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        # candidate meta claims a non-reference forced token at d=1,
+        # while the receipt arrays stay consistent — meta-vs-reference
+        # binding must catch it
+        cand["meta_rows"][1]["forced_token"] = cand["meta_rows"][1][
+            "sampled_winner"] + 7
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("meta row 1 forced_token" in p
+                            for p in out["problems"]))
+
+    def test_missing_dispatch_authority_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        del cand["dispatch_authority"]
+        out = self._run(ref, cand)
+        self.assertFalse(out["validated"])
+        self.assertTrue(any("dispatch-authority" in p for p in out["problems"]))
+
+    def test_cross_binding_covers_subject_runtime_fields(self):
+        for field in cmp2.CROSS_BOUND_FIELDS:
+            ref, cand, _, _ = self._pair()
+            cand[field] = "TAMPERED"
+            out = self._run(ref, cand)
+            self.assertFalse(out["validated"], field)
+            self.assertTrue(any(field in p for p in out["problems"]), field)
+
+    def test_reference_ngl_must_equal_candidate_ngl_at_selection(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        out = cmp2.validate_pair(ref, cand,
+                                 cmp2.custody_row_reader(Path("/tmp")),
+                                 expected_ngl=1)
+        # no rows staged but path shape checks pass; validated is False
+        # only because rows are unreadable — ngl must NOT be the catcher
+        self.assertFalse(any("matched" in p or "expected_ngl" in p
+                             for p in out["problems"]))
+
+    def test_expected_ngl_mismatch_fails(self):
+        ref, cand, stage_ref, stage_cand = self._pair()
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            stage_ref(t)
+            stage_cand(t)
+            out = cmp2.validate_pair(ref, cand, cmp2.custody_row_reader(t),
+                                     expected_ngl=2)
+            self.assertFalse(out["validated"])
+            self.assertTrue(any("phase-2 matched" in p for p in out["problems"]))
 
 
 class TestObserverPatch(unittest.TestCase):
@@ -633,6 +1047,15 @@ class TestSupersession(unittest.TestCase):
         self.assertIn("PROSPECTIVE", out["status"])
         self.assertFalse(out.get("supersession_blocked", False))
 
+    def test_no_authority_emitted_before_disposition_and_go(self):
+        # Issue #241 sequencing: the builder must emit NO v2 authority
+        # before the measured Phase-4 disposition AND maintainer GO.
+        for terminal in C.DISPOSITIONS:
+            out = supersession.build_supersession(phase4_terminal=terminal)
+            self.assertFalse(out["authority_emitted"], terminal)
+            self.assertIn("NO v2 supersession authority",
+                          out["authority_note"], terminal)
+
     def test_holdout_reuse_binding_check_live(self):
         check = supersession.check_holdout_reuse(REPO)
         # committed seal carries no superseded identity markers
@@ -661,9 +1084,6 @@ class TestSupersession(unittest.TestCase):
             check = supersession.check_holdout_reuse(t)
             self.assertFalse(check["reuse_valid"])
             self.assertIn("inferswarm02", check["binding_markers_present"])
-            out = supersession.build_supersession(
-                phase4_terminal=C.DISPOSITION_PRACTICAL)
-            # (builder uses live root; the fake sandbox only proves the check)
 
     def test_superseded_and_preserved_named_mechanically(self):
         out = supersession.build_supersession(
@@ -746,6 +1166,175 @@ class TestDispatchAuthority(unittest.TestCase):
                 [self._review(commit_id="d" * 40)], self.HEAD)
 
 
+# ---------------------------------------------------------------------------
+# Physical dispatch gating (correction item 1)
+# ---------------------------------------------------------------------------
+
+class TestPhysicalDispatchGating(unittest.TestCase):
+    """Every physical entrypoint must reach the dispatch gate BEFORE any
+    physical/device/model operation — proven by RECORDED CALL LISTS on
+    the gated operations, not prose."""
+
+    def setUp(self):
+        physical.reset_gate_for_tests()
+        self.addCleanup(physical.reset_gate_for_tests)
+
+    def _instrument(self):
+        """Record every gated-operation call; fail the gate by default."""
+        calls: list[str] = []
+        patches = []
+        for attr in physical.GATED_OPERATION_ATTRS:
+            def make_recorder(name):
+                def record(*a, **k):
+                    calls.append(name)
+                    return {"case_id": (a[0] if a else None),
+                            "recorded": name}
+                return record
+            patches.append(mock.patch.object(
+                physical, attr, side_effect=make_recorder(attr)))
+            patches[-1].start()
+            self.addCleanup(patches[-1].stop)
+        return calls, patches
+
+    def _deny_dispatch(self):
+        def deny(*a, **k):
+            raise ValueError("no current OWNER/MEMBER approval dispatches")
+        return mock.patch.object(dispatch, "require_live_dispatch",
+                                 side_effect=deny)
+
+    def _grant_dispatch(self):
+        def grant(repo_root, pr_number):
+            return dispatch_authority_receipt()
+        return mock.patch.object(dispatch, "require_live_dispatch",
+                                 side_effect=grant)
+
+    def test_entrypoints_exist_and_are_committed(self):
+        for name in physical.physical_entrypoints():
+            fn = getattr(physical, name)
+            self.assertTrue(callable(fn))
+            self.assertEqual(
+                Path(physical.__file__).read_text().count(f"def {name}("), 1)
+
+    def test_no_physical_operation_without_dispatch(self):
+        # deny the gate: every entrypoint must fail and the recorded
+        # call list of physical operations must be EMPTY
+        calls, _ = self._instrument()
+        with self._deny_dispatch():
+            for name in physical.physical_entrypoints():
+                fn = getattr(physical, name)
+                with self.assertRaises(ValueError, msg=name):
+                    fn(REPO, pr_number=242)
+        self.assertEqual(calls, [], "physical op reached before dispatch gate")
+
+    def test_operations_only_after_gate_with_grant(self):
+        calls, _ = self._instrument()
+        with self._grant_dispatch():
+            out = physical.run_phase1(REPO, pr_number=242)
+        self.assertTrue(len(calls) > 0)
+        self.assertEqual(out["dispatch_head_sha"], FAKE_HEAD)
+        self.assertEqual(out["dispatch_authority"]["dispatch_phrase"],
+                         dispatch.DISPATCH_PHRASE)
+        # every physical operation happened only after the gate: the
+        # first recorded call follows a successful gate (granted), and
+        # the receipt binds the authority
+        self.assertTrue(out["physical_execution_performed"])
+
+    def test_gate_refuses_dirty_worktree(self):
+        # require_live_dispatch demands a clean worktree; the REAL repo
+        # path is used and must fail closed while files are dirty
+        with mock.patch.object(dispatch, "current_clean_git_head",
+                               side_effect=ValueError(
+                                   "physical execution requires a clean "
+                                   "producer worktree")):
+            calls, _ = self._instrument()
+            with self.assertRaises(ValueError):
+                physical.run_phase1(REPO, pr_number=242)
+            self.assertEqual(calls, [])
+
+    def test_gated_operation_call_directly_refuses_without_gate(self):
+        # even a direct call to a physical operation must refuse: the
+        # operations themselves re-check the gate (defense in depth)
+        required_args = {
+            "_load_fixture_content": ("case-256",),
+            "_probe_devices": ("B",),
+            "_build_server": ("B",),
+            "_read_model_bytes": (),
+            "_run_inference": ("case-256", "B", 1),
+            "_placement_probe": ("C", 1),
+            "_gpu_telemetry": (),
+        }
+        for attr in physical.GATED_OPERATION_ATTRS:
+            physical.reset_gate_for_tests()
+            with self.assertRaises(RuntimeError, msg=attr):
+                getattr(physical, attr)(*required_args[attr])
+
+    def test_cases_outside_bounded_set_rejected(self):
+        with self._grant_dispatch():
+            physical.run_phase1(REPO, pr_number=242)  # sets the gate
+        for bad in ("c237-01-01-001", "case-512", "h237-02-05-001"):
+            with self.assertRaises(RuntimeError, msg=bad):
+                physical._authorized_case(bad)
+
+    def test_predictive_namespace_rejected_at_load(self):
+        with self._grant_dispatch():
+            physical.run_phase1(REPO, pr_number=242)
+        with self.assertRaises(RuntimeError):
+            physical._load_fixture_content("c237-01-01-001")
+
+    def test_receipts_bind_dispatch_authority(self):
+        with self._grant_dispatch():
+            for name in ("run_phase1", "run_phase2", "run_phase3"):
+                out = getattr(physical, name)(REPO, pr_number=242)
+                self.assertEqual(out["schema"], physical.PHYSICAL_SCHEMA)
+                self.assertEqual(out["dispatch_authority"]["head_sha"],
+                                 FAKE_HEAD)
+                self.assertTrue(out["physical_execution_performed"])
+
+    def test_no_physical_execution_during_correction(self):
+        # module import and every entrypoint exist WITHOUT any recorded
+        # physical call in THIS test process (the gate was never granted
+        # for real); the recorded-calls assertion above proves reach-
+        # ability. This control pins the correction-session invariant.
+        calls, _ = self._instrument()
+        with self._deny_dispatch():
+            for name in physical.physical_entrypoints():
+                try:
+                    getattr(physical, name)(REPO, pr_number=242)
+                except ValueError:
+                    pass
+        self.assertEqual(calls, [])
+
+    def test_source_order_gate_before_operations(self):
+        # structural proof: in the committed source of every physical
+        # entrypoint, the dispatch call appears BEFORE every gated
+        # operation call
+        src = Path(physical.__file__).read_text()
+        import re as _re
+        for name in physical.physical_entrypoints():
+            m = _re.search(
+                rf"def {name}\(.*?\n(?=def |\Z)", src, _re.DOTALL)
+            self.assertIsNotNone(m, name)
+            body = m.group(0)
+            gate_at = body.find("require_dispatch_authority(")
+            self.assertGreaterEqual(gate_at, 0, name)
+            for attr in physical.GATED_OPERATION_ATTRS:
+                op_at = body.find(f"{attr}(")
+                if op_at >= 0:
+                    self.assertLess(
+                        gate_at, op_at,
+                        f"{name}: {attr} runs before the dispatch gate")
+
+    def test_main_has_no_ungated_entrypoint(self):
+        # every public run_* function in the physical module must gate
+        import re as _re
+        src = Path(physical.__file__).read_text()
+        for m in _re.finditer(r"def (run_[a-z0-9_]+)\(", src):
+            name = m.group(1)
+            body = _re.search(
+                rf"def {name}\(.*?\n(?=def |\Z)", src, _re.DOTALL).group(0)
+            self.assertIn("require_dispatch_authority(", body, name)
+
+
 class TestCampaignDormancy(unittest.TestCase):
     def test_all_physical_phases_dormant(self):
         status = campaign.campaign_status(REPO)
@@ -762,7 +1351,7 @@ class TestCampaignDormancy(unittest.TestCase):
 
     def test_no_decrypt_path_in_module_graph(self):
         for mod in (campaign, cmp2, placement, prac, supersession,
-                    opatch, census):
+                    opatch, census, physical):
             src = Path(sys.modules[mod.__name__].__file__).read_text()
             lowered = src.lower()
             self.assertNotIn("openssl", lowered, mod.__name__)
@@ -778,8 +1367,13 @@ class TestCampaignDormancy(unittest.TestCase):
         for name in ("issue241_phase0", "issue241_census",
                      "issue241_placement", "issue241_comparator",
                      "issue241_practicality", "issue241_supersession",
-                     "issue241_dispatch", "issue241_observer_patch"):
+                     "issue241_dispatch", "issue241_observer_patch",
+                     "issue241_physical"):
             self.assertTrue((REPO / "scripts" / f"{name}.py").is_file())
+
+    def test_campaign_names_physical_entrypoints(self):
+        self.assertEqual(campaign.PHYSICAL_ENTRYPOINTS,
+                         ("run_phase1", "run_phase2", "run_phase3"))
 
 
 if __name__ == "__main__":

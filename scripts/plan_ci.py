@@ -811,6 +811,7 @@ PATH_GROUPS = {
     "scripts/issue241_supersession.py": ["vulkan-v0-b"],
     "scripts/issue241_phase0.py": ["vulkan-v0-b"],
     "scripts/issue241_campaign.py": ["vulkan-v0-b"],
+    "scripts/issue241_physical.py": ["vulkan-v0-b"],
     "tests/test_issue241_r8i3_rx580.py": ["vulkan-v0-b"],
     "scripts/issue237_methodology.py": ["vulkan-v0-b"],
     "scripts/issue237_reconstruct_tokenizer.py": ["vulkan-v0-b"],

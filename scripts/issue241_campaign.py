@@ -34,11 +34,18 @@ PHASES = (
      "DORMANT — maintainer dispatch required"),
     ("phase4", "practicality projection + one disposition", "reducer",
      "DORMANT — consumes measured receipts only"),
-    ("phase5", "additive v2 methodology supersession", "builder",
-     "DORMANT — requires a passing phase-4 terminal"),
+    ("phase5", "additive v2 methodology supersession (NO authority "
+               "before the measured phase-4 disposition and maintainer GO)",
+     "builder",
+     "DORMANT — requires a passing phase-4 terminal AND maintainer GO"),
 )
 
 PHYSICAL_PHASES = ("phase1", "phase2", "phase3")
+
+# The committed bounded physical execution path (scripts/issue241_physical.py):
+# each entrypoint gates on require_live_dispatch BEFORE any fixture load,
+# device probe/init, server build, model-byte read, telemetry, or inference.
+PHYSICAL_ENTRYPOINTS = ("run_phase1", "run_phase2", "run_phase3")
 
 
 def campaign_status(repo: Path | None = None) -> dict[str, Any]:

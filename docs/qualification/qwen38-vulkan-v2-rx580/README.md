@@ -30,8 +30,11 @@ producer head (phrase `R8I3 PHYSICAL DISPATCH #241`).
 | 2 matched-placement ladder | physical | DORMANT — dispatch required |
 | 3 comparator/2 validation | physical | DORMANT — dispatch required |
 | 4 practicality projection | reducer | DORMANT — consumes measured receipts only |
-| 5 v2 supersession | builder | DORMANT — requires passing phase-4 terminal |
+| 5 v2 supersession | builder | DORMANT — phase-4 terminal AND maintainer GO; emits no authority before that |
 
-Every physical producer calls `issue241_dispatch.require_live_dispatch`
-BEFORE fixture load or server launch. The superseded #240 exploration is
+Every physical entrypoint is the committed bounded path in
+`scripts/issue241_physical.py` (`run_phase1`/`run_phase2`/`run_phase3`);
+each invokes `issue241_dispatch.require_live_dispatch` BEFORE fixture
+load, device probe/init, server build, model-byte reads, telemetry, or
+inference (structurally tested). The superseded #240 exploration is
 diagnostic history only; nothing from it is consumed here.

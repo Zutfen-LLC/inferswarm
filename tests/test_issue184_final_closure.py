@@ -439,7 +439,11 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue241_comparator.py",
             "scripts/issue241_supersession.py",
             "scripts/issue241_phase0.py",
-            "scripts/issue241_campaign.py")
+            "scripts/issue241_campaign.py",
+            # Correction pass: the committed bounded physical execution
+            # path (dormant; every entrypoint gates on live exact-head
+            # dispatch before any physical/device/model operation).
+            "scripts/issue241_physical.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 

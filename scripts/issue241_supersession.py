@@ -133,6 +133,14 @@ def build_supersession(root: Path | None = None,
         "superseded": list(SUPERSEDED),
         "preserved": list(PRESERVED),
         "holdout_reuse": holdout,
+        "authority_emitted": False,
+        "authority_note": (
+            "PROSPECTIVE RECORD ONLY — this builder emits NO v2 "
+            "supersession authority. A v2 supersession is emitted only "
+            "after the measured Phase-4 disposition AND a subsequent "
+            "maintainer GO on the exact corrected head (Issue #241 "
+            "sequencing); until then this record carries no accepted "
+            "authority of any kind."),
         "status": ("PROSPECTIVE — dormant until maintainer dispatch and a "
                    "passing practical terminal" if not practical else
                    "READY — pending maintainer acceptance"),

@@ -99,6 +99,15 @@ N_VOCAB = 248320
 ROW_BYTES = N_VOCAB * 4
 DECISIONS = 8
 
+# comparator/2 observer source identity: sha256 of server-context.cpp at
+# llama.cpp pin b29c606e AFTER the accepted R8-E patch (post-image blob
+# 02a8e4b439c78224d1b9e4eaeb1d890718c00e68, verified byte-identical to
+# the accepted applied-source.patch header) plus the comparator/2 seam.
+# Derived CPU-only from accepted committed bytes; re-derivable via
+# scripts/issue241_observer_patch.py against the pinned base blob.
+OBSERVER_PATCHED_SOURCE_SHA256 = (
+    "2f1f3d5461c39b94d4dc92c74e03da5fb0b1af069f1aeda1df587a25c3ffe89f")
+
 # --- arms: SAME HOST (inferswarm01), sequential execution only ----------
 # Identities below are the PROSPECTIVE frozen subject, derived from the
 # post-swap fresh census (2026-09-23). Physical Phase 1 must re-observe

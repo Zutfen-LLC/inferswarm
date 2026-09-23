@@ -26,6 +26,7 @@ BASE_REF = "main"
 DISPATCH_PHRASE = "R8I3 PHYSICAL DISPATCH #241"
 AUTHORIZED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER"})
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
+AUTHORITY_SCHEMA = "inferswarm.issue241.dispatch-authority/1"
 
 
 def _require_sha(value: Any, name: str) -> str:
@@ -99,7 +100,7 @@ def validate_dispatch_authority(
             "no current OWNER/MEMBER approval explicitly dispatches this exact head")
     submitted, review, login = max(candidates, key=lambda item: item[0])
     return {
-        "schema": "inferswarm.issue241.dispatch-authority/1",
+        "schema": AUTHORITY_SCHEMA,
         "repository": REPO,
         "issue_number": ISSUE_NUMBER,
         "pr_number": pr.get("number"),

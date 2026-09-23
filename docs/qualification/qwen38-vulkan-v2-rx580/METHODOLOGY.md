@@ -192,6 +192,16 @@ exact-head review; never manufacture a new holdout.
   (`scripts/issue241_dispatch.py`: open PR, open issue #241, current
   OWNER/MEMBER approval naming `R8I3 PHYSICAL DISPATCH #241` and
   `head=<sha>` on the exact clean producer HEAD) and a clean worktree.
+  The committed bounded execution path is
+  `scripts/issue241_physical.py` (`run_phase1`/`run_phase2`/
+  `run_phase3`); each entrypoint invokes the dispatch validation
+  BEFORE loading historical fixture content for execution, probing or
+  initializing Vulkan/CUDA devices, building or starting the
+  qualification server, reading model bytes for model execution, or
+  running vulkaninfo, GPU telemetry, placement/model probes, or model
+  inference — structurally proven by the dispatch/order tests in
+  `tests/test_issue241_r8i3_rx580.py`. Any head movement invalidates
+  the authorization.
 - If the hardware swap produces unresolved PCI resource, power, cooling,
   or driver conflicts, STOP before model execution and report the exact
   blocker (`R8I3_RX580_INFRASTRUCTURE_BLOCKED`).

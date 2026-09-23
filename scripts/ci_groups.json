@@ -1272,6 +1272,9 @@
   "scripts/issue241_phase0.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue241_physical.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue241_placement.py": [
    "vulkan-v0-b"
   ],
