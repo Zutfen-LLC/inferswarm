@@ -6,7 +6,7 @@ Initial baseline collected: 2026-09-13 via SSH (`dmidecode -t slot` + `lspci -PP
 Valinor audit added: 2026-09-13.  
 Issue #189 R8-A accelerator census refresh (read-only sysfs/lspci/nvidia-smi, per-device VRAM measured): 2026-09-14 — see `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json` for the authoritative per-resource record.  
 Issue #196 living inventory refresh (Valinor RX 6800 XT installed; inferswarm02 RX 5600 XT observed alongside both Ellesmere): 2026-09-15 — raw receipts at `docs/hardware/current-inventory/2026-09-15/`.  
-Last topology refresh: 2026-09-15.
+Last topology refresh: 2026-09-23 (inferswarm05 V340L import; the 2026-09-15 aggregate tables below remain their recorded census rather than a retroactive fleet recount).
 
 The original inferswarm01-04 collection notes referenced raw JSON per host (`inferswarm0{1..4}.json`). Those captures were not included in this repository import and are not reconstructed here.
 
@@ -62,6 +62,25 @@ DMI usage flags unreliable (all "In Use"); occupancy derived from lspci.
 | 3 | J6D1 | x1 | (DMI claims In Use; no endpoint found) | - | - |
 | 4 | J7B1 | x1 | (DMI claims In Use; no endpoint found) | - | - |
 | 5 | J8B4 | x1 | Realtek RTL8111 GbE @03:00.0 | Gen1 x1 | Gen1 x1 |
+
+## inferswarm05  (HP Z440, Debian 13; Issue #243 retained census, 2026-09-23)
+
+The accepted R8-I4 source capture is retained at
+`docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/retained/raw/phase1/`.
+This is a host-specific, measured inventory; it does not retrofit the
+2026-09-15 aggregate census below.
+
+| Path / resource | Observed occupant or capability | Link interpretation |
+|-----------------|---------------------------------|---------------------|
+| shared host/card path | Root port `00:03.0` → PM8533 fanout `03:00.0` | One shared upstream/root-port path for the dual-die card; **not two independent host uplinks**. |
+| die A complete path | `00:03.0/03:00.0/04:00.0/05:00.0/06:00.0/07:00.0` → Vega10 `1002:6864`, 8,573,157,376 B HBM2 | The endpoint/downstream chain reported loaded Gen3 x16. This describes the die-side link, not a separate host uplink. |
+| die B complete path | `00:03.0/03:00.0/04:01.0/09:00.0/0a:00.0/0b:00.0` → Vega10 `1002:6864`, 8,573,157,376 B HBM2 | The endpoint/downstream chain reported loaded Gen3 x16. This describes the die-side link, not a separate host uplink. |
+| slot 2 | GTX 1060 3GB @ `02:00.0` | Present but excluded from the R8-I4 campaign. |
+
+Both V340L dies are separate Memory Resources; no coherent 16-GiB address
+space, cross-die P2P capability, or two independent x16 host-uplink claim is
+made here. The complete `lspci -PP` source lines are retained verbatim in the
+R8-I4 import, rather than compressed into this living summary.
 
 ## Valinor  (ASUS ROG STRIX B550-E GAMING, AMD B550 / AM4)
 
@@ -197,3 +216,4 @@ Record test-relevant physical changes here in addition to updating the current t
 | 2026-09-14 | Issue #189 R8-A accelerator census refresh | Read-only per-device VRAM measurement (amdgpu sysfs, nvidia-smi) and fleet-wide device sweep; retained in docs/investigations/qwen38-flash-next-r8-a/hardware-census.json. Confirmed 80 GiB NVIDIA on 01-04 and 2x8 GiB Ellesmere on 02; recorded reported-but-unobserved AMD devices and pending V340L as non-deployed. |
 | 2026-09-15 | Issue #196 living inventory refresh | Valinor: GTX 1060 3GB replaced by XFX RX 6800 XT in PCIEX16_1; PCIEX16_2 NVMe adapter removed (slot now empty); measured external link Gen4 x8 despite empty PCIEX16_2. inferswarm02: RX 5600 XT (Navi 10, 5.98 GiB) newly observed at 05:00.0; both Ellesmere cards remain (02:00.0, 06:00.0 after BDF shift); 3060 Ti moved to 07:00.0. Measurement basis: read-only dmidecode/lspci -vvv/sysfs/vulkaninfo/nvidia-smi scans; raw receipts at docs/hardware/current-inventory/2026-09-15/. Fleet: 10 GPUs, 101.98 GiB execution-fleet (01-04), 117.97 GiB including Valinor. |
 | 2026-09-17 | Issue #215 V2-C V2C_V340L_PLATFORM_STABILITY_PASS | inferswarm02: V340L (PM8533 + two Vega 10 dies @06:00.0/09:00.0, Gen3 x1 upstream) is the current installed configuration; prior #196 inventory (RX 5600 XT / Ellesmere x2 / 3060 Ti on x1 risers) is historical. Proven stable across baseline + 4 warm reboots + 1 operator cold power cycle with zero manual interventions; both dies independently reproduce the accepted V2-B byte-exact qualification. Raw receipts: docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/. |
+| 2026-09-23 | Issue #244 Phase-0 durable import of accepted Issue #243 / R8-I4 | Added the inferswarm05 HP Z440 V340L inventory from retained raw topology. The complete `lspci -PP` paths retain both Vega10 endpoints behind root port `00:03.0` and PM8533; endpoint/downstream Gen3 x16 is explicitly distinguished from the shared upstream/root-port path. Source bytes and their SHA-256 inventory: `docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/`. |

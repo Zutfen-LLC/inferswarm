@@ -1,0 +1,504 @@
+{
+  "campaign": "issue243-r8i4-v340l-z440-characterization",
+  "decision_authority": {
+    "accepted_decision_comment": 5803481831,
+    "maintainer_acceptance_comment": 5803559861,
+    "source": "GitHub issue comments retrieved by REST API as exact byte snapshots; the remaining retained evidence is the verified read-only SCP import from inferswarm05."
+  },
+  "file_count": 81,
+  "files": [
+    {
+      "bytes": 83,
+      "repository_path": "retained/burnin-die0-ngl7.log",
+      "sha256": "2138fa0dab448c6d3df048683e5961664151914ee7cd9f5873a791d095f57959",
+      "source_path": "burnin-die0-ngl7.log"
+    },
+    {
+      "bytes": 83,
+      "repository_path": "retained/burnin-die0.log",
+      "sha256": "d641d22b64d19432c12ad37efc87f90d18ec29086a3479ba908edc10ef67a580",
+      "source_path": "burnin-die0.log"
+    },
+    {
+      "bytes": 83,
+      "repository_path": "retained/burnin-die1.log",
+      "sha256": "6b068f48cba2709ce44e44261c643a323d6e20b7eba290e2dfcf120540f620ce",
+      "source_path": "burnin-die1.log"
+    },
+    {
+      "bytes": 92,
+      "repository_path": "retained/burnin-dual.log",
+      "sha256": "e2c37ace5ef7ec7f70735dccd30859cd8188767e2dc0adf8abe591c73f9e1735",
+      "source_path": "burnin-dual.log"
+    },
+    {
+      "bytes": 75,
+      "repository_path": "retained/dual.log",
+      "sha256": "97d647f6dc22fe9cf4d4478d56ba0ca1c78d63e61ec0a49fd37d386f2757bdef",
+      "source_path": "dual.log"
+    },
+    {
+      "bytes": 300762,
+      "repository_path": "retained/evidence/phase1/phase1-census.json",
+      "sha256": "c74c3d205ae77ce63c3be9eab9c9b5df3fad4fa7e67567d58b48231bf3953347",
+      "source_path": "evidence/phase1/phase1-census.json"
+    },
+    {
+      "bytes": 44415,
+      "repository_path": "retained/evidence/phase2/die0-ngl7/burnin-samples.jsonl",
+      "sha256": "b28919a9461855ac3566372614e33d87fbb21110e913eb1ac38c92e1d51a757c",
+      "source_path": "evidence/phase2/die0-ngl7/burnin-samples.jsonl"
+    },
+    {
+      "bytes": 48955,
+      "repository_path": "retained/evidence/phase2/die0-ngl7/burnin-server-idx0.log",
+      "sha256": "86b00b227e71349766d956fa25134f921c1509debcc0d491f5e1ae5516d06314",
+      "source_path": "evidence/phase2/die0-ngl7/burnin-server-idx0.log"
+    },
+    {
+      "bytes": 1417,
+      "repository_path": "retained/evidence/phase2/die0-ngl7/burnin-summary.json",
+      "sha256": "600d7b06182c56a9636d33eacb36959b18808d38dbbc4772c15e6118375c094e",
+      "source_path": "evidence/phase2/die0-ngl7/burnin-summary.json"
+    },
+    {
+      "bytes": 43526,
+      "repository_path": "retained/evidence/phase2/die0/burnin-samples.jsonl",
+      "sha256": "77640ca742d840ebed3e59c867bf21e4e7fbdfe9dad24523d0673d3edc0a3768",
+      "source_path": "evidence/phase2/die0/burnin-samples.jsonl"
+    },
+    {
+      "bytes": 47999,
+      "repository_path": "retained/evidence/phase2/die0/burnin-server-idx0.log",
+      "sha256": "8e6a1b83f80fe49e5023db3bbeb9982e11727751de2da1043d94d2a3f8526f39",
+      "source_path": "evidence/phase2/die0/burnin-server-idx0.log"
+    },
+    {
+      "bytes": 1417,
+      "repository_path": "retained/evidence/phase2/die0/burnin-summary.json",
+      "sha256": "55b5a75cceea9bd07ed04ce47c93bc7f8c773a5059e227fa5a663a24292b0c48",
+      "source_path": "evidence/phase2/die0/burnin-summary.json"
+    },
+    {
+      "bytes": 44423,
+      "repository_path": "retained/evidence/phase2/die1/burnin-samples.jsonl",
+      "sha256": "7d9cb19d9ceb4fdd085d5db85716516d7b24d700b560f0abe584790b4b7572de",
+      "source_path": "evidence/phase2/die1/burnin-samples.jsonl"
+    },
+    {
+      "bytes": 48960,
+      "repository_path": "retained/evidence/phase2/die1/burnin-server-idx1.log",
+      "sha256": "515a7cd3c039aedd8845599fc9a1f381f66593c9cbbaea6e6fc9a08bdfc57740",
+      "source_path": "evidence/phase2/die1/burnin-server-idx1.log"
+    },
+    {
+      "bytes": 1417,
+      "repository_path": "retained/evidence/phase2/die1/burnin-summary.json",
+      "sha256": "519a48d9f8af59f842044978f98a4a8b83df74a1546cbd82c1a66f8558dafe94",
+      "source_path": "evidence/phase2/die1/burnin-summary.json"
+    },
+    {
+      "bytes": 26184,
+      "repository_path": "retained/evidence/phase2/dual/burnin-samples.jsonl",
+      "sha256": "78034fff30bc313aff41bbc3f2dc2dc8d05946ccf68c223dd439008de6df52b4",
+      "source_path": "evidence/phase2/dual/burnin-samples.jsonl"
+    },
+    {
+      "bytes": 28820,
+      "repository_path": "retained/evidence/phase2/dual/burnin-server-idx0.log",
+      "sha256": "009fc6a48a1023b2b070b3a7b0b7ba5b6a9c07fdba5ef8c644cf1b9790a8ed71",
+      "source_path": "evidence/phase2/dual/burnin-server-idx0.log"
+    },
+    {
+      "bytes": 28823,
+      "repository_path": "retained/evidence/phase2/dual/burnin-server-idx1.log",
+      "sha256": "fba235059cdccc90da5aeb25935cfe9cd1f578b4bfe54d157bcf847f221378fd",
+      "source_path": "evidence/phase2/dual/burnin-server-idx1.log"
+    },
+    {
+      "bytes": 1435,
+      "repository_path": "retained/evidence/phase2/dual/burnin-summary.json",
+      "sha256": "d52430bb652383fce29516e1fbc109851ec22f17a3c57a39c1e362480f60f493",
+      "source_path": "evidence/phase2/dual/burnin-summary.json"
+    },
+    {
+      "bytes": 7933,
+      "repository_path": "retained/evidence/phase3/ladder/rung-idx0-ngl1.json",
+      "sha256": "35441717537491eda52c40588f808e6643a9cf3b9104a69d1d75baa3936d7692",
+      "source_path": "evidence/phase3/ladder/rung-idx0-ngl1.json"
+    },
+    {
+      "bytes": 7930,
+      "repository_path": "retained/evidence/phase3/ladder/rung-idx0-ngl2.json",
+      "sha256": "468ff0ab89049a2eb726521e09a288d722f379e22687ff054aa47e32e48f79f2",
+      "source_path": "evidence/phase3/ladder/rung-idx0-ngl2.json"
+    },
+    {
+      "bytes": 7923,
+      "repository_path": "retained/evidence/phase3/ladder/rung-idx0-ngl4.json",
+      "sha256": "126851727f912cd6e4e7fa5df833c4cfec4469ccc8d7d48a390f7c5849dde8f8",
+      "source_path": "evidence/phase3/ladder/rung-idx0-ngl4.json"
+    },
+    {
+      "bytes": 7934,
+      "repository_path": "retained/evidence/phase3/ladder/rung-idx0-ngl6.json",
+      "sha256": "1e98025f6eff24c17063c8074f795d5157c4a89686c38deffd00115bf3b4a2f4",
+      "source_path": "evidence/phase3/ladder/rung-idx0-ngl6.json"
+    },
+    {
+      "bytes": 7930,
+      "repository_path": "retained/evidence/phase3/ladder/rung-idx0-ngl7.json",
+      "sha256": "89d590bbab2f535b48827a254a0c9c176e695b9759837e48d092424a4593e080",
+      "source_path": "evidence/phase3/ladder/rung-idx0-ngl7.json"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase3/ladder/server-idx0-ngl1.log",
+      "sha256": "ac9f7369614c68a681bd817c6b1bf65cee17d14f34d0646f83466f117ae2e179",
+      "source_path": "evidence/phase3/ladder/server-idx0-ngl1.log"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase3/ladder/server-idx0-ngl2.log",
+      "sha256": "9c10bf30d43ef51cfeee21aa6a4c649c6a2f91d8a1f2da004a292cfc4ca4b853",
+      "source_path": "evidence/phase3/ladder/server-idx0-ngl2.log"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase3/ladder/server-idx0-ngl4.log",
+      "sha256": "fd79e88feba36637fe35111ea2ae490d59c5cb5be3592ecbffbeb76edd5bf183",
+      "source_path": "evidence/phase3/ladder/server-idx0-ngl4.log"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase3/ladder/server-idx0-ngl6.log",
+      "sha256": "4f604b00d6cc1996f67ee60cdecc84be695fdb8ebc173ec7ef65e619d6f33842",
+      "source_path": "evidence/phase3/ladder/server-idx0-ngl6.log"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase3/ladder/server-idx0-ngl7.log",
+      "sha256": "cc3c280ccd2b21f7ba28e3aa2f091e2aff24fed50f5d25e445d643535e7ff0e9",
+      "source_path": "evidence/phase3/ladder/server-idx0-ngl7.log"
+    },
+    {
+      "bytes": 2737,
+      "repository_path": "retained/evidence/phase3/placement-probe.json",
+      "sha256": "fc8c0dd8f0d236edf8c441f6e2c21ea5fe66bc69fb4a7346d0d8542d71d21a41",
+      "source_path": "evidence/phase3/placement-probe.json"
+    },
+    {
+      "bytes": 1137,
+      "repository_path": "retained/evidence/phase3/probe-bind-idx0-ngl1-server.log",
+      "sha256": "40d0297b9dc9aa9dda35aecaf0022870d98620fc963d8f5c80d97fa2f8bb5234",
+      "source_path": "evidence/phase3/probe-bind-idx0-ngl1-server.log"
+    },
+    {
+      "bytes": 1137,
+      "repository_path": "retained/evidence/phase3/probe-bind-idx1-ngl1-server.log",
+      "sha256": "662ef187d24ef74c37d32b0f0cdd6e79cb3af57128e5f66a01e90eff9b56050a",
+      "source_path": "evidence/phase3/probe-bind-idx1-ngl1-server.log"
+    },
+    {
+      "bytes": 1137,
+      "repository_path": "retained/evidence/phase3/probe-law-idx0-ngl1-server.log",
+      "sha256": "5aa2dd9defc0fd74d6a515568ce81412f473ca927d527b37e0ef57be4e386343",
+      "source_path": "evidence/phase3/probe-law-idx0-ngl1-server.log"
+    },
+    {
+      "bytes": 1137,
+      "repository_path": "retained/evidence/phase3/probe-law-idx0-ngl2-server.log",
+      "sha256": "b6b112b276d6b8254d9b04825b41ea920c47a30a356d47ae2c046b9b8d162e02",
+      "source_path": "evidence/phase3/probe-law-idx0-ngl2-server.log"
+    },
+    {
+      "bytes": 1137,
+      "repository_path": "retained/evidence/phase3/probe-law-idx0-ngl3-server.log",
+      "sha256": "9a93077cad069855c055f014e0c07207c8af39bf59d963daa6df34abd64f64b4",
+      "source_path": "evidence/phase3/probe-law-idx0-ngl3-server.log"
+    },
+    {
+      "bytes": 33281,
+      "repository_path": "retained/evidence/phase4/regime-idx0-ngl7.json",
+      "sha256": "d373d747cf3f140d7a7c9ecd677b12641c077cf0a3f3883a5db58789687850b1",
+      "source_path": "evidence/phase4/regime-idx0-ngl7.json"
+    },
+    {
+      "bytes": 25016,
+      "repository_path": "retained/evidence/phase4/server-idx0-ngl7.log",
+      "sha256": "9eb4bdd6ad160b495974b479e32f6511766c73b9a04539d84e4c0dad41e24c16",
+      "source_path": "evidence/phase4/server-idx0-ngl7.log"
+    },
+    {
+      "bytes": 33255,
+      "repository_path": "retained/evidence/phase5/regime-idx1-ngl7.json",
+      "sha256": "1d7c4ca228a6081f8d34bb1fe7562215d3f582175c34355347260bf96e883866",
+      "source_path": "evidence/phase5/regime-idx1-ngl7.json"
+    },
+    {
+      "bytes": 7925,
+      "repository_path": "retained/evidence/phase5/rung-idx1-ngl7.json",
+      "sha256": "189d821721550ea8f47707ecc06e531e7fe415e177e6dd74d4af7050ba3f8df8",
+      "source_path": "evidence/phase5/rung-idx1-ngl7.json"
+    },
+    {
+      "bytes": 3927,
+      "repository_path": "retained/evidence/phase5/server-idx1-ngl7.log",
+      "sha256": "841d6d01d35548d97fa0405cedcd82b86b0716858eeb63126cd5947566440e8b",
+      "source_path": "evidence/phase5/server-idx1-ngl7.log"
+    },
+    {
+      "bytes": 8666,
+      "repository_path": "retained/evidence/phase6/dual-samples.jsonl",
+      "sha256": "03e2eb9cddc6fe0ecf340ecc51e8f39933ad54a93ff1d7b53dfdfe49ff7084c0",
+      "source_path": "evidence/phase6/dual-samples.jsonl"
+    },
+    {
+      "bytes": 14622,
+      "repository_path": "retained/evidence/phase6/dual-server-idx0.log",
+      "sha256": "ba45b146f9e883fe1afa6491a228237506d3b06741e79877d72baba898b09f38",
+      "source_path": "evidence/phase6/dual-server-idx0.log"
+    },
+    {
+      "bytes": 16827,
+      "repository_path": "retained/evidence/phase6/dual-server-idx1.log",
+      "sha256": "c145a9a2367c2f068cab1d3361566844fd9d438c4a5fa1e8c050b4c8a53d4bdb",
+      "source_path": "evidence/phase6/dual-server-idx1.log"
+    },
+    {
+      "bytes": 12131,
+      "repository_path": "retained/evidence/phase6/dual-summary.json",
+      "sha256": "5834b0204b3a9d9d8484a0d2e242d5d742bbae1d733f0c252c2eb7c259779519",
+      "source_path": "evidence/phase6/dual-summary.json"
+    },
+    {
+      "bytes": 100043,
+      "repository_path": "retained/fixtures.json",
+      "sha256": "8ef89a84c0844beefc6721350e67cc9ceb8ccdc8012b69f66091e53445e513c0",
+      "source_path": "fixtures.json"
+    },
+    {
+      "bytes": 9067,
+      "repository_path": "retained/issue243-decision-comment-5803481831.md",
+      "sha256": "8fdba20017ddccaaf508d278f94ca0daaf2ca670dc3f1d63b98a0f9fb33a65bf",
+      "source_kind": "accepted-decision-report-comment",
+      "source_path": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/comments/5803481831"
+    },
+    {
+      "bytes": 2197,
+      "repository_path": "retained/issue243-maintainer-acceptance-comment-5803559861.md",
+      "sha256": "c0a7a03d862948eb2dae775aa0e5982eafcfef52c518f548dd4a4dd23b2508de",
+      "source_kind": "maintainer-acceptance-comment",
+      "source_path": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/comments/5803559861"
+    },
+    {
+      "bytes": 904,
+      "repository_path": "retained/ladder-all.log",
+      "sha256": "b550073d48e35ca342fe3d971d7a002b9b19ffe9e26e70a35e72ad328f7e8093",
+      "source_path": "ladder-all.log"
+    },
+    {
+      "bytes": 86,
+      "repository_path": "retained/placement-probe.log",
+      "sha256": "9848a1a747236e2dd0b1efd53f807c3c9a662f4930a0e77613b36f111d885f19",
+      "source_path": "placement-probe.log"
+    },
+    {
+      "bytes": 6540,
+      "repository_path": "retained/producers/issue243_burnin.py",
+      "sha256": "9bff47057021aa34e53a8e8ee74267c1e1c4536464a5934e188a9df5a1b77b30",
+      "source_path": "producers/issue243_burnin.py"
+    },
+    {
+      "bytes": 5962,
+      "repository_path": "retained/producers/issue243_census.py",
+      "sha256": "46aa9b1d5c00a78308d7da9515d647f5774117e2d4c8e45c9a68cb7727f896e6",
+      "source_path": "producers/issue243_census.py"
+    },
+    {
+      "bytes": 4342,
+      "repository_path": "retained/producers/issue243_constants.py",
+      "sha256": "8e469ec6ea1ca2f57e20808904251e5f78b014f961c3db21c2c12c0b3c2e4095",
+      "source_path": "producers/issue243_constants.py"
+    },
+    {
+      "bytes": 5052,
+      "repository_path": "retained/producers/issue243_dualdie.py",
+      "sha256": "abf0bf659146709a39f0b7e14b8f9dd67d5d8162923844b45e686cdc13df8c76",
+      "source_path": "producers/issue243_dualdie.py"
+    },
+    {
+      "bytes": 1193,
+      "repository_path": "retained/producers/issue243_loadgen_notes.py",
+      "sha256": "ab303886bff9791148f61014112a6de17495144e7f1f92cf625df169779df0e5",
+      "source_path": "producers/issue243_loadgen_notes.py"
+    },
+    {
+      "bytes": 11048,
+      "repository_path": "retained/producers/issue243_phase34.py",
+      "sha256": "81c916b5fe70defad57133db47cc0e4dd5c8d615720f3c41c50035d4c4c1768a",
+      "source_path": "producers/issue243_phase34.py"
+    },
+    {
+      "bytes": 7953,
+      "repository_path": "retained/producers/issue243_placement_probe.py",
+      "sha256": "fd69a7e675156f9e0c505aaa04b4b917903e90218c42e4d77e7508272ea1be8e",
+      "source_path": "producers/issue243_placement_probe.py"
+    },
+    {
+      "bytes": 4401,
+      "repository_path": "retained/producers/issue243_sampler.py",
+      "sha256": "5c761360f85a81332fcd59b2564330e017210efc196dfbf2fdeb0e6ee28282e4",
+      "source_path": "producers/issue243_sampler.py"
+    },
+    {
+      "bytes": 179621,
+      "repository_path": "retained/raw/phase1/VP_VULKANINFO_AMD_Radeon_Pro_V340_(RADV_VEGA10)_25_0_7.json",
+      "sha256": "eae0f16627b1aa1c0dc0b1c80de4eeeffc45a73e9fcf4c4e65fcd43ac17a733a",
+      "source_path": "raw/phase1/VP_VULKANINFO_AMD_Radeon_Pro_V340_(RADV_VEGA10)_25_0_7.json"
+    },
+    {
+      "bytes": 21,
+      "repository_path": "retained/raw/phase1/captured-at.txt",
+      "sha256": "1791aea6a82779ea26b0ad07cd47d2db8c20823e852dbb47ba73b0b94e239d49",
+      "source_path": "raw/phase1/captured-at.txt"
+    },
+    {
+      "bytes": 102,
+      "repository_path": "retained/raw/phase1/cmdline.txt",
+      "sha256": "ed30c6a503d777ccf89e86ae8cf0bfa4d46db51b3fffc3a532048d43ad451056",
+      "source_path": "raw/phase1/cmdline.txt"
+    },
+    {
+      "bytes": 120592,
+      "repository_path": "retained/raw/phase1/dmesg-baseline.txt",
+      "sha256": "6f0947a45a05fa732a59dfc425698ba28b23eed7128dde81c0c9be42f3ea4f2a",
+      "source_path": "raw/phase1/dmesg-baseline.txt"
+    },
+    {
+      "bytes": 1078,
+      "repository_path": "retained/raw/phase1/dmidecode-baseboard.txt",
+      "sha256": "06e7a41f3265b8d93efbc442891d6189515f345a532822b5244d45b7384baeaa",
+      "source_path": "raw/phase1/dmidecode-baseboard.txt"
+    },
+    {
+      "bytes": 1088,
+      "repository_path": "retained/raw/phase1/dmidecode-bios.txt",
+      "sha256": "5d8f66727f56e9284baddb4cf8a7f36aea17bf49e34a84b2320059fdb0c99375",
+      "source_path": "raw/phase1/dmidecode-bios.txt"
+    },
+    {
+      "bytes": 2299,
+      "repository_path": "retained/raw/phase1/dmidecode-memory.txt",
+      "sha256": "bdffc86cd3c21ab5e375c05532d4b77582df63f3b82bcb91ab5f94e911f48aba",
+      "source_path": "raw/phase1/dmidecode-memory.txt"
+    },
+    {
+      "bytes": 1773,
+      "repository_path": "retained/raw/phase1/dmidecode-processor.txt",
+      "sha256": "1bb7b8c66c9bb3b2df841b27a43abe692de6c56130f36115fd8ed00647f75e06",
+      "source_path": "raw/phase1/dmidecode-processor.txt"
+    },
+    {
+      "bytes": 1831,
+      "repository_path": "retained/raw/phase1/dmidecode-slots.txt",
+      "sha256": "1ac934c4f7c25e45476d0a337496f4c6abc4809d88a47a780650da58440ce9c1",
+      "source_path": "raw/phase1/dmidecode-slots.txt"
+    },
+    {
+      "bytes": 210,
+      "repository_path": "retained/raw/phase1/free-b.txt",
+      "sha256": "96e32831c087ae21c754ef01ef47545cd21ceeb2795b9ecd05f3b11dbe8c651b",
+      "source_path": "raw/phase1/free-b.txt"
+    },
+    {
+      "bytes": 13,
+      "repository_path": "retained/raw/phase1/hostname.txt",
+      "sha256": "21291063fd86601523f8b87c632f7f7135ec7318b9df32351c76942bba46aecc",
+      "source_path": "raw/phase1/hostname.txt"
+    },
+    {
+      "bytes": 13409,
+      "repository_path": "retained/raw/phase1/lspci-PP-nn.txt",
+      "sha256": "ca1635f0c9bee5dcce06924ea393c74fac1542cadb698bf390c2b5eb9ac46624",
+      "source_path": "raw/phase1/lspci-PP-nn.txt"
+    },
+    {
+      "bytes": 4689,
+      "repository_path": "retained/raw/phase1/lspci-vv-02.00.0-gtx1060.txt",
+      "sha256": "ec5cee985c093f2269a80615d56f7cf8674354b040bc2499b0dc492c8b138caa",
+      "source_path": "raw/phase1/lspci-vv-02.00.0-gtx1060.txt"
+    },
+    {
+      "bytes": 5885,
+      "repository_path": "retained/raw/phase1/lspci-vv-07.00.0.txt",
+      "sha256": "d415c558a364c367d9391590ffff31e1401fe39820635c601777ace4b2328a84",
+      "source_path": "raw/phase1/lspci-vv-07.00.0.txt"
+    },
+    {
+      "bytes": 5885,
+      "repository_path": "retained/raw/phase1/lspci-vv-0b.00.0.txt",
+      "sha256": "67a6beb576a92505a1f26c8a843847ae426d40b721cf625562198c4ac4a29a0d",
+      "source_path": "raw/phase1/lspci-vv-0b.00.0.txt"
+    },
+    {
+      "bytes": 132727,
+      "repository_path": "retained/raw/phase1/lspci-vv-full.txt",
+      "sha256": "221d4302f0f535dfb94a8f511a34c7770adbdd02adcf6e6246440270f425cc88",
+      "source_path": "raw/phase1/lspci-vv-full.txt"
+    },
+    {
+      "bytes": 33,
+      "repository_path": "retained/raw/phase1/machine-id.txt",
+      "sha256": "078c64468b3a1946a78e5999d712497ce9393435920fd36bfe644415167440db",
+      "source_path": "raw/phase1/machine-id.txt"
+    },
+    {
+      "bytes": 104,
+      "repository_path": "retained/raw/phase1/swap.txt",
+      "sha256": "5ed920d3ca5718cdc61d66c13241e68cf302b0164fbc0c9854a27006284ed869",
+      "source_path": "raw/phase1/swap.txt"
+    },
+    {
+      "bytes": 111,
+      "repository_path": "retained/raw/phase1/uname.txt",
+      "sha256": "7d58440bb5c718a6dce5a105b4208dc0b5c75fdbb01115eabb19c9c633fd3bbe",
+      "source_path": "raw/phase1/uname.txt"
+    },
+    {
+      "bytes": 0,
+      "repository_path": "retained/raw/phase1/vk-d0.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_path": "raw/phase1/vk-d0.txt"
+    },
+    {
+      "bytes": 1636,
+      "repository_path": "retained/raw/phase1/vulkaninfo-devdetail.txt",
+      "sha256": "5e2ab7c394fcaa9ed2728f056047ec0a3f69ae33cacee0ac72fd60f4d29fdc53",
+      "source_path": "raw/phase1/vulkaninfo-devdetail.txt"
+    },
+    {
+      "bytes": 3490,
+      "repository_path": "retained/raw/phase1/vulkaninfo-summary.txt",
+      "sha256": "7121b14bf7641e8932e84a15abe007aaff1ad60b7fe0cebd8bcf5ef965af3b03",
+      "source_path": "raw/phase1/vulkaninfo-summary.txt"
+    },
+    {
+      "bytes": 807,
+      "repository_path": "retained/regime-idx0.log",
+      "sha256": "4bb455eb70ee8dd59fb63c0ac92e4d35b9bb5bdb6128637f5dcbbc1f62dfa61a",
+      "source_path": "regime-idx0.log"
+    },
+    {
+      "bytes": 981,
+      "repository_path": "retained/regime-idx1.log",
+      "sha256": "55dc0f0ca73c78e41cb18eb289f732152242d4bc915f09fb7294e43cfacb1c25",
+      "source_path": "regime-idx1.log"
+    }
+  ],
+  "issue": 243,
+  "retrieval_method": "Read-only SCP copy followed by SHA-256 equality against a fresh remote recursive inventory (79 remote evidence files matched 79 local files with no extras or omissions); exact GitHub API snapshots of accepted decision report comment 5803481831 and maintainer acceptance comment 5803559861 are retained separately.",
+  "schema": "inferswarm.issue244.source-import/1",
+  "source_host": "inferswarm05",
+  "source_root": "/home/hermes/is243"
+}

@@ -274,6 +274,7 @@ GROUP_TEST_MODULES = {
         "test_issue241_comparator_producer",
         "test_issue241_physical_producer",
         "test_issue241_measured_practicality",
+        "test_issue244_r8i5_v340l_import",
         "test_issue35_link_probe",
         "test_issue35_role_sweep",
         "test_issue35_envelope",
@@ -838,6 +839,11 @@ PATH_GROUPS = {
     "scripts/issue237_schemas.py": ["vulkan-v0-b"],
     "scripts/issue237_length_bands.py": ["vulkan-v0-b"],
     "tests/test_issue237_r8i_methodology.py": ["vulkan-v0-b"],
+    # Issue #244 Phase 0: durable import of accepted R8-I4 V340L/Z440
+    # engineering evidence and its living-ledger cross-check.
+    "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": ["vulkan-v0-b"],
+    "docs/hardware/pcie-slot-ledger.md": ["vulkan-v0-b"],
+    "tests/test_issue244_r8i5_v340l_import.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_external_memory.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_vk_contract.py": ["vulkan-v0-b"],
     "tests/issue230_vk_stub/": ["vulkan-v0-b"],

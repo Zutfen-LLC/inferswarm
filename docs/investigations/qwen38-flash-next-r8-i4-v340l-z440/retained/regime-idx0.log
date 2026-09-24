@@ -1,0 +1,17 @@
+{"case": "case-256", "rep": 0, "wall": 14.165}
+{"case": "case-256", "rep": 1, "wall": 13.482}
+{"case": "case-256", "rep": 2, "wall": 13.632}
+{"case": "case-256", "rep": 3, "wall": 13.69}
+{"case": "case-1024", "rep": 0, "wall": 25.518}
+{"case": "case-1024", "rep": 1, "wall": 24.411}
+{"case": "case-1024", "rep": 2, "wall": 24.695}
+{"case": "case-1024", "rep": 3, "wall": 24.716}
+{"case": "case-3072", "rep": 0, "wall": 64.311}
+{"case": "case-3072", "rep": 1, "wall": 63.876}
+{"case": "case-3072", "rep": 2, "wall": 63.627}
+{"case": "case-3072", "rep": 3, "wall": 62.841}
+{"case": "case-4096", "rep": 0, "wall": 79.625}
+{"case": "case-4096", "rep": 1, "wall": 80.159}
+{"case": "case-4096", "rep": 2, "wall": 80.766}
+{"case": "case-4096", "rep": 3, "wall": 81.259}
+wrote evidence/phase4/regime-idx0-ngl7.json
