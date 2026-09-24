@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "cat",
+    "/sys/bus/pci/devices/0000:03:00.0/subsystem_device"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "0x4074\n",
+  "stdout_sha256": "f76ae6ef1746f1f7453f74a41dd745764c99b1d691b48e76709c857ca11b38f1"
+}

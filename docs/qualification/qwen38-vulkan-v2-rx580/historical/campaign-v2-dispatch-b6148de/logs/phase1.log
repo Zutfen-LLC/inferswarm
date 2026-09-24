@@ -1,0 +1,15 @@
+PHASE-RESULT {
+  "head": "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2",
+  "phase": 1,
+  "verdict": {
+    "campaign": "issue241-r8i3-rx580-comparator-v2",
+    "candidate_bdf": "00000000:02:00.0",
+    "notes": "identity validation only; stability is assessed by the bounded historical-fixture runs, not by this reducer",
+    "reference_bdf": "00000000:03:00.0",
+    "same_host": true,
+    "schema": "inferswarm.issue241.phase1-census-verdict/1",
+    "stability_assessed": false,
+    "validated": true,
+    "vram_census_mib": 8192
+  }
+}

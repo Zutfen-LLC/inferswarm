@@ -1,0 +1,8 @@
+launching: --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --n-gpu-layers 8 --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 19001 -lv 5
+load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+ready hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+prompt-start hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'

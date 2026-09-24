@@ -1,0 +1,840 @@
+{
+  "argv": [
+    "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server",
+    "--n-gpu-layers",
+    "8",
+    "--model",
+    "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "--ctx-size",
+    "8192",
+    "--batch-size",
+    "512",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "48937",
+    "-lv",
+    "5"
+  ],
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "-1",
+    "GGML_VK_VISIBLE_DEVICES": "0",
+    "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json"
+  },
+  "excluded_device_residency_mib": {
+    "00000000:03:00.0": 0.0
+  },
+  "gpu_telemetry": {
+    "baseline": {
+      "amd": {
+        "00000000:02:00.0": {
+          "vram_used_bytes": 6496256
+        }
+      },
+      "captured_at": 1790223509.4079168,
+      "nvidia": {
+        "00000000:03:00.0": {
+          "used_mib": 1,
+          "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+        }
+      }
+    },
+    "samples": [
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 6496256
+            }
+          },
+          "captured_at": 1790223509.4504917,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 10804\nwchar: 0\nsyscr: 16\nsyscw: 0\nread_bytes: 0\nwrite_bytes: 0\ncancelled_write_bytes: 0\n",
+          "major_faults": 0,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 96,
+          "rss_file_kib": 500,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 69 0 0 0 0 0 0 0 20 0 1 0 5889866 20353024 248 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 0 0 0 0 0 17 6 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t   14220 kB\nVmSize:\t   14220 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t    1012 kB\nVmRSS:\t    1012 kB\nRssAnon:\t      96 kB\nRssFile:\t     500 kB\nRssShmem:\t     416 kB\nVmData:\t     440 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t    9192 kB\nVmPTE:\t      64 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000000000\nSigCgt:\t0000000000000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t0\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223509.4088976
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7970816
+            }
+          },
+          "captured_at": 1790223510.4969614,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 11196456\nwchar: 200928\nsyscr: 2919\nsyscw: 8402\nread_bytes: 0\nwrite_bytes: 212992\ncancelled_write_bytes: 0\n",
+          "major_faults": 1,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 530032,
+          "rss_file_kib": 46912,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 22728 0 1 0 90 15 0 0 20 0 33 0 5889866 2204753920 149600 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t 2214232 kB\nVmSize:\t 2153080 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  599424 kB\nVmRSS:\t  599424 kB\nRssAnon:\t  530032 kB\nRssFile:\t   46912 kB\nRssShmem:\t   22480 kB\nVmData:\t 1586436 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t    1592 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t9\nnonvoluntary_ctxt_switches:\t11\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223510.450647
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 6856560640
+            }
+          },
+          "captured_at": 1790223512.584599,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 22236598\nwchar: 389586\nsyscr: 5632\nsyscw: 16193\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+          "major_faults": 1,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 102632,
+          "rss_file_kib": 3901544,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 84760 0 1 0 171 41 0 0 20 0 33 0 5889866 73424666624 1007750 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t71703776 kB\nVmSize:\t71703776 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t 4026912 kB\nVmRSS:\t 4026912 kB\nRssAnon:\t  102632 kB\nRssFile:\t 3901544 kB\nRssShmem:\t   22736 kB\nVmData:\t  358696 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t    8276 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t14\nnonvoluntary_ctxt_switches:\t17\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223511.497132
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 6857478144
+            }
+          },
+          "captured_at": 1790223513.6313148,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 22249974\nwchar: 390126\nsyscr: 6131\nsyscw: 16216\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+          "major_faults": 1,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 102888,
+          "rss_file_kib": 22430216,
+          "stat": "146844 (llama-server) S 137307 146844 146844 0 -1 4194304 386979 0 1 0 212 168 0 0 20 0 33 0 5889866 74031755264 5638710 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tS (sleeping)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72362172 kB\nVmSize:\t72296636 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22555840 kB\nVmRSS:\t22555840 kB\nRssAnon:\t  102888 kB\nRssFile:\t22430216 kB\nRssShmem:\t   22736 kB\nVmData:\t  359228 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   45452 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t209\nnonvoluntary_ctxt_switches:\t28\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223513.584799
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 6857478144
+            }
+          },
+          "captured_at": 1790223514.67765,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 22249974\nwchar: 390126\nsyscr: 6131\nsyscw: 16216\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+          "major_faults": 1,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 102912,
+          "rss_file_kib": 22430216,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 386985 0 1 0 257 169 0 0 20 0 33 0 5889866 74098864128 5638710 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t72362172 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22555864 kB\nVmRSS:\t22555864 kB\nRssAnon:\t  102912 kB\nRssFile:\t22430216 kB\nRssShmem:\t   22736 kB\nVmData:\t  359360 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   45456 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t307\nnonvoluntary_ctxt_switches:\t29\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223514.6315172
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7647547392
+            }
+          },
+          "captured_at": 1790223515.7237954,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 22249974\nwchar: 401921\nsyscr: 6131\nsyscw: 16807\nread_bytes: 0\nwrite_bytes: 421888\ncancelled_write_bytes: 0\n",
+          "major_faults": 1,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 720412,
+          "rss_file_kib": 15744320,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 389655 0 1 0 295 199 0 0 20 0 33 0 5889866 68926582784 4121640 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67311116 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t16487532 kB\nRssAnon:\t  720412 kB\nRssFile:\t15744320 kB\nRssShmem:\t   22800 kB\nVmData:\t 1784108 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   33628 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t343\nnonvoluntary_ctxt_switches:\t34\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223515.6778374
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7647604736
+            }
+          },
+          "captured_at": 1790223516.7714803,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 22336383\nwchar: 402833\nsyscr: 6166\nsyscw: 16844\nread_bytes: 0\nwrite_bytes: 425984\ncancelled_write_bytes: 0\n",
+          "major_faults": 50,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721008,
+          "rss_file_kib": 18021324,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 451992 0 50 0 1637 256 0 0 20 0 46 0 5889866 69103198208 4690844 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 20 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67483592 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t18765940 kB\nRssAnon:\t  721008 kB\nRssFile:\t18021324 kB\nRssShmem:\t   23608 kB\nVmData:\t 1890736 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   42980 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t46\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t626\nnonvoluntary_ctxt_switches:\t39\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223516.7239368
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7648395264
+            }
+          },
+          "captured_at": 1790223517.8188555,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24079116\nwchar: 405353\nsyscr: 6822\nsyscw: 16934\nread_bytes: 0\nwrite_bytes: 430080\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721032,
+          "rss_file_kib": 18475208,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 461066 0 53 0 2926 266 0 0 20 0 46 0 5889866 69172080640 4804418 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 0 0 0 0 17 6 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67550860 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t19220424 kB\nRssAnon:\t  721032 kB\nRssFile:\t18475208 kB\nRssShmem:\t   24184 kB\nVmData:\t 1890868 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   46060 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t46\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t751\nnonvoluntary_ctxt_switches:\t42\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223517.7716274
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7649230848
+            }
+          },
+          "captured_at": 1790223518.8682075,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24491984\nwchar: 412076\nsyscr: 6974\nsyscw: 17164\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 18772296,
+          "stat": "146844 (llama-server) S 137307 146844 146844 0 -1 4194304 466101 0 53 0 3056 272 0 0 20 0 47 0 5889866 69387231232 4878910 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tS (sleeping)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67760968 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t19518616 kB\nRssAnon:\t  721176 kB\nRssFile:\t18772296 kB\nRssShmem:\t   25144 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   48820 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t791\nnonvoluntary_ctxt_switches:\t48\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223518.8190405
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223519.9184906,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 19875016,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 483447 0 53 0 3172 293 0 0 20 0 47 0 5889866 69391409152 5154879 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67765048 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t20621400 kB\nRssAnon:\t  721176 kB\nRssFile:\t19875016 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   52960 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t949\nnonvoluntary_ctxt_switches:\t67\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223519.8683581
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223520.9694192,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 21048520,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 501768 0 53 0 3274 317 0 0 20 0 47 0 5889866 69391409152 5447999 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67765048 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t21794904 kB\nRssAnon:\t  721176 kB\nRssFile:\t21048520 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   56832 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1064\nnonvoluntary_ctxt_switches:\t84\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223520.9186714
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223522.0200086,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 22218376,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 520185 0 53 0 3382 334 0 0 20 0 47 0 5889866 69393252352 5740671 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22964760 kB\nVmRSS:\t22964760 kB\nRssAnon:\t  721176 kB\nRssFile:\t22218376 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   60684 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1179\nnonvoluntary_ctxt_switches:\t98\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223521.96961
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223523.0708919,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 23483976,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 539949 0 53 0 3475 356 0 0 20 0 47 0 5889866 69393252352 6056895 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t24230360 kB\nVmRSS:\t24230360 kB\nRssAnon:\t  721176 kB\nRssFile:\t23483976 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   64808 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1278\nnonvoluntary_ctxt_switches:\t116\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223523.020183
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223524.1215937,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 24677256,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 558610 0 53 0 3583 374 0 0 20 0 47 0 5889866 69393252352 6355455 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t25423640 kB\nVmRSS:\t25423640 kB\nRssAnon:\t  721176 kB\nRssFile:\t24677256 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   68324 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1382\nnonvoluntary_ctxt_switches:\t136\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223524.0710392
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651565568
+            }
+          },
+          "captured_at": 1790223525.172769,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573082 0 53 0 3681 390 0 0 20 0 47 0 5889866 69393252352 6587007 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70820 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1481\nnonvoluntary_ctxt_switches:\t155\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223525.1217802
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651573760
+            }
+          },
+          "captured_at": 1790223526.223451,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573223 0 53 0 3793 406 0 0 20 0 47 0 5889866 69394173952 6587007 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67767748 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1585\nnonvoluntary_ctxt_switches:\t173\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223526.172956
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651573760
+            }
+          },
+          "captured_at": 1790223527.281061,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573223 0 53 0 3904 421 0 0 20 0 47 0 5889866 69394173952 6587007 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 18 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67767748 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1700\nnonvoluntary_ctxt_switches:\t198\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223527.223638
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651573760
+            }
+          },
+          "captured_at": 1790223528.3317356,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573378 0 53 0 4016 436 0 0 20 0 47 0 5889866 69395095552 6587007 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67768648 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1815\nnonvoluntary_ctxt_switches:\t219\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223528.2812457
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651573760
+            }
+          },
+          "captured_at": 1790223529.3841493,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 721176,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573378 0 53 0 4133 449 0 0 20 0 47 0 5889866 69395095552 6587007 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 18 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67768648 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1896\nnonvoluntary_ctxt_switches:\t233\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223529.3319068
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651606528
+            }
+          },
+          "captured_at": 1790223530.4350178,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 413488\nsyscr: 7120\nsyscw: 17217\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 777060,
+          "rss_file_kib": 25604488,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 573986 0 53 0 4193 460 0 0 20 0 47 0 5889866 69534470144 6600981 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 18 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67904756 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26406756 kB\nVmRSS:\t26406756 kB\nRssAnon:\t  777060 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 2014732 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70972 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2109\nnonvoluntary_ctxt_switches:\t246\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223530.3843365
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651606528
+            }
+          },
+          "captured_at": 1790223531.4887218,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 24882656\nwchar: 414094\nsyscr: 7120\nsyscw: 17244\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 836452,
+          "rss_file_kib": 25825032,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 578846 0 53 0 5534 468 0 0 20 0 47 0 5889866 69534470144 6670786 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67904756 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26686692 kB\nVmRSS:\t26686692 kB\nRssAnon:\t  836452 kB\nRssFile:\t25825032 kB\nRssShmem:\t   25208 kB\nVmData:\t 2014732 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71640 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2184\nnonvoluntary_ctxt_switches:\t250\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223531.4351704
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651713024
+            }
+          },
+          "captured_at": 1790223532.5393288,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 25177588\nwchar: 415556\nsyscr: 7228\nsyscw: 17310\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 839376,
+          "rss_file_kib": 25868168,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 580463 0 53 0 6925 469 0 0 20 0 47 0 5889866 69537611776 6682264 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907824 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26732752 kB\nVmRSS:\t26732752 kB\nRssAnon:\t  839376 kB\nRssFile:\t25868168 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017696 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71752 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2278\nnonvoluntary_ctxt_switches:\t251\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223532.4888723
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651713024
+            }
+          },
+          "captured_at": 1790223533.5904024,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 25342204\nwchar: 417981\nsyscr: 7294\nsyscw: 17422\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 839548,
+          "rss_file_kib": 25913864,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 581437 0 53 0 8339 473 0 0 20 0 47 0 5889866 69537746944 6693579 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 18 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26778620 kB\nVmRSS:\t26778620 kB\nRssAnon:\t  839548 kB\nRssFile:\t25913864 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71848 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2462\nnonvoluntary_ctxt_switches:\t255\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223533.5394788
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651713024
+            }
+          },
+          "captured_at": 1790223534.6416855,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 25342204\nwchar: 420132\nsyscr: 7294\nsyscw: 17524\nread_bytes: 0\nwrite_bytes: 446464\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 839548,
+          "rss_file_kib": 25931080,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 581841 0 53 0 9752 478 0 0 20 0 47 0 5889866 69537746944 6697869 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 18 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26795836 kB\nVmRSS:\t26795836 kB\nRssAnon:\t  839548 kB\nRssFile:\t25931080 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71852 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2645\nnonvoluntary_ctxt_switches:\t259\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223534.5905476
+      },
+      {
+        "device": {
+          "amd": {
+            "00000000:02:00.0": {
+              "vram_used_bytes": 7651713024
+            }
+          },
+          "captured_at": 1790223535.6944325,
+          "nvidia": {
+            "00000000:03:00.0": {
+              "used_mib": 1,
+              "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+            }
+          }
+        },
+        "proc": {
+          "cmdline": "/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server --n-gpu-layers 8 --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 48937 -lv 5",
+          "io": "rchar: 25342204\nwchar: 422277\nsyscr: 7294\nsyscw: 17626\nread_bytes: 0\nwrite_bytes: 450560\ncancelled_write_bytes: 0\n",
+          "major_faults": 53,
+          "physical_read_bytes": 0,
+          "pid": 146844,
+          "rss_anon_kib": 839548,
+          "rss_file_kib": 26010696,
+          "stat": "146844 (llama-server) R 137307 146844 146844 0 -1 4194304 583363 0 53 0 11163 481 0 0 20 0 47 0 5889866 69537746944 6717783 18446744073709551615 94553232543744 94553232546161 140726023751616 0 0 0 0 4096 16386 0 0 0 17 4 0 0 0 0 0 94553232555400 94553232556200 94554171183104 140726023756756 140726023756996 140726023756996 140726023757746 0\n",
+          "status": "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26875452 kB\nVmRSS:\t26875452 kB\nRssAnon:\t  839548 kB\nRssFile:\t26010696 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   72084 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2832\nnonvoluntary_ctxt_switches:\t263\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+          "swap_kib": 0
+        },
+        "t": 1790223535.6418283
+      }
+    ],
+    "source": "live-device-samples"
+  },
+  "http_status": 200,
+  "pid": 146844,
+  "proc_io": [
+    "rchar: 10804\nwchar: 0\nsyscr: 16\nsyscw: 0\nread_bytes: 0\nwrite_bytes: 0\ncancelled_write_bytes: 0\n",
+    "rchar: 11196456\nwchar: 200928\nsyscr: 2919\nsyscw: 8402\nread_bytes: 0\nwrite_bytes: 212992\ncancelled_write_bytes: 0\n",
+    "rchar: 22236598\nwchar: 389586\nsyscr: 5632\nsyscw: 16193\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+    "rchar: 22249974\nwchar: 390126\nsyscr: 6131\nsyscw: 16216\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+    "rchar: 22249974\nwchar: 390126\nsyscr: 6131\nsyscw: 16216\nread_bytes: 0\nwrite_bytes: 405504\ncancelled_write_bytes: 0\n",
+    "rchar: 22249974\nwchar: 401921\nsyscr: 6131\nsyscw: 16807\nread_bytes: 0\nwrite_bytes: 421888\ncancelled_write_bytes: 0\n",
+    "rchar: 22336383\nwchar: 402833\nsyscr: 6166\nsyscw: 16844\nread_bytes: 0\nwrite_bytes: 425984\ncancelled_write_bytes: 0\n",
+    "rchar: 24079116\nwchar: 405353\nsyscr: 6822\nsyscw: 16934\nread_bytes: 0\nwrite_bytes: 430080\ncancelled_write_bytes: 0\n",
+    "rchar: 24491984\nwchar: 412076\nsyscr: 6974\nsyscw: 17164\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 412636\nsyscr: 7120\nsyscw: 17184\nread_bytes: 0\nwrite_bytes: 434176\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 413488\nsyscr: 7120\nsyscw: 17217\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+    "rchar: 24882656\nwchar: 414094\nsyscr: 7120\nsyscw: 17244\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+    "rchar: 25177588\nwchar: 415556\nsyscr: 7228\nsyscw: 17310\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+    "rchar: 25342204\nwchar: 417981\nsyscr: 7294\nsyscw: 17422\nread_bytes: 0\nwrite_bytes: 442368\ncancelled_write_bytes: 0\n",
+    "rchar: 25342204\nwchar: 420132\nsyscr: 7294\nsyscw: 17524\nread_bytes: 0\nwrite_bytes: 446464\ncancelled_write_bytes: 0\n",
+    "rchar: 25342204\nwchar: 422277\nsyscr: 7294\nsyscw: 17626\nread_bytes: 0\nwrite_bytes: 450560\ncancelled_write_bytes: 0\n"
+  ],
+  "proc_status": [
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t   14220 kB\nVmSize:\t   14220 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t    1012 kB\nVmRSS:\t    1012 kB\nRssAnon:\t      96 kB\nRssFile:\t     500 kB\nRssShmem:\t     416 kB\nVmData:\t     440 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t    9192 kB\nVmPTE:\t      64 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t1\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000000000\nSigCgt:\t0000000000000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t0\nnonvoluntary_ctxt_switches:\t0\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t 2214232 kB\nVmSize:\t 2153080 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t  599424 kB\nVmRSS:\t  599424 kB\nRssAnon:\t  530032 kB\nRssFile:\t   46912 kB\nRssShmem:\t   22480 kB\nVmData:\t 1586436 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t    1592 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t9\nnonvoluntary_ctxt_switches:\t11\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t71703776 kB\nVmSize:\t71703776 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t 4026912 kB\nVmRSS:\t 4026912 kB\nRssAnon:\t  102632 kB\nRssFile:\t 3901544 kB\nRssShmem:\t   22736 kB\nVmData:\t  358696 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t    8276 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t14\nnonvoluntary_ctxt_switches:\t17\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tS (sleeping)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72362172 kB\nVmSize:\t72296636 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22555840 kB\nVmRSS:\t22555840 kB\nRssAnon:\t  102888 kB\nRssFile:\t22430216 kB\nRssShmem:\t   22736 kB\nVmData:\t  359228 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   45452 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t209\nnonvoluntary_ctxt_switches:\t28\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t72362172 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22555864 kB\nVmRSS:\t22555864 kB\nRssAnon:\t  102912 kB\nRssFile:\t22430216 kB\nRssShmem:\t   22736 kB\nVmData:\t  359360 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   45456 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t307\nnonvoluntary_ctxt_switches:\t29\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67311116 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t16487532 kB\nRssAnon:\t  720412 kB\nRssFile:\t15744320 kB\nRssShmem:\t   22800 kB\nVmData:\t 1784108 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   33628 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t33\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t343\nnonvoluntary_ctxt_switches:\t34\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67483592 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t18765940 kB\nRssAnon:\t  721008 kB\nRssFile:\t18021324 kB\nRssShmem:\t   23608 kB\nVmData:\t 1890736 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   42980 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t46\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t626\nnonvoluntary_ctxt_switches:\t39\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67550860 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t19220424 kB\nRssAnon:\t  721032 kB\nRssFile:\t18475208 kB\nRssShmem:\t   24184 kB\nVmData:\t 1890868 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   46060 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t46\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100000000\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t751\nnonvoluntary_ctxt_switches:\t42\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tS (sleeping)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67760968 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t19518616 kB\nRssAnon:\t  721176 kB\nRssFile:\t18772296 kB\nRssShmem:\t   25144 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   48820 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t791\nnonvoluntary_ctxt_switches:\t48\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67765048 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t20621400 kB\nRssAnon:\t  721176 kB\nRssFile:\t19875016 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   52960 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t949\nnonvoluntary_ctxt_switches:\t67\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67765048 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22554840 kB\nVmRSS:\t21794904 kB\nRssAnon:\t  721176 kB\nRssFile:\t21048520 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   56832 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1064\nnonvoluntary_ctxt_switches:\t84\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t22964760 kB\nVmRSS:\t22964760 kB\nRssAnon:\t  721176 kB\nRssFile:\t22218376 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   60684 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1179\nnonvoluntary_ctxt_switches:\t98\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t24230360 kB\nVmRSS:\t24230360 kB\nRssAnon:\t  721176 kB\nRssFile:\t23483976 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   64808 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1278\nnonvoluntary_ctxt_switches:\t116\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t25423640 kB\nVmRSS:\t25423640 kB\nRssAnon:\t  721176 kB\nRssFile:\t24677256 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   68324 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1382\nnonvoluntary_ctxt_switches:\t136\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67766848 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70820 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1481\nnonvoluntary_ctxt_switches:\t155\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67767748 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1585\nnonvoluntary_ctxt_switches:\t173\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67767748 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1700\nnonvoluntary_ctxt_switches:\t198\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67768648 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1815\nnonvoluntary_ctxt_switches:\t219\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67768648 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26350872 kB\nVmRSS:\t26350872 kB\nRssAnon:\t  721176 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 1899456 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70824 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t1896\nnonvoluntary_ctxt_switches:\t233\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67904756 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26406756 kB\nVmRSS:\t26406756 kB\nRssAnon:\t  777060 kB\nRssFile:\t25604488 kB\nRssShmem:\t   25208 kB\nVmData:\t 2014732 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   70972 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2109\nnonvoluntary_ctxt_switches:\t246\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67904756 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26686692 kB\nVmRSS:\t26686692 kB\nRssAnon:\t  836452 kB\nRssFile:\t25825032 kB\nRssShmem:\t   25208 kB\nVmData:\t 2014732 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71640 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2184\nnonvoluntary_ctxt_switches:\t250\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907824 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26732752 kB\nVmRSS:\t26732752 kB\nRssAnon:\t  839376 kB\nRssFile:\t25868168 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017696 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71752 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2278\nnonvoluntary_ctxt_switches:\t251\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26778620 kB\nVmRSS:\t26778620 kB\nRssAnon:\t  839548 kB\nRssFile:\t25913864 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71848 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2462\nnonvoluntary_ctxt_switches:\t255\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26795836 kB\nVmRSS:\t26795836 kB\nRssAnon:\t  839548 kB\nRssFile:\t25931080 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   71852 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2645\nnonvoluntary_ctxt_switches:\t259\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n",
+    "Name:\tllama-server\nUmask:\t0002\nState:\tR (running)\nTgid:\t146844\nNgid:\t0\nPid:\t146844\nPPid:\t137307\nTracerPid:\t0\nUid:\t1001\t1001\t1001\t1001\nGid:\t1001\t1001\t1001\t1001\nFDSize:\t64\nGroups:\t27 44 100 992 1001 \nNStgid:\t146844\nNSpid:\t146844\nNSpgid:\t146844\nNSsid:\t146844\nKthread:\t0\nVmPeak:\t72427708 kB\nVmSize:\t67907956 kB\nVmLck:\t       0 kB\nVmPin:\t       0 kB\nVmHWM:\t26875452 kB\nVmRSS:\t26875452 kB\nRssAnon:\t  839548 kB\nRssFile:\t26010696 kB\nRssShmem:\t   25208 kB\nVmData:\t 2017828 kB\nVmStk:\t     132 kB\nVmExe:\t       4 kB\nVmLib:\t  166832 kB\nVmPTE:\t   72084 kB\nVmSwap:\t       0 kB\nHugetlbPages:\t       0 kB\nCoreDumping:\t0\nTHP_enabled:\t1\nuntag_mask:\t0xffffffffffffffff\nThreads:\t47\nSigQ:\t1/514192\nSigPnd:\t0000000000000000\nShdPnd:\t0000000000000000\nSigBlk:\t0000000000000000\nSigIgn:\t0000000000001000\nSigCgt:\t0000000100004002\nCapInh:\t0000000000000000\nCapPrm:\t0000000000000000\nCapEff:\t0000000000000000\nCapBnd:\t000001ffffffffff\nCapAmb:\t0000000000000000\nNoNewPrivs:\t0\nSeccomp:\t0\nSeccomp_filters:\t0\nSpeculation_Store_Bypass:\tthread vulnerable\nSpeculationIndirectBranch:\tconditional enabled\nCpus_allowed:\tfffffff\nCpus_allowed_list:\t0-27\nMems_allowed:\t00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001\nMems_allowed_list:\t0\nvoluntary_ctxt_switches:\t2832\nnonvoluntary_ctxt_switches:\t263\nx86_Thread_features:\t\nx86_Thread_features_locked:\t\n"
+  ],
+  "process_measurements": {
+    "major_faults": 53,
+    "physical_read_bytes": 0,
+    "rss_anon_kib": 839548,
+    "rss_file_kib": 26010696,
+    "swap_kib": 0
+  },
+  "request_timings": {
+    "decode_ms": 3804.676,
+    "prompt_ms": 13754.432
+  },
+  "request_wall_s": 27.415389235000475,
+  "returncode": 0
+}

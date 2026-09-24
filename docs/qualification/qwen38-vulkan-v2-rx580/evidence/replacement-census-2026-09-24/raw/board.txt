@@ -1,0 +1,7 @@
+board_vendor=Hewlett-Packard
+board_name=212B
+board_version=1.01
+bios_vendor=Hewlett-Packard
+bios_version=M60 v02.62
+product_name=HP Z440 Workstation
+product_serial=UNREADABLE

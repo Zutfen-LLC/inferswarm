@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "sha256sum",
+    "--",
+    "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a  /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf\n",
+  "stdout_sha256": "609a1a9453af83380dfae258ae1a62c75e20715efc89695724bbcf051f4ebb63"
+}

@@ -109,28 +109,49 @@ OBSERVER_PATCHED_SOURCE_SHA256 = (
     "2f1f3d5461c39b94d4dc92c74e03da5fb0b1af069f1aeda1df587a25c3ffe89f")
 
 # --- arms: SAME HOST (inferswarm01), sequential execution only ----------
-# Identities below are the PROSPECTIVE frozen subject, derived from the
-# post-swap fresh census (2026-09-23). Physical Phase 1 must re-observe
-# every field read-only and fail closed on drift.
+# SUBJECT GENERATION 2 (prospective re-freeze, 2026-09-24): the generation-1
+# physical candidate FAILED (fatal PCIe/AER under dispatch b6148de; terminal
+# R8I3_RX580_INFRASTRUCTURE_BLOCKED — historical/ dir of this area). The
+# operator replaced the physical card in the same slot. This generation-2
+# freeze derives from the maintainer-authorized fresh READ-ONLY census of the
+# replacement (evidence/replacement-census-2026-09-24/, raw sysfs/lspci/
+# nvidia-smi/per-ICD vulkaninfo bytes, no GPU compute/model reads/dispatch
+# machinery). Mechanical derivation from those bytes changed exactly ONE
+# frozen field versus generation 1: negotiated link_width x8 -> x16 (the
+# replacement trains the full slot width). Every other software-visible
+# identity field is byte-identical (same marketed model AND same subsystem
+# 1da2:e353 / rev e7 / 8192 MiB VRAM / amdgpu / RADV POLARIS10 UUID —
+# recorded as COINCIDENTAL EQUALITY, not card equality: the physical card
+# was replaced and no software field is claimed to individuate Polaris
+# boards). Generation-1 receipts are historical and can never satisfy a
+# generation-2 acceptance gate (mechanically: their dispatch authority,
+# head SHA, and phase receipts bind generation-1 constants; negatively
+# controlled in tests).
+SUBJECT_GENERATION = 2
+HISTORICAL_TERMINAL = "R8I3_RX580_INFRASTRUCTURE_BLOCKED"
+HISTORICAL_DISPATCH_HEAD = "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2"
+HISTORICAL_DISPATCH_COMMENT = 5806929798
+REPLACEMENT_CENSUS_REL = (
+    "docs/qualification/qwen38-vulkan-v2-rx580/evidence/"
+    "replacement-census-2026-09-24")
+# Identities below are the PROSPECTIVE frozen subject (generation 2),
+# derived from the fresh 2026-09-24 replacement census. Physical Phase 1
+# must re-observe every field read-only and fail closed on drift.
 #
 # Machine-readable frozen subject identity (R8-I3 correction pass): every
 # identity field required by issue #241 is a constant here, never prose
-# alone. Sources (already-authoritative pre-campaign observations only):
-#   * the retained 2026-09-23 post-swap census observations (session
-#     outputs: lspci -nn/-k, nvidia-smi UUID/bus-id, dmesg amdgpu VRAM,
-#     ICD inventory, per-ICD vulkaninfo summaries incl. NVIDIA deviceUUID
-#     and RADV POLARIS10 deviceName/apiVersion/Mesa version);
-#   * the accepted fleet hardware census of 2026-09-15
-#     (docs/investigations/qwen38-flash-next-r8-a/hardware-census.json +
-#     raw-hardware/inv-inferswarm01.txt), which recorded the 03:00.0 slot
-#     as 10de:2504 subsystem 1458:4074 rev a1, LnkCap x16;
-#   * a read-only sysfs/lspci -vv/nvidia-smi/vulkaninfo observation of
-#     inferswarm01 taken 2026-09-23 for the subsystem/link-width fields
-#     the post-swap session had not retained (identity-observation raw
-#     retained at docs/qualification/qwen38-vulkan-v2-rx580/
-#     identity-observation-2026-09-23.txt; sha256 recorded in the area
-#     MANIFEST). No GPU compute, model read, or dispatch machinery was
-#     involved.
+# alone. Generation-2 authority (exclusively):
+#   * the retained fresh read-only replacement census of 2026-09-24
+#     (evidence/replacement-census-2026-09-24/raw/ — sysfs per-BDF
+#     vendor/device/subsystem/revision/link/driver/VRAM bytes, lspci
+#     -Dnn/-Dnnvv topology, nvidia-smi identity query, per-ICD vulkaninfo
+#     summaries incl. RADV deviceName/UUID/apiVersion/driverInfo); every
+#     frozen field below is re-derivable from those bytes by
+#     derive_candidate_identity_from_census() (tested).
+# Generation-1 authority (2026-09-23 census + fleet inventory) is retired
+# for the candidate; the reference arm's freeze is unchanged (same
+# physical 3060, re-observed x16/x16 @ 16.0 GT/s capability in the
+# 2026-09-24 census, UUID GPU-d5c05739).
 # LINK IDENTITY POLICY: negotiated link SPEED is downtrainable by normal
 # PCIe power management (observed 2.5 GT/s at idle on the reference) and
 # is therefore recorded, never frozen. The frozen link identity is the
@@ -172,9 +193,12 @@ CANDIDATE_ARM = {
     "arm": "C",
     "role": "candidate",
     "host": "inferswarm01",  # SAME host — the matched-host pivot
+    "subject_generation": SUBJECT_GENERATION,  # replacement card (2026-09-24)
     "device": "AMD Radeon RX 580 Series (RADV POLARIS10), Ellesmere "
               "[1002:67df] rev e7, Sapphire Radeon RX 570 Pulse 4GB "
-              "subsystem (8192 MiB VRAM per amdgpu census)",
+              "subsystem (8192 MiB VRAM per amdgpu census) — REPLACEMENT "
+              "physical card, generation 2 (negotiates x16; the generation-1 "
+              "card negotiated x8 and failed fatally)",
     "gpu_uuid": None,  # RADV Polaris exposes no per-card UUID; bound below
     "bdf": "00000000:02:00.0",
     "pci_id": "1002:67df",
@@ -183,8 +207,10 @@ CANDIDATE_ARM = {
     "subsystem_vendor_id": "1da2",   # Sapphire Technology Limited
     "subsystem_device_id": "e353",   # "Radeon RX 570 Pulse 4GB" label
     "revision": "e7",
-    "link_width": "x8",              # negotiated width (frozen identity;
-    #                                   observed downgraded from x16 LnkCap)
+    "link_width": "x16",             # negotiated width (frozen identity;
+    #                                   generation-2 replacement trains the
+    #                                   full slot width; generation-1 card
+    #                                   was frozen at x8 — see historical/)
     "max_link_width": "x16",         # device capability (frozen)
     "max_link_speed": "8.0 GT/s",    # Gen3 capability (frozen; Gen3-vs-Gen1
     #                                   slot drift discriminator)
@@ -224,6 +250,102 @@ def frozen_identity(arm: str) -> dict[str, str]:
         identity["pci_id"] = cfg["pci_id"]
         identity["max_link_speed"] = cfg["max_link_speed"]
     return identity
+
+
+# --- generation-2 freeze provenance (mechanical derivation from the
+# retained fresh replacement-census bytes; see maintainer remediation
+# directive 2026-09-24, points 4-7) --------------------------------------
+
+def _census_raw(root: Path | None = None) -> Path:
+    root = root or ROOT
+    return root / REPLACEMENT_CENSUS_REL / "raw"
+
+
+def derive_candidate_identity_from_census(
+        root: Path | None = None) -> dict[str, str]:
+    """Mechanically derive the candidate identity from the retained fresh
+    replacement-census raw bytes (generation-2 freeze authority).
+
+    Parses ONLY the retained read-only observation artifacts — no device
+    access, no network, no dispatch machinery. Every output field is the
+    same normalization the census/Phase-2/Phase-3 predicates apply, so the
+    frozen CANDIDATE_ARM constants are provable from retained bytes."""
+    raw = _census_raw(root)
+    bdf = CANDIDATE_ARM["bdf"]
+    short = bdf.split(":", 1)[1]  # 00000000:02:00.0 -> 02:00.0
+
+    def rd(name: str) -> str:
+        path = raw / f"{name}.txt"
+        if path.is_symlink() or not path.is_file():
+            raise RuntimeError(f"replacement census artifact missing: {name}")
+        return path.read_text().strip()
+
+    def hexid(name: str) -> str:
+        return rd(f"sys_{short}_{name}").lower().removeprefix("0x")
+
+    # RADV physical-device summary (GPU0 of the radeon ICD)
+    vulkan_text = rd("vulkan_radeon")
+    gpu0: dict[str, str] = {}
+    current: dict[str, str] | None = None
+    for line in vulkan_text.splitlines():
+        stripped = line.strip()
+        if stripped == "GPU0:":
+            current = gpu0
+        elif stripped.startswith("GPU") and stripped.endswith(":"):
+            current = None  # only GPU0 binds the single AMD device
+        elif current is not None and "=" in stripped:
+            key, value = stripped.split("=", 1)
+            current[key.strip()] = value.strip()
+    for field in ("deviceName", "deviceUUID", "apiVersion", "driverInfo"):
+        if not gpu0.get(field):
+            raise RuntimeError(f"RADV summary missing {field}")
+
+    derived = {
+        "bdf": bdf,
+        "vendor_id": hexid("vendor"),
+        "device_id": hexid("device"),
+        "subsystem_vendor_id": hexid("subsystem_vendor"),
+        "subsystem_device_id": hexid("subsystem_device"),
+        "revision": hexid("revision"),
+        "link_width": "x" + rd(f"sys_{short}_current_link_width"),
+        "max_link_width": "x" + rd(f"sys_{short}_max_link_width"),
+        "max_link_speed": rd(f"sys_{short}_max_link_speed").removesuffix(
+            " PCIe"),
+        "kernel_driver": rd(f"sys_{short}_driver").rsplit("/", 1)[-1],
+        "vram_mib": int(rd(f"sys_{short}_vram_total")) // (1024 * 1024),
+        "vulkan_device_name": gpu0["deviceName"],
+        "vulkan_device_uuid": gpu0["deviceUUID"],
+        "vulkan_api_version": gpu0["apiVersion"],
+        "vulkan_driver": (f"RADV ({gpu0['driverInfo']}), "
+                          f"apiVersion {gpu0['apiVersion']}"),
+        "icd": CANDIDATE_ARM["icd"],
+    }
+    return derived
+
+
+CENSUS_DERIVED_FIELDS = (
+    "bdf", "vendor_id", "device_id", "subsystem_vendor_id",
+    "subsystem_device_id", "revision", "link_width", "max_link_width",
+    "max_link_speed", "kernel_driver", "vram_mib", "vulkan_device_name",
+    "vulkan_device_uuid", "vulkan_api_version", "vulkan_driver",
+)
+
+
+def verify_replacement_freeze_provenance(root: Path | None = None) -> None:
+    """Fail closed unless every census-derived frozen field equals the
+    generation-2 constants (the freeze is mechanical, not asserted)."""
+    derived = derive_candidate_identity_from_census(root)
+    cfg = CANDIDATE_ARM
+    drift = {
+        field: f"derived {derived[field]!r} != frozen {cfg[field]!r}"
+        for field in CENSUS_DERIVED_FIELDS
+        if field in cfg and derived[field] != cfg[field]}
+    if derived["vram_mib"] != CANDIDATE_VRAM_CENSUS_MIB:
+        drift["vram_mib"] = (f"derived {derived['vram_mib']!r} != "
+                             f"frozen {CANDIDATE_VRAM_CENSUS_MIB!r}")
+    if drift:
+        raise RuntimeError(
+            f"generation-2 freeze not derivable from retained census: {drift}")
 # The excluded device set on this host: the non-participating GPU of each
 # arm. Sequential single-GPU execution: during arm B only 03:00.0 may hold
 # model residency; during arm C only 02:00.0 may.

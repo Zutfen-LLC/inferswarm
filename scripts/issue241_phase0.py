@@ -100,6 +100,31 @@ def audit_phase0(repo: Path | None = None) -> dict[str, Any]:
             problems.append(
                 "superseded #240 exploration area modified by this branch")
 
+    # Generation-2 subject re-freeze custody (maintainer remediation
+    # directive 2026-09-24): the frozen candidate constants must be
+    # mechanically derivable from the retained fresh replacement-census
+    # bytes, and the historical generation-1 campaign/fault/diagnostic
+    # evidence must remain present and hash-bound by the area MANIFEST.
+    try:
+        C.verify_replacement_freeze_provenance(repo)
+        freeze_provenance_ok = True
+    except (RuntimeError, OSError) as exc:
+        problems.append(f"generation-2 freeze provenance failed: {exc}")
+        freeze_provenance_ok = False
+    historical_root = repo / C.AREA_REL / "historical"
+    historical_required = (
+        "campaign-v2-dispatch-b6148de/platform-fault/SHA256SUMS",
+        "oldcard-canonical-fault-repro-2026-09-24/SHA256SUMS",
+        "replacement-crash-leg-diagnostic-2026-09-24/diag-response.json",
+        "campaign-v2-dispatch-b6148de/logs/chain.log",
+    )
+    historical_missing = [
+        rel for rel in historical_required
+        if not (historical_root / rel).is_file()]
+    if historical_missing:
+        problems.append(
+            f"historical retention incomplete: {historical_missing}")
+
     report: dict[str, Any] = {
         "schema": SCHEMA,
         "campaign": C.CAMPAIGN_ID,
@@ -111,6 +136,9 @@ def audit_phase0(repo: Path | None = None) -> dict[str, Any]:
         "r8i_files_total": len(C.accepted_r8i_file_digest(repo)),
         "holdout_ciphertext_sha256": holdout,
         "predictive_evidence_hits": predictive_hits,
+        "subject_generation": C.SUBJECT_GENERATION,
+        "freeze_provenance_ok": freeze_provenance_ok,
+        "historical_retention_ok": not historical_missing,
         "problems": problems,
         "clean": not problems,
     }

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "cat",
+    "/sys/bus/pci/devices/0000:02:00.0/max_link_width"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "16\n",
+  "stdout_sha256": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017"
+}

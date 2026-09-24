@@ -1,0 +1,1 @@
+cat: /proc/2468/stack: Permission denied

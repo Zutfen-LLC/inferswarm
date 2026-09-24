@@ -1,0 +1,22 @@
+PHASE-RESULT {
+  "head": "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2",
+  "phase": 2,
+  "selected": {
+    "campaign": "issue241-r8i3-rx580-comparator-v2",
+    "matched_ngl": 8,
+    "placement_blocked": false,
+    "problems": {
+      "B": {},
+      "C": {}
+    },
+    "rule": "largest rung valid on both arms; reference runs at the candidate's exact offloaded-layer count; performance and candidate-vs-reference agreement never entered selection",
+    "schema": "inferswarm.issue241.phase2-matched-placement/1",
+    "valid_common_rungs": [
+      1,
+      2,
+      4,
+      6,
+      8
+    ]
+  }
+}

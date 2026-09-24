@@ -1,0 +1,21 @@
+== /sys/class/hwmon/hwmon0 (hp)
+  temp1_input=READ_ERROR
+  power1_average=READ_ERROR
+  power1_input=READ_ERROR
+  fan1_input=READ_ERROR
+  pwm1=READ_ERROR
+  pwm1_enable=READ_ERROR
+== /sys/class/hwmon/hwmon1 (coretemp)
+  temp1_input=42000
+  power1_average=READ_ERROR
+  power1_input=READ_ERROR
+  fan1_input=READ_ERROR
+  pwm1=READ_ERROR
+  pwm1_enable=READ_ERROR
+== /sys/class/hwmon/hwmon2 (amdgpu)
+  temp1_input=38000
+  power1_average=READ_ERROR
+  power1_input=8081000
+  fan1_input=11
+  pwm1=0
+  pwm1_enable=2

@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import glob,json;print(json.dumps(sorted(glob.glob('/usr/share/vulkan/icd.d/*.json')+glob.glob('/etc/vulkan/icd.d/*.json'))))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "[\"/usr/share/vulkan/icd.d/gfxstream_vk_icd.json\", \"/usr/share/vulkan/icd.d/intel_hasvk_icd.json\", \"/usr/share/vulkan/icd.d/intel_icd.json\", \"/usr/share/vulkan/icd.d/lvp_icd.json\", \"/usr/share/vulkan/icd.d/nouveau_icd.json\", \"/usr/share/vulkan/icd.d/nvidia_icd.json\", \"/usr/share/vulkan/icd.d/radeon_icd.json\", \"/usr/share/vulkan/icd.d/virtio_icd.json\"]\n",
+  "stdout_sha256": "0a62d9b64a622db4221b94f5ab2969fe29d5e5d300cad484bc008d1be8bffa72"
+}

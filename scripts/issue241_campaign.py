@@ -56,6 +56,9 @@ def campaign_status(repo: Path | None = None) -> dict[str, Any]:
         "campaign": C.CAMPAIGN_ID,
         "issue": C.ISSUE,
         "head": audit["head"],
+        "subject_generation": C.SUBJECT_GENERATION,
+        "historical_terminal": C.HISTORICAL_TERMINAL,
+        "historical_dispatch_head": C.HISTORICAL_DISPATCH_HEAD,
         "phase0": audit,
         "phases": [
             {"phase": p, "description": d, "kind": k, "state": s}

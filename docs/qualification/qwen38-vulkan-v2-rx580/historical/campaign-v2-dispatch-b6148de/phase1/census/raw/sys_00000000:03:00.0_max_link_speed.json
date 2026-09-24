@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "cat",
+    "/sys/bus/pci/devices/0000:03:00.0/max_link_speed"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "16.0 GT/s PCIe\n",
+  "stdout_sha256": "d0b7d19c724e0ba9f52f44b108b58cb694d7f1747bdfd0efda0fd770f8d800ba"
+}

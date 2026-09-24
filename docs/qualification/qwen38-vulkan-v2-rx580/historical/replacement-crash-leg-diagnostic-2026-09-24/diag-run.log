@@ -1,0 +1,12 @@
+launching: --model /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --n-gpu-layers 8 --ctx-size 8192 --batch-size 512 --host 127.0.0.1 --port 19001 -lv 5
+load hwmon-read-error: [Errno 22] Invalid argument
+load hwmon-read-error: [Errno 22] Invalid argument
+load hwmon-read-error: [Errno 22] Invalid argument
+load hwmon-read-error: [Errno 22] Invalid argument
+load hwmon-read-error: [Errno 22] Invalid argument
+ready hwmon-read-error: [Errno 22] Invalid argument
+prompt-start hwmon-read-error: [Errno 22] Invalid argument
+prompt-done temp=46.0C power=32.11W fan=899rpm vram=7201MiB
+tokens: [271, 760, 324, 55965, 51624, 29014, 34227, 18030]
+total wall: 38.1s
+post temp=45.0C power=12.07W fan=898rpm vram=7MiB

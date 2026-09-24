@@ -1,0 +1,884 @@
+{
+  "campaign": "issue241-r8i3-rx580-comparator-v2",
+  "census": {
+    "census": {
+      "authority": {
+        "base_ref": "main",
+        "comment_id": 5806929798,
+        "commenter": "ezutfen",
+        "commenter_association": "MEMBER",
+        "created_at": "2026-09-24T03:23:51Z",
+        "dispatch_phrase": "R8I3 PHYSICAL DISPATCH #241",
+        "head_sha": "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2",
+        "issue_number": 241,
+        "merged_at": null,
+        "pr_number": 242,
+        "pr_state": "open",
+        "repository": "Zutfen-LLC/inferswarm",
+        "schema": "inferswarm.issue241.dispatch-authority/2",
+        "verified_via": "public-github-api"
+      },
+      "campaign": "issue241-r8i3-rx580-comparator-v2",
+      "cpu": [
+        "model name\t: Intel(R) Xeon(R) CPU E5-2683 v3 @ 2.00GHz"
+      ],
+      "gpus": [
+        {
+          "bdf": "00000000:02:00.0",
+          "class_id": "0300",
+          "device_id": "67df",
+          "driver_in_use": "amdgpu",
+          "link_speed": "8.0 GT/s PCIe",
+          "link_width": "x8",
+          "max_link_speed": "8.0 GT/s PCIe",
+          "max_link_width": "x16",
+          "pci_description": "0000:02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)",
+          "pci_id": "1002:67df",
+          "pci_tree": "-+-[0000:00]-+-00.0\n |           +-01.0-[01]--\n |           +-02.0-[02]--+-00.0\n |           |            \\-00.1\n |           +-03.0-[03]--+-00.0\n |           |            \\-00.1\n |           +-05.0\n |           +-05.1\n |           +-05.2\n |           +-05.4\n |           +-11.0\n |           +-11.4\n |           +-14.0\n |           +-16.0\n |           +-16.3\n |           +-19.0\n |           +-1a.0\n |           +-1c.0-[04]--\n |           +-1c.1-[05]--\n |           +-1c.3-[06-07]----00.0-[07]--\n |           +-1c.4-[08]--\n |           +-1d.0\n |           +-1f.0\n |           +-1f.2\n |           \\-1f.3\n \\-[0000:ff]-+-0b.0\n             +-0b.1\n             +-0b.2\n             +-0c.0\n             +-0c.1\n             +-0c.2\n             +-0c.3\n             +-0c.4\n             +-0c.5\n             +-0c.6\n             +-0c.7\n             +-0d.0\n             +-0d.1\n             +-0d.2\n             +-0d.3\n             +-0d.4\n             +-0d.5\n             +-0f.0\n             +-0f.1\n             +-0f.2\n             +-0f.3\n             +-0f.4\n             +-0f.5\n             +-0f.6\n             +-10.0\n             +-10.1\n             +-10.5\n             +-10.6\n             +-10.7\n             +-12.0\n             +-12.1\n             +-12.4\n             +-12.5\n             +-13.0\n             +-13.1\n             +-13.2\n             +-13.3\n             +-13.6\n             +-13.7\n             +-14.0\n             +-14.1\n             +-14.2\n             +-14.3\n             +-14.4\n             +-14.5\n             +-14.6\n             +-14.7\n             +-16.0\n             +-16.1\n             +-16.2\n             +-16.3\n             +-16.6\n             +-16.7\n             +-17.0\n             +-17.1\n             +-17.2\n             +-17.3\n             +-17.4\n             +-17.5\n             +-17.6\n             +-17.7\n             +-1e.0\n             +-1e.1\n             +-1e.2\n             +-1e.3\n             +-1e.4\n             +-1f.0\n             \\-1f.2\n",
+          "revision": "e7",
+          "subsystem_device_id": "e353",
+          "subsystem_vendor_id": "1da2",
+          "vendor_id": "1002",
+          "vram_mib": 8192,
+          "vulkan_api_version": "1.4.305",
+          "vulkan_device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+          "vulkan_device_uuid": "00000000-0200-0000-0000-000000000000",
+          "vulkan_driver_info": "Mesa 25.0.7-2+deb13u1",
+          "vulkan_driver_name": "radv",
+          "vulkan_icd": "/usr/share/vulkan/icd.d/radeon_icd.json"
+        },
+        {
+          "bdf": "00000000:03:00.0",
+          "class_id": "0300",
+          "device_id": "2504",
+          "driver_in_use": "nvidia",
+          "driver_version": "610.57.04",
+          "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+          "link_speed": "2.5 GT/s PCIe",
+          "link_width": "x16",
+          "max_link_speed": "16.0 GT/s PCIe",
+          "max_link_width": "x16",
+          "nvidia_name": "NVIDIA GeForce RTX 3060",
+          "pci_description": "0000:03:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA106 [GeForce RTX 3060 Lite Hash Rate] [10de:2504] (rev a1)",
+          "pci_id": "10de:2504",
+          "pci_tree": "-+-[0000:00]-+-00.0\n |           +-01.0-[01]--\n |           +-02.0-[02]--+-00.0\n |           |            \\-00.1\n |           +-03.0-[03]--+-00.0\n |           |            \\-00.1\n |           +-05.0\n |           +-05.1\n |           +-05.2\n |           +-05.4\n |           +-11.0\n |           +-11.4\n |           +-14.0\n |           +-16.0\n |           +-16.3\n |           +-19.0\n |           +-1a.0\n |           +-1c.0-[04]--\n |           +-1c.1-[05]--\n |           +-1c.3-[06-07]----00.0-[07]--\n |           +-1c.4-[08]--\n |           +-1d.0\n |           +-1f.0\n |           +-1f.2\n |           \\-1f.3\n \\-[0000:ff]-+-0b.0\n             +-0b.1\n             +-0b.2\n             +-0c.0\n             +-0c.1\n             +-0c.2\n             +-0c.3\n             +-0c.4\n             +-0c.5\n             +-0c.6\n             +-0c.7\n             +-0d.0\n             +-0d.1\n             +-0d.2\n             +-0d.3\n             +-0d.4\n             +-0d.5\n             +-0f.0\n             +-0f.1\n             +-0f.2\n             +-0f.3\n             +-0f.4\n             +-0f.5\n             +-0f.6\n             +-10.0\n             +-10.1\n             +-10.5\n             +-10.6\n             +-10.7\n             +-12.0\n             +-12.1\n             +-12.4\n             +-12.5\n             +-13.0\n             +-13.1\n             +-13.2\n             +-13.3\n             +-13.6\n             +-13.7\n             +-14.0\n             +-14.1\n             +-14.2\n             +-14.3\n             +-14.4\n             +-14.5\n             +-14.6\n             +-14.7\n             +-16.0\n             +-16.1\n             +-16.2\n             +-16.3\n             +-16.6\n             +-16.7\n             +-17.0\n             +-17.1\n             +-17.2\n             +-17.3\n             +-17.4\n             +-17.5\n             +-17.6\n             +-17.7\n             +-1e.0\n             +-1e.1\n             +-1e.2\n             +-1e.3\n             +-1e.4\n             +-1f.0\n             \\-1f.2\n",
+          "power_draw_w": "13.94 W",
+          "power_limit_w": "170.00 W",
+          "revision": "a1",
+          "subsystem_device_id": "4074",
+          "subsystem_vendor_id": "1458",
+          "temperature_c": "33",
+          "vendor_id": "10de",
+          "vram_mib": 12288,
+          "vulkan_api_version": "1.4.341",
+          "vulkan_device_name": "NVIDIA GeForce RTX 3060",
+          "vulkan_device_uuid": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+          "vulkan_driver_info": "610.57.04",
+          "vulkan_driver_name": "NVIDIA",
+          "vulkan_icd": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+        }
+      ],
+      "host": "inferswarm01",
+      "mem_total_kib": 131821256,
+      "memory_state": {
+        "Buffers": 305784,
+        "Cached": 74546952,
+        "MemAvailable": 128545940,
+        "SReclaimable": 380344,
+        "SwapFree": 12596220,
+        "SwapTotal": 12596220
+      },
+      "model_backing": {
+        "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": {
+          "bytes": 10946624,
+          "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+          "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+        },
+        "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": {
+          "bytes": 49990818368,
+          "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+        },
+        "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": {
+          "bytes": 22544696352,
+          "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+        }
+      },
+      "motherboard": {
+        "bios_version": "M60 v02.62",
+        "board_name": "212B",
+        "board_vendor": "Hewlett-Packard",
+        "board_version": "1.01"
+      },
+      "out_dir": "/home/hermes/is241-campaign-v2/phase1/census",
+      "platform": {
+        "machine": "x86_64",
+        "release": "6.12.105+deb13-amd64"
+      },
+      "power_thermal": {
+        "hwmon": [
+          {
+            "fan1_input": "2012",
+            "name": "amdgpu",
+            "power1_input": "7068000",
+            "temp1_input": "31000"
+          },
+          {
+            "name": "hp"
+          },
+          {
+            "name": "coretemp",
+            "temp1_input": "41000"
+          }
+        ],
+        "nvidia": [
+          {
+            "bdf": "00000000:03:00.0",
+            "power_draw_w": "13.94 W",
+            "power_limit_w": "170.00 W",
+            "temperature_c": "33"
+          }
+        ],
+        "power_supply": [],
+        "sensors_available": true
+      },
+      "raw": {
+        "cpu": {
+          "argv": [
+            "python3",
+            "-c",
+            "import json;print(json.dumps([x.strip() for x in open('/proc/cpuinfo') if x.startswith('model name')][:1]))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "[\"model name\\t: Intel(R) Xeon(R) CPU E5-2683 v3 @ 2.00GHz\"]\n",
+          "stdout_sha256": "cca9ffbc9057e4809bcddc1caa1614f0ea0db544429f3b9b9a91e8a457299a68"
+        },
+        "driver_00000000:02:00.0": {
+          "argv": [
+            "readlink",
+            "-f",
+            "/sys/bus/pci/devices/0000:02:00.0/driver"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/sys/bus/pci/drivers/amdgpu\n",
+          "stdout_sha256": "79da86f008de308e25f884ff5f3db353166fa7c42bc8bd293c37772c35aded37"
+        },
+        "driver_00000000:03:00.0": {
+          "argv": [
+            "readlink",
+            "-f",
+            "/sys/bus/pci/devices/0000:03:00.0/driver"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/sys/bus/pci/drivers/nvidia\n",
+          "stdout_sha256": "5089460dad956e5c3025f60b8e9c38a45ffb3b1f0a7ce3a8bfb8ff4e709e9f11"
+        },
+        "hostname": {
+          "argv": [
+            "hostname"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "inferswarm01\n",
+          "stdout_sha256": "21b28e3a84c0f781642529ee464f39f41711484706f818a9599bcd70ac177821"
+        },
+        "icd_inventory": {
+          "argv": [
+            "python3",
+            "-c",
+            "import glob,json;print(json.dumps(sorted(glob.glob('/usr/share/vulkan/icd.d/*.json')+glob.glob('/etc/vulkan/icd.d/*.json'))))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "[\"/usr/share/vulkan/icd.d/gfxstream_vk_icd.json\", \"/usr/share/vulkan/icd.d/intel_hasvk_icd.json\", \"/usr/share/vulkan/icd.d/intel_icd.json\", \"/usr/share/vulkan/icd.d/lvp_icd.json\", \"/usr/share/vulkan/icd.d/nouveau_icd.json\", \"/usr/share/vulkan/icd.d/nvidia_icd.json\", \"/usr/share/vulkan/icd.d/radeon_icd.json\", \"/usr/share/vulkan/icd.d/virtio_icd.json\"]\n",
+          "stdout_sha256": "0a62d9b64a622db4221b94f5ab2969fe29d5e5d300cad484bc008d1be8bffa72"
+        },
+        "memory": {
+          "argv": [
+            "python3",
+            "-c",
+            "import json;print(json.dumps({'mem_total_kib':int(next(x.split()[1] for x in open('/proc/meminfo') if x.startswith('MemTotal:')))}))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "{\"mem_total_kib\": 131821256}\n",
+          "stdout_sha256": "0e5cfaeb2c5d59d8f86337d6b5d4592af6f4179c13ea82ff540d70a07cb1fb94"
+        },
+        "memory_state": {
+          "argv": [
+            "python3",
+            "-c",
+            "import json;mem_state={k:int(v.split()[0]) for k,v in (line.split(':',1) for line in open('/proc/meminfo')) if k in ('MemAvailable','Cached','Buffers','SReclaimable','SwapTotal','SwapFree')};print(json.dumps(mem_state))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "{\"MemAvailable\": 128545940, \"Buffers\": 305784, \"Cached\": 74546952, \"SwapTotal\": 12596220, \"SwapFree\": 12596220, \"SReclaimable\": 380344}\n",
+          "stdout_sha256": "9cd22cf745ce8d5ed6987daca428556c2297eb89adb3024e8d97a46a37a42979"
+        },
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": {
+          "argv": [
+            "sha256sum",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd  /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf\n",
+          "stdout_sha256": "d33c21d54e3cd8cfa15dd0b3d2c1048545044c21aa5b40feb658153ceddef297"
+        },
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": {
+          "argv": [
+            "sha256sum",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6  /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf\n",
+          "stdout_sha256": "49d472b11864703dcec274cfbf44dcab4c5e6dc23f73645714e2d4bdac153dec"
+        },
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": {
+          "argv": [
+            "sha256sum",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a  /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf\n",
+          "stdout_sha256": "609a1a9453af83380dfae258ae1a62c75e20715efc89695724bbcf051f4ebb63"
+        },
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": {
+          "argv": [
+            "stat",
+            "-c",
+            "%s",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "10946624\n",
+          "stdout_sha256": "cd7719dd508d65ca6d0be46757c355cc63b060a67fa05506a72baff98992b08e"
+        },
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": {
+          "argv": [
+            "stat",
+            "-c",
+            "%s",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "49990818368\n",
+          "stdout_sha256": "4ed6cf11d1a3ab27e3d80dd2c254d11d75284fccb27eb9badd8fef8d92448307"
+        },
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": {
+          "argv": [
+            "stat",
+            "-c",
+            "%s",
+            "--",
+            "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "22544696352\n",
+          "stdout_sha256": "de09ebe7ec51d09b9534c149304c45c4cb442be7d57e735b202fcb8af4058ef2"
+        },
+        "motherboard": {
+          "argv": [
+            "python3",
+            "-c",
+            "import json,pathlib;d=pathlib.Path('/sys/class/dmi/id');print(json.dumps({k:(d/k).read_text().strip() for k in ('board_vendor','board_name','board_version','bios_version')}))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "{\"board_vendor\": \"Hewlett-Packard\", \"board_name\": \"212B\", \"board_version\": \"1.01\", \"bios_version\": \"M60 v02.62\"}\n",
+          "stdout_sha256": "3e593644df6bdd8dfae1a74b504eec652a7cda68d238df8ee33885dc73ebe832"
+        },
+        "nvidia": {
+          "argv": [
+            "nvidia-smi",
+            "--query-gpu=index,uuid,pci.bus_id,name,driver_version,memory.total,temperature.gpu,power.draw,power.limit",
+            "--format=csv,noheader"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0, GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 00000000:03:00.0, NVIDIA GeForce RTX 3060, 610.57.04, 12288 MiB, 33, 13.94 W, 170.00 W\n",
+          "stdout_sha256": "c5144cef6a39b7f2614ca4621a49b1d32ddc31996d2cdbb068fc33e84ca6b9c5"
+        },
+        "pci": {
+          "argv": [
+            "lspci",
+            "-Dnn"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0000:00:00.0 Host bridge [0600]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DMI2 [8086:2f00] (rev 02)\n0000:00:01.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 1 [8086:2f02] (rev 02)\n0000:00:02.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 2 [8086:2f04] (rev 02)\n0000:00:03.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 3 [8086:2f08] (rev 02)\n0000:00:05.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Address Map, VTd_Misc, System Management [8086:2f28] (rev 02)\n0000:00:05.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Hot Plug [8086:2f29] (rev 02)\n0000:00:05.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 RAS, Control Status and Global Errors [8086:2f2a] (rev 02)\n0000:00:05.4 PIC [0800]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 I/O APIC [8086:2f2c] (rev 02)\n0000:00:11.0 Unassigned class [ff00]: Intel Corporation C610/X99 series chipset SPSR [8086:8d7c] (rev 05)\n0000:00:11.4 SATA controller [0106]: Intel Corporation C610/X99 series chipset sSATA Controller [AHCI mode] [8086:8d62] (rev 05)\n0000:00:14.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB xHCI Host Controller [8086:8d31] (rev 05)\n0000:00:16.0 Communication controller [0780]: Intel Corporation C610/X99 series chipset MEI Controller #1 [8086:8d3a] (rev 05)\n0000:00:16.3 Serial controller [0700]: Intel Corporation C610/X99 series chipset KT Controller [8086:8d3d] (rev 05)\n0000:00:19.0 Ethernet controller [0200]: Intel Corporation Ethernet Connection (2) I218-LM [8086:15a0] (rev 05)\n0000:00:1a.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB Enhanced Host Controller #2 [8086:8d2d] (rev 05)\n0000:00:1c.0 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #1 [8086:8d10] (rev d5)\n0000:00:1c.1 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #2 [8086:8d12] (rev d5)\n0000:00:1c.3 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #4 [8086:8d16] (rev d5)\n0000:00:1c.4 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #5 [8086:8d18] (rev d5)\n0000:00:1d.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB Enhanced Host Controller #1 [8086:8d26] (rev 05)\n0000:00:1f.0 ISA bridge [0601]: Intel Corporation C610/X99 series chipset LPC Controller [8086:8d44] (rev 05)\n0000:00:1f.2 SATA controller [0106]: Intel Corporation C610/X99 series chipset 6-Port SATA Controller [AHCI mode] [8086:8d02] (rev 05)\n0000:00:1f.3 SMBus [0c05]: Intel Corporation C610/X99 series chipset SMBus Controller [8086:8d22] (rev 05)\n0000:02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)\n0000:02:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590] [1002:aaf0]\n0000:03:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA106 [GeForce RTX 3060 Lite Hash Rate] [10de:2504] (rev a1)\n0000:03:00.1 Audio device [0403]: NVIDIA Corporation GA106 High Definition Audio Controller [10de:228e] (rev a1)\n0000:06:00.0 PCI bridge [0604]: Integrated Technology Express, Inc. IT8893E PCIe to PCI Bridge [1283:8893] (rev 52)\n0000:ff:0b.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f81] (rev 02)\n0000:ff:0b.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f36] (rev 02)\n0000:ff:0b.2 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f37] (rev 02)\n0000:ff:0c.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe0] (rev 02)\n0000:ff:0c.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe1] (rev 02)\n0000:ff:0c.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe2] (rev 02)\n0000:ff:0c.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe3] (rev 02)\n0000:ff:0c.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe4] (rev 02)\n0000:ff:0c.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe5] (rev 02)\n0000:ff:0c.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe6] (rev 02)\n0000:ff:0c.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe7] (rev 02)\n0000:ff:0d.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe8] (rev 02)\n0000:ff:0d.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe9] (rev 02)\n0000:ff:0d.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fea] (rev 02)\n0000:ff:0d.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2feb] (rev 02)\n0000:ff:0d.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fec] (rev 02)\n0000:ff:0d.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fed] (rev 02)\n0000:ff:0f.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ff8] (rev 02)\n0000:ff:0f.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ff9] (rev 02)\n0000:ff:0f.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ffa] (rev 02)\n0000:ff:0f.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ffb] (rev 02)\n0000:ff:0f.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffc] (rev 02)\n0000:ff:0f.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffd] (rev 02)\n0000:ff:0f.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffe] (rev 02)\n0000:ff:10.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f1d] (rev 02)\n0000:ff:10.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f34] (rev 02)\n0000:ff:10.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1e] (rev 02)\n0000:ff:10.6 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f7d] (rev 02)\n0000:ff:10.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1f] (rev 02)\n0000:ff:12.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2fa0] (rev 02)\n0000:ff:12.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2f30] (rev 02)\n0000:ff:12.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f60] (rev 02)\n0000:ff:12.5 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f38] (rev 02)\n0000:ff:13.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2fa8] (rev 02)\n0000:ff:13.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2f71] (rev 02)\n0000:ff:13.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2faa] (rev 02)\n0000:ff:13.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2fab] (rev 02)\n0000:ff:13.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Channel 0/1 Broadcast [8086:2fae] (rev 02)\n0000:ff:13.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Global Broadcast [8086:2faf] (rev 02)\n0000:ff:14.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 Thermal Control [8086:2fb0] (rev 02)\n0000:ff:14.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 Thermal Control [8086:2fb1] (rev 02)\n0000:ff:14.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 ERROR Registers [8086:2fb2] (rev 02)\n0000:ff:14.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 ERROR Registers [8086:2fb3] (rev 02)\n0000:ff:14.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbc] (rev 02)\n0000:ff:14.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbd] (rev 02)\n0000:ff:14.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbe] (rev 02)\n0000:ff:14.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbf] (rev 02)\n0000:ff:16.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f68] (rev 02)\n0000:ff:16.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f79] (rev 02)\n0000:ff:16.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6a] (rev 02)\n0000:ff:16.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6b] (rev 02)\n0000:ff:16.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Channel 2/3 Broadcast [8086:2f6e] (rev 02)\n0000:ff:16.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Global Broadcast [8086:2f6f] (rev 02)\n0000:ff:17.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 Thermal Control [8086:2fd0] (rev 02)\n0000:ff:17.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 Thermal Control [8086:2fd1] (rev 02)\n0000:ff:17.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 ERROR Registers [8086:2fd2] (rev 02)\n0000:ff:17.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 ERROR Registers [8086:2fd3] (rev 02)\n0000:ff:17.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fb8] (rev 02)\n0000:ff:17.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fb9] (rev 02)\n0000:ff:17.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fba] (rev 02)\n0000:ff:17.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fbb] (rev 02)\n0000:ff:1e.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f98] (rev 02)\n0000:ff:1e.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f99] (rev 02)\n0000:ff:1e.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9a] (rev 02)\n0000:ff:1e.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2fc0] (rev 02)\n0000:ff:1e.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9c] (rev 02)\n0000:ff:1f.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 VCU [8086:2f88] (rev 02)\n0000:ff:1f.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 VCU [8086:2f8a] (rev 02)\n",
+          "stdout_sha256": "6e7677cbc539d8c31a6932c38234d80120f87429359943335e2d2c0df24f5aeb"
+        },
+        "pci_tree": {
+          "argv": [
+            "lspci",
+            "-Dnn",
+            "-t"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "-+-[0000:00]-+-00.0\n |           +-01.0-[01]--\n |           +-02.0-[02]--+-00.0\n |           |            \\-00.1\n |           +-03.0-[03]--+-00.0\n |           |            \\-00.1\n |           +-05.0\n |           +-05.1\n |           +-05.2\n |           +-05.4\n |           +-11.0\n |           +-11.4\n |           +-14.0\n |           +-16.0\n |           +-16.3\n |           +-19.0\n |           +-1a.0\n |           +-1c.0-[04]--\n |           +-1c.1-[05]--\n |           +-1c.3-[06-07]----00.0-[07]--\n |           +-1c.4-[08]--\n |           +-1d.0\n |           +-1f.0\n |           +-1f.2\n |           \\-1f.3\n \\-[0000:ff]-+-0b.0\n             +-0b.1\n             +-0b.2\n             +-0c.0\n             +-0c.1\n             +-0c.2\n             +-0c.3\n             +-0c.4\n             +-0c.5\n             +-0c.6\n             +-0c.7\n             +-0d.0\n             +-0d.1\n             +-0d.2\n             +-0d.3\n             +-0d.4\n             +-0d.5\n             +-0f.0\n             +-0f.1\n             +-0f.2\n             +-0f.3\n             +-0f.4\n             +-0f.5\n             +-0f.6\n             +-10.0\n             +-10.1\n             +-10.5\n             +-10.6\n             +-10.7\n             +-12.0\n             +-12.1\n             +-12.4\n             +-12.5\n             +-13.0\n             +-13.1\n             +-13.2\n             +-13.3\n             +-13.6\n             +-13.7\n             +-14.0\n             +-14.1\n             +-14.2\n             +-14.3\n             +-14.4\n             +-14.5\n             +-14.6\n             +-14.7\n             +-16.0\n             +-16.1\n             +-16.2\n             +-16.3\n             +-16.6\n             +-16.7\n             +-17.0\n             +-17.1\n             +-17.2\n             +-17.3\n             +-17.4\n             +-17.5\n             +-17.6\n             +-17.7\n             +-1e.0\n             +-1e.1\n             +-1e.2\n             +-1e.3\n             +-1e.4\n             +-1f.0\n             \\-1f.2\n",
+          "stdout_sha256": "b70c1852d4c454224e5fcffd2c501bbf13e38fb3ff93f0e58d2d820401e85f06"
+        },
+        "pci_verbose": {
+          "argv": [
+            "lspci",
+            "-Dnnvv"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0000:00:00.0 Host bridge [0600]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DMI2 [8086:2f00] (rev 02)\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tInterrupt: pin A routed to IRQ 0\n\tIOMMU group: 12\n\tCapabilities: <access denied>\n\n0000:00:01.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 1 [8086:2f02] (rev 02) (prog-if 00 [Normal decode])\n\tSubsystem: Intel Corporation Device [8086:0000]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 26\n\tIOMMU group: 13\n\tBus: primary=00, secondary=01, subordinate=01, sec-latency=0\n\tI/O behind bridge: [disabled] [16-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:02.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 2 [8086:2f04] (rev 02) (prog-if 00 [Normal decode])\n\tSubsystem: Intel Corporation Device [8086:0000]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 27\n\tIOMMU group: 14\n\tBus: primary=00, secondary=02, subordinate=02, sec-latency=0\n\tI/O behind bridge: 3000-3fff [size=4K] [16-bit]\n\tMemory behind bridge: f2100000-f21fffff [size=1M] [32-bit]\n\tPrefetchable memory behind bridge: e0000000-f01fffff [size=258M] [32-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA+ VGA16+ MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:03.0 PCI bridge [0604]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCI Express Root Port 3 [8086:2f08] (rev 02) (prog-if 00 [Normal decode])\n\tSubsystem: Intel Corporation Device [8086:0000]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 28\n\tIOMMU group: 15\n\tBus: primary=00, secondary=03, subordinate=03, sec-latency=0\n\tI/O behind bridge: 2000-2fff [size=4K] [16-bit]\n\tMemory behind bridge: f1000000-f20fffff [size=17M] [32-bit]\n\tPrefetchable memory behind bridge: c0000000-d1ffffff [size=288M] [32-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:05.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Address Map, VTd_Misc, System Management [8086:2f28] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 16\n\tCapabilities: <access denied>\n\n0000:00:05.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Hot Plug [8086:2f29] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 17\n\tCapabilities: <access denied>\n\n0000:00:05.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 RAS, Control Status and Global Errors [8086:2f2a] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 18\n\tCapabilities: <access denied>\n\n0000:00:05.4 PIC [0800]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 I/O APIC [8086:2f2c] (rev 02) (prog-if 20 [IO(X)-APIC])\n\tSubsystem: Intel Corporation Device [8086:0000]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tIOMMU group: 19\n\tRegion 0: Memory at f2239000 (32-bit, non-prefetchable) [size=4K]\n\tCapabilities: <access denied>\n\n0000:00:11.0 Unassigned class [ff00]: Intel Corporation C610/X99 series chipset SPSR [8086:8d7c] (rev 05)\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 20\n\tCapabilities: <access denied>\n\n0000:00:11.4 SATA controller [0106]: Intel Corporation C610/X99 series chipset sSATA Controller [AHCI mode] [8086:8d62] (rev 05) (prog-if 01 [AHCI 1.0])\n\tDeviceName: sSATA\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz+ UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 34\n\tIOMMU group: 21\n\tRegion 0: I/O ports at 4080 [size=8]\n\tRegion 1: I/O ports at 4094 [size=4]\n\tRegion 2: I/O ports at 4078 [size=8]\n\tRegion 3: I/O ports at 4090 [size=4]\n\tRegion 4: I/O ports at 4040 [size=32]\n\tRegion 5: Memory at f2238000 (32-bit, non-prefetchable) [size=2K]\n\tCapabilities: <access denied>\n\tKernel driver in use: ahci\n\tKernel modules: ahci\n\n0000:00:14.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB xHCI Host Controller [8086:8d31] (rev 05) (prog-if 30 [XHCI])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin D routed to IRQ 19\n\tIOMMU group: 22\n\tRegion 0: Memory at f2220000 (64-bit, non-prefetchable) [size=64K]\n\tCapabilities: <access denied>\n\tKernel driver in use: xhci_hcd\n\tKernel modules: xhci_pci\n\n0000:00:16.0 Communication controller [0780]: Intel Corporation C610/X99 series chipset MEI Controller #1 [8086:8d3a] (rev 05)\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 36\n\tIOMMU group: 23\n\tRegion 0: Memory at f2230000 (64-bit, non-prefetchable) [size=16]\n\tCapabilities: <access denied>\n\tKernel driver in use: mei_me\n\tKernel modules: mei_me\n\n0000:00:16.3 Serial controller [0700]: Intel Corporation C610/X99 series chipset KT Controller [8086:8d3d] (rev 05) (prog-if 02 [16550])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz+ UDF- FastB2B+ ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tInterrupt: pin B routed to IRQ 17\n\tIOMMU group: 23\n\tRegion 0: I/O ports at 4070 [size=8]\n\tRegion 1: Memory at f2237000 (32-bit, non-prefetchable) [size=4K]\n\tCapabilities: <access denied>\n\tKernel driver in use: serial\n\n0000:00:19.0 Ethernet controller [0200]: Intel Corporation Ethernet Connection (2) I218-LM [8086:15a0] (rev 05)\n\tDeviceName: LAN (AMT)\n\tSubsystem: Hewlett-Packard Company Device [103c:2129]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 33\n\tIOMMU group: 24\n\tRegion 0: Memory at f2200000 (32-bit, non-prefetchable) [size=128K]\n\tRegion 1: Memory at f2236000 (32-bit, non-prefetchable) [size=4K]\n\tRegion 2: I/O ports at 4020 [disabled] [size=32]\n\tCapabilities: <access denied>\n\tKernel driver in use: e1000e\n\tKernel modules: e1000e\n\n0000:00:1a.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB Enhanced Host Controller #2 [8086:8d2d] (rev 05) (prog-if 20 [EHCI])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin C routed to IRQ 18\n\tIOMMU group: 25\n\tRegion 0: Memory at f2235000 (32-bit, non-prefetchable) [size=1K]\n\tCapabilities: <access denied>\n\tKernel driver in use: ehci-pci\n\tKernel modules: ehci_pci\n\n0000:00:1c.0 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #1 [8086:8d10] (rev d5) (prog-if 00 [Normal decode])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tPhysical Slot: 1\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 29\n\tIOMMU group: 26\n\tBus: primary=00, secondary=04, subordinate=04, sec-latency=0\n\tI/O behind bridge: [disabled] [16-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity- SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:1c.1 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #2 [8086:8d12] (rev d5) (prog-if 00 [Normal decode])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tPhysical Slot: 1\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin B routed to IRQ 30\n\tIOMMU group: 27\n\tBus: primary=00, secondary=05, subordinate=05, sec-latency=0\n\tI/O behind bridge: [disabled] [16-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:1c.3 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #4 [8086:8d16] (rev d5) (prog-if 01 [Subtractive decode])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tPhysical Slot: 1\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin ? routed to IRQ 31\n\tIOMMU group: 28\n\tBus: primary=00, secondary=06, subordinate=07, sec-latency=0\n\tI/O behind bridge: [disabled] [16-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort+ <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:1c.4 PCI bridge [0604]: Intel Corporation C610/X99 series chipset PCI Express Root Port #5 [8086:8d18] (rev d5) (prog-if 00 [Normal decode])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tPhysical Slot: 1\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr+ Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 32\n\tIOMMU group: 29\n\tBus: primary=00, secondary=08, subordinate=08, sec-latency=0\n\tI/O behind bridge: [disabled] [16-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-\n\tBridgeCtl: Parity+ SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\tKernel driver in use: pcieport\n\n0000:00:1d.0 USB controller [0c03]: Intel Corporation C610/X99 series chipset USB Enhanced Host Controller #1 [8086:8d26] (rev 05) (prog-if 20 [EHCI])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin C routed to IRQ 18\n\tIOMMU group: 30\n\tRegion 0: Memory at f2234000 (32-bit, non-prefetchable) [size=1K]\n\tCapabilities: <access denied>\n\tKernel driver in use: ehci-pci\n\tKernel modules: ehci_pci\n\n0000:00:1f.0 ISA bridge [0601]: Intel Corporation C610/X99 series chipset LPC Controller [8086:8d44] (rev 05)\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tIOMMU group: 31\n\tCapabilities: <access denied>\n\tKernel driver in use: lpc_ich\n\tKernel modules: lpc_ich\n\n0000:00:1f.2 SATA controller [0106]: Intel Corporation C610/X99 series chipset 6-Port SATA Controller [AHCI mode] [8086:8d02] (rev 05) (prog-if 01 [AHCI 1.0])\n\tDeviceName: SATA\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz+ UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 35\n\tIOMMU group: 31\n\tRegion 0: I/O ports at 4068 [size=8]\n\tRegion 1: I/O ports at 408c [size=4]\n\tRegion 2: I/O ports at 4060 [size=8]\n\tRegion 3: I/O ports at 4088 [size=4]\n\tRegion 4: I/O ports at 4000 [size=32]\n\tRegion 5: Memory at f2233000 (32-bit, non-prefetchable) [size=2K]\n\tCapabilities: <access denied>\n\tKernel driver in use: ahci\n\tKernel modules: ahci\n\n0000:00:1f.3 SMBus [0c05]: Intel Corporation C610/X99 series chipset SMBus Controller [8086:8d22] (rev 05)\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B+ ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tInterrupt: pin C routed to IRQ 18\n\tIOMMU group: 31\n\tRegion 0: Memory at d2000000 (64-bit, non-prefetchable) [size=256]\n\tRegion 4: I/O ports at 0780 [size=32]\n\tKernel driver in use: i801_smbus\n\tKernel modules: i2c_i801\n\n0000:02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7) (prog-if 00 [VGA controller])\n\tSubsystem: Sapphire Technology Limited Radeon RX 570 Pulse 4GB [1da2:e353]\n\tPhysical Slot: 2\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0, Cache Line Size: 32 bytes\n\tInterrupt: pin A routed to IRQ 41\n\tIOMMU group: 32\n\tRegion 0: Memory at e0000000 (64-bit, prefetchable) [size=256M]\n\tRegion 2: Memory at f0000000 (64-bit, prefetchable) [size=2M]\n\tRegion 4: I/O ports at 3000 [size=256]\n\tRegion 5: Memory at f2100000 (32-bit, non-prefetchable) [size=256K]\n\tExpansion ROM at 000c0000 [disabled] [size=128K]\n\tCapabilities: <access denied>\n\tKernel driver in use: amdgpu\n\tKernel modules: amdgpu\n\n0000:02:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590] [1002:aaf0] (prog-if 00 [HDA compatible])\n\tSubsystem: Sapphire Technology Limited Device [1da2:aaf0]\n\tPhysical Slot: 2\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0, Cache Line Size: 32 bytes\n\tInterrupt: pin B routed to IRQ 38\n\tIOMMU group: 32\n\tRegion 0: Memory at f2140000 (64-bit, non-prefetchable) [size=16K]\n\tCapabilities: <access denied>\n\tKernel driver in use: snd_hda_intel\n\tKernel modules: snd_hda_intel\n\n0000:03:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA106 [GeForce RTX 3060 Lite Hash Rate] [10de:2504] (rev a1) (prog-if 00 [VGA controller])\n\tSubsystem: Gigabyte Technology Co., Ltd Device [1458:4074]\n\tPhysical Slot: 5\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx+\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0\n\tInterrupt: pin A routed to IRQ 43\n\tIOMMU group: 33\n\tRegion 0: Memory at f1000000 (32-bit, non-prefetchable) [size=16M]\n\tRegion 1: Memory at c0000000 (64-bit, prefetchable) [size=256M]\n\tRegion 3: Memory at d0000000 (64-bit, prefetchable) [size=32M]\n\tRegion 5: I/O ports at 2000 [size=128]\n\tExpansion ROM at f2080000 [virtual] [disabled] [size=512K]\n\tCapabilities: <access denied>\n\tKernel driver in use: nvidia\n\tKernel modules: nouveau, nvidia_drm, nvidia\n\n0000:03:00.1 Audio device [0403]: NVIDIA Corporation GA106 High Definition Audio Controller [10de:228e] (rev a1) (prog-if 00 [HDA compatible])\n\tSubsystem: Gigabyte Technology Co., Ltd Device [1458:4074]\n\tPhysical Slot: 5\n\tControl: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0, Cache Line Size: 32 bytes\n\tInterrupt: pin B routed to IRQ 39\n\tIOMMU group: 33\n\tRegion 0: Memory at f2000000 (32-bit, non-prefetchable) [size=16K]\n\tCapabilities: <access denied>\n\tKernel driver in use: snd_hda_intel\n\tKernel modules: snd_hda_intel\n\n0000:06:00.0 PCI bridge [0604]: Integrated Technology Express, Inc. IT8893E PCIe to PCI Bridge [1283:8893] (rev 52) (prog-if 01 [Subtractive decode])\n\tSubsystem: Hewlett-Packard Company Device [103c:212b]\n\tControl: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR+ FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tLatency: 0, Cache Line Size: 64 bytes\n\tInterrupt: pin A routed to IRQ 255\n\tIOMMU group: 34\n\tBus: primary=06, secondary=07, subordinate=07, sec-latency=128\n\tI/O behind bridge: [disabled] [32-bit]\n\tMemory behind bridge: [disabled] [32-bit]\n\tPrefetchable memory behind bridge: [disabled] [64-bit]\n\tSecondary status: 66MHz+ FastB2B- ParErr- DEVSEL=medium >TAbort- <TAbort- <MAbort+ <SERR- <PERR-\n\tBridgeCtl: Parity- SERR+ NoISA- VGA- VGA16- MAbort- >Reset- FastB2B-\n\t\tPriDiscTmr- SecDiscTmr+ DiscTmrStat- DiscTmrSERREn-\n\tCapabilities: <access denied>\n\n0000:ff:0b.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f81] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f81]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 0\n\n0000:ff:0b.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f36] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f36]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 0\n\tKernel driver in use: hswep_uncore\n\n0000:ff:0b.2 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f37] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 R3 QPI Link 0 & 1 Monitoring [8086:2f37]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 0\n\tKernel driver in use: hswep_uncore\n\n0000:ff:0c.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe0] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe1] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe1]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe2] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe2]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe3] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe3]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe4] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe4]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe5] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe5]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe6] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe6]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0c.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe7] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe7]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 1\n\n0000:ff:0d.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe8] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe8]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0d.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe9] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fe9]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0d.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fea] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fea]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0d.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2feb] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2feb]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0d.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fec] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fec]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0d.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fed] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Unicast Registers [8086:2fed]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 2\n\n0000:ff:0f.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ff8] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ff9] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ffa] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Buffered Ring Agent [8086:2ffb] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffc] (rev 02)\n\tSubsystem: Intel Corporation Device [8086:2fe0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffd] (rev 02)\n\tSubsystem: Intel Corporation Device [8086:2fe0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:0f.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 System Address Decoder & Broadcast Registers [8086:2ffe] (rev 02)\n\tSubsystem: Intel Corporation Device [8086:2fe0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 3\n\n0000:ff:10.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f1d] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f1d]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 4\n\n0000:ff:10.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f34] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 PCIe Ring Interface [8086:2f34]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 4\n\tKernel driver in use: hswep_uncore\n\n0000:ff:10.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1e] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1e]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 4\n\n0000:ff:10.6 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f7d] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f7d]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 4\n\n0000:ff:10.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1f] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Scratchpad & Semaphore Registers [8086:2f1f]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 4\n\n0000:ff:12.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2fa0] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2fa0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 5\n\n0000:ff:12.1 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2f30] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 0 [8086:2f30]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 5\n\tKernel driver in use: hswep_uncore\n\n0000:ff:12.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f60] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f60]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 5\n\n0000:ff:12.5 Performance counters [1101]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f38] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Home Agent 1 [8086:2f38]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 5\n\tKernel driver in use: hswep_uncore\n\n0000:ff:13.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2fa8] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2fa8]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:13.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2f71] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Target Address, Thermal & RAS Registers [8086:2f71]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:13.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2faa] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2faa]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:13.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2fab] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel Target Address Decoder [8086:2fab]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:13.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Channel 0/1 Broadcast [8086:2fae] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:13.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Global Broadcast [8086:2faf] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 6\n\n0000:ff:14.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 Thermal Control [8086:2fb0] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 Thermal Control [8086:2fb0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\tKernel driver in use: hswep_uncore\n\n0000:ff:14.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 Thermal Control [8086:2fb1] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 Thermal Control [8086:2fb1]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\tKernel driver in use: hswep_uncore\n\n0000:ff:14.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 ERROR Registers [8086:2fb2] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 0 ERROR Registers [8086:2fb2]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:14.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 ERROR Registers [8086:2fb3] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 0 Channel 1 ERROR Registers [8086:2fb3]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:14.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbc] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:14.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbd] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:14.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbe] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:14.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 0 & 1 [8086:2fbf] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 7\n\n0000:ff:16.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f68] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f68]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:16.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f79] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Target Address, Thermal & RAS Registers [8086:2f79]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:16.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6a] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6a]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:16.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6b] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel Target Address Decoder [8086:2f6b]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:16.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Channel 2/3 Broadcast [8086:2f6e] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:16.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO Global Broadcast [8086:2f6f] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 8\n\n0000:ff:17.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 Thermal Control [8086:2fd0] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 Thermal Control [8086:2fd0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\tKernel driver in use: hswep_uncore\n\n0000:ff:17.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 Thermal Control [8086:2fd1] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 Thermal Control [8086:2fd1]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\tKernel driver in use: hswep_uncore\n\n0000:ff:17.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 ERROR Registers [8086:2fd2] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 0 ERROR Registers [8086:2fd2]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:17.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 ERROR Registers [8086:2fd3] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Integrated Memory Controller 1 Channel 1 ERROR Registers [8086:2fd3]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:17.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fb8] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:17.5 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fb9] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:17.6 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fba] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:17.7 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 DDRIO (VMSE) 2 & 3 [8086:2fbb] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 9\n\n0000:ff:1e.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f98] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f98]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 10\n\n0000:ff:1e.1 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f99] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f99]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 10\n\n0000:ff:1e.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9a] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9a]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 10\n\n0000:ff:1e.3 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2fc0] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2fc0]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 10\n\n0000:ff:1e.4 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9c] (rev 02)\n\tSubsystem: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 Power Control Unit [8086:2f9c]\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 10\n\n0000:ff:1f.0 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 VCU [8086:2f88] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 11\n\n0000:ff:1f.2 System peripheral [0880]: Intel Corporation Xeon E7 v3/Xeon E5 v3/Core i7 VCU [8086:2f8a] (rev 02)\n\tControl: I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-\n\tStatus: Cap- 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-\n\tIOMMU group: 11\n\n",
+          "stdout_sha256": "6dd7588957823f69ec70bcf8da621768e5948c8d90ff3f9ca7b80efca33187b9"
+        },
+        "platform": {
+          "argv": [
+            "python3",
+            "-c",
+            "import json,platform;print(json.dumps({'machine':platform.machine(),'release':platform.release()}))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "{\"machine\": \"x86_64\", \"release\": \"6.12.105+deb13-amd64\"}\n",
+          "stdout_sha256": "89b12baf1b56dfd8562844e1f3e2d933d6f5ea10590b70a5c0d8953559db1829"
+        },
+        "sensors": {
+          "argv": [
+            "python3",
+            "-c",
+            "import glob,json,pathlib; h=[{p.name:p.read_text().strip() for p in d.iterdir() if p.is_file() and p.name in ('name','temp1_input','power1_average','power1_input','fan1_input')} for d in map(pathlib.Path,glob.glob('/sys/class/hwmon/hwmon*'))]; s=[{'name':d.name,'online':(d/'online').read_text().strip() if (d/'online').exists() else None} for d in map(pathlib.Path,glob.glob('/sys/class/power_supply/*'))];print(json.dumps({'hwmon':h,'power_supply':s}))"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "{\"hwmon\": [{\"fan1_input\": \"2012\", \"power1_input\": \"7068000\", \"temp1_input\": \"31000\", \"name\": \"amdgpu\"}, {\"name\": \"hp\"}, {\"temp1_input\": \"41000\", \"name\": \"coretemp\"}], \"power_supply\": []}\n",
+          "stdout_sha256": "a43894853f0624de522aa6ffffcfdbeed2a03d6e55f0cd462ddb7ff7b516cadf"
+        },
+        "sys_00000000:02:00.0_current_link_speed": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/current_link_speed"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "8.0 GT/s PCIe\n",
+          "stdout_sha256": "704d5513df24549101340dc7020db1ce07a9901d135eb23ba0461dcf6f6d7cd9"
+        },
+        "sys_00000000:02:00.0_current_link_width": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/current_link_width"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "8\n",
+          "stdout_sha256": "aa67a169b0bba217aa0aa88a65346920c84c42447c36ba5f7ea65f422c1fe5d8"
+        },
+        "sys_00000000:02:00.0_device": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/device"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x67df\n",
+          "stdout_sha256": "1a194249dabb2971e66f379f645c54f04564329083775731a3b40e087b91ac42"
+        },
+        "sys_00000000:02:00.0_max_link_speed": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/max_link_speed"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "8.0 GT/s PCIe\n",
+          "stdout_sha256": "704d5513df24549101340dc7020db1ce07a9901d135eb23ba0461dcf6f6d7cd9"
+        },
+        "sys_00000000:02:00.0_max_link_width": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/max_link_width"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "16\n",
+          "stdout_sha256": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017"
+        },
+        "sys_00000000:02:00.0_revision": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/revision"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0xe7\n",
+          "stdout_sha256": "1eb7535c1e5b8f175db1c10dae60a39aaf9fe7ad1782f65cb0dd3f8dd5eb65a0"
+        },
+        "sys_00000000:02:00.0_subsystem_device": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/subsystem_device"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0xe353\n",
+          "stdout_sha256": "b598774c6e859b146dc77f78a85cf01572ee3ed213f173ec710c0003ef6fece6"
+        },
+        "sys_00000000:02:00.0_subsystem_vendor": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/subsystem_vendor"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x1da2\n",
+          "stdout_sha256": "f3eebe2b93cc715d1c33240d6b6a6ac2aa34c267aca37bdca639d9dae78025ef"
+        },
+        "sys_00000000:02:00.0_vendor": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/vendor"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x1002\n",
+          "stdout_sha256": "59eb647ef1fc0c0bd6ba711e1d041dac35fdd84c78e4bb42c04a233c3c738f1f"
+        },
+        "sys_00000000:03:00.0_current_link_speed": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/current_link_speed"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "2.5 GT/s PCIe\n",
+          "stdout_sha256": "fe12cb6b56f6a51bbead3077fa2070bcf13beb8e933327de709c331406f256bc"
+        },
+        "sys_00000000:03:00.0_current_link_width": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/current_link_width"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "16\n",
+          "stdout_sha256": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017"
+        },
+        "sys_00000000:03:00.0_device": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/device"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x2504\n",
+          "stdout_sha256": "ef7de055a31316f6a68065b0634ab256587a0256dddca4eb6280dec31788ec88"
+        },
+        "sys_00000000:03:00.0_max_link_speed": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/max_link_speed"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "16.0 GT/s PCIe\n",
+          "stdout_sha256": "d0b7d19c724e0ba9f52f44b108b58cb694d7f1747bdfd0efda0fd770f8d800ba"
+        },
+        "sys_00000000:03:00.0_max_link_width": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/max_link_width"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "16\n",
+          "stdout_sha256": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017"
+        },
+        "sys_00000000:03:00.0_revision": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/revision"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0xa1\n",
+          "stdout_sha256": "6ab2f8165568cda3f5b69b07fd1260f37a34e2097ace41bec2bbfc1aaa500a52"
+        },
+        "sys_00000000:03:00.0_subsystem_device": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/subsystem_device"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x4074\n",
+          "stdout_sha256": "f76ae6ef1746f1f7453f74a41dd745764c99b1d691b48e76709c857ca11b38f1"
+        },
+        "sys_00000000:03:00.0_subsystem_vendor": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/subsystem_vendor"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x1458\n",
+          "stdout_sha256": "4a31e8bf953f73ab409900247dc5399b64d9a3fb3ef425ffb71870f9ff78f14c"
+        },
+        "sys_00000000:03:00.0_vendor": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:03:00.0/vendor"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "0x10de\n",
+          "stdout_sha256": "f2f873749225dd505e68db72d29b5db903cc4540aca7f56f60d11ff0979a7be5"
+        },
+        "vram_00000000:02:00.0": {
+          "argv": [
+            "cat",
+            "/sys/bus/pci/devices/0000:02:00.0/mem_info_vram_total"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "8589934592\n",
+          "stdout_sha256": "8528d39f97fdd9c9689c4373fe4c7b18f2c3bef6b044a2c4be74b07bf9cd07d8"
+        },
+        "vulkan_0": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/gfxstream_vk_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 1,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+          "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+          "stdout": "",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "vulkan_1": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_hasvk_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 1,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+          "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+          "stdout": "",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "vulkan_2": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 1,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+          "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+          "stdout": "",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "vulkan_3": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\n",
+          "stderr_sha256": "9b8ce0d5aabd827937d81f2e3a130958edf27c3abe507ce8c54ed6cef9c82b27",
+          "stdout": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 18\n-------------------------------\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_headless_surface                : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.305\n\tdriverVersion      = 0.0.1\n\tvendorID           = 0x10005\n\tdeviceID           = 0x0000\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_CPU\n\tdeviceName         = llvmpipe (LLVM 19.1.7, 256 bits)\n\tdriverID           = DRIVER_ID_MESA_LLVMPIPE\n\tdriverName         = llvmpipe\n\tdriverInfo         = Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)\n\tconformanceVersion = 1.3.1.1\n\tdeviceUUID         = 6d657361-3235-2e30-2e37-2d322b646500\n\tdriverUUID         = 6c6c766d-7069-7065-5555-494400000000\n",
+          "stdout_sha256": "3347318f8673fda382f9aeb23e7356f4cd6375df19ecded6e76e95836f5fc630"
+        },
+        "vulkan_4": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nouveau_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 1,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+          "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+          "stdout": "",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "vulkan_5": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/nvidia_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\n",
+          "stderr_sha256": "9b8ce0d5aabd827937d81f2e3a130958edf27c3abe507ce8c54ed6cef9c82b27",
+          "stdout": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\nVK_NV_display_stereo                   : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.341\n\tdriverVersion      = 610.57.4.0\n\tvendorID           = 0x10de\n\tdeviceID           = 0x2504\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = NVIDIA GeForce RTX 3060\n\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n\tdriverName         = NVIDIA\n\tdriverInfo         = 610.57.04\n\tconformanceVersion = 1.4.3.3\n\tdeviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n\tdriverUUID         = 9992f558-9329-580d-a9f3-a38ee24bc64d\n",
+          "stdout_sha256": "aac5bf3ecd4f94d099b798b7f33b69e665fc5bc4a0497ed6da74681e396c4899"
+        },
+        "vulkan_6": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/radeon_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 0,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\n",
+          "stderr_sha256": "9b8ce0d5aabd827937d81f2e3a130958edf27c3abe507ce8c54ed6cef9c82b27",
+          "stdout": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_headless_surface                : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.305\n\tdriverVersion      = 25.0.7\n\tvendorID           = 0x1002\n\tdeviceID           = 0x67df\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)\n\tdriverID           = DRIVER_ID_MESA_RADV\n\tdriverName         = radv\n\tdriverInfo         = Mesa 25.0.7-2+deb13u1\n\tconformanceVersion = 1.4.0.0\n\tdeviceUUID         = 00000000-0200-0000-0000-000000000000\n\tdriverUUID         = 414d442d-4d45-5341-2d44-525600000000\n",
+          "stdout_sha256": "036716e1b43844dfe75b0e8be652f9c3028d01d599a288e50c0006d0f55409fd"
+        },
+        "vulkan_7": {
+          "argv": [
+            "env",
+            "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/virtio_icd.json",
+            "vulkaninfo",
+            "--summary"
+          ],
+          "cwd": null,
+          "returncode": 1,
+          "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+          "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+          "stdout": "",
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "raw_artifact_sha256": {
+        "cpu": "724e47c740f5ec92afd36fa98d294555be0f4edfaa075b0cb613bd48147e290b",
+        "driver_00000000:02:00.0": "d9ef53afa453f9b5975ab8e5e37e6816ae1b8f81cd3b0d8fa194a9d66330251e",
+        "driver_00000000:03:00.0": "876f42a7d1758e026eb37f7695f630a10f3bf8be48f8cfa44291821e160863e8",
+        "hostname": "2ca2f9d4b2748e88d8a97e0f834ab12ae744880fda34aaf94294d92c80da5a32",
+        "icd_inventory": "bb7cba3c20b7c38d51365b93ae90b2bd3f9942f7596a0312d9c00061e33e999d",
+        "memory": "e4ffc5ca9dfc2cf7dedb5bcb934f0c1c5930831c1670d0a03987dec588953279",
+        "memory_state": "416e91f3ed9138847ab5f7c9209ea09d3291466b76c36a3107e063ebc33430ae",
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": "a913756b6f0c81ef99923a73a504eea1e359836d3c05e9226c249b077b78f54c",
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": "f5e48bef73b5bea6c23c558f97fddd0717fd4b0009206609f94211c032e2e369",
+        "model_sha_Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": "98e5da523001bad16ac81c08ea36546cb35168dc8c5b03808ad992fa187dbe3a",
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": "2177be27460b4e0df286e2514c77d204fdedc9169f245abf5c80e8034486465f",
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": "6483ada35465bff6afce9b3ec8a574f265daaac9bb7042a96fced5673697938f",
+        "model_size_Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": "57cff709a03eb9de13106929f1ca46972ff7a08f864c88f2df4b9c1eabe3f05c",
+        "motherboard": "dd9df49567c8289adaa4cc14158ba949522189be2b718d89a5d552b8ea88005e",
+        "nvidia": "45a1c7eb92b4b11d2dfbd5df29686ca5071c348db256f2f76a31a06aab35af9b",
+        "pci": "888ecd5e699d6f6ea4ce9238df139ac5de7b29def2f9dd0df770e00711155746",
+        "pci_tree": "89ebc751a366f1c92af25909e64592e90e38cebbef9a90f34a459522520402cd",
+        "pci_verbose": "101f3559d6609f9eb11330f26fd9e8513784e73ab85592493b3747b6289100cd",
+        "platform": "99517272d26c7f0b1c78141c49202a93787dcf5ddb99a072de6d4bc5d850977b",
+        "sensors": "5be44003fec648feb28fc499c86a881bbb7fcb1117403ea907ca8eacb5569e51",
+        "sys_00000000:02:00.0_current_link_speed": "f847c9697f5ca1347f5a6e6b702196d2d63fac8c046aa7df49b9e65628245125",
+        "sys_00000000:02:00.0_current_link_width": "b629cbb60b45461003d454f676cc90de778bfdd1ada40400106d174b625cdb64",
+        "sys_00000000:02:00.0_device": "2f174232ac31180271ad9854a06f67e061a0e249f2a308e04800d9bf01ca69d6",
+        "sys_00000000:02:00.0_max_link_speed": "b8aee1e2402b729f95d07e71268374d336e3d8c5aabb366b44a9a11378e296cd",
+        "sys_00000000:02:00.0_max_link_width": "14146320953760a390bcf7a2c4b3054889f8eb28e7f933b736cf42f8e8e72d03",
+        "sys_00000000:02:00.0_revision": "00b4bbe0b8d3900f936423c7e9f281c5254b4fcfa631acd464990da7e8ea1a27",
+        "sys_00000000:02:00.0_subsystem_device": "154119a4a8ca4f69caeedd640dbf3d78b69ab19c0950ea7d8cc7cf359a6f98e1",
+        "sys_00000000:02:00.0_subsystem_vendor": "7c8e56962e385bcc96f79f16fc6e8c09eebd2e95c90c8e9eccd12b6bf69835bd",
+        "sys_00000000:02:00.0_vendor": "4d91ccca0e3b5d79a487f634614afcd79fa6af02e720874fcc48d5d74a37e08f",
+        "sys_00000000:03:00.0_current_link_speed": "4eb91213de159a875c11a4bc5800bb8a10a17adb05e5d3cfb7636230695e4244",
+        "sys_00000000:03:00.0_current_link_width": "51f4b7cadf0029f8cff68c37f3be1e07057d0fddfd5a275e655870ecb2b95918",
+        "sys_00000000:03:00.0_device": "b71580e1d02db916a41cda0ee0029c20424d8544632ea81ae9c8c04e8219f7f7",
+        "sys_00000000:03:00.0_max_link_speed": "57470f628ef9c3d241890fb076e0cbc15f7f81ba348b087f9c9fbcfa113ddf4f",
+        "sys_00000000:03:00.0_max_link_width": "b944ad85a9189822662fabfe4ffb188eb90a2fe2e870864ee808e7f9cdcb14a7",
+        "sys_00000000:03:00.0_revision": "430b47eceadd964ddf1e7146de3367fed70d109590b740011727d62041298f6c",
+        "sys_00000000:03:00.0_subsystem_device": "60fb64212d7d73b98bf1bb7f3dadbcec23e62c68dcbe5d8793f0228871041549",
+        "sys_00000000:03:00.0_subsystem_vendor": "e4ceb79d4ca5a016f4c251f85f89e5f8ac0c5665b1b2cd9d748eadd6e0bccfa6",
+        "sys_00000000:03:00.0_vendor": "99bb83b9979dffec7dff341b899b16aca1a9281f1c4388d039aacdfbc826f6b9",
+        "vram_00000000:02:00.0": "df35957203c796a42b56f787576576422ba70b8b05d92c647a90406c7140c1c3",
+        "vulkan_0": "dd727619771302fc44dfa71ad19db203c3724b4aaf70af9ffd8071cabf88b77a",
+        "vulkan_1": "945702018bb86ee6a059100d656f983fe53dbe12fb67dd9da9b3a15556b45d08",
+        "vulkan_2": "4eeae667cfff90c18ac5f163880972552f06c365263ea863b6561443cbb64627",
+        "vulkan_3": "f06623e4045004acddb23d249b87ed4275a76fd225f83a6fe42738d7443407a7",
+        "vulkan_4": "e7b56c2bcd70169964c4301377db07980f80bdbd94c2d70bc97951369d46832e",
+        "vulkan_5": "0ce7d34012ca6dea13444a87798d537f04a7eccd160f1405e243009f3e6f2947",
+        "vulkan_6": "de5426c5cf9f2494296d978d60dd692e32cbf313dbe6860a64808ab56a28f810",
+        "vulkan_7": "10417395a8d9a479489f931c8ada781f9343edd8d62f3f11e157f1f37ad57a7d"
+      },
+      "schema": "inferswarm.issue241.host-census/1",
+      "source_tree": "/home/hermes/is241-repo/docs/qualification/qwen38-vulkan-v1",
+      "vulkan_devices": {
+        "/usr/share/vulkan/icd.d/lvp_icd.json": [
+          {
+            "apiVersion": "1.4.305",
+            "conformanceVersion": "1.3.1.1",
+            "deviceID": "0x0000",
+            "deviceName": "llvmpipe (LLVM 19.1.7, 256 bits)",
+            "deviceType": "PHYSICAL_DEVICE_TYPE_CPU",
+            "deviceUUID": "6d657361-3235-2e30-2e37-2d322b646500",
+            "driverID": "DRIVER_ID_MESA_LLVMPIPE",
+            "driverInfo": "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)",
+            "driverName": "llvmpipe",
+            "driverUUID": "6c6c766d-7069-7065-5555-494400000000",
+            "driverVersion": "0.0.1",
+            "vendorID": "0x10005"
+          }
+        ],
+        "/usr/share/vulkan/icd.d/nvidia_icd.json": [
+          {
+            "apiVersion": "1.4.341",
+            "conformanceVersion": "1.4.3.3",
+            "deviceID": "0x2504",
+            "deviceName": "NVIDIA GeForce RTX 3060",
+            "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+            "deviceUUID": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "driverID": "DRIVER_ID_NVIDIA_PROPRIETARY",
+            "driverInfo": "610.57.04",
+            "driverName": "NVIDIA",
+            "driverUUID": "9992f558-9329-580d-a9f3-a38ee24bc64d",
+            "driverVersion": "610.57.4.0",
+            "vendorID": "0x10de"
+          }
+        ],
+        "/usr/share/vulkan/icd.d/radeon_icd.json": [
+          {
+            "apiVersion": "1.4.305",
+            "conformanceVersion": "1.4.0.0",
+            "deviceID": "0x67df",
+            "deviceName": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+            "deviceType": "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU",
+            "deviceUUID": "00000000-0200-0000-0000-000000000000",
+            "driverID": "DRIVER_ID_MESA_RADV",
+            "driverInfo": "Mesa 25.0.7-2+deb13u1",
+            "driverName": "radv",
+            "driverUUID": "414d442d-4d45-5341-2d44-525600000000",
+            "driverVersion": "25.0.7",
+            "vendorID": "0x1002"
+          }
+        ]
+      }
+    },
+    "verdict": {
+      "campaign": "issue241-r8i3-rx580-comparator-v2",
+      "candidate_bdf": "00000000:02:00.0",
+      "notes": "identity validation only; stability is assessed by the bounded historical-fixture runs, not by this reducer",
+      "reference_bdf": "00000000:03:00.0",
+      "same_host": true,
+      "schema": "inferswarm.issue241.phase1-census-verdict/1",
+      "stability_assessed": false,
+      "validated": true,
+      "vram_census_mib": 8192
+    }
+  },
+  "dispatch_authority": {
+    "base_ref": "main",
+    "comment_id": 5806929798,
+    "commenter": "ezutfen",
+    "commenter_association": "MEMBER",
+    "created_at": "2026-09-24T03:23:51Z",
+    "dispatch_phrase": "R8I3 PHYSICAL DISPATCH #241",
+    "head_sha": "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2",
+    "issue_number": 241,
+    "merged_at": null,
+    "pr_number": 242,
+    "pr_state": "open",
+    "repository": "Zutfen-LLC/inferswarm",
+    "schema": "inferswarm.issue241.dispatch-authority/2",
+    "verified_via": "public-github-api"
+  },
+  "dispatch_head_sha": "b6148de7897de49e961ceca2f3cc0ee2f59dc4b2",
+  "kind": "phase1-census",
+  "physical_execution_performed": true,
+  "schema": "inferswarm.issue241.physical-campaign-receipt/2"
+}

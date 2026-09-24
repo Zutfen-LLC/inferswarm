@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import json,pathlib;d=pathlib.Path('/sys/class/dmi/id');print(json.dumps({k:(d/k).read_text().strip() for k in ('board_vendor','board_name','board_version','bios_version')}))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "{\"board_vendor\": \"Hewlett-Packard\", \"board_name\": \"212B\", \"board_version\": \"1.01\", \"bios_version\": \"M60 v02.62\"}\n",
+  "stdout_sha256": "3e593644df6bdd8dfae1a74b504eec652a7cda68d238df8ee33885dc73ebe832"
+}

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "cat",
+    "/sys/bus/pci/devices/0000:02:00.0/current_link_speed"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "8.0 GT/s PCIe\n",
+  "stdout_sha256": "704d5513df24549101340dc7020db1ce07a9901d135eb23ba0461dcf6f6d7cd9"
+}

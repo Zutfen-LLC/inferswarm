@@ -518,10 +518,55 @@ class TestCensus(unittest.TestCase):
             census.validate_census(self._candidate_field("revision", "e6"))
 
     def test_wrong_candidate_link_width_rejected(self):
-        # x16 would mean the board moved to a different slot/link: the
-        # frozen predicate is exact (x8 negotiated / x16 max), not a set.
+        # A width other than the frozen x16 (e.g. the OLD generation-1
+        # card's x8, or a further downtrain) must not satisfy the frozen
+        # candidate identity: the predicate is exact (x16/x16), not a set.
         with self.assertRaisesRegex(ValueError, "link_width"):
-            census.validate_census(self._candidate_field("link_width", "x16"))
+            census.validate_census(self._candidate_field("link_width", "x8"))
+
+    def test_old_generation_x8_subject_rejected(self):
+        # Maintainer directive point 8: the old x8 subject CANNOT satisfy
+        # the replacement x16 predicate. The generation-1 frozen identity
+        # (x8 negotiated, all else equal) fails the generation-2 predicate
+        # on exactly the link_width field.
+        problems = census.identity_problems("C", {
+            **valid_device_identity("C"), "link_width": "x8"})
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("link_width", problems[0])
+        self.assertIn("x8", problems[0])
+
+    def test_replacement_census_derivation_is_frozen_constants(self):
+        # Maintainer directive points 4-6: the generation-2 constants ARE
+        # the mechanical derivation of the retained fresh census bytes.
+        derived = C.derive_candidate_identity_from_census(REPO)
+        for field in C.CENSUS_DERIVED_FIELDS:
+            if field == "vram_mib":
+                self.assertEqual(derived[field], C.CANDIDATE_VRAM_CENSUS_MIB)
+            elif field in C.CANDIDATE_ARM:
+                self.assertEqual(derived[field], C.CANDIDATE_ARM[field],
+                                 f"freeze drift on {field}")
+        C.verify_replacement_freeze_provenance(REPO)  # no exception
+
+    def test_freeze_provenance_fails_closed_on_census_mutation(self):
+        # Negative control for the derivation: mutate ONE retained raw
+        # byte (the negotiated width file x16->x8) in a sandbox copy and
+        # the provenance check must fail on exactly that field.
+        import shutil, tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            area = root / C.REPLACEMENT_CENSUS_REL
+            shutil.copytree(REPO / C.REPLACEMENT_CENSUS_REL, area)
+            width_file = area / "raw" / "sys_02:00.0_current_link_width.txt"
+            width_file.write_text("8\n")
+            with self.assertRaisesRegex(
+                    RuntimeError, "link_width") as ctx:
+                C.verify_replacement_freeze_provenance(root)
+            self.assertIn("x8", str(ctx.exception))
+            # and the historical x8 value in the census must likewise be
+            # rejected by the identity predicate:
+            self.assertTrue(census.identity_problems("C", {
+                **valid_device_identity("C"),
+                "link_width": "x" + width_file.read_text().strip()}))
 
     def test_wrong_reference_link_width_rejected(self):
         doc = make_census()
@@ -550,6 +595,50 @@ class TestCensus(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "driver"):
             census.validate_census(
                 self._candidate_field("driver_in_use", "radeon"))
+
+    def test_historical_generation1_census_cannot_validate(self):
+        # Maintainer directive point 8 (stale receipts): the RETAINED
+        # generation-1 Phase-1 census (historical/campaign-v2-dispatch-
+        # b6148de/phase1/census/census.json) carries the old card's x8
+        # negotiated width; the generation-2 predicate must reject it.
+        historical = (REPO / C.AREA_REL / "historical"
+                      / "campaign-v2-dispatch-b6148de"
+                      / "phase1" / "census" / "census.json")
+        if historical.is_file():  # retained on this branch
+            doc = json.loads(historical.read_bytes())
+            amd = next(g for g in doc["census"]["gpus"]
+                       if g.get("vendor_id") == "1002")
+            self.assertEqual(amd["link_width"], "x8")  # old card
+            problems = census.identity_problems("C", amd)
+            self.assertTrue(problems, "historical x8 census must drift")
+            self.assertTrue(
+                any("link_width" in p and "x8" in p for p in problems),
+                problems)
+
+    def test_replacement_diagnostic_is_not_qualification(self):
+        # Maintainer directive point 8c: the retained replacement-card
+        # crash-leg diagnostic (raw response JSON, no dispatch authority,
+        # no campaign schemas) cannot satisfy any acceptance gate.
+        diag = (REPO / C.AREA_REL / "historical"
+                / "replacement-crash-leg-diagnostic-2026-09-24"
+                / "diag-response.json")
+        if diag.is_file():
+            doc = json.loads(diag.read_bytes())
+            self.assertNotIn("dispatch_authority", doc)
+            self.assertNotIn("schema", doc)
+            self.assertEqual(doc.get("tokens_predicted"), 8)  # it did run
+            self.assertEqual(doc.get("stop_type"), "limit")
+            # Mechanical proof through the comparator/2 receipt validator:
+            # the raw diagnostic response cannot pose as an arm receipt.
+            result = cmp2.validate_arm_receipt(doc, "C", row_reader=None)
+            self.assertFalse(result["valid"])
+            joined = "; ".join(result["problems"])
+            self.assertIn("arm mismatch", joined)
+            self.assertIn("campaign mismatch", joined)
+            # And through the practicality projection: no wall-time
+            # authority is derivable from it.
+            with self.assertRaises(Exception):
+                prac.project_from_measurements(diag)
 
     def test_candidate_icd_drift_rejected(self):
         with self.assertRaisesRegex(ValueError, "vulkan_icd"):

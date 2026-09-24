@@ -110,13 +110,13 @@ class HostProducerTests(unittest.TestCase):
                 elif command[:1] == ['cat']:
                     key = command[-1].rsplit('/', 1)[-1]
                     value = {'vendor':'0x1002','device':'0x67df','subsystem_vendor':'0x1da2',
-                        'subsystem_device':'0xe353','revision':'0xe7','current_link_width':'8',
+                        'subsystem_device':'0xe353','revision':'0xe7','current_link_width':'16',
                         'current_link_speed':'8.0 GT/s','max_link_width':'16',
-                        'max_link_speed':'8.0 GT/s','mem_info_vram_total':str(8*1024**3)}.get(key, '1')
+                        'max_link_speed':'8.0 GT/s PCIe','mem_info_vram_total':str(8*1024**3)}.get(key, '1')
                     if '03:00.0' in joined: value = {'vendor':'0x10de','device':'0x2504','revision':'0xa1',
                         'subsystem_vendor':'0x1458','subsystem_device':'0x4074',
                         'current_link_width':'16','current_link_speed':'2.5 GT/s',
-                        'max_link_width':'16','max_link_speed':'16.0 GT/s'}.get(key, value)
+                        'max_link_width':'16','max_link_speed':'16.0 GT/s PCIe'}.get(key, value)
                 elif command[:1] == ['sha256sum']: value = C.MODEL_MEMBER_SHA256[command[-1].rsplit('/', 1)[-1]] + '  ' + command[-1]
                 elif command[:1] == ['stat']: value = '24346461344' if C.MODEL_MEMBERS[2] in joined else '24100000000'
                 elif command[:1] == ['python3']:
