@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -261,30 +262,82 @@ def _census_raw(root: Path | None = None) -> Path:
     return root / REPLACEMENT_CENSUS_REL / "raw"
 
 
-def derive_candidate_identity_from_census(
-        root: Path | None = None) -> dict[str, str]:
-    """Mechanically derive the candidate identity from the retained fresh
-    replacement-census raw bytes (generation-2 freeze authority).
+def _census_read(raw: Path, name: str, *, receipt: bool = False) -> str:
+    """Read one retained census artifact (or its rc receipt). Fails closed
+    on missing/symlink/non-regular bytes."""
+    path = raw / f"{name}.txt"
+    if path.is_symlink() or not path.is_file():
+        raise RuntimeError(f"replacement census artifact missing: {name}")
+    text = path.read_text()
+    if receipt:
+        rc = _census_rc(raw, name)
+        if rc != 0:
+            raise RuntimeError(
+                f"replacement census receipt unsuccessful: {name} rc={rc}")
+    return text
 
-    Parses ONLY the retained read-only observation artifacts — no device
-    access, no network, no dispatch machinery. Every output field is the
-    same normalization the census/Phase-2/Phase-3 predicates apply, so the
-    frozen CANDIDATE_ARM constants are provable from retained bytes."""
-    raw = _census_raw(root)
-    bdf = CANDIDATE_ARM["bdf"]
-    short = bdf.split(":", 1)[1]  # 00000000:02:00.0 -> 02:00.0
 
-    def rd(name: str) -> str:
-        path = raw / f"{name}.txt"
-        if path.is_symlink() or not path.is_file():
-            raise RuntimeError(f"replacement census artifact missing: {name}")
-        return path.read_text().strip()
+def _census_rc(raw: Path, name: str) -> int:
+    path = raw / f"{name}.rc"
+    if path.is_symlink() or not path.is_file():
+        raise RuntimeError(f"replacement census receipt missing: {name}")
+    match = re.fullmatch(r"rc=(\d+)", path.read_text().strip())
+    if match is None:
+        raise RuntimeError(f"replacement census receipt malformed: {name}")
+    return int(match[1])
 
-    def hexid(name: str) -> str:
-        return rd(f"sys_{short}_{name}").lower().removeprefix("0x")
 
-    # RADV physical-device summary (GPU0 of the radeon ICD)
-    vulkan_text = rd("vulkan_radeon")
+# A display-class (03xx) endpoint is a GPU candidate only if its PCI
+# class is exactly 0300 (VGA compatible controller). 0380 (display
+# other) and non-display classes must not match. lspci line shape:
+# "<bdf> <multi-word class name> [0300]: <description> [vend:dev] ..."
+_GPU_CLASS_RE = re.compile(r"^\S+\s+[^\[]*\[(0300)\]")
+
+
+def _candidate_bdf_from_topology(raw: Path) -> str:
+    """Derive the AMD candidate BDF from retained PCI/topology bytes.
+
+    Identifies the unique AMD display endpoint from the retained lspci
+    population (pci.txt, corroborated by pci_verbose.txt), then renders
+    the frozen 16-char domain-prefixed BDF. Fails closed on zero, multiple,
+    or contradictory AMD display endpoints, and on any disagreement between
+    the two independent retained topology observations."""
+    def amd_display_endpoints(text: str) -> list[str]:
+        found: list[str] = []
+        for line in text.splitlines():
+            if not _GPU_CLASS_RE.match(line):
+                continue
+            if "[1002:" not in line:
+                continue
+            found.append(line.split()[0])
+        return found
+
+    pci = _census_read(raw, "pci", receipt=True)
+    pci_verbose = _census_read(raw, "pci_verbose", receipt=True)
+    short_bdfs = amd_display_endpoints(pci)
+    if len(short_bdfs) != 1:
+        raise RuntimeError(
+            "AMD display endpoint not unique in retained pci.txt: "
+            f"{short_bdfs!r}")
+    verbose_bdfs = amd_display_endpoints(pci_verbose)
+    if verbose_bdfs != short_bdfs:
+        raise RuntimeError(
+            "retained topology disagreement (pci.txt vs pci_verbose.txt): "
+            f"{short_bdfs!r} != {verbose_bdfs!r}")
+    short = short_bdfs[0]
+    # lspci -D renders the domain as 4 hex digits (e.g. 0000:02:00.0);
+    # the frozen identity uses the 16-char domain-prefixed form
+    # (00000000:02:00.0). Normalize domain to 8 digits.
+    domain, rest = short.split(":", 1)
+    if not re.fullmatch(r"[0-9a-f]+", domain):
+        raise RuntimeError(f"malformed PCI domain in topology: {domain!r}")
+    return f"{int(domain, 16):08x}:{rest}"
+
+
+def _radv_gpu0(raw: Path) -> dict[str, str]:
+    """GPU0 key=value block of the retained radeon-ICD vulkaninfo summary,
+    requiring a successful command receipt."""
+    vulkan_text = _census_read(raw, "vulkan_radeon", receipt=True)
     gpu0: dict[str, str] = {}
     current: dict[str, str] | None = None
     for line in vulkan_text.splitlines():
@@ -299,6 +352,75 @@ def derive_candidate_identity_from_census(
     for field in ("deviceName", "deviceUUID", "apiVersion", "driverInfo"):
         if not gpu0.get(field):
             raise RuntimeError(f"RADV summary missing {field}")
+    return gpu0
+
+
+def _candidate_icd_from_census(raw: Path, bdf: str) -> str:
+    """Derive/cross-bind the Radeon ICD path from retained census evidence.
+
+    The retained icd_inventory.txt must contain EXACTLY ONE radeon ICD
+    path. That ICD must be the one whose retained successful RADV
+    vulkaninfo observation (vulkan_radeon.txt, rc=0) reports the AMD
+    candidate's PCI vendor/device — the inventory path itself carries no
+    vendor bytes, so the binding is proven by the observation it produced,
+    exactly as the producing census joined GPUs to ICDs (issue241_host_producer
+    matched vulkaninfo vendorID/deviceID against the lspci-derived GPU
+    rows). The vendor/device compared here are re-derived from the
+    independently derived BDF's retained sysfs bytes, never taken from the
+    frozen constants."""
+    inventory = _census_read(raw, "icd_inventory")
+    radeon = sorted(
+        line.strip() for line in inventory.splitlines()
+        if line.strip() and "radeon" in line.strip())
+    if len(radeon) != 1:
+        raise RuntimeError(
+            f"radeon ICD not unique in retained inventory: {radeon!r}")
+    icd = radeon[0]
+    if not icd.endswith(".json") or not icd.startswith("/"):
+        raise RuntimeError(f"malformed ICD path in retained inventory: {icd!r}")
+    gpu0 = _radv_gpu0(raw)
+    short = bdf.split(":", 1)[1]
+
+    def rd(name: str) -> str:
+        return _census_read(raw, name).strip()
+
+    expected = tuple(
+        "0x" + rd(f"sys_{short}_{name}").lower().removeprefix("0x")
+        for name in ("vendor", "device"))
+    observed = (gpu0.get("vendorID", ""), gpu0.get("deviceID", ""))
+    if observed != expected:
+        raise RuntimeError(
+            f"radeon ICD {icd!r} not bound to the AMD candidate: "
+            f"vendorID/deviceID {observed!r} != {expected!r}")
+    return icd
+
+
+def derive_candidate_identity_from_census(
+        root: Path | None = None) -> dict[str, str]:
+    """Mechanically derive the candidate identity from the retained fresh
+    replacement-census raw bytes (generation-2 freeze authority).
+
+    Parses ONLY the retained read-only observation artifacts — no device
+    access, no network, no dispatch machinery. Every output field is the
+    same normalization the census/Phase-2/Phase-3 predicates apply, so the
+    frozen CANDIDATE_ARM constants are provable from retained bytes.
+
+    NO frozen constant feeds the derivation: the BDF comes from retained
+    PCI/topology bytes, the ICD from the retained ICD inventory cross-bound
+    to the retained RADV observation, and every other field from retained
+    per-BDF sysfs artifacts keyed by the DERIVED BDF (which additionally
+    proves the sysfs artifacts and the topology agree on the endpoint)."""
+    raw = _census_raw(root)
+    bdf = _candidate_bdf_from_topology(raw)
+    short = bdf.split(":", 1)[1]  # 00000000:02:00.0 -> 02:00.0
+    icd = _candidate_icd_from_census(raw, bdf)
+    gpu0 = _radv_gpu0(raw)
+
+    def rd(name: str) -> str:
+        return _census_read(raw, name).strip()
+
+    def hexid(name: str) -> str:
+        return rd(f"sys_{short}_{name}").lower().removeprefix("0x")
 
     derived = {
         "bdf": bdf,
@@ -318,7 +440,7 @@ def derive_candidate_identity_from_census(
         "vulkan_api_version": gpu0["apiVersion"],
         "vulkan_driver": (f"RADV ({gpu0['driverInfo']}), "
                           f"apiVersion {gpu0['apiVersion']}"),
-        "icd": CANDIDATE_ARM["icd"],
+        "icd": icd,
     }
     return derived
 
@@ -327,13 +449,14 @@ CENSUS_DERIVED_FIELDS = (
     "bdf", "vendor_id", "device_id", "subsystem_vendor_id",
     "subsystem_device_id", "revision", "link_width", "max_link_width",
     "max_link_speed", "kernel_driver", "vram_mib", "vulkan_device_name",
-    "vulkan_device_uuid", "vulkan_api_version", "vulkan_driver",
+    "vulkan_device_uuid", "vulkan_api_version", "vulkan_driver", "icd",
 )
 
 
 def verify_replacement_freeze_provenance(root: Path | None = None) -> None:
-    """Fail closed unless every census-derived frozen field equals the
-    generation-2 constants (the freeze is mechanical, not asserted)."""
+    """Fail closed unless every remediation-required frozen candidate field
+    equals the independently derived retained census evidence (the freeze
+    is mechanical, not asserted)."""
     derived = derive_candidate_identity_from_census(root)
     cfg = CANDIDATE_ARM
     drift = {

@@ -568,6 +568,220 @@ class TestCensus(unittest.TestCase):
                 **valid_device_identity("C"),
                 "link_width": "x" + width_file.read_text().strip()}))
 
+    # --- generation-2 provenance circularity controls (correction round 2,
+    # maintainer review comment 5814248688) ------------------------------
+
+    def _sandbox_census(self):
+        """Copy the retained replacement census into a temp sandbox for
+        one-artifact mutation controls. NEVER mutates the retained tree."""
+        import shutil
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        area = root / C.REPLACEMENT_CENSUS_REL
+        shutil.copytree(REPO / C.REPLACEMENT_CENSUS_REL, area)
+        return root, area
+
+    def test_derivation_reads_no_frozen_constants_structurally(self):
+        # The circularity defect class: derive_candidate_identity_from_
+        # census() and every helper it calls must not load any frozen arm
+        # constant (no CANDIDATE_ARM/REFERENCE_ARM subscript/attribute
+        # reads anywhere in the derivation call tree).
+        import ast
+
+        def constant_loads(func):
+            src = inspect.getsource(func)
+            tree = ast.parse(textwrap.dedent(src))
+            hits = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Subscript) and isinstance(
+                        node.value, ast.Name) and node.value.id in (
+                            "CANDIDATE_ARM", "REFERENCE_ARM"):
+                    hits.append(ast.dump(node))
+                if (isinstance(node, ast.Attribute)
+                        and node.attr in ("bdf", "icd")
+                        and isinstance(node.value, ast.Name)
+                        and node.value.id in ("CANDIDATE_ARM",
+                                              "REFERENCE_ARM")):
+                    hits.append(ast.dump(node))
+            return hits
+
+        # Functions introduced by the correction are checked where they
+        # exist; derive_candidate_identity_from_census itself is the
+        # minimum contract (guarded so a pre-fix head fails on the
+        # BEHAVIORAL assertion, not on a missing attribute).
+        functions = [fn for fn in (
+            C.derive_candidate_identity_from_census,
+            getattr(C, "_candidate_bdf_from_topology", None),
+            getattr(C, "_candidate_icd_from_census", None),
+            getattr(C, "_radv_gpu0", None),
+            getattr(C, "_census_read", None),
+            getattr(C, "_census_rc", None)) if fn is not None]
+        for fn in functions:
+            with self.subTest(fn=fn.__name__):
+                self.assertEqual(constant_loads(fn), [],
+                                 f"derivation reads frozen constants: {fn.__name__}")
+
+    def test_bdf_removed_from_topology_fails_closed(self):
+        # Mutation: remove the AMD endpoint's BDF from the retained
+        # topology bytes (pci.txt AND pci_verbose.txt, all occurrences)
+        # -> zero AMD display endpoints -> provenance fails closed.
+        root, area = self._sandbox_census()
+        for name in ("pci.txt", "pci_verbose.txt"):
+            p = area / "raw" / name
+            lines = [ln for ln in p.read_text().splitlines(True)
+                     if "[1002:" not in ln and "AMD/ATI" not in ln]
+            p.write_text("".join(lines))
+        with self.assertRaisesRegex(
+                RuntimeError, "not unique|missing"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def _move_amd_endpoint(self, area, bus="05"):
+        """Competent forgery: move the AMD endpoint to a different bus in
+        the retained topology AND rename its sysfs artifacts to match, so
+        the mutated evidence is internally consistent and the derivation
+        can complete (a partial mutation is already covered by the
+        cross-bind fail-closed control)."""
+        for name in ("pci.txt", "pci_verbose.txt"):
+            p = area / "raw" / name
+            text = p.read_text()
+            text = text.replace("0000:02:00.0", f"0000:{bus}:00.0")
+            text = text.replace("0000:02:00.1", f"0000:{bus}:00.1")
+            p.write_text(text)
+        raw = area / "raw"
+        for p in list(raw.glob("sys_02:00.0_*")):
+            p.rename(raw / p.name.replace("sys_02:00.0_",
+                                          f"sys_{bus}:00.0_"))
+
+    def test_bdf_moved_in_topology_ignores_frozen_constant(self):
+        # Mutation: place the AMD endpoint at a DIFFERENT BDF
+        # (0000:05:00.0) consistently across retained topology and sysfs
+        # artifacts. The derivation must follow the retained evidence (no
+        # frozen-constant fallback); the frozen 02:00.0 identity then
+        # fails the verifier's comparison — proving the derivation returns
+        # retained evidence, not the frozen constant.
+        root, area = self._sandbox_census()
+        self._move_amd_endpoint(area)
+        derived = C.derive_candidate_identity_from_census(root)
+        self.assertEqual(derived["bdf"], "00000000:05:00.0",
+                         "derivation must follow retained topology, not the frozen constant")
+        with self.assertRaisesRegex(RuntimeError, "bdf"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_bdf_missing_sysfs_crossbind_fails_closed(self):
+        # Mutation: move the AMD endpoint in topology while LEAVING the
+        # sysfs artifacts at 02:00.0 -> the derived BDF (05:00.0) has no
+        # sysfs artifacts -> derivation fails closed on the cross-bind.
+        root, area = self._sandbox_census()
+        for name in ("pci.txt", "pci_verbose.txt"):
+            p = area / "raw" / name
+            text = p.read_text()
+            for old, new in (("0000:02:00.0", "0000:05:00.0"),
+                             ("0000:02:00.1", "0000:05:00.1")):
+                text = text.replace(old, new)
+            p.write_text(text)
+        with self.assertRaisesRegex(
+                RuntimeError, "missing"):
+            C.derive_candidate_identity_from_census(root)
+
+    def test_icd_removed_from_inventory_fails_closed(self):
+        # Mutation: remove /usr/share/vulkan/icd.d/radeon_icd.json from
+        # the retained ICD evidence -> zero radeon ICDs -> provenance
+        # fails closed on icd (the old defect: icd was fed from
+        # CANDIDATE_ARM and could not fail).
+        root, area = self._sandbox_census()
+        inv = area / "raw" / "icd_inventory.txt"
+        lines = [ln for ln in inv.read_text().splitlines(True)
+                 if "radeon" not in ln]
+        inv.write_text("".join(lines))
+        with self.assertRaisesRegex(
+                RuntimeError, "radeon ICD not unique"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_icd_altered_in_inventory_fails_closed(self):
+        # Mutation: alter the radeon ICD path (rename to a wrong name)
+        # -> unique radeon ICD still found but != frozen constant ->
+        # provenance fails on icd.
+        root, area = self._sandbox_census()
+        inv = area / "raw" / "icd_inventory.txt"
+        inv.write_text(inv.read_text().replace(
+            "/usr/share/vulkan/icd.d/radeon_icd.json",
+            "/usr/share/vulkan/icd.d/radeonn_icd.json"))
+        with self.assertRaisesRegex(RuntimeError, "icd"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_radv_receipt_unsuccessful_fails_closed(self):
+        # Mutation: the retained radeon RADV vulkaninfo receipt becomes
+        # unsuccessful (rc=1) -> derivation fails closed (the successful
+        # observation participated in the derivation).
+        root, area = self._sandbox_census()
+        (area / "raw" / "vulkan_radeon.rc").write_text("rc=1\n")
+        with self.assertRaisesRegex(
+                RuntimeError, "vulkan_radeon"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_radv_vendor_binding_mutation_fails_closed(self):
+        # Mutation: swap the RADV GPU0 vendorID in the retained
+        # observation -> the ICD-to-candidate cross-binding fails (the
+        # radeon ICD no longer reports the AMD candidate's PCI identity).
+        root, area = self._sandbox_census()
+        obs = area / "raw" / "vulkan_radeon.txt"
+        obs.write_text(obs.read_text().replace(
+            "vendorID           = 0x1002",
+            "vendorID           = 0x10de"))
+        with self.assertRaisesRegex(
+                RuntimeError, "not bound to the AMD candidate"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_second_amd_endpoint_fails_closed(self):
+        # Mutation: duplicate the AMD line (two AMD display endpoints)
+        # -> ambiguity -> fail closed.
+        root, area = self._sandbox_census()
+        p = area / "raw" / "pci.txt"
+        lines = p.read_text().splitlines(True)
+        amd = [ln for ln in lines if "[1002:" in ln and "[0300]" in ln]
+        self.assertEqual(len(amd), 1)
+        idx = lines.index(amd[0])
+        lines.insert(idx, amd[0].replace("0000:02:00.0", "0000:04:00.0"))
+        p.write_text("".join(lines))
+        with self.assertRaisesRegex(RuntimeError, "not unique"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_topology_disagreement_fails_closed(self):
+        # Mutation: pci.txt says 02:00.0, pci_verbose.txt says 05:00.0
+        # -> the two independent topology observations contradict ->
+        # fail closed.
+        root, area = self._sandbox_census()
+        for name, bus in (("pci.txt", "05"), ("pci_verbose.txt", "02")):
+            p = area / "raw" / name
+            p.write_text(p.read_text().replace(
+                "0000:02:00.0", f"0000:{bus}:00.0"))
+        with self.assertRaisesRegex(
+                RuntimeError, "topology disagreement"):
+            C.verify_replacement_freeze_provenance(root)
+
+    def test_derivation_is_independent_of_frozen_value(self):
+        # The preferred control: mutate the retained evidence to a
+        # DIFFERENT unique AMD endpoint BDF (internally consistent:
+        # topology + sysfs) and prove the derivation returns the retained
+        # value (05:00.0), NOT the frozen 02:00.0 — expected-vs-observed
+        # comparison happens in the verifier, not in the derivation.
+        root, area = self._sandbox_census()
+        self._move_amd_endpoint(area)
+        derived = C.derive_candidate_identity_from_census(root)
+        self.assertNotEqual(derived["bdf"], C.CANDIDATE_ARM["bdf"])
+        self.assertEqual(derived["bdf"], "00000000:05:00.0")
+
+    def test_pci_receipt_unsuccessful_fails_closed(self):
+        # Mutation: retained lspci receipt unsuccessful -> BDF derivation
+        # fails closed (receipt checked before bytes are trusted).
+        root, area = self._sandbox_census()
+        (area / "raw" / "pci.rc").write_text("rc=1\n")
+        with self.assertRaisesRegex(
+                RuntimeError, "unsuccessful"):
+            C.verify_replacement_freeze_provenance(root)
+
+
     def test_wrong_reference_link_width_rejected(self):
         doc = make_census()
         doc["gpus"][0]["link_width"] = "x8"

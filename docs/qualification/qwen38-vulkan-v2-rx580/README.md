@@ -30,7 +30,7 @@ branch-head movement invalidates an existing authorization.
 - comparator/2 validation reducer: `scripts/issue241_comparator.py`
 - Practicality projection: `scripts/issue241_practicality.py`
 - Supersession builder: `scripts/issue241_supersession.py`
-- Focused tests: `tests/test_issue241_r8i3_rx580.py` (190 tests)
+- Focused tests: `tests/test_issue241_r8i3_rx580.py` (202 tests)
 
 ## Subject generations
 
@@ -45,7 +45,16 @@ sysfs/lspci/nvidia-smi/per-ICD vulkaninfo bytes; no GPU compute, no
 model reads, no dispatch machinery). The frozen constants equal the
 mechanical derivation of those bytes
 (`issue241_constants.derive_candidate_identity_from_census`, enforced by
-the Phase-0 audit). Exactly one field changed versus generation 1:
+the Phase-0 audit). The derivation reads NO frozen constant: the BDF is
+derived from the retained PCI topology (`raw/pci.txt` cross-corroborated
+by `raw/pci_verbose.txt`, unique AMD display endpoint, rc-checked), then
+cross-bound to the retained per-BDF sysfs artifacts; the Radeon ICD is
+derived from the retained ICD inventory (`raw/icd_inventory.txt`, unique
+radeon entry) cross-bound to the retained successful RADV observation
+(`raw/vulkan_radeon.txt` GPU0, `rc=0`, vendor/device match against the
+derived BDF's sysfs bytes) — negatively controlled by sandboxed
+topology/ICD/receipt mutations (correction round 2, review comment
+5814248688). Exactly one field changed versus generation 1:
 negotiated `link_width` x8 → x16. All other software-visible identity
 fields are byte-identical (same marketed model, same subsystem
 1da2:e353, rev e7, 8192 MiB VRAM, amdgpu, RADV POLARIS10 UUID) —
