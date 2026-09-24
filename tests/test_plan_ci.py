@@ -38,6 +38,14 @@ PLANNER = REPO_ROOT / "scripts" / "plan_ci.py"
 
 
 def run_planner(*argv, stdin=None):
+    # Without explicit input the planner CLI reads stdin; never inherit the
+    # caller's (possibly open) stdin, or the test blocks forever.
+    if stdin is None:
+        return subprocess.run(
+            [sys.executable, str(PLANNER), *argv],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+            stdin=subprocess.DEVNULL,
+        )
     return subprocess.run(
         [sys.executable, str(PLANNER), *argv],
         capture_output=True, text=True, cwd=REPO_ROOT,
