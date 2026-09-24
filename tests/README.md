@@ -33,7 +33,7 @@ What the environment provides and why:
 |---|---|
 | Python 3.12 (exact) | everything — the accepted Issue #129 real-tokenizer proof pins its frozen software identity to 3.12; the bootstrap creates a 3.12 `.venv` and the doctor rejects other minor versions |
 | `jsonschema` | `test_issue74_methodology`, `test_issue79_v2_threshold_tooling`, `test_issue86_v3_methodology`, `test_issue110_v5_custody_handoff`, and the v2/v3 unseal preflights |
-| `numpy` | `test_analyze_phase1_p6` only |
+| `numpy` | `scripts/analyze_phase1_p6.py` only (a declared environment dependency; that historical analysis's test was retired by Issue #246) |
 | `pyyaml` | the CI YAML check, not the test suite |
 | the pinned Issue #129 tokenizer requirements | `test_issue129_arm_c_retry` real-tokenizer proof (installed by reference from the authority file) |
 | `openssl` on `PATH` | the sealing/preflight tools and the synthetic certificate/custody tests in `test_issue109_v5_methodology` and `test_issue110_v5_custody_handoff` (external executable checked by the doctor, not a Python package) |
@@ -76,17 +76,16 @@ python3 scripts/check_phase0_workloads.py
 ## Expected result
 
 On a clean working tree inside a bootstrapped environment, the whole suite
-passes with **5 skips** (discovery adds no skips; CI's named-module selection
+passes with **4 skips** (discovery adds no skips; CI's named-module selection
 remains a subset). Every skip is a host-local resource this repository
 deliberately does not carry:
 
 | Skipped test | Reason |
 |---|---|
-| `test_derive_phase1r_d7_placement.test_companion_and_byte_deterministic_rerun` | frozen external exact-route evidence is host-local |
 | `test_issue117_applicability` (3 producer-delta tests) | the FreeToken repository is not present on this machine |
 | `test_issue74_methodology.test_public_artifacts_reproduce_byte_for_byte_with_pinned_tokenizer` | the pinned tokenizer is not provided |
 
-**A dirty working tree adds a sixth skip.**
+**A dirty working tree adds a fifth skip.**
 `test_issue117_preflight.test_valid_preflight_passes` skips with
 `test repository working tree is dirty` whenever uncommitted changes exist —
 including the change you are testing. Commit or stash before treating that
@@ -103,21 +102,20 @@ drift and authority-field separation. The separate evidence-manifest gate runs
 `test_evidence_manifest_lifecycle` and the Issue #137, #153, and #187 bundle
 verifiers.
 
-Every module guarding live evidence is in that list, including
-`test_issue117_physical_retention`, which runs in the issue #117 CPU-only step.
+Every canonical test module is registered to exactly one CI group and
+carries a retention record in
+[`docs/ci/test-retention-audit.json`](../docs/ci/test-retention-audit.json)
+(Issue #246). Tests are retained because they protect current contracts,
+reachable regressions, or current evidence integrity; issue provenance alone
+is not a reason to keep one. See the
+[test lifecycle](../docs/ci-impact-planning.md#test-lifecycle-issue-246).
 
-Five modules are deliberately out:
-
-| Module | Why it is out of CI |
-|---|---|
-| `test_analyze_phase1_p6` | historical Phase-1 analysis; runs locally under the canonical environment (which does provide `numpy`) |
-| `test_derive_phase1_placement_v2` | historical Phase-1 derivation |
-| `test_derive_phase1r_d3_placement` | historical Phase1R derivation |
-| `test_derive_phase1r_d4_placement` | historical Phase1R derivation |
-| `test_derive_phase1r_d7_placement` | historical Phase1R derivation |
-
-These five guard records that are frozen and no longer change. Run them locally
-before touching anything under `docs/investigations/data/`.
+Historical behavior suites that only replayed completed campaigns (the
+Phase-1/Phase1R derivations, the V2-B..V2-G V340L campaigns, R8-C/E/G/H,
+#157, and #175) were retired. Their accepted evidence, manifests, and
+producers are pinned instead, and the always-on
+`scripts/check_ci_test_retention.py` check fails if any of those bytes
+change, including anything under `docs/investigations/data/`.
 
 CI bootstraps the same canonical environment locally developers use
 (`bootstrap_test_env.py` + `check_test_env.py`, Issue #131); it installs no

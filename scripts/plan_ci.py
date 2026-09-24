@@ -107,6 +107,12 @@ REPO_AUTHORITY_PATHS = [
     "docs/status-maintenance.md",
     "docs/evidence-manifests.md",
     "docs/project-status.json",
+    # Issue #246 retention authority: the per-module audit, the
+    # retired-lineage evidence pins (a pin change is how retired
+    # accepted evidence would be rewritten), and their checker.
+    "docs/ci/test-retention-audit.json",
+    "docs/ci/retired-lineage-pins.sha256",
+    "scripts/check_ci_test_retention.py",
 ]
 
 # Shared test infrastructure consumed by (potentially) every family.
@@ -135,6 +141,8 @@ GROUP_TEST_MODULES = {
         "test_issue131_cpu_test_env",
         "test_plan_ci",
         "test_run_full_cpu_suite",
+        # Issue #246: retention audit + retired-lineage integrity.
+        "test_ci_test_retention",
     ],
     "issue-74-79": [
         "test_issue74_methodology",
@@ -189,9 +197,6 @@ GROUP_TEST_MODULES = {
     "issue-172-requal": [
         "test_issue172_requalification",
     ],
-    "issue-175-arm-d": [
-        "test_issue175_arm_d",
-    ],
     "issue-182-arm-e": [
         "test_issue182_arm_e",
     ],
@@ -216,7 +221,6 @@ GROUP_TEST_MODULES = {
     "issue-137": [
         "test_issue137_regime4_diagnosis",
         "test_issue137_regime4_diagnosis_correction",
-        "test_issue157_chunk2_diagnosis",
     ],
     "issue-99-103": [
         "test_issue99_artifact_core",
@@ -227,15 +231,29 @@ GROUP_TEST_MODULES = {
         "test_issue200_r8f_source_policy",
         "test_issue200_r8f_proof",
     ],
-    "vulkan-v0-b": [
+    # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
+    # current dependency/authority boundary (import-graph component).
+    # Current R8-I Qwen heterogeneous-Vulkan qualification authority.
+    "r8i-qwen-qualification": [
+        "test_issue237_r8i_methodology",
+        "test_issue244_r8i5_v340l_import",
+    ],
+    # R8-A/B/D Qwen static and llama.cpp RPC lineage (R8-A is the living
+    # frontier reference; R8-B fixtures feed R8-I). Test files are pinned
+    # by accepted evidence manifests.
+    "r8-qwen-lineage": [
         "test_issue189_r8a",
         "test_issue191_r8b",
-        "test_issue193_r8c",
         "test_issue195_r8d",
         "test_issue195_r8d_v2",
-        "test_issue199_r8e",
-        "test_issue207_r8g",
+    ],
+    # Historical Vulkan lineages retained only because accepted evidence
+    # manifests pin their test files (retirement needs maintainer
+    # authority; see docs/ci/test-retention-audit.json).
+    "vulkan-v0b": [
         "test_v0b_reduction",
+    ],
+    "vulkan-v0c-v2a": [
         "test_v0c_canonical_run",
         "test_v0c_correctness",
         "test_v0c_evidence_manifest",
@@ -256,37 +274,86 @@ GROUP_TEST_MODULES = {
         "test_v2a_evidence_manifest",
         "test_v2a_discovery_authority_binding",
         "test_v2a_discovery_authority_binding_r3",
-        "test_issue210_v2b_v340l",
-        "test_issue215_v2c_platform_stability",
-        "test_issue219_v2d0_overlap_seam",
-        "test_issue216_v2d_concurrent",
-        "test_issue216_v2d_assembler",
-        "test_issue228_v2e_peer_link",
-        "test_issue228_v2e_assembler",
-        "test_issue230_v2f_external_memory",
-        "test_issue230_v2f_vk_contract",
-        "test_issue232_v2g_pcie_remediation",
-        "test_issue234_r8h_vulkan",
-        "test_issue237_r8i_methodology",
-        "test_issue244_r8i5_v340l_import",
+    ],
+    "link-x1-issue35": [
         "test_issue35_link_probe",
         "test_issue35_role_sweep",
         "test_issue35_envelope",
         "test_issue35_evidence_manifest",
         "test_issue35_corrections",
     ],
-    "phase1-analysis": [
-        "test_analyze_phase1_p6",
-        "test_derive_phase1_placement_v2",
-        "test_derive_phase1r_d3_placement",
-        "test_derive_phase1r_d4_placement",
-        "test_derive_phase1r_d7_placement",
-    ],
     # CPU-only methodology gates not surfaced as CI steps on main; they
     # are part of full regression so no coverage is lost.
     "issue-115-cleanup": [
         "test_issue115_cleanup_retention",
     ],
+}
+
+# Issue #246 lifecycle rule: every group declares the current invariant
+# (owner) it protects. A group exists because it protects current
+# contracts, reachable regressions, or current evidence integrity —
+# never for lineage continuity alone. Per-module classification lives
+# in docs/ci/test-retention-audit.json (checked by
+# scripts/check_ci_test_retention.py).
+GROUP_INVARIANTS = {
+    "repo-integrity":
+        "Repository authority: canonical CPU environment, generated status, "
+        "deterministic finalization, evidence-manifest lifecycle, CI "
+        "planner/registry/workflow parity, full-suite identity, retention "
+        "audit, and retired-lineage evidence integrity.",
+    "issue-74-79":
+        "Shared qualification methodology core (issue74_methodology is "
+        "imported by every later qualification line, including R8-I) and "
+        "the v1/v2 holdout custody/unseal gates.",
+    "issue-83-95":
+        "Semantic/numerical-core doctrine consumed by the accepted V5 "
+        "contract and the v3/v4 holdout custody/unseal gates.",
+    "issue-109-110":
+        "Accepted V5 dense Gemma qualification capability: methodology "
+        "freeze, thresholds, and holdout custody hand-off.",
+    "issue-117-133":
+        "Accepted #117 Arm A-C Gemma evidence and its frozen-producer "
+        "bindings (retained under accepted manifest pins).",
+    "issue-172-requal":
+        "#172 Arm-C requalification record and its H109 holdout-access "
+        "guard.",
+    "issue-182-arm-e":
+        "#182 Arm-E locality-mutation record and its H109 holdout-access "
+        "guard.",
+    "issue-213-gate-ordering":
+        "Current campaign gate-ordering doctrine: exact-head suite "
+        "receipts and hosted Final CPU Validation.",
+    "issue-187-r7a":
+        "R7-A DeepSeek static census authority feeding the open R7 track.",
+    "issue-209-r7b":
+        "R7-B DeepSeek physical-gate record pending maintainer acceptance.",
+    "issue-222-r7c":
+        "R7-C current-fleet capacity prerequisite for the R7 track.",
+    "issue-137":
+        "#137 regime-4 diagnosis evidence bindings (retained under accepted "
+        "manifest pins).",
+    "issue-99-103":
+        "Accepted acquisition, orchestration, and locality-planning "
+        "capabilities plus the R8-F source-policy seam.",
+    "r8i-qwen-qualification":
+        "Current R8-I Qwen heterogeneous-Vulkan qualification authority: "
+        "methodology freeze, holdout custody, comparator semantics, and the "
+        "accepted R8-I4 V340L import.",
+    "r8-qwen-lineage":
+        "R8-A frontier census and the R8-B/R8-D evidence consumed by R8-I "
+        "(test files pinned by accepted manifests).",
+    "vulkan-v0b":
+        "Historical V0-B reduction over accepted V0-A/V0-B evidence, "
+        "retained because accepted manifests pin its test file.",
+    "vulkan-v0c-v2a":
+        "Historical V0-C/V1/V2-A Vulkan harness lineage, retained because "
+        "accepted manifests pin its test files.",
+    "link-x1-issue35":
+        "Historical #35 x1 link-envelope lineage, retained because accepted "
+        "manifests pin its test files.",
+    "issue-115-cleanup":
+        "V5 cleanup retention manifest and the no-plaintext/secret custody "
+        "guard.",
 }
 
 # Path -> group selection rules. Order does not matter; a path may
@@ -299,6 +366,9 @@ GROUP_TEST_MODULES = {
 #   - a test-module change additionally selects every family whose
 #     module list contains that module (a test module is the family's
 #     own regression surface, and its imports couple it to producers);
+#   - a script change selects every family whose test modules import
+#     it, directly or transitively (Issue #246 import-closure fan-out,
+#     enforced by tests/test_plan_ci.py TestImportClosureFanout);
 #   - scripts/ and tests/ are shared namespaces: any script or test
 #     NOT under a family prefix and NOT the module-bound script of a
 #     family is unclassified -> full regression (fail closed).
@@ -308,6 +378,8 @@ PATH_GROUPS = {
     "scripts/finalize_repository.py": ["repo-integrity"],
     "scripts/issue137_manifest.py": ["repo-integrity"],
     "scripts/check_phase0_workloads.py": ["repo-integrity"],
+    "scripts/check_ci_test_retention.py": ["repo-integrity"],  # + authority -> full
+    "docs/ci/": ["repo-integrity"],
     "docs/project-status.json": ["repo-integrity"],
     "docs/status-maintenance.md": ["repo-integrity"],
     # Living hardware inventory receipts (Issue #196): raw read-only
@@ -329,10 +401,17 @@ PATH_GROUPS = {
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full
 
     # Issue family surfaces
-    "scripts/issue74_methodology.py": ["issue-74-79"],
+    "scripts/issue74_methodology.py": [
+        "issue-74-79",
+        "issue-109-110",
+        "issue-117-133",
+        "issue-182-arm-e",
+        "issue-83-95",
+        "issue-99-103",
+        "r8i-qwen-qualification"],
     "scripts/commit_issue74_holdout.py": ["issue-74-79"],
     "scripts/seal_issue74_holdout.py": ["issue-74-79"],
-    "scripts/generate_issue74_corpora.py": ["issue-74-79"],
+    "scripts/generate_issue74_corpora.py": ["issue-74-79", "issue-109-110"],
     "scripts/hash_issue74_artifacts.py": ["issue-74-79"],
     "scripts/select_issue74_margin_stress.py": ["issue-74-79"],
     "scripts/select_issue76_margin_stress_v2.py": ["issue-74-79"],
@@ -347,7 +426,10 @@ PATH_GROUPS = {
     "scripts/issue86_v3_thresholds.py": ["issue-83-95"],
     "scripts/issue90_post_v3_diagnosis.py": ["issue-83-95"],
     "scripts/issue95_v4_contract.py": ["issue-83-95"],
-    "scripts/issue95_v4_methodology.py": ["issue-83-95"],
+    "scripts/issue95_v4_methodology.py": [
+        "issue-83-95",
+        "issue-109-110",
+        "r8i-qwen-qualification"],
     "scripts/issue95_v4_thresholds.py": ["issue-83-95"],
     "scripts/verify_issue86_v3_unseal.py": ["issue-83-95"],
     "scripts/verify_issue95_v4_unseal.py": ["issue-83-95"],
@@ -364,7 +446,9 @@ PATH_GROUPS = {
     "scripts/build_issue95_disjointness.py": ["issue-83-95"],
     "scripts/build_issue95_schemas.py": ["issue-83-95"],
     "scripts/issue105_post_v4_core_diagnosis.py": ["issue-83-95"],
-    "scripts/issue108_post_v4_statistical_metric_doctrine.py": ["issue-83-95"],
+    "scripts/issue108_post_v4_statistical_metric_doctrine.py": [
+        "issue-83-95",
+        "issue-109-110"],
     "docs/adr/": ["issue-83-95"],  # ADRs decide; doctrine changes are broad
     "docs/architecture/": ["issue-83-95"],
     "docs/qualification/gemma4-12b-it-semantic-83/": ["issue-83-95"],
@@ -412,7 +496,9 @@ PATH_GROUPS = {
     "docs/qualification/gemma4-12b-it-v4-campaign-97/": ["issue-117-133"],
 
     # Issue #117 producer scripts and evidence tree.
-    "scripts/issue117_accepted_subject.py": ["issue-117-133"],
+    "scripts/issue117_accepted_subject.py": [
+        "issue-117-133",
+        "issue-182-arm-e"],
     "scripts/issue117_applicability.py": ["issue-117-133"],
     "scripts/issue117_arm_a_evidence.py": ["issue-117-133"],
     "scripts/issue117_arm_b_correction_build.py": ["issue-117-133"],
@@ -435,10 +521,12 @@ PATH_GROUPS = {
     "scripts/issue117_gemma_strategy.py": ["issue-117-133"],
     "scripts/issue117_integration_fixture.py": ["issue-117-133"],
     "scripts/issue117_parsers/": ["issue-117-133"],
-    "scripts/issue117_planner.py": ["issue-117-133"],
+    "scripts/issue117_planner.py": ["issue-117-133", "issue-182-arm-e"],
     "scripts/issue117_preflight.py": ["issue-117-133"],
     "scripts/issue117_proof.py": ["issue-117-133"],
-    "scripts/issue117_subject_identity.py": ["issue-117-133"],
+    "scripts/issue117_subject_identity.py": [
+        "issue-117-133",
+        "issue-182-arm-e"],
     "scripts/issue129_arm_c_retry_core.py": ["issue-117-133"],
     "scripts/issue133_arm_c_retry_campaign.py": ["issue-117-133"],
     "scripts/issue133_arm_c_retry_direct.py": ["issue-117-133"],
@@ -492,14 +580,17 @@ PATH_GROUPS = {
     "scripts/issue172_zero_invariants.py": ["issue-172-requal"],
     "scripts/issue172_terminal.py": ["issue-172-requal"],
     "scripts/issue172_manifest.py": ["issue-172-requal"],
-    "docs/implementation/r6-successor-arm-d-warm-restart-175/": [
-        "issue-175-arm-d"],
-    "scripts/issue175_campaign_pins.py": ["issue-175-arm-d"],
-    "scripts/issue175_authority.py": ["issue-175-arm-d"],
-    "scripts/issue175_assemble.py": ["issue-175-arm-d"],
-    "scripts/issue175_inventory.py": ["issue-175-arm-d"],
-    "scripts/issue175_reduce.py": ["issue-175-arm-d"],
-    "scripts/issue175_terminal.py": ["issue-175-arm-d"],
+    # Retired #175 Arm-D behavior suite (Issue #246): integrity-only.
+    "docs/implementation/r6-successor-arm-d-warm-restart-175/":
+        ["repo-integrity"],
+    "scripts/issue175_assemble.py": ["repo-integrity"],
+    "scripts/issue175_authority.py": ["repo-integrity"],
+    "scripts/issue175_campaign_pins.py": ["repo-integrity"],
+    "scripts/issue175_inventory.py": ["repo-integrity"],
+    "scripts/issue175_manifest.py": ["repo-integrity"],
+    "scripts/issue175_ordinary_client.py": ["repo-integrity"],
+    "scripts/issue175_reduce.py": ["repo-integrity"],
+    "scripts/issue175_terminal.py": ["repo-integrity"],
     "docs/implementation/r6-successor-arm-e-locality-mutation-182/": [
         "issue-182-arm-e"],
     "scripts/issue182_campaign_pins.py": ["issue-182-arm-e"],
@@ -508,11 +599,11 @@ PATH_GROUPS = {
     "scripts/issue182_compare.py": ["issue-182-arm-e"],
     "scripts/issue182_terminal.py": ["issue-182-arm-e"],
     "scripts/issue187_r7a_census.py": ["issue-187-r7a"],
-    "scripts/issue187_r7a_manifest.py": ["issue-187-r7a"],
-    "scripts/issue187_r7a_reducer.py": ["issue-187-r7a"],
-    "scripts/issue209_r7b_manifest.py": ["issue-209-r7b"],
-    "scripts/issue209_r7b_reducer.py": ["issue-209-r7b"],
-    "scripts/issue209_r7b_fixture.py": ["issue-209-r7b"],
+    "scripts/issue187_r7a_manifest.py": ["issue-187-r7a", "issue-222-r7c"],
+    "scripts/issue187_r7a_reducer.py": ["issue-187-r7a", "issue-222-r7c"],
+    "scripts/issue209_r7b_manifest.py": ["issue-209-r7b", "issue-222-r7c"],
+    "scripts/issue209_r7b_reducer.py": ["issue-209-r7b", "issue-222-r7c"],
+    "scripts/issue209_r7b_fixture.py": ["issue-209-r7b", "issue-222-r7c"],
     "scripts/issue222_r7c.py": ["issue-222-r7c"],
     "docs/investigations/deepseek-v41-flash-r7-b/": ["issue-209-r7b"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
@@ -527,7 +618,9 @@ PATH_GROUPS = {
     # The parallel full-suite runner itself (Issue #173): its contract
     # tests are repo-integrity modules; classify explicitly instead of
     # failing closed to full regression for every runner-only change.
-    "scripts/run_full_cpu_suite.py": ["repo-integrity"],
+    "scripts/run_full_cpu_suite.py": [
+        "repo-integrity",
+        "issue-213-gate-ordering"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also
@@ -536,20 +629,19 @@ PATH_GROUPS = {
         ["issue-137", "issue-117-133"],
 
     "scripts/issue137_binding.py": ["issue-137"],
-    # Issue #157 chunk-2 diagnosis (CPU tooling; evidence bundle under
-    # the #117 tree fans out like #137's above).
+    # Retired #157 chunk-2 diagnosis behavior suite (Issue #246): the
+    # bundle is integrity-pinned; test_issue166 still reads it.
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/":
-        ["issue-137", "issue-117-133"],
-    "scripts/issue157_binding.py": ["issue-137"],
-    "scripts/issue157_instrumentation.py": ["issue-137"],
-    "scripts/issue157_sitecustomize.py": ["issue-137"],
-    "scripts/issue157_probe_driver.py": ["issue-137"],
-    "scripts/issue157_replay_harness.py": ["issue-137"],
-    "scripts/issue157_replay_worker.py": ["issue-137"],
-    "scripts/issue157_baseline_record.py": ["issue-137"],
-    "scripts/issue157_conclusions.py": ["issue-137"],
-    "scripts/issue157_manifest.py": ["issue-137", "repo-integrity"],
-    "tests/test_issue157_chunk2_diagnosis.py": ["issue-137"],
+        ["issue-117-133", "repo-integrity"],
+    "scripts/issue157_baseline_record.py": ["repo-integrity"],
+    "scripts/issue157_binding.py": ["repo-integrity"],
+    "scripts/issue157_conclusions.py": ["repo-integrity"],
+    "scripts/issue157_instrumentation.py": ["repo-integrity"],
+    "scripts/issue157_manifest.py": ["repo-integrity"],
+    "scripts/issue157_probe_driver.py": ["repo-integrity"],
+    "scripts/issue157_replay_harness.py": ["repo-integrity"],
+    "scripts/issue157_replay_worker.py": ["repo-integrity"],
+    "scripts/issue157_sitecustomize.py": ["repo-integrity"],
     # Issue #153 Arm-C remediation slice (CPU-only; bundle lives under the
     # #117 implementation area, scripts + tests classified to the
     # issue-117-133 lineage group).
@@ -566,14 +658,23 @@ PATH_GROUPS = {
     # prefix never matched a tracked path; the real retained #137
     # evidence rule lives with the #117 tree above.)
 
-    "scripts/issue99_artifact_core.py": ["issue-99-103"],
+    "scripts/issue99_artifact_core.py": [
+        "issue-99-103",
+        "issue-117-133",
+        "issue-182-arm-e"],
     "scripts/issue99_mini_model.py": ["issue-99-103"],
     "scripts/issue99_proof.py": ["issue-99-103"],
     "scripts/issue101_fixture.py": ["issue-99-103"],
-    "scripts/issue101_orchestration.py": ["issue-99-103"],
+    "scripts/issue101_orchestration.py": [
+        "issue-99-103",
+        "issue-117-133",
+        "issue-182-arm-e"],
     "scripts/issue101_proof.py": ["issue-99-103"],
     "scripts/issue103_fixture.py": ["issue-99-103"],
-    "scripts/issue103_planner.py": ["issue-99-103"],
+    "scripts/issue103_planner.py": [
+        "issue-99-103",
+        "issue-117-133",
+        "issue-182-arm-e"],
     "scripts/issue103_proof.py": ["issue-99-103"],
     # #103 evidence; test_issue117_provenance and test_issue103_planner /
     # test_evidence_manifest_lifecycle consume this shared tree.
@@ -598,259 +699,234 @@ PATH_GROUPS = {
     "tests/test_issue200_r8f_proof.py": ["issue-99-103"],
     "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],
 
-    "scripts/v0a_correctness_derive.py": ["vulkan-v0-b"],
-    "scripts/v0a_correctness_run.py": ["vulkan-v0-b"],
-    "scripts/v0a_materialization_derive.py": ["vulkan-v0-b"],
-    "scripts/v0a_materialization_run.py": ["vulkan-v0-b"],
-    "scripts/v0b_capability_assessment.py": ["vulkan-v0-b"],
-    "scripts/v0b_comparability_audit.py": ["vulkan-v0-b"],
-    "scripts/v0b_correctness_stability.py": ["vulkan-v0-b"],
-    "scripts/v0b_cpu_proof.py": ["vulkan-v0-b"],
-    "scripts/v0b_cpu_supplement_derive.py": ["vulkan-v0-b"],
-    "scripts/v0b_cpu_supplement_run.py": ["vulkan-v0-b"],
-    "scripts/v0b_economics.py": ["vulkan-v0-b"],
-    "scripts/v0b_manifest.py": ["vulkan-v0-b"],
-    "scripts/v0b_seam_comparison.py": ["vulkan-v0-b"],
-    "scripts/v0b_terminal.py": ["vulkan-v0-b"],
-    # Retained V0-A/V0-B investigation evidence. test_v0b_reduction
-    # reads both trees directly (V0-B consumes accepted V0-A evidence),
-    # so both select vulkan-v0-b.
-    "docs/investigations/vulkan-v0-a/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v0-b/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v0-c/": ["vulkan-v0-b"],
-    # Issue #189 is a CPU/static architecture and residency investigation;
-    # it shares the bounded static-investigation contract with this group.
-    "docs/investigations/qwen38-flash-next-r8-a/": ["vulkan-v0-b"],
-    "scripts/issue189_r8a_reducer.py": ["vulkan-v0-b"],
-    # Issue #191 (R8-B) physical llama.cpp RPC qualification; evidence,
-    # producers, and its retention test form one family selecting the
-    # static/llama.cpp investigation group.
-    "docs/investigations/qwen38-flash-next-r8-b/": ["vulkan-v0-b"],
-    "scripts/issue191_r8b_authority.py": ["vulkan-v0-b"],
-    "scripts/issue191_derive_fixtures.py": ["vulkan-v0-b"],
-    "scripts/issue191_run_ladder.py": ["vulkan-v0-b"],
-    "scripts/issue191_negative_controls.py": ["vulkan-v0-b"],
-    "scripts/issue191_terminal_reduction.py": ["vulkan-v0-b"],
-    "scripts/issue191_verify_split_set.py": ["vulkan-v0-b"],
-    "tests/test_issue191_r8b.py": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-c/": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-d/": ["vulkan-v0-b"],
-    "scripts/issue193_r8c_authority.py": ["vulkan-v0-b"],
-    "scripts/issue193_phase1_reduction.py": ["vulkan-v0-b"],
-    "scripts/issue193_terminal_reduction.py": ["vulkan-v0-b"],
-    "tests/test_issue193_r8c.py": ["vulkan-v0-b"],
-    "scripts/issue195_r8d_authority.py": ["vulkan-v0-b"],
-    "scripts/issue195_run_ladder.py": ["vulkan-v0-b"],
-    "scripts/issue195_sampler_probe.py": ["vulkan-v0-b"],
-    "scripts/issue195_terminal_reduction.py": ["vulkan-v0-b"],
-    "scripts/issue195_negative_controls.py": ["vulkan-v0-b"],
-    "scripts/issue195_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue195_r8d.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_authority.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_run_ladder.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_freeze_reference.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_terminal_reduction.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_negative_controls.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_manifest.py": ["vulkan-v0-b"],
-    "scripts/issue195_v2_launch.py": ["vulkan-v0-b"],
-    "tests/test_issue195_r8d_v2.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_authority.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_launch.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_capture.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_terminal_reduction.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_negative_controls.py": ["vulkan-v0-b"],
-    "scripts/issue199_r8e_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue199_r8e.py": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-e/": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-g/": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-d-v2/": ["vulkan-v0-b"],
-    "scripts/v0c_canonical_run.py": ["vulkan-v0-b"],
-    "scripts/v0c_correctness.py": ["vulkan-v0-b"],
-    "scripts/v0c_execution_seam.py": ["vulkan-v0-b"],
-    "scripts/v0c_manifest.py": ["vulkan-v0-b"],
-    "scripts/v0c_vulkan_adapter.py": ["vulkan-v0-b"],
-    "tests/test_v0c_canonical_run.py": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v1-a/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v1-b/": ["vulkan-v0-b"],
-    "scripts/v1a_execution_participant.py": ["vulkan-v0-b"],
-    "scripts/v1a_manifest.py": ["vulkan-v0-b"],
-    "scripts/v1a_runner.py": ["vulkan-v0-b"],
-    "scripts/v1a_vulkan_adapter.py": ["vulkan-v0-b"],
-    "tests/test_v1a_execution_participant.py": ["vulkan-v0-b"],
-    "tests/test_v1a_runner.py": ["vulkan-v0-b"],
-    "tests/test_v1a_vulkan_adapter.py": ["vulkan-v0-b"],
-    "tests/test_v1a_evidence_manifest.py": ["vulkan-v0-b"],
-    "scripts/v1b_campaign.py": ["vulkan-v0-b"],
-    "scripts/v1b_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v1b_campaign.py": ["vulkan-v0-b"],
-    "tests/test_v1b_evidence_manifest.py": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v1-c/": ["vulkan-v0-b"],
-    "scripts/v1c_accounting.py": ["vulkan-v0-b"],
-    "scripts/v1c_runner.py": ["vulkan-v0-b"],
-    "scripts/v1c_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v1c_accounting.py": ["vulkan-v0-b"],
-    "tests/test_v1c_runner.py": ["vulkan-v0-b"],
-    "tests/test_v1c_evidence_manifest.py": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-a/": ["vulkan-v0-b"],
-    "scripts/v2a_discovery.py": ["vulkan-v0-b"],
-    "scripts/v2a_authority.py": ["vulkan-v0-b"],
-    "scripts/v2a_harness.py": ["vulkan-v0-b"],
-    "scripts/v2a_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v2a_discovery.py": ["vulkan-v0-b"],
-    "tests/test_v2a_authority.py": ["vulkan-v0-b"],
-    "tests/test_v2a_harness.py": ["vulkan-v0-b"],
-    "tests/test_v2a_evidence_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v2a_discovery_authority_binding.py": ["vulkan-v0-b"],
-    "scripts/v2a_discovery_v2.py": ["vulkan-v0-b"],
-    "scripts/v2a_authority_v2.py": ["vulkan-v0-b"],
-    "scripts/v2a_discovery_v3.py": ["vulkan-v0-b"],
-    "scripts/v2a_authority_v3.py": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-b-v340l/": ["vulkan-v0-b"],
-    "scripts/issue210_build_authorities.py": ["vulkan-v0-b"],
-    "scripts/issue210_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue210_terminal.py": ["vulkan-v0-b"],
-    "scripts/issue210_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue210_v2b_v340l.py": ["vulkan-v0-b"],
-    # Issue #215 V2-C V340L platform-stability campaign (issue215 tooling
-    # shares the Vulkan evidence-lifecycle family).
-    "docs/investigations/vulkan-v2-c-v340l-platform-stability/": ["vulkan-v0-b"],
-    "scripts/issue215_campaign_plan.py": ["vulkan-v0-b"],
-    "scripts/issue215_snapshot.py": ["vulkan-v0-b"],
-    "scripts/issue215_sentinel.py": ["vulkan-v0-b"],
-    "scripts/issue215_terminal.py": ["vulkan-v0-b"],
-    "tests/test_issue215_v2c_platform_stability.py": ["vulkan-v0-b"],
-    # Issue #219 V2-D0 overlap-seam qualification producers.
-    "docs/investigations/vulkan-v2-d0-overlap-seam/": ["vulkan-v0-b"],
-    "scripts/issue219_seam_rubric.py": ["vulkan-v0-b"],
-    "scripts/issue219_capability_probe.py": ["vulkan-v0-b"],
-    "scripts/issue219_patch.py": ["vulkan-v0-b"],
-    "scripts/issue219_observe_collector.py": ["vulkan-v0-b"],
-    "scripts/issue219_reduce.py": ["vulkan-v0-b"],
-    "scripts/issue219_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue219_v2d0_overlap_seam.py": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-d-v340l-concurrent/": ["vulkan-v0-b"],
-    "scripts/issue216_receipt.py": ["vulkan-v0-b"],
-    "scripts/issue216_physical_authority.py": ["vulkan-v0-b"],
-    "scripts/issue216_host.py": ["vulkan-v0-b"],
-    "scripts/issue216_execution.py": ["vulkan-v0-b"],
-    "scripts/issue216_preflight.py": ["vulkan-v0-b"],
-    "scripts/issue216_concurrent.py": ["vulkan-v0-b"],
-    "scripts/issue216_transport.py": ["vulkan-v0-b"],
-    "scripts/issue216_soak.py": ["vulkan-v0-b"],
-    "scripts/issue216_fault.py": ["vulkan-v0-b"],
-    "scripts/issue216_reset.py": ["vulkan-v0-b"],
-    "scripts/issue216_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue216_manifest.py": ["vulkan-v0-b"],
-    # Issue #228 V2-E: additive V340L inter-die peer-link campaign
-    # producers, independently pinned by the V2-E evidence manifest.
-    "scripts/issue228_receipt.py": ["vulkan-v0-b"],
-    "scripts/issue228_freeze.py": ["vulkan-v0-b"],
-    "scripts/issue228_authority.py": ["vulkan-v0-b"],
-    "scripts/issue228_host.py": ["vulkan-v0-b"],
-    "scripts/issue228_capability.py": ["vulkan-v0-b"],
-    "scripts/issue228_probe.py": ["vulkan-v0-b"],
-    "scripts/issue228_ladder.py": ["vulkan-v0-b"],
-    "scripts/issue228_baselines.py": ["vulkan-v0-b"],
-    "scripts/issue228_reduce.py": ["vulkan-v0-b"],
-    "scripts/issue228_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue228_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue228_v2e_peer_link.py": ["vulkan-v0-b"],
-    "tests/test_issue228_v2e_assembler.py": ["vulkan-v0-b"],
-    "scripts/issue230_receipt.py": ["vulkan-v0-b"],
-    "scripts/issue230_freeze.py": ["vulkan-v0-b"],
-    "scripts/issue230_authority.py": ["vulkan-v0-b"],
-    "scripts/issue230_host.py": ["vulkan-v0-b"],
-    "scripts/issue230_preflight.py": ["vulkan-v0-b"],
-    "scripts/issue230_safety.py": ["vulkan-v0-b"],
-    "scripts/issue230_transfer.py": ["vulkan-v0-b"],
-    "scripts/issue230_runner.py": ["vulkan-v0-b"],
-    "scripts/issue230_reduce.py": ["vulkan-v0-b"],
-    "scripts/issue230_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue230_manifest.py": ["vulkan-v0-b"],
-    "scripts/issue232_receipt.py": ["vulkan-v0-b"],
-    "scripts/issue232_freeze.py": ["vulkan-v0-b"],
-    "scripts/issue232_authority.py": ["vulkan-v0-b"],
-    "scripts/issue232_host.py": ["vulkan-v0-b"],
-    "scripts/issue232_baseline.py": ["vulkan-v0-b"],
-    "scripts/issue232_gate.py": ["vulkan-v0-b"],
-    "scripts/issue232_qualify.py": ["vulkan-v0-b"],
-    "scripts/issue232_replay.py": ["vulkan-v0-b"],
-    "scripts/issue232_reduce.py": ["vulkan-v0-b"],
-    "scripts/issue232_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue232_manifest.py": ["vulkan-v0-b"],
-    "scripts/issue232_coldproof.py": ["vulkan-v0-b"],
-    "scripts/issue232_bootproof.py": ["vulkan-v0-b"],
-    "tests/test_issue232_v2g_pcie_remediation.py": ["vulkan-v0-b"],
-    "scripts/issue234_receipt.py": ["vulkan-v0-b"],
-    "scripts/issue234_freeze.py": ["vulkan-v0-b"],
-    "scripts/issue234_authority.py": ["vulkan-v0-b"],
-    "scripts/issue234_host.py": ["vulkan-v0-b"],
-    "scripts/issue234_runtime.py": ["vulkan-v0-b"],
-    "scripts/issue234_placement.py": ["vulkan-v0-b"],
-    "scripts/issue234_ladder.py": ["vulkan-v0-b"],
-    "scripts/issue234_health.py": ["vulkan-v0-b"],
-    "scripts/issue234_reduce.py": ["vulkan-v0-b"],
-    "scripts/issue234_assemble.py": ["vulkan-v0-b"],
-    "scripts/issue234_manifest.py": ["vulkan-v0-b"],
-    "tests/test_issue234_r8h_vulkan.py": ["vulkan-v0-b"],
-    "docs/investigations/qwen38-flash-next-r8-h-vulkan/": ["vulkan-v0-b"],
-    # Issue #237 (R8-I) Qwen heterogeneous-Vulkan qualification methodology
-    # freeze: CPU/static methodology area + tooling + focused tests share the
-    # Vulkan evidence-lifecycle family.
-    "docs/qualification/qwen38-vulkan-v1/": ["vulkan-v0-b"],
-    "scripts/issue237_methodology.py": ["vulkan-v0-b"],
-    "scripts/issue237_reconstruct_tokenizer.py": ["vulkan-v0-b"],
-    "scripts/issue237_build_exclusion_inventory.py": ["vulkan-v0-b"],
-    "scripts/issue237_generate_corpora.py": ["vulkan-v0-b"],
-    "scripts/issue237_seal_holdout.py": ["vulkan-v0-b"],
-    "scripts/issue237_freeze_tooling.py": ["vulkan-v0-b"],
-    "scripts/issue237_thresholds.py": ["vulkan-v0-b"],
-    "scripts/issue237_semantic_adjudication.py": ["vulkan-v0-b"],
-    "scripts/issue237_unseal_preflight.py": ["vulkan-v0-b"],
-    "scripts/issue237_schemas.py": ["vulkan-v0-b"],
-    "scripts/issue237_length_bands.py": ["vulkan-v0-b"],
-    "tests/test_issue237_r8i_methodology.py": ["vulkan-v0-b"],
-    # Issue #244 Phase 0: durable import of accepted R8-I4 V340L/Z440
-    # engineering evidence and its living-ledger cross-check.
-    "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": ["vulkan-v0-b"],
-    "docs/hardware/pcie-slot-ledger.md": ["vulkan-v0-b"],
-    "tests/test_issue244_r8i5_v340l_import.py": ["vulkan-v0-b"],
-    "tests/test_issue230_v2f_external_memory.py": ["vulkan-v0-b"],
-    "tests/test_issue230_v2f_vk_contract.py": ["vulkan-v0-b"],
-    "tests/issue230_vk_stub/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-f-v340l-external-memory/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-g-pcie-path-remediation/": ["vulkan-v0-b"],
-    "docs/investigations/vulkan-v2-e-v340l-peer-link/": ["vulkan-v0-b"],
-    "tests/test_issue216_v2d_concurrent.py": ["vulkan-v0-b"],
-    "tests/test_issue216_v2d_assembler.py": ["vulkan-v0-b"],
-    "tests/test_v2a_discovery_authority_binding_r3.py": ["vulkan-v0-b"],
-    # Issue #35 x1 interconnect envelope campaign (same accepted
-    # evidence-lifecycle family; the manifest generator is shared).
-    "docs/investigations/link-x1-envelope/": ["vulkan-v0-b"],
-    "scripts/issue35_link_probe.py": ["vulkan-v0-b"],
-    "scripts/issue35_role_sweep.py": ["vulkan-v0-b"],
-    "scripts/issue35_envelope.py": ["vulkan-v0-b"],
-    "scripts/issue35_coarse_concurrent.py": ["vulkan-v0-b"],
-    "scripts/issue35_residency_facts.py": ["vulkan-v0-b"],
-    "tests/test_issue35_link_probe.py": ["vulkan-v0-b"],
-    "tests/test_issue35_role_sweep.py": ["vulkan-v0-b"],
-    "tests/test_issue35_corrections.py": ["vulkan-v0-b"],
-    "tests/test_issue35_envelope.py": ["vulkan-v0-b"],
-    "tests/test_issue35_evidence_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v0c_correctness.py": ["vulkan-v0-b"],
-    "tests/test_v0c_evidence_manifest.py": ["vulkan-v0-b"],
-    "tests/test_v0c_execution_seam.py": ["vulkan-v0-b"],
-    "tests/test_v0c_vulkan_adapter.py": ["vulkan-v0-b"],
-
-    "scripts/analyze_phase1_p6.py": ["phase1-analysis"],
-    "scripts/derive_phase1_placement.py": ["phase1-analysis"],
-    "scripts/derive_phase1_placement_v2.py": ["phase1-analysis"],
-    "scripts/derive_phase1r_d3_placement.py": ["phase1-analysis"],
-    "scripts/derive_phase1r_d4_placement.py": ["phase1-analysis"],
-    "scripts/derive_phase1r_d7_placement.py": ["phase1-analysis"],
-    # Retained Phase-1 campaign evidence and placement data.
-    "docs/benchmarks/results/phase1/": ["phase1-analysis"],
-    "docs/investigations/data/": ["phase1-analysis"],
+    # Issue #246 topology: the former monolithic vulkan-v0-b bucket split
+    # by current dependency/authority boundary (import-graph component).
+    # Retired lineages select the always-on repo-integrity group, whose
+    # retired-lineage integrity check (scripts/check_ci_test_retention.py)
+    # pins their accepted evidence, manifests, and producers; a consumer
+    # group is added only where a retained test reads that evidence.
+    #
+    # Current R8-I Qwen heterogeneous-Vulkan qualification (#237/#244).
+    "docs/qualification/qwen38-vulkan-v1/": ["r8i-qwen-qualification"],
+    "scripts/issue237_build_exclusion_inventory.py":
+        ["r8i-qwen-qualification"],
+    "scripts/issue237_freeze_tooling.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_generate_corpora.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_length_bands.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_methodology.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_reconstruct_tokenizer.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_schemas.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_seal_holdout.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_semantic_adjudication.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_thresholds.py": ["r8i-qwen-qualification"],
+    "scripts/issue237_unseal_preflight.py": ["r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/":
+        ["r8i-qwen-qualification"],
+    "docs/hardware/pcie-slot-ledger.md": ["r8i-qwen-qualification"],
+    # R8-A/B/C/D Qwen lineage; R8-A/R8-B evidence also feeds the #237
+    # historical-exclusion inventory and length-band derivation.
+    "docs/investigations/qwen38-flash-next-r8-a/":
+        ["r8-qwen-lineage", "r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-b/":
+        ["r8-qwen-lineage", "r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-c/":
+        ["r8-qwen-lineage", "repo-integrity"],
+    "docs/investigations/qwen38-flash-next-r8-d/": ["r8-qwen-lineage"],
+    "docs/investigations/qwen38-flash-next-r8-d-v2/": ["r8-qwen-lineage"],
+    "scripts/issue189_r8a_reducer.py": ["r8-qwen-lineage", "issue-222-r7c"],
+    "scripts/issue191_derive_fixtures.py": ["r8-qwen-lineage"],
+    "scripts/issue191_negative_controls.py": ["r8-qwen-lineage"],
+    "scripts/issue191_r8b_authority.py": ["r8-qwen-lineage"],
+    "scripts/issue191_run_ladder.py": ["r8-qwen-lineage"],
+    "scripts/issue191_terminal_reduction.py": ["r8-qwen-lineage"],
+    "scripts/issue191_verify_split_set.py": ["r8-qwen-lineage"],
+    "scripts/issue195_manifest.py": ["r8-qwen-lineage"],
+    "scripts/issue195_negative_controls.py": ["r8-qwen-lineage"],
+    "scripts/issue195_r8d_authority.py": ["r8-qwen-lineage"],
+    "scripts/issue195_run_ladder.py": ["r8-qwen-lineage"],
+    "scripts/issue195_sampler_probe.py": ["r8-qwen-lineage"],
+    "scripts/issue195_terminal_reduction.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_authority.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_freeze_reference.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_launch.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_manifest.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_negative_controls.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_run_ladder.py": ["r8-qwen-lineage"],
+    "scripts/issue195_v2_terminal_reduction.py": ["r8-qwen-lineage"],
+    # Retired R8-C/E/G/H behavior suites (Issue #246): integrity-only,
+    # except where current #237 tooling reads the evidence.
+    "docs/investigations/qwen38-flash-next-r8-e/": ["repo-integrity"],
+    "docs/investigations/qwen38-flash-next-r8-g/":
+        ["r8i-qwen-qualification", "repo-integrity"],
+    "docs/investigations/qwen38-flash-next-r8-h-vulkan/":
+        ["r8i-qwen-qualification", "repo-integrity"],
+    "scripts/issue193_phase1_reduction.py": ["repo-integrity"],
+    "scripts/issue193_r8c_authority.py": ["repo-integrity"],
+    "scripts/issue193_terminal_reduction.py": ["repo-integrity"],
+    "scripts/issue199_r8e_authority.py": ["repo-integrity"],
+    "scripts/issue199_r8e_capture.py": ["repo-integrity"],
+    "scripts/issue199_r8e_launch.py": ["repo-integrity"],
+    "scripts/issue199_r8e_manifest.py": ["repo-integrity"],
+    "scripts/issue199_r8e_negative_controls.py": ["repo-integrity"],
+    "scripts/issue199_r8e_terminal_reduction.py": ["repo-integrity"],
+    "scripts/issue207_r8g_authority.py": ["repo-integrity"],
+    "scripts/issue207_r8g_capture.py": ["repo-integrity"],
+    "scripts/issue207_r8g_launch.py": ["repo-integrity"],
+    "scripts/issue207_r8g_manifest.py": ["repo-integrity"],
+    "scripts/issue207_r8g_negative_controls.py": ["repo-integrity"],
+    "scripts/issue207_r8g_reduce.py": ["repo-integrity"],
+    "scripts/issue234_assemble.py": ["repo-integrity"],
+    "scripts/issue234_authority.py": ["repo-integrity"],
+    "scripts/issue234_characterize.py": ["repo-integrity"],
+    "scripts/issue234_freeze.py": ["repo-integrity"],
+    "scripts/issue234_health.py": ["repo-integrity"],
+    "scripts/issue234_host.py": ["repo-integrity"],
+    "scripts/issue234_ladder.py": ["repo-integrity"],
+    "scripts/issue234_manifest.py": ["repo-integrity"],
+    "scripts/issue234_observe.py": ["repo-integrity"],
+    "scripts/issue234_placement.py": ["repo-integrity"],
+    "scripts/issue234_receipt.py": ["repo-integrity"],
+    "scripts/issue234_reduce.py": ["repo-integrity"],
+    "scripts/issue234_runtime.py": ["repo-integrity"],
+    # Historical V0-B reduction (V0-A evidence is also read by V1-B).
+    "scripts/v0a_correctness_derive.py": ["vulkan-v0b"],
+    "scripts/v0a_correctness_run.py": ["vulkan-v0b"],
+    "scripts/v0a_materialization_derive.py": ["vulkan-v0b"],
+    "scripts/v0a_materialization_run.py": ["vulkan-v0b"],
+    "scripts/v0b_capability_assessment.py": ["vulkan-v0b"],
+    "scripts/v0b_comparability_audit.py": ["vulkan-v0b"],
+    "scripts/v0b_correctness_stability.py": ["vulkan-v0b"],
+    "scripts/v0b_cpu_proof.py": ["vulkan-v0b"],
+    "scripts/v0b_cpu_supplement_derive.py": ["vulkan-v0b"],
+    "scripts/v0b_cpu_supplement_run.py": ["vulkan-v0b"],
+    "scripts/v0b_economics.py": ["vulkan-v0b"],
+    "scripts/v0b_manifest.py": ["vulkan-v0b"],
+    "scripts/v0b_seam_comparison.py": ["vulkan-v0b"],
+    "scripts/v0b_terminal.py": ["vulkan-v0b"],
+    "docs/investigations/vulkan-v0-a/": ["vulkan-v0b", "vulkan-v0c-v2a"],
+    "docs/investigations/vulkan-v0-b/": ["vulkan-v0b"],
+    # Historical V0-C/V1/V2-A harness component (imported by #35).
+    "scripts/v0c_canonical_run.py": ["vulkan-v0c-v2a"],
+    "scripts/v0c_correctness.py": ["vulkan-v0c-v2a", "link-x1-issue35"],
+    "scripts/v0c_execution_seam.py": ["vulkan-v0c-v2a"],
+    "scripts/v0c_manifest.py": ["vulkan-v0c-v2a"],
+    "scripts/v0c_vulkan_adapter.py": ["vulkan-v0c-v2a"],
+    "scripts/v1a_execution_participant.py": ["vulkan-v0c-v2a"],
+    "scripts/v1a_manifest.py": ["vulkan-v0c-v2a"],
+    "scripts/v1a_runner.py": ["vulkan-v0c-v2a"],
+    "scripts/v1a_vulkan_adapter.py": ["vulkan-v0c-v2a"],
+    "scripts/v1b_campaign.py": ["vulkan-v0c-v2a"],
+    "scripts/v1b_manifest.py": ["vulkan-v0c-v2a"],
+    "scripts/v1c_accounting.py": ["vulkan-v0c-v2a"],
+    "scripts/v1c_manifest.py": ["vulkan-v0c-v2a"],
+    "scripts/v1c_runner.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_authority.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_authority_v2.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_authority_v3.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_discovery.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_discovery_v2.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_discovery_v3.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_harness.py": ["vulkan-v0c-v2a"],
+    "scripts/v2a_manifest.py": ["vulkan-v0c-v2a", "link-x1-issue35"],
+    "docs/investigations/vulkan-v0-c/": ["vulkan-v0c-v2a"],
+    "docs/investigations/vulkan-v1-a/": ["vulkan-v0c-v2a"],
+    "docs/investigations/vulkan-v1-b/": ["vulkan-v0c-v2a"],
+    "docs/investigations/vulkan-v1-c/": ["vulkan-v0c-v2a"],
+    "docs/investigations/vulkan-v2-a/": ["vulkan-v0c-v2a"],
+    # Historical #35 x1 interconnect envelope lineage.
+    "scripts/issue35_coarse_concurrent.py": ["link-x1-issue35"],
+    "scripts/issue35_envelope.py": ["link-x1-issue35"],
+    "scripts/issue35_link_probe.py": ["link-x1-issue35"],
+    "scripts/issue35_residency_facts.py": ["link-x1-issue35"],
+    "scripts/issue35_role_sweep.py": ["link-x1-issue35"],
+    "docs/investigations/link-x1-envelope/": ["link-x1-issue35"],
+    # Retired V2-B..V2-G V340L campaign behavior suites (Issue #246).
+    "docs/investigations/vulkan-v2-b-v340l/": ["repo-integrity"],
+    "docs/investigations/vulkan-v2-c-v340l-platform-stability/":
+        ["repo-integrity"],
+    "docs/investigations/vulkan-v2-d0-overlap-seam/": ["repo-integrity"],
+    "docs/investigations/vulkan-v2-d-v340l-concurrent/": ["repo-integrity"],
+    "docs/investigations/vulkan-v2-e-v340l-peer-link/": ["repo-integrity"],
+    "docs/investigations/vulkan-v2-f-v340l-external-memory/":
+        ["repo-integrity"],
+    "docs/investigations/vulkan-v2-g-pcie-path-remediation/":
+        ["repo-integrity"],
+    "scripts/issue210_assemble.py": ["repo-integrity"],
+    "scripts/issue210_build_authorities.py": ["repo-integrity"],
+    "scripts/issue210_manifest.py": ["repo-integrity"],
+    "scripts/issue210_terminal.py": ["repo-integrity"],
+    "scripts/issue215_build_final_authorities.py": ["repo-integrity"],
+    "scripts/issue215_build_final_authorities_v2.py": ["repo-integrity"],
+    "scripts/issue215_campaign_plan.py": ["repo-integrity"],
+    "scripts/issue215_final_canonical.py": ["repo-integrity"],
+    "scripts/issue215_manifest.py": ["repo-integrity"],
+    "scripts/issue215_sentinel.py": ["repo-integrity"],
+    "scripts/issue215_snapshot.py": ["repo-integrity"],
+    "scripts/issue215_terminal.py": ["repo-integrity"],
+    "scripts/issue215_v2_authority.py": ["repo-integrity"],
+    "scripts/issue216_assemble.py": ["repo-integrity"],
+    "scripts/issue216_concurrent.py": ["repo-integrity"],
+    "scripts/issue216_execution.py": ["repo-integrity"],
+    "scripts/issue216_fault.py": ["repo-integrity"],
+    "scripts/issue216_freeze.py": ["repo-integrity"],
+    "scripts/issue216_host.py": ["repo-integrity"],
+    "scripts/issue216_manifest.py": ["repo-integrity"],
+    "scripts/issue216_physical_authority.py": ["repo-integrity"],
+    "scripts/issue216_preflight.py": ["repo-integrity"],
+    "scripts/issue216_receipt.py": ["repo-integrity"],
+    "scripts/issue216_reset.py": ["repo-integrity"],
+    "scripts/issue216_soak.py": ["repo-integrity"],
+    "scripts/issue216_transport.py": ["repo-integrity"],
+    "scripts/issue219_capability_probe.py": ["repo-integrity"],
+    "scripts/issue219_manifest.py": ["repo-integrity"],
+    "scripts/issue219_observe_collector.py": ["repo-integrity"],
+    "scripts/issue219_patch.py": ["repo-integrity"],
+    "scripts/issue219_reduce.py": ["repo-integrity"],
+    "scripts/issue219_seam_rubric.py": ["repo-integrity"],
+    "scripts/issue228_assemble.py": ["repo-integrity"],
+    "scripts/issue228_authority.py": ["repo-integrity"],
+    "scripts/issue228_baselines.py": ["repo-integrity"],
+    "scripts/issue228_capability.py": ["repo-integrity"],
+    "scripts/issue228_freeze.py": ["repo-integrity"],
+    "scripts/issue228_host.py": ["repo-integrity"],
+    "scripts/issue228_ladder.py": ["repo-integrity"],
+    "scripts/issue228_manifest.py": ["repo-integrity"],
+    "scripts/issue228_probe.py": ["repo-integrity"],
+    "scripts/issue228_receipt.py": ["repo-integrity"],
+    "scripts/issue228_reduce.py": ["repo-integrity"],
+    "scripts/issue230_assemble.py": ["repo-integrity"],
+    "scripts/issue230_authority.py": ["repo-integrity"],
+    "scripts/issue230_freeze.py": ["repo-integrity"],
+    "scripts/issue230_host.py": ["repo-integrity"],
+    "scripts/issue230_manifest.py": ["repo-integrity"],
+    "scripts/issue230_preflight.py": ["repo-integrity"],
+    "scripts/issue230_receipt.py": ["repo-integrity"],
+    "scripts/issue230_reduce.py": ["repo-integrity"],
+    "scripts/issue230_runner.py": ["repo-integrity"],
+    "scripts/issue230_safety.py": ["repo-integrity"],
+    "scripts/issue230_transfer.py": ["repo-integrity"],
+    "scripts/issue232_assemble.py": ["repo-integrity"],
+    "scripts/issue232_authority.py": ["repo-integrity"],
+    "scripts/issue232_baseline.py": ["repo-integrity"],
+    "scripts/issue232_bootproof.py": ["repo-integrity"],
+    "scripts/issue232_coldproof.py": ["repo-integrity"],
+    "scripts/issue232_freeze.py": ["repo-integrity"],
+    "scripts/issue232_gate.py": ["repo-integrity"],
+    "scripts/issue232_host.py": ["repo-integrity"],
+    "scripts/issue232_manifest.py": ["repo-integrity"],
+    "scripts/issue232_qualify.py": ["repo-integrity"],
+    "scripts/issue232_receipt.py": ["repo-integrity"],
+    "scripts/issue232_reduce.py": ["repo-integrity"],
+    "scripts/issue232_replay.py": ["repo-integrity"],
+    # Retired Phase-1/Phase1R derivation replays (Issue #246).
+    "scripts/analyze_phase1_p6.py": ["repo-integrity"],
+    "scripts/derive_phase1_placement.py": ["repo-integrity"],
+    "scripts/derive_phase1_placement_v2.py": ["repo-integrity"],
+    "scripts/derive_phase1r_d3_placement.py": ["repo-integrity"],
+    "scripts/derive_phase1r_d4_placement.py": ["repo-integrity"],
+    "scripts/derive_phase1r_d7_placement.py": ["repo-integrity"],
+    "docs/benchmarks/results/phase1/": ["repo-integrity"],
+    "docs/investigations/data/": ["repo-integrity"],
     "docs/investigations/deepseek-v41-flash-r7-a/": ["issue-187-r7a"],
     "docs/investigations/deepseek-v41-flash-r7-c/": ["issue-222-r7c"],
     # Phase-0 retained results: p0c-hardware-profile.json is consumed
@@ -1077,6 +1153,7 @@ def build_registry():
         "always_on": list(ALWAYS_ON_GROUPS),
         "groups": {
             group: {
+                "invariant": GROUP_INVARIANTS.get(group, ""),
                 "test_modules": list(modules),
             }
             for group, modules in sorted(GROUP_TEST_MODULES.items())
@@ -1109,6 +1186,13 @@ def self_check():
             if m in seen:
                 errors.append(f"module {m} in both {seen[m]} and {g}")
             seen[m] = g
+    # every group declares its current invariant (Issue #246)
+    for g, info in reg["groups"].items():
+        if not info["invariant"].strip():
+            errors.append(f"group {g} declares no current invariant "
+                          "(GROUP_INVARIANTS)")
+    for g in sorted(set(GROUP_INVARIANTS) - set(GROUP_TEST_MODULES)):
+        errors.append(f"invariant declared for unregistered group {g}")
     # every rule references registered groups
     for pattern, gs in reg["path_rules"].items():
         for g in gs:

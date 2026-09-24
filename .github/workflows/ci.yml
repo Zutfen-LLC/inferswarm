@@ -185,6 +185,11 @@ jobs:
       - name: Check CI planner self-check (Issue #148)
         run: python3 scripts/plan_ci.py --self-check
 
+      - name: Check CI test-retention audit and retired-lineage integrity (Issue #246)
+        run: |
+          python3 scripts/check_ci_test_retention.py
+          python3 -m unittest tests.test_ci_test_retention -v
+
       - name: Check CI planner and full-suite runner tests
         # Registry parity requires every repo-integrity module to run here.
         run: python3 -m unittest tests.test_plan_ci tests.test_run_full_cpu_suite -v
@@ -479,7 +484,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-137
-        run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction tests.test_issue157_chunk2_diagnosis -v
+        run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction -v
 
   issue-172-requal:
     name: Group issue-172-requal
@@ -503,29 +508,6 @@ jobs:
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-172-requal
         run: python3 -m unittest tests.test_issue172_requalification -v
-
-  issue-175-arm-d:
-    name: Group issue-175-arm-d
-    runs-on: ubuntu-latest
-    needs: plan
-    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-175-arm-d')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.12"
-      - name: Bootstrap canonical CPU test environment (Issue #131)
-        run: |
-          python3 scripts/bootstrap_test_env.py
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
-      - name: Doctor CPU test environment (Issue #131)
-        run: .venv/bin/python scripts/check_test_env.py
-      - name: Run group issue-175-arm-d
-        run: python3 -m unittest tests.test_issue175_arm_d -v
 
   issue-182-arm-e:
     name: Group issue-182-arm-e
@@ -667,11 +649,11 @@ jobs:
       - name: Run group issue-99-103
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof -v
 
-  vulkan-v0-b:
-    name: Group vulkan-v0-b
+  r8i-qwen-qualification:
+    name: Group r8i-qwen-qualification
     runs-on: ubuntu-latest
     needs: plan
-    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'vulkan-v0-b')
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -687,21 +669,16 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
-      - name: Run group vulkan-v0-b
-        # Registry parity (Issue #153 correction): this job must execute
-        # every module registered to the vulkan-v0-b group in
-        # scripts/plan_ci.py GROUP_TEST_MODULES — V0-B plus the V0-C
-        # modules accepted from PR #150, the V1-A modules (Issue #154),
-        # the V1-B modules (Issue #158), and the V1-C modules (#161).
-        # tests/test_plan_ci.py enforces this mechanically against the
-        # parsed workflow.
-        run: python3 -m unittest tests.test_issue189_r8a tests.test_issue191_r8b tests.test_issue193_r8c tests.test_issue195_r8d tests.test_issue195_r8d_v2 tests.test_issue199_r8e tests.test_issue207_r8g tests.test_v0b_reduction tests.test_v0c_canonical_run tests.test_v0c_correctness tests.test_v0c_evidence_manifest tests.test_v0c_execution_seam tests.test_v0c_vulkan_adapter tests.test_v1a_execution_participant tests.test_v1a_runner tests.test_v1a_vulkan_adapter tests.test_v1a_evidence_manifest tests.test_v1b_campaign tests.test_v1b_evidence_manifest tests.test_v1c_accounting tests.test_v1c_runner tests.test_v1c_evidence_manifest tests.test_v2a_discovery tests.test_v2a_authority tests.test_v2a_harness tests.test_v2a_evidence_manifest tests.test_v2a_discovery_authority_binding tests.test_v2a_discovery_authority_binding_r3 tests.test_issue210_v2b_v340l tests.test_issue215_v2c_platform_stability tests.test_issue219_v2d0_overlap_seam tests.test_issue216_v2d_concurrent tests.test_issue216_v2d_assembler tests.test_issue228_v2e_peer_link tests.test_issue228_v2e_assembler tests.test_issue230_v2f_external_memory tests.test_issue230_v2f_vk_contract tests.test_issue232_v2g_pcie_remediation tests.test_issue234_r8h_vulkan tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue35_link_probe tests.test_issue35_role_sweep tests.test_issue35_envelope tests.test_issue35_evidence_manifest tests.test_issue35_corrections -v
+      - name: Run group r8i-qwen-qualification
+        # Issue #246: current R8-I qualification authority (split from
+        # the retired vulkan-v0-b catch-all by dependency boundary).
+        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import -v
 
-  phase1-analysis:
-    name: Group phase1-analysis
+  r8-qwen-lineage:
+    name: Group r8-qwen-lineage
     runs-on: ubuntu-latest
     needs: plan
-    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'phase1-analysis')
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8-qwen-lineage')
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -717,8 +694,77 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
-      - name: Run group phase1-analysis
-        run: python3 -m unittest tests.test_analyze_phase1_p6 tests.test_derive_phase1_placement_v2 tests.test_derive_phase1r_d3_placement tests.test_derive_phase1r_d4_placement tests.test_derive_phase1r_d7_placement -v
+      - name: Run group r8-qwen-lineage
+        run: python3 -m unittest tests.test_issue189_r8a tests.test_issue191_r8b tests.test_issue195_r8d tests.test_issue195_r8d_v2 -v
+
+  vulkan-v0b:
+    name: Group vulkan-v0b
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'vulkan-v0b')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group vulkan-v0b
+        run: python3 -m unittest tests.test_v0b_reduction -v
+
+  vulkan-v0c-v2a:
+    name: Group vulkan-v0c-v2a
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'vulkan-v0c-v2a')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group vulkan-v0c-v2a
+        run: python3 -m unittest tests.test_v0c_canonical_run tests.test_v0c_correctness tests.test_v0c_evidence_manifest tests.test_v0c_execution_seam tests.test_v0c_vulkan_adapter tests.test_v1a_execution_participant tests.test_v1a_runner tests.test_v1a_vulkan_adapter tests.test_v1a_evidence_manifest tests.test_v1b_campaign tests.test_v1b_evidence_manifest tests.test_v1c_accounting tests.test_v1c_runner tests.test_v1c_evidence_manifest tests.test_v2a_discovery tests.test_v2a_authority tests.test_v2a_harness tests.test_v2a_evidence_manifest tests.test_v2a_discovery_authority_binding tests.test_v2a_discovery_authority_binding_r3 -v
+
+  link-x1-issue35:
+    name: Group link-x1-issue35
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'link-x1-issue35')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group link-x1-issue35
+        run: python3 -m unittest tests.test_issue35_link_probe tests.test_issue35_role_sweep tests.test_issue35_envelope tests.test_issue35_evidence_manifest tests.test_issue35_corrections -v
 
   issue-115-cleanup:
     name: Group issue-115-cleanup
@@ -754,10 +800,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [plan, repo-integrity, issue-74-79, issue-83-95, issue-109-110,
             issue-117-133-s1, issue-117-133-s2, issue-117-133-s3,
-            issue-117-133-s4, issue-137, issue-172-requal, issue-175-arm-d,
+            issue-117-133-s4, issue-137, issue-172-requal,
             issue-182-arm-e, issue-187-r7a, issue-209-r7b, issue-222-r7c,
-            issue-99-103, issue-213-gate-ordering, vulkan-v0-b,
-            phase1-analysis, issue-115-cleanup]
+            issue-99-103, issue-213-gate-ordering, r8i-qwen-qualification,
+            r8-qwen-lineage, vulkan-v0b, vulkan-v0c-v2a, link-x1-issue35,
+            issue-115-cleanup]
     if: always()
     steps:
       - name: Aggregate selected results (fail closed)
@@ -776,15 +823,17 @@ jobs:
               "issue-117-133-shard4": "${{ needs.issue-117-133-s4.result }}",
               "issue-137": "${{ needs.issue-137.result }}",
               "issue-172-requal": "${{ needs.issue-172-requal.result }}",
-              "issue-175-arm-d": "${{ needs.issue-175-arm-d.result }}",
               "issue-182-arm-e": "${{ needs.issue-182-arm-e.result }}",
               "issue-213-gate-ordering": "${{ needs.issue-213-gate-ordering.result }}",
               "issue-187-r7a": "${{ needs.issue-187-r7a.result }}",
               "issue-209-r7b": "${{ needs.issue-209-r7b.result }}",
               "issue-222-r7c": "${{ needs.issue-222-r7c.result }}",
               "issue-99-103": "${{ needs.issue-99-103.result }}",
-              "vulkan-v0-b": "${{ needs.vulkan-v0-b.result }}",
-              "phase1-analysis": "${{ needs.phase1-analysis.result }}",
+              "r8i-qwen-qualification": "${{ needs.r8i-qwen-qualification.result }}",
+              "r8-qwen-lineage": "${{ needs.r8-qwen-lineage.result }}",
+              "vulkan-v0b": "${{ needs.vulkan-v0b.result }}",
+              "vulkan-v0c-v2a": "${{ needs.vulkan-v0c-v2a.result }}",
+              "link-x1-issue35": "${{ needs.link-x1-issue35.result }}",
               "issue-115-cleanup": "${{ needs.issue-115-cleanup.result }}",
           }
           # The plan is re-derived from planner outputs embedded below;
@@ -821,15 +870,17 @@ jobs:
               "issue-117-133": "issue-117-133",
               "issue-137": "issue-137",
               "issue-172-requal": "issue-172-requal",
-              "issue-175-arm-d": "issue-175-arm-d",
               "issue-182-arm-e": "issue-182-arm-e",
               "issue-213-gate-ordering": "issue-213-gate-ordering",
               "issue-187-r7a": "issue-187-r7a",
               "issue-209-r7b": "issue-209-r7b",
               "issue-222-r7c": "issue-222-r7c",
               "issue-99-103": "issue-99-103",
-              "vulkan-v0-b": "vulkan-v0-b",
-              "phase1-analysis": "phase1-analysis",
+              "r8i-qwen-qualification": "r8i-qwen-qualification",
+              "r8-qwen-lineage": "r8-qwen-lineage",
+              "vulkan-v0b": "vulkan-v0b",
+              "vulkan-v0c-v2a": "vulkan-v0c-v2a",
+              "link-x1-issue35": "link-x1-issue35",
               "issue-115-cleanup": "issue-115-cleanup",
           }
           # the four 117-133 shards all report under the group id

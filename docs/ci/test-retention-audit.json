@@ -1,0 +1,3455 @@
+{
+ "integrity_replacements": [
+  {
+   "bundles": [
+    {
+     "root": "docs/investigations/qwen38-flash-next-r8-c/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/qwen38-flash-next-r8-c/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/qwen38-flash-next-r8-e/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/qwen38-flash-next-r8-e/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/qwen38-flash-next-r8-g/",
+     "row_files": [
+      {
+       "base": "bundle",
+       "format": "sha256sum",
+       "path": "docs/investigations/qwen38-flash-next-r8-g/CLOSURE.sha256"
+      },
+      {
+       "base": "repo",
+       "format": "json-rows",
+       "path": "docs/investigations/qwen38-flash-next-r8-g/evidence/input-manifest.json"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/qwen38-flash-next-r8-h-vulkan/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/qwen38-flash-next-r8-h-vulkan/MANIFEST.sha256"
+      }
+     ]
+    }
+   ],
+   "extra_pins": [
+    "docs/investigations/qwen38-flash-next-r8-e/producer-hashes.json"
+   ],
+   "id": "r8-qwen-retired-investigations",
+   "producers": [
+    "scripts/issue193_phase1_reduction.py",
+    "scripts/issue193_r8c_authority.py",
+    "scripts/issue193_terminal_reduction.py",
+    "scripts/issue199_r8e_authority.py",
+    "scripts/issue199_r8e_capture.py",
+    "scripts/issue199_r8e_launch.py",
+    "scripts/issue199_r8e_manifest.py",
+    "scripts/issue199_r8e_negative_controls.py",
+    "scripts/issue199_r8e_terminal_reduction.py",
+    "scripts/issue207_r8g_authority.py",
+    "scripts/issue207_r8g_capture.py",
+    "scripts/issue207_r8g_launch.py",
+    "scripts/issue207_r8g_manifest.py",
+    "scripts/issue207_r8g_negative_controls.py",
+    "scripts/issue207_r8g_reduce.py",
+    "scripts/issue234_assemble.py",
+    "scripts/issue234_authority.py",
+    "scripts/issue234_characterize.py",
+    "scripts/issue234_freeze.py",
+    "scripts/issue234_health.py",
+    "scripts/issue234_host.py",
+    "scripts/issue234_ladder.py",
+    "scripts/issue234_manifest.py",
+    "scripts/issue234_observe.py",
+    "scripts/issue234_placement.py",
+    "scripts/issue234_receipt.py",
+    "scripts/issue234_reduce.py",
+    "scripts/issue234_runtime.py"
+   ],
+   "replaces": [
+    "test_issue193_r8c",
+    "test_issue199_r8e",
+    "test_issue207_r8g",
+    "test_issue234_r8h_vulkan"
+   ]
+  },
+  {
+   "bundles": [
+    {
+     "root": "docs/investigations/vulkan-v2-b-v340l/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-b-v340l/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-c-v340l-platform-stability/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-d0-overlap-seam/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-d0-overlap-seam/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-d-v340l-concurrent/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-e-v340l-peer-link/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-f-v340l-external-memory/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-f-v340l-external-memory/MANIFEST.sha256"
+      }
+     ]
+    },
+    {
+     "root": "docs/investigations/vulkan-v2-g-pcie-path-remediation/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/investigations/vulkan-v2-g-pcie-path-remediation/MANIFEST.sha256"
+      }
+     ]
+    }
+   ],
+   "extra_pins": [],
+   "id": "vulkan-v2-v340l-campaigns",
+   "producers": [
+    "scripts/issue210_assemble.py",
+    "scripts/issue210_build_authorities.py",
+    "scripts/issue210_manifest.py",
+    "scripts/issue210_terminal.py",
+    "scripts/issue215_build_final_authorities.py",
+    "scripts/issue215_build_final_authorities_v2.py",
+    "scripts/issue215_campaign_plan.py",
+    "scripts/issue215_final_canonical.py",
+    "scripts/issue215_manifest.py",
+    "scripts/issue215_sentinel.py",
+    "scripts/issue215_snapshot.py",
+    "scripts/issue215_terminal.py",
+    "scripts/issue215_v2_authority.py",
+    "scripts/issue216_assemble.py",
+    "scripts/issue216_concurrent.py",
+    "scripts/issue216_execution.py",
+    "scripts/issue216_fault.py",
+    "scripts/issue216_freeze.py",
+    "scripts/issue216_host.py",
+    "scripts/issue216_manifest.py",
+    "scripts/issue216_physical_authority.py",
+    "scripts/issue216_preflight.py",
+    "scripts/issue216_receipt.py",
+    "scripts/issue216_reset.py",
+    "scripts/issue216_soak.py",
+    "scripts/issue216_transport.py",
+    "scripts/issue219_capability_probe.py",
+    "scripts/issue219_manifest.py",
+    "scripts/issue219_observe_collector.py",
+    "scripts/issue219_patch.py",
+    "scripts/issue219_reduce.py",
+    "scripts/issue219_seam_rubric.py",
+    "scripts/issue228_assemble.py",
+    "scripts/issue228_authority.py",
+    "scripts/issue228_baselines.py",
+    "scripts/issue228_capability.py",
+    "scripts/issue228_freeze.py",
+    "scripts/issue228_host.py",
+    "scripts/issue228_ladder.py",
+    "scripts/issue228_manifest.py",
+    "scripts/issue228_probe.py",
+    "scripts/issue228_receipt.py",
+    "scripts/issue228_reduce.py",
+    "scripts/issue230_assemble.py",
+    "scripts/issue230_authority.py",
+    "scripts/issue230_freeze.py",
+    "scripts/issue230_host.py",
+    "scripts/issue230_manifest.py",
+    "scripts/issue230_preflight.py",
+    "scripts/issue230_receipt.py",
+    "scripts/issue230_reduce.py",
+    "scripts/issue230_runner.py",
+    "scripts/issue230_safety.py",
+    "scripts/issue230_transfer.py",
+    "scripts/issue232_assemble.py",
+    "scripts/issue232_authority.py",
+    "scripts/issue232_baseline.py",
+    "scripts/issue232_bootproof.py",
+    "scripts/issue232_coldproof.py",
+    "scripts/issue232_freeze.py",
+    "scripts/issue232_gate.py",
+    "scripts/issue232_host.py",
+    "scripts/issue232_manifest.py",
+    "scripts/issue232_qualify.py",
+    "scripts/issue232_receipt.py",
+    "scripts/issue232_reduce.py",
+    "scripts/issue232_replay.py"
+   ],
+   "replaces": [
+    "test_issue210_v2b_v340l",
+    "test_issue215_v2c_platform_stability",
+    "test_issue216_v2d_concurrent",
+    "test_issue216_v2d_assembler",
+    "test_issue219_v2d0_overlap_seam",
+    "test_issue228_v2e_peer_link",
+    "test_issue228_v2e_assembler",
+    "test_issue230_v2f_external_memory",
+    "test_issue230_v2f_vk_contract",
+    "test_issue232_v2g_pcie_remediation"
+   ]
+  },
+  {
+   "bundles": [
+    {
+     "root": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/MANIFEST.sha256"
+      }
+     ]
+    }
+   ],
+   "extra_pins": [],
+   "id": "issue117-arm-c-chunk2-157",
+   "producers": [
+    "scripts/issue157_baseline_record.py",
+    "scripts/issue157_binding.py",
+    "scripts/issue157_conclusions.py",
+    "scripts/issue157_instrumentation.py",
+    "scripts/issue157_manifest.py",
+    "scripts/issue157_probe_driver.py",
+    "scripts/issue157_replay_harness.py",
+    "scripts/issue157_replay_worker.py",
+    "scripts/issue157_sitecustomize.py"
+   ],
+   "replaces": [
+    "test_issue157_chunk2_diagnosis"
+   ]
+  },
+  {
+   "bundles": [
+    {
+     "root": "docs/implementation/r6-successor-arm-d-warm-restart-175/",
+     "row_files": [
+      {
+       "base": "repo",
+       "format": "sha256sum",
+       "path": "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/MANIFEST.sha256"
+      }
+     ]
+    }
+   ],
+   "extra_pins": [],
+   "id": "issue117-arm-d-175",
+   "producers": [
+    "scripts/issue175_assemble.py",
+    "scripts/issue175_authority.py",
+    "scripts/issue175_campaign_pins.py",
+    "scripts/issue175_inventory.py",
+    "scripts/issue175_manifest.py",
+    "scripts/issue175_ordinary_client.py",
+    "scripts/issue175_reduce.py",
+    "scripts/issue175_terminal.py"
+   ],
+   "replaces": [
+    "test_issue175_arm_d"
+   ]
+  },
+  {
+   "bundles": [
+    {
+     "exempt_suffixes": [
+      ".md"
+     ],
+     "root": "docs/investigations/data/",
+     "row_files": []
+    },
+    {
+     "exempt_suffixes": [
+      ".md"
+     ],
+     "root": "docs/benchmarks/results/phase1/",
+     "row_files": []
+    }
+   ],
+   "extra_pins": [],
+   "id": "phase1-derivations",
+   "producers": [
+    "scripts/analyze_phase1_p6.py",
+    "scripts/derive_phase1_placement.py",
+    "scripts/derive_phase1_placement_v2.py",
+    "scripts/derive_phase1r_d3_placement.py",
+    "scripts/derive_phase1r_d4_placement.py",
+    "scripts/derive_phase1r_d7_placement.py"
+   ],
+   "replaces": [
+    "test_analyze_phase1_p6",
+    "test_derive_phase1_placement_v2",
+    "test_derive_phase1r_d3_placement",
+    "test_derive_phase1r_d4_placement",
+    "test_derive_phase1r_d7_placement"
+   ]
+  }
+ ],
+ "issue": 246,
+ "lifecycle_rule": "CI tests are retained because they protect current contracts, reachable regressions, or current evidence integrity. Historical issue provenance alone is not a retention criterion.",
+ "modules": {
+  "test_analyze_phase1_p6": {
+   "baseline_group": "phase1-analysis",
+   "baseline_serial_seconds": 0.23,
+   "baseline_test_count": 7,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Phase-1 P6 analysis",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/analyze_phase1_p6.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical Phase-1/Phase1R derivations (Phase 1 NO-GO is unchanged history); tests/README already listed them as historical. The suite replayed frozen derivations and synthetic analysis cases.",
+   "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_ci_test_retention": {
+   "baseline_group": null,
+   "baseline_serial_seconds": null,
+   "baseline_test_count": null,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "Every discovered test module carries a retention record; retired modules stay out of discovery; retired-lineage evidence, manifests, and producers cannot drift or be rewritten together.",
+   "lineage": "repository authority (Issue #246)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-c/"
+    ],
+    "scripts_imported": [
+     "scripts/plan_ci.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Enforces the CI lifecycle rule and the integrity replacements introduced by Issue #246.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_derive_phase1_placement_v2": {
+   "baseline_group": "phase1-analysis",
+   "baseline_serial_seconds": 0.36,
+   "baseline_test_count": 9,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Phase-1 placement",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/data/"
+    ],
+    "scripts_imported": [
+     "scripts/derive_phase1_placement.py",
+     "scripts/derive_phase1_placement_v2.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical Phase-1/Phase1R derivations (Phase 1 NO-GO is unchanged history); tests/README already listed them as historical. The suite replayed frozen derivations and synthetic analysis cases.",
+   "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_derive_phase1r_d3_placement": {
+   "baseline_group": "phase1-analysis",
+   "baseline_serial_seconds": 1.8,
+   "baseline_test_count": 1,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Phase1R D3 placement",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/data/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical Phase-1/Phase1R derivations (Phase 1 NO-GO is unchanged history); tests/README already listed them as historical. The suite replayed frozen derivations and synthetic analysis cases.",
+   "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_derive_phase1r_d4_placement": {
+   "baseline_group": "phase1-analysis",
+   "baseline_serial_seconds": 18.26,
+   "baseline_test_count": 2,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Phase1R D4 placement",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/data/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical Phase-1/Phase1R derivations (Phase 1 NO-GO is unchanged history); tests/README already listed them as historical. The suite replayed frozen derivations and synthetic analysis cases.",
+   "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_derive_phase1r_d7_placement": {
+   "baseline_group": "phase1-analysis",
+   "baseline_serial_seconds": 0.29,
+   "baseline_test_count": 5,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Phase1R D7 placement",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/data/"
+    ],
+    "scripts_imported": [
+     "scripts/derive_phase1r_d7_placement.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical Phase-1/Phase1R derivations (Phase 1 NO-GO is unchanged history); tests/README already listed them as historical. The suite replayed frozen derivations and synthetic analysis cases.",
+   "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_evidence_manifest_lifecycle": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 0.86,
+   "baseline_test_count": 7,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "Every docs/**/MANIFEST.sha256 row matches its bytes, living files never enter evidence manifests, and the #137 bundle stays closed.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/README.md",
+     "docs/implementation/artifact-locality-transition-planning-103/",
+     "docs/implementation/plan-driven-artifact-acquisition-99/",
+     "docs/implementation/plan-driven-artifact-orchestration-101/",
+     "docs/qualification/gemma4-12b-it-v1/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_proof.py",
+     "scripts/issue137_manifest.py",
+     "scripts/issue137_phase1_inventory.py",
+     "scripts/sync_project_status.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/issue-130-finalization/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/issue-130-finalization/producer-hashes.json"
+   ],
+   "rationale": "The cheap repository-wide evidence boundary; retired behavior suites rely on it.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_finalize_repository": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 44.51,
+   "baseline_test_count": 73,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "scripts/finalize_repository.py --check is deterministic and each registered finalizer stage fails closed.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/finalize_repository.py",
+     "scripts/issue117_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/issue-130-finalization/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/issue-130-finalization/producer-hashes.json"
+   ],
+   "rationale": "Finalization is a current repository-wide authority surface.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue101_orchestration": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.18,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "Peer reuse/replacement orchestration semantics (accepted capability).",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue101_fixture.py",
+     "scripts/issue101_orchestration.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/plan-driven-artifact-orchestration-101/evidence/MANIFEST.sha256",
+    "docs/implementation/plan-driven-artifact-orchestration-101/evidence/producer-hashes.json"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue101_proof": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.42,
+   "baseline_test_count": 17,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "The #101 orchestration proof regenerates its accepted evidence.",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue101_proof.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/plan-driven-artifact-orchestration-101/evidence/MANIFEST.sha256"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue103_planner": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.91,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "Locality-aware transition planning keeps technical feasibility independent of locality (accepted capability).",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/artifact-locality-transition-planning-103/"
+    ],
+    "scripts_imported": [
+     "scripts/issue103_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/artifact-locality-transition-planning-103/evidence/MANIFEST.sha256"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue105_post_v4_core_diagnosis": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 7.08,
+   "baseline_test_count": 25,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Pinned diagnosis inputs reproduce the accepted statistical classification that fed the V5 doctrine.",
+   "lineage": "post-v4 core diagnosis (#105)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue105_post_v4_core_diagnosis.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical diagnosis tool; its statistical classification is an input to the doctrine chain the accepted V5 contract consumes.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue108_post_v4_statistical_metric_doctrine": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 0.17,
+   "baseline_test_count": 21,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "The post-v4 statistical metric doctrine consumed unchanged by the V5 freeze stays intact.",
+   "lineage": "statistical metric doctrine (#108)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/"
+    ],
+    "scripts_imported": [
+     "scripts/issue108_post_v4_statistical_metric_doctrine.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5 validates its selection against the unchanged #108 contract.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue109_v5_methodology": {
+   "baseline_group": "issue-109-110",
+   "baseline_serial_seconds": 0.28,
+   "baseline_test_count": 26,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-109-110",
+   "imported_by_scripts": [],
+   "invariant": "The accepted V5 methodology derivations and certificate/custody helpers reproduce and fail closed.",
+   "lineage": "Gemma qualification V5 (#109/#110)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5/",
+     "docs/qualification/post-v3-numerical-core-doctrine/",
+     "docs/qualification/post-v4-statistical-metric-doctrine/"
+    ],
+    "scripts_imported": [
+     "scripts/build_issue109_schemas.py",
+     "scripts/commit_issue109_holdout.py",
+     "scripts/generate_issue109_corpora.py",
+     "scripts/issue109_v5_contract.py",
+     "scripts/issue109_v5_methodology.py",
+     "scripts/issue74_methodology.py",
+     "scripts/issue95_v4_methodology.py",
+     "scripts/verify_issue109_v5_unseal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5_QUALIFICATION_PASS is an accepted current capability in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue109_v5_methodology_freeze": {
+   "baseline_group": "issue-109-110",
+   "baseline_serial_seconds": 0.16,
+   "baseline_test_count": 18,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-109-110",
+   "imported_by_scripts": [],
+   "invariant": "The accepted V5 methodology freeze record stays bound to its contract and derivations.",
+   "lineage": "Gemma qualification V5 (#109/#110)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue109_v5_methodology_freeze.py",
+     "scripts/issue74_methodology.py",
+     "scripts/validate_issue109_prerequisites.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5_QUALIFICATION_PASS is an accepted current capability in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue109_v5_thresholds": {
+   "baseline_group": "issue-109-110",
+   "baseline_serial_seconds": 4.38,
+   "baseline_test_count": 9,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-109-110",
+   "imported_by_scripts": [],
+   "invariant": "Accepted V5 threshold derivation reproduces from pinned inputs.",
+   "lineage": "Gemma qualification V5 (#109/#110)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue109_v5_contract.py",
+     "scripts/issue109_v5_methodology.py",
+     "scripts/issue109_v5_thresholds.py",
+     "scripts/issue74_methodology.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5_QUALIFICATION_PASS is an accepted current capability in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue110_terminal_report_decimals": {
+   "baseline_group": "issue-109-110",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 6,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-109-110",
+   "imported_by_scripts": [],
+   "invariant": "Displayed V5 terminal decimals derive from the authoritative adjudication hex values.",
+   "lineage": "Gemma qualification V5 (#109/#110)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5_QUALIFICATION_PASS is an accepted current capability in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue110_v5_custody_handoff": {
+   "baseline_group": "issue-109-110",
+   "baseline_serial_seconds": 0.32,
+   "baseline_test_count": 40,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-109-110",
+   "imported_by_scripts": [],
+   "invariant": "The V5 custody hand-off and threshold adapter keep their proven one-substitution identity.",
+   "lineage": "Gemma qualification V5 (#109/#110)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/build_issue110_v5_threshold_adapter.py",
+     "scripts/commit_issue109_holdout.py",
+     "scripts/issue109_v5_thresholds.py",
+     "scripts/issue110_v5_custody.py",
+     "scripts/issue110_v5_thresholds.py",
+     "scripts/issue74_methodology.py",
+     "scripts/verify_issue109_v5_unseal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "V5_QUALIFICATION_PASS is an accepted current capability in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue115_cleanup_retention": {
+   "baseline_group": "issue-115-cleanup",
+   "baseline_serial_seconds": 0.06,
+   "baseline_test_count": 27,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-115-cleanup",
+   "imported_by_scripts": [],
+   "invariant": "The V5 raw-evidence retention manifest stays complete and no plaintext holdout or secret material is committed.",
+   "lineage": "V5 cleanup (#115)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Active custody guard over the accepted V5 holdout material.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_accepted_subject": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.16,
+   "baseline_test_count": 21,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v2-campaign-81/",
+     "docs/qualification/gemma4-12b-it-v4-campaign-97/",
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_accepted_subject.py",
+     "scripts/issue117_applicability.py",
+     "scripts/issue117_gemma_strategy.py",
+     "scripts/issue117_planner.py",
+     "scripts/issue117_preflight.py",
+     "scripts/issue117_subject_identity.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_applicability": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 82.67,
+   "baseline_test_count": 38,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v4-campaign-97/",
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_applicability.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_arm_a_retention": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.54,
+   "baseline_test_count": 76,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue117_arm_a_evidence.py",
+     "scripts/issue117_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_arm_b_retention": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 34.33,
+   "baseline_test_count": 112,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_arm_c_blocker": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 1.92,
+   "baseline_test_count": 38,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "The frozen Arm-C blocker reduction derives from retained bytes and rejects its mandatory mutations.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-/",
+     "docs/implementation/r6-successor-dense-full-integration-/",
+     "docs/implementation/r6-successor-dense-full-integration/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_arm_c_blocker_fakeroot.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical blocker replay.",
+   "replacement": null,
+   "retention_blocker": "scripts/issue117_arm_c_authority_audit.py hashes tests/test_issue117_arm_c_blocker.py into its post-audit correction allowlist; deleting the file breaks that builder (Issue #246 stop condition: tooling consumes test code). Retained."
+  },
+  "test_issue117_arm_c_retention": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.21,
+   "baseline_test_count": 34,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_arm_c_fakeroot.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/pre-execution-authority-audit.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_checkpoint_authority": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 2.4,
+   "baseline_test_count": 11,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue117_applicability.py",
+     "scripts/issue117_checkpoint_authority.py",
+     "scripts/issue117_preflight.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_gemma_strategy": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.49,
+   "baseline_test_count": 50,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue117_gemma_strategy.py",
+     "scripts/issue117_subject_identity.py",
+     "scripts/issue74_methodology.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_integration_fixture": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.23,
+   "baseline_test_count": 13,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_integration_fixture.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_physical_retention": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.18,
+   "baseline_test_count": 15,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_applicability.py",
+     "scripts/issue117_proof.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue117_planner": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 33,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue103_planner.py",
+     "scripts/issue117_planner.py",
+     "scripts/issue74_methodology.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_preflight": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 5.37,
+   "baseline_test_count": 56,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/qualification/gemma4-12b-it-v2-campaign-81/",
+     "docs/qualification/gemma4-12b-it-v4-campaign-97/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_applicability.py",
+     "scripts/issue117_gemma_strategy.py",
+     "scripts/issue117_planner.py",
+     "scripts/issue117_preflight.py",
+     "scripts/issue117_subject_identity.py",
+     "scripts/issue74_methodology.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_proof": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 34.8,
+   "baseline_test_count": 25,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_applicability.py",
+     "scripts/issue117_gemma_strategy.py",
+     "scripts/issue117_integration_fixture.py",
+     "scripts/issue117_planner.py",
+     "scripts/issue117_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue117_provenance": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 2,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/README.md",
+     "docs/implementation/artifact-locality-transition-planning-103/",
+     "docs/implementation/plan-driven-artifact-acquisition-99/",
+     "docs/implementation/plan-driven-artifact-orchestration-101/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue129_arm_c_retry": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 49.93,
+   "baseline_test_count": 113,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-/"
+    ],
+    "scripts_imported": [
+     "scripts/issue129_arm_c_retry_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue131_cpu_test_env": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 11.12,
+   "baseline_test_count": 46,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "The canonical CPU test environment (requirements-test.txt, bootstrap, doctor) is the single dependency authority.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/bootstrap_test_env.py",
+     "scripts/check_test_env.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Every suite depends on this environment contract.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue133_arm_c_retry_campaign": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 2.72,
+   "baseline_test_count": 35,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue129_arm_c_retry_core.py",
+     "scripts/issue133_arm_c_retry_campaign.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue133_arm_c_retry_direct": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.35,
+   "baseline_test_count": 53,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/implementation/r6-successor-dense-full/"
+    ],
+    "scripts_imported": [
+     "scripts/issue129_arm_c_retry_core.py",
+     "scripts/issue133_arm_c_retry_campaign.py",
+     "scripts/issue133_arm_c_retry_direct.py",
+     "scripts/issue133_canonical_environment.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue133_corrected_freeze": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.15,
+   "baseline_test_count": 25,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue129_arm_c_retry_core.py",
+     "scripts/issue133_arm_c_retry_campaign.py",
+     "scripts/issue133_arm_c_retry_direct.py",
+     "scripts/issue133_canonical_environment.py",
+     "scripts/issue133_real_builder_dry_run.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue133_gate_tooling_drift": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 10.6,
+   "baseline_test_count": 17,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue133_arm_c_retry_campaign.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue133_physical_execution_retention": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 14.14,
+   "baseline_test_count": 62,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Accepted #117 subject/arm evidence stays byte-identical and bound to its accepted provenance.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Retention checks over accepted evidence; #117 Arm A-E is historical but its accepted subject is bound by the V5 line.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue133_prelaunch_bootstrap": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 10.41,
+   "baseline_test_count": 21,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue133_arm_c_retry_campaign.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256, docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue137_regime4_diagnosis": {
+   "baseline_group": "issue-137",
+   "baseline_serial_seconds": 0.39,
+   "baseline_test_count": 13,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-137",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#137 regime-4 diagnosis",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue137_regime4_diagnosis_correction": {
+   "baseline_group": "issue-137",
+   "baseline_serial_seconds": 3.21,
+   "baseline_test_count": 36,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-137",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#137 regime-4 diagnosis",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue137_binding.py",
+     "scripts/issue137_phase1_inventory.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue153_arm_c_remediation": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.1,
+   "baseline_test_count": 26,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue117_proof.py",
+     "scripts/issue153_manifest.py",
+     "scripts/issue153_phase0_inventory.py",
+     "scripts/issue153_producer_delta.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-dense-full-integration-117/remediation/evidence/MANIFEST.sha256"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-dense-full-integration-117/remediation/evidence/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue157_chunk2_diagnosis": {
+   "baseline_group": "issue-137",
+   "baseline_serial_seconds": 0.16,
+   "baseline_test_count": 49,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "#157 Arm-C chunk-2 diagnosis",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/issue157_binding.py",
+     "scripts/issue157_instrumentation.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed #157 diagnosis inside the historical #117 Arm-C lineage; the retained test_issue166 still verifies the #157 bundle bytes it consumes. The suite re-ran the historical reducer/binding logic.",
+   "replacement": "integrity_replacements[issue117-arm-c-chunk2-157]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue166_swa_remediation_record": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 23,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [
+    "scripts/issue168_authority_record.py"
+   ],
+   "invariant": "The accepted #166 remediation record binds its producer hashes and #157 predecessor bytes.",
+   "lineage": "#166 Arm-C SWA remediation record",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-arm-c-swa-remediation-166/",
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical record replay.",
+   "replacement": null,
+   "retention_blocker": "scripts/issue168_authority_record.py imports this module's constants as the machine-checked #166 source of truth (Issue #246 stop condition: tooling imports test code). Retained."
+  },
+  "test_issue168_requal_blocked_record": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.43,
+   "baseline_test_count": 29,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "The #168 pre-observation blocked record derives from its census and never claims execution or H109 access.",
+   "lineage": "#168 Arm-C requalification blocked record",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-arm-c-requal-blocked-168/",
+     "docs/implementation/r6-successor-arm-c-swa-remediation-166/",
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical record replay.",
+   "replacement": null,
+   "retention_blocker": "Asserts the campaign tooling cannot reach the H109 (V5) holdout namespace -- a holdout-contamination guard whose current role needs maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue170_long_remainder_corpus": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 0.25,
+   "baseline_test_count": 45,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #117-lineage producers reproduce their accepted records and fail closed.",
+   "lineage": "#117 R6-successor Gemma integration",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/",
+     "docs/implementation/r6-successor-arm-c-requal-blocked-168/",
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/qualification/gemma4-12b-it-v5/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/evidence/producer-hashes.json"
+   ],
+   "rationale": "Replays frozen producers of a completed campaign (docs/project-status.json: '#117 Arm A-E remains historical evidence').",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/evidence/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue172_requalification": {
+   "baseline_group": "issue-172-requal",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 18,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-172-requal",
+   "imported_by_scripts": [],
+   "invariant": "The accepted #172 terminal chain derives from retained bytes and never touches H109.",
+   "lineage": "#172 Arm-C physical requalification",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue172_campaign_pins.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Asserts the campaign tooling cannot reach the H109 (V5) holdout namespace -- a holdout-contamination guard whose current role needs maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue175_arm_d": {
+   "baseline_group": "issue-175-arm-d",
+   "baseline_serial_seconds": 1.35,
+   "baseline_test_count": 64,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "#175 Arm-D warm restart",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue175_assemble.py",
+     "scripts/issue175_campaign_pins.py",
+     "scripts/issue175_reduce.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed #175 Arm-D campaign inside the historical #117 A-E sequence (closed by #184). No retained test or tool imports its producers or reads its evidence. The suite re-ran historical campaign reducers.",
+   "replacement": "integrity_replacements[issue117-arm-d-175]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue182_arm_e": {
+   "baseline_group": "issue-182-arm-e",
+   "baseline_serial_seconds": 81.95,
+   "baseline_test_count": 70,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-182-arm-e",
+   "imported_by_scripts": [],
+   "invariant": "The accepted #182 Arm-E terminal derives from retained bytes; tooling stays CPU-pure and outside H109.",
+   "lineage": "#182 Arm-E locality mutation",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue182_campaign_pins.py",
+     "scripts/issue182_compare.py",
+     "scripts/issue182_inventory.py",
+     "scripts/issue182_terminal.py",
+     "scripts/issue74_methodology.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Asserts the campaign tooling cannot reach the H109 (V5) holdout namespace -- a holdout-contamination guard whose current role needs maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue184_final_closure": {
+   "baseline_group": "issue-117-133",
+   "baseline_serial_seconds": 1.48,
+   "baseline_test_count": 20,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "narrow",
+   "group": "issue-117-133",
+   "imported_by_scripts": [],
+   "invariant": "The living status record closes the #117 A-E sequence without stale claims, and the accepted A-E evidence trees stay byte-identical to the closure head.",
+   "lineage": "#184 A-E closure",
+   "overrides": {
+    "Issue184PreservationTests.test_no_freetoken_or_producer_script_changes": {
+     "category": "CURRENT_CONTRACT",
+     "disposition": "narrow",
+     "rationale": "Narrowed (Issue #246): the cross-PR allowlist of every later producer path (each new campaign had to extend it) was OBSOLETE lineage bookkeeping and was removed; the unit keeps the FreeToken-tree and frozen #117 proof-producer guards."
+    },
+    "Issue184PreservationTests.test_preserved_trees_byte_identical_to_starting_head": {
+     "category": "EVIDENCE_INTEGRITY",
+     "disposition": "retain",
+     "rationale": "Cheap byte-preservation check of the accepted A-E evidence trees."
+    }
+   },
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/",
+     "docs/implementation/r6-successor-arm-c-requal-blocked-168/",
+     "docs/implementation/r6-successor-arm-c-requalification-172/",
+     "docs/implementation/r6-successor-arm-c-swa-remediation-166/",
+     "docs/implementation/r6-successor-arm-d-warm-restart-175/",
+     "docs/implementation/r6-successor-arm-e-locality-mutation-182/",
+     "docs/implementation/r6-successor-dense-full-integration-117/"
+    ],
+    "scripts_imported": [
+     "scripts/sync_project_status.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Living-status checks are current; the preservation checks are cheap evidence integrity.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue187_r7a": {
+   "baseline_group": "issue-187-r7a",
+   "baseline_serial_seconds": 3.15,
+   "baseline_test_count": 11,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "issue-187-r7a",
+   "imported_by_scripts": [],
+   "invariant": "The retained R7-A static census terminal stays current and fails closed on census drift.",
+   "lineage": "R7 DeepSeek (#187 R7-A)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue187_r7a_reducer.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/deepseek-v41-flash-r7-a/MANIFEST.sha256",
+    "docs/investigations/deepseek-v41-flash-r7-a/producer-hashes.json"
+   ],
+   "rationale": "Feeds the open R7 track (R7-B acceptance pending, R7-C prerequisite).",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue189_r8a": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.55,
+   "baseline_test_count": 37,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8-qwen-lineage",
+   "imported_by_scripts": [],
+   "invariant": "The R8-A terminal derives from the mechanical census, never smuggles execution authority, and fails closed on fleet/census drift.",
+   "lineage": "R8-A Qwen static census (#189)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue189_r8a_reducer.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-a/MANIFEST.sha256",
+    "docs/investigations/qwen38-flash-next-r8-a/producer-hashes.json"
+   ],
+   "rationale": "Issue #189 is the living frontier reference in docs/project-status.json.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue191_r8b": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 12,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "r8-qwen-lineage",
+   "imported_by_scripts": [],
+   "invariant": "R8-B evidence (including the fixture ladder #237 derives length bands from) is manifest-complete and byte-stable.",
+   "lineage": "R8-B Qwen RPC qualification (#191)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-b/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-b/producer-hashes.json"
+   ],
+   "rationale": "Evidence consumed by current R8-I tooling.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue193_r8c": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.64,
+   "baseline_test_count": 20,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "R8-C Qwen (#193)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed R8 investigation whose terminal is accepted evidence. No current tool imports its producers (#237 reads only the evidence bytes, which stay pinned). The suite re-ran historical reducers and negative controls against frozen bytes.",
+   "replacement": "integrity_replacements[r8-qwen-retired-investigations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue195_r8d": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.1,
+   "baseline_test_count": 23,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "r8-qwen-lineage",
+   "imported_by_scripts": [],
+   "invariant": "The retained R8-D terminal re-derives from its evidence bytes.",
+   "lineage": "R8-D Qwen (#195)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-a/",
+     "docs/investigations/qwen38-flash-next-r8-d/"
+    ],
+    "scripts_imported": [
+     "scripts/issue195_r8d_authority.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-d/producer-hashes.json"
+   ],
+   "rationale": "Completed R8-D campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/qwen38-flash-next-r8-d/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue195_r8d_v2": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 1.28,
+   "baseline_test_count": 27,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "r8-qwen-lineage",
+   "imported_by_scripts": [],
+   "invariant": "The retained R8-D terminal re-derives from its evidence bytes.",
+   "lineage": "R8-D Qwen (#195)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-a/",
+     "docs/investigations/qwen38-flash-next-r8-b/",
+     "docs/investigations/qwen38-flash-next-r8-c/",
+     "docs/investigations/qwen38-flash-next-r8-d-v2/",
+     "docs/investigations/qwen38-flash-next-r8-d/"
+    ],
+    "scripts_imported": [
+     "scripts/issue195_v2_authority.py",
+     "scripts/issue195_v2_run_ladder.py",
+     "scripts/issue195_v2_terminal_reduction.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-d-v2/producer-hashes.json"
+   ],
+   "rationale": "Completed R8-D campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/qwen38-flash-next-r8-d-v2/producer-hashes.json; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue199_r8e": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 10.29,
+   "baseline_test_count": 33,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "R8-E Qwen (#199)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-d-v2/",
+     "docs/investigations/qwen38-flash-next-r8-e/"
+    ],
+    "scripts_imported": [
+     "scripts/issue199_r8e_authority.py",
+     "scripts/issue199_r8e_terminal_reduction.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed R8 investigation whose terminal is accepted evidence. No current tool imports its producers (#237 reads only the evidence bytes, which stay pinned). The suite re-ran historical reducers and negative controls against frozen bytes.",
+   "replacement": "integrity_replacements[r8-qwen-retired-investigations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue200_r8f_proof": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 27.27,
+   "baseline_test_count": 23,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "R8-F evidence regenerates and PASS derives only from raw receipts.",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue200_r8f_cache_enum.py",
+     "scripts/issue200_r8f_network_reduce.py",
+     "scripts/issue200_r8f_physical.py",
+     "scripts/issue200_r8f_proof.py",
+     "scripts/issue200_r8f_range_receipt.py",
+     "scripts/issue200_r8f_rpc_cache_mechanism.py",
+     "scripts/issue200_r8f_stage_cache.py",
+     "scripts/issue200_r8f_terminal_reduction.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r8-f-local-backing-source-policy-200/evidence/MANIFEST.sha256",
+    "docs/implementation/r8-f-local-backing-source-policy-200/evidence/producer-hashes.json"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue200_r8f_source_policy": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.13,
+   "baseline_test_count": 17,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "The R8-F Source-policy seam preserves the accepted local-then-remote order and required/optional backing accounting.",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue101_orchestration.py",
+     "scripts/issue200_r8f_fixture.py",
+     "scripts/issue200_r8f_source_policy.py",
+     "scripts/issue99_artifact_core.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/r8-f-local-backing-source-policy-200/evidence/MANIFEST.sha256",
+    "docs/implementation/r8-f-local-backing-source-policy-200/evidence/producer-hashes.json"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue207_r8g": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 2.81,
+   "baseline_test_count": 33,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "R8-G Qwen (#207)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-d-v2/",
+     "docs/investigations/qwen38-flash-next-r8-e/",
+     "docs/investigations/qwen38-flash-next-r8-g/"
+    ],
+    "scripts_imported": [
+     "scripts/issue207_r8g_authority.py",
+     "scripts/issue207_r8g_reduce.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed R8 investigation whose terminal is accepted evidence. No current tool imports its producers (#237 reads only the evidence bytes, which stay pinned). The suite re-ran historical reducers and negative controls against frozen bytes.",
+   "replacement": "integrity_replacements[r8-qwen-retired-investigations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue209_r7b": {
+   "baseline_group": "issue-209-r7b",
+   "baseline_serial_seconds": 0.16,
+   "baseline_test_count": 20,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-209-r7b",
+   "imported_by_scripts": [],
+   "invariant": "The R7-B gate-ready terminal is derived, never authored, while maintainer acceptance is pending.",
+   "lineage": "R7 DeepSeek (#209 R7-B)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/deepseek-v41-flash-r7-a/",
+     "docs/investigations/deepseek-v41-flash-r7-b/"
+    ],
+    "scripts_imported": [
+     "scripts/issue209_r7b_manifest.py",
+     "scripts/issue209_r7b_reducer.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/deepseek-v41-flash-r7-b/MANIFEST.sha256",
+    "docs/investigations/deepseek-v41-flash-r7-b/producer-hashes.json"
+   ],
+   "rationale": "docs/project-status.json limits: R7-B acceptance pending.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue210_v2b_v340l": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 1.38,
+   "baseline_test_count": 38,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-B V340L (#210)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v2-a/",
+     "docs/investigations/vulkan-v2-b-v340l/"
+    ],
+    "scripts_imported": [
+     "scripts/issue210_terminal.py",
+     "scripts/v0c_correctness.py",
+     "scripts/v1a_runner.py",
+     "scripts/v1c_accounting.py",
+     "scripts/v2a_authority_v3.py",
+     "scripts/v2a_harness.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue213_campaign_gate_ordering": {
+   "baseline_group": "issue-213-gate-ordering",
+   "baseline_serial_seconds": 16.67,
+   "baseline_test_count": 95,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "narrow",
+   "group": "issue-213-gate-ordering",
+   "imported_by_scripts": [],
+   "invariant": "Exact-head single-launch suite receipts, gate ordering, and orchestration purity (AGENTS.md doctrine).",
+   "lineage": "campaign gate ordering (#213)",
+   "overrides": {
+    "PreservationTests.test_historical_trees_untouched_by_this_change": {
+     "category": "OBSOLETE",
+     "disposition": "delete",
+     "rationale": "A #213 PR-scope proof that grew into a cross-PR allowlist every later campaign had to extend; it protected no current invariant (accepted bytes are protected by manifest checks and retired-lineage pins). Deleted (Issue #246)."
+    }
+   },
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/investigations/README.md",
+     "docs/investigations/deepseek-v41-flash-r7-c/",
+     "docs/investigations/qwen38-flash-next-r8-h-vulkan/",
+     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/",
+     "docs/investigations/vulkan-v2-c-v340l-platform-stability/",
+     "docs/investigations/vulkan-v2-d-v340l-concurrent/",
+     "docs/investigations/vulkan-v2-d0-overlap-seam/",
+     "docs/investigations/vulkan-v2-e-v340l-peer-link/",
+     "docs/investigations/vulkan-v2-f-v340l-external-memory/",
+     "docs/investigations/vulkan-v2-g-pcie-path-remediation/",
+     "docs/qualification/README.md",
+     "docs/qualification/qwen38-vulkan-v1/"
+    ],
+    "scripts_imported": [
+     "scripts/issue213_gate_orchestration.py",
+     "scripts/run_full_cpu_suite.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current handoff doctrine.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue215_v2c_platform_stability": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.47,
+   "baseline_test_count": 41,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-C V340L (#215)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v2-c-v340l-platform-stability/"
+    ],
+    "scripts_imported": [
+     "scripts/issue215_campaign_plan.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue216_v2d_assembler": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 6.31,
+   "baseline_test_count": 46,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-D V340L (#216)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue216_assemble.py",
+     "scripts/issue216_physical_authority.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue216_v2d_concurrent": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.21,
+   "baseline_test_count": 20,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-D V340L (#216)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v2-d-v340l-concurrent/"
+    ],
+    "scripts_imported": [
+     "scripts/issue216_assemble.py",
+     "scripts/issue216_execution.py",
+     "scripts/issue216_freeze.py",
+     "scripts/issue216_physical_authority.py",
+     "scripts/issue216_receipt.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue219_v2d0_overlap_seam": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 31,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-D0 (#219)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v2-d0-overlap-seam/"
+    ],
+    "scripts_imported": [
+     "scripts/issue219_patch.py",
+     "scripts/issue219_reduce.py",
+     "scripts/issue219_seam_rubric.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue222_r7c": {
+   "baseline_group": "issue-222-r7c",
+   "baseline_serial_seconds": 34.21,
+   "baseline_test_count": 24,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-222-r7c",
+   "imported_by_scripts": [],
+   "invariant": "The R7-C per-stage capacity prerequisite derives from assembled fleet provenance and verified predecessors.",
+   "lineage": "R7 DeepSeek (#222 R7-C)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/finalize_repository.py",
+     "scripts/issue222_r7c.py",
+     "scripts/plan_ci.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/deepseek-v41-flash-r7-c/MANIFEST.sha256",
+    "docs/investigations/deepseek-v41-flash-r7-c/producer-hashes.json"
+   ],
+   "rationale": "Current-fleet capacity prerequisite of the open R7 track.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue226_final_validation_ci": {
+   "baseline_group": "issue-213-gate-ordering",
+   "baseline_serial_seconds": 0.09,
+   "baseline_test_count": 28,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-213-gate-ordering",
+   "imported_by_scripts": [],
+   "invariant": "The hosted Final CPU Validation workflow runs only on an explicit exact SHA and its envelope fails closed.",
+   "lineage": "hosted Final CPU Validation (#226)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue213_gate_orchestration.py",
+     "scripts/plan_ci.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current final-validation gate.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue228_v2e_assembler": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 2.28,
+   "baseline_test_count": 17,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-E V340L (#228)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue228_assemble.py",
+     "scripts/issue228_freeze.py",
+     "scripts/issue228_ladder.py",
+     "scripts/issue228_probe.py",
+     "scripts/issue228_receipt.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue228_v2e_peer_link": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 1.61,
+   "baseline_test_count": 61,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-E V340L (#228)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v2-e-v340l-peer-link/"
+    ],
+    "scripts_imported": [
+     "scripts/issue228_assemble.py",
+     "scripts/issue228_authority.py",
+     "scripts/issue228_freeze.py",
+     "scripts/issue228_ladder.py",
+     "scripts/issue228_probe.py",
+     "scripts/issue228_receipt.py",
+     "scripts/issue228_reduce.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue230_v2f_external_memory": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 2.16,
+   "baseline_test_count": 46,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-F V340L (#230)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue230_assemble.py",
+     "scripts/issue230_authority.py",
+     "scripts/issue230_freeze.py",
+     "scripts/issue230_preflight.py",
+     "scripts/issue230_receipt.py",
+     "scripts/issue230_reduce.py",
+     "scripts/issue230_safety.py",
+     "scripts/issue230_transfer.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue230_v2f_vk_contract": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 2.42,
+   "baseline_test_count": 12,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-F V340L (#230)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue230_transfer.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue232_v2g_pcie_remediation": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 44.1,
+   "baseline_test_count": 96,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "Vulkan V2-G (#232)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v2-f-v340l-external-memory/"
+    ],
+    "scripts_imported": [
+     "scripts/issue232_assemble.py",
+     "scripts/issue232_authority.py",
+     "scripts/issue232_baseline.py",
+     "scripts/issue232_bootproof.py",
+     "scripts/issue232_freeze.py",
+     "scripts/issue232_gate.py",
+     "scripts/issue232_host.py",
+     "scripts/issue232_qualify.py",
+     "scripts/issue232_receipt.py",
+     "scripts/issue232_reduce.py",
+     "scripts/issue232_replay.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Terminal V340L V2 campaign (accepted terminal retained). The V340L successor (#244 R8-I5) consumes comparator/2 (#241/#242) and #237 authority, not V2 tooling; no current tool imports these producers. The suite re-ran historical producers/reducers against frozen evidence.",
+   "replacement": "integrity_replacements[vulkan-v2-v340l-campaigns]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue234_r8h_vulkan": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 1.51,
+   "baseline_test_count": 84,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "integrity-replacement",
+   "group": null,
+   "imported_by_scripts": [],
+   "invariant": "(retired) Reproduced a completed campaign's historical derivation from frozen evidence.",
+   "lineage": "R8-H Qwen Vulkan (#234)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue234_assemble.py",
+     "scripts/issue234_observe.py",
+     "scripts/issue234_receipt.py",
+     "scripts/issue234_reduce.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Completed R8 investigation whose terminal is accepted evidence. No current tool imports its producers (#237 reads only the evidence bytes, which stay pinned). The suite re-ran historical reducers and negative controls against frozen bytes.",
+   "replacement": "integrity_replacements[r8-qwen-retired-investigations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
+   "retention_blocker": null
+  },
+  "test_issue237_r8i_methodology": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 87.05,
+   "baseline_test_count": 104,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "imported_by_scripts": [],
+   "invariant": "The accepted R8-I methodology freeze, holdout custody, thresholds, length bands, and unseal preflight stay fixed-point and fail closed.",
+   "lineage": "R8-I Qwen qualification (#237)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-b/",
+     "docs/qualification/qwen38-vulkan-v1/"
+    ],
+    "scripts_imported": [
+     "scripts/issue237_build_exclusion_inventory.py",
+     "scripts/issue237_freeze_tooling.py",
+     "scripts/issue237_length_bands.py",
+     "scripts/issue237_methodology.py",
+     "scripts/issue237_seal_holdout.py",
+     "scripts/issue237_semantic_adjudication.py",
+     "scripts/issue237_thresholds.py",
+     "scripts/issue237_unseal_preflight.py",
+     "scripts/issue74_methodology.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current statistical/semantic authority consumed by #241 and #244.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue244_r8i5_v340l_import": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 5,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "imported_by_scripts": [],
+   "invariant": "The durable #243 import is completely manifested, cross-bound to its source records, and not comparator authority.",
+   "lineage": "R8-I5 V340L import (#244)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/hardware/pcie-slot-ledger.md",
+     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/MANIFEST.sha256"
+   ],
+   "rationale": "Current #244 applicability work consumes this import.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue35_corrections": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.17,
+   "baseline_test_count": 38,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "link-x1-issue35",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #35 probe/sweep/envelope reducers keep their accepted behavior.",
+   "lineage": "#35 x1 link envelope",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/link-x1-envelope/"
+    ],
+    "scripts_imported": [
+     "scripts/issue35_coarse_concurrent.py",
+     "scripts/issue35_envelope.py",
+     "scripts/issue35_residency_facts.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/link-x1-envelope/MANIFEST.sha256"
+   ],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/link-x1-envelope/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue35_envelope": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 12,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "link-x1-issue35",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #35 probe/sweep/envelope reducers keep their accepted behavior.",
+   "lineage": "#35 x1 link envelope",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue35_envelope.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/link-x1-envelope/MANIFEST.sha256"
+   ],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/link-x1-envelope/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue35_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.14,
+   "baseline_test_count": 7,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "link-x1-issue35",
+   "imported_by_scripts": [],
+   "invariant": "The accepted link-x1-envelope manifest is exact and rejects drift.",
+   "lineage": "#35 x1 link envelope",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/link-x1-envelope/"
+    ],
+    "scripts_imported": [
+     "scripts/v2a_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/link-x1-envelope/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue35_link_probe": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 15,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "link-x1-issue35",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #35 probe/sweep/envelope reducers keep their accepted behavior.",
+   "lineage": "#35 x1 link envelope",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/link-x1-envelope/"
+    ],
+    "scripts_imported": [
+     "scripts/issue35_link_probe.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/link-x1-envelope/MANIFEST.sha256"
+   ],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/link-x1-envelope/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue35_role_sweep": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 17,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "link-x1-issue35",
+   "imported_by_scripts": [],
+   "invariant": "Frozen #35 probe/sweep/envelope reducers keep their accepted behavior.",
+   "lineage": "#35 x1 link envelope",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/link-x1-envelope/"
+    ],
+    "scripts_imported": [
+     "scripts/issue35_role_sweep.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/link-x1-envelope/MANIFEST.sha256"
+   ],
+   "rationale": "Historical campaign replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/link-x1-envelope/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_issue74_methodology": {
+   "baseline_group": "issue-74-79",
+   "baseline_serial_seconds": 0.59,
+   "baseline_test_count": 26,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-74-79",
+   "imported_by_scripts": [],
+   "invariant": "issue74_methodology (corpus generation, reducers, sealing helpers) behaves as frozen; it is imported by V5 (#109/#110), #117, #99-#103, and current R8-I (#237) tooling.",
+   "lineage": "Gemma qualification v1 (#74)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v1/"
+    ],
+    "scripts_imported": [
+     "scripts/generate_issue74_corpora.py",
+     "scripts/issue74_methodology.py",
+     "scripts/select_issue74_margin_stress.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256"
+   ],
+   "rationale": "Shared methodology core with current consumers; its v1 holdout checks are custody authority.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue76_v2_stress_selection": {
+   "baseline_group": "issue-74-79",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 32,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-74-79",
+   "imported_by_scripts": [],
+   "invariant": "Superseded qualification-line stress selection/threshold/holdout custody gates stay fail-closed.",
+   "lineage": "Gemma qualification v2 (#76)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v1/",
+     "docs/qualification/gemma4-12b-it-v2/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/select_issue74_margin_stress.py",
+     "scripts/select_issue76_margin_stress_v2.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Methodology superseded by the accepted V5 line, but the module encodes sealed-holdout custody/unseal authority.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue79_v2_threshold_tooling": {
+   "baseline_group": "issue-74-79",
+   "baseline_serial_seconds": 2.55,
+   "baseline_test_count": 109,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-74-79",
+   "imported_by_scripts": [],
+   "invariant": "Superseded qualification-line stress selection/threshold/holdout custody gates stay fail-closed.",
+   "lineage": "Gemma qualification v2 (#79)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v1/",
+     "docs/qualification/gemma4-12b-it-v2/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/issue79_v2_thresholds.py",
+     "scripts/select_issue76_margin_stress_v2.py",
+     "scripts/verify_issue79_v2_unseal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Methodology superseded by the accepted V5 line, but the module encodes sealed-holdout custody/unseal authority.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue83_semantic_contract": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 0.18,
+   "baseline_test_count": 30,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Decision-stability theorems and the semantic gate evaluator of the numerical-equivalence contract (consumed unchanged by current R8-I work) hold and fail closed.",
+   "lineage": "semantic contract (#83)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-semantic-83/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Normative contract logic, not a campaign replay.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue86_v3_methodology": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 21.0,
+   "baseline_test_count": 96,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Superseded qualification-line stress selection/threshold/holdout custody gates stay fail-closed.",
+   "lineage": "Gemma qualification v3 (#86)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v1/",
+     "docs/qualification/gemma4-12b-it-v2/",
+     "docs/qualification/gemma4-12b-it-v3/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/issue86_v3_methodology.py",
+     "scripts/issue86_v3_thresholds.py",
+     "scripts/select_issue86_margin_stress_v3.py",
+     "scripts/verify_issue86_v3_unseal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Methodology superseded by the accepted V5 line, but the module encodes sealed-holdout custody/unseal authority.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue90_post_v3_diagnosis": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 0.31,
+   "baseline_test_count": 21,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Pinned diagnosis inputs reproduce the accepted statistical classification that fed the V5 doctrine.",
+   "lineage": "post-v3 envelope diagnosis (#90)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/",
+     "docs/qualification/gemma4-12b-it-v3-campaign-88/",
+     "docs/qualification/gemma4-12b-it-v3/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Historical diagnosis tool; its statistical classification is an input to the doctrine chain the accepted V5 contract consumes.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue93_numerical_core_doctrine": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 0.03,
+   "baseline_test_count": 3,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "The prospective numerical-core doctrine classification stays complete and tiered.",
+   "lineage": "numerical-core doctrine (#93)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v1/",
+     "docs/qualification/post-v3-numerical-core-doctrine/"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Normative doctrine consumed by V5 and later qualification lines.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue95_v4_methodology": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 18,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Superseded qualification-line stress selection/threshold/holdout custody gates stay fail-closed.",
+   "lineage": "Gemma qualification v4 (#95)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v4/",
+     "docs/qualification/post-v3-numerical-core-doctrine/"
+    ],
+    "scripts_imported": [
+     "scripts/build_issue95_schemas.py",
+     "scripts/issue74_methodology.py",
+     "scripts/issue95_v4_contract.py",
+     "scripts/issue95_v4_methodology.py",
+     "scripts/verify_issue95_v4_unseal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Methodology superseded by the accepted V5 line, but the module encodes sealed-holdout custody/unseal authority.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue95_v4_thresholds": {
+   "baseline_group": "issue-83-95",
+   "baseline_serial_seconds": 3.34,
+   "baseline_test_count": 7,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "issue-83-95",
+   "imported_by_scripts": [],
+   "invariant": "Superseded qualification-line stress selection/threshold/holdout custody gates stay fail-closed.",
+   "lineage": "Gemma qualification v4 (#95)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/gemma4-12b-it-v4/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/issue95_v4_contract.py",
+     "scripts/issue95_v4_methodology.py",
+     "scripts/issue95_v4_thresholds.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Methodology superseded by the accepted V5 line, but the module encodes sealed-holdout custody/unseal authority.",
+   "replacement": null,
+   "retention_blocker": "Encodes holdout/custody/unseal or statistical-selection authority for a qualification line whose current role is not resolvable without maintainer review (Issue #246 stop condition); retained."
+  },
+  "test_issue99_artifact_core": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 4.69,
+   "baseline_test_count": 49,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "Plan-driven artifact acquisition core semantics (accepted capability).",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/issue99_artifact_core.py",
+     "scripts/issue99_mini_model.py",
+     "scripts/issue99_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_issue99_proof": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 4.29,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "imported_by_scripts": [],
+   "invariant": "The #99 acquisition proof regenerates its accepted evidence and keeps model nouns out of the generic core.",
+   "lineage": "artifact acquisition/orchestration/locality (#99-#103, #200)",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/README.md",
+     "docs/implementation/plan-driven-artifact-acquisition-99/"
+    ],
+    "scripts_imported": [
+     "scripts/issue74_methodology.py",
+     "scripts/issue99_artifact_core.py",
+     "scripts/issue99_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256"
+   ],
+   "rationale": "Acquisition, orchestration, and locality are accepted current capabilities; #200 extends that architecture.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_plan_ci": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 0.61,
+   "baseline_test_count": 81,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "The CI planner is deterministic and fail-closed, fans script changes out to every importing group, and stays at parity with the registry and workflow.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/benchmarks/results/phase1/",
+     "docs/hardware/current-inventory/",
+     "docs/implementation/phase0-baseline.md",
+     "docs/implementation/plan-driven-artifact-acquisition-99/",
+     "docs/implementation/r6-successor-dense-full-integration-117/",
+     "docs/implementation/vulkan-v0-b/",
+     "docs/investigations/vulkan-v0-a/",
+     "docs/investigations/vulkan-v0-b/",
+     "docs/qualification/gemma4-12b-it-v5-campaign-110/",
+     "docs/qualification/gemma4-12b-it-v5/",
+     "docs/qualification/newfamily/"
+    ],
+    "scripts_imported": [
+     "scripts/ci_workflow_parity.py",
+     "scripts/plan_ci.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "The planner is the single selection authority for PR CI.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_project_status": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 8,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "Generated living status sections equal docs/project-status.json; observation, acceptance, and execution-authorization records stay separate.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Guards the living status authority every PR must maintain (docs/status-maintenance.md).",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_run_full_cpu_suite": {
+   "baseline_group": "repo-integrity",
+   "baseline_serial_seconds": 22.33,
+   "baseline_test_count": 29,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "repo-integrity",
+   "imported_by_scripts": [],
+   "invariant": "The full-suite runner executes exactly the serial discovery population and fails closed on identity drift.",
+   "lineage": "repository authority",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/run_full_cpu_suite.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Canonical full CPU validation depends on this runner.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v0b_reduction": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 18.08,
+   "baseline_test_count": 53,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0b",
+   "imported_by_scripts": [],
+   "invariant": "V0-B reductions reproduce from accepted V0-A/V0-B evidence and the V0-B manifest stays closed.",
+   "lineage": "Vulkan V0-A/V0-B",
+   "overrides": {
+    "TestManifestLifecycle": {
+     "category": "EVIDENCE_INTEGRITY",
+     "disposition": "retain",
+     "rationale": "Manifest closure of the accepted V0-B bundle."
+    }
+   },
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v0-a/",
+     "docs/investigations/vulkan-v0-b/"
+    ],
+    "scripts_imported": [
+     "scripts/v0b_cpu_proof.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-b/MANIFEST.sha256"
+   ],
+   "rationale": "Historical reducer replay.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v0-b/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v0c_canonical_run": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 13,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v0-c/"
+    ],
+    "scripts_imported": [
+     "scripts/v0c_canonical_run.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v0-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v0c_correctness": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 7,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v0-c/"
+    ],
+    "scripts_imported": [
+     "scripts/v0c_correctness.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v0-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v0c_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.09,
+   "baseline_test_count": 6,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "The accepted bundle manifest is exact and rejects undeclared files.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v0-c/"
+    ],
+    "scripts_imported": [
+     "scripts/v0c_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-c/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity for accepted evidence.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v0c_execution_seam": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 15,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v0c_execution_seam.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v0-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v0c_vulkan_adapter": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 5,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v0c_vulkan_adapter.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v0-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v0-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1a_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 2,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "The accepted bundle manifest is exact and rejects undeclared files.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1a_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-a/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity for accepted evidence.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v1a_execution_participant": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.04,
+   "baseline_test_count": 10,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1a_execution_participant.py",
+     "scripts/v1a_vulkan_adapter.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1a_runner": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 3,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1a_execution_participant.py",
+     "scripts/v1a_runner.py",
+     "scripts/v1a_vulkan_adapter.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1a_vulkan_adapter": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 6,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1a_vulkan_adapter.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1b_campaign": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 10,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v0-a/",
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v1-b/"
+    ],
+    "scripts_imported": [
+     "scripts/v0c_canonical_run.py",
+     "scripts/v1a_vulkan_adapter.py",
+     "scripts/v1b_campaign.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-b/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-b/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1b_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 3,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "The accepted bundle manifest is exact and rejects undeclared files.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1b_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-b/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity for accepted evidence.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v1c_accounting": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 19,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v1-b/"
+    ],
+    "scripts_imported": [
+     "scripts/v1c_accounting.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v1c_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 5,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "The accepted bundle manifest is exact and rejects undeclared files.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v1c_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-c/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity for accepted evidence.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v1c_runner": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.06,
+   "baseline_test_count": 8,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v1-b/"
+    ],
+    "scripts_imported": [
+     "scripts/v1c_accounting.py",
+     "scripts/v1c_runner.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v1-c/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v1-c/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v2a_authority": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 13,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v2a_authority.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v2-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v2a_discovery": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 11,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v2a_discovery.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v2-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v2a_discovery_authority_binding": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 23,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v2a_authority.py",
+     "scripts/v2a_authority_v2.py",
+     "scripts/v2a_discovery_v2.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v2-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v2a_discovery_authority_binding_r3": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 32,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/v2a_authority.py",
+     "scripts/v2a_authority_v3.py",
+     "scripts/v2a_discovery_v3.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v2-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  },
+  "test_v2a_evidence_manifest": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.05,
+   "baseline_test_count": 8,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "The accepted bundle manifest is exact and rejects undeclared files.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v2-a/"
+    ],
+    "scripts_imported": [
+     "scripts/v2a_manifest.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "Cheap manifest integrity for accepted evidence.",
+   "replacement": null,
+   "retention_blocker": null
+  },
+  "test_v2a_harness": {
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": 0.07,
+   "baseline_test_count": 23,
+   "category": "HISTORICAL_ONLY",
+   "disposition": "retain",
+   "group": "vulkan-v0c-v2a",
+   "imported_by_scripts": [],
+   "invariant": "Frozen V0-C/V1/V2-A harness producers keep their accepted behavior.",
+   "lineage": "Vulkan V0-C/V1/V2-A",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-v1-a/",
+     "docs/investigations/vulkan-v1-c/"
+    ],
+    "scripts_imported": [
+     "scripts/v1a_execution_participant.py",
+     "scripts/v1a_vulkan_adapter.py",
+     "scripts/v1c_accounting.py",
+     "scripts/v2a_authority.py",
+     "scripts/v2a_harness.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-v2-a/MANIFEST.sha256"
+   ],
+   "rationale": "No current (R8-I, #241, #244) tooling imports this harness; only retired V2-B..V2-G campaigns did.",
+   "replacement": null,
+   "retention_blocker": "Test file is a row in accepted evidence manifest(s) docs/investigations/vulkan-v2-a/MANIFEST.sha256; removing or relocating it would rewrite accepted evidence (Issue #246 stop condition). Retirement from canonical discovery needs maintainer authority."
+  }
+ },
+ "schema": "inferswarm.ci.test-retention-audit/1",
+ "starting_authority": {
+  "note": "PR #245 merged; baseline inventory measured at this SHA.",
+  "origin_main": "121ba56a18ad1693e4563be08ee0e154a1e6285e"
+ },
+ "taxonomy": {
+  "categories": [
+   "CURRENT_CONTRACT",
+   "CURRENT_REGRESSION",
+   "EVIDENCE_INTEGRITY",
+   "HISTORICAL_ONLY",
+   "OBSOLETE"
+  ],
+  "dispositions": [
+   "retain",
+   "narrow",
+   "integrity-replacement",
+   "historical-retire",
+   "delete"
+  ],
+  "rules": [
+   "Only HISTORICAL_ONLY or OBSOLETE units may leave canonical discovery/CI.",
+   "A retained HISTORICAL_ONLY/OBSOLETE module must name its retention_blocker (an Issue #246 stop condition).",
+   "Removed modules must name what protects their evidence (replacement).",
+   "overrides classify mixed modules at Class or Class.test_method granularity."
+  ]
+ }
+}

@@ -3,12 +3,15 @@
   "repo-integrity"
  ],
  "full_regression_paths": [
+  "docs/ci/retired-lineage-pins.sha256",
+  "docs/ci/test-retention-audit.json",
   "docs/evidence-manifests.md",
   "docs/finalization.md",
   "docs/project-status.json",
   "docs/status-maintenance.md",
   "requirements-test.txt",
   "scripts/bootstrap_test_env.py",
+  "scripts/check_ci_test_retention.py",
   "scripts/check_test_env.py",
   "scripts/ci_groups.json",
   "scripts/finalize_repository.py",
@@ -19,6 +22,7 @@
  ],
  "groups": {
   "issue-109-110": {
+   "invariant": "Accepted V5 dense Gemma qualification capability: methodology freeze, thresholds, and holdout custody hand-off.",
    "test_modules": [
     "test_issue109_v5_methodology",
     "test_issue109_v5_thresholds",
@@ -28,11 +32,13 @@
    ]
   },
   "issue-115-cleanup": {
+   "invariant": "V5 cleanup retention manifest and the no-plaintext/secret custody guard.",
    "test_modules": [
     "test_issue115_cleanup_retention"
    ]
   },
   "issue-117-133": {
+   "invariant": "Accepted #117 Arm A-C Gemma evidence and its frozen-producer bindings (retained under accepted manifest pins).",
    "test_modules": [
     "test_issue117_integration_fixture",
     "test_issue117_applicability",
@@ -63,49 +69,51 @@
    ]
   },
   "issue-137": {
+   "invariant": "#137 regime-4 diagnosis evidence bindings (retained under accepted manifest pins).",
    "test_modules": [
     "test_issue137_regime4_diagnosis",
-    "test_issue137_regime4_diagnosis_correction",
-    "test_issue157_chunk2_diagnosis"
+    "test_issue137_regime4_diagnosis_correction"
    ]
   },
   "issue-172-requal": {
+   "invariant": "#172 Arm-C requalification record and its H109 holdout-access guard.",
    "test_modules": [
     "test_issue172_requalification"
    ]
   },
-  "issue-175-arm-d": {
-   "test_modules": [
-    "test_issue175_arm_d"
-   ]
-  },
   "issue-182-arm-e": {
+   "invariant": "#182 Arm-E locality-mutation record and its H109 holdout-access guard.",
    "test_modules": [
     "test_issue182_arm_e"
    ]
   },
   "issue-187-r7a": {
+   "invariant": "R7-A DeepSeek static census authority feeding the open R7 track.",
    "test_modules": [
     "test_issue187_r7a"
    ]
   },
   "issue-209-r7b": {
+   "invariant": "R7-B DeepSeek physical-gate record pending maintainer acceptance.",
    "test_modules": [
     "test_issue209_r7b"
    ]
   },
   "issue-213-gate-ordering": {
+   "invariant": "Current campaign gate-ordering doctrine: exact-head suite receipts and hosted Final CPU Validation.",
    "test_modules": [
     "test_issue213_campaign_gate_ordering",
     "test_issue226_final_validation_ci"
    ]
   },
   "issue-222-r7c": {
+   "invariant": "R7-C current-fleet capacity prerequisite for the R7 track.",
    "test_modules": [
     "test_issue222_r7c"
    ]
   },
   "issue-74-79": {
+   "invariant": "Shared qualification methodology core (issue74_methodology is imported by every later qualification line, including R8-I) and the v1/v2 holdout custody/unseal gates.",
    "test_modules": [
     "test_issue74_methodology",
     "test_issue76_v2_stress_selection",
@@ -113,6 +121,7 @@
    ]
   },
   "issue-83-95": {
+   "invariant": "Semantic/numerical-core doctrine consumed by the accepted V5 contract and the v3/v4 holdout custody/unseal gates.",
    "test_modules": [
     "test_issue83_semantic_contract",
     "test_issue86_v3_methodology",
@@ -125,6 +134,7 @@
    ]
   },
   "issue-99-103": {
+   "invariant": "Accepted acquisition, orchestration, and locality-planning capabilities plus the R8-F source-policy seam.",
    "test_modules": [
     "test_issue99_artifact_core",
     "test_issue99_proof",
@@ -135,35 +145,53 @@
     "test_issue200_r8f_proof"
    ]
   },
-  "phase1-analysis": {
+  "link-x1-issue35": {
+   "invariant": "Historical #35 x1 link-envelope lineage, retained because accepted manifests pin its test files.",
    "test_modules": [
-    "test_analyze_phase1_p6",
-    "test_derive_phase1_placement_v2",
-    "test_derive_phase1r_d3_placement",
-    "test_derive_phase1r_d4_placement",
-    "test_derive_phase1r_d7_placement"
+    "test_issue35_link_probe",
+    "test_issue35_role_sweep",
+    "test_issue35_envelope",
+    "test_issue35_evidence_manifest",
+    "test_issue35_corrections"
+   ]
+  },
+  "r8-qwen-lineage": {
+   "invariant": "R8-A frontier census and the R8-B/R8-D evidence consumed by R8-I (test files pinned by accepted manifests).",
+   "test_modules": [
+    "test_issue189_r8a",
+    "test_issue191_r8b",
+    "test_issue195_r8d",
+    "test_issue195_r8d_v2"
+   ]
+  },
+  "r8i-qwen-qualification": {
+   "invariant": "Current R8-I Qwen heterogeneous-Vulkan qualification authority: methodology freeze, holdout custody, comparator semantics, and the accepted R8-I4 V340L import.",
+   "test_modules": [
+    "test_issue237_r8i_methodology",
+    "test_issue244_r8i5_v340l_import"
    ]
   },
   "repo-integrity": {
+   "invariant": "Repository authority: canonical CPU environment, generated status, deterministic finalization, evidence-manifest lifecycle, CI planner/registry/workflow parity, full-suite identity, retention audit, and retired-lineage evidence integrity.",
    "test_modules": [
     "test_project_status",
     "test_finalize_repository",
     "test_evidence_manifest_lifecycle",
     "test_issue131_cpu_test_env",
     "test_plan_ci",
-    "test_run_full_cpu_suite"
+    "test_run_full_cpu_suite",
+    "test_ci_test_retention"
    ]
   },
-  "vulkan-v0-b": {
+  "vulkan-v0b": {
+   "invariant": "Historical V0-B reduction over accepted V0-A/V0-B evidence, retained because accepted manifests pin its test file.",
    "test_modules": [
-    "test_issue189_r8a",
-    "test_issue191_r8b",
-    "test_issue193_r8c",
-    "test_issue195_r8d",
-    "test_issue195_r8d_v2",
-    "test_issue199_r8e",
-    "test_issue207_r8g",
-    "test_v0b_reduction",
+    "test_v0b_reduction"
+   ]
+  },
+  "vulkan-v0c-v2a": {
+   "invariant": "Historical V0-C/V1/V2-A Vulkan harness lineage, retained because accepted manifests pin its test files.",
+   "test_modules": [
     "test_v0c_canonical_run",
     "test_v0c_correctness",
     "test_v0c_evidence_manifest",
@@ -183,25 +211,7 @@
     "test_v2a_harness",
     "test_v2a_evidence_manifest",
     "test_v2a_discovery_authority_binding",
-    "test_v2a_discovery_authority_binding_r3",
-    "test_issue210_v2b_v340l",
-    "test_issue215_v2c_platform_stability",
-    "test_issue219_v2d0_overlap_seam",
-    "test_issue216_v2d_concurrent",
-    "test_issue216_v2d_assembler",
-    "test_issue228_v2e_peer_link",
-    "test_issue228_v2e_assembler",
-    "test_issue230_v2f_external_memory",
-    "test_issue230_v2f_vk_contract",
-    "test_issue232_v2g_pcie_remediation",
-    "test_issue234_r8h_vulkan",
-    "test_issue237_r8i_methodology",
-    "test_issue244_r8i5_v340l_import",
-    "test_issue35_link_probe",
-    "test_issue35_role_sweep",
-    "test_issue35_envelope",
-    "test_issue35_evidence_manifest",
-    "test_issue35_corrections"
+    "test_v2a_discovery_authority_binding_r3"
    ]
   }
  },
@@ -246,13 +256,16 @@
    "issue-117-133"
   ],
   "docs/benchmarks/results/phase1/": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "docs/benchmarks/workloads/": [
    "repo-integrity"
   ],
   "docs/campaign-gate-ordering.md": [
    "issue-213-gate-ordering"
+  ],
+  "docs/ci/": [
+   "repo-integrity"
   ],
   "docs/evidence-manifests.md": [
    "repo-integrity"
@@ -264,7 +277,7 @@
    "repo-integrity"
   ],
   "docs/hardware/pcie-slot-ledger.md": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "docs/implementation/artifact-locality-transition-planning-103/": [
    "issue-99-103",
@@ -291,7 +304,7 @@
    "issue-117-133"
   ],
   "docs/implementation/r6-successor-arm-d-warm-restart-175/": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "docs/implementation/r6-successor-arm-e-locality-mutation-182/": [
    "issue-182-arm-e"
@@ -300,8 +313,8 @@
    "issue-117-133"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/": [
-   "issue-137",
-   "issue-117-133"
+   "issue-117-133",
+   "repo-integrity"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/": [
    "issue-137",
@@ -311,7 +324,7 @@
    "issue-99-103"
   ],
   "docs/investigations/data/": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "docs/investigations/deepseek-v41-flash-r7-a/": [
    "issue-187-r7a"
@@ -323,76 +336,82 @@
    "issue-222-r7c"
   ],
   "docs/investigations/link-x1-envelope/": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "docs/investigations/qwen38-flash-next-r8-a/": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage",
+   "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-b/": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage",
+   "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-c/": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage",
+   "repo-integrity"
   ],
   "docs/investigations/qwen38-flash-next-r8-d-v2/": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "docs/investigations/qwen38-flash-next-r8-d/": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "docs/investigations/qwen38-flash-next-r8-e/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/qwen38-flash-next-r8-g/": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification",
+   "repo-integrity"
   ],
   "docs/investigations/qwen38-flash-next-r8-h-vulkan/": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification",
+   "repo-integrity"
   ],
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "docs/investigations/vulkan-v0-a/": [
-   "vulkan-v0-b"
+   "vulkan-v0b",
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v0-b/": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "docs/investigations/vulkan-v0-c/": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v1-a/": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v1-b/": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v1-c/": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v2-a/": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "docs/investigations/vulkan-v2-b-v340l/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-c-v340l-platform-stability/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-d-v340l-concurrent/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-d0-overlap-seam/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-e-v340l-peer-link/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-f-v340l-external-memory/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/investigations/vulkan-v2-g-pcie-path-remediation/": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "docs/project-status.json": [
    "repo-integrity"
@@ -448,7 +467,7 @@
    "issue-109-110"
   ],
   "docs/qualification/qwen38-vulkan-v1/": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "docs/status-maintenance.md": [
    "repo-integrity"
@@ -460,7 +479,7 @@
    "repo-integrity"
   ],
   "scripts/analyze_phase1_p6.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/bootstrap_test_env.py": [
    "repo-integrity"
@@ -488,6 +507,9 @@
   ],
   "scripts/build_issue95_schemas.py": [
    "issue-83-95"
+  ],
+  "scripts/check_ci_test_retention.py": [
+   "repo-integrity"
   ],
   "scripts/check_phase0_workloads.py": [
    "repo-integrity"
@@ -517,19 +539,19 @@
    "issue-83-95"
   ],
   "scripts/derive_phase1_placement.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/derive_phase1_placement_v2.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/derive_phase1r_d3_placement.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/derive_phase1r_d4_placement.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/derive_phase1r_d7_placement.py": [
-   "phase1-analysis"
+   "repo-integrity"
   ],
   "scripts/finalize_repository.py": [
    "repo-integrity"
@@ -538,7 +560,8 @@
    "issue-109-110"
   ],
   "scripts/generate_issue74_corpora.py": [
-   "issue-74-79"
+   "issue-74-79",
+   "issue-109-110"
   ],
   "scripts/generate_issue76_stress_pool_v2.py": [
    "issue-74-79"
@@ -556,7 +579,9 @@
    "issue-99-103"
   ],
   "scripts/issue101_orchestration.py": [
-   "issue-99-103"
+   "issue-99-103",
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue101_proof.py": [
    "issue-99-103"
@@ -565,7 +590,9 @@
    "issue-99-103"
   ],
   "scripts/issue103_planner.py": [
-   "issue-99-103"
+   "issue-99-103",
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue103_proof.py": [
    "issue-99-103"
@@ -574,7 +601,8 @@
    "issue-83-95"
   ],
   "scripts/issue108_post_v4_statistical_metric_doctrine.py": [
-   "issue-83-95"
+   "issue-83-95",
+   "issue-109-110"
   ],
   "scripts/issue109_v5_contract.py": [
    "issue-109-110"
@@ -595,7 +623,8 @@
    "issue-109-110"
   ],
   "scripts/issue117_accepted_subject.py": [
-   "issue-117-133"
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue117_applicability.py": [
    "issue-117-133"
@@ -664,7 +693,8 @@
    "issue-117-133"
   ],
   "scripts/issue117_planner.py": [
-   "issue-117-133"
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue117_preflight.py": [
    "issue-117-133"
@@ -673,7 +703,8 @@
    "issue-117-133"
   ],
   "scripts/issue117_subject_identity.py": [
-   "issue-117-133"
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue129_arm_c_retry_core.py": [
    "issue-117-133"
@@ -732,32 +763,31 @@
    "issue-117-133"
   ],
   "scripts/issue157_baseline_record.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_binding.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_conclusions.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_instrumentation.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_manifest.py": [
-   "issue-137",
    "repo-integrity"
   ],
   "scripts/issue157_probe_driver.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_replay_harness.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_replay_worker.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue157_sitecustomize.py": [
-   "issue-137"
+   "repo-integrity"
   ],
   "scripts/issue168_authority_record.py": [
    "issue-117-133"
@@ -841,22 +871,28 @@
    "issue-172-requal"
   ],
   "scripts/issue175_assemble.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "scripts/issue175_authority.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "scripts/issue175_campaign_pins.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "scripts/issue175_inventory.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
+  ],
+  "scripts/issue175_manifest.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue175_ordinary_client.py": [
+   "repo-integrity"
   ],
   "scripts/issue175_reduce.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "scripts/issue175_terminal.py": [
-   "issue-175-arm-d"
+   "repo-integrity"
   ],
   "scripts/issue182_authority.py": [
    "issue-182-arm-e"
@@ -880,97 +916,100 @@
    "issue-187-r7a"
   ],
   "scripts/issue187_r7a_manifest.py": [
-   "issue-187-r7a"
+   "issue-187-r7a",
+   "issue-222-r7c"
   ],
   "scripts/issue187_r7a_reducer.py": [
-   "issue-187-r7a"
+   "issue-187-r7a",
+   "issue-222-r7c"
   ],
   "scripts/issue189_r8a_reducer.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage",
+   "issue-222-r7c"
   ],
   "scripts/issue191_derive_fixtures.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue191_negative_controls.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue191_r8b_authority.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue191_run_ladder.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue191_terminal_reduction.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue191_verify_split_set.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue193_phase1_reduction.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue193_r8c_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue193_terminal_reduction.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue195_manifest.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_negative_controls.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_r8d_authority.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_run_ladder.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_sampler_probe.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_terminal_reduction.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_authority.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_freeze_reference.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_launch.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_manifest.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_negative_controls.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_run_ladder.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue195_v2_terminal_reduction.py": [
-   "vulkan-v0-b"
+   "r8-qwen-lineage"
   ],
   "scripts/issue199_r8e_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue199_r8e_capture.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue199_r8e_launch.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue199_r8e_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue199_r8e_negative_controls.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue199_r8e_terminal_reduction.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue200_r8f_fixture.py": [
    "issue-99-103"
@@ -990,287 +1029,338 @@
   "scripts/issue200_r8f_terminal_reduction.py": [
    "issue-99-103"
   ],
+  "scripts/issue207_r8g_authority.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue207_r8g_capture.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue207_r8g_launch.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue207_r8g_manifest.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue207_r8g_negative_controls.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue207_r8g_reduce.py": [
+   "repo-integrity"
+  ],
   "scripts/issue209_r7b_fixture.py": [
-   "issue-209-r7b"
+   "issue-209-r7b",
+   "issue-222-r7c"
   ],
   "scripts/issue209_r7b_manifest.py": [
-   "issue-209-r7b"
+   "issue-209-r7b",
+   "issue-222-r7c"
   ],
   "scripts/issue209_r7b_reducer.py": [
-   "issue-209-r7b"
+   "issue-209-r7b",
+   "issue-222-r7c"
   ],
   "scripts/issue210_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue210_build_authorities.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue210_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue210_terminal.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue213_gate_orchestration.py": [
    "issue-213-gate-ordering"
   ],
+  "scripts/issue215_build_final_authorities.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue215_build_final_authorities_v2.py": [
+   "repo-integrity"
+  ],
   "scripts/issue215_campaign_plan.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
+  ],
+  "scripts/issue215_final_canonical.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue215_manifest.py": [
+   "repo-integrity"
   ],
   "scripts/issue215_sentinel.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue215_snapshot.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue215_terminal.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
+  ],
+  "scripts/issue215_v2_authority.py": [
+   "repo-integrity"
   ],
   "scripts/issue216_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_concurrent.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_execution.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_fault.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
+  ],
+  "scripts/issue216_freeze.py": [
+   "repo-integrity"
   ],
   "scripts/issue216_host.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_physical_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_preflight.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_receipt.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_reset.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_soak.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue216_transport.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_capability_probe.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_observe_collector.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_patch.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_reduce.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue219_seam_rubric.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue222_r7c.py": [
    "issue-222-r7c"
   ],
   "scripts/issue228_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_baselines.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_capability.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_freeze.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_host.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_ladder.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_probe.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_receipt.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue228_reduce.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_freeze.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_host.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_preflight.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_receipt.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_reduce.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_runner.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_safety.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue230_transfer.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_baseline.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_bootproof.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_coldproof.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_freeze.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_gate.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_host.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_qualify.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_receipt.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_reduce.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue232_replay.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_assemble.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_authority.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
+  ],
+  "scripts/issue234_characterize.py": [
+   "repo-integrity"
   ],
   "scripts/issue234_freeze.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_health.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_host.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_ladder.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_manifest.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
+  ],
+  "scripts/issue234_observe.py": [
+   "repo-integrity"
   ],
   "scripts/issue234_placement.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_receipt.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_reduce.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue234_runtime.py": [
-   "vulkan-v0-b"
+   "repo-integrity"
   ],
   "scripts/issue237_build_exclusion_inventory.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_freeze_tooling.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_generate_corpora.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_length_bands.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_methodology.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_reconstruct_tokenizer.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_schemas.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_seal_holdout.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_semantic_adjudication.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_thresholds.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue237_unseal_preflight.py": [
-   "vulkan-v0-b"
+   "r8i-qwen-qualification"
   ],
   "scripts/issue35_coarse_concurrent.py": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "scripts/issue35_envelope.py": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "scripts/issue35_link_probe.py": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "scripts/issue35_residency_facts.py": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "scripts/issue35_role_sweep.py": [
-   "vulkan-v0-b"
+   "link-x1-issue35"
   ],
   "scripts/issue74_methodology.py": [
-   "issue-74-79"
+   "issue-74-79",
+   "issue-109-110",
+   "issue-117-133",
+   "issue-182-arm-e",
+   "issue-83-95",
+   "issue-99-103",
+   "r8i-qwen-qualification"
   ],
   "scripts/issue79_v2_thresholds.py": [
    "issue-74-79"
@@ -1291,13 +1381,17 @@
    "issue-83-95"
   ],
   "scripts/issue95_v4_methodology.py": [
-   "issue-83-95"
+   "issue-83-95",
+   "issue-109-110",
+   "r8i-qwen-qualification"
   ],
   "scripts/issue95_v4_thresholds.py": [
    "issue-83-95"
   ],
   "scripts/issue99_artifact_core.py": [
-   "issue-99-103"
+   "issue-99-103",
+   "issue-117-133",
+   "issue-182-arm-e"
   ],
   "scripts/issue99_mini_model.py": [
    "issue-99-103"
@@ -1306,7 +1400,8 @@
    "issue-99-103"
   ],
   "scripts/run_full_cpu_suite.py": [
-   "repo-integrity"
+   "repo-integrity",
+   "issue-213-gate-ordering"
   ],
   "scripts/seal_issue74_holdout.py": [
    "issue-74-79"
@@ -1330,112 +1425,114 @@
    "repo-integrity"
   ],
   "scripts/v0a_correctness_derive.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0a_correctness_run.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0a_materialization_derive.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0a_materialization_run.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_capability_assessment.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_comparability_audit.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_correctness_stability.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_cpu_proof.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_cpu_supplement_derive.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_cpu_supplement_run.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_economics.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_seam_comparison.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0b_terminal.py": [
-   "vulkan-v0-b"
+   "vulkan-v0b"
   ],
   "scripts/v0c_canonical_run.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v0c_correctness.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a",
+   "link-x1-issue35"
   ],
   "scripts/v0c_execution_seam.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v0c_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v0c_vulkan_adapter.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1a_execution_participant.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1a_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1a_runner.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1a_vulkan_adapter.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1b_campaign.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1b_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1c_accounting.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1c_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v1c_runner.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_authority.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_authority_v2.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_authority_v3.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_discovery.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_discovery_v2.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_discovery_v3.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_harness.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a"
   ],
   "scripts/v2a_manifest.py": [
-   "vulkan-v0-b"
+   "vulkan-v0c-v2a",
+   "link-x1-issue35"
   ],
   "scripts/validate_issue109_prerequisites.py": [
    "issue-109-110"
@@ -1452,9 +1549,6 @@
   "scripts/verify_issue95_v4_unseal.py": [
    "issue-83-95"
   ],
-  "tests/issue230_vk_stub/": [
-   "vulkan-v0-b"
-  ],
   "tests/test_evidence_manifest_lifecycle.py": [
    "repo-integrity"
   ],
@@ -1467,26 +1561,8 @@
   "tests/test_issue153_arm_c_remediation.py": [
    "issue-117-133"
   ],
-  "tests/test_issue157_chunk2_diagnosis.py": [
-   "issue-137"
-  ],
   "tests/test_issue187_r7a.py": [
    "issue-187-r7a"
-  ],
-  "tests/test_issue191_r8b.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue193_r8c.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue195_r8d.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue195_r8d_v2.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue199_r8e.py": [
-   "vulkan-v0-b"
   ],
   "tests/test_issue200_r8f_proof.py": [
    "issue-99-103"
@@ -1497,125 +1573,11 @@
   "tests/test_issue209_r7b.py": [
    "issue-209-r7b"
   ],
-  "tests/test_issue210_v2b_v340l.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue215_v2c_platform_stability.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue216_v2d_assembler.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue216_v2d_concurrent.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue219_v2d0_overlap_seam.py": [
-   "vulkan-v0-b"
-  ],
   "tests/test_issue222_r7c.py": [
    "issue-222-r7c"
   ],
-  "tests/test_issue228_v2e_assembler.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue228_v2e_peer_link.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue230_v2f_external_memory.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue230_v2f_vk_contract.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue232_v2g_pcie_remediation.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue234_r8h_vulkan.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue237_r8i_methodology.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue244_r8i5_v340l_import.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue35_corrections.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue35_envelope.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue35_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue35_link_probe.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_issue35_role_sweep.py": [
-   "vulkan-v0-b"
-  ],
   "tests/test_project_status.py": [
    "repo-integrity"
-  ],
-  "tests/test_v0c_canonical_run.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v0c_correctness.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v0c_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v0c_execution_seam.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v0c_vulkan_adapter.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1a_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1a_execution_participant.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1a_runner.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1a_vulkan_adapter.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1b_campaign.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1b_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1c_accounting.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1c_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v1c_runner.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_authority.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_discovery.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_discovery_authority_binding.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_discovery_authority_binding_r3.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_evidence_manifest.py": [
-   "vulkan-v0-b"
-  ],
-  "tests/test_v2a_harness.py": [
-   "vulkan-v0-b"
   ]
  },
  "planner": "scripts/plan_ci.py",
