@@ -45,10 +45,12 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 import issue248_diagnostic as D
+import issue248_health as H
 import issue248_identity as I
 
 UNIT_SCHEMA = "inferswarm.issue248.diagnostic-unit/1"
@@ -91,7 +93,9 @@ def _arm_identity_ok(arm: str, observation: dict[str, Any]) -> list[str]:
 
 def _device_sample(arm: str) -> dict[str, Any]:
     """One residency sample for both devices (per-process residency)."""
-    sample: dict[str, Any] = {"stage": None, "residency_mib": {}}
+    sample: dict[str, Any] = {
+        "stage": None, "captured_at": datetime.now(timezone.utc).isoformat(),
+        "residency_mib": {}}
     smi = subprocess.run(
         ["nvidia-smi", "--query-gpu=uuid,memory.used",
          "--format=csv,noheader,nounits"],
@@ -105,6 +109,17 @@ def _device_sample(arm: str) -> dict[str, Any]:
         if p.is_file():
             sample["residency_mib"][bdf] = (
                 int(p.read_text().strip()) / (1024 * 1024))
+    if arm == "B":
+        telemetry = subprocess.run(
+            ["nvidia-smi", f"--query-gpu={H.NVIDIA_QUERY}",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=15)
+        if telemetry.returncode != 0 or not telemetry.stdout:
+            raise PhysicalDiagnosticError("in-window NVIDIA telemetry unavailable")
+        sample["nvidia_smi_raw"] = telemetry.stdout
+    if arm == "C":
+        sample["amd_hwmon_raw"] = H.read_amd_hwmon(
+            Path("/sys/bus/pci/devices/00000000:02:00.0/hwmon"))
     return sample
 
 
@@ -136,6 +151,7 @@ def run_diagnostic_unit(
     request_contract: dict[str, Any] | None = None,
     intervention: dict[str, Any] | None = None,
     model_hasher: Callable[[Path], str] | None = None,
+    health_runner: Callable[..., Any] = H._run_readonly,
     github_api: str = "https://api.github.com",
 ) -> dict[str, Any]:
     """Execute ONE diagnostic unit under full gating; retain raw custody.
@@ -238,6 +254,7 @@ def run_diagnostic_unit(
                if not k.startswith("LLAMA_OBSERVE")}
     argv = D.server_argv(Path(binary), launch_member, ngl,
                          PORT_BY_ARM[arm])
+    unit_started_at = datetime.now(timezone.utc).isoformat()
     started = time.monotonic()
 
     runner = execute or _real_execute
@@ -263,6 +280,24 @@ def run_diagnostic_unit(
             or any(type(t) is not int for t in tokens)):
         raise PhysicalDiagnosticError(f"{tag}: malformed token output")
     (unit_dir / "response.json.raw").write_bytes(result["response_raw"])
+    # A successful unit cannot acquire a receipt until its complete raw
+    # platform-health custody is durable and independently verified. The
+    # collection window starts before the launch and ends after teardown.
+    unit_ended_at = datetime.now(timezone.utc).isoformat()
+    device_samples = result.get("device_samples")
+    if not isinstance(device_samples, list):
+        raise PhysicalDiagnosticError("execution returned no device samples")
+    health_receipt = H.capture_platform_health(
+        unit_dir, unit_started_at, unit_ended_at,
+        samples=device_samples, runner=health_runner)
+    verified_health = H.verify_platform_health(
+        unit_dir, health_receipt,
+        expected_gpu_uuid=I.REFERENCE_IDENTITY["gpu_uuid"] if arm == "B" else None,
+        expected_bdf=I.frozen_identity(arm)["bdf"],
+        expected_arm=arm)
+    if not verified_health["valid"]:
+        raise PhysicalDiagnosticError(
+            f"retained platform health invalid: {verified_health['problems']}")
     receipt = {
         "schema": UNIT_SCHEMA,
         "kind": kind,
@@ -285,7 +320,15 @@ def run_diagnostic_unit(
         "server_env": {k: env[k] for k in sorted(env)
                        if k.startswith(("LLAMA_", "VK_", "CUDA_"))},
         "process_attribution": result.get("process_attribution"),
+        "platform_health": health_receipt,
+        "platform_health_receipt": {
+            "path": "platform-health-receipt.json",
+            "bytes": len((unit_dir / "platform-health-receipt.json").read_bytes()),
+            "sha256": D.file_sha256(unit_dir / "platform-health-receipt.json"),
+            "window": {"start": unit_started_at, "end": unit_ended_at},
+        },
         "tokens": tokens,
+        "response_raw_sha256": D.sha256_bytes(result["response_raw"]),
         "deterministic_output_sha256": D.canonical_token_digest(tokens),
         "identity_problems_pre": problems_pre,
         "identity_problems_post": problems_post,
@@ -299,9 +342,26 @@ def run_diagnostic_unit(
                       "case4096": authority.get("case4096")},
         "wall_time_s": wall,
     }
-    rows_meta = result.get("rows_meta")
-    if rows_meta:
-        receipt["observer_rows"] = rows_meta
+    meta_path = unit_dir / "obs.meta.json"
+    if meta_path.is_file():
+        rows, metadata = D.collect_row_meta(unit_dir)
+        if (len(metadata) != D.DECISIONS
+                or any(not isinstance(m, dict) or m.get("pos") != i
+                       for i, m in enumerate(metadata))):
+            raise PhysicalDiagnosticError("observer meta population malformed")
+        receipt["observer_rows"] = [D.row_digest(rows[str(i)])
+                                    for i in range(D.DECISIONS)]
+        receipt["observer_meta_sha256"] = D.file_sha256(meta_path)
+    elif kind in ("repeat", "rung", "regime") or observer_mode in (
+            "comparator", "comparator-dual") and kind == "observer":
+        raise PhysicalDiagnosticError("required full-row capture missing")
+    r8e_rows = D.r8e_captured_rows(unit_dir)
+    if observer_mode in ("comparator-dual", "r8e-only"):
+        if set(r8e_rows) != {0}:
+            raise PhysicalDiagnosticError("R8-E capture must retain position 0")
+        receipt["r8e_row0_sha256"] = D.row_digest(r8e_rows[0])
+    elif r8e_rows:
+        raise PhysicalDiagnosticError("unexpected R8-E capture")
     _write_json(unit_dir / "unit.json", receipt)
     return receipt
 
@@ -371,6 +431,9 @@ def _real_execute(argv: list[str], env: dict[str, str], arm: str,
                         return
                     time.sleep(2.0)
 
+            # Guarantee a retained during-stage sample even for a very
+            # short request; periodic sampling adds further observations.
+            samples.append(_device_sample(arm) | {"stage": "during"})
             thread = threading.Thread(target=sample_loop, daemon=True)
             thread.start()
             try:
@@ -435,7 +498,15 @@ def derive_reduction(evidence_root: Path, namespace: str,
                 problems.append(f"{probe_name}: raw response missing: {tag}")
                 continue
             resp = json.loads(raw_path.read_bytes())
+            if not isinstance(resp, dict):
+                problems.append(
+                    f"{probe_name}: raw response is not an object: {tag}")
+                continue
             tokens = resp.get("tokens", resp.get("tokens_predicted"))
+            if not isinstance(tokens, list):
+                problems.append(
+                    f"{probe_name}: raw response tokens missing: {tag}")
+                continue
             if tokens != receipt.get("tokens"):
                 problems.append(
                     f"{probe_name}: receipt tokens differ from raw: {tag}")
@@ -501,7 +572,7 @@ def _row_determinism(unit_facts: list[dict[str, Any]]) -> dict[str, Any]:
 REDUCER_BLOCKED = "R8I3_REDUCER_BLOCKED_INCOMPLETE"
 # The frozen probe names the decision tree consumes; a plan lacking one
 # can never yield a terminal.
-REQUIRED_PROBE_NAMES = ("repeat", "observer", "canonical")
+REQUIRED_PROBE_NAMES = ("repeat", "placement", "regime", "observer", "canonical")
 # Phase-3 observer-ladder variants (unit-tag variant spellings). The
 # plan declares the primary observer units; every variant's units are
 # derived by swapping the variant segment (same case/arm/index shape).
@@ -526,254 +597,67 @@ def _fork_units(units: list[str], variant: str) -> list[str]:
     return out
 
 
-def derive_terminal(evidence_root: Path, namespace: str,
-                    plan: dict[str, Any]) -> dict[str, Any]:
-    """Mechanically derive the Issue #248 terminal (correction 5).
+def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
+                    *, case4096_authority: Any = None) -> dict[str, Any]:
+    """The strict retained-byte terminal authority; no caller-selected label.
 
-    Decision tree over retained bytes + frozen plan (first match wins;
-    any missing/malformed evidence fails closed to ``blocked``):
-
-      A. NOT_REPRODUCED — the fresh reference repeatability population
-         is complete and fully deterministic (tokens AND rows). The
-         accepted retained #241 mismatch stays verified by Phase-0
-         authority; no later probe reinterprets it.
-      D. PLATFORM_INSTABILITY_LOCALIZED — retained physical evidence:
-         fatal platform states (recorded identity drift or fatal
-         device-sample markers) in the repeat population. Numerical row
-         variation alone never selects D.
-      B. OBSERVER_PERTURBATION_LOCALIZED — repeatable comparator-observer
-         row variability demonstrated AND the dual-capture discriminator
-         agrees within every process AND the comparator-independent
-         capture path (r8e-only) is row-DETERMINISTIC AND the canonical
-         unobserved ladder is token-deterministic: the equivalent
-         unobserved path is stable, localizing the perturbation to
-         observer/capture.
-      C. VULKAN_NONDETERMINISM_LOCALIZED — row variation reproducible,
-         dual capture paths agree within each process (capture
-         faithful), variation survives across fresh processes in every
-         capture mode including the comparator-independent one, and
-         platform health is clean: the boundary is the Vulkan/runtime
-         execution upstream of capture.
-      E. UNRESOLVED — complete probes confirm repeatable variation but
-         no stronger localization predicate is mechanically satisfied.
+    ``case4096_authority`` must be a LIVE dispatch authority payload when
+    (and only when) the plan contains case-4096 units; see
+    ``issue248_terminal.derive_terminal``.
     """
-    evidence_root = Path(evidence_root)
-    base = D.namespace_dir(evidence_root, namespace)
-    plan_probes = plan.get("probes", {})
-    for required in REQUIRED_PROBE_NAMES:
-        if required not in plan_probes:
-            return _blocked(reduction=None, namespace=namespace, extra=[
-                f"plan lacks required probe: {required}"])
-    # Internal plan: repeat + canonical as frozen, plus one probe per
-    # observer-ladder variant (units derived by variant swap).
-    observer_units = plan_probes["observer"].get("units", [])
-    internal: dict[str, Any] = {"probes": {
-        "repeat": plan_probes["repeat"],
-        "canonical": plan_probes["canonical"],
-    }}
-    for variant in OBSERVER_VARIANTS:
-        internal["probes"][f"observer:{variant}"] = {
-            "units": _fork_units(observer_units, variant)}
-    reduction = derive_reduction(evidence_root, namespace, internal)
-    if not reduction["complete"]:
-        return _blocked(reduction, namespace, [
-            "reduction incomplete: missing/malformed retained units"])
-    return _derive_terminal_from_reduction(base, namespace, reduction,
-                                           plan_probes)
-
-
-def _blocked(reduction: dict[str, Any] | None, namespace: str,
-             extra: list[str]) -> dict[str, Any]:
-    return {
-        "schema": REDUCER_SCHEMA,
-        "namespace": namespace,
-        "terminal": None,
-        "terminal_vocabulary": list(D.TERMINALS),
-        "blocked": REDUCER_BLOCKED,
-        "problems": list((reduction or {}).get("problems", [])) + extra,
-        "probes": (reduction or {}).get("probes", {}),
-        "complete": False,
-    }
-
-
-def _terminal_result(namespace: str, reduction: dict[str, Any],
-                     terminal: str, basis: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "schema": REDUCER_SCHEMA,
-        "namespace": namespace,
-        "terminal": terminal,
-        "terminal_vocabulary": list(D.TERMINALS),
-        "blocked": None,
-        "problems": list(reduction.get("problems", [])),
-        "probes": reduction.get("probes", {}),
-        "complete": True,
-        "basis": basis,
-    }
-
-
-def _derive_terminal_from_reduction(
-        base: Path, namespace: str, reduction: dict[str, Any],
-        plan_probes: dict[str, Any]) -> dict[str, Any]:
-    repeat = reduction["probes"]["repeat"]
-    token_det = repeat["token_determinism"]["deterministic"]
-    row_det = repeat["row_determinism"]["deterministic"]
-
-    # --- A. NOT_REPRODUCED ----------------------------------------------
-    if token_det is True and row_det is True:
-        return _terminal_result(namespace, reduction,
-                                "R8I3_REF_NONDETERMINISM_NOT_REPRODUCED",
-                                {"accepted_241_mismatch":
-                                 "verified (Phase-0 authority, read-only)",
-                                 "repeat_population_complete": True,
-                                 "repeat_rows_deterministic": True,
-                                 "note": ("no later probe reinterprets the "
-                                          "accepted #241 blocked campaign")})
-
-    repeat_units = plan_probes["repeat"].get("units", [])
-    if not repeat_units:
-        return _blocked(reduction, namespace, ["repeat probe has no units"])
-
-    # --- D. PLATFORM_INSTABILITY_LOCALIZED -------------------------------
-    health = _platform_health(base, repeat_units)
-    if health is None:
-        return _blocked(reduction, namespace, [
-            "platform-health evidence missing/malformed for the repeat "
-            "population (fail closed: D unavailable)"])
-    if health["fatal_states"]:
-        return _terminal_result(namespace, reduction,
-                                "R8I3_REF_PLATFORM_INSTABILITY_LOCALIZED",
-                                {"fatal_states": health["fatal_states"],
-                                 "evidence": health["evidence"],
-                                 "note": ("causal platform instability "
-                                          "evidence, not numerical "
-                                          "variation alone")})
-
-    # --- Discriminator evidence (B vs C) ----------------------------------
-    dual_ok, dual_detail = _dual_capture_agreement(base, reduction,
-                                                   plan_probes)
-    if dual_ok is None:
-        return _blocked(reduction, namespace,
-                        ["dual-capture discriminator evidence missing "
-                         "(obs-dual units or r8e rows absent)"])
-    canonical = reduction["probes"]["canonical"]
-    canon_det = canonical["token_determinism"]["deterministic"]
-    r8e_det = reduction["probes"]["observer:obs-r8e"][
-        "row_determinism"]["deterministic"]
-    comparator_det = reduction["probes"]["observer:obs-comparator"][
-        "row_determinism"]["deterministic"]
-
-    # --- B. OBSERVER_PERTURBATION_LOCALIZED ------------------------------
-    if (comparator_det is False and dual_ok
-            and r8e_det is True and canon_det is True):
-        return _terminal_result(namespace, reduction,
-                                "R8I3_REF_OBSERVER_PERTURBATION_LOCALIZED",
-                                {"comparator_rows_vary": True,
-                                 "dual_capture_within_process": dual_detail,
-                                 "r8e_only_rows_deterministic": True,
-                                 "canonical_tokens_deterministic": True,
-                                 "note": ("the comparator-independent path "
-                                          "is stable: perturbation "
-                                          "localized to observer/capture")})
-
-    # --- C. VULKAN_NONDETERMINISM_LOCALIZED -------------------------------
-    all_capture_modes_vary = True
-    for variant in ("obs-comparator", "obs-dual", "obs-r8e"):
-        det = reduction["probes"][f"observer:{variant}"][
-            "row_determinism"]["deterministic"]
-        if det is not False:
-            all_capture_modes_vary = False
-            break
-    if (row_det is False and dual_ok and all_capture_modes_vary
-            and canon_det is True):
-        return _terminal_result(namespace, reduction,
-                                "R8I3_REF_VULKAN_NONDETERMINISM_LOCALIZED",
-                                {"row_variation_reproducible": True,
-                                 "dual_capture_within_process": dual_detail,
-                                 "fresh_process_variation_all_modes": True,
-                                 "platform_health_clean": True,
-                                 "boundary": ("Vulkan/runtime execution "
-                                              "upstream of capture")})
-
-    # --- E. UNRESOLVED ------------------------------------------------------
-    if token_det is False or row_det is False:
-        return _terminal_result(namespace, reduction,
-                                "R8I3_REF_NONDETERMINISM_UNRESOLVED",
-                                {"repeatable_variation_confirmed": True,
-                                 "localization_predicates_satisfied": False})
-    return _blocked(reduction, namespace,
-                    ["repeatable variation could not be confirmed from "
-                     "complete evidence; no honest terminal derivable"])
+    import issue248_terminal as terminal
+    return terminal.derive_terminal(evidence_root, namespace, plan,
+                                    case4096_authority=case4096_authority)
 
 
 def _platform_health(base: Path,
                      repeat_units: list[str]) -> dict[str, Any] | None:
-    """Derive platform-health fatal states from retained unit receipts.
+    """Verify complete raw health custody for every selected unit.
 
-    Reads the identity receipts + device samples of the repeat
-    population. Fatal states are an explicit closed vocabulary
-    (recorded identity drift; ECC/XID/thermal/power fatal markers in
-    retained samples). Returns None when evidence is missing/malformed
-    (fail closed), never a vacuous clean bill.
+    The unit receipt binds the retained health ledger by byte count, digest
+    and window. The health verifier independently rehashes each raw artifact,
+    validates its schema/window and derives fatal states from raw evidence;
+    a claimed clean summary is never authority. Missing evidence is never
+    a negative observation.
     """
-    FATAL_MARKERS = ("ECC", "XID", "thermal violation", "power violation",
-                     "overcurrent")
-    fatal: list[str] = []
+    if not repeat_units or len(set(repeat_units)) != len(repeat_units):
+        return None
+    fatal: list[dict[str, Any]] = []
     evidence: list[str] = []
     for tag in repeat_units:
         unit = base / tag
-        identity_path = unit / "identity-post.json"
-        receipt_path = unit / "unit.json"
-        if not identity_path.is_file() or not receipt_path.is_file():
+        if not (unit / "identity-pre.json").is_file() or not (
+                unit / "identity-post.json").is_file():
             return None
         try:
-            receipt = json.loads(receipt_path.read_bytes())
-        except json.JSONDecodeError:
-            return None
-        if receipt.get("tag") != tag:
-            return None
-        if receipt.get("identity_problems_post"):
-            fatal.append(f"{tag}: identity problems post-execution")
-        samples_path = unit / "device-samples.json"
-        if samples_path.is_file():
-            try:
-                text = json.dumps(json.loads(samples_path.read_bytes()))
-            except json.JSONDecodeError:
+            receipt = json.loads((unit / "unit.json").read_bytes())
+            binding = receipt["platform_health_receipt"]
+            health_receipt = receipt["platform_health"]
+            raw = (unit / "platform-health-receipt.json").read_bytes()
+            if (receipt.get("schema") != UNIT_SCHEMA
+                    or receipt.get("tag") != tag
+                    or binding.get("path") != "platform-health-receipt.json"
+                    or type(binding.get("bytes")) is not int
+                    or binding["bytes"] != len(raw)
+                    or binding.get("sha256") != D.sha256_bytes(raw)
+                    or binding.get("window") != health_receipt.get("window")):
                 return None
-            for marker in FATAL_MARKERS:
-                if marker in text:
-                    fatal.append(
-                        f"{tag}: fatal marker {marker} in device samples")
-            evidence.append(f"{tag}/device-samples.json")
-        evidence.append(f"{tag}/identity-post.json")
+            if receipt.get("arm") not in ("B", "C"):
+                return None
+            arm = receipt["arm"]
+            checked = H.verify_platform_health(
+                unit, health_receipt,
+                expected_gpu_uuid=(I.REFERENCE_IDENTITY["gpu_uuid"]
+                                   if arm == "B" else None),
+                expected_bdf=I.frozen_identity(arm)["bdf"],
+                expected_arm=arm)
+            if not checked["valid"]:
+                return None
+            fatal.extend({"tag": tag, **finding}
+                         for finding in checked["fatal_findings"])
+            evidence.extend(f"{tag}/{entry['path']}"
+                            for entry in health_receipt["artifacts"])
+            evidence.append(f"{tag}/platform-health-receipt.json")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            return None
     return {"fatal_states": fatal, "evidence": evidence}
-
-
-def _dual_capture_agreement(base: Path, reduction: dict[str, Any],
-                            plan_probes: dict[str, Any]
-                            ) -> tuple[bool | None, str]:
-    """Do the two capture paths agree WITHIN each obs-dual process?
-
-    For every obs-dual unit with comparator rows: the r8i3 row-0 bytes
-    and the R8-E captured row-0 bytes must be byte-identical (two
-    independently coded capture paths reading the same row). Returns
-    (None, detail) when the evidence is missing, (False, detail) on the
-    first disagreement, (True, detail) when every dual unit agrees.
-    """
-    dual_units = _fork_units(
-        plan_probes["observer"].get("units", []), "obs-dual")
-    if not dual_units:
-        return None, "no obs-dual units retained"
-    checked = 0
-    for tag in dual_units:
-        unit = base / tag
-        meta_path = unit / "obs.meta.json"
-        if not meta_path.is_file():
-            return None, f"obs-dual unit lacks comparator capture: {tag}"
-        rows, _meta = D.collect_row_meta(unit)
-        r8e = D.r8e_captured_rows(unit)
-        if 0 not in r8e:
-            return None, f"obs-dual unit lacks r8e row 0: {tag}"
-        if rows["0"] != r8e[0]:
-            return False, f"dual-capture disagreement in {tag} (row 0)"
-        checked += 1
-    return True, f"both capture paths byte-identical in {checked} processes"

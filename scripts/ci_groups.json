@@ -1259,7 +1259,13 @@
   "scripts/issue248_diagnostic.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue248_health.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue248_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_terminal.py": [
    "r8i-qwen-qualification"
   ],
   "scripts/issue35_coarse_concurrent.py": [
