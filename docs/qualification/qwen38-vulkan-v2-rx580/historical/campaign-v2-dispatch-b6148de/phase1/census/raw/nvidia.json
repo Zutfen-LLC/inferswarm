@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "nvidia-smi",
+    "--query-gpu=index,uuid,pci.bus_id,name,driver_version,memory.total,temperature.gpu,power.draw,power.limit",
+    "--format=csv,noheader"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "0, GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 00000000:03:00.0, NVIDIA GeForce RTX 3060, 610.57.04, 12288 MiB, 33, 13.94 W, 170.00 W\n",
+  "stdout_sha256": "c5144cef6a39b7f2614ca4621a49b1d32ddc31996d2cdbb068fc33e84ca6b9c5"
+}

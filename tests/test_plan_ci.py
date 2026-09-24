@@ -937,10 +937,12 @@ class TestRetentionTopology(unittest.TestCase):
                          ["r8i-qwen-qualification", "repo-integrity"])
 
     def test_issue241_style_change_selects_current_group_not_history(self):
-        p = make_plan(["docs/qualification/qwen38-vulkan-v1/README.md",
-                       "scripts/issue237_unseal_preflight.py",
-                       "tests/test_issue237_r8i_methodology.py",
-                       "docs/hardware/pcie-slot-ledger.md"])
+        p = make_plan([
+            "docs/qualification/qwen38-vulkan-v2-rx580/MANIFEST.sha256",
+            "scripts/issue241_dispatch.py",
+            "scripts/issue241_comparator_producer.py",
+            "tests/test_issue241_r8i3_rx580.py",
+        ])
         self.assertFalse(p["full_regression"])
         self.assertEqual(p["groups"],
                          ["r8i-qwen-qualification", "repo-integrity"])

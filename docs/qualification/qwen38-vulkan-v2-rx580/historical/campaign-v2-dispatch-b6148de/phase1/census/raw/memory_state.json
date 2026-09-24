@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import json;mem_state={k:int(v.split()[0]) for k,v in (line.split(':',1) for line in open('/proc/meminfo')) if k in ('MemAvailable','Cached','Buffers','SReclaimable','SwapTotal','SwapFree')};print(json.dumps(mem_state))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "{\"MemAvailable\": 128545940, \"Buffers\": 305784, \"Cached\": 74546952, \"SwapTotal\": 12596220, \"SwapFree\": 12596220, \"SReclaimable\": 380344}\n",
+  "stdout_sha256": "9cd22cf745ce8d5ed6987daca428556c2297eb89adb3024e8d97a46a37a42979"
+}

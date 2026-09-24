@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "env",
+    "VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_hasvk_icd.json",
+    "vulkaninfo",
+    "--summary"
+  ],
+  "cwd": null,
+  "returncode": 1,
+  "stderr": "'DISPLAY' environment variable not set... skipping surface info\nERROR: [Loader Message] Code 0 : setup_loader_term_phys_devs:  Failed to detect any valid GPUs in the current config\nERROR at ./vulkaninfo/./vulkaninfo.h:247:vkEnumeratePhysicalDevices failed with ERROR_INITIALIZATION_FAILED\n",
+  "stderr_sha256": "085a6b1ccdd807338c0e10808b0d9a18b5cf41d29409d7c30e28e355529fb371",
+  "stdout": "",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

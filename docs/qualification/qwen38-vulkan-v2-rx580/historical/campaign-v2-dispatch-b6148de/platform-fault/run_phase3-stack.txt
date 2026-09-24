@@ -1,0 +1,1 @@
+cat: /proc/147401/stack: Permission denied

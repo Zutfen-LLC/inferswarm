@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import glob,json,pathlib; h=[{p.name:p.read_text().strip() for p in d.iterdir() if p.is_file() and p.name in ('name','temp1_input','power1_average','power1_input','fan1_input')} for d in map(pathlib.Path,glob.glob('/sys/class/hwmon/hwmon*'))]; s=[{'name':d.name,'online':(d/'online').read_text().strip() if (d/'online').exists() else None} for d in map(pathlib.Path,glob.glob('/sys/class/power_supply/*'))];print(json.dumps({'hwmon':h,'power_supply':s}))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "{\"hwmon\": [{\"fan1_input\": \"2012\", \"power1_input\": \"7068000\", \"temp1_input\": \"31000\", \"name\": \"amdgpu\"}, {\"name\": \"hp\"}, {\"temp1_input\": \"41000\", \"name\": \"coretemp\"}], \"power_supply\": []}\n",
+  "stdout_sha256": "a43894853f0624de522aa6ffffcfdbeed2a03d6e55f0cd462ddb7ff7b516cadf"
+}

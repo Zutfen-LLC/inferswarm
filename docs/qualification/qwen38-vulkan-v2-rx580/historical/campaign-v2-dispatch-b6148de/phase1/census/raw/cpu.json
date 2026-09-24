@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import json;print(json.dumps([x.strip() for x in open('/proc/cpuinfo') if x.startswith('model name')][:1]))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "[\"model name\\t: Intel(R) Xeon(R) CPU E5-2683 v3 @ 2.00GHz\"]\n",
+  "stdout_sha256": "cca9ffbc9057e4809bcddc1caa1614f0ea0db544429f3b9b9a91e8a457299a68"
+}

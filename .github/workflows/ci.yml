@@ -523,7 +523,7 @@ jobs:
       - name: Run group r8i-qwen-qualification
         # Issue #246: current R8-I qualification authority (split from
         # the retired vulkan-v0-b catch-all by dependency boundary).
-        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import -v
+        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue241_comparator_producer tests.test_issue241_host_producer tests.test_issue241_measured_practicality tests.test_issue241_physical_producer tests.test_issue241_placement_producer tests.test_issue241_r8i3_rx580 tests.test_issue244_r8i5_v340l_import -v
 
   r8-qwen-lineage:
     name: Group r8-qwen-lineage

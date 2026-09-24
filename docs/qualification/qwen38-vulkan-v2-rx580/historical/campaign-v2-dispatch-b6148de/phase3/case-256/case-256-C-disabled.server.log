@@ -1,0 +1,22 @@
+0.00.042.348 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.042.598 W srv  llama_server: -----------------
+0.00.042.602 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.042.602 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.042.603 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.042.603 W srv  llama_server: -----------------
+0.00.043.894 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.01.143.164 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 8, abort
+0.06.369.337 I cmn          init: llama threadpool init, n_threads = 14
+0.08.422.562 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'
+0.08.434.590 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
+0.08.434.651 I srv  llama_server: model loaded
+0.08.434.657 I srv  llama_server: listening on http://127.0.0.1:19001
+0.08.502.645 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.08.502.689 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.20.334.102 I slot print_timing: id  3 | task 0 | prompt processing, n_tokens =    252, progress = 0.98, t =  11.83 s / 21.30 tokens per second
+0.26.101.022 I slot print_timing: id  3 | task 0 | prompt eval time =   13709.89 ms /   256 tokens (   53.55 ms per token,    18.67 tokens per second)
+0.26.101.029 I slot print_timing: id  3 | task 0 |        eval time =    3888.35 ms /     8 tokens (  555.48 ms per token,     1.80 tokens per second)
+0.26.101.031 I slot print_timing: id  3 | task 0 |       total time =   17598.23 ms /   264 tokens
+0.26.101.037 I slot print_timing: id  3 | task 0 |    graphs reused =          7
+0.26.101.086 I slot      release: id  3 | task 0 | stop processing: n_tokens = 263, truncated = 0
+0.26.142.385 I srv    operator(): operator(): cleaning up before exit...

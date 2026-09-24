@@ -1,0 +1,67 @@
+{
+  "arm": "B",
+  "campaign": "issue241-r8i3-rx580-comparator-v2",
+  "capture_stage": "post-execution",
+  "derived_health": {
+    "fatal_states": [],
+    "observed": {
+      "bdf": "00000000:03:00.0",
+      "device_id": "2504",
+      "driver_in_use": "nvidia",
+      "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "link_speed": "8.0 GT/s",
+      "link_width": "x16",
+      "max_link_speed": "16.0 GT/s",
+      "max_link_width": "x16",
+      "pci_id": "10de:2504",
+      "revision": "a1",
+      "selected_device_present": true,
+      "subsystem_device_id": "4074",
+      "subsystem_vendor_id": "1458",
+      "vendor_id": "10de",
+      "vulkan_api_version": "1.4.341",
+      "vulkan_device_name": "NVIDIA GeForce RTX 3060",
+      "vulkan_device_uuid": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "vulkan_icd": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+    }
+  },
+  "derived_identity": {
+    "bdf": "00000000:03:00.0",
+    "device_id": "2504",
+    "driver_in_use": "nvidia",
+    "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "link_speed": "8.0 GT/s",
+    "link_width": "x16",
+    "max_link_speed": "16.0 GT/s",
+    "max_link_width": "x16",
+    "pci_id": "10de:2504",
+    "revision": "a1",
+    "subsystem_device_id": "4074",
+    "subsystem_vendor_id": "1458",
+    "vendor_id": "10de",
+    "vulkan_api_version": "1.4.341",
+    "vulkan_device_name": "NVIDIA GeForce RTX 3060",
+    "vulkan_device_uuid": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "vulkan_icd": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+  },
+  "ngl": 6,
+  "raw": {
+    "nvidia_smi": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 00000000:03:00.0\n",
+    "sysfs": {
+      "current_link_speed": "8.0 GT/s PCIe",
+      "current_link_width": "16",
+      "device": "0x2504",
+      "driver": "nvidia",
+      "max_link_speed": "16.0 GT/s PCIe",
+      "max_link_width": "16",
+      "revision": "0xa1",
+      "subsystem_device": "0x4074",
+      "subsystem_vendor": "0x1458",
+      "vendor": "0x10de"
+    },
+    "sysfs_present": true,
+    "vulkaninfo_summary": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\nVK_NV_display_stereo                   : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.341\n\tdriverVersion      = 610.57.4.0\n\tvendorID           = 0x10de\n\tdeviceID           = 0x2504\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = NVIDIA GeForce RTX 3060\n\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n\tdriverName         = NVIDIA\n\tdriverInfo         = 610.57.04\n\tconformanceVersion = 1.4.3.3\n\tdeviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n\tdriverUUID         = 9992f558-9329-580d-a9f3-a38ee24bc64d\n"
+  },
+  "repeat_index": 0,
+  "schema": "inferswarm.issue241.phase2-identity-observation/1"
+}

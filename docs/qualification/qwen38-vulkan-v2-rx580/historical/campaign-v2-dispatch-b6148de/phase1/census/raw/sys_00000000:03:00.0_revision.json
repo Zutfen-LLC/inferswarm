@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "cat",
+    "/sys/bus/pci/devices/0000:03:00.0/revision"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "0xa1\n",
+  "stdout_sha256": "6ab2f8165568cda3f5b69b07fd1260f37a34e2097ace41bec2bbfc1aaa500a52"
+}

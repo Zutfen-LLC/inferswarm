@@ -1,0 +1,2 @@
+model name	: Intel(R) Xeon(R) CPU E5-2683 v3 @ 2.00GHz
+28

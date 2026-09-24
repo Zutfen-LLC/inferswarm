@@ -1,0 +1,84 @@
+Traceback (most recent call last):
+  File "/home/hermes/is241-repo/scripts/issue241_comparator_producer.py", line 203, in _real_runner
+    with urllib.request.urlopen(req, timeout=max(.1, deadline-time.monotonic())) as response:
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/urllib/request.py", line 189, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/urllib/request.py", line 489, in open
+    response = self._open(req, data)
+  File "/usr/lib/python3.13/urllib/request.py", line 506, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "/usr/lib/python3.13/urllib/request.py", line 466, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.13/urllib/request.py", line 1348, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/urllib/request.py", line 1323, in do_open
+    r = h.getresponse()
+  File "/usr/lib/python3.13/http/client.py", line 1459, in getresponse
+    response.begin()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/hermes/is241-repo/scripts/issue241_comparator_producer.py", line 218, in _real_runner
+    try: proc.wait(timeout=10)
+         ~~~~~~~~~^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1280, in wait
+    return self._wait(timeout=timeout)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2058, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server', '--model', '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf', '-ngl', '8', '--ctx-size', '8192', '--batch-size', '512', '--host', '127.0.0.1', '--port', '19001']' timed out after 10 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/hermes/is241-campaign-v2/run_phase.py", line 97, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/hermes/is241-campaign-v2/run_phase.py", line 76, in main
+    receipt = phys.run_phase3(REPO, evidence_root=EVIDENCE,
+                              selected_path=selected, server=server,
+                              canonical_server=CANONICAL_SERVER)
+  File "/home/hermes/is241-repo/scripts/issue241_physical.py", line 504, in run_phase3
+    result = _run_inference(authority=authority, repo_root=Path(repo_root),
+                            evidence_root=out, server=server, selected=selected,
+                            runner=runner, canonical_server=canonical_server)
+  File "/home/hermes/is241-repo/scripts/issue241_physical.py", line 448, in _run_inference
+    return cmp_producer.run_phase3_producer(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        repo_root, evidence_root / "phase3", server, selected, authority, runner,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        canonical_server=canonical_server,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        revalidate_authority=lambda old: _revalidate(repo_root, old))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hermes/is241-repo/scripts/issue241_comparator_producer.py", line 408, in run_phase3_producer
+    b=run(case,"B","baseline"); c=run(case,"C","candidate",b["sampled_winners"])
+                                  ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hermes/is241-repo/scripts/issue241_comparator_producer.py", line 270, in run
+    result=execute(argv=argv,env=env,arm=arm,mode=mode,request=request,
+                   prompt=fixtures[case]["prompt_text"],output_dir=case_dir,timeout_s=timeout_s)
+  File "/home/hermes/is241-repo/scripts/issue241_comparator_producer.py", line 220, in _real_runner
+    os.killpg(proc.pid, signal.SIGKILL); proc.wait(timeout=5)
+                                         ~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1280, in wait
+    return self._wait(timeout=timeout)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2058, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['/tmp/issue241-build-du1k1e4x/checkout/build-issue241/bin/llama-server', '--model', '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf', '-ngl', '8', '--ctx-size', '8192', '--batch-size', '512', '--host', '127.0.0.1', '--port', '19001']' timed out after 5 seconds

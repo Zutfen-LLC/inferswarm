@@ -1,0 +1,61 @@
+Sep 23 23:52:22 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 04:42:1a:0d:a9:a1 detected!
+Sep 23 23:52:22 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 04:42:1a:0d:a9:a1 detected!
+Sep 23 23:55:26 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by bc:24:11:9e:b9:91 detected!
+Sep 23 23:55:26 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by bc:24:11:99:aa:e4 detected!
+Sep 23 23:58:45 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 50:17:ff:d6:91:47 detected!
+Sep 23 23:58:45 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 00:e0:70:65:f3:65 detected!
+Sep 24 00:01:44 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by bc:24:11:99:aa:e4 detected!
+Sep 24 00:01:44 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 80:16:09:07:7d:1d detected!
+Sep 24 00:04:26 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by bc:24:11:94:d2:f9 detected!
+Sep 24 00:04:26 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 80:16:09:07:7d:1d detected!
+Sep 24 00:07:11 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 00:e0:70:65:f3:65 detected!
+Sep 24 00:07:11 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 70:5a:0f:49:19:d8 detected!
+Sep 24 00:09:49 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 90:b1:1c:91:1f:a2 detected!
+Sep 24 00:09:49 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 80:16:09:07:7d:1d detected!
+Sep 24 00:12:25 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 90:b1:1c:91:1f:a2 detected!
+Sep 24 00:12:25 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by bc:24:11:94:d2:f9 detected!
+Sep 24 00:15:42 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by bc:24:11:70:ca:b1 detected!
+Sep 24 00:15:42 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 80:16:09:07:7d:1d detected!
+Sep 24 00:16:35 inferswarm01 kernel: perf: interrupt took too long (2520 > 2500), lowering kernel.perf_event_max_sample_rate to 79250
+Sep 24 00:18:28 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by bc:24:11:70:ca:b1 detected!
+Sep 24 00:18:28 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 80:16:09:07:7d:1d detected!
+Sep 24 00:21:07 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by bc:24:11:94:d2:f9 detected!
+Sep 24 00:21:07 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 90:b1:1c:91:1f:a2 detected!
+Sep 24 00:24:18 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 04:42:1a:0d:a9:a1 detected!
+Sep 24 00:24:18 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 04:42:1a:0d:a9:a1 detected!
+Sep 24 00:24:39 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 50:17:ff:d6:91:47 detected!
+Sep 24 00:24:39 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by bc:24:11:94:d2:f9 detected!
+Sep 24 00:27:38 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by 50:17:ff:d6:91:47 detected!
+Sep 24 00:27:38 inferswarm01 kernel: IPv6: eno1: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 70:5a:0f:49:19:d8 detected!
+Sep 24 00:29:50 inferswarm01 kernel: pcieport 0000:00:02.0: AER: Uncorrectable (Fatal) error message received from 0000:00:02.0
+Sep 24 00:29:50 inferswarm01 kernel: pcieport 0000:00:02.0: PCIe Bus Error: severity=Uncorrectable (Fatal), type=Transaction Layer, (Receiver ID)
+Sep 24 00:29:50 inferswarm01 kernel: pcieport 0000:00:02.0:   device [8086:2f04] error status/mask=00000020/00000000
+Sep 24 00:29:50 inferswarm01 kernel: pcieport 0000:00:02.0:    [ 5] SDES                   (First)
+Sep 24 00:29:50 inferswarm01 kernel: snd_hda_intel 0000:02:00.1: Unable to change power state from D3hot to D0, device inaccessible
+Sep 24 00:29:50 inferswarm01 kernel: snd_hda_intel 0000:02:00.1: CORB reset timeout#2, CORBRP = 65535
+Sep 24 00:29:50 inferswarm01 kernel: [drm] PCI error: detected callback, state(2)!!
+Sep 24 00:29:50 inferswarm01 kernel: snd_hda_intel 0000:02:00.1: AER: can't recover (no error_detected callback)
+Sep 24 00:29:51 inferswarm01 kernel: pcieport 0000:00:02.0: broken device, retraining non-functional downstream link at 2.5GT/s
+Sep 24 00:29:52 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:52 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:52 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:52 inferswarm01 kernel: pcieport 0000:00:02.0: retraining failed
+Sep 24 00:29:52 inferswarm01 kernel: pcieport 0000:00:02.0: Data Link Layer Link Active not set in 100 msec
+Sep 24 00:29:52 inferswarm01 kernel: pcieport 0000:00:02.0: AER: Root Port link has been reset (-25)
+Sep 24 00:29:52 inferswarm01 kernel: pcieport 0000:00:02.0: AER: subordinate device reset failed
+Sep 24 00:29:52 inferswarm01 kernel: pcieport 0000:00:02.0: AER: device recovery failed
+Sep 24 00:29:53 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:53 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:53 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:54 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:54 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535
+Sep 24 00:29:54 inferswarm01 kernel: amdgpu 0000:02:00.0: amdgpu: 
+                                     last message was failed ret is 65535

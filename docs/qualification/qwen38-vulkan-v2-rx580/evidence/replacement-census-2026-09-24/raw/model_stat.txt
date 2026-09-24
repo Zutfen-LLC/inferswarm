@@ -1,0 +1,13 @@
+total 70846280
+drwxr-xr-x  2 zutfen zutfen        4096 Sep 14 23:34 .
+drwxr-xr-x 10 zutfen zutfen        4096 Sep 14 23:13 ..
+-rw-rw-r--  1 zutfen zutfen       94973 Sep 14 23:34 download.log
+-rw-rw-r--  1 zutfen zutfen    10946624 Sep 14 23:14 Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf
+-rw-rw-r--  1 zutfen zutfen           0 Sep 14 23:14 Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf.done
+-rw-rw-r--  1 zutfen zutfen 49990818368 Sep 14 23:26 Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf
+-rw-rw-r--  1 zutfen zutfen           0 Sep 14 23:26 Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf.done
+-rw-rw-r--  1 zutfen zutfen 22544696352 Sep 14 23:34 Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf
+-rw-rw-r--  1 zutfen zutfen           0 Sep 14 23:34 Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf.done
+/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf 10946624
+/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf 49990818368
+/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf 22544696352

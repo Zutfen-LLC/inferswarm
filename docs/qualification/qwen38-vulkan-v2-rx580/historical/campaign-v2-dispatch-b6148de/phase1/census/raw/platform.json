@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "python3",
+    "-c",
+    "import json,platform;print(json.dumps({'machine':platform.machine(),'release':platform.release()}))"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "{\"machine\": \"x86_64\", \"release\": \"6.12.105+deb13-amd64\"}\n",
+  "stdout_sha256": "89b12baf1b56dfd8562844e1f3e2d933d6f5ea10590b70a5c0d8953559db1829"
+}

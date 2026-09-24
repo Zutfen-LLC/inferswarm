@@ -1,0 +1,9 @@
+06:53:09 load hwmon-read-error: [Errno 22] Invalid argument
+06:53:11 load hwmon-read-error: [Errno 22] Invalid argument
+06:53:14 load hwmon-read-error: [Errno 22] Invalid argument
+06:53:16 load hwmon-read-error: [Errno 22] Invalid argument
+06:53:18 load hwmon-read-error: [Errno 22] Invalid argument
+06:53:18 ready hwmon-read-error: [Errno 22] Invalid argument
+06:53:18 prompt-start hwmon-read-error: [Errno 22] Invalid argument
+06:53:47 prompt-done temp=46.0C power=32.11W fan=899rpm vram=7201MiB
+06:53:48 post temp=45.0C power=12.07W fan=898rpm vram=7MiB

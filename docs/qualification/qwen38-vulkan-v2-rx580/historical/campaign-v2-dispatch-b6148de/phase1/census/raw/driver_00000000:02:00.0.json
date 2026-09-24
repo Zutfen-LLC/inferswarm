@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "readlink",
+    "-f",
+    "/sys/bus/pci/devices/0000:02:00.0/driver"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "/sys/bus/pci/drivers/amdgpu\n",
+  "stdout_sha256": "79da86f008de308e25f884ff5f3db353166fa7c42bc8bd293c37772c35aded37"
+}

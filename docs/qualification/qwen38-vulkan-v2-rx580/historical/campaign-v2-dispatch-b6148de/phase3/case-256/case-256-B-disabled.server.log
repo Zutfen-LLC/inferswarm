@@ -1,0 +1,21 @@
+0.00.168.993 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.169.206 W srv  llama_server: -----------------
+0.00.169.210 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.169.211 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.169.211 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.169.211 W srv  llama_server: -----------------
+0.00.170.536 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.06.111.922 I cmn          init: llama threadpool init, n_threads = 14
+0.08.314.523 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'
+0.08.326.667 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
+0.08.326.730 I srv  llama_server: model loaded
+0.08.326.741 I srv  llama_server: listening on http://127.0.0.1:19000
+0.08.396.626 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.08.396.687 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.14.998.822 I slot print_timing: id  3 | task 0 | prompt processing, n_tokens =    252, progress = 0.98, t =   6.60 s / 38.17 tokens per second
+0.21.209.666 I slot print_timing: id  3 | task 0 | prompt eval time =    8485.58 ms /   256 tokens (   33.15 ms per token,    30.17 tokens per second)
+0.21.209.673 I slot print_timing: id  3 | task 0 |        eval time =    4327.26 ms /     8 tokens (  618.18 ms per token,     1.62 tokens per second)
+0.21.209.675 I slot print_timing: id  3 | task 0 |       total time =   12812.84 ms /   264 tokens
+0.21.209.681 I slot print_timing: id  3 | task 0 |    graphs reused =          7
+0.21.209.735 I slot      release: id  3 | task 0 | stop processing: n_tokens = 263, truncated = 0
+0.21.212.051 I srv    operator(): operator(): cleaning up before exit...

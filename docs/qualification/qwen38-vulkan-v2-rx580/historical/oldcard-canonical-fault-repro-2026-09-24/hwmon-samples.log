@@ -1,0 +1,7 @@
+06:39:38 load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:40 load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:43 load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:45 load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:47 load hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:47 ready hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'
+06:39:47 prompt-start hwmon-read-error: [Errno 2] No such file or directory: '/sys/class/hwmon/hwmon2/power1_average'

@@ -112,6 +112,12 @@
    "invariant": "Current R8-I Qwen heterogeneous-Vulkan qualification authority: methodology freeze, holdout custody, comparator semantics, and the accepted R8-I4 V340L import. Current R8/Qwen work joins this group.",
    "test_modules": [
     "test_issue237_r8i_methodology",
+    "test_issue241_comparator_producer",
+    "test_issue241_host_producer",
+    "test_issue241_measured_practicality",
+    "test_issue241_physical_producer",
+    "test_issue241_placement_producer",
+    "test_issue241_r8i3_rx580",
     "test_issue244_r8i5_v340l_import"
    ]
   },
@@ -387,6 +393,9 @@
    "issue-109-110"
   ],
   "docs/qualification/qwen38-vulkan-v1/": [
+   "r8i-qwen-qualification"
+  ],
+  "docs/qualification/qwen38-vulkan-v2-rx580/": [
    "r8i-qwen-qualification"
   ],
   "docs/status-maintenance.md": [
@@ -1249,6 +1258,48 @@
   "scripts/issue237_unseal_preflight.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue241_campaign.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_census.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_comparator.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_comparator_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_constants.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_dispatch.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_host_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_observer_patch.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_phase0.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_placement.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_placement_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_practicality.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue241_supersession.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1479,6 +1530,24 @@
   ],
   "tests/test_issue222_r7c.py": [
    "issue-222-r7c"
+  ],
+  "tests/test_issue241_comparator_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue241_host_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue241_measured_practicality.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue241_physical_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue241_placement_producer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue241_r8i3_rx580.py": [
+   "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
    "repo-integrity"

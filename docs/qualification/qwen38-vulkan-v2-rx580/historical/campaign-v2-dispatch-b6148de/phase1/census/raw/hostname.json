@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "hostname"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "inferswarm01\n",
+  "stdout_sha256": "21b28e3a84c0f781642529ee464f39f41711484706f818a9599bcd70ac177821"
+}

@@ -1,0 +1,68 @@
+{
+  "arm": "C",
+  "campaign": "issue241-r8i3-rx580-comparator-v2",
+  "capture_stage": "post-execution",
+  "derived_health": {
+    "fatal_states": [],
+    "observed": {
+      "bdf": "00000000:02:00.0",
+      "device_id": "67df",
+      "driver_in_use": "amdgpu",
+      "link_speed": "8.0 GT/s",
+      "link_width": "x8",
+      "max_link_speed": "8.0 GT/s",
+      "max_link_width": "x16",
+      "pci_id": "1002:67df",
+      "revision": "e7",
+      "selected_device_present": true,
+      "subsystem_device_id": "e353",
+      "subsystem_vendor_id": "1da2",
+      "vendor_id": "1002",
+      "vram_mib": 8192,
+      "vulkan_api_version": "1.4.305",
+      "vulkan_device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+      "vulkan_device_uuid": "00000000-0200-0000-0000-000000000000",
+      "vulkan_icd": "/usr/share/vulkan/icd.d/radeon_icd.json"
+    }
+  },
+  "derived_identity": {
+    "bdf": "00000000:02:00.0",
+    "device_id": "67df",
+    "driver_in_use": "amdgpu",
+    "link_speed": "8.0 GT/s",
+    "link_width": "x8",
+    "max_link_speed": "8.0 GT/s",
+    "max_link_width": "x16",
+    "pci_id": "1002:67df",
+    "revision": "e7",
+    "subsystem_device_id": "e353",
+    "subsystem_vendor_id": "1da2",
+    "vendor_id": "1002",
+    "vram_mib": 8192,
+    "vulkan_api_version": "1.4.305",
+    "vulkan_device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+    "vulkan_device_uuid": "00000000-0200-0000-0000-000000000000",
+    "vulkan_icd": "/usr/share/vulkan/icd.d/radeon_icd.json"
+  },
+  "ngl": 2,
+  "raw": {
+    "amd_vram_total_bytes": 8589934592,
+    "nvidia_smi": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 00000000:03:00.0\n",
+    "sysfs": {
+      "current_link_speed": "8.0 GT/s PCIe",
+      "current_link_width": "8",
+      "device": "0x67df",
+      "driver": "amdgpu",
+      "max_link_speed": "8.0 GT/s PCIe",
+      "max_link_width": "16",
+      "revision": "0xe7",
+      "subsystem_device": "0xe353",
+      "subsystem_vendor": "0x1da2",
+      "vendor": "0x1002"
+    },
+    "sysfs_present": true,
+    "vulkaninfo_summary": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_headless_surface                : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.305\n\tdriverVersion      = 25.0.7\n\tvendorID           = 0x1002\n\tdeviceID           = 0x67df\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)\n\tdriverID           = DRIVER_ID_MESA_RADV\n\tdriverName         = radv\n\tdriverInfo         = Mesa 25.0.7-2+deb13u1\n\tconformanceVersion = 1.4.0.0\n\tdeviceUUID         = 00000000-0200-0000-0000-000000000000\n\tdriverUUID         = 414d442d-4d45-5341-2d44-525600000000\n"
+  },
+  "repeat_index": 1,
+  "schema": "inferswarm.issue241.phase2-identity-observation/1"
+}

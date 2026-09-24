@@ -205,6 +205,12 @@ GROUP_TEST_MODULES = {
     # Current R8-I Qwen heterogeneous-Vulkan qualification authority.
     "r8i-qwen-qualification": [
         "test_issue237_r8i_methodology",
+        "test_issue241_comparator_producer",
+        "test_issue241_host_producer",
+        "test_issue241_measured_practicality",
+        "test_issue241_physical_producer",
+        "test_issue241_placement_producer",
+        "test_issue241_r8i3_rx580",
         "test_issue244_r8i5_v340l_import",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
@@ -618,6 +624,29 @@ PATH_GROUPS = {
     "scripts/issue237_semantic_adjudication.py": ["r8i-qwen-qualification"],
     "scripts/issue237_thresholds.py": ["r8i-qwen-qualification"],
     "scripts/issue237_unseal_preflight.py": ["r8i-qwen-qualification"],
+    # Issue #241 R8-I3: current RX580 comparator/2 qualification surface.
+    "docs/qualification/qwen38-vulkan-v2-rx580/":
+        ["r8i-qwen-qualification"],
+    "scripts/issue241_campaign.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_census.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_comparator.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_comparator_producer.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_constants.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_dispatch.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_host_producer.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_observer_patch.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_phase0.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_physical.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_placement.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_placement_producer.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_practicality.py": ["r8i-qwen-qualification"],
+    "scripts/issue241_supersession.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_comparator_producer.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_host_producer.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_measured_practicality.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_physical_producer.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_placement_producer.py": ["r8i-qwen-qualification"],
+    "tests/test_issue241_r8i3_rx580.py": ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/":
         ["r8i-qwen-qualification"],
     "docs/hardware/pcie-slot-ledger.md": ["r8i-qwen-qualification"],

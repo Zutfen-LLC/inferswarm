@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "readlink",
+    "-f",
+    "/sys/bus/pci/devices/0000:03:00.0/driver"
+  ],
+  "cwd": null,
+  "returncode": 0,
+  "stderr": "",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout": "/sys/bus/pci/drivers/nvidia\n",
+  "stdout_sha256": "5089460dad956e5c3025f60b8e9c38a45ffb3b1f0a7ce3a8bfb8ff4e709e9f11"
+}
