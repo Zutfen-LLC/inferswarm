@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 import sys
 import tempfile
@@ -12,10 +13,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_ci_test_retention as retention  # noqa: E402
 import issue117_proof  # noqa: E402
-import issue137_manifest  # noqa: E402
 import issue137_phase1_inventory  # noqa: E402
 import sync_project_status  # noqa: E402
+
+ISSUE137_BUNDLE = ("docs/implementation/r6-successor-dense-full-integration-117/"
+                   "evidence/arm-c-regime4-diagnosis-137/")
+ISSUE137_MANIFEST = ISSUE137_BUNDLE + "MANIFEST.sha256"
 
 
 FORBIDDEN_LIVING_PATHS = {
@@ -53,24 +58,37 @@ def sha256(path: Path) -> str:
 
 
 class EvidenceManifestLifecycleTests(unittest.TestCase):
-    def copy_issue137_manifest_inputs(self, root):
-        relative_paths = {
-            *(str(issue137_manifest.BUNDLE / name)
-              for name in issue137_manifest.EVIDENCE_FILES),
-            *issue137_manifest.PRODUCERS,
-        }
-        for relative in relative_paths:
-            destination = root / relative
+    @classmethod
+    def setUpClass(cls):
+        cls.audit = retention.load_audit(ROOT)
+        cls.retired, errors = retention.load_retired_rows(ROOT, cls.audit)
+        assert not errors, errors
+
+    def copy_issue137_bundle(self, root):
+        """Scratch copy of the #137 bundle, its row targets, and tombstones."""
+        rows = retention.parse_sha256sum(
+            (ROOT / ISSUE137_MANIFEST).read_text(), "")
+        for relative in [ISSUE137_MANIFEST, str(retention.RETIRED_ROWS), *rows]:
+            if (ROOT / relative).is_file():
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / relative, destination)
+        for present in retention.files_under(ROOT, ISSUE137_BUNDLE):
+            destination = root / present
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / relative, destination)
-        manifest = root / issue137_manifest.MANIFEST
-        manifest.write_bytes(issue137_manifest.render(root))
+            shutil.copy2(ROOT / present, destination)
+
+    def issue137_errors(self, root):
+        bundle = retention.replacement_bundle(self.audit, ISSUE137_BUNDLE)
+        retired, _ = retention.load_retired_rows(root, self.audit)
+        return retention.bundle_errors(root, bundle, retired)
 
     def test_manifests_are_current_outside_frozen_legacy_snapshots(self):
         manifests = sorted((ROOT / "docs").rglob("MANIFEST.sha256"))
         self.assertGreaterEqual(len(manifests), 9)
         for manifest in manifests:
             manifest_relative = manifest.relative_to(ROOT).as_posix()
+            manifest_digest = sha256(manifest)
             legacy_rows = LEGACY_SNAPSHOT_ROWS.get(manifest_relative, set())
             listed = set()
             for line in manifest.read_text().splitlines():
@@ -79,17 +97,35 @@ class EvidenceManifestLifecycleTests(unittest.TestCase):
                 self.assertEqual(len(digest), 64, manifest)
                 self.assertNotIn(relative, listed, manifest)
                 self.assertNotEqual(ROOT / relative, manifest, manifest)
+                listed.add(relative)
                 target = ROOT / relative
-                self.assertTrue(target.is_file(), relative)
+                if not target.is_file():
+                    # a deliberately deleted test file keeps its accepted
+                    # row; only an exact Issue #246 tombstone excuses it
+                    self.assertTrue(self.retired.permits(
+                        manifest_relative, manifest_digest, relative, digest),
+                        f"{manifest_relative}: row target missing without "
+                        f"an exact retired-row tombstone: {relative}")
+                    continue
                 if relative not in legacy_rows:
                     self.assertNotIn(relative, FORBIDDEN_LIVING_PATHS,
                                      manifest)
                     self.assertEqual(sha256(target), digest, relative)
-                listed.add(relative)
             self.assertLessEqual(legacy_rows, listed)
             self.assertEqual(
                 listed & FORBIDDEN_LIVING_PATHS,
                 legacy_rows & FORBIDDEN_LIVING_PATHS)
+
+    def test_real_retired_rows_are_exactly_the_missing_manifest_targets(self):
+        missing = set()
+        for manifest in (ROOT / "docs").rglob("MANIFEST.sha256"):
+            rows = retention.parse_sha256sum(manifest.read_text(), "")
+            missing |= {(manifest.relative_to(ROOT).as_posix(), target)
+                        for target in rows if not (ROOT / target).exists()}
+        tombstoned = {(e["manifest"], e["target"])
+                      for e in self.retired.entries
+                      if e["manifest"].endswith("MANIFEST.sha256")}
+        self.assertEqual(missing, tombstoned)
 
     def test_status_synchronization_has_no_manifest_side_effect(self):
         source = (ROOT / "scripts" / "sync_project_status.py").read_text()
@@ -110,33 +146,45 @@ class EvidenceManifestLifecycleTests(unittest.TestCase):
         ))
 
     def test_issue137_bundle_manifest_is_acyclic_and_complete(self):
-        issue137_manifest.check(ROOT)
-        entries = issue137_manifest.parse(
-            (ROOT / issue137_manifest.MANIFEST).read_bytes())
-        self.assertNotIn(str(issue137_manifest.MANIFEST), entries)
+        rows = retention.parse_sha256sum(
+            (ROOT / ISSUE137_MANIFEST).read_text(), "")
+        self.assertNotIn(ISSUE137_MANIFEST, rows)
+        self.assertEqual(self.issue137_errors(ROOT), [])
+        # every bundle file other than the manifest itself is a row
         self.assertEqual(
-            set(entries), set(issue137_manifest.expected_entries(ROOT)))
+            set(retention.files_under(ROOT, ISSUE137_BUNDLE))
+            - {ISSUE137_MANIFEST},
+            {r for r in rows if r.startswith(ISSUE137_BUNDLE)})
 
     def test_issue137_manifest_rejects_changed_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.copy_issue137_manifest_inputs(root)
-            issue137_manifest.check(root)
-            readme = root / issue137_manifest.BUNDLE / "README.md"
+            self.copy_issue137_bundle(root)
+            self.assertEqual(self.issue137_errors(root), [])
+            readme = root / ISSUE137_BUNDLE / "README.md"
             readme.write_bytes(readme.read_bytes() + b"\nmutation\n")
-            with self.assertRaisesRegex(
-                    issue137_manifest.ManifestError, "manifest drift"):
-                issue137_manifest.check(root)
+            self.assertTrue(any("accepted evidence changed" in e
+                                for e in self.issue137_errors(root)))
 
     def test_issue137_manifest_rejects_undeclared_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.copy_issue137_manifest_inputs(root)
-            rogue = root / issue137_manifest.BUNDLE / "undeclared.json"
-            rogue.write_text("{}\n")
-            with self.assertRaisesRegex(
-                    issue137_manifest.ManifestError, "unexpected"):
-                issue137_manifest.check(root)
+            self.copy_issue137_bundle(root)
+            (root / ISSUE137_BUNDLE / "undeclared.json").write_text("{}\n")
+            self.assertTrue(any("undeclared evidence file" in e
+                                for e in self.issue137_errors(root)))
+
+    def test_issue137_retired_test_rows_need_their_exact_tombstones(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.copy_issue137_bundle(root)
+            (root / retention.RETIRED_ROWS).write_text(json.dumps({
+                "schema": retention.RETIRED_ROWS_SCHEMA,
+                "retirements": []}))
+            errors = self.issue137_errors(root)
+            self.assertTrue(any(
+                "accepted row missing: tests/test_issue137_regime4_diagnosis.py"
+                in e for e in errors), errors)
 
     def test_issue137_parent_authority_is_the_accepted_git_object(self):
         authority = issue137_phase1_inventory.accepted_manifest_bytes(ROOT)
@@ -144,7 +192,7 @@ class EvidenceManifestLifecycleTests(unittest.TestCase):
             hashlib.sha256(authority).hexdigest(),
             issue137_phase1_inventory.AUTHORITY_MANIFEST_SHA256)
         committed = (
-            ROOT / issue137_manifest.BUNDLE / "phase1-inventory.json"
+            ROOT / ISSUE137_BUNDLE / "phase1-inventory.json"
         ).read_text()
         self.assertIn(issue137_phase1_inventory.AUTHORITY_MANIFEST_SHA256,
                       committed)

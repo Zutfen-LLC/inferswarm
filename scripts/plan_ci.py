@@ -102,16 +102,18 @@ ENV_AUTHORITY_PATHS = [
 REPO_AUTHORITY_PATHS = [
     "scripts/finalize_repository.py",
     "scripts/sync_project_status.py",
-    "scripts/issue137_manifest.py",
     "docs/finalization.md",
     "docs/status-maintenance.md",
     "docs/evidence-manifests.md",
     "docs/project-status.json",
     # Issue #246 retention authority: the per-module audit, the
     # retired-lineage evidence pins (a pin change is how retired
-    # accepted evidence would be rewritten), and their checker.
+    # accepted evidence would be rewritten), the retired-test-row
+    # tombstones (how a deleted test leaves an accepted manifest), and
+    # their checker.
     "docs/ci/test-retention-audit.json",
     "docs/ci/retired-lineage-pins.sha256",
+    "docs/ci/retired-test-rows.json",
     "scripts/check_ci_test_retention.py",
 ]
 
@@ -146,17 +148,10 @@ GROUP_TEST_MODULES = {
     ],
     "issue-74-79": [
         "test_issue74_methodology",
-        "test_issue76_v2_stress_selection",
-        "test_issue79_v2_threshold_tooling",
     ],
     "issue-83-95": [
         "test_issue83_semantic_contract",
-        "test_issue86_v3_methodology",
-        "test_issue90_post_v3_diagnosis",
         "test_issue93_numerical_core_doctrine",
-        "test_issue95_v4_methodology",
-        "test_issue95_v4_thresholds",
-        "test_issue105_post_v4_core_diagnosis",
         "test_issue108_post_v4_statistical_metric_doctrine",
     ],
     "issue-109-110": [
@@ -165,40 +160,18 @@ GROUP_TEST_MODULES = {
         "test_issue109_v5_methodology_freeze",
         "test_issue110_v5_custody_handoff",
         "test_issue110_terminal_report_decimals",
+        # Issue #246: the consumed-holdout non-reuse guard extracted from the
+        # retired #168/#172/#182 and V3 suites (V5/#110 doctrine).
+        "test_consumed_holdout_boundary",
     ],
     "issue-117-133": [
-        "test_issue117_integration_fixture",
-        "test_issue117_applicability",
-        "test_issue117_gemma_strategy",
-        "test_issue117_planner",
-        "test_issue117_preflight",
-        "test_issue117_proof",
         "test_issue117_provenance",
-        "test_issue117_checkpoint_authority",
         "test_issue117_accepted_subject",
-        "test_issue117_physical_retention",
         "test_issue117_arm_a_retention",
         "test_issue117_arm_b_retention",
         "test_issue117_arm_c_retention",
-        "test_issue117_arm_c_blocker",
-        "test_issue129_arm_c_retry",
-        "test_issue133_arm_c_retry_campaign",
-        "test_issue133_arm_c_retry_direct",
-        "test_issue133_corrected_freeze",
-        "test_issue133_gate_tooling_drift",
-        "test_issue133_prelaunch_bootstrap",
         "test_issue133_physical_execution_retention",
-        "test_issue153_arm_c_remediation",
-        "test_issue166_swa_remediation_record",
-        "test_issue168_requal_blocked_record",
-        "test_issue170_long_remainder_corpus",
         "test_issue184_final_closure",
-    ],
-    "issue-172-requal": [
-        "test_issue172_requalification",
-    ],
-    "issue-182-arm-e": [
-        "test_issue182_arm_e",
     ],
     # Issue #213: campaign gate ordering / exact-head suite receipts.
     "issue-213-gate-ordering": [
@@ -218,10 +191,6 @@ GROUP_TEST_MODULES = {
     "issue-222-r7c": [
         "test_issue222_r7c",
     ],
-    "issue-137": [
-        "test_issue137_regime4_diagnosis",
-        "test_issue137_regime4_diagnosis_correction",
-    ],
     "issue-99-103": [
         "test_issue99_artifact_core",
         "test_issue99_proof",
@@ -238,49 +207,11 @@ GROUP_TEST_MODULES = {
         "test_issue237_r8i_methodology",
         "test_issue244_r8i5_v340l_import",
     ],
-    # R8-A/B/D Qwen static and llama.cpp RPC lineage (R8-A is the living
-    # frontier reference; R8-B fixtures feed R8-I). Test files are pinned
-    # by accepted evidence manifests.
+    # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
+    # R8-B fixtures feed R8-I).
     "r8-qwen-lineage": [
         "test_issue189_r8a",
         "test_issue191_r8b",
-        "test_issue195_r8d",
-        "test_issue195_r8d_v2",
-    ],
-    # Historical Vulkan lineages retained only because accepted evidence
-    # manifests pin their test files (retirement needs maintainer
-    # authority; see docs/ci/test-retention-audit.json).
-    "vulkan-v0b": [
-        "test_v0b_reduction",
-    ],
-    "vulkan-v0c-v2a": [
-        "test_v0c_canonical_run",
-        "test_v0c_correctness",
-        "test_v0c_evidence_manifest",
-        "test_v0c_execution_seam",
-        "test_v0c_vulkan_adapter",
-        "test_v1a_execution_participant",
-        "test_v1a_runner",
-        "test_v1a_vulkan_adapter",
-        "test_v1a_evidence_manifest",
-        "test_v1b_campaign",
-        "test_v1b_evidence_manifest",
-        "test_v1c_accounting",
-        "test_v1c_runner",
-        "test_v1c_evidence_manifest",
-        "test_v2a_discovery",
-        "test_v2a_authority",
-        "test_v2a_harness",
-        "test_v2a_evidence_manifest",
-        "test_v2a_discovery_authority_binding",
-        "test_v2a_discovery_authority_binding_r3",
-    ],
-    "link-x1-issue35": [
-        "test_issue35_link_probe",
-        "test_issue35_role_sweep",
-        "test_issue35_envelope",
-        "test_issue35_evidence_manifest",
-        "test_issue35_corrections",
     ],
     # CPU-only methodology gates not surfaced as CI steps on main; they
     # are part of full regression so no coverage is lost.
@@ -300,26 +231,23 @@ GROUP_INVARIANTS = {
         "Repository authority: canonical CPU environment, generated status, "
         "deterministic finalization, evidence-manifest lifecycle, CI "
         "planner/registry/workflow parity, full-suite identity, retention "
-        "audit, and retired-lineage evidence integrity.",
+        "audit, exact retired-test-row tombstones, and retired-lineage "
+        "evidence integrity.",
     "issue-74-79":
         "Shared qualification methodology core (issue74_methodology is "
-        "imported by every later qualification line, including R8-I) and "
-        "the v1/v2 holdout custody/unseal gates.",
+        "imported by every later qualification line, including R8-I).",
     "issue-83-95":
-        "Semantic/numerical-core doctrine consumed by the accepted V5 "
-        "contract and the v3/v4 holdout custody/unseal gates.",
+        "Semantic/numerical-core and post-v4 statistical doctrine consumed "
+        "by the accepted V5 contract and current R8-I comparator semantics.",
     "issue-109-110":
         "Accepted V5 dense Gemma qualification capability: methodology "
-        "freeze, thresholds, and holdout custody hand-off.",
+        "freeze, thresholds, holdout custody hand-off, and the consumed-"
+        "holdout non-reuse boundary (h86/h109 never become successor "
+        "inputs).",
     "issue-117-133":
-        "Accepted #117 Arm A-C Gemma evidence and its frozen-producer "
-        "bindings (retained under accepted manifest pins).",
-    "issue-172-requal":
-        "#172 Arm-C requalification record and its H109 holdout-access "
-        "guard.",
-    "issue-182-arm-e":
-        "#182 Arm-E locality-mutation record and its H109 holdout-access "
-        "guard.",
+        "Accepted #117 Arm A-C subject/arm evidence bindings consumed by the "
+        "V5 subject lineage, and the #184 A-E closure of the living status "
+        "record.",
     "issue-213-gate-ordering":
         "Current campaign gate-ordering doctrine: exact-head suite "
         "receipts and hosted Final CPU Validation.",
@@ -329,28 +257,15 @@ GROUP_INVARIANTS = {
         "R7-B DeepSeek physical-gate record pending maintainer acceptance.",
     "issue-222-r7c":
         "R7-C current-fleet capacity prerequisite for the R7 track.",
-    "issue-137":
-        "#137 regime-4 diagnosis evidence bindings (retained under accepted "
-        "manifest pins).",
     "issue-99-103":
         "Accepted acquisition, orchestration, and locality-planning "
         "capabilities plus the R8-F source-policy seam.",
     "r8i-qwen-qualification":
         "Current R8-I Qwen heterogeneous-Vulkan qualification authority: "
         "methodology freeze, holdout custody, comparator semantics, and the "
-        "accepted R8-I4 V340L import.",
+        "accepted R8-I4 V340L import. Current R8/Qwen work joins this group.",
     "r8-qwen-lineage":
-        "R8-A frontier census and the R8-B/R8-D evidence consumed by R8-I "
-        "(test files pinned by accepted manifests).",
-    "vulkan-v0b":
-        "Historical V0-B reduction over accepted V0-A/V0-B evidence, "
-        "retained because accepted manifests pin its test file.",
-    "vulkan-v0c-v2a":
-        "Historical V0-C/V1/V2-A Vulkan harness lineage, retained because "
-        "accepted manifests pin its test files.",
-    "link-x1-issue35":
-        "Historical #35 x1 link-envelope lineage, retained because accepted "
-        "manifests pin its test files.",
+        "R8-A frontier census and the R8-B evidence consumed by R8-I.",
     "issue-115-cleanup":
         "V5 cleanup retention manifest and the no-plaintext/secret custody "
         "guard.",
@@ -402,10 +317,9 @@ PATH_GROUPS = {
 
     # Issue family surfaces
     "scripts/issue74_methodology.py": [
-        "issue-74-79",
         "issue-109-110",
         "issue-117-133",
-        "issue-182-arm-e",
+        "issue-74-79",
         "issue-83-95",
         "issue-99-103",
         "r8i-qwen-qualification"],
@@ -414,49 +328,51 @@ PATH_GROUPS = {
     "scripts/generate_issue74_corpora.py": ["issue-74-79", "issue-109-110"],
     "scripts/hash_issue74_artifacts.py": ["issue-74-79"],
     "scripts/select_issue74_margin_stress.py": ["issue-74-79"],
-    "scripts/select_issue76_margin_stress_v2.py": ["issue-74-79"],
-    "scripts/generate_issue76_stress_pool_v2.py": ["issue-74-79"],
-    "scripts/issue79_v2_thresholds.py": ["issue-74-79"],
-    "scripts/verify_issue79_v2_unseal.py": ["issue-74-79"],
+    "scripts/select_issue76_margin_stress_v2.py": ["repo-integrity"],
+    "scripts/generate_issue76_stress_pool_v2.py": ["repo-integrity"],
+    "scripts/issue79_v2_thresholds.py": ["repo-integrity"],
+    "scripts/verify_issue79_v2_unseal.py": ["repo-integrity"],
     "docs/qualification/gemma4-12b-it-v1/": ["issue-74-79"],
-    "docs/qualification/gemma4-12b-it-v2/": ["issue-74-79"],
+    "docs/qualification/gemma4-12b-it-v2/": ["repo-integrity"],
 
     "scripts/issue83_first_divergence.py": ["issue-83-95"],
-    "scripts/issue86_v3_methodology.py": ["issue-83-95"],
-    "scripts/issue86_v3_thresholds.py": ["issue-83-95"],
-    "scripts/issue90_post_v3_diagnosis.py": ["issue-83-95"],
-    "scripts/issue95_v4_contract.py": ["issue-83-95"],
+    "scripts/issue86_v3_methodology.py": ["repo-integrity"],
+    "scripts/issue86_v3_thresholds.py": ["repo-integrity"],
+    "scripts/issue90_post_v3_diagnosis.py": ["repo-integrity"],
+    "scripts/issue95_v4_contract.py": ["repo-integrity"],
     "scripts/issue95_v4_methodology.py": [
         "issue-83-95",
         "issue-109-110",
         "r8i-qwen-qualification"],
-    "scripts/issue95_v4_thresholds.py": ["issue-83-95"],
-    "scripts/verify_issue86_v3_unseal.py": ["issue-83-95"],
-    "scripts/verify_issue95_v4_unseal.py": ["issue-83-95"],
-    "scripts/select_issue86_margin_stress_v3.py": ["issue-83-95"],
-    "scripts/select_issue95_margin_stress_v4.py": ["issue-83-95"],
-    "scripts/generate_issue86_corpora.py": ["issue-83-95"],
-    "scripts/generate_issue95_corpora.py": ["issue-83-95"],
-    "scripts/commit_issue86_holdout.py": ["issue-83-95"],
-    "scripts/commit_issue86_stress_selection.py": ["issue-83-95"],
-    "scripts/commit_issue95_holdout.py": ["issue-83-95"],
-    "scripts/commit_issue95_stress_selection.py": ["issue-83-95"],
-    "scripts/build_issue86_disjointness.py": ["issue-83-95"],
-    "scripts/build_issue86_schemas.py": ["issue-83-95"],
-    "scripts/build_issue95_disjointness.py": ["issue-83-95"],
-    "scripts/build_issue95_schemas.py": ["issue-83-95"],
-    "scripts/issue105_post_v4_core_diagnosis.py": ["issue-83-95"],
+    "scripts/issue95_v4_thresholds.py": ["repo-integrity"],
+    "scripts/verify_issue86_v3_unseal.py": ["repo-integrity"],
+    "scripts/verify_issue95_v4_unseal.py": ["repo-integrity"],
+    "scripts/select_issue86_margin_stress_v3.py": ["repo-integrity"],
+    "scripts/select_issue95_margin_stress_v4.py": ["repo-integrity"],
+    "scripts/generate_issue86_corpora.py": ["repo-integrity"],
+    "scripts/generate_issue95_corpora.py": ["repo-integrity"],
+    "scripts/commit_issue86_holdout.py": ["repo-integrity"],
+    "scripts/commit_issue86_stress_selection.py": ["repo-integrity"],
+    "scripts/commit_issue95_holdout.py": ["repo-integrity"],
+    "scripts/commit_issue95_stress_selection.py": ["repo-integrity"],
+    "scripts/build_issue86_disjointness.py": ["repo-integrity"],
+    "scripts/build_issue86_schemas.py": ["repo-integrity"],
+    "scripts/build_issue95_disjointness.py": ["repo-integrity"],
+    "scripts/build_issue95_schemas.py": ["repo-integrity"],
+    "scripts/issue105_post_v4_core_diagnosis.py": ["repo-integrity"],
     "scripts/issue108_post_v4_statistical_metric_doctrine.py": [
         "issue-83-95",
         "issue-109-110"],
     "docs/adr/": ["issue-83-95"],  # ADRs decide; doctrine changes are broad
     "docs/architecture/": ["issue-83-95"],
     "docs/qualification/gemma4-12b-it-semantic-83/": ["issue-83-95"],
-    "docs/qualification/gemma4-12b-it-v3/": ["issue-83-95"],
-    "docs/qualification/gemma4-12b-it-v3-campaign-88/": ["issue-83-95"],
-    "docs/qualification/gemma4-12b-it-v4/": ["issue-83-95"],
-    "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/": ["issue-83-95"],
-    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-v3/": ["repo-integrity"],
+    "docs/qualification/gemma4-12b-it-v3-campaign-88/": ["repo-integrity"],
+    "docs/qualification/gemma4-12b-it-v4/": ["repo-integrity"],
+    "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/":
+        ["repo-integrity"],
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/":
+        ["repo-integrity", "issue-83-95"],
     "docs/qualification/post-v3-numerical-core-doctrine/": ["issue-83-95",
         "issue-109-110"],  # test_issue109_v5_methodology also pins it
 
@@ -492,94 +408,87 @@ PATH_GROUPS = {
     # Shared qualification lineage evidence consumed by #117 subject
     # reconstruction (test_issue117_accepted_subject / applicability /
     # preflight read these campaign trees directly).
-    "docs/qualification/gemma4-12b-it-v2-campaign-81/": ["issue-117-133"],
-    "docs/qualification/gemma4-12b-it-v4-campaign-97/": ["issue-117-133"],
+    "docs/qualification/gemma4-12b-it-v2-campaign-81/":
+        ["repo-integrity", "issue-117-133"],
+    "docs/qualification/gemma4-12b-it-v4-campaign-97/":
+        ["repo-integrity", "issue-117-133"],
 
     # Issue #117 producer scripts and evidence tree.
-    "scripts/issue117_accepted_subject.py": [
-        "issue-117-133",
-        "issue-182-arm-e"],
+    "scripts/issue117_accepted_subject.py": ["issue-117-133"],
     "scripts/issue117_applicability.py": ["issue-117-133"],
     "scripts/issue117_arm_a_evidence.py": ["issue-117-133"],
-    "scripts/issue117_arm_b_correction_build.py": ["issue-117-133"],
-    "scripts/issue117_arm_b_evidence.py": ["issue-117-133"],
-    "scripts/issue117_arm_b_observe_hosts.py": ["issue-117-133"],
-    "scripts/issue117_arm_b_transport_audit_build.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_authority_audit.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_blocker_fakeroot.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_blocker_reducer.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_client.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_decoded_bytes.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_direct.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_evidence.py": ["issue-117-133"],
+    "scripts/issue117_arm_b_correction_build.py": ["repo-integrity"],
+    "scripts/issue117_arm_b_evidence.py": ["repo-integrity"],
+    "scripts/issue117_arm_b_observe_hosts.py": ["repo-integrity"],
+    "scripts/issue117_arm_b_transport_audit_build.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_authority_audit.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_blocker_fakeroot.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_blocker_reducer.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_client.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_decoded_bytes.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_direct.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_evidence.py": ["repo-integrity"],
     "scripts/issue117_arm_c_fakeroot.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_frozen_pins.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_observe.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_plan.py": ["issue-117-133"],
-    "scripts/issue117_arm_c_serving_evidence.py": ["issue-117-133"],
+    "scripts/issue117_arm_c_frozen_pins.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_observe.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_plan.py": ["repo-integrity"],
+    "scripts/issue117_arm_c_serving_evidence.py": ["repo-integrity"],
     "scripts/issue117_checkpoint_authority.py": ["issue-117-133"],
     "scripts/issue117_gemma_strategy.py": ["issue-117-133"],
     "scripts/issue117_integration_fixture.py": ["issue-117-133"],
     "scripts/issue117_parsers/": ["issue-117-133"],
-    "scripts/issue117_planner.py": ["issue-117-133", "issue-182-arm-e"],
+    "scripts/issue117_planner.py": ["issue-117-133"],
     "scripts/issue117_preflight.py": ["issue-117-133"],
-    "scripts/issue117_proof.py": ["issue-117-133"],
-    "scripts/issue117_subject_identity.py": [
-        "issue-117-133",
-        "issue-182-arm-e"],
-    "scripts/issue129_arm_c_retry_core.py": ["issue-117-133"],
-    "scripts/issue133_arm_c_retry_campaign.py": ["issue-117-133"],
-    "scripts/issue133_arm_c_retry_direct.py": ["issue-117-133"],
-    "scripts/issue133_canonical_environment.py": ["issue-117-133"],
-    "scripts/issue133_equality_reduction.py": ["issue-117-133"],
-    "scripts/issue133_physical_prelaunch_gate.py": ["issue-117-133"],
-    "scripts/issue133_real_builder_dry_run.py": ["issue-117-133"],
-    "scripts/issue133_regenerate_corrected_freeze.py": ["issue-117-133"],
-    "scripts/issue133_terminal_reduction.py": ["issue-117-133"],
+    "scripts/issue117_proof.py": ["repo-integrity", "issue-117-133"],
+    "scripts/issue117_subject_identity.py": ["issue-117-133"],
+    "scripts/issue129_arm_c_retry_core.py": ["repo-integrity"],
+    "scripts/issue133_arm_c_retry_campaign.py": ["repo-integrity"],
+    "scripts/issue133_arm_c_retry_direct.py": ["repo-integrity"],
+    "scripts/issue133_canonical_environment.py": ["repo-integrity"],
+    "scripts/issue133_equality_reduction.py": ["repo-integrity"],
+    "scripts/issue133_physical_prelaunch_gate.py": ["repo-integrity"],
+    "scripts/issue133_real_builder_dry_run.py": ["repo-integrity"],
+    "scripts/issue133_regenerate_corrected_freeze.py": ["repo-integrity"],
+    "scripts/issue133_terminal_reduction.py": ["repo-integrity"],
     "docs/implementation/r6-successor-dense-full-integration-117/": ["issue-117-133"],
-    # Issue #166 Arm-C SWA remediation record area (CPU-only successor
-    # record; the FreeToken remediation producer is pinned by hash inside
-    # remediation-record.json).
-    "docs/implementation/r6-successor-arm-c-swa-remediation-166/": ["issue-117-133"],
-    # Issue #168 Arm-C post-SWA requalification blocked record (CPU-only
-    # pre-observation terminal; no physical execution).
-    "docs/implementation/r6-successor-arm-c-requal-blocked-168/": ["issue-117-133"],
-    "scripts/issue168_corpus_census.py": ["issue-117-133"],
-    "scripts/issue168_authority_record.py": ["issue-117-133"],
-    "scripts/issue168_terminal_reduction.py": ["issue-117-133"],
-    "scripts/issue168_manifest.py": ["issue-117-133"],
-    # Issue #170 Arm-C long-remainder public corpus freeze (CPU-only
-    # prospective corpus; tokenizer-bound producer + stdlib reducer).
-    "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/": [
-        "issue-117-133"],
-    "scripts/issue170_corpus_methodology.py": ["issue-117-133"],
-    "scripts/issue170_corpus_producer.py": ["issue-117-133"],
-    "scripts/issue170_authority_record.py": ["issue-117-133"],
-    "scripts/issue170_terminal_reduction.py": ["issue-117-133"],
-    "scripts/issue170_manifest.py": ["issue-117-133"],
-    # Issue #172 Arm-C physical requalification (post-#166/#170; the
-    # physical evidence bundle + CPU-side campaign tooling; the physical
-    # drivers are hash-retained inside the preflight records).
-    "docs/implementation/r6-successor-arm-c-requalification-172/": [
-        "issue-172-requal"],
-    "scripts/issue172_campaign_pins.py": ["issue-172-requal"],
-    "scripts/issue172_authority.py": ["issue-172-requal"],
-    "scripts/issue172_corpus_bind.py": ["issue-172-requal"],
-    "scripts/issue172_direct_loop.py": ["issue-172-requal"],
-    "scripts/issue172_ordinary_loop.py": ["issue-172-requal"],
-    "scripts/issue172_cpu_preflight.py": ["issue-172-requal"],
-    "scripts/issue172_physical_preflight.py": ["issue-172-requal"],
-    "scripts/issue172_refreeze.py": ["issue-172-requal"],
-    "scripts/issue172_real_builder_dry_run.py": ["issue-172-requal"],
-    "scripts/issue172_direct_driver.py": ["issue-172-requal"],
-    "scripts/issue172_ordinary_client.py": ["issue-172-requal"],
-    "scripts/issue172_serving_evidence.py": ["issue-172-requal"],
-    "scripts/issue172_equality_reduce.py": ["issue-172-requal"],
-    "scripts/issue172_sentinel_reduce.py": ["issue-172-requal"],
-    "scripts/issue172_swa_observation.py": ["issue-172-requal"],
-    "scripts/issue172_zero_invariants.py": ["issue-172-requal"],
-    "scripts/issue172_terminal.py": ["issue-172-requal"],
-    "scripts/issue172_manifest.py": ["issue-172-requal"],
+    # Issues #166/#168/#170/#172/#182 Arm-C/Arm-E records: behavior suites
+    # retired (Issue #246, PR #247 correction round 1). The bundles and
+    # producers are integrity-pinned; test_issue184_final_closure still
+    # reads the A-E trees, so issue-117-133 also runs.
+    "docs/implementation/r6-successor-arm-c-swa-remediation-166/":
+        ["repo-integrity", "issue-117-133"],
+    "docs/implementation/r6-successor-arm-c-requal-blocked-168/":
+        ["repo-integrity", "issue-117-133"],
+    "scripts/issue168_corpus_census.py": ["repo-integrity"],
+    "scripts/issue168_terminal_reduction.py": ["repo-integrity"],
+    "scripts/issue168_manifest.py": ["repo-integrity"],
+    "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/":
+        ["repo-integrity", "issue-117-133"],
+    "scripts/issue170_corpus_methodology.py": ["repo-integrity"],
+    "scripts/issue170_corpus_producer.py": ["repo-integrity"],
+    "scripts/issue170_authority_record.py": ["repo-integrity"],
+    "scripts/issue170_terminal_reduction.py": ["repo-integrity"],
+    "scripts/issue170_manifest.py": ["repo-integrity"],
+    "docs/implementation/r6-successor-arm-c-requalification-172/":
+        ["repo-integrity", "issue-117-133"],
+    "scripts/issue172_campaign_pins.py": ["repo-integrity"],
+    "scripts/issue172_authority.py": ["repo-integrity"],
+    "scripts/issue172_corpus_bind.py": ["repo-integrity"],
+    "scripts/issue172_direct_loop.py": ["repo-integrity"],
+    "scripts/issue172_ordinary_loop.py": ["repo-integrity"],
+    "scripts/issue172_cpu_preflight.py": ["repo-integrity"],
+    "scripts/issue172_physical_preflight.py": ["repo-integrity"],
+    "scripts/issue172_refreeze.py": ["repo-integrity"],
+    "scripts/issue172_real_builder_dry_run.py": ["repo-integrity"],
+    "scripts/issue172_direct_driver.py": ["repo-integrity"],
+    "scripts/issue172_ordinary_client.py": ["repo-integrity"],
+    "scripts/issue172_serving_evidence.py": ["repo-integrity"],
+    "scripts/issue172_equality_reduce.py": ["repo-integrity"],
+    "scripts/issue172_sentinel_reduce.py": ["repo-integrity"],
+    "scripts/issue172_swa_observation.py": ["repo-integrity"],
+    "scripts/issue172_zero_invariants.py": ["repo-integrity"],
+    "scripts/issue172_terminal.py": ["repo-integrity"],
+    "scripts/issue172_manifest.py": ["repo-integrity"],
     # Retired #175 Arm-D behavior suite (Issue #246): integrity-only.
     "docs/implementation/r6-successor-arm-d-warm-restart-175/":
         ["repo-integrity"],
@@ -591,13 +500,13 @@ PATH_GROUPS = {
     "scripts/issue175_ordinary_client.py": ["repo-integrity"],
     "scripts/issue175_reduce.py": ["repo-integrity"],
     "scripts/issue175_terminal.py": ["repo-integrity"],
-    "docs/implementation/r6-successor-arm-e-locality-mutation-182/": [
-        "issue-182-arm-e"],
-    "scripts/issue182_campaign_pins.py": ["issue-182-arm-e"],
-    "scripts/issue182_authority.py": ["issue-182-arm-e"],
-    "scripts/issue182_inventory.py": ["issue-182-arm-e"],
-    "scripts/issue182_compare.py": ["issue-182-arm-e"],
-    "scripts/issue182_terminal.py": ["issue-182-arm-e"],
+    "docs/implementation/r6-successor-arm-e-locality-mutation-182/":
+        ["repo-integrity", "issue-117-133"],
+    "scripts/issue182_campaign_pins.py": ["repo-integrity"],
+    "scripts/issue182_authority.py": ["repo-integrity"],
+    "scripts/issue182_inventory.py": ["repo-integrity"],
+    "scripts/issue182_compare.py": ["repo-integrity"],
+    "scripts/issue182_terminal.py": ["repo-integrity"],
     "scripts/issue187_r7a_census.py": ["issue-187-r7a"],
     "scripts/issue187_r7a_manifest.py": ["issue-187-r7a", "issue-222-r7c"],
     "scripts/issue187_r7a_reducer.py": ["issue-187-r7a", "issue-222-r7c"],
@@ -606,7 +515,7 @@ PATH_GROUPS = {
     "scripts/issue209_r7b_fixture.py": ["issue-209-r7b", "issue-222-r7c"],
     "scripts/issue222_r7c.py": ["issue-222-r7c"],
     "docs/investigations/deepseek-v41-flash-r7-b/": ["issue-209-r7b"],
-    "scripts/issue182_manifest.py": ["issue-182-arm-e"],
+    "scripts/issue182_manifest.py": ["repo-integrity"],
     # Issue #213 campaign gate ordering (orchestration tooling + tests);
     # Issue #226 adds the hosted Final CPU Validation workflow, envelope
     # seams, and its controls in the same doctrinal group.  (Workflow
@@ -622,15 +531,16 @@ PATH_GROUPS = {
         "repo-integrity",
         "issue-213-gate-ordering"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
-    # the narrower #137 subtree fans out to both its semantic group and
-    # the broader shared-tree lineage (the #117 prefix rule above also
-    # matches, and classification unions all matching rules).
-    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/":
-        ["issue-137", "issue-117-133"],
+    # its behavior suites are retired (Issue #246) and the bundle is
+    # integrity-pinned (the #117 prefix rule above also matches, and
+    # classification unions all matching rules).
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/": [
+        "repo-integrity",
+        "issue-117-133"],
 
-    "scripts/issue137_binding.py": ["issue-137"],
+    "scripts/issue137_binding.py": ["repo-integrity"],
     # Retired #157 chunk-2 diagnosis behavior suite (Issue #246): the
-    # bundle is integrity-pinned; test_issue166 still reads it.
+    # bundle is integrity-pinned.
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/":
         ["issue-117-133", "repo-integrity"],
     "scripts/issue157_baseline_record.py": ["repo-integrity"],
@@ -642,39 +552,27 @@ PATH_GROUPS = {
     "scripts/issue157_replay_harness.py": ["repo-integrity"],
     "scripts/issue157_replay_worker.py": ["repo-integrity"],
     "scripts/issue157_sitecustomize.py": ["repo-integrity"],
-    # Issue #153 Arm-C remediation slice (CPU-only; bundle lives under the
-    # #117 implementation area, scripts + tests classified to the
-    # issue-117-133 lineage group).
-    "scripts/issue153_phase0_inventory.py": ["issue-117-133"],
-    "scripts/issue153_producer_delta.py": ["issue-117-133"],
-    "scripts/issue153_boundary_matrix.py": ["issue-117-133"],
-    "scripts/issue153_manifest.py": ["issue-117-133", "repo-integrity"],
-    "tests/test_issue153_arm_c_remediation.py": ["issue-117-133"],
-    "scripts/issue137_conclusions.py": ["issue-137"],
-    "scripts/issue137_phase1_inventory.py": ["issue-137"],
-    "scripts/issue137_probe_driver.py": ["issue-137",
-        "issue-74-79"],   # Phase-1 probes feed 74-79 placement lineage
+    # Retired #153 Arm-C remediation suite (Issue #246): the bundle under
+    # the #117 implementation area and its producers are integrity-pinned.
+    "scripts/issue153_phase0_inventory.py": ["repo-integrity"],
+    "scripts/issue153_producer_delta.py": ["repo-integrity"],
+    "scripts/issue153_boundary_matrix.py": ["repo-integrity"],
+    "scripts/issue153_manifest.py": ["repo-integrity"],
+    "scripts/issue137_conclusions.py": ["repo-integrity"],
+    "scripts/issue137_phase1_inventory.py": ["repo-integrity"],
+    "scripts/issue137_probe_driver.py": ["repo-integrity"],
     # (The synthetic docs/implementation/vulkan-arm-c-regime4-diagnosis-137/
     # prefix never matched a tracked path; the real retained #137
     # evidence rule lives with the #117 tree above.)
 
-    "scripts/issue99_artifact_core.py": [
-        "issue-99-103",
-        "issue-117-133",
-        "issue-182-arm-e"],
+    "scripts/issue99_artifact_core.py": ["issue-117-133", "issue-99-103"],
     "scripts/issue99_mini_model.py": ["issue-99-103"],
     "scripts/issue99_proof.py": ["issue-99-103"],
     "scripts/issue101_fixture.py": ["issue-99-103"],
-    "scripts/issue101_orchestration.py": [
-        "issue-99-103",
-        "issue-117-133",
-        "issue-182-arm-e"],
+    "scripts/issue101_orchestration.py": ["issue-117-133", "issue-99-103"],
     "scripts/issue101_proof.py": ["issue-99-103"],
     "scripts/issue103_fixture.py": ["issue-99-103"],
-    "scripts/issue103_planner.py": [
-        "issue-99-103",
-        "issue-117-133",
-        "issue-182-arm-e"],
+    "scripts/issue103_planner.py": ["issue-117-133", "issue-99-103"],
     "scripts/issue103_proof.py": ["issue-99-103"],
     # #103 evidence; test_issue117_provenance and test_issue103_planner /
     # test_evidence_manifest_lifecycle consume this shared tree.
@@ -723,16 +621,17 @@ PATH_GROUPS = {
     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/":
         ["r8i-qwen-qualification"],
     "docs/hardware/pcie-slot-ledger.md": ["r8i-qwen-qualification"],
-    # R8-A/B/C/D Qwen lineage; R8-A/R8-B evidence also feeds the #237
-    # historical-exclusion inventory and length-band derivation.
+    # R8-A/B Qwen lineage; R8-A/R8-B evidence also feeds the #237
+    # historical-exclusion inventory and length-band derivation. Retired
+    # R8-D/R8-D-v2 suites (Issue #246): integrity-only.
     "docs/investigations/qwen38-flash-next-r8-a/":
         ["r8-qwen-lineage", "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-b/":
         ["r8-qwen-lineage", "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-c/":
         ["r8-qwen-lineage", "repo-integrity"],
-    "docs/investigations/qwen38-flash-next-r8-d/": ["r8-qwen-lineage"],
-    "docs/investigations/qwen38-flash-next-r8-d-v2/": ["r8-qwen-lineage"],
+    "docs/investigations/qwen38-flash-next-r8-d/": ["repo-integrity"],
+    "docs/investigations/qwen38-flash-next-r8-d-v2/": ["repo-integrity"],
     "scripts/issue189_r8a_reducer.py": ["r8-qwen-lineage", "issue-222-r7c"],
     "scripts/issue191_derive_fixtures.py": ["r8-qwen-lineage"],
     "scripts/issue191_negative_controls.py": ["r8-qwen-lineage"],
@@ -740,19 +639,19 @@ PATH_GROUPS = {
     "scripts/issue191_run_ladder.py": ["r8-qwen-lineage"],
     "scripts/issue191_terminal_reduction.py": ["r8-qwen-lineage"],
     "scripts/issue191_verify_split_set.py": ["r8-qwen-lineage"],
-    "scripts/issue195_manifest.py": ["r8-qwen-lineage"],
-    "scripts/issue195_negative_controls.py": ["r8-qwen-lineage"],
-    "scripts/issue195_r8d_authority.py": ["r8-qwen-lineage"],
-    "scripts/issue195_run_ladder.py": ["r8-qwen-lineage"],
-    "scripts/issue195_sampler_probe.py": ["r8-qwen-lineage"],
-    "scripts/issue195_terminal_reduction.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_authority.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_freeze_reference.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_launch.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_manifest.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_negative_controls.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_run_ladder.py": ["r8-qwen-lineage"],
-    "scripts/issue195_v2_terminal_reduction.py": ["r8-qwen-lineage"],
+    "scripts/issue195_manifest.py": ["repo-integrity"],
+    "scripts/issue195_negative_controls.py": ["repo-integrity"],
+    "scripts/issue195_r8d_authority.py": ["repo-integrity"],
+    "scripts/issue195_run_ladder.py": ["repo-integrity"],
+    "scripts/issue195_sampler_probe.py": ["repo-integrity"],
+    "scripts/issue195_terminal_reduction.py": ["repo-integrity"],
+    "scripts/issue195_v2_authority.py": ["repo-integrity"],
+    "scripts/issue195_v2_freeze_reference.py": ["repo-integrity"],
+    "scripts/issue195_v2_launch.py": ["repo-integrity"],
+    "scripts/issue195_v2_manifest.py": ["repo-integrity"],
+    "scripts/issue195_v2_negative_controls.py": ["repo-integrity"],
+    "scripts/issue195_v2_run_ladder.py": ["repo-integrity"],
+    "scripts/issue195_v2_terminal_reduction.py": ["repo-integrity"],
     # Retired R8-C/E/G/H behavior suites (Issue #246): integrity-only,
     # except where current #237 tooling reads the evidence.
     "docs/investigations/qwen38-flash-next-r8-e/": ["repo-integrity"],
@@ -788,58 +687,60 @@ PATH_GROUPS = {
     "scripts/issue234_receipt.py": ["repo-integrity"],
     "scripts/issue234_reduce.py": ["repo-integrity"],
     "scripts/issue234_runtime.py": ["repo-integrity"],
-    # Historical V0-B reduction (V0-A evidence is also read by V1-B).
-    "scripts/v0a_correctness_derive.py": ["vulkan-v0b"],
-    "scripts/v0a_correctness_run.py": ["vulkan-v0b"],
-    "scripts/v0a_materialization_derive.py": ["vulkan-v0b"],
-    "scripts/v0a_materialization_run.py": ["vulkan-v0b"],
-    "scripts/v0b_capability_assessment.py": ["vulkan-v0b"],
-    "scripts/v0b_comparability_audit.py": ["vulkan-v0b"],
-    "scripts/v0b_correctness_stability.py": ["vulkan-v0b"],
-    "scripts/v0b_cpu_proof.py": ["vulkan-v0b"],
-    "scripts/v0b_cpu_supplement_derive.py": ["vulkan-v0b"],
-    "scripts/v0b_cpu_supplement_run.py": ["vulkan-v0b"],
-    "scripts/v0b_economics.py": ["vulkan-v0b"],
-    "scripts/v0b_manifest.py": ["vulkan-v0b"],
-    "scripts/v0b_seam_comparison.py": ["vulkan-v0b"],
-    "scripts/v0b_terminal.py": ["vulkan-v0b"],
-    "docs/investigations/vulkan-v0-a/": ["vulkan-v0b", "vulkan-v0c-v2a"],
-    "docs/investigations/vulkan-v0-b/": ["vulkan-v0b"],
-    # Historical V0-C/V1/V2-A harness component (imported by #35).
-    "scripts/v0c_canonical_run.py": ["vulkan-v0c-v2a"],
-    "scripts/v0c_correctness.py": ["vulkan-v0c-v2a", "link-x1-issue35"],
-    "scripts/v0c_execution_seam.py": ["vulkan-v0c-v2a"],
-    "scripts/v0c_manifest.py": ["vulkan-v0c-v2a"],
-    "scripts/v0c_vulkan_adapter.py": ["vulkan-v0c-v2a"],
-    "scripts/v1a_execution_participant.py": ["vulkan-v0c-v2a"],
-    "scripts/v1a_manifest.py": ["vulkan-v0c-v2a"],
-    "scripts/v1a_runner.py": ["vulkan-v0c-v2a"],
-    "scripts/v1a_vulkan_adapter.py": ["vulkan-v0c-v2a"],
-    "scripts/v1b_campaign.py": ["vulkan-v0c-v2a"],
-    "scripts/v1b_manifest.py": ["vulkan-v0c-v2a"],
-    "scripts/v1c_accounting.py": ["vulkan-v0c-v2a"],
-    "scripts/v1c_manifest.py": ["vulkan-v0c-v2a"],
-    "scripts/v1c_runner.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_authority.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_authority_v2.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_authority_v3.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_discovery.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_discovery_v2.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_discovery_v3.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_harness.py": ["vulkan-v0c-v2a"],
-    "scripts/v2a_manifest.py": ["vulkan-v0c-v2a", "link-x1-issue35"],
-    "docs/investigations/vulkan-v0-c/": ["vulkan-v0c-v2a"],
-    "docs/investigations/vulkan-v1-a/": ["vulkan-v0c-v2a"],
-    "docs/investigations/vulkan-v1-b/": ["vulkan-v0c-v2a"],
-    "docs/investigations/vulkan-v1-c/": ["vulkan-v0c-v2a"],
-    "docs/investigations/vulkan-v2-a/": ["vulkan-v0c-v2a"],
-    # Historical #35 x1 interconnect envelope lineage.
-    "scripts/issue35_coarse_concurrent.py": ["link-x1-issue35"],
-    "scripts/issue35_envelope.py": ["link-x1-issue35"],
-    "scripts/issue35_link_probe.py": ["link-x1-issue35"],
-    "scripts/issue35_residency_facts.py": ["link-x1-issue35"],
-    "scripts/issue35_role_sweep.py": ["link-x1-issue35"],
-    "docs/investigations/link-x1-envelope/": ["link-x1-issue35"],
+    # Retired V0-A/V0-B Vulkan lineage (Issue #246): integrity-only.
+    "scripts/v0a_correctness_derive.py": ["repo-integrity"],
+    "scripts/v0a_correctness_run.py": ["repo-integrity"],
+    "scripts/v0a_materialization_derive.py": ["repo-integrity"],
+    "scripts/v0a_materialization_run.py": ["repo-integrity"],
+    "scripts/v0b_capability_assessment.py": ["repo-integrity"],
+    "scripts/v0b_comparability_audit.py": ["repo-integrity"],
+    "scripts/v0b_correctness_stability.py": ["repo-integrity"],
+    "scripts/v0b_cpu_proof.py": ["repo-integrity"],
+    "scripts/v0b_cpu_supplement_derive.py": ["repo-integrity"],
+    "scripts/v0b_cpu_supplement_run.py": ["repo-integrity"],
+    "scripts/v0b_economics.py": ["repo-integrity"],
+    "scripts/v0b_manifest.py": ["repo-integrity"],
+    "scripts/v0b_seam_comparison.py": ["repo-integrity"],
+    "scripts/v0b_terminal.py": ["repo-integrity"],
+    "docs/investigations/vulkan-v0-a/": ["repo-integrity"],
+    "docs/investigations/vulkan-v0-b/": ["repo-integrity"],
+    # Retired V0-C/V1/V2-A Vulkan harness lineage (Issue #246):
+    # integrity-only.
+    "scripts/v0c_canonical_run.py": ["repo-integrity"],
+    "scripts/v0c_correctness.py": ["repo-integrity"],
+    "scripts/v0c_execution_seam.py": ["repo-integrity"],
+    "scripts/v0c_manifest.py": ["repo-integrity"],
+    "scripts/v0c_vulkan_adapter.py": ["repo-integrity"],
+    "scripts/v1a_execution_participant.py": ["repo-integrity"],
+    "scripts/v1a_manifest.py": ["repo-integrity"],
+    "scripts/v1a_runner.py": ["repo-integrity"],
+    "scripts/v1a_vulkan_adapter.py": ["repo-integrity"],
+    "scripts/v1b_campaign.py": ["repo-integrity"],
+    "scripts/v1b_manifest.py": ["repo-integrity"],
+    "scripts/v1c_accounting.py": ["repo-integrity"],
+    "scripts/v1c_manifest.py": ["repo-integrity"],
+    "scripts/v1c_runner.py": ["repo-integrity"],
+    "scripts/v2a_authority.py": ["repo-integrity"],
+    "scripts/v2a_authority_v2.py": ["repo-integrity"],
+    "scripts/v2a_authority_v3.py": ["repo-integrity"],
+    "scripts/v2a_discovery.py": ["repo-integrity"],
+    "scripts/v2a_discovery_v2.py": ["repo-integrity"],
+    "scripts/v2a_discovery_v3.py": ["repo-integrity"],
+    "scripts/v2a_harness.py": ["repo-integrity"],
+    "scripts/v2a_manifest.py": ["repo-integrity"],
+    "docs/investigations/vulkan-v0-c/": ["repo-integrity"],
+    "docs/investigations/vulkan-v1-a/": ["repo-integrity"],
+    "docs/investigations/vulkan-v1-b/": ["repo-integrity"],
+    "docs/investigations/vulkan-v1-c/": ["repo-integrity"],
+    "docs/investigations/vulkan-v2-a/": ["repo-integrity"],
+    # Retired #35 x1 interconnect envelope lineage (Issue #246):
+    # integrity-only.
+    "scripts/issue35_coarse_concurrent.py": ["repo-integrity"],
+    "scripts/issue35_envelope.py": ["repo-integrity"],
+    "scripts/issue35_link_probe.py": ["repo-integrity"],
+    "scripts/issue35_residency_facts.py": ["repo-integrity"],
+    "scripts/issue35_role_sweep.py": ["repo-integrity"],
+    "docs/investigations/link-x1-envelope/": ["repo-integrity"],
     # Retired V2-B..V2-G V340L campaign behavior suites (Issue #246).
     "docs/investigations/vulkan-v2-b-v340l/": ["repo-integrity"],
     "docs/investigations/vulkan-v2-c-v340l-platform-stability/":
@@ -949,6 +850,7 @@ PATH_GROUPS = {
     "LICENSE": ["repo-integrity"],
     ".gitignore": ["repo-integrity"],
     ".github/ISSUE_TEMPLATE/": ["repo-integrity"],
+
 }
 
 # Generic documentation classification. Any docs/ path not matched by an

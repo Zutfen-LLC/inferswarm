@@ -123,9 +123,9 @@ python3 scripts/check_phase0_workloads.py
 | Script | Purpose |
 |---|---|
 | `sync_project_status.py` | Renders living status sections and checks for drift. It never reads or writes evidence manifests and does not grant execution authority. |
-| `issue137_manifest.py` | Builds or verifies the immutable bundle-local Issue #137 evidence manifest. |
+| `issue137_manifest.py` | Frozen builder of the immutable bundle-local Issue #137 evidence manifest. It hashes #137 test files retired by Issue #246, so the accepted bundle is verified by `check_ci_test_retention.py` and the finalizer instead. |
 | `check_phase0_workloads.py` | Validates the frozen Phase-0 workload manifest without model or GPU access. Wired into CI. |
-| `check_ci_test_retention.py` | Validates the Issue #246 test-retention audit (`docs/ci/test-retention-audit.json`) and the retired-lineage evidence/producer pins. Wired into CI. |
+| `check_ci_test_retention.py` | Validates the Issue #246 test-retention audit (`docs/ci/test-retention-audit.json`), the exact retired-test-row tombstones (`docs/ci/retired-test-rows.json`), and the retired-lineage evidence/producer pins. Wired into CI. |
 
 ### Phase 0 / Phase 1 / Phase1R derivation and analysis
 

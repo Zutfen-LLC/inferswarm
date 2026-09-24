@@ -58,11 +58,11 @@ def _retired_integrity_roots():
 
 RETIRED_INTEGRITY_ROOTS = _retired_integrity_roots()
 
-# Issue #246: groups that hold superseded/historical lineages retained
-# only because accepted evidence pins their test files.  A current
-# source change must not pull them in without a real dependency.
-HISTORICAL_GROUPS = {"vulkan-v0b", "vulkan-v0c-v2a", "link-x1-issue35",
-                     "r8-qwen-lineage"}
+# Issue #246 (PR #247 correction round 1): groups that no longer exist.
+# Their suites were deleted; their evidence is integrity-pinned.
+RETIRED_GROUPS = {"vulkan-v0-b", "phase1-analysis", "issue-175-arm-d",
+                  "vulkan-v0b", "vulkan-v0c-v2a", "link-x1-issue35",
+                  "issue-137", "issue-172-requal", "issue-182-arm-e"}
 
 
 class TestPlannerContract(unittest.TestCase):
@@ -112,13 +112,12 @@ class TestSelectionBehavior(unittest.TestCase):
         self.assertEqual(p["groups"], ["repo-integrity"])
         self.assertNotIn("issue-117-133", p["groups"])
 
-    # 2. Vulkan V0-B-only
-    def test_vulkan_v0b_only(self):
+    # 2. Retired Vulkan V0-B lineage: integrity only (Issue #246)
+    def test_retired_vulkan_v0b_lineage_selects_integrity_only(self):
         p = make_plan(["scripts/v0b_terminal.py",
                        "docs/implementation/vulkan-v0-b/summary.md"])
         self.assertFalse(p["full_regression"])
-        self.assertEqual(p["groups"], ["repo-integrity", "vulkan-v0b"])
-        self.assertNotIn("issue-117-133", p["groups"])
+        self.assertEqual(p["groups"], ["repo-integrity"])
 
     # 3. Issue #117 producer change
     def test_issue117_producer_selects_lineage(self):
@@ -133,7 +132,7 @@ class TestSelectionBehavior(unittest.TestCase):
         self.assertFalse(p["full_regression"])
 
     def test_issue117_test_module_change_selects_lineage(self):
-        p = make_plan(["tests/test_issue133_corrected_freeze.py"])
+        p = make_plan(["tests/test_issue133_physical_execution_retention.py"])
         self.assertIn("issue-117-133", p["groups"])
 
     # 4. common/shared module change selects every consumer
@@ -189,21 +188,24 @@ class TestSelectionBehavior(unittest.TestCase):
     def test_deleted_path_still_classified(self):
         # classification is purely path-based; deletion of a family
         # file still selects the family (and CI checkout verifies).
-        p = make_plan(["scripts/v0b_terminal.py"])
-        self.assertIn("vulkan-v0b", p["groups"])
+        p = make_plan(["scripts/issue117_planner.py"])
+        self.assertIn("issue-117-133", p["groups"])
 
     # 11. multiple paths union their groups
     def test_multiple_paths_union(self):
-        p = make_plan(["scripts/v0b_terminal.py", "scripts/issue79_v2_thresholds.py"])
+        p = make_plan(["scripts/issue117_planner.py",
+                       "scripts/issue237_methodology.py"])
         self.assertFalse(p["full_regression"])
-        self.assertEqual(p["groups"],
-                         ["issue-74-79", "repo-integrity", "vulkan-v0b"])
+        self.assertEqual(p["groups"], ["issue-117-133",
+                                       "r8i-qwen-qualification",
+                                       "repo-integrity"])
 
     def test_one_path_selects_multiple_groups(self):
-        # issue137 probe driver feeds both issue-137 and issue-74-79
-        p = make_plan(["scripts/issue137_probe_driver.py"])
-        self.assertIn("issue-137", p["groups"])
-        self.assertIn("issue-74-79", p["groups"])
+        # the v4 methodology core is imported by the #83 doctrine, V5, and
+        # the current R8-I comparator
+        p = make_plan(["scripts/issue95_v4_methodology.py"])
+        for group in ("issue-83-95", "issue-109-110", "r8i-qwen-qualification"):
+            self.assertIn(group, p["groups"])
 
     # 12. malformed input fails closed
     def test_malformed_input_fails_closed(self):
@@ -314,25 +316,27 @@ class TestAggregateGate(unittest.TestCase):
         return True, "ok"
 
     def test_gate_passes_all_selected_success(self):
-        plan = {"groups": ["repo-integrity", "vulkan-v0b"],
+        plan = {"groups": ["repo-integrity", "r8i-qwen-qualification"],
                 "full_regression": False}
-        results = {"repo-integrity": "success", "vulkan-v0b": "success",
+        results = {"repo-integrity": "success",
+                   "r8i-qwen-qualification": "success",
                    "issue-117-133": "skipped"}
         ok, _ = self.gate(plan, results)
         self.assertTrue(ok)
 
     # 17. gate fails when a selected group fails
     def test_gate_fails_on_selected_failure(self):
-        plan = {"groups": ["repo-integrity", "vulkan-v0b"],
+        plan = {"groups": ["repo-integrity", "r8i-qwen-qualification"],
                 "full_regression": False}
-        results = {"repo-integrity": "success", "vulkan-v0b": "failure",
+        results = {"repo-integrity": "success",
+                   "r8i-qwen-qualification": "failure",
                    "issue-117-133": "skipped"}
         ok, _ = self.gate(plan, results)
         self.assertFalse(ok)
 
     # 18. gate succeeds with unselected skips and all selected passing
     def test_gate_succeeds_unselected_skipped(self):
-        p = make_plan(["scripts/v0b_terminal.py"])
+        p = make_plan(["scripts/issue237_methodology.py"])
         results = {g: "success" for g in p["groups"]}
         for g in plan_ci.GROUP_TEST_MODULES:
             results.setdefault(g, "skipped")
@@ -341,14 +345,14 @@ class TestAggregateGate(unittest.TestCase):
 
     # 19. gate fails when a selected group never ran / cancelled
     def test_gate_fails_on_missing_selected_group(self):
-        p = make_plan(["scripts/v0b_terminal.py"])
-        results = {g: "success" if g != "vulkan-v0b" else None
+        p = make_plan(["scripts/issue237_methodology.py"])
+        results = {g: "success" if g != "r8i-qwen-qualification" else None
                    for g in p["groups"]}
         ok, _ = self.gate(p, results)
         self.assertFalse(ok)
 
     def test_gate_fails_on_cancelled_selected_group(self):
-        p = make_plan(["scripts/v0b_terminal.py"])
+        p = make_plan(["scripts/issue237_methodology.py"])
         results = {g: "cancelled" for g in p["groups"]}
         ok, _ = self.gate(p, results)
         self.assertFalse(ok)
@@ -363,8 +367,9 @@ class TestAggregateGate(unittest.TestCase):
 
     def test_gate_full_regression_requires_every_group(self):
         p = make_plan(["docs/README.md"], mode="full")
-        results = {g: "success" for g in p["groups"] if g != "issue-137"}
-        results["issue-137"] = "skipped"
+        results = {g: "success" for g in p["groups"]
+                   if g != "issue-115-cleanup"}
+        results["issue-115-cleanup"] = "skipped"
         ok, _ = self.gate(p, results)
         self.assertFalse(ok)
 
@@ -456,17 +461,16 @@ class TestWorkflowContract(unittest.TestCase):
                           f"registered group {group} has no selectable job")
             self.assertTrue(group_jobs[group], group)
 
-    def test_issue117_maps_to_all_four_shards(self):
-        shard_jobs = [j for j in self.jobs if j.startswith("issue-117-133-s")]
-        self.assertEqual(len(shard_jobs), 4, shard_jobs)
-        for j in shard_jobs:
-            cond = self.jobs[j]["if"]
-            self.assertIn("'issue-117-133'", cond, j)
+    def test_issue117_runs_as_one_job(self):
+        # the four shards existed for the retired ~850-test #117/#129/#133
+        # replay lineage; the retained evidence-integrity group is small
+        self.assertEqual([j for j in self.jobs if j.startswith("issue-117-133")],
+                         ["issue-117-133"])
+        self.assertIn("'issue-117-133'", self.jobs["issue-117-133"]["if"])
 
-    def test_all_four_shards_required_by_gate(self):
-        gate_needs = self.jobs["ci-gate"]["needs"]
-        for i in (1, 2, 3, 4):
-            self.assertIn(f"issue-117-133-s{i}", gate_needs)
+    def test_every_group_job_required_by_gate(self):
+        gate_needs = set(self.jobs["ci-gate"]["needs"])
+        self.assertEqual(gate_needs, set(self.jobs) - {"ci-gate"})
 
     def test_repo_integrity_has_no_selection_condition(self):
         self.assertNotIn("if", self.jobs["repo-integrity"])
@@ -577,37 +581,38 @@ class TestWorkflowRegistryParity(unittest.TestCase):
                          "registry/workflow parity drift:\n  "
                          + "\n  ".join(problems))
 
-    def test_v0b_job_executes_every_v0b_v0c_registered_module(self):
+    def test_r8i_job_executes_every_r8i_registered_module(self):
         exec_map = self.parity.group_execution_map(self.doc)
-        self.assertEqual(exec_map["vulkan-v0c-v2a"],
-                         self.registry["vulkan-v0c-v2a"])
-        self.assertIn("test_v0c_correctness", exec_map["vulkan-v0c-v2a"])
+        self.assertEqual(exec_map["r8i-qwen-qualification"],
+                         self.registry["r8i-qwen-qualification"])
+        self.assertIn("test_issue237_r8i_methodology",
+                      exec_map["r8i-qwen-qualification"])
 
     def test_repo_integrity_union_equals_registry(self):
         exec_map = self.parity.group_execution_map(self.doc)
         self.assertEqual(exec_map["repo-integrity"],
                          self.registry["repo-integrity"])
 
-    def test_issue117_shard_union_equals_registry(self):
+    def test_issue117_job_equals_registry(self):
         exec_map = self.parity.group_execution_map(self.doc)
         self.assertEqual(exec_map["issue-117-133"],
                          self.registry["issue-117-133"])
 
-    def test_issue117_shards_execute_each_module_exactly_once(self):
-        per_job = self.parity.parse_workflow(self.doc)
-        shard_jobs = {j: m for j, m in per_job.items()
-                      if self.parity.SHARD_JOB_RE.match(j)}
-        self.assertEqual(len(shard_jobs), 4, sorted(shard_jobs))
+    def test_group_jobs_execute_each_registered_module_exactly_once(self):
         from collections import Counter
-        counts = Counter(
-            module for modules in shard_jobs.values()
-            for module in modules)
+        counts = Counter()
+        for job_id, job in self.doc["jobs"].items():
+            for step in job.get("steps", []):
+                run = step.get("run") or ""
+                for match in self.parity._UNITTEST_RE.finditer(run):
+                    counts.update(token.split(".", 1)[1]
+                                  for token in match.group(1).split())
         duplicated = {m: c for m, c in counts.items() if c != 1}
-        self.assertEqual(
-            duplicated, {},
-            "shard commands must execute every registered module "
-            "exactly once")
-        self.assertEqual(set(counts), self.registry["issue-117-133"])
+        self.assertEqual(duplicated, {},
+                         "workflow commands must execute every registered "
+                         "module exactly once")
+        self.assertEqual(set(counts),
+                         set().union(*self.registry.values()))
 
     # -- negative controls (scratch representations) ----------------------
 
@@ -619,16 +624,16 @@ class TestWorkflowRegistryParity(unittest.TestCase):
             any(needle in p for p in problems),
             f"expected failure mentioning {needle!r}, got: {problems}")
 
-    def test_control_registered_v0c_module_removed_from_workflow(self):
-        # (1) a V0-C module stays registered but the workflow command
+    def test_control_registered_r8i_module_removed_from_workflow(self):
+        # (1) an R8-I module stays registered but the workflow command
         # no longer executes it.
         doc = self._copy_doc()
-        step = [s for s in doc["jobs"]["vulkan-v0c-v2a"]["steps"]
+        step = [s for s in doc["jobs"]["r8i-qwen-qualification"]["steps"]
                 if "unittest" in (s.get("run") or "")][0]
         step["run"] = step["run"].replace(
-            " tests.test_v0c_correctness", "")
+            " tests.test_issue244_r8i5_v340l_import", "")
         self._assert_problems(doc, self.registry,
-                              "test_v0c_correctness")
+                              "test_issue244_r8i5_v340l_import")
 
     def test_control_test_plan_ci_registered_but_not_executed(self):
         # (2) test_plan_ci is registered to repo-integrity but no step
@@ -641,38 +646,37 @@ class TestWorkflowRegistryParity(unittest.TestCase):
         self.assertIn("test_plan_ci", self.registry["repo-integrity"])
         self._assert_problems(doc, self.registry, "test_plan_ci")
 
-    def test_control_one_117_shard_drops_a_module(self):
-        # (3) one Issue #117 shard silently drops a module.
+    def test_control_issue117_job_drops_a_module(self):
+        # (3) the Issue #117 job silently drops a module.
         doc = self._copy_doc()
-        step = [s for s in doc["jobs"]["issue-117-133-s1"]["steps"]
+        step = [s for s in doc["jobs"]["issue-117-133"]["steps"]
                 if "unittest" in (s.get("run") or "")][0]
         step["run"] = step["run"].replace(
-            " tests.test_issue117_proof", "")
+            " tests.test_issue184_final_closure", "")
         self._assert_problems(doc, self.registry,
-                              "test_issue117_proof")
+                              "test_issue184_final_closure")
 
     def test_control_workflow_runs_an_unregistered_module(self):
         # (4) a workflow command executes a module the registry does
         # not know.
         doc = self._copy_doc()
         registry = self._copy_registry()
-        registry["vulkan-v0c-v2a"].discard("test_v0c_correctness")
-        step = [s for s in doc["jobs"]["vulkan-v0b"]["steps"]
+        step = [s for s in doc["jobs"]["r8i-qwen-qualification"]["steps"]
                 if "unittest" in (s.get("run") or "")][0]
         step["run"] = step["run"].replace(
-            "tests.test_v0b_reduction",
-            "tests.test_v0b_reduction tests.test_ghost_module")
+            "tests.test_issue237_r8i_methodology",
+            "tests.test_issue237_r8i_methodology tests.test_ghost_module")
         self._assert_problems(doc, registry, "test_ghost_module")
 
     def test_control_module_in_two_unrelated_groups(self):
         # (5) a module appears in two unrelated execution groups while
         # no duplication is declared.
         doc = self._copy_doc()
-        step = [s for s in doc["jobs"]["link-x1-issue35"]["steps"]
+        step = [s for s in doc["jobs"]["issue-74-79"]["steps"]
                 if "unittest" in (s.get("run") or "")][0]
         step["run"] = step["run"].replace(
-            "tests.test_issue35_link_probe",
-            "tests.test_issue35_link_probe tests.test_v0b_reduction")
+            "tests.test_issue74_methodology",
+            "tests.test_issue74_methodology tests.test_issue237_r8i_methodology")
         self._assert_problems(doc, self.registry,
                               "multiple unrelated groups")
 
@@ -695,15 +699,14 @@ class TestRepositoryTreeCoverage(unittest.TestCase):
         self.assertFalse(p["full_regression"], path)
         return set(p["groups"])
 
-    def test_v0b_economics_json_selects_v0b(self):
+    def test_retired_v0b_evidence_selects_integrity_only(self):
+        # Issue #246: the V0-B replay suite is retired; its accepted
+        # evidence is pinned by the always-on retired-lineage check.
         g = self._plan_groups(
             "docs/investigations/vulkan-v0-b/results/economics.json")
-        self.assertEqual(g, {"repo-integrity", "vulkan-v0b"})
+        self.assertEqual(g, {"repo-integrity"})
 
-    def test_retained_v0a_evidence_selects_v0b(self):
-        # V0-B consumes accepted V0-A evidence (test_v0b_reduction
-        # reads both trees) and test_v1b_campaign reads the V0-A
-        # correction run; several concrete tracked files:
+    def test_retired_v0a_evidence_selects_integrity_only(self):
         for path in (
             "docs/investigations/vulkan-v0-a/results/bench-summary.json",
             "docs/investigations/vulkan-v0-a/correctness/correction-cor-nvavk-01/run.json",
@@ -711,8 +714,7 @@ class TestRepositoryTreeCoverage(unittest.TestCase):
         ):
             self.assertIn(path, self.files, path)
             g = self._plan_groups(path)
-            self.assertEqual(g, {"repo-integrity", "vulkan-v0b",
-                                 "vulkan-v0c-v2a"}, path)
+            self.assertEqual(g, {"repo-integrity"}, path)
 
     def test_v5_manifests_select_real_consumers(self):
         for path in (
@@ -758,17 +760,16 @@ class TestRepositoryTreeCoverage(unittest.TestCase):
             g = self._plan_groups(path)
             self.assertEqual(g, {"repo-integrity"}, path)
 
-    def test_issue137_retained_evidence_selects_137_and_shared(self):
-        # #137 evidence is nested in the #117 tree; it must select the
-        # narrow #137 semantic group AND the broad shared-tree lineage.
+    def test_issue137_retained_evidence_selects_integrity_and_shared(self):
+        # #137 evidence is nested in the #117 tree; its replay suites are
+        # retired (integrity-pinned), and the shared-tree lineage still runs.
         path = ("docs/implementation/r6-successor-dense-full-integration-117/"
                 "evidence/arm-c-regime4-diagnosis-137/")
         nested = [f for f in self.files if f.startswith(path)]
         self.assertTrue(nested, "no tracked #137 evidence files")
         for f in sorted(nested)[:3]:
             g = self._plan_groups(f)
-            self.assertIn("issue-137", g, f)
-            self.assertIn("issue-117-133", g, f)
+            self.assertEqual(g, {"repo-integrity", "issue-117-133"}, f)
 
     def test_every_configured_prefix_exists_in_tree(self):
         dirs = set()
@@ -869,15 +870,35 @@ class TestRetentionTopology(unittest.TestCase):
                          set(plan_ci.GROUP_TEST_MODULES))
 
     def test_self_check_rejects_group_without_invariant(self):
-        original = plan_ci.GROUP_INVARIANTS.pop("vulkan-v0b")
+        original = plan_ci.GROUP_INVARIANTS.pop("issue-115-cleanup")
         try:
             self.assertTrue(any("invariant" in e for e in plan_ci.self_check()))
         finally:
-            plan_ci.GROUP_INVARIANTS["vulkan-v0b"] = original
+            plan_ci.GROUP_INVARIANTS["issue-115-cleanup"] = original
 
     def test_no_historical_catch_all_bucket_remains(self):
-        self.assertNotIn("vulkan-v0-b", plan_ci.GROUP_TEST_MODULES)
-        self.assertNotIn("phase1-analysis", plan_ci.GROUP_TEST_MODULES)
+        groups = set(plan_ci.GROUP_TEST_MODULES)
+        self.assertFalse(RETIRED_GROUPS & groups)
+        self.assertFalse({g for g in groups if "histor" in g})
+        for rule_groups in plan_ci.PATH_GROUPS.values():
+            self.assertFalse(RETIRED_GROUPS & set(rule_groups))
+
+    def test_every_registered_module_is_current(self):
+        # Issue #246 maintainer decision: historical provenance is not a
+        # retention criterion; only current categories may be registered.
+        audit = retention.load_audit(REPO_ROOT)
+        for group, modules in plan_ci.GROUP_TEST_MODULES.items():
+            self.assertTrue(modules, group)
+            for module in modules:
+                self.assertIn(audit["modules"][module]["category"],
+                              retention.CURRENT_CATEGORIES,
+                              f"{group}: {module}")
+
+    def test_reintroduced_retired_test_path_fails_closed(self):
+        for path in ("tests/test_v0b_reduction.py",
+                     "tests/test_issue182_arm_e.py",
+                     "tests/test_issue117_preflight.py"):
+            self.assertTrue(make_plan([path])["full_regression"], path)
 
     def test_current_r8i_source_selects_its_current_group_only(self):
         for path in ("scripts/issue237_methodology.py",
@@ -886,8 +907,8 @@ class TestRetentionTopology(unittest.TestCase):
                      "tests/test_issue237_r8i_methodology.py"):
             p = make_plan([path])
             self.assertFalse(p["full_regression"], path)
-            self.assertIn("r8i-qwen-qualification", p["groups"], path)
-            self.assertFalse(HISTORICAL_GROUPS & set(p["groups"]), path)
+            self.assertEqual(p["groups"],
+                             ["r8i-qwen-qualification", "repo-integrity"], path)
 
     def test_issue244_style_change_selects_current_group_not_history(self):
         # The evidence/test surface of PR #245 (Issue #244 import).  Its
@@ -925,6 +946,16 @@ class TestRetentionTopology(unittest.TestCase):
             "scripts/issue232_gate.py",
             "scripts/issue175_reduce.py",
             "scripts/derive_phase1r_d3_placement.py",
+            # PR #247 correction round 1 retirements
+            "docs/investigations/vulkan-v0-b/MANIFEST.sha256",
+            "docs/investigations/vulkan-v2-a/FINAL-TERMINAL-R2.json",
+            "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+            "docs/investigations/qwen38-flash-next-r8-d/terminal-reduction.json",
+            "docs/qualification/gemma4-12b-it-v3/MANIFEST.sha256",
+            "scripts/v0c_correctness.py",
+            "scripts/issue182_compare.py",
+            "scripts/issue86_v3_methodology.py",
+            "scripts/issue133_arm_c_retry_campaign.py",
         ):
             p = make_plan([path])
             self.assertFalse(p["full_regression"], path)
@@ -941,10 +972,12 @@ class TestRetentionTopology(unittest.TestCase):
                              ["r8i-qwen-qualification", "repo-integrity"], path)
 
     def test_shared_producer_still_widens_to_every_consumer(self):
-        # v0c_correctness is imported by the V1/V2-A harness and #35.
-        p = make_plan(["scripts/v0c_correctness.py"])
-        self.assertEqual(p["groups"], ["link-x1-issue35", "repo-integrity",
-                                       "vulkan-v0c-v2a"])
+        # the v4 methodology core is imported by the #83 doctrine suites,
+        # V5, and the current R8-I comparator
+        p = make_plan(["scripts/issue95_v4_methodology.py"])
+        self.assertEqual(p["groups"], ["issue-109-110", "issue-83-95",
+                                       "r8i-qwen-qualification",
+                                       "repo-integrity"])
         # the v1 methodology core is imported by every qualification line
         p = make_plan(["scripts/issue74_methodology.py"])
         for group in ("issue-74-79", "issue-109-110",
@@ -954,6 +987,7 @@ class TestRetentionTopology(unittest.TestCase):
     def test_retention_authority_changes_force_full(self):
         for path in ("docs/ci/test-retention-audit.json",
                      "docs/ci/retired-lineage-pins.sha256",
+                     "docs/ci/retired-test-rows.json",
                      "scripts/check_ci_test_retention.py"):
             p = make_plan([path])
             self.assertTrue(p["full_regression"], path)

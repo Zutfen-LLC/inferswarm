@@ -92,11 +92,9 @@ checking out other revisions to demonstrate the gap on the base branch. Only
 if the doctor passes and a test still fails is normal
 pre-existing-failure reproduction appropriate.
 
-On a clean working tree the suite passes with four skips, all of them
-host-local resources this repository deliberately does not carry. A dirty
-working tree adds a fifth skip — commit or stash before treating
-`test_issue117_preflight` as having run. Details, including which modules CI
-runs, are in [`tests/README.md`](tests/README.md).
+The suite passes with one skip, a host-local resource (the pinned tokenizer)
+this repository deliberately does not carry. Details, including which modules
+CI runs, are in [`tests/README.md`](tests/README.md).
 
 Before editing anything under `scripts/`, read the frozen-producer rule in
 [`scripts/README.md`](scripts/README.md). Most of those files are hash-pinned
