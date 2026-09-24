@@ -11,16 +11,31 @@ Machine-enforced boundaries (tested in test_issue248_diagnostic.py):
   * The diagnostic namespace is exactly ``d248-<label>``; every physical
     helper refuses any other namespace, and refuses the qualification
     namespace outright.
-  * No physical entrypoint runs without a maintainer dispatch authority
-    bound to the exact current HEAD (accepted #241 authority model:
-    top-level PR conversation comment with dispatch phrase + head=sha +
-    diagnostic-namespace scope as exact stripped lines) — a #241
-    qualification dispatch can never authorize diagnostic execution.
+  * No physical entrypoint runs without a MAINTAINER DISPATCH AUTHORITY
+    revalidated LIVE immediately before every unit: the top-level PR
+    conversation comment with dispatch phrase + head=sha +
+    diagnostic-namespace scope as exact stripped lines from a current
+    OWNER/MEMBER, fetched together with the live PR state (OPEN,
+    unmerged, base main, head == authorized head) and the live Issue
+    #248 state (OPEN). There is no production path that accepts a
+    cached/prevalidated authority dict (the runner has no authority
+    parameter); a closed/merged PR or a closed issue fails before any
+    launch; any later HEAD movement invalidates the authorization.
+  * case-4096 executes ONLY when the SAME live comment carries an exact
+    stripped ``case-4096:<reason>`` line (exactly one, nonempty
+    reason); the authorization is bound to that comment id in the
+    authority snapshot. No caller-supplied field can manufacture it.
   * Every diagnostic execution unit binds, before launch: exact binary
-    identity (one of the three accepted llama.cpp pin builds), exact
-    model member hashes, exact case fixture from the accepted historical
-    ladder (sha-verified), exact arm identity via the frozen #241
-    generation-2 constants, and the frozen request contract.
+    identity (one of the three accepted llama.cpp pin builds), the
+    COMPLETE accepted three-member model set (every member hashed
+    independently and compared against the accepted #241 digests; the
+    launched path is the derived member 1), exact case fixture from the
+    accepted historical ladder (sha-verified), the frozen request
+    contract (caller overrides must equal it exactly; extra semantic
+    keys rejected), and the EXACT accepted runtime/device subject
+    identity (every frozen field derived from fresh raw observations
+    pre AND post execution; single-factor DIAGNOSTIC_ONLY interventions
+    only).
   * Determinism is judged ONLY on independently computed digests of the
     derived acceptance-bearing output (the fixed 8-token list canonically
     packed) plus the full row bytes when the observer captured them; raw
@@ -29,6 +44,11 @@ Machine-enforced boundaries (tested in test_issue248_diagnostic.py):
   * Retained bytes are append-only: a failed or superseded diagnostic
     unit directory must be moved aside to a ``-quarantined`` sibling
     before any re-run at the same label (no overwrite in place).
+  * The diagnostic terminal is derived MECHANICALLY by the offline
+    reducer from retained unit bytes against the frozen plan; missing
+    or ambiguous evidence fails closed to the machine-readable
+    R8I3_REDUCER_BLOCKED_INCOMPLETE state, never to a hand-selected
+    terminal.
 
 The physical runner is deliberately structured as a thin orchestrator
 around the SAME seams the accepted campaign used, so the diagnostic runs
@@ -43,6 +63,7 @@ import os
 import re
 import struct
 import subprocess
+import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
@@ -77,6 +98,26 @@ TERMINALS = (
 #   canonical  — no observation hook at all (accepted R8-H binary);
 #   r8e-obs    — R8-E observation-only hook (captures rows, no forcing);
 #   comparator — R8-E + R8-I3 comparator/2 hooks (accepted patched build).
+# Correction 1: exact model authority — the accepted #241 split GGUF set
+# (PR #242 head 4e8b4fc, scripts/issue241_constants.py MODEL_*). The
+# complete set verifies before ANY launch; the server launch points at
+# member 1 (the accepted loader seam) only after all three digests
+# verify against these accepted values.
+MODEL_DIR = "/srv/models/qwen38-ud-iq1-s"
+MODEL_MEMBERS = (
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+)
+MODEL_MEMBER_SHA256 = {
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf":
+        "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf":
+        "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf":
+        "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+}
+MODEL_MEMBER_1 = MODEL_MEMBERS[0]
 SERVER_BINARIES = {
     "canonical": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
     "r8e-obs": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0",
@@ -123,6 +164,46 @@ REQUEST_CONTRACT = {
     "temperature": 0.0,
     "top_k": 1,
 }
+# Keys whose presence could alter llama.cpp completion semantics; any
+# extra key in a request contract is rejected (correction 2).
+REQUEST_CONTRACT_KEYS = frozenset(REQUEST_CONTRACT)
+
+
+def canonical_request_digest(contract: dict[str, Any]) -> str:
+    """Digest of the canonical (sorted-keys JSON) request contract."""
+    return sha256_bytes(
+        json.dumps(contract, sort_keys=True, separators=(",", ":")
+                   ).encode())
+
+
+def validate_request_contract(contract: Any) -> dict[str, Any]:
+    """Require byte/semantic equality with the frozen request contract.
+
+    Correction 2: production diagnostic execution derives the request
+    from immutable frozen authority; any override must be EXACTLY equal
+    (same keys, same values, no extras) or it is rejected. Unknown keys
+    are rejected outright — they could alter completion semantics.
+    """
+    if not isinstance(contract, dict):
+        raise DiagnosticError("request contract must be a dict")
+    keys = set(contract)
+    extra = keys - REQUEST_CONTRACT_KEYS
+    if extra:
+        raise DiagnosticError(
+            f"request contract carries extra semantic keys: {sorted(extra)}")
+    missing = REQUEST_CONTRACT_KEYS - keys
+    if missing:
+        raise DiagnosticError(
+            f"request contract is missing frozen keys: {sorted(missing)}")
+    if contract != REQUEST_CONTRACT:
+        differing = {k: (contract.get(k), REQUEST_CONTRACT[k])
+                     for k in sorted(REQUEST_CONTRACT_KEYS)
+                     if contract.get(k) != REQUEST_CONTRACT[k]}
+        raise DiagnosticError(
+            f"request contract is not the frozen accepted contract; "
+            f"differences: {differing}")
+    return dict(contract)
+
 
 # Frozen diagnostic case ladder (accepted historical excluded fixtures,
 # diagnostics-only reuse; case-4096 requires explicit preauthorization
@@ -198,6 +279,14 @@ def validate_authority_payload(authority: dict[str, Any],
     ``diagnostic-namespace=<d248-...>`` so a #241 qualification dispatch
     can never authorize diagnostic execution and vice versa. The live
     fetch path is :func:`fetch_dispatch_authority`.
+
+    Corrections 3+4 (maintainer NO-GO): the payload must also carry the
+    live PR/issue STATE (open_pr / issue_open, fetched in the same live
+    pass — a closed or merged PR, or a closed Issue #248, fails here,
+    before any launch); and any case-4096 authorization is parsed ONLY
+    from the comment body's exact stripped ``case-4096:<reason>`` line
+    (``preauthorized_case4096`` dict fields are ignored; the derived
+    authorization is returned as ``case4096``).
     """
     if not isinstance(authority, dict):
         raise DiagnosticError("authority must be a dict")
@@ -205,6 +294,17 @@ def validate_authority_payload(authority: dict[str, Any],
                 "created_at", "body", "head_sha"):
         if not authority.get(key):
             raise DiagnosticError(f"authority field missing: {key}")
+    for key in ("open_pr", "issue_open"):
+        if key not in authority:
+            raise DiagnosticError(
+                f"live authority state missing: {key} (the dispatch must "
+                f"be revalidated live; a cached payload without PR/issue "
+                f"state cannot authorize)")
+    if not authority["open_pr"]:
+        raise DiagnosticError(
+            f"PR #{DIAGNOSTIC_PR_NUMBER} is closed or merged")
+    if not authority["issue_open"]:
+        raise DiagnosticError(f"Issue #{DIAGNOSTIC_ISSUE} is closed")
     if authority["author_association"] not in ("OWNER", "MEMBER"):
         raise DiagnosticError(
             f"dispatch author is not OWNER/MEMBER: "
@@ -225,14 +325,34 @@ def validate_authority_payload(authority: dict[str, Any],
     head_line = f"head={expected_head}"
     if head_line not in lines:
         raise DiagnosticError(f"exact head line absent: {head_line}")
-    namespace = None
-    for ln in lines:
-        if ln.startswith("diagnostic-namespace="):
-            namespace = ln.split("=", 1)[1]
-    validate_namespace(namespace or "")
+    namespaces = [ln.split("=", 1)[1] for ln in lines
+                  if ln.startswith("diagnostic-namespace=")]
+    if len(namespaces) != 1:
+        raise DiagnosticError(
+            f"exactly one diagnostic-namespace line required, found "
+            f"{len(namespaces)}")
+    namespace = namespaces[0]
+    validate_namespace(namespace)
     if namespace != authority.get("namespace"):
         raise DiagnosticError("scope namespace mismatch inside authority")
-    return dict(authority, namespace=namespace)
+    # case-4096 authorization derives ONLY from the comment bytes
+    # (correction 4): an exact stripped ``case-4096:<reason>`` line,
+    # exactly one, nonempty reason. Prose mentions and malformed
+    # prefixes are not authorization.
+    c4096 = [ln for ln in lines if ln.startswith("case-4096:")]
+    if len(c4096) > 1:
+        raise DiagnosticError(
+            f"multiple conflicting case-4096 authorization lines "
+            f"({len(c4096)})")
+    case4096: dict[str, Any] | None = None
+    if len(c4096) == 1:
+        reason = c4096[0][len("case-4096:"):].strip()
+        if not reason:
+            raise DiagnosticError("case-4096 authorization line has an "
+                                  "empty reason")
+        case4096 = {"comment_id": authority["comment_id"],
+                    "line": c4096[0], "reason": reason}
+    return dict(authority, namespace=namespace, case4096=case4096)
 
 
 def fetch_dispatch_authority(repo_root: Path, expected_head: str,
@@ -244,23 +364,51 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
     GET-only, paginated, fail-closed on unbounded pages; honors the
     authenticated GET-only proxy environment variables the accepted
     campaign used on the compute node (https_proxy/SSL_CERT_FILE).
-    """
-    import urllib.request
 
+    In the SAME live pass it fetches the PR state (must be OPEN,
+    unmerged, base main, head exactly ``expected_head``) and the Issue
+    #248 state (must be OPEN) — correction 3: a closed/merged PR or a
+    closed issue fails before any launch, and HEAD movement
+    automatically invalidates the authorization.
+    """
     _require_clean_head(Path(repo_root), expected_head)
     headers = {"Accept": "application/vnd.github+json",
                "User-Agent": "inferswarm-issue248-diagnostic"}
     token = os.environ.get("GH_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    def _get_json(path: str) -> Any:
+        url = f"{github_api}/repos/Zutfen-LLC/inferswarm/{path}"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return json.loads(response.read())
+
+    # Live PR state: OPEN, unmerged, base main, head == expected_head.
+    pr = _get_json(f"pulls/{DIAGNOSTIC_PR_NUMBER}")
+    if pr.get("state") != "open" or pr.get("merged"):
+        raise DiagnosticError(
+            f"PR #{DIAGNOSTIC_PR_NUMBER} is not open/unmerged "
+            f"(state={pr.get('state')!r}, merged={pr.get('merged')!r})")
+    if pr.get("base", {}).get("ref") != "main":
+        raise DiagnosticError(
+            f"PR #{DIAGNOSTIC_PR_NUMBER} base is not main: "
+            f"{pr.get('base', {}).get('ref')!r}")
+    if pr.get("head", {}).get("sha") != expected_head:
+        raise DiagnosticError(
+            f"GitHub PR head {pr.get('head', {}).get('sha')} != expected "
+            f"{expected_head}")
+    # Live issue state: OPEN.
+    issue = _get_json(f"issues/{DIAGNOSTIC_ISSUE}")
+    if issue.get("state") != "open":
+        raise DiagnosticError(
+            f"Issue #{DIAGNOSTIC_ISSUE} is not open "
+            f"(state={issue.get('state')!r})")
     comments: list[dict[str, Any]] = []
     page = 1
     while True:
-        url = (f"{github_api}/repos/Zutfen-LLC/inferswarm/"
-               f"issues/{DIAGNOSTIC_PR_NUMBER}/comments?page={page}&per_page=100")
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=30) as response:
-            batch = json.loads(response.read())
+        batch = _get_json(f"issues/{DIAGNOSTIC_PR_NUMBER}/comments"
+                          f"?page={page}&per_page=100")
         if not isinstance(batch, list) or not batch:
             break
         comments.extend(batch)
@@ -280,6 +428,8 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
             "body": comment.get("body"),
             "head_sha": expected_head,
             "namespace": namespace,
+            "open_pr": True,
+            "issue_open": True,
         }
         try:
             return validate_authority_payload(authority, expected_head)
@@ -288,6 +438,28 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
     raise DiagnosticError(
         f"no valid dispatch authority for head {expected_head} "
         f"namespace {namespace}")
+
+
+def require_live_dispatch(repo_root: Path, expected_head: str,
+                          namespace: str, revalidate_authority: Any = None,
+                          github_api: str = "https://api.github.com",
+                          ) -> dict[str, Any]:
+    """MANDATORY live revalidation immediately before a physical unit.
+
+    There is no production path where omitting ``revalidate_authority``
+    silently disables live verification (correction 3): the default
+    fetcher is always executed. Tests inject a fake through
+    ``revalidate_authority`` (a callable receiving
+    ``(repo_root, expected_head, namespace, github_api)`` and returning
+    the validated authority payload); production callers pass nothing.
+    A cached/prevalidated dict passed here is NEVER trusted as
+    authority.
+    """
+    if revalidate_authority is None:
+        revalidate_authority = fetch_dispatch_authority
+    authority = revalidate_authority(repo_root, expected_head, namespace,
+                                     github_api)
+    return validate_authority_payload(authority, expected_head)
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +520,48 @@ def verify_binary(path: Path, binary_id: str) -> str:
         raise DiagnosticError(
             f"binary sha mismatch for {binary_id}: {digest}")
     return digest
+
+
+def verify_model_members(model_dir: Path,
+                         hasher: Callable[[Path], str] = file_sha256
+                         ) -> dict[str, str]:
+    """Verify the COMPLETE accepted three-member GGUF set (correction 1).
+
+    Requires all three expected member paths, rejects a missing member,
+    rejects a wrong filename/path mapping, hashes every member
+    independently, and compares every digest against the exact accepted
+    #241 values. Returns the verified {member filename: sha256} map for
+    binding into the unit receipt. No arbitrary caller-supplied model
+    file can pass: the launched member-1 path is derived from
+    ``model_dir`` + the frozen member filename, never accepted from the
+    caller.
+    """
+    model_dir = Path(model_dir)
+    if not model_dir.is_dir():
+        raise DiagnosticError(
+            f"model dir is not a directory: {model_dir}")
+    present = sorted(p.name for p in model_dir.iterdir()
+                     if p.suffix == ".gguf")
+    expected = sorted(MODEL_MEMBERS)
+    unexpected = sorted(set(present) - set(expected))
+    if unexpected:
+        raise DiagnosticError(
+            f"unexpected split topology in {model_dir}: {unexpected}")
+    verified: dict[str, str] = {}
+    for member in MODEL_MEMBERS:
+        path = model_dir / member
+        if path.is_symlink() or not path.is_file():
+            raise DiagnosticError(
+                f"accepted model member missing: {path}")
+        digest = hasher(path)
+        if digest != MODEL_MEMBER_SHA256[member]:
+            raise DiagnosticError(
+                f"model member sha mismatch for {member}: {digest} != "
+                f"{MODEL_MEMBER_SHA256[member]}")
+        verified[member] = digest
+    if set(verified) != set(MODEL_MEMBER_SHA256):
+        raise DiagnosticError("model member map incomplete")
+    return verified
 
 
 def verify_fixtures(repo_root: Path) -> dict[str, Any]:

@@ -132,5 +132,22 @@ R8I3_REF_NONDETERMINISM_NOT_REPRODUCED
 
 A terminal is derived only by the offline reducer from retained unit
 bytes against the frozen plan; a missing/incomplete probe fails closed.
-None of these terminals qualifies comparator/2. After the terminal is
-derived: STOP for maintainer review. No automatic merge into #241.
+The derivation is MECHANICAL (scripts/issue248_physical.py
+derive_terminal): the decision tree distinguishes (A) NOT_REPRODUCED
+(complete fresh repeatability population, row-deterministic under the
+frozen digest criterion; the accepted retained #241 mismatch stays
+verified and no later probe reinterprets it), (D) PLATFORM_INSTABILITY_
+LOCALIZED (retained causal platform evidence — recorded identity drift
+or fatal device-sample markers; numerical variation alone never
+selects D), (B) OBSERVER_PERTURBATION_LOCALIZED (comparator-observer
+rows vary while the dual-capture discriminator agrees within every
+process AND the comparator-independent capture path AND the canonical
+unobserved ladder stay deterministic), (C) VULKAN_NONDETERMINISM_
+LOCALIZED (reproducible row variation, dual-capture agreement, variation
+surviving fresh processes in every capture mode, clean platform
+health), or (E) UNRESOLVED (complete probes confirm repeatable
+variation, no localization predicate satisfied). Missing/malformed
+evidence yields the machine-readable `R8I3_REDUCER_BLOCKED_INCOMPLETE`
+state — never a hand-selected terminal. None of these terminals
+qualifies comparator/2. After the terminal is derived: STOP for
+maintainer review. No automatic merge into #241.

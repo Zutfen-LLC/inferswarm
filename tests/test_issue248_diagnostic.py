@@ -1,4 +1,13 @@
-"""Issue #248 (R8-I3A) diagnostic tooling tests (CPU-only, fake runners)."""
+"""Issue #248 (R8-I3A) diagnostic tooling tests (CPU-only, fake runners).
+
+Round-1 correction suite (maintainer NO-GO comment 5820126410): adds
+old-defect proofs and mutation controls for the six corrected boundaries
+— exact three-member model authority, frozen request contract, mandatory
+live dispatch authority, comment-bound case-4096 authorization,
+mechanical terminal derivation, and exact runtime/device subject
+identity. Still CPU-only: every physical seam (git, GitHub, identity
+observer, model hashing, server launch) is injected.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -15,12 +24,71 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import issue248_diagnostic as D  # noqa: E402
 import issue248_physical as P  # noqa: E402
+import issue248_identity as I  # noqa: E402
 
 HEAD = "0" * 40  # synthetic authorized head for authority tests
 
+# Retained-census-shaped raw identity evidence (arm B), provenance-bound
+# to the accepted #241 replacement census (2026-09-24). Mutations of
+# THIS structure drive the identity negative controls.
+CENSUS_RAW_B = {
+    "host": "inferswarm01",
+    "bdf": "00000000:03:00.0",
+    "sysfs.vendor": "0x10de",
+    "sysfs.device": "0x2504",
+    "sysfs.subsystem_vendor": "0x1458",
+    "sysfs.subsystem_device": "0x4074",
+    "sysfs.revision": "0xa1",
+    "sysfs.current_link_width": "16",
+    "sysfs.max_link_width": "16",
+    "sysfs.max_link_speed": "16.0 GT/s PCIe",
+    "sysfs.driver": "nvidia",
+    "nvidia-smi": ("0, GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
+                   "00000000:03:00.0, NVIDIA GeForce RTX 3060, 610.57.04, "
+                   "12288 MiB, 38, 14.28 W, 170.00 W"),
+    "icd_inventory": {
+        "nvidia_icd.json": json.dumps(
+            {"ICD": {"library_path": "libGLX_nvidia.so.0"},
+             "api_version": "1.4.341"}),
+        "radeon_icd.json": json.dumps(
+            {"ICD": {"library_path": "/usr/lib/x86_64-linux-gnu/"
+                     "libradeon_vulkan.so.1"},
+             "api_version": "1.4.305"}),
+    },
+    "vulkaninfo": {
+        "icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "stdout": (
+            "==========\nVULKANINFO\n==========\n\n"
+            "Vulkan Instance Version: 1.4.309\n\nDevices:\n========\n"
+            "GPU0:\n\tapiVersion         = 1.4.341\n"
+            "\tdriverVersion      = 610.57.4.0\n"
+            "\tvendorID           = 0x10de\n"
+            "\tdeviceID           = 0x2504\n"
+            "\tdeviceName         = NVIDIA GeForce RTX 3060\n"
+            "\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n"
+            "\tdriverName         = NVIDIA\n"
+            "\tdriverInfo         = 610.57.04\n"
+            "\tdeviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n"),
+        "rc": 0,
+    },
+}
+
+
+def census_observation(arm: str = "B", **overrides) -> dict:
+    raw = json.loads(json.dumps(CENSUS_RAW_B))
+    raw.update(overrides)
+    return {"arm": arm, "raw": raw}
+
+
+def identity_ok(arm: str) -> dict:
+    """Valid arm-B observation (arm C is not identity-exercised here)."""
+    return census_observation(arm)
+
 
 def make_authority(head: str = HEAD, namespace: str = "d248-test-ns",
-                   body_extra: list[str] | None = None) -> dict:
+                   body_extra: list[str] | None = None,
+                   open_pr: bool = True, issue_open: bool = True,
+                   ) -> dict:
     lines = [
         f"{D.DIAGNOSTIC_DISPATCH_PHRASE}",
         f"head={head}",
@@ -36,6 +104,8 @@ def make_authority(head: str = HEAD, namespace: str = "d248-test-ns",
         "body": "\n".join(lines),
         "head_sha": head,
         "namespace": namespace,
+        "open_pr": open_pr,
+        "issue_open": issue_open,
     }
 
 
@@ -130,6 +200,86 @@ class AuthorityTests(unittest.TestCase):
         a["namespace"] = "d248-test-ns"
         with self.assertRaises(D.DiagnosticError):
             D.validate_authority_payload(a, HEAD)
+
+    def test_rejects_pr_closed(self):
+        a = make_authority(open_pr=False)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(a, HEAD)
+        self.assertIn("closed or merged", str(ctx.exception))
+
+    def test_rejects_issue_closed(self):
+        a = make_authority(issue_open=False)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(a, HEAD)
+        self.assertIn("Issue #248 is closed", str(ctx.exception))
+
+    def test_cached_payload_without_live_state_fails(self):
+        # Correction 3 old-defect proof: a syntactically valid CACHED
+        # authority dict (no live PR/issue state) can no longer pass.
+        a = make_authority()
+        del a["open_pr"]
+        del a["issue_open"]
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(a, HEAD)
+        self.assertIn("live authority state missing", str(ctx.exception))
+
+    def test_multiple_scope_lines_rejected(self):
+        a = make_authority(body_extra=["diagnostic-namespace=d248-test-ns"])
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(a, HEAD)
+        self.assertIn("exactly one diagnostic-namespace", str(ctx.exception))
+
+
+class RequireLiveDispatchTests(unittest.TestCase):
+    """Correction 3: the live fetch is MANDATORY on the production path."""
+
+    def test_default_path_runs_the_real_fetcher(self):
+        calls = []
+
+        def failing_fetch(repo_root, expected_head, namespace, github_api):
+            calls.append((str(repo_root), expected_head, namespace,
+                          github_api))
+            raise D.DiagnosticError("live fetch attempted (no network in "
+                                    "unit tests)")
+
+        import inspect
+        # The production default wires revalidate_authority=None to the
+        # real live fetcher: prove require_live_dispatch dispatches to
+        # the fetcher (here: a probe that records and fails), and that
+        # a VALID injected fetch result is re-validated and returned.
+        try:
+            D.require_live_dispatch(Path("/tmp"), HEAD, "d248-test-ns",
+                                    revalidate_authority=failing_fetch,
+                                    github_api="https://example.invalid")
+        except D.DiagnosticError as exc:
+            self.assertIn("live fetch attempted", str(exc))
+        self.assertEqual(len(calls), 1)
+
+        payload = make_authority()
+        result = D.require_live_dispatch(
+            Path("/tmp"), HEAD, "d248-test-ns",
+            revalidate_authority=lambda *a, **k: payload)
+        self.assertEqual(result["namespace"], "d248-test-ns")
+        self.assertTrue(result["open_pr"])
+        self.assertTrue(result["issue_open"])
+        # the structural default is the REAL fetcher (source-level)
+        src = inspect.getsource(D.require_live_dispatch)
+        self.assertIn("revalidate_authority = fetch_dispatch_authority",
+                      src)
+
+    def test_injected_fetcher_rejects_stale_head(self):
+        def fetch(repo_root, expected_head, namespace, github_api):
+            return make_authority(head="f" * 40)
+        with self.assertRaises(D.DiagnosticError):
+            D.require_live_dispatch(Path("/tmp"), HEAD, "d248-test-ns",
+                                    revalidate_authority=fetch)
+
+    def test_injected_fetcher_rejects_closed_pr(self):
+        def fetch(repo_root, expected_head, namespace, github_api):
+            return make_authority(open_pr=False)
+        with self.assertRaises(D.DiagnosticError):
+            D.require_live_dispatch(Path("/tmp"), HEAD, "d248-test-ns",
+                                    revalidate_authority=fetch)
 
 
 class FixtureAndIdentityTests(unittest.TestCase):
@@ -246,8 +396,23 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         (self.repo / D.FIXTURE_LADDER_REL).write_bytes(source)
         self.bin = self.root / "bin"
         self.bin.write_bytes(b"x" * 32)
-        self.model = self.root / "model.gguf"
-        self.model.write_bytes(b"m" * 64)
+        # Correction 1: the FULL accepted three-member set under the
+        # accepted MODEL_DIR layout; deterministic digests via the
+        # injected model_hasher seam (real 50-GiB members never needed).
+        self.model_dir = self.root / D.MODEL_DIR.lstrip("/")
+        self.model_dir.mkdir(parents=True)
+        self.member_digests = {}
+        for member in D.MODEL_MEMBERS:
+            p = self.model_dir / member
+            p.write_bytes(b"m" * 64)
+        for i, member in enumerate(D.MODEL_MEMBERS):
+            # The injected hasher stands in for hashing the real
+            # 50-GiB bytes: by default it reports the ACCEPTED digests
+            # (i.e. the members hold exactly the accepted content).
+            # Negative controls override individual members.
+            self.member_digests[member] = D.MODEL_MEMBER_SHA256[member]
+        self.model_hasher = (
+            lambda path: self.member_digests[path.name])
         # deterministic binary sha by patching SERVER_BINARIES lookup
         self._orig = dict(D.SERVER_BINARIES)
         D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
@@ -263,19 +428,18 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         issue248_diagnostic.subprocess.run = self._orig_run
         self._tmp.cleanup()
 
-    def _identity_ok(self, arm):
-        return {"arm": arm, "raw": {
-            "nvidia-smi": ("GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
-                           "NVIDIA GeForce RTX 3060, "
-                           "00000000:03:00.0, 610.57.04"),
-            "sysfs.vendor": "0x10de", "sysfs.device": "0x2504",
-        }}
+    def _live_fetch(self):
+        """Injected live-dispatch fetcher returning a VALID payload."""
+        def fetch(repo_root, expected_head, namespace, github_api):
+            return make_authority(head=expected_head, namespace=namespace)
+        return fetch
+
+    def _identity_ok_seam(self, arm):
+        return identity_ok(arm)
 
     def _identity_drift(self, arm):
-        return {"arm": arm, "raw": {
-            "nvidia-smi": "some other gpu",
-            "sysfs.vendor": "0x1234", "sysfs.device": "0x9999",
-        }}
+        return census_observation(
+            arm, **{"nvidia-smi": "some other gpu"})
 
     def _fake_execute(self, tokens=(328, 760, 324, 55965, 51624, 29014,
                                     34227, 18030)):
@@ -297,26 +461,298 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
                                        {"stage": "after"}]}
         return execute
 
-    def test_positive_path_writes_custody(self):
-        receipt = P.run_diagnostic_unit(
-            self.repo, self.root / "ev", "d248-fake", "repeat",
+    def _run_kwargs(self, **overrides):
+        kw = dict(
             arm="B", case="case-3072", ngl=8, binary_id="comparator",
-            binary=self.bin, model_member=self.model,
-            expected_head=HEAD, authority=make_authority(), index=1,
-            execute=self._fake_execute(),
-            identity_observer=self._identity_ok)
+            binary=self.bin, model_dir=self.model_dir, expected_head=HEAD,
+            index=1, execute=self._fake_execute(),
+            identity_observer=self._identity_ok_seam,
+            revalidate_authority=self._live_fetch(),
+            model_hasher=self.model_hasher)
+        kw.update(overrides)
+        return kw
+
+    def _run(self, **overrides):
+        return P.run_diagnostic_unit(self.repo, self.root / "ev",
+                                     "d248-fake", "repeat", **overrides
+                                     ) if False else P.run_diagnostic_unit(
+            self.repo, self.root / "ev", "d248-fake", "repeat",
+            **self._run_kwargs(**overrides))
+
+    def test_positive_path_writes_custody(self):
+        receipt = self._run()
         self.assertEqual(receipt["tokens"],
                          [328, 760, 324, 55965, 51624, 29014, 34227, 18030])
+        # Correction 1: the COMPLETE verified member map is bound.
+        self.assertEqual(receipt["model_members_sha256"],
+                         self.member_digests)
+        self.assertEqual(set(receipt["model_members_sha256"]),
+                         set(D.MODEL_MEMBERS))
+        # the launch path is DERIVED member 1 under the frozen dir
+        self.assertEqual(
+            Path(receipt["model_launch_member"]),
+            self.model_dir / D.MODEL_MEMBER_1)
+        # Correction 2: the receipt binds the frozen contract + digest.
+        self.assertEqual(receipt["request_contract"], D.REQUEST_CONTRACT)
+        self.assertEqual(
+            receipt["request_contract_sha256"],
+            D.canonical_request_digest(D.REQUEST_CONTRACT))
         unit = self.root / "ev" / "d248-fake" / receipt["tag"]
         for name in ("unit.json", "response.json.raw", "identity-pre.json",
-                     "identity-post.json", "obs.meta.json", "server.log"):
-            self.assertTrue((unit / name).exists() or name == "server.log",
-                            name)
+                     "identity-post.json", "obs.meta.json"):
+            self.assertTrue((unit / name).exists(), name)
         # determinism digest derives from raw bytes, not receipt claims
         rr = json.loads((unit / "response.json.raw").read_bytes())
         self.assertEqual(
             receipt["deterministic_output_sha256"],
             D.canonical_token_digest(rr["tokens"]))
+
+    # --- Correction 1 negative controls: exact model authority ---------
+
+    def test_model_member1_wrong_bytes_no_launch(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        digests = dict(self.member_digests)
+        digests[D.MODEL_MEMBERS[0]] = "b" * 64
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute,
+                      model_hasher=lambda p: digests[p.name])
+        self.assertIn(D.MODEL_MEMBERS[0], str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_model_member2_wrong_bytes_no_launch(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        digests = dict(self.member_digests)
+        digests[D.MODEL_MEMBERS[1]] = "c" * 64
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute,
+                      model_hasher=lambda p: digests[p.name])
+        self.assertIn(D.MODEL_MEMBERS[1], str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_model_member3_wrong_bytes_no_launch(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        digests = dict(self.member_digests)
+        digests[D.MODEL_MEMBERS[2]] = "d" * 64
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute,
+                      model_hasher=lambda p: digests[p.name])
+        self.assertIn(D.MODEL_MEMBERS[2], str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_model_member_missing_no_launch(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        import shutil
+        shutil.rmtree(self.model_dir)
+        self.model_dir.mkdir(parents=True)
+        for member in D.MODEL_MEMBERS[1:]:  # member 1 absent
+            (self.model_dir / member).write_bytes(b"m" * 64)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute, model_hasher=self.model_hasher)
+        self.assertIn("missing", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_arbitrary_replacement_model_no_launch(self):
+        # A competent caller points model_dir at a directory holding a
+        # DIFFERENT gguf (with correct member-1 digest even): the split
+        # topology check rejects it before launch.
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        import shutil
+        other = self.root / "other-model"
+        other.mkdir()
+        (other / "MysteryModel-Q4_K_M-00001-of-00001.gguf").write_bytes(
+            b"z" * 64)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute, model_dir=other,
+                      model_hasher=lambda p: self.member_digests.get(
+                          p.name, "a" * 64))
+        self.assertIn("unexpected split topology", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_competent_caller_mutates_members2_3_no_launch(self):
+        # member 1 hash is CORRECT, members 2/3 mutated: still no launch.
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        digests = dict(self.member_digests)
+        digests[D.MODEL_MEMBERS[1]] = "e" * 64
+        digests[D.MODEL_MEMBERS[2]] = "f" * 64
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute,
+                      model_hasher=lambda p: digests[p.name])
+        self.assertIn(D.MODEL_MEMBERS[1], str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_real_model_hasher_rejects_fake_bytes(self):
+        # The production hasher path (file bytes) must reject a dir of
+        # fake members whose digests cannot match the accepted values.
+        with self.assertRaises(D.DiagnosticError):
+            D.verify_model_members(self.model_dir)
+
+    # --- Correction 6 negative controls: subject identity --------------
+
+    def _identity_case(self, label, **overrides):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute,
+                      identity_observer=lambda arm: census_observation(
+                          arm, **overrides))
+        self.assertEqual(called, [])
+        return ctx.exception
+
+    def test_identity_driver_drift_no_launch(self):
+        exc = self._identity_case(
+            "driver", **{"nvidia-smi": CENSUS_RAW_B["nvidia-smi"].replace(
+                "610.57.04", "615.00.01")})
+        self.assertIn("nvidia_driver", str(exc))
+
+    def test_identity_wrong_icd_no_launch(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        del raw["icd_inventory"]["nvidia_icd.json"]
+        exc = self._identity_case("icd", **{"icd_inventory":
+                                            raw["icd_inventory"]})
+        self.assertIn("nvidia_icd", str(exc))
+
+    def test_identity_wrong_vulkan_uuid_no_launch(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "deadbeef-96c1-7e49-89b6-bf54c2121c55")
+        exc = self._identity_case("vulkan-uuid", **{"vulkaninfo":
+                                                    raw["vulkaninfo"]})
+        # either the Vulkan UUID field or the cross-binding must fire
+        self.assertTrue("vulkan_device_uuid" in str(exc)
+                        or "cross-bind" in str(exc))
+
+    def test_identity_wrong_vulkan_device_no_launch(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "NVIDIA GeForce RTX 3060", "NVIDIA GeForce RTX 3050")
+        exc = self._identity_case("vulkan-device", **{"vulkaninfo":
+                                                      raw["vulkaninfo"]})
+        self.assertIn("vulkan_device_name", str(exc))
+
+    def test_identity_subsystem_drift_no_launch(self):
+        exc = self._identity_case("subsystem",
+                                  **{"sysfs.subsystem_vendor": "0x8086"})
+        self.assertIn("subsystem_vendor_id", str(exc))
+
+    def test_identity_revision_drift_no_launch(self):
+        exc = self._identity_case("revision", **{"sysfs.revision": "0xb1"})
+        self.assertIn("revision", str(exc))
+
+    def test_identity_width_drift_no_launch(self):
+        exc = self._identity_case("width", **{"sysfs.current_link_width":
+                                              "8"})
+        self.assertIn("negotiated_width", str(exc))
+
+    def test_identity_speed_capability_drift_no_launch(self):
+        exc = self._identity_case("speed", **{"sysfs.max_link_speed":
+                                              "8.0 GT/s PCIe"})
+        self.assertIn("max_link_speed_capability", str(exc))
+
+    def test_identity_wrong_bdf_no_launch(self):
+        # The observed BDF differs from the frozen address: fail closed.
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["bdf"] = "00000000:c1:00.0"
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute,
+                      identity_observer=lambda arm: {"arm": arm,
+                                                     "raw": raw})
+        self.assertEqual(called, [])
+        self.assertIn("device address disagreement", str(ctx.exception))
+
+    def test_identity_wrong_gpu_uuid_no_launch(self):
+        exc = self._identity_case(
+            "gpu-uuid", **{"nvidia-smi": CENSUS_RAW_B["nvidia-smi"].replace(
+                "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                "GPU-11111111-2222-3333-4444-555555555555")})
+        self.assertTrue("gpu_uuid" in str(exc) or "cross-bind" in str(exc))
+
+    def test_identity_missing_raw_source_no_launch(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        raw2 = json.loads(json.dumps(CENSUS_RAW_B))
+        del raw2["sysfs.revision"]
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute,
+                      identity_observer=lambda arm: {"arm": arm,
+                                                     "raw": raw2})
+        self.assertEqual(called, [])
+        self.assertIn("derivation failed", str(ctx.exception))
+
+    def test_identity_vulkan_receipt_wrong_icd_source_no_launch(self):
+        # The vulkaninfo receipt must come from the DERIVED ICD.
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["icd_path"] = (
+            "/usr/share/vulkan/icd.d/radeon_icd.json")
+        exc = self._identity_case("receipt-icd", **{"vulkaninfo":
+                                                    raw["vulkaninfo"]})
+        self.assertIn("derived ICD", str(exc))
+
+    def test_single_factor_intervention_runs_and_labels(self):
+        iv = {"field": "negotiated_width", "expected_value": "x8"}
+        receipt = self._run(
+            identity_observer=lambda arm: census_observation(
+                arm, **{"sysfs.current_link_width": "8"}),
+            intervention=iv)
+        self.assertEqual(receipt["intervention_mode"], True)
+        self.assertEqual(receipt["intervention"], iv)
+        self.assertEqual(receipt["identity_problems_pre"], [])
+        self.assertEqual(receipt["identity_problems_post"], [])
+
+    def test_two_factor_intervention_rejected(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        iv = {"field": "negotiated_width", "expected_value": "x8"}
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute,
+                      identity_observer=lambda arm: census_observation(
+                          arm, **{"sysfs.current_link_width": "8",
+                                  "sysfs.max_link_width": "8"}),
+                      intervention=iv)
+        self.assertEqual(called, [])
+        # the ONLY drift is the undeclared second factor
+        self.assertIn("max_width", str(ctx.exception))
+        self.assertNotIn("negotiated_width: observed", str(ctx.exception))
+
+    def test_intervention_target_must_differ(self):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        iv = {"field": "negotiated_width",
+              "expected_value": I.frozen_identity("B")["negotiated_width"]}
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute, intervention=iv)
+        self.assertEqual(called, [])
+        self.assertIn("DIFFERS", str(ctx.exception))
 
     def test_identity_drift_fails_closed_before_launch(self):
         called = []
@@ -324,94 +760,169 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
             called.append(kw)
             return self._fake_execute()(**kw)
         with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
-            P.run_diagnostic_unit(
-                self.repo, self.root / "ev", "d248-fake", "repeat",
-                arm="B", case="case-3072", ngl=8, binary_id="comparator",
-                binary=self.bin, model_member=self.model,
-                expected_head=HEAD, authority=make_authority(), index=1,
-                execute=execute,
-                identity_observer=self._identity_drift)
+            self._run(execute=execute,
+                      identity_observer=self._identity_drift)
         self.assertIn("identity drift", str(ctx.exception))
         self.assertEqual(called, [])  # probe list EMPTY when gate denied
 
     def test_case4096_requires_preauthorization(self):
-        with self.assertRaises(P.PhysicalDiagnosticError):
+        # Valid authority comment WITHOUT a case-4096 line: the regime
+        # run of case-4096 must fail before launch.
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
             P.run_diagnostic_unit(
                 self.repo, self.root / "ev", "d248-fake", "regime",
-                arm="B", case="case-4096", ngl=8, binary_id="comparator",
-                binary=self.bin, model_member=self.model,
-                expected_head=HEAD,
-                authority=make_authority(), index=1,
-                execute=self._fake_execute(),
-                identity_observer=self._identity_ok)
+                **self._run_kwargs(case="case-4096"))
+        self.assertIn("case-4096", str(ctx.exception))
 
-    def test_case4096_authorized_runs(self):
-        a = make_authority()
-        a["preauthorized_case4096"] = "case-4096:regime bracket"
+    def test_case4096_authorized_by_comment_line_runs(self):
+        # Correction 4 POSITIVE: the authorization comes from the exact
+        # stripped comment line parsed out of the live-fetched payload.
+        def fetch(repo_root, expected_head, namespace, github_api):
+            return make_authority(
+                head=expected_head, namespace=namespace,
+                body_extra=["case-4096:regime bracket extension"])
         receipt = P.run_diagnostic_unit(
             self.repo, self.root / "ev", "d248-fake", "regime",
-            arm="B", case="case-4096", ngl=8, binary_id="comparator",
-            binary=self.bin, model_member=self.model,
-            expected_head=HEAD, authority=a, index=1,
-            execute=self._fake_execute(),
-            identity_observer=self._identity_ok)
+            **self._run_kwargs(case="case-4096", revalidate_authority=fetch))
         self.assertIn("case4096", receipt["tag"])
+        self.assertEqual(receipt["authority"]["case4096"]["reason"],
+                         "regime bracket extension")
+        self.assertEqual(receipt["authority"]["case4096"]["comment_id"],
+                         123456)
+
+    def test_case4096_dict_metadata_cannot_authorize(self):
+        # Correction 4 OLD-DEFECT PROOF: an otherwise valid dispatch
+        # comment WITHOUT a case-4096 line, plus an arbitrary
+        # preauthorized_case4096 field injected into the in-memory
+        # authority dict, must STILL fail before launch.
+        def fetch(repo_root, expected_head, namespace, github_api):
+            a = make_authority(head=expected_head, namespace=namespace)
+            a["preauthorized_case4096"] = "case-4096:caller-manufactured"
+            return a
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.run_diagnostic_unit(
+                self.repo, self.root / "ev", "d248-fake", "regime",
+                **self._run_kwargs(case="case-4096",
+                                   revalidate_authority=fetch))
+        self.assertIn("exact 'case-4096:<reason>' line", str(ctx.exception))
+
+    def test_case4096_empty_reason_fails(self):
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(make_authority(
+                body_extra=["case-4096:"]), HEAD)
+        self.assertIn("empty reason", str(ctx.exception))
+
+    def test_case4096_prose_mention_is_not_authorization(self):
+        a = make_authority(body_extra=[
+            "we discussed case-4096: maybe later"])
+        out = D.validate_authority_payload(a, HEAD)
+        self.assertIsNone(out["case4096"])  # not an exact stripped line
+
+    def test_case4096_malformed_prefix_fails(self):
+        for bad in ("case-4096 <reason>", "case4096:x", "case-4096",
+                    "Case-4096:x"):
+            a = make_authority(body_extra=[bad])
+            out = D.validate_authority_payload(a, HEAD)
+            self.assertIsNone(out["case4096"], bad)
+
+    def test_case4096_duplicate_lines_fail(self):
+        a = make_authority(body_extra=["case-4096:reason one",
+                                       "case-4096:reason two"])
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            D.validate_authority_payload(a, HEAD)
+        self.assertIn("multiple conflicting case-4096", str(ctx.exception))
 
     def test_bad_authority_rejected_before_launch(self):
         called = []
         def execute(**kw):
             called.append(kw)
             return self._fake_execute()(**kw)
-        a = make_authority()
-        a["author_association"] = "CONTRIBUTOR"
+        def fetch(repo_root, expected_head, namespace, github_api):
+            a = make_authority(head=expected_head, namespace=namespace)
+            a["author_association"] = "CONTRIBUTOR"
+            return a
         with self.assertRaises(D.DiagnosticError):
-            P.run_diagnostic_unit(
-                self.repo, self.root / "ev", "d248-fake", "repeat",
-                arm="B", case="case-3072", ngl=8, binary_id="comparator",
-                binary=self.bin, model_member=self.model,
-                expected_head=HEAD, authority=a, index=1,
-                execute=execute,
-                identity_observer=self._identity_ok)
+            self._run(execute=execute, revalidate_authority=fetch)
         self.assertEqual(called, [])
 
     def test_canonical_kind_requires_canonical_binary(self):
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.run_diagnostic_unit(
                 self.repo, self.root / "ev", "d248-fake", "canonical",
-                arm="B", case="case-3072", ngl=8, binary_id="comparator",
-                binary=self.bin, model_member=self.model,
-                expected_head=HEAD, authority=make_authority(), index=1,
-                execute=self._fake_execute(),
-                identity_observer=self._identity_ok)
+                **self._run_kwargs())
 
     def test_dirty_head_rejected(self):
         import issue248_diagnostic
         issue248_diagnostic.subprocess.run = FakeGit(HEAD, dirty=True)
         try:
             with self.assertRaises(D.DiagnosticError):
-                P.run_diagnostic_unit(
-                    self.repo, self.root / "ev", "d248-fake", "repeat",
-                    arm="B", case="case-3072", ngl=8,
-                    binary_id="comparator", binary=self.bin,
-                    model_member=self.model, expected_head=HEAD,
-                    authority=make_authority(), index=1,
-                    execute=self._fake_execute(),
-                    identity_observer=self._identity_ok)
+                self._run()
         finally:
             issue248_diagnostic.subprocess.run = FakeGit(HEAD)
 
     def test_no_overwrite_of_existing_unit(self):
-        kw = dict(
-            arm="B", case="case-3072", ngl=8, binary_id="comparator",
-            binary=self.bin, model_member=self.model, expected_head=HEAD,
-            authority=make_authority(), index=1,
-            execute=self._fake_execute(),
-            identity_observer=self._identity_ok)
+        kw = self._run_kwargs()
         P.run_diagnostic_unit(self.repo, self.root / "ev", "d248-fake",
                               "repeat", **kw)
         with self.assertRaises(D.DiagnosticError):
             P.run_diagnostic_unit(self.repo, self.root / "ev", "d248-fake",
                                   "repeat", **kw)
+
+    # --- Correction 2 negative controls: frozen request contract -------
+
+    def _contract_case(self, contract):
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            self._run(execute=execute, request_contract=contract)
+        self.assertEqual(called, [])
+        return ctx.exception
+
+    def test_request_seed_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, seed=42)
+        self.assertIn("seed", str(self._contract_case(c)))
+
+    def test_request_top_k_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, top_k=20)
+        self.assertIn("top_k", str(self._contract_case(c)))
+
+    def test_request_sampler_list_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, samplers=["top_k", "temp"])
+        self.assertIn("samplers", str(self._contract_case(c)))
+
+    def test_request_temperature_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, temperature=0.7)
+        self.assertIn("temperature", str(self._contract_case(c)))
+
+    def test_request_n_predict_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, n_predict=16)
+        self.assertIn("n_predict", str(self._contract_case(c)))
+
+    def test_request_cache_prompt_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, cache_prompt=True)
+        self.assertIn("cache_prompt", str(self._contract_case(c)))
+
+    def test_request_stream_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, stream=True)
+        self.assertIn("stream", str(self._contract_case(c)))
+
+    def test_request_return_tokens_change_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, return_tokens=False)
+        self.assertIn("return_tokens", str(self._contract_case(c)))
+
+    def test_request_extra_semantic_key_no_launch(self):
+        c = dict(D.REQUEST_CONTRACT, min_p=0.05)
+        exc = str(self._contract_case(c))
+        self.assertIn("extra semantic keys", exc)
+        self.assertIn("min_p", exc)
+
+    def test_request_equal_override_accepted(self):
+        # An override EQUAL to the canonical contract is accepted and
+        # the executed request is byte-identical to the frozen one.
+        receipt = self._run(request_contract=dict(D.REQUEST_CONTRACT))
+        self.assertEqual(receipt["request_contract"], D.REQUEST_CONTRACT)
 
 
 class ReducerTests(unittest.TestCase):

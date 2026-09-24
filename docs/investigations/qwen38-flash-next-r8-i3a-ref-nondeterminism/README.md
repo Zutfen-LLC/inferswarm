@@ -92,5 +92,26 @@ Authority model
 Physical diagnostic execution requires a maintainer dispatch comment on
 the diagnostic PR carrying the dispatch phrase, `head=<exact sha>`, and
 `diagnostic-namespace=<d248-…>` as exact stripped lines from a current
-OWNER/MEMBER. Verified live at unit-launch time against the exact clean
-HEAD (accepted #241 authority model, diagnostic-scoped).
+OWNER/MEMBER. Verified LIVE immediately before every unit against the
+exact clean HEAD and the live GitHub state: PR #249 OPEN/unmerged with
+base `main` and head exactly the authorized sha, and Issue #248 OPEN —
+any later HEAD movement, PR merge/close, or issue close invalidates the
+authority before launch. No cached authority dict is accepted (the
+runner has no authority parameter). case-4096 additionally requires an
+exact stripped `case-4096:<reason>` line in the same live comment;
+the authorization is comment-bound and cannot be supplied by any other
+means.
+
+Subject identity model
+----------------------
+The accepted #241 generation-2 runtime/device subject is held FIXED for
+both arms (scripts/issue248_identity.py): every frozen field — PCI
+sysfs identity, nvidia-smi identity, NVIDIA ICD, Vulkan device/UUID/
+API/driver, kernel driver, negotiated link width, and max link/speed
+capability — is derived from FRESH RAW OBSERVATIONS (sysfs, per-ICD
+vulkaninfo, ICD inventory; read-only, no GPU compute) and compared
+against the frozen constants before AND after every unit. Driver,
+ICD, Vulkan, subsystem, revision, or link-identity drift fails the
+unit closed. Exactly one factor may be deliberately changed under a
+declared DIAGNOSTIC_ONLY intervention (single-factor, receipt-labeled,
+baseline preserved); simultaneous multi-factor changes are rejected.
