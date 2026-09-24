@@ -3702,7 +3702,7 @@
   },
   "test_issue86_v3_methodology": {
    "baseline_group": "issue-83-95",
-   "baseline_serial_seconds": 21,
+   "baseline_serial_seconds": 21.0,
    "baseline_test_count": 96,
    "category": "HISTORICAL_ONLY",
    "disposition": "integrity-replacement",
