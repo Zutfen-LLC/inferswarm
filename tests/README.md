@@ -76,13 +76,14 @@ python3 scripts/check_phase0_workloads.py
 ## Expected result
 
 On a clean or dirty working tree inside a bootstrapped environment, the whole
-suite passes with **1 skip** (discovery adds no skips; CI's named-module
-selection remains a subset). The skip is a host-local resource this repository
-deliberately does not carry:
+suite passes with **4 skips** (discovery adds no skips; CI's named-module
+selection remains a subset). Every skip is a host-local resource this
+repository deliberately does not carry:
 
 | Skipped test | Reason |
 |---|---|
 | `test_issue74_methodology.test_public_artifacts_reproduce_byte_for_byte_with_pinned_tokenizer` | the pinned tokenizer is not provided |
+| `test_issue133_physical_execution_retention` (3 frozen-reducer replays) | the host-local `/tmp/is133-venv` frozen-tokenizer interpreter is not present |
 
 The FreeToken producer-delta skips and the dirty-tree skip belonged to
 `test_issue117_applicability` and `test_issue117_preflight`, which Issue #246
