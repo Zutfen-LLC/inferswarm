@@ -24,10 +24,11 @@ Two repository-integrity checks, both CPU-only and pure standard library:
    * every row in every row file matches the bytes on disk;
    * every file under a bundle root is covered by a row, a row file, a
      pin, or a declared exempt suffix (no undeclared evidence);
-   * the row files themselves, the producers, and any root files the
-     accepted rows do not cover are pinned by
+   * the row files themselves, the retired producers, the ``extra_pins``
+     (root files the accepted rows do not cover), and -- for a bundle with
+     no row files -- every non-exempt file under its root are pinned by
      ``docs/ci/retired-lineage-pins.sha256``, so evidence and its manifest
-     cannot be rewritten together;
+     cannot be rewritten together and retired producers stay frozen;
    * the pin file names exactly the required set (no stray pins).
 
 Usage::
@@ -47,6 +48,7 @@ import ast
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -64,6 +66,7 @@ CATEGORIES = frozenset({
 })
 CURRENT_CATEGORIES = frozenset({
     "CURRENT_CONTRACT", "CURRENT_REGRESSION", "EVIDENCE_INTEGRITY"})
+REMOVABLE_CATEGORIES = CATEGORIES - CURRENT_CATEGORIES
 ACTIVE_DISPOSITIONS = frozenset({"retain", "narrow"})
 REMOVED_DISPOSITIONS = frozenset({
     "integrity-replacement", "historical-retire", "delete"})
@@ -110,6 +113,10 @@ def parse_json_rows(text: str) -> dict[str, str]:
     rows = json.loads(text).get("rows")
     if not isinstance(rows, dict) or not rows:
         raise RetentionError("json-rows file has no rows object")
+    for relative, digest in rows.items():
+        if (not isinstance(digest, str) or len(digest) != 64
+                or any(c not in "0123456789abcdef" for c in digest)):
+            raise RetentionError(f"malformed json row: {relative}")
     return dict(rows)
 
 
@@ -234,15 +241,69 @@ def discovered_modules(root: Path = ROOT) -> set[str]:
     return {p.stem for p in (root / "tests").glob("test_*.py")}
 
 
+FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+CI_REGISTRATION_SCRIPTS = frozenset({"plan_ci.py", "ci_workflow_parity.py"})
+
+
 def defined_names(path: Path) -> set[str]:
-    """``Class`` and ``Class.test_method`` names defined by a test module."""
+    """``Class``, ``Class.method``, and module-level function names."""
     names: set[str] = set()
     for node in ast.parse(path.read_text(encoding="utf-8")).body:
-        if isinstance(node, ast.ClassDef):
+        if isinstance(node, FUNCTIONS):
+            names.add(node.name)
+        elif isinstance(node, ast.ClassDef):
             names.add(node.name)
             names.update(f"{node.name}.{item.name}" for item in node.body
-                         if isinstance(item, ast.FunctionDef))
+                         if isinstance(item, FUNCTIONS))
     return names
+
+
+def manifest_rows_naming_tests(root: Path) -> dict[str, set[str]]:
+    """Test module -> accepted MANIFEST.sha256 files listing its path.
+
+    The evidence-manifest lifecycle check requires every row target to
+    exist, so a listed test file cannot be removed without rewriting
+    accepted evidence.
+    """
+    found: dict[str, set[str]] = {}
+    docs = root / "docs"
+    if not docs.is_dir():
+        return found
+    for manifest in docs.rglob("MANIFEST.sha256"):
+        for line in manifest.read_text(encoding="utf-8").splitlines():
+            relative = line.partition("  ")[2]
+            if relative.startswith("tests/test_") and relative.endswith(".py"):
+                found.setdefault(relative[len("tests/"):-3], set()).add(
+                    manifest.relative_to(root).as_posix())
+    return found
+
+
+def scripts_consuming_tests(root: Path) -> dict[str, set[str]]:
+    """Test module -> scripts that import it or name its file path.
+
+    Manifest builders and authority audits that name a test file consume
+    its bytes; the CI planner's own registration lists are not consumers.
+    """
+    found: dict[str, set[str]] = {}
+    scripts = root / "scripts"
+    if not scripts.is_dir():
+        return found
+    for path in scripts.glob("*.py"):
+        if path.name in CI_REGISTRATION_SCRIPTS:
+            continue
+        source = path.read_text(encoding="utf-8")
+        consumed = set(re.findall(r"tests/(test_\w+)\.py", source))
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Import):
+                consumed.update(a.name for a in node.names
+                                if a.name.startswith("test_"))
+            elif (isinstance(node, ast.ImportFrom) and node.module
+                  and node.module.startswith("test_")):
+                consumed.add(node.module)
+        for module in consumed:
+            found.setdefault(module, set()).add(
+                path.relative_to(root).as_posix())
+    return found
 
 
 def planner_module_groups(root: Path = ROOT) -> dict[str, str]:
@@ -271,7 +332,7 @@ def _record_errors(module: str, record: dict) -> list[str]:
             errors.append(f"{module}: retained {category} module must name "
                           "the retention_blocker stop condition")
     if disposition in REMOVED_DISPOSITIONS:
-        if category not in ("HISTORICAL_ONLY", "OBSOLETE"):
+        if category not in REMOVABLE_CATEGORIES:
             errors.append(f"{module}: {category} module cannot be removed; "
                           "only HISTORICAL_ONLY/OBSOLETE units may leave CI")
         if not str(record.get("replacement") or "").strip():
@@ -279,8 +340,7 @@ def _record_errors(module: str, record: dict) -> list[str]:
                           "its evidence or why nothing needs to")
     for key, override in record.get("overrides", {}).items():
         if (override.get("disposition") in REMOVED_DISPOSITIONS
-                and override.get("category") not in ("HISTORICAL_ONLY",
-                                                     "OBSOLETE")):
+                and override.get("category") not in REMOVABLE_CATEGORIES):
             errors.append(f"{module}.{key}: only HISTORICAL_ONLY/OBSOLETE "
                           "units may be removed")
         if override.get("category") not in CATEGORIES:
@@ -300,12 +360,25 @@ def audit_errors(root: Path = ROOT, audit: dict | None = None) -> list[str]:
     records = audit.get("modules", {})
     discovered = discovered_modules(root)
     owners = planner_module_groups(root)
+    manifest_rows = manifest_rows_naming_tests(root)
+    consumers = scripts_consuming_tests(root)
     for module in sorted(discovered - set(records)):
         errors.append(f"{module}: discovered test module has no retention "
                       "audit record (declare its category and invariant)")
     for module, record in sorted(records.items()):
         errors.extend(_record_errors(module, record))
         disposition = record.get("disposition")
+        # The declared pins/consumers are cross-checked against the tree:
+        # an accepted manifest row or a consuming script is a stop
+        # condition, so the audit may not omit one.
+        for manifest in sorted(manifest_rows.get(module, set())
+                               - set(record.get("pinned_by_evidence", []))):
+            errors.append(f"{module}: accepted manifest {manifest} lists the "
+                          "test file but pinned_by_evidence omits it")
+        for script in sorted(consumers.get(module, set())
+                             - set(record.get("referenced_by_scripts", []))):
+            errors.append(f"{module}: {script} consumes the test module but "
+                          "referenced_by_scripts omits it")
         if disposition in ACTIVE_DISPOSITIONS:
             if module not in discovered:
                 errors.append(f"{module}: retained module is not discovered")
@@ -367,11 +440,8 @@ def main(argv: list[str] | None = None) -> int:
     if errors:
         print(f"ci-test-retention: FAILED ({len(errors)} errors)")
         return 1
-    audit = load_audit()
-    active = sum(1 for r in audit["modules"].values()
-                 if r["disposition"] in ACTIVE_DISPOSITIONS)
-    print(f"ci-test-retention: OK ({active} retained modules audited; "
-          f"{len(read_pins(ROOT))} retired-lineage pins verified)")
+    print("ci-test-retention: OK (retention audit complete; retired-lineage "
+          "evidence, manifests, and producers verified)")
     return 0
 
 

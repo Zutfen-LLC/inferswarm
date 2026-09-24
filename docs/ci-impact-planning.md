@@ -126,6 +126,9 @@ runs in `repo-integrity` and fails when:
 - a discovered module has no record (a new module must declare its
   owner and current invariant);
 - a retained module's audit group differs from its planner group;
+- an accepted `MANIFEST.sha256` lists a test file, or a script imports
+  or names one, and the record omits it (`pinned_by_evidence`,
+  `referenced_by_scripts`) — both are retention stop conditions;
 - a retained `HISTORICAL_ONLY`/`OBSOLETE` module names no
   `retention_blocker` (the stop condition that keeps it, for example
   an accepted manifest that pins the test file);
@@ -148,11 +151,14 @@ runs in `repo-integrity` and fails when:
    replacement instead of reducer replay: add an
    `integrity_replacements` entry naming the evidence bundles (root plus
    accepted row files such as `MANIFEST.sha256`) and the retired
-   producers, then pin them with
+   producers (plus `extra_pins` for any bundle file the accepted rows
+   do not cover), then pin them with
    `python3 scripts/check_ci_test_retention.py --write-pins`. The pin
    file ([`docs/ci/retired-lineage-pins.sha256`](ci/retired-lineage-pins.sha256))
    pins the manifests themselves, so evidence cannot be rewritten
-   together with its manifest.
+   together with its manifest. Pinned retired producers are frozen:
+   editing one, even cosmetically, fails `repo-integrity` until a
+   maintainer-authorized re-pin.
 4. Delete the module and any test-only helpers, unregister them from
    the planner and workflow, map the retired paths to `repo-integrity`
    (plus any retained consumer group), and set the record's disposition

@@ -31,6 +31,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
+import check_ci_test_retention as retention  # noqa: E402
 import plan_ci  # noqa: E402
 
 PLANNER = REPO_ROOT / "scripts" / "plan_ci.py"
@@ -49,8 +50,7 @@ def make_plan(paths, mode="pr"):
 
 
 def _retired_integrity_roots():
-    audit = json.loads((REPO_ROOT / "docs" / "ci" / "test-retention-audit.json")
-                       .read_text(encoding="utf-8"))
+    audit = retention.load_audit(REPO_ROOT)
     return tuple(bundle["root"]
                  for replacement in audit["integrity_replacements"]
                  for bundle in replacement["bundles"])
@@ -966,12 +966,11 @@ class TestRetentionTopology(unittest.TestCase):
             self.assertTrue(make_plan([path])["full_regression"], path)
 
     def test_retired_modules_are_unregistered_and_unmapped(self):
-        audit = json.loads((REPO_ROOT / "docs/ci/test-retention-audit.json")
-                           .read_text(encoding="utf-8"))
+        audit = retention.load_audit(REPO_ROOT)
         registered = {m for mods in plan_ci.GROUP_TEST_MODULES.values()
                       for m in mods}
         for module, record in audit["modules"].items():
-            if record["disposition"] in ("retain", "narrow"):
+            if record["disposition"] in retention.ACTIVE_DISPOSITIONS:
                 continue
             self.assertNotIn(module, registered)
             self.assertNotIn(f"tests/{module}.py", plan_ci.PATH_GROUPS)

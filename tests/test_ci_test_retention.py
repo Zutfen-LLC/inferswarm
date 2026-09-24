@@ -62,10 +62,10 @@ class RealRepositoryTests(unittest.TestCase):
         for module, record in self.audit["modules"].items():
             if record["disposition"] in retention.REMOVED_DISPOSITIONS:
                 self.assertIn(record["category"],
-                              ("HISTORICAL_ONLY", "OBSOLETE"), module)
+                              retention.REMOVABLE_CATEGORIES, module)
                 self.assertTrue(record["replacement"], module)
                 self.assertEqual(record["pinned_by_evidence"], [], module)
-                self.assertEqual(record["imported_by_scripts"], [], module)
+                self.assertEqual(record["referenced_by_scripts"], [], module)
 
     def test_every_retired_producer_and_row_file_is_pinned(self):
         pins = retention.read_pins(ROOT)
@@ -319,6 +319,28 @@ class AuditControls(unittest.TestCase):
                                         "rationale": "r"}}
         self.assert_caught("removed test unit PinnedTests.test_replay is "
                            "still defined")
+
+    def test_undeclared_manifest_pin_is_caught(self):
+        write(self.root, "docs/ev/MANIFEST.sha256",
+              f"{'0' * 64}  tests/test_pinned.py\n")
+        self.assert_caught("test_pinned: accepted manifest "
+                           "docs/ev/MANIFEST.sha256 lists the test file but "
+                           "pinned_by_evidence omits it")
+
+    def test_undeclared_consuming_script_is_caught(self):
+        write(self.root, "scripts/builder.py",
+              "from test_pinned import CONSTANT\n")
+        write(self.root, "scripts/audit.py",
+              "INPUTS = ['tests/test_current.py']\n")
+        self.assert_caught("test_pinned: scripts/builder.py consumes the test "
+                           "module but referenced_by_scripts omits it")
+        self.assert_caught("test_current: scripts/audit.py consumes the test "
+                           "module but referenced_by_scripts omits it")
+
+    def test_planner_registration_is_not_consumption(self):
+        write(self.root, "scripts/plan_ci.py",
+              "MODULES = ['tests/test_current.py']\n")
+        self.assertEqual(self.errors(), [])
 
     def test_removed_module_needs_a_replacement_statement(self):
         self.audit["modules"]["test_retired"]["replacement"] = ""
