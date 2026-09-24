@@ -40,6 +40,10 @@ An investigation is evidence in, not a decision or doctrine update out.
 - [qwen38-flash-next-r8-a/](qwen38-flash-next-r8-a/README.md) — the R8-A
   static Qwen3.8-Flash-Next state/representation/runtime/fleet investigation;
   it records a runtime prerequisite and no physical execution claim.
+- [qwen38-flash-next-r8-i4-v340l-z440/](qwen38-flash-next-r8-i4-v340l-z440/README.md)
+  — the durable R8-I4 engineering record for the accepted V340L single-die
+  practicality characterization on inferswarm05; it is not comparator/2 or
+  R8-J execution authority.
 - [data/](data/README.md) — the byte-preserved derivation outputs and their
   `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
   placements, and the Phase1R D3/D4/D7 placements. The tools that produce them

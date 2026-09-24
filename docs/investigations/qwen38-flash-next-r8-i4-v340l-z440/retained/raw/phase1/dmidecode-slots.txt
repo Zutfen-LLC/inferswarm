@@ -1,0 +1,88 @@
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 2.8 present.
+
+Handle 0x003F, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 1
+	Type: PCI Express 2 x4
+	Data Bus Width: 1x or x1
+	Current Usage: Available
+	Length: Long
+	ID: 1
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:0e:00.0
+
+Handle 0x0040, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 2
+	Type: PCI Express 3
+	Data Bus Width: 16x or x16
+	Current Usage: In Use
+	Length: Long
+	ID: 2
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:02:00.0
+
+Handle 0x0041, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 3
+	Type: PCI Express 2 x8
+	Data Bus Width: 4x or x4
+	Current Usage: Available
+	Length: Long
+	ID: 3
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:11:00.0
+
+Handle 0x0042, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 4
+	Type: PCI Express 3
+	Data Bus Width: 8x or x8
+	Current Usage: Available
+	Length: Long
+	ID: 4
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:01:00.0
+
+Handle 0x0043, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 5
+	Type: PCI Express 3
+	Data Bus Width: 16x or x16
+	Current Usage: In Use
+	Length: Long
+	ID: 5
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:03:00.0
+
+Handle 0x0044, DMI type 9, 17 bytes
+System Slot Information
+	Designation: SLOT 6
+	Type: PCI
+	Data Bus Width: 32 bit
+	Current Usage: Available
+	Length: Long
+	ID: 6
+	Characteristics:
+		5.0 V is provided
+		PME signal is supported
+		SMBus signal is supported
+	Bus Address: 0000:10:00.0
+

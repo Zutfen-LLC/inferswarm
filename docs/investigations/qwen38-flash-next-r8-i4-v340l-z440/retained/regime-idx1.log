@@ -1,0 +1,21 @@
+{"case": "case-256", "rep": 0, "wall": 14.117}
+{"case": "case-256", "rep": 1, "wall": 13.545}
+{"case": "case-256", "rep": 2, "wall": 13.562}
+{"case": "case-256", "rep": 3, "wall": 13.599}
+{"case": "case-1024", "rep": 0, "wall": 24.509}
+{"case": "case-1024", "rep": 1, "wall": 24.33}
+{"case": "case-1024", "rep": 2, "wall": 24.396}
+{"case": "case-1024", "rep": 3, "wall": 24.264}
+{"case": "case-3072", "rep": 0, "wall": 63.484}
+{"case": "case-3072", "rep": 1, "wall": 63.029}
+{"case": "case-3072", "rep": 2, "wall": 62.801}
+{"case": "case-3072", "rep": 3, "wall": 63.415}
+{"case": "case-4096", "rep": 0, "wall": 81.382}
+{"case": "case-4096", "rep": 1, "wall": 80.865}
+{"case": "case-4096", "rep": 2, "wall": 80.973}
+{"case": "case-4096", "rep": 3, "wall": 80.658}
+wrote evidence/phase5/regime-idx1-ngl7.json
+{"rep": 1, "wall": 13.782, "prompt_s": 256}
+{"rep": 2, "wall": 13.061, "prompt_s": 256}
+{"rep": 3, "wall": 13.091, "prompt_s": 256}
+wrote evidence/phase5/rung-idx1-ngl7.json

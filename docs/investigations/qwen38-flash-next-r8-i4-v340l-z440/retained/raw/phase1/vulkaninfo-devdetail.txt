@@ -1,0 +1,40 @@
+	deviceName        = AMD Radeon Pro V340 (RADV VEGA10)
+	pipelineCacheUUID = e585b1a7-b665-383b-6330-1d5c0b365774
+
+VkPhysicalDeviceLimits:
+-----------------------
+	maxImageDimension1D                             = 16384
+	maxImageDimension2D                             = 16384
+	maxImageDimension3D                             = 2048
+	maxImageDimensionCube                           = 16384
+	maxImageArrayLayers                             = 2048
+--
+	shaderModuleIdentifierAlgorithmUUID     = 4d455341-2d42-4c41-4b45-330000000000
+
+VkPhysicalDeviceShaderObjectPropertiesEXT:
+------------------------------------------
+	shaderBinaryUUID     = e585b1a7-b665-383b-6330-1d5c0b365774
+	shaderBinaryVersion  = 1
+
+VkPhysicalDeviceTransformFeedbackPropertiesEXT:
+-----------------------------------------------
+	maxTransformFeedbackStreams                = 4
+	maxTransformFeedbackBuffers                = 4
+	maxTransformFeedbackBufferSize             = 0xffffffff
+	maxTransformFeedbackStreamDataSize         = 512
+--
+	deviceUUID                        = 00000000-0700-0000-0000-000000000000
+	driverUUID                        = 414d442d-4d45-5341-2d44-525600000000
+	deviceNodeMask                    = 0
+	deviceLUIDValid                   = false
+	subgroupSize                      = 64
+	subgroupSupportedStages: count = 6
+		SHADER_STAGE_VERTEX_BIT
+		SHADER_STAGE_TESSELLATION_CONTROL_BIT
+		SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+		SHADER_STAGE_GEOMETRY_BIT
+--
+	optimalTilingLayoutUUID                             = 00000000-0000-0000-0000-000000000000
+	identicalMemoryTypeRequirements                     = false
+
+Device Extensions: count = 191

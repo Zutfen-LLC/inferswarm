@@ -1,0 +1,68 @@
+{
+ "schema": "inferswarm.issue243.burnin/1",
+ "campaign": "issue243-r8i4-v340l-z440-characterization",
+ "mode": "single",
+ "ngl": 7,
+ "t0": "2026-09-23T20:15:55Z",
+ "geometry": {
+  "ngl": 7,
+  "ctx": {
+   "ctx-size": 8192,
+   "batch-size": 512
+  },
+  "request": {
+   "samplers": [
+    "top_k"
+   ],
+   "top_k": 1,
+   "temperature": 0.0,
+   "seed": 0,
+   "cache_prompt": false,
+   "stream": false,
+   "return_tokens": true,
+   "n_predict": 8
+  }
+ },
+ "vram_loaded": {
+  "0000:07:00.0": 8351744,
+  "0000:0b:00.0": 6756581376
+ },
+ "gpu_loaded": {
+  "0000:07:00.0": {
+   "gpu_busy_percent": "0",
+   "mem_info_vram_used": "8351744",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "temp_edge": 29.0,
+   "temp_junction": 31.0,
+   "temp_mem": 29.0,
+   "power_w": 4.0,
+   "sclk_current": "300Mhz"
+  },
+  "0000:0b:00.0": {
+   "gpu_busy_percent": "0",
+   "mem_info_vram_used": "6756581376",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "temp_edge": 38.0,
+   "temp_junction": 39.0,
+   "temp_mem": 37.0,
+   "power_w": 4.0,
+   "sclk_current": "300Mhz"
+  }
+ },
+ "vram_final": {
+  "0000:07:00.0": 8351744,
+  "0000:0b:00.0": 6778585088
+ },
+ "requests_completed": {
+  "1": 50
+ },
+ "kernel_new_lines": [],
+ "fail_closed": {
+  "amdgpu_reset_or_fault": [],
+  "aer_or_pcieport_errors": [],
+  "process_failures": []
+ },
+ "terminal": "THERMAL_PLATFORM_STABLE_FOR_BOUNDED_TESTING"
+}
