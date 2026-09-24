@@ -211,11 +211,14 @@ def dispatch_authority_receipt() -> dict:
         "repository": dispatch.REPO,
         "issue_number": 241,
         "pr_number": 242,
+        "pr_state": "open",
+        "merged_at": None,
+        "base_ref": "main",
         "head_sha": FAKE_HEAD,
-        "review_id": 55,
-        "reviewer": "maintainer",
-        "reviewer_association": "OWNER",
-        "review_commit_id": FAKE_HEAD,
+        "comment_id": 55,
+        "commenter": "maintainer",
+        "commenter_association": "OWNER",
+        "created_at": "2026-09-23T12:00:00Z",
         "dispatch_phrase": dispatch.DISPATCH_PHRASE,
     }
 
@@ -1631,72 +1634,335 @@ class TestSupersession(unittest.TestCase):
 
 
 class TestDispatchAuthority(unittest.TestCase):
+    """Comment-authority contract (maintainer correction, 2026-09-24).
+
+    Authority is a top-level PR conversation comment from a current
+    OWNER/MEMBER bound to the exact PR head. GitHub review state is
+    irrelevant; the PR author may be the commenter.
+    """
     HEAD = "b" * 40
+    ISSUE_URL = "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/242"
 
     def _pr(self, **over):
         doc = {
-            "state": "open", "merged_at": None, "number": 300,
+            "state": "open", "merged_at": None, "number": 242,
             "base": {"ref": "main"}, "head": {"sha": self.HEAD},
         }
         doc.update(over)
         return doc
 
-    def _review(self, **over):
+    def _issue(self, **over):
+        doc = {"number": 241, "state": "open"}
+        doc.update(over)
+        return doc
+
+    def _comment(self, **over):
         doc = {
-            "id": 55, "state": "APPROVED",
-            "author_association": "OWNER", "commit_id": self.HEAD,
+            "id": 55,
+            "author_association": "OWNER",
             "user": {"login": "maintainer"},
-            "submitted_at": "2026-09-23T12:00:00Z",
+            "created_at": "2026-09-23T12:00:00Z",
+            "issue_url": self.ISSUE_URL,
             "body": f"R8I3 PHYSICAL DISPATCH #241\nhead={self.HEAD}",
         }
         doc.update(over)
         return doc
 
-    def test_valid_dispatch(self):
-        authority = dispatch.validate_dispatch_authority(
-            self._pr(), {"number": 241, "state": "open"},
-            [self._review()], self.HEAD)
+    def _validate(self, comments, head=None, pr=None, issue=None):
+        return dispatch.validate_dispatch_authority(
+            pr or self._pr(), issue or self._issue(), comments,
+            head or self.HEAD)
+
+    # -- required PASS --------------------------------------------------
+
+    def test_exact_head_owner_comment_authorizes(self):
+        authority = self._validate([self._comment()])
         self.assertEqual(authority["head_sha"], self.HEAD)
+        self.assertEqual(authority["comment_id"], 55)
+        self.assertEqual(authority["commenter"], "maintainer")
+        self.assertEqual(authority["commenter_association"], "OWNER")
+        self.assertEqual(authority["created_at"], "2026-09-23T12:00:00Z")
         self.assertEqual(authority["dispatch_phrase"],
                          "R8I3 PHYSICAL DISPATCH #241")
+        self.assertEqual(authority["pr_number"], 242)
+        self.assertEqual(authority["issue_number"], 241)
+        self.assertEqual(authority["base_ref"], "main")
+        self.assertEqual(authority["schema"], dispatch.AUTHORITY_SCHEMA)
 
-    def test_wrong_head_rejected(self):
+    def test_exact_head_member_comment_authorizes(self):
+        authority = self._validate([
+            self._comment(author_association="MEMBER",
+                          user={"login": "ops-member"})])
+        self.assertEqual(authority["commenter_association"], "MEMBER")
+
+    def test_pr_author_may_authorize_himself(self):
+        # Single-maintainer repository: self-authorship is intentional
+        # authority, not a rejection criterion.
+        authority = self._validate([
+            self._comment(user={"login": "ezutfen"})])
+        self.assertEqual(authority["commenter"], "ezutfen")
+
+    def test_latest_valid_comment_selected_deterministically(self):
+        older = self._comment(id=10, created_at="2026-09-23T10:00:00Z")
+        authority = self._validate([older, self._comment()])
+        self.assertEqual(authority["comment_id"], 55)
+        # tie on timestamp: highest comment id wins
+        tied = self._comment(id=99, created_at="2026-09-23T12:00:00Z")
+        self.assertEqual(
+            self._validate([self._comment(), tied])["comment_id"], 99)
+
+    def test_multiline_comment_with_surrounding_prose_authorizes(self):
+        comment = self._comment(
+            body=("Dispatching after review.\n\n"
+                  "R8I3 PHYSICAL DISPATCH #241  \n"
+                  f"head={self.HEAD}\n\n— maintainer"))
+        self.assertIn("comment_id", self._validate([comment]))
+
+    def test_missing_issue_url_rejected(self):
+        # Real GitHub issue-comment responses always carry issue_url;
+        # documents lacking it are not PR conversation comments.
+        comment = self._comment()
+        comment.pop("issue_url")
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(), {"number": 241, "state": "open"},
-                [self._review()], "c" * 40)
+            self._validate([comment])
+
+    def test_whitespace_padded_lines_authorize(self):
+        comment = self._comment(
+            body=f"  R8I3 PHYSICAL DISPATCH #241  \n\thead={self.HEAD}\t")
+        self.assertIn("comment_id", self._validate([comment]))
+
+    def test_phrase_case_must_match_exactly(self):
+        lowered = self._comment(
+            body=f"r8i3 physical dispatch #241\nhead={self.HEAD}")
+        with self.assertRaises(ValueError):
+            self._validate([lowered])
+
+    # -- required FAIL --------------------------------------------------
+
+    def test_stale_head_comment_rejected(self):
+        with self.assertRaises(ValueError):
+            self._validate([self._comment(
+                body=f"R8I3 PHYSICAL DISPATCH #241\nhead={'d' * 40}")])
+
+    def test_malformed_head_rejected(self):
+        for body in (
+                f"R8I3 PHYSICAL DISPATCH #241\nhead={'d' * 39}",
+                f"R8I3 PHYSICAL DISPATCH #241\nhead={self.HEAD.upper()}",
+                f"R8I3 PHYSICAL DISPATCH #241\nhead=xyz",
+                "R8I3 PHYSICAL DISPATCH #241"):
+            with self.assertRaises(ValueError, msg=body[-20:]):
+                self._validate([self._comment(body=body)])
 
     def test_missing_phrase_rejected(self):
-        review = self._review(body="head=" + self.HEAD)
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(), {"number": 241, "state": "open"},
-                [review], self.HEAD)
+            self._validate([self._comment(body=f"head={self.HEAD}")])
 
-    def test_non_owner_rejected(self):
+    def test_phrase_as_substring_not_exact_line_rejected(self):
+        for body in (
+                f"prefix R8I3 PHYSICAL DISPATCH #241 suffix\nhead={self.HEAD}",
+                f"xxR8I3 PHYSICAL DISPATCH #241\nhead={self.HEAD}",
+                f"R8I3 PHYSICAL DISPATCH #241xx\nhead={self.HEAD}",
+                f"R8I3 PHYSICAL DISPATCH 241\nhead={self.HEAD}",
+                "R8I3 PHYSICAL DISPATCH #241 head=" + self.HEAD):
+            with self.assertRaises(ValueError, msg=body[:40]):
+                self._validate([self._comment(body=body)])
+
+    def test_wrong_issue_or_pr_rejected(self):
+        # comment minted on another issue/PR carries a foreign issue_url
+        foreign = self._comment(
+            issue_url="https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/240")
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(), {"number": 241, "state": "open"},
-                [self._review(author_association="CONTRIBUTOR")], self.HEAD)
+            self._validate([foreign])
+        with self.assertRaises(ValueError):
+            self._validate([self._comment()], pr=self._pr(number=240))
+
+    def test_closed_pr_rejected(self):
+        with self.assertRaises(ValueError):
+            self._validate([self._comment()], pr=self._pr(state="closed"))
 
     def test_merged_pr_rejected(self):
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(merged_at="2026-09-23T00:00:00Z"),
-                {"number": 241, "state": "open"},
-                [self._review()], self.HEAD)
+            self._validate(
+                [self._comment()],
+                pr=self._pr(merged_at="2026-09-23T00:00:00Z"))
+
+    def test_wrong_base_ref_rejected(self):
+        with self.assertRaises(ValueError):
+            self._validate(
+                [self._comment()],
+                pr=self._pr(base={"ref": "develop"}))
+
+    def test_live_pr_head_differs_rejected(self):
+        # expected_head != the live PR head: the authorization comment is
+        # bound to a head the PR no longer points at.
+        with self.assertRaises(ValueError):
+            self._validate([self._comment()], head="c" * 40)
 
     def test_closed_issue_rejected(self):
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(), {"number": 241, "state": "closed"},
-                [self._review()], self.HEAD)
+            self._validate([self._comment()], issue=self._issue(state="closed"))
 
-    def test_stale_review_commit_rejected(self):
+    def test_wrong_issue_number_rejected(self):
         with self.assertRaises(ValueError):
-            dispatch.validate_dispatch_authority(
-                self._pr(), {"number": 241, "state": "open"},
-                [self._review(commit_id="d" * 40)], self.HEAD)
+            self._validate([self._comment()], issue=self._issue(number=239))
+
+    def test_non_owner_member_association_rejected(self):
+        for assoc in ("CONTRIBUTOR", "COLLABORATOR", "NONE", "MANNEQUIN",
+                      "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", ""):
+            with self.assertRaises(ValueError, msg=assoc):
+                self._validate([
+                    self._comment(author_association=assoc)])
+
+    def test_missing_commenter_login_rejected(self):
+        with self.assertRaises(ValueError):
+            self._validate([self._comment(user={})])
+        with self.assertRaises(ValueError):
+            self._validate([self._comment(user=None)])
+
+    def test_invalid_comment_id_rejected(self):
+        for bad in (0, -1, True, "55", 5.5, None):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                self._validate([self._comment(id=bad)])
+
+    def test_malformed_timestamp_rejected(self):
+        for bad in ("not-a-time", "2026-09-23 12:00", 12345, None, "",
+                    "2026-09-23T12:00:00"):  # naive: no timezone
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                self._validate([self._comment(created_at=bad)])
+
+    # -- GitHub review state is irrelevant ------------------------------
+
+    def test_approved_review_without_comment_rejected(self):
+        # A normal APPROVED review is NOT a dispatch authority: only a
+        # top-level PR conversation comment authorizes.
+        review = {
+            "id": 900, "state": "APPROVED",
+            "author_association": "OWNER", "commit_id": self.HEAD,
+            "user": {"login": "maintainer"},
+            "submitted_at": "2026-09-23T12:00:00Z",
+            "body": f"R8I3 PHYSICAL DISPATCH #241\nhead={self.HEAD}",
+        }
+        with self.assertRaises(ValueError):
+            self._validate([review])
+
+    def test_commented_review_without_comment_rejected(self):
+        review = {
+            "id": 901, "state": "COMMENTED",
+            "author_association": "MEMBER", "commit_id": self.HEAD,
+            "user": {"login": "maintainer"},
+            "submitted_at": "2026-09-23T12:00:00Z",
+            "body": f"R8I3 PHYSICAL DISPATCH #241\nhead={self.HEAD}",
+        }
+        with self.assertRaises(ValueError):
+            self._validate([review])
+
+    def test_reviews_alongside_comment_do_not_change_authority(self):
+        # Ordinary review traffic (including APPROVED) neither authorizes
+        # nor invalidates a valid exact-head comment authorization.
+        review = {
+            "id": 902, "state": "APPROVED",
+            "author_association": "CONTRIBUTOR", "commit_id": "e" * 40,
+            "user": {"login": "someone"}, "submitted_at": "2026-09-23T13:00:00Z",
+            "body": "LGTM",
+        }
+        authority = self._validate([review, self._comment()])
+        self.assertEqual(authority["comment_id"], 55)
+
+    def test_review_shaped_entry_lacking_created_at_rejected(self):
+        # Review submissions carry submitted_at, never created_at; the
+        # validator structurally rejects review documents passed as
+        # comments even when every other field matches.
+        review_shaped = self._comment()
+        review_shaped.pop("created_at")
+        review_shaped["submitted_at"] = "2026-09-23T12:00:00Z"
+        with self.assertRaises(ValueError):
+            self._validate([review_shaped])
+
+    def test_inline_review_comment_endpoint_shape_rejected(self):
+        # Inline review comments come from /pulls/{n}/comments: they carry
+        # pull_request_url and no issue_url, so they can never authorize.
+        inline: dict = dict(self._comment())
+        inline.pop("issue_url")
+        inline["pull_request_url"] = (
+            "https://api.github.com/repos/Zutfen-LLC/inferswarm/pulls/242")
+        inline["in_reply_to_id"] = 1
+        with self.assertRaises(ValueError):
+            self._validate([inline])
+
+    # -- fetch path -----------------------------------------------------
+
+    def test_fetch_uses_issue_comments_endpoint_with_pagination(self):
+        pages = {
+            1: [dict(self._comment(), id=1000 + i,
+                     body=f"noise {i}") for i in range(100)],
+            2: [self._comment()],
+        }
+
+        def opener(request, timeout=20):
+            url = request.full_url
+            self.assertNotIn("/pulls/242/reviews", url)
+            self.assertNotIn("/pulls/242/comments", url)
+            if url.endswith(f"/repos/{dispatch.REPO}/pulls/242"):
+                body = json.dumps(self._pr()).encode()
+            elif url.endswith(f"/repos/{dispatch.REPO}/issues/241"):
+                body = json.dumps(self._issue()).encode()
+            else:
+                self.assertIn("/issues/242/comments", url)
+                self.assertIn("per_page=100", url)
+                from urllib.parse import urlparse, parse_qs
+                query = parse_qs(urlparse(url).query)
+                page = int(query["page"][0])
+                self.assertEqual(page, len(seen_pages) + 1)
+                seen_pages.append(page)
+                body = json.dumps(pages[page]).encode()
+
+            class R:
+                status = 200
+
+                def read(self):
+                    return body
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *a):
+                    return False
+
+            return R()
+
+        seen_pages: list[int] = []
+        authority = dispatch.fetch_dispatch_authority(242, self.HEAD, opener)
+        self.assertEqual(seen_pages, [1, 2])
+        self.assertEqual(authority["comment_id"], 55)
+        self.assertEqual(authority["verified_via"], "public-github-api")
+
+    def test_fetch_fails_closed_on_unbounded_comment_pages(self):
+        full_page = [dict(self._comment(), id=1000 + i) for i in range(100)]
+
+        def opener(request, timeout=20):
+            body = json.dumps(full_page).encode()
+
+            class R:
+                status = 200
+
+                def read(self):
+                    return body
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *a):
+                    return False
+
+            return R()
+
+        with self.assertRaises(ValueError):
+            dispatch.fetch_dispatch_authority(242, self.HEAD, opener)
+
+    def test_fetch_rejects_non_positive_pr_number(self):
+        for bad in (0, -1, True, "242", 2.5):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                dispatch.fetch_dispatch_authority(bad, self.HEAD)
 
 
 # ---------------------------------------------------------------------------

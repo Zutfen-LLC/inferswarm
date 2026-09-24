@@ -64,7 +64,9 @@ def fake_identity(arm):
 
 def authority():
     return {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40, "review_id": 123,
+            "comment_id": 123, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
             "pr_number": 242, "issue_number": 241,
             "dispatch_phrase": dispatch.DISPATCH_PHRASE}
 

@@ -17,9 +17,10 @@ import issue241_constants as C
 AUTHORITY = {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
              "repository": dispatch.REPO, "issue_number": 241, "pr_number": 242,
              "pr_state": "open", "merged_at": None, "base_ref": "main",
-             "review_id": 1, "reviewer": "maintainer", "reviewer_association": "OWNER",
-             "review_commit_id": "a" * 40, "dispatch_phrase": dispatch.DISPATCH_PHRASE,
-             "submitted_at": "2026-09-23T00:00:00Z"}
+             "comment_id": 1, "commenter": "maintainer",
+             "commenter_association": "OWNER",
+             "created_at": "2026-09-23T00:00:00Z",
+             "dispatch_phrase": dispatch.DISPATCH_PHRASE}
 
 class FakeRunner:
     def __init__(self, responses=None):
@@ -79,7 +80,8 @@ class HostProducerTests(unittest.TestCase):
     def test_incomplete_or_revoked_authority_rejected_before_runner(self):
         for authority in ({"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40},
                           {**AUTHORITY, "pr_state": "closed"},
-                          {**AUTHORITY, "review_commit_id": "b" * 40}):
+                          {**AUTHORITY, "commenter_association": "CONTRIBUTOR"},
+                          {**AUTHORITY, "created_at": "not-a-time"}):
             runner = FakeRunner()
             with self.assertRaisesRegex(producer.ProducerError, "authority"):
                 producer.run_recorded(runner, ["fixture"], authority=authority)

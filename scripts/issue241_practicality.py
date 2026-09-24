@@ -32,6 +32,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue241_constants as C
+import issue241_dispatch as dispatch
 
 SCHEMA = "inferswarm.issue241.phase4-practicality/1"
 
@@ -122,10 +123,14 @@ def project_from_measurements(receipt_path: Path) -> dict[str, Any]:
         raise ValueError("measured wall-time authority invalid")
     authority = receipt.get("dispatch_authority")
     if (not isinstance(authority, dict)
-            or authority.get("schema") != "inferswarm.issue241.dispatch-authority/1"
+            or authority.get("schema") != dispatch.AUTHORITY_SCHEMA
             or not isinstance(authority.get("head_sha"), str)
             or len(authority["head_sha"]) != 40
-            or authority.get("review_commit_id") != authority["head_sha"]):
+            or authority.get("commenter_association")
+            not in dispatch.AUTHORIZED_ASSOCIATIONS
+            or not isinstance(authority.get("comment_id"), int)
+            or authority.get("comment_id", 0) <= 0
+            or dispatch.LEGACY_AUTHORITY_KEYS.intersection(authority)):
         raise ValueError("measured walls missing exact-head dispatch authority")
     measurements = receipt.get("measurements")
     if not isinstance(measurements, dict) or set(measurements) != {"B", "C"}:

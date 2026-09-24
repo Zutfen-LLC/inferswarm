@@ -56,12 +56,18 @@ def _authority(value: Any, initial: dict[str, Any] | None = None) -> dict[str, A
         raise ValueError("explicit validated dispatch authority required")
     head = value.get("head_sha")
     if (not isinstance(head, str) or not dispatch.SHA40.fullmatch(head)
-            or value.get("review_commit_id") != head
             or value.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE
             or value.get("pr_number") != 242 or value.get("issue_number") != C.ISSUE
-            or isinstance(value.get("review_id"), bool)
-            or not isinstance(value.get("review_id"), int) or value["review_id"] <= 0):
-        raise ValueError("dispatch authority head/review binding invalid")
+            or value.get("commenter_association")
+            not in dispatch.AUTHORIZED_ASSOCIATIONS
+            or isinstance(value.get("comment_id"), bool)
+            or not isinstance(value.get("comment_id"), int)
+            or value["comment_id"] <= 0
+            or not isinstance(value.get("commenter"), str)
+            or not value["commenter"]
+            or dispatch.LEGACY_AUTHORITY_KEYS.intersection(value)):
+        raise ValueError("dispatch authority head/comment binding invalid")
+    dispatch._parse_timestamp(value.get("created_at"))
     if initial is not None and value != initial:
         raise RuntimeError("dispatch authority changed before arm execution")
     return value

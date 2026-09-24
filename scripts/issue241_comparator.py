@@ -215,11 +215,20 @@ def _dispatch_authority_problems(receipt: dict[str, Any]) -> list[str]:
         problems.append("dispatch-authority head_sha malformed")
     if da.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE:
         problems.append("dispatch-authority phrase mismatch")
-    if not isinstance(da.get("review_id"), int) or isinstance(
-            da.get("review_id"), bool):
-        problems.append("dispatch-authority review_id malformed")
-    if not isinstance(da.get("reviewer"), str) or not da.get("reviewer"):
-        problems.append("dispatch-authority reviewer missing")
+    if (not isinstance(da.get("comment_id"), int)
+            or isinstance(da.get("comment_id"), bool)
+            or da.get("comment_id", 0) <= 0):
+        problems.append("dispatch-authority comment_id malformed")
+    if not isinstance(da.get("commenter"), str) or not da.get("commenter"):
+        problems.append("dispatch-authority commenter missing")
+    if da.get("commenter_association") not in dispatch.AUTHORIZED_ASSOCIATIONS:
+        problems.append("dispatch-authority commenter association not OWNER/MEMBER")
+    if dispatch.LEGACY_AUTHORITY_KEYS.intersection(da):
+        problems.append("dispatch-authority carries legacy review-only fields")
+    try:
+        dispatch._parse_timestamp(da.get("created_at"))
+    except ValueError:
+        problems.append("dispatch-authority created_at malformed")
     return problems
 
 

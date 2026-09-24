@@ -11,7 +11,10 @@ from scripts import issue241_practicality as practicality
 from scripts import issue241_comparator as comparator
 
 AUTHORITY = {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-             "review_commit_id": "a" * 40, "dispatch_phrase": dispatch.DISPATCH_PHRASE,
+             "comment_id": 7, "commenter": "maintainer",
+             "commenter_association": "OWNER",
+             "created_at": "2026-09-23T00:00:00Z",
+             "dispatch_phrase": dispatch.DISPATCH_PHRASE,
              "pr_number": 242, "issue_number": 241}
 
 class MeasuredPracticalityTests(unittest.TestCase):

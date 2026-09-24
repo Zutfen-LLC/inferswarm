@@ -116,8 +116,16 @@ def _validate_authority(doc: Any) -> dict[str, Any]:
         raise ValueError("dispatch authority head is malformed")
     if doc.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE:
         raise ValueError("dispatch authority phrase mismatch")
-    if not isinstance(doc.get("review_id"), int) or isinstance(doc.get("review_id"), bool) or not doc.get("reviewer"):
-        raise ValueError("dispatch authority reviewer/review identity missing")
+    if (not isinstance(doc.get("comment_id"), int)
+            or isinstance(doc.get("comment_id"), bool)
+            or doc["comment_id"] <= 0
+            or not isinstance(doc.get("commenter"), str)
+            or not doc["commenter"]
+            or doc.get("commenter_association")
+            not in dispatch.AUTHORIZED_ASSOCIATIONS
+            or dispatch.LEGACY_AUTHORITY_KEYS.intersection(doc)):
+        raise ValueError("dispatch authority commenter/comment identity missing")
+    dispatch._parse_timestamp(doc.get("created_at"))
     return doc
 
 def _phase2(doc: Any) -> int:

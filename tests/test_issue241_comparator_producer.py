@@ -17,7 +17,9 @@ from tests.test_issue241_placement_producer import identity_observer
 
 AUTH = {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
         "dispatch_phrase": dispatch.DISPATCH_PHRASE,
-        "review_id": 55, "reviewer": "maintainer", "review_commit_id": "a" * 40}
+        "comment_id": 55, "commenter": "maintainer",
+        "commenter_association": "OWNER",
+        "created_at": "2026-09-23T00:00:00Z"}
 
 
 def phase2():

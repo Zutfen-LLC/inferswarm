@@ -4,7 +4,11 @@ Prospective CPU/static freeze for the first practical AMD/Vulkan Qwen
 comparator on the matched high-RAM host. Implementation and CPU/fake
 fixtures only: NO physical R8-I3 execution has occurred. Physical
 phases 1-4 are dormant until the maintainer dispatches the exact frozen
-producer head (phrase `R8I3 PHYSICAL DISPATCH #241`).
+producer head (phrase `R8I3 PHYSICAL DISPATCH #241`). Dispatch
+authority is an exact-head OWNER/MEMBER top-level PR conversation
+comment on PR #242 (single-maintainer repository; GitHub review state,
+including APPROVED, is not part of the gate); any branch-head movement
+invalidates an existing authorization.
 
 - Frozen methodology: [METHODOLOGY.md](METHODOLOGY.md)
 - Campaign status producer: `scripts/issue241_campaign.py`

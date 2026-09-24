@@ -11,7 +11,8 @@ normally), and no physical successor created in this issue slice.
 This document freezes the R8-I3 deltas BEFORE the campaign's physical
 result phases. Physical phases 1-4 are DORMANT until the maintainer
 dispatches them on the exact frozen producer head (dispatch phrase
-`R8I3 PHYSICAL DISPATCH #241`).
+`R8I3 PHYSICAL DISPATCH #241`; dispatch authority is an exact-head
+OWNER/MEMBER top-level PR conversation comment — see section 8).
 
 Status marker: `R8I3_QWEN38_RX580_COMPARATOR_V2_METHODOLOGY_FROZEN`
 
@@ -263,9 +264,22 @@ exact-head review; never manufacture a new holdout.
 - Candidate-vs-reference numerical agreement is NEVER a placement
   selection criterion.
 - Every physical producer requires the exact-head maintainer dispatch
-  (`scripts/issue241_dispatch.py`: open PR, open issue #241, current
-  OWNER/MEMBER approval naming `R8I3 PHYSICAL DISPATCH #241` and
-  `head=<sha>` on the exact clean producer HEAD) and a clean worktree.
+  (`scripts/issue241_dispatch.py`: open PR, open issue #241, and a
+  current OWNER/MEMBER **top-level PR conversation comment** on PR #242
+  containing the exact stripped lines `R8I3 PHYSICAL DISPATCH #241` and
+  `head=<exact 40-char clean producer HEAD>`) and a clean worktree.
+  This comment-authority model is INTENTIONAL for this repository:
+  it has exactly one human maintainer, who is also the PR author, and
+  GitHub structurally prohibits a PR author from approving their own
+  PR — an independent APPROVED-review gate is unrealizable here by
+  construction (maintainer correction, 2026-09-24). GitHub review
+  state — including APPROVED — is NOT part of the gate: no pull-request
+  review, reviewer identity, or second maintainer is required or
+  consulted, and the PR author MAY be the authorizing commenter.
+  Any branch-head movement invalidates an existing authorization
+  because the comment's bound head no longer matches the live PR head.
+  No physical execution occurred during the comment-authority
+  correction itself.
   The committed bounded execution path is
   `scripts/issue241_physical.py` (`run_phase1`/`run_phase2`/
   `run_phase3`); each entrypoint invokes the dispatch validation

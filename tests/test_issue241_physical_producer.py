@@ -92,7 +92,10 @@ class PhysicalProducerControls(unittest.TestCase):
     def test_phase1_raw_outputs_live_beneath_campaign_root(self):
         authority = {
             "schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40, "dispatch_phrase": dispatch.DISPATCH_PHRASE,
+            "comment_id": 9, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
+            "dispatch_phrase": dispatch.DISPATCH_PHRASE,
             "pr_number": 242, "issue_number": 241,
         }
         with tempfile.TemporaryDirectory() as temp:
@@ -107,7 +110,9 @@ class PhysicalProducerControls(unittest.TestCase):
     def test_phase2_requires_valid_phase1_census_before_build(self):
         authority = {
             "schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40,
+            "comment_id": 9, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
             "dispatch_phrase": dispatch.DISPATCH_PHRASE,
             "pr_number": 242, "issue_number": 241,
         }
@@ -124,7 +129,9 @@ class PhysicalProducerControls(unittest.TestCase):
     def test_phase1_raw_command_digest_tamper_blocks_phase2(self):
         from tests.test_issue241_r8i3_rx580 import make_census
         authority = {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-                     "review_commit_id": "a" * 40,
+                     "comment_id": 9, "commenter": "maintainer",
+                     "commenter_association": "OWNER",
+                     "created_at": "2026-09-23T00:00:00Z",
                      "dispatch_phrase": dispatch.DISPATCH_PHRASE,
                      "pr_number": 242, "issue_number": 241}
         with tempfile.TemporaryDirectory() as temp:
@@ -150,7 +157,10 @@ class PhysicalProducerControls(unittest.TestCase):
     def test_phase3_build_receipt_binds_actual_launched_executable(self):
         authority = {
             "schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40, "dispatch_phrase": dispatch.DISPATCH_PHRASE,
+            "comment_id": 9, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
+            "dispatch_phrase": dispatch.DISPATCH_PHRASE,
             "pr_number": 242, "issue_number": 241,
         }
         with tempfile.TemporaryDirectory() as temp:
@@ -179,14 +189,16 @@ class PhysicalProducerControls(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     physical._build_receipt(receipt, authority, server)
                 server.write_bytes(b"built comparator binary")
-                forged = {**authority, "head_sha": "b" * 40, "review_commit_id": "b" * 40}
+                forged = {**authority, "head_sha": "b" * 40}
                 with self.assertRaises(ValueError):
                     physical._build_receipt(receipt, forged, server)
 
     def test_phase3_passes_selected_receipt_and_revalidation_to_producer(self):
         authority = {
             "schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40,
+            "comment_id": 9, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
             "dispatch_phrase": dispatch.DISPATCH_PHRASE,
             "pr_number": 242, "issue_number": 241,
         }
@@ -226,7 +238,9 @@ class PhaseLinkageControls(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.authority = {
             "schema": dispatch.AUTHORITY_SCHEMA, "head_sha": "a" * 40,
-            "review_commit_id": "a" * 40,
+            "comment_id": 9, "commenter": "maintainer",
+            "commenter_association": "OWNER",
+            "created_at": "2026-09-23T00:00:00Z",
             "dispatch_phrase": dispatch.DISPATCH_PHRASE,
             "pr_number": 242, "issue_number": 241,
         }
@@ -421,9 +435,25 @@ class PhaseLinkageControls(unittest.TestCase):
             self.check()
 
     def test_wrong_dispatch_head_rejected(self):
-        self.doc["authority"]["head_sha"] = "b" * 40
+        # The retained receipt's dispatch authority must equal the live
+        # validated authority; a receipt bound to a different head fails.
+        self.doc["authority"] = {**self.authority, "head_sha": "b" * 40}
         with self.assertRaises((ValueError, RuntimeError)):
             self.check()
+
+    def test_legacy_review_shaped_authority_rejected_by_selected_receipt(self):
+        # A pre-correction schema-/1 review-authority receipt must be
+        # refused even when offered as the live authority.
+        legacy = {**self.authority,
+                  "schema": "inferswarm.issue241.dispatch-authority/1",
+                  "review_id": 55, "reviewer": "maintainer",
+                  "review_commit_id": self.authority["head_sha"]}
+        legacy.pop("comment_id")
+        legacy.pop("commenter")
+        legacy.pop("commenter_association")
+        legacy.pop("created_at")
+        with self.assertRaises((ValueError, RuntimeError)):
+            physical._selected_receipt(self.path, legacy)
 
     # --- correction pass 5: per-repeat raw identity custody mutations ---
 
@@ -722,6 +752,71 @@ class PhaseLinkageControls(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError, "summary differs|sane-completion"):
             self.check()
+
+
+class LegacyReviewAuthorityRejection(unittest.TestCase):
+    """Correction-pass controls (2026-09-24): the dispatch authority is a
+    top-level PR conversation comment, never a pull-request review. Old
+    review-shaped receipts must be rejected, and review state must be
+    irrelevant to authorization."""
+
+    HEAD = "a" * 40
+
+    def _comment_authority(self) -> dict:
+        return {"schema": dispatch.AUTHORITY_SCHEMA, "head_sha": self.HEAD,
+                "repository": dispatch.REPO, "issue_number": 241,
+                "pr_number": 242, "pr_state": "open", "merged_at": None,
+                "base_ref": "main", "comment_id": 9,
+                "commenter": "maintainer", "commenter_association": "OWNER",
+                "created_at": "2026-09-23T00:00:00Z",
+                "dispatch_phrase": dispatch.DISPATCH_PHRASE}
+
+    def _legacy_review_authority(self) -> dict:
+        """Schema-/1 review-shaped receipt (the pre-correction shape)."""
+        return {"schema": "inferswarm.issue241.dispatch-authority/1",
+                "repository": dispatch.REPO, "issue_number": 241,
+                "pr_number": 242, "pr_state": "open", "merged_at": None,
+                "base_ref": "main", "head_sha": self.HEAD,
+                "review_id": 55, "reviewer": "maintainer",
+                "reviewer_association": "OWNER",
+                "review_commit_id": self.HEAD,
+                "submitted_at": "2026-09-23T12:00:00Z",
+                "dispatch_phrase": dispatch.DISPATCH_PHRASE}
+
+    def test_legacy_review_receipt_rejected_by_physical_gate(self):
+        with self.assertRaisesRegex(RuntimeError, "authority"):
+            physical._head(self._legacy_review_authority())
+
+    def test_legacy_review_fields_smuggled_into_schema2_rejected(self):
+        smuggled = {**self._comment_authority(),
+                    "review_id": 55, "reviewer": "maintainer",
+                    "review_commit_id": self.HEAD}
+        with self.assertRaisesRegex(RuntimeError, "legacy review"):
+            physical._head(smuggled)
+
+    def test_valid_comment_authority_passes_head_check(self):
+        self.assertEqual(physical._head(self._comment_authority()), self.HEAD)
+
+    def test_authority_head_movement_invalidates_prior_authorization(self):
+        # A comment bound to an earlier head is structurally stale once the
+        # PR head moves: revalidation fetches live state and the equality
+        # check fails closed.
+        old = self._comment_authority()
+        new_head = {**old, "head_sha": "b" * 40}
+        with mock.patch.object(physical, "require_dispatch_authority",
+                               return_value=new_head):
+            with self.assertRaisesRegex(RuntimeError, "moved|revoked"):
+                physical._revalidate(Path("/nonexistent-repo"), old)
+
+    def test_review_only_authorization_cannot_reach_producers(self):
+        # Even a schema-/2 dict whose identity fields claim a review (the
+        # pre-correction model) is rejected by every producer validator.
+        legacy = self._legacy_review_authority()
+        for validator_name in ("_authority",):
+            module = place_producer
+            validator = getattr(module, validator_name)
+            with self.assertRaises(ValueError):
+                validator(legacy)
 
 
 if __name__ == "__main__":

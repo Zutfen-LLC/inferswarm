@@ -34,11 +34,24 @@ def _head(authority: dict[str, Any] | None) -> str:
     head = authority.get("head_sha")
     if not isinstance(head, str) or not dispatch.SHA40.fullmatch(head):
         raise RuntimeError("exact dispatch head required")
-    if (authority.get("review_commit_id") != head
-            or authority.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE
+    if (authority.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE
             or authority.get("pr_number") != PR_NUMBER
             or authority.get("issue_number") != C.ISSUE):
-        raise RuntimeError("dispatch review binding invalid")
+        raise RuntimeError("dispatch comment binding invalid")
+    if not isinstance(authority.get("comment_id"), int) \
+            or isinstance(authority.get("comment_id"), bool) \
+            or authority["comment_id"] <= 0 \
+            or not isinstance(authority.get("commenter"), str) \
+            or not authority["commenter"] \
+            or authority.get("commenter_association") \
+            not in dispatch.AUTHORIZED_ASSOCIATIONS:
+        raise RuntimeError("dispatch comment authority identity invalid")
+    try:
+        dispatch._parse_timestamp(authority.get("created_at"))
+    except ValueError as exc:
+        raise RuntimeError("dispatch comment timestamp invalid") from exc
+    if dispatch.LEGACY_AUTHORITY_KEYS.intersection(authority):
+        raise RuntimeError("legacy review-authority fields rejected")
     return head
 
 

@@ -53,17 +53,17 @@ def _authorize(authority: dict[str, Any] | None) -> None:
             or authority.get("pr_state") != "open"
             or authority.get("merged_at", "missing") is not None
             or authority.get("base_ref") != dispatch.BASE_REF
-            or authority.get("review_commit_id") != head
-            or authority.get("reviewer_association") not in dispatch.AUTHORIZED_ASSOCIATIONS
+            or authority.get("commenter_association") not in dispatch.AUTHORIZED_ASSOCIATIONS
             or authority.get("dispatch_phrase") != dispatch.DISPATCH_PHRASE
-            or not isinstance(authority.get("review_id"), int)
-            or isinstance(authority.get("review_id"), bool)
-            or authority["review_id"] <= 0
-            or not isinstance(authority.get("reviewer"), str)
-            or not authority["reviewer"]):
+            or not isinstance(authority.get("comment_id"), int)
+            or isinstance(authority.get("comment_id"), bool)
+            or authority["comment_id"] <= 0
+            or not isinstance(authority.get("commenter"), str)
+            or not authority["commenter"]
+            or dispatch.LEGACY_AUTHORITY_KEYS.intersection(authority)):
         raise ProducerError("incomplete or revoked dispatch authority")
     try:
-        dispatch._parse_timestamp(authority.get("submitted_at"))
+        dispatch._parse_timestamp(authority.get("created_at"))
     except ValueError as exc:
         raise ProducerError("invalid dispatch authority timestamp") from exc
 

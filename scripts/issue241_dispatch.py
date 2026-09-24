@@ -1,9 +1,19 @@
 """Fail-closed maintainer dispatch verification for physical R8-I3 runs.
 
 The verifier authorizes only an open PR on the current exact commit, while
-Issue #241 remains open, and a latest OWNER/MEMBER approval explicitly
-containing the dispatch phrase and head SHA. It performs read-only GitHub
-API requests; it never launches a model or touches a GPU.
+Issue #241 remains open, and a latest OWNER/MEMBER top-level PR conversation
+comment explicitly containing the dispatch phrase and the exact head SHA.
+It performs read-only GitHub API requests; it never launches a model or
+touches a GPU.
+
+This repository has exactly one human maintainer, who is also the PR author.
+GitHub structurally prevents a PR author from approving their own PR, so an
+independent APPROVED-review gate is unrealizable here by construction.
+Dispatch authority is therefore an exact-head top-level PR conversation
+comment (Issue #241 maintainer authorization doctrine; maintainer correction
+comment on PR #242, 2026-09-24). GitHub review state — including APPROVED —
+is NOT part of this gate, and the PR author MAY be the authorizing
+commenter.
 
 No physical R8-I3 execution may occur without this authority (Issue #241:
 the operator performs the hardware swap; retained physical measurements
@@ -26,7 +36,21 @@ BASE_REF = "main"
 DISPATCH_PHRASE = "R8I3 PHYSICAL DISPATCH #241"
 AUTHORIZED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER"})
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
-AUTHORITY_SCHEMA = "inferswarm.issue241.dispatch-authority/1"
+# Schema /2 (2026-09-24): dispatch authority changed from pull-request
+# review submissions (review_id/reviewer/review_commit_id/submitted_at,
+# requiring state == APPROVED) to top-level PR conversation comments
+# (comment_id/commenter/commenter_association/created_at). Review-only
+# fields were removed, not retained as placeholders; receipts carrying
+# schema /1 or legacy review-* fields are rejected.
+AUTHORITY_SCHEMA = "inferswarm.issue241.dispatch-authority/2"
+LEGACY_AUTHORITY_KEYS = frozenset({
+    "review_id", "reviewer", "reviewer_association", "review_commit_id",
+    "submitted_at",
+})
+# Issue-comments are fetched paginated; a valid authorization comment must
+# never be missed because a caller assumed a single page.
+COMMENTS_PER_PAGE = 100
+MAX_COMMENT_PAGES = 30
 
 
 def _require_sha(value: Any, name: str) -> str:
@@ -37,23 +61,34 @@ def _require_sha(value: Any, name: str) -> str:
 
 def _parse_timestamp(value: Any) -> dt.datetime:
     if not isinstance(value, str):
-        raise ValueError("dispatch review requires submitted_at")
+        raise ValueError("dispatch comment requires created_at")
     try:
         parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ValueError("dispatch review submitted_at is malformed") from exc
+        raise ValueError("dispatch comment created_at is malformed") from exc
     if parsed.tzinfo is None:
-        raise ValueError("dispatch review submitted_at must include a timezone")
+        raise ValueError("dispatch comment created_at must include a timezone")
     return parsed.astimezone(dt.timezone.utc)
+
+
+def _exact_lines(body: str) -> set[str]:
+    return {line.strip() for line in body.splitlines()}
 
 
 def validate_dispatch_authority(
     pr: dict[str, Any],
     issue: dict[str, Any],
-    reviews: list[dict[str, Any]],
+    comments: list[dict[str, Any]],
     expected_head: str,
 ) -> dict[str, Any]:
-    """Validate a live PR/issue/review response for an explicit dispatch."""
+    """Validate live PR/issue/PR-conversation-comment responses for dispatch.
+
+    ``comments`` must be the TOP-LEVEL PR conversation comments (the issue
+    comments of the PR), never pull-request review submissions, inline
+    review comments, or commit comments. GitHub review state is irrelevant:
+    no review — APPROVED or otherwise — can authorize or contribute to
+    authorization.
+    """
     expected_head = _require_sha(expected_head, "expected_head")
     if not isinstance(pr, dict) or not isinstance(issue, dict):
         raise ValueError("PR and issue responses must be objects")
@@ -65,54 +100,70 @@ def validate_dispatch_authority(
         raise ValueError("dispatch PR head does not match the exact producer commit")
     if issue.get("number") != ISSUE_NUMBER or issue.get("state") != "open":
         raise ValueError(f"Issue #{ISSUE_NUMBER} must remain open for physical dispatch")
-    if not isinstance(reviews, list):
-        raise ValueError("PR reviews response must be a list")
+    if not isinstance(comments, list):
+        raise ValueError("PR conversation comments response must be a list")
 
-    latest_by_login: dict[str, dict[str, Any]] = {}
-    for review in reviews:
-        if not isinstance(review, dict):
-            raise ValueError("PR review entries must be objects")
-        user = review.get("user")
+    pr_number = pr.get("number")
+    if not isinstance(pr_number, int) or isinstance(pr_number, bool):
+        raise ValueError("PR response must carry an integer PR number")
+
+    candidates: list[tuple[dt.datetime, int, dict[str, Any], str]] = []
+    for comment in comments:
+        if not isinstance(comment, dict):
+            raise ValueError("PR conversation comment entries must be objects")
+        # A comment minted on another issue/PR is not a PR #<pr> dispatch
+        # comment even if its body carries the phrase. Real GitHub
+        # issue-comment responses always carry issue_url; requiring it
+        # (and rejecting pull_request_url) structurally excludes inline
+        # review comments, which live on /pulls/{n}/comments.
+        issue_url = comment.get("issue_url")
+        if (not isinstance(issue_url, str)
+                or not issue_url.rstrip("/").endswith(f"/issues/{pr_number}")
+                or comment.get("pull_request_url") is not None):
+            continue
+        association = comment.get("author_association")
+        if association not in AUTHORIZED_ASSOCIATIONS:
+            continue
+        body = comment.get("body")
+        if not isinstance(body, str):
+            continue
+        lines = _exact_lines(body)
+        if (DISPATCH_PHRASE not in lines
+                or f"head={expected_head}" not in lines):
+            continue
+        comment_id = comment.get("id")
+        if (not isinstance(comment_id, int) or isinstance(comment_id, bool)
+                or comment_id <= 0):
+            continue
+        user = comment.get("user")
         login = user.get("login") if isinstance(user, dict) else None
-        if isinstance(login, str) and login:
-            latest_by_login[login] = review
-
-    candidates: list[tuple[dt.datetime, dict[str, Any], str]] = []
-    for login, review in latest_by_login.items():
-        association = review.get("author_association")
-        body = review.get("body")
-        if (review.get("state") != "APPROVED" or
-                association not in AUTHORIZED_ASSOCIATIONS or
-                review.get("commit_id") != expected_head or
-                not isinstance(body, str)):
+        if not isinstance(login, str) or not login:
             continue
-        lines = {line.strip() for line in body.splitlines()}
-        if DISPATCH_PHRASE not in lines or f"head={expected_head}" not in lines:
-            continue
-        review_id = review.get("id")
-        if not isinstance(review_id, int) or isinstance(review_id, bool) or review_id <= 0:
-            continue
-        submitted = _parse_timestamp(review.get("submitted_at"))
-        candidates.append((submitted, review, login))
+        # Review submissions carry no created_at; requiring it here also
+        # structurally rejects review-shaped documents passed as comments.
+        created = _parse_timestamp(comment.get("created_at"))
+        candidates.append((created, comment_id, comment, login))
 
     if not candidates:
         raise ValueError(
-            "no current OWNER/MEMBER approval explicitly dispatches this exact head")
-    submitted, review, login = max(candidates, key=lambda item: item[0])
+            "no current OWNER/MEMBER top-level PR conversation comment "
+            "explicitly dispatches this exact head")
+    # Deterministic selection: latest timestamp, then highest comment ID.
+    created, comment_id, comment, login = max(
+        candidates, key=lambda item: (item[0], item[1]))
     return {
         "schema": AUTHORITY_SCHEMA,
         "repository": REPO,
         "issue_number": ISSUE_NUMBER,
-        "pr_number": pr.get("number"),
+        "pr_number": pr_number,
         "pr_state": pr["state"],
         "merged_at": pr.get("merged_at"),
         "base_ref": BASE_REF,
         "head_sha": expected_head,
-        "review_id": review["id"],
-        "reviewer": login,
-        "reviewer_association": review["author_association"],
-        "review_commit_id": review["commit_id"],
-        "submitted_at": submitted.isoformat().replace("+00:00", "Z"),
+        "comment_id": comment_id,
+        "commenter": login,
+        "commenter_association": comment["author_association"],
+        "created_at": created.isoformat().replace("+00:00", "Z"),
         "dispatch_phrase": DISPATCH_PHRASE,
     }
 
@@ -136,6 +187,29 @@ def _get_json(url: str, opener: Callable[..., Any] = urllib.request.urlopen) -> 
         raise ValueError("GitHub API dispatch lookup was unavailable") from exc
 
 
+def _fetch_all_pr_comments(api: str, pr_number: int,
+                           opener: Callable[..., Any]) -> list[dict[str, Any]]:
+    """Fetch every top-level PR conversation comment, across pages.
+
+    Fail closed: pagination continues until a short page; hitting the page
+    bound with a full page is an error, never a silent truncation that
+    could miss a valid authorization comment.
+    """
+    comments: list[dict[str, Any]] = []
+    for page in range(1, MAX_COMMENT_PAGES + 1):
+        batch = _get_json(
+            f"{api}/repos/{REPO}/issues/{pr_number}/comments"
+            f"?per_page={COMMENTS_PER_PAGE}&page={page}", opener)
+        if not isinstance(batch, list):
+            raise ValueError("PR conversation comments response must be a list")
+        comments.extend(batch)
+        if len(batch) < COMMENTS_PER_PAGE:
+            return comments
+    raise ValueError(
+        "PR conversation comments exceeded the bounded page fetch; "
+        "refusing to authorize on a possibly-truncated comment list")
+
+
 def fetch_dispatch_authority(
     pr_number: int,
     expected_head: str,
@@ -148,8 +222,8 @@ def fetch_dispatch_authority(
     api = "https://api.github.com"
     pr = _get_json(f"{api}/repos/{REPO}/pulls/{pr_number}", opener)
     issue = _get_json(f"{api}/repos/{REPO}/issues/{ISSUE_NUMBER}", opener)
-    reviews = _get_json(f"{api}/repos/{REPO}/pulls/{pr_number}/reviews?per_page=100", opener)
-    authority = validate_dispatch_authority(pr, issue, reviews, head)
+    comments = _fetch_all_pr_comments(api, pr_number, opener)
+    authority = validate_dispatch_authority(pr, issue, comments, head)
     if authority["pr_number"] != pr_number:
         raise ValueError("GitHub returned a different PR number")
     authority["verified_via"] = "public-github-api"
