@@ -31,8 +31,8 @@ stable id, kind (`primary` / `derived` / `index` / `terminal-manifest` /
 manifest covers, whether its inputs are **protected** primary/frozen
 authority records, and its dependencies. **Declarations are derived from the
 canonical constants of the producers themselves** — `sync_project_status.
-TARGETS`, `issue117_proof`'s closed-bundle bindings, and `issue137_manifest`'s
-bundle constants — never hand-maintained duplicates. The engine mechanically
+TARGETS`, `issue117_proof`'s closed-bundle bindings, and the accepted #137
+`MANIFEST.sha256` rows — never hand-maintained duplicates. The engine mechanically
 proves, before writing anything:
 
 - the graph is **acyclic** — a cycle is reported with its member cycle;

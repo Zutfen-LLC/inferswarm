@@ -16,8 +16,8 @@ reads, what it writes, what a terminal manifest covers, and which stages
 it runs after.  Declarations are derived from the canonical constants of
 the producers themselves (``sync_project_status.TARGETS``,
 ``issue117_proof.PRODUCERS``, the pinned authority dictionaries in
-``issue117_applicability`` and ``issue117_accepted_subject``, and
-``issue137_manifest``'s bundle constants) — never hand-maintained
+``issue117_applicability`` and ``issue117_accepted_subject``, and the
+accepted #137 ``MANIFEST.sha256`` rows) — never hand-maintained
 duplicates.  Before writing anything the engine mechanically proves:
 
 - the graph is acyclic (a cycle is reported with its member cycle);
@@ -1245,6 +1245,7 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
 _AREA = ("docs/implementation/r6-successor-dense-full-integration-117")
 _EVIDENCE = f"{_AREA}/evidence"
 _BUNDLE_137 = f"{_EVIDENCE}/arm-c-regime4-diagnosis-137"
+_MANIFEST_137 = f"{_BUNDLE_137}/MANIFEST.sha256"
 _R8A = "docs/investigations/qwen38-flash-next-r8-a"
 _R8A_TERMINAL = f"{_R8A}/terminal-reduction.json"
 _R8A_HASHES = f"{_R8A}/producer-hashes.json"
@@ -1536,15 +1537,25 @@ def _status_sync_producer(run: StageRun, scratch: Path) -> dict[str, bytes]:
 
 
 def _issue137_bundle_verify(run: StageRun, scratch: Path) -> None:
-    """The accepted Issue #137 bundle is closed: verify it byte-current."""
+    """The accepted Issue #137 bundle is closed: verify it byte-current.
+
+    Verified through the Issue #246 tombstone-aware row verifier: every
+    accepted ``MANIFEST.sha256`` row must match its bytes, except a
+    retired test row excused by one exact tombstone in
+    ``docs/ci/retired-test-rows.json`` (the frozen
+    ``scripts/issue137_manifest.py`` builder re-hashes its retired test
+    files, so it no longer verifies the accepted bundle).
+    """
     _scripts(run.root)
-    import issue137_manifest  # noqa: PLC0415
-    try:
-        issue137_manifest.check(run.root)
-    except Exception as error:  # noqa: BLE001 (report any verification fail)
+    import check_ci_test_retention as retention  # noqa: PLC0415
+    retired, _ = retention.load_retired_rows(run.root)
+    bundle = {"root": f"{_BUNDLE_137}/", "row_files": [{
+        "path": _MANIFEST_137, "format": "sha256sum", "base": "repo"}]}
+    errors = retention.bundle_errors(run.root, bundle, retired)
+    if errors:
         raise FinalizationError(
-            f"Issue #137 bundle manifest verification failed: {error}") \
-            from error
+            "Issue #137 bundle manifest verification failed: "
+            + "; ".join(errors))
 
 
 def _status_sync_reads() -> frozenset[str]:
@@ -1561,12 +1572,19 @@ def _status_sync_reads() -> frozenset[str]:
 
 
 def _issue137_bundle_reads() -> frozenset[str]:
-    """The closed #137 bundle's real read set, from its own constants."""
+    """The closed #137 bundle's real read set, from its accepted manifest.
+
+    The accepted manifest, every row target still present (evidence and
+    frozen producers), the retired-test-row tombstones that excuse the
+    deleted #137 test rows, and the verifier itself.
+    """
     _scripts(ROOT)
-    import issue137_manifest as bundle  # noqa: PLC0415
-    reads = {f"{_BUNDLE_137}/{name}" for name in bundle.EVIDENCE_FILES}
-    reads.add(f"{_BUNDLE_137}/MANIFEST.sha256")
-    reads |= set(bundle.PRODUCERS)
+    import check_ci_test_retention as retention  # noqa: PLC0415
+    rows = retention.parse_sha256sum(
+        (ROOT / _MANIFEST_137).read_text(encoding="utf-8"), "")
+    reads = {path for path in rows if (ROOT / path).is_file()}
+    reads |= {_MANIFEST_137, str(retention.RETIRED_ROWS),
+              "scripts/check_ci_test_retention.py"}
     return frozenset(reads)
 
 
@@ -1808,9 +1826,10 @@ def default_registry() -> tuple[Stage, ...]:
             kind="verify",
             description=(
                 "The accepted Issue #137 additive bundle is closed and must "
-                "stay byte-current (scripts/issue137_manifest.py --check). "
-                "Reads derived from the bundle's own evidence/producer "
-                "constants; the #137 bundle inputs are protected"),
+                "stay byte-current (tombstone-aware row verification, "
+                "scripts/check_ci_test_retention.py). Reads derived from "
+                "the accepted manifest; the #137 bundle inputs are "
+                "protected"),
             reads=_issue137_bundle_reads(),
             protected=True,
             after=frozenset({"issue117-successor-manifest"}),

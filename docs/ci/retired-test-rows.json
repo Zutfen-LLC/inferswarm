@@ -1,0 +1,488 @@
+{
+ "authority": "https://github.com/Zutfen-LLC/inferswarm/issues/246",
+ "issue": 246,
+ "retirements": [
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/evidence/producer-hashes.json",
+   "manifest_sha256": "1ce6e1854cea0b8ea16b0b2eecb7a3d55d0531c89312a0f46c37be5149b3671b",
+   "reason": "test_issue170_long_remainder_corpus was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue166-172-arm-c-requalification].",
+   "target": "tests/test_issue170_long_remainder_corpus.py",
+   "target_sha256": "1c58062d85622246aea974588ec7eeae7f86114b235d720a097610c77125a6c9"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_applicability was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_applicability.py",
+   "target_sha256": "b315d7ffbf01707dfe87daf05258de29e9795c8d012a963fd105f38ebbdb255a"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_checkpoint_authority was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_checkpoint_authority.py",
+   "target_sha256": "cc23dde8513f6c075a76482802aa2d9975409374e23b3effcff925d8e4c959c2"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_gemma_strategy was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_gemma_strategy.py",
+   "target_sha256": "9c04a8ce6babe164f3db30e8471dedb696eec55616fe4db3d5c1b2caf67359a1"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_integration_fixture was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_integration_fixture.py",
+   "target_sha256": "52c1bc12b4e075790feb015ed5d76b5f461f046fa51957b212b4004917cc845f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_physical_retention was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_physical_retention.py",
+   "target_sha256": "bc4337a58a5fb9b99d4021f8589df5d774babeb454c03eff168758333768c34f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_planner was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_planner.py",
+   "target_sha256": "81bde7c11f872c60363dbae4004876a39a8abbf600afe73d0db618466d4ed4ac"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_preflight was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_preflight.py",
+   "target_sha256": "a4cfb127bfaa7f4a393173b23bbdfa1c2c8419719f529a9787c1ce85f3f8a99e"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue117_proof was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_proof.py",
+   "target_sha256": "0faa3f2e2c50ebc8d941933f2d991112718dfed546fdcd46990537d094f1d47b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue129_arm_c_retry was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue129_arm_c_retry.py",
+   "target_sha256": "a41be55ae606ae917c8cddaf58666d004947754199d8e87440d1bf76c2667fa2"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue133_arm_c_retry_campaign was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_arm_c_retry_campaign.py",
+   "target_sha256": "0fda0e6fe3efec52828c934b08c3632523501148a30d815c2c6616ef8f772f5b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue133_arm_c_retry_direct was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_arm_c_retry_direct.py",
+   "target_sha256": "0c82ddbf50116d0c8a37a3a141b684cceb62910f9916f6a49e45cfb8ab55cac7"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue133_corrected_freeze was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_corrected_freeze.py",
+   "target_sha256": "c47fe2278b4f920a98bac2060e2066995606b730f4267fe8fe9148787a55d65f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue133_gate_tooling_drift was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_gate_tooling_drift.py",
+   "target_sha256": "d1c3f31b0033ef1c8d7230306f43c1f8246af10f6c54d2addddc1ed2c1b8e552"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+   "manifest_sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+   "reason": "test_issue133_prelaunch_bootstrap was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_prelaunch_bootstrap.py",
+   "target_sha256": "f232373a4a4813637d0e1a560b11ab5934f0bda15c9b884a2bf25258807afe03"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256",
+   "manifest_sha256": "de77b1dbac1fd0d29847c6de08468ecc5fc49176de238a719e887fb33d191bcc",
+   "reason": "test_issue137_regime4_diagnosis was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue137-regime4-diagnosis].",
+   "target": "tests/test_issue137_regime4_diagnosis.py",
+   "target_sha256": "a47c2758b6f934c6fba292242d043d5a0477a68b24fab8da00918ebb80a96ac0"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/MANIFEST.sha256",
+   "manifest_sha256": "de77b1dbac1fd0d29847c6de08468ecc5fc49176de238a719e887fb33d191bcc",
+   "reason": "test_issue137_regime4_diagnosis_correction was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue137-regime4-diagnosis].",
+   "target": "tests/test_issue137_regime4_diagnosis_correction.py",
+   "target_sha256": "7d6b59f7f0a46c8390dc58aa39509e649303262a1ba9091ef441a9f09c62ce2a"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_applicability was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_applicability.py",
+   "target_sha256": "b315d7ffbf01707dfe87daf05258de29e9795c8d012a963fd105f38ebbdb255a"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_checkpoint_authority was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_checkpoint_authority.py",
+   "target_sha256": "cc23dde8513f6c075a76482802aa2d9975409374e23b3effcff925d8e4c959c2"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_gemma_strategy was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_gemma_strategy.py",
+   "target_sha256": "9c04a8ce6babe164f3db30e8471dedb696eec55616fe4db3d5c1b2caf67359a1"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_integration_fixture was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_integration_fixture.py",
+   "target_sha256": "52c1bc12b4e075790feb015ed5d76b5f461f046fa51957b212b4004917cc845f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_physical_retention was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_physical_retention.py",
+   "target_sha256": "bc4337a58a5fb9b99d4021f8589df5d774babeb454c03eff168758333768c34f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_planner was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_planner.py",
+   "target_sha256": "81bde7c11f872c60363dbae4004876a39a8abbf600afe73d0db618466d4ed4ac"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_preflight was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_preflight.py",
+   "target_sha256": "a4cfb127bfaa7f4a393173b23bbdfa1c2c8419719f529a9787c1ce85f3f8a99e"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue117_proof was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue117_proof.py",
+   "target_sha256": "0faa3f2e2c50ebc8d941933f2d991112718dfed546fdcd46990537d094f1d47b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue129_arm_c_retry was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue129_arm_c_retry.py",
+   "target_sha256": "a41be55ae606ae917c8cddaf58666d004947754199d8e87440d1bf76c2667fa2"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue133_arm_c_retry_campaign was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_arm_c_retry_campaign.py",
+   "target_sha256": "0fda0e6fe3efec52828c934b08c3632523501148a30d815c2c6616ef8f772f5b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue133_arm_c_retry_direct was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_arm_c_retry_direct.py",
+   "target_sha256": "0c82ddbf50116d0c8a37a3a141b684cceb62910f9916f6a49e45cfb8ab55cac7"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue133_corrected_freeze was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_corrected_freeze.py",
+   "target_sha256": "c47fe2278b4f920a98bac2060e2066995606b730f4267fe8fe9148787a55d65f"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue133_gate_tooling_drift was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_gate_tooling_drift.py",
+   "target_sha256": "d1c3f31b0033ef1c8d7230306f43c1f8246af10f6c54d2addddc1ed2c1b8e552"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+   "manifest_sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+   "reason": "test_issue133_prelaunch_bootstrap was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue133_prelaunch_bootstrap.py",
+   "target_sha256": "f232373a4a4813637d0e1a560b11ab5934f0bda15c9b884a2bf25258807afe03"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/implementation/r6-successor-dense-full-integration-117/remediation/evidence/MANIFEST.sha256",
+   "manifest_sha256": "ec1306c5f85bb2191a0f62148e732d30d4eeb7b822f142a4beb3bf4f7096f6cd",
+   "reason": "test_issue153_arm_c_remediation was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[issue117-133-arm-a-c].",
+   "target": "tests/test_issue153_arm_c_remediation.py",
+   "target_sha256": "22ce1235e1239bcba21e9d6ceec8439075f2e3b3bf892ffeb62b71d44c6537f8"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+   "manifest_sha256": "fa75f5bf544f33bf5b864cd150a2e4ff28dc5fc4f897fdb9e498bfabcf58e655",
+   "reason": "test_issue35_corrections was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[link-x1-issue35].",
+   "target": "tests/test_issue35_corrections.py",
+   "target_sha256": "3e79b39fb13ccf1ebbd7e25145c2b31f430050b7ab4fef1643738c912d50c1db"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+   "manifest_sha256": "fa75f5bf544f33bf5b864cd150a2e4ff28dc5fc4f897fdb9e498bfabcf58e655",
+   "reason": "test_issue35_envelope was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[link-x1-issue35].",
+   "target": "tests/test_issue35_envelope.py",
+   "target_sha256": "79b2764b3f88750c24897c128517973d6f5f124f68c36dd211f44c859b02529b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+   "manifest_sha256": "fa75f5bf544f33bf5b864cd150a2e4ff28dc5fc4f897fdb9e498bfabcf58e655",
+   "reason": "test_issue35_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[link-x1-issue35].",
+   "target": "tests/test_issue35_evidence_manifest.py",
+   "target_sha256": "5c5dda9e92bd5aed4af6be6f8d3e53e484dfaf6065ac5f7db19b6e530d767966"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+   "manifest_sha256": "fa75f5bf544f33bf5b864cd150a2e4ff28dc5fc4f897fdb9e498bfabcf58e655",
+   "reason": "test_issue35_link_probe was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[link-x1-issue35].",
+   "target": "tests/test_issue35_link_probe.py",
+   "target_sha256": "a64b59288372ccb5e03ecca4f81b346772f664b50f82101f43352c937ec2cc27"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/link-x1-envelope/MANIFEST.sha256",
+   "manifest_sha256": "fa75f5bf544f33bf5b864cd150a2e4ff28dc5fc4f897fdb9e498bfabcf58e655",
+   "reason": "test_issue35_role_sweep was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[link-x1-issue35].",
+   "target": "tests/test_issue35_role_sweep.py",
+   "target_sha256": "872a8241b9337d966f8091bbcec59d3f3f314251627caf516cbc3eb17310f5d7"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/qwen38-flash-next-r8-d-v2/producer-hashes.json",
+   "manifest_sha256": "f04c88e18e2f6d1eb76b26448a03eb95f48e84a30afb043513b02ca1024e37e3",
+   "reason": "test_issue195_r8d_v2 was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[r8-d-lineage].",
+   "target": "tests/test_issue195_r8d_v2.py",
+   "target_sha256": "11c5cc96ba87a9d9a3ce0c0c6bc4d6a560f86004ac57b4fbb0e3308dfb4b8ef1"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/qwen38-flash-next-r8-d/producer-hashes.json",
+   "manifest_sha256": "8cf151bd0ae1b81cad227fcfe90d1ea60aba4645fbb4b978e4ac128e85816cba",
+   "reason": "test_issue195_r8d was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[r8-d-lineage].",
+   "target": "tests/test_issue195_r8d.py",
+   "target_sha256": "00c89be5a75e4aeab30a6505fa7ab159050b5c3c507ecf7990f7a68cd85414c7"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-b/MANIFEST.sha256",
+   "manifest_sha256": "b16ab4a0b094135f07d7d8175a115c67b5fb5009faa4dbbeab72cb48af6b5878",
+   "reason": "test_v0b_reduction was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0b].",
+   "target": "tests/test_v0b_reduction.py",
+   "target_sha256": "10f1b38528c438643ed80b2fd5ed0b398cc2c44fb867af1ff3b5f2cc138d9248"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-c/MANIFEST.sha256",
+   "manifest_sha256": "b2715bcf4b97453ef6b473e0efcdce8f87eb6a8a2e5e675e1a470faa05936a95",
+   "reason": "test_v0c_canonical_run was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v0c_canonical_run.py",
+   "target_sha256": "fd284c883b1dbece8802a88f420af5bae90e6b05f0e1a1a7480865b536480ef9"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-c/MANIFEST.sha256",
+   "manifest_sha256": "b2715bcf4b97453ef6b473e0efcdce8f87eb6a8a2e5e675e1a470faa05936a95",
+   "reason": "test_v0c_correctness was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v0c_correctness.py",
+   "target_sha256": "df90c5fea959de7a2464fd651ae158621b03566682fcbf05edafd22dd9aa6949"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-c/MANIFEST.sha256",
+   "manifest_sha256": "b2715bcf4b97453ef6b473e0efcdce8f87eb6a8a2e5e675e1a470faa05936a95",
+   "reason": "test_v0c_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v0c_evidence_manifest.py",
+   "target_sha256": "bd2df50ff0250cf25c1cf65910c3b306b12a38cfda7754fab9467121cb9fb38d"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-c/MANIFEST.sha256",
+   "manifest_sha256": "b2715bcf4b97453ef6b473e0efcdce8f87eb6a8a2e5e675e1a470faa05936a95",
+   "reason": "test_v0c_execution_seam was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v0c_execution_seam.py",
+   "target_sha256": "a7c487f6387d2101f448eb0a67c8b8c6ed1de797095150e048c9e86ff69fbd87"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v0-c/MANIFEST.sha256",
+   "manifest_sha256": "b2715bcf4b97453ef6b473e0efcdce8f87eb6a8a2e5e675e1a470faa05936a95",
+   "reason": "test_v0c_vulkan_adapter was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v0c_vulkan_adapter.py",
+   "target_sha256": "3e7eb7d8250e1015f9035d4c1131715d84f3aac6b5d39ddd38d41aa2a117173c"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-a/MANIFEST.sha256",
+   "manifest_sha256": "eb7b91c48a0fb591904e9363514cb9772e37f360ea3868f8fde485a058b4cc6e",
+   "reason": "test_v1a_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1a_evidence_manifest.py",
+   "target_sha256": "58f744fc7628788b0cf99e93dbf5ba59808a4f1b36211b9a99ec7c5797d58d25"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-a/MANIFEST.sha256",
+   "manifest_sha256": "eb7b91c48a0fb591904e9363514cb9772e37f360ea3868f8fde485a058b4cc6e",
+   "reason": "test_v1a_execution_participant was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1a_execution_participant.py",
+   "target_sha256": "b8f34765c56d0d34715cf137ffb31c4e036c8d8928658ee3890faae007c7f3ed"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-a/MANIFEST.sha256",
+   "manifest_sha256": "eb7b91c48a0fb591904e9363514cb9772e37f360ea3868f8fde485a058b4cc6e",
+   "reason": "test_v1a_runner was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1a_runner.py",
+   "target_sha256": "cd6bb3c594c69d89f21f3332c38642c2b9de055f2d6abf02eac2e044048fa2e8"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-a/MANIFEST.sha256",
+   "manifest_sha256": "eb7b91c48a0fb591904e9363514cb9772e37f360ea3868f8fde485a058b4cc6e",
+   "reason": "test_v1a_vulkan_adapter was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1a_vulkan_adapter.py",
+   "target_sha256": "38c77b7b6384d1a2dc911f49fd45b867d39ce81b08c2082b03184afcb8c7f3f3"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-b/MANIFEST.sha256",
+   "manifest_sha256": "d5b57803a8e18c089ebd7368619c19b3f63e7815a680af873812fc134395dd21",
+   "reason": "test_v1b_campaign was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1b_campaign.py",
+   "target_sha256": "828b9dcee73ab8f142c45fd2492286416120be7e0fe3903c1842f9568697a792"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-b/MANIFEST.sha256",
+   "manifest_sha256": "d5b57803a8e18c089ebd7368619c19b3f63e7815a680af873812fc134395dd21",
+   "reason": "test_v1b_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1b_evidence_manifest.py",
+   "target_sha256": "98fa1d45b84f4fa31497766500b74b47f1ec4c077a04d9775bdc19ce8e5cf9b4"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-c/MANIFEST.sha256",
+   "manifest_sha256": "668a10ffbe69568a323af549c3c5353311802fe45389a4dd65a30f2679fe9072",
+   "reason": "test_v1c_accounting was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1c_accounting.py",
+   "target_sha256": "21dc5c6a64f86b0e3e157ce1798b64be02ae5be1d00760ffd13d8f5a94362fbf"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-c/MANIFEST.sha256",
+   "manifest_sha256": "668a10ffbe69568a323af549c3c5353311802fe45389a4dd65a30f2679fe9072",
+   "reason": "test_v1c_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1c_evidence_manifest.py",
+   "target_sha256": "f5e2e3a962f981cdf2130c3634b862c60a895851678125dc26359f227bbab64c"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v1-c/MANIFEST.sha256",
+   "manifest_sha256": "668a10ffbe69568a323af549c3c5353311802fe45389a4dd65a30f2679fe9072",
+   "reason": "test_v1c_runner was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v1c_runner.py",
+   "target_sha256": "5d3ffdbc011405b7179ac15852100348ca36b349694ed6a4387cb81500d62d38"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_authority was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_authority.py",
+   "target_sha256": "31dbba987f3d868acf7399626f27f9754cf0ccbc463945b9517f36c7cf78c527"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_discovery was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_discovery.py",
+   "target_sha256": "691922b4226a81994312f5af310935001bc05e283465ebaf0fc354d8cf24db0a"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_discovery_authority_binding was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_discovery_authority_binding.py",
+   "target_sha256": "a690c94ce7ce3f0fd7e3bd79c35ff3c185fb8f607784c81e2bbb9a6e09f958f5"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_discovery_authority_binding_r3 was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_discovery_authority_binding_r3.py",
+   "target_sha256": "06d105b51f6f9664e97f72a91696c934a3fdecf2bd707ad8699fe66f1270176a"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_evidence_manifest was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_evidence_manifest.py",
+   "target_sha256": "2b565322de7e361f572d9841b1b4803b5ed9d261159b5c2dfaeae7010739ed6b"
+  },
+  {
+   "authority": "Issue #246",
+   "manifest": "docs/investigations/vulkan-v2-a/MANIFEST.sha256",
+   "manifest_sha256": "83ccd263b05de304f0a8f5a1d797f8fe08779ebea1c53ce1811dfebe70932313",
+   "reason": "test_v2a_harness was retired from canonical discovery by the Issue #246 maintainer decision (historical provenance is not a retention criterion; Git history is the archive). The accepted manifest bytes stay unchanged; the evidence stays protected by integrity_replacements[vulkan-v0c-v1-v2a].",
+   "target": "tests/test_v2a_harness.py",
+   "target_sha256": "d858e67315b6b553a23611543b46adfc8e850b640327c719c0baf01d18ac4b8f"
+  }
+ ],
+ "rule": "One exact tombstone per accepted row that names a deliberately deleted test file. Row verification treats a missing target as PASS only when one entry matches the manifest path, the SHA-256 of the current manifest bytes, the target path, and the SHA-256 the manifest stores for it. The accepted manifest bytes are never rewritten. Checked by scripts/check_ci_test_retention.py.",
+ "schema": "inferswarm.ci.retired-test-rows/1"
+}

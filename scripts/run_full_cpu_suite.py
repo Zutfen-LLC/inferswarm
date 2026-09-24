@@ -66,29 +66,25 @@ SCHEMA = "parallel-full-cpu-suite/1"
 # of a command string alone.
 SUITE_CONFIG_SCHEMA = "suite-config/1"
 DEFAULT_MAX_JOBS = 4
-# Kept in one interpreter because the historical Issue #133 fixture deliberately
-# couples these real script modules through sys.modules.
-COOLOCATED_MODULES = frozenset({
-    "test_issue133_arm_c_retry_campaign",
-    "test_issue133_arm_c_retry_direct",
-    "test_issue133_corrected_freeze",
-})
+# Modules kept together in one interpreter because their fixtures deliberately
+# couple real script modules through sys.modules.  Empty: the only members,
+# the Issue #133 Arm-C retry suites, were retired (Issue #246); the mechanism
+# stays for any future coupled fixture.
+COOLOCATED_MODULES: frozenset[str] = frozenset()
 # These modules need an exclusive worker process under parallel execution.
-# Arm-B copies multi-GB retained evidence; Issue #103 and the Issue #117
-# preflight assert serial /tmp-shaped volatile paths.  Keeping each in its own
-# single-module process preserves both contracts without starving the
-# remaining population of worker slots.
+# Arm-B copies multi-GB retained evidence; Issue #103 asserts serial
+# /tmp-shaped volatile paths.  Keeping each in its own single-module process
+# preserves both contracts without starving the remaining population of
+# worker slots.
 ISOLATED_MODULES = frozenset({
     "test_issue117_arm_b_retention",
     "test_issue103_planner",
-    "test_issue117_preflight",
 })
 # Modules whose deterministic records encode /tmp-shaped volatile paths.  A
 # task containing any of them must run with the serial-compatible inherited
 # environment (no TMPDIR override), never with private scratch.
 TMPDIR_SENSITIVE_MODULES = frozenset({
     "test_issue103_planner",
-    "test_issue117_preflight",
 })
 
 

@@ -27,6 +27,7 @@ roadmap paragraph cannot change normative doctrine; that requires an ADR.
 | run the checks | [`tests/README.md`](../tests/README.md) |
 | understand a script | [`scripts/README.md`](../scripts/README.md) |
 | understand which CI checks run for a change | [CI impact planning](ci-impact-planning.md) |
+| add, retain, or retire a CI test module | [Test lifecycle](ci-impact-planning.md#test-lifecycle-issue-246), the [retention audit](ci/test-retention-audit.json), and the [retired-test-row tombstones](ci/retired-test-rows.json) |
 | run a campaign/review handoff | [Campaign gate ordering](campaign-gate-ordering.md) |
 
 ## Directories

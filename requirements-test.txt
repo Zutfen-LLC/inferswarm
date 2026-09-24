@@ -22,6 +22,8 @@ numpy>=1.26,<3
 pyyaml>=6.0,<7
 
 # Immutable accepted Issue #117 Arm-C-retry frozen tokenizer environment
-# (transformers/tokenizers/Jinja2/MarkupSafe exact pins). Required by the
-# real-tokenizer proof (test_issue129_arm_c_retry) and related modules.
+# (transformers/tokenizers/Jinja2/MarkupSafe exact pins). Consumed by the
+# tokenizer-backed current suites (test_issue74_methodology,
+# test_issue237_r8i_methodology); the Issue #129 real-tokenizer proof that
+# first required it was retired by Issue #246.
 -r docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/requirements.txt

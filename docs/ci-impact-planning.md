@@ -13,7 +13,7 @@ output is always the source of truth.
 PR            -> plan_ci.py --mode pr  -> repo-integrity (always-on)
                                             + selected impact groups
                                         -> CI Gate
-main / manual -> plan_ci.py --mode full -> every group (sharded) -> CI Gate
+main / manual -> plan_ci.py --mode full -> every group -> CI Gate
 unknown / shared / authority change -> planner fails closed to full regression
 ```
 
@@ -80,14 +80,131 @@ Gate` on the same exact head; see
 
 ## Groups
 
-Registered group ids live in `scripts/ci_groups.json` (`groups` key).
-`repo-integrity` is always-on: the canonical CPU environment
-bootstrap/doctor, YAML syntax, generated project status, deterministic
-finalization `--check`, evidence manifest lifecycle, frozen Phase-0
-workload integrity, the planner self-check, Markdown links, repository
-hygiene, and project naming. All other groups are impact-selected
-families (e.g. `issue-117-133`, `vulkan-v0-b`) mapped from owned paths
-by the registry's `path_rules`.
+Registered group ids live in `scripts/ci_groups.json` (`groups` key);
+each group records the current invariant it protects (`invariant`,
+from `GROUP_INVARIANTS` in the planner). `repo-integrity` is
+always-on: the canonical CPU environment bootstrap/doctor, YAML
+syntax, generated project status, deterministic finalization
+`--check`, evidence manifest lifecycle, frozen Phase-0 workload
+integrity, the planner self-check, the test-retention audit and
+retired-lineage integrity check, Markdown links, repository hygiene,
+and project naming. All other groups are impact-selected families
+(e.g. `issue-117-133`, `r8i-qwen-qualification`) mapped from owned
+paths by the registry's `path_rules`.
+
+Groups follow current dependency and authority boundaries, not issue
+chronology. Issue #246 split the former `vulkan-v0-b` catch-all
+(46 modules spanning V0, V1, V2, R8, and #35) by dependency boundary
+and then retired every historical-only suite:
+
+- `r8i-qwen-qualification` — the current R8-I authority (#237, #244).
+  Current R8/Qwen work (for example Issue #241) registers its modules
+  here;
+- `r8-qwen-lineage` — R8-A (the living frontier reference) and the
+  R8-B evidence that R8-I consumes;
+- the V0-B, V0-C/V1/V2-A, #35, and R8-D replay suites are deleted;
+  their accepted evidence is protected by the always-on retired-lineage
+  integrity check.
+
+There is no historical group: a registered group holds only current
+contracts, current regressions, or current evidence integrity.
+
+A script change selects every group whose test modules import it,
+directly or transitively (`tests/test_plan_ci.py`,
+`TestImportClosureFanout`, enforces this). Evidence that a retained
+test reads fans out to that test's group.
+
+## Test lifecycle (Issue #246)
+
+> CI tests are retained because they protect current contracts,
+> reachable regressions, or current evidence integrity. Historical
+> issue provenance alone is not a retention criterion.
+
+Git history is the archive. An accepted manifest, a producer-hash
+ledger, a historical script, or an old issue that names a test path
+never keeps that test alive.
+
+Every canonical test module (`tests/test_*.py`) has a record in
+[`docs/ci/test-retention-audit.json`](ci/test-retention-audit.json)
+with exactly one category, a disposition, the current invariant it
+protects, and its rationale. A discovered or CI-registered module must
+be `CURRENT_CONTRACT`, `CURRENT_REGRESSION`, or `EVIDENCE_INTEGRITY`;
+`HISTORICAL_ONLY` and `OBSOLETE` records exist only for removed units.
+Mixed modules add `overrides` at class or test-method granularity, and
+a retained unit must itself be current.
+[`scripts/check_ci_test_retention.py`](../scripts/check_ci_test_retention.py)
+runs in `repo-integrity` and fails when:
+
+- a discovered module has no record (a new module must declare its
+  owner and current invariant);
+- a discovered or registered module is `HISTORICAL_ONLY` or `OBSOLETE`;
+- a retained module's audit group differs from its planner group;
+- an accepted `MANIFEST.sha256` lists a retained test file, or a script
+  imports or names a test module, and the record omits it
+  (`pinned_by_evidence`, `referenced_by_scripts`);
+- a removed module is still discovered or registered, is not
+  `HISTORICAL_ONLY`/`OBSOLETE`, names nothing that protects its
+  evidence, or its accepted rows are not exactly tombstoned;
+- any script imports a removed test module, or a current (unpinned)
+  script names one.
+
+### Retired test rows
+
+An accepted manifest that names a deleted test file keeps its bytes.
+[`docs/ci/retired-test-rows.json`](ci/retired-test-rows.json) records
+one exact tombstone per retired row, binding:
+
+- the accepted manifest path and the SHA-256 of its accepted bytes;
+- the retired target path and the SHA-256 the manifest stores for it;
+- the retirement reason and the Issue #246 authority.
+
+Row verification — the evidence-manifest lifecycle test, the
+retired-lineage integrity check, and the finalizer's closed-bundle
+stage — passes a missing target only when one tombstone matches all
+four identities. A changed manifest, a changed stored digest, a
+missing, duplicate, or conflicting tombstone, a wildcard or prefix
+target, and a tombstone for a target that still exists all fail, and
+every unrelated missing row still fails.
+
+### Retiring or replacing tests when an implementation is superseded
+
+1. Classify the module (or its classes/tests) against current
+   reachability: which current source path can make it fail, and which
+   current invariant that failure represents. Completion of the issue
+   alone is not evidence of obsolescence.
+2. If a still-current guard (for example a holdout, custody, or
+   predictive-contamination rule) lives inside a historical suite,
+   extract only that minimal guard into a `CURRENT_CONTRACT` module of
+   the active authority, then retire the rest. Do not invent a current
+   invariant to keep historical code.
+3. If a current script imports or hashes the test module, move the
+   authority it consumes into a non-test module or data artifact. If
+   the script is itself historical, retire it too (pin it as a frozen
+   producer when accepted evidence names it, otherwise delete it).
+4. Protect the evidence it guarded with an integrity
+   replacement instead of reducer replay: add an
+   `integrity_replacements` entry naming the evidence bundles (root plus
+   accepted row files such as `MANIFEST.sha256` or a `json-map`
+   producer-hash ledger; `pin_uncovered` pins bundle files the accepted
+   rows do not cover, and `excluded_subtrees` leaves nested bundles to
+   their own authority) and the retired producers, then pin them with
+   `python3 scripts/check_ci_test_retention.py --write-pins`. The pin
+   file ([`docs/ci/retired-lineage-pins.sha256`](ci/retired-lineage-pins.sha256))
+   pins the manifests themselves, so evidence cannot be rewritten
+   together with its manifest. Pinned retired producers are frozen:
+   editing one, even cosmetically, fails `repo-integrity` until a
+   maintainer-authorized re-pin.
+5. Tombstone every accepted row that names the deleted test file in
+   `docs/ci/retired-test-rows.json`.
+6. Delete the module and any test-only helpers, unregister them from
+   the planner and workflow, map the retired paths to `repo-integrity`
+   (plus any retained consumer group), and set the record's disposition
+   to `integrity-replacement` or `delete`.
+
+Do not keep a permanent historical-tests bucket, and do not add
+machinery only to preserve old test code. Changing the audit, the pin
+file, the retired-row tombstones, or the checker fails the planner
+closed to full regression.
 
 ## Fail-closed surfaces
 
@@ -105,7 +222,9 @@ The planner escalates to full regression when:
 - the canonical dependency authority changes (`requirements-test.txt`,
   `scripts/bootstrap_test_env.py`, `scripts/check_test_env.py`);
 - repository authority surfaces change (finalizer, status syncer,
-  evidence manifest tooling and their docs, `docs/project-status.json`);
+  evidence manifest tooling and their docs, `docs/project-status.json`,
+  the Issue #246 retention audit, retired-lineage pins, retired-test-row
+  tombstones, and their checker);
 - the changed-path input is malformed (duplicates, whitespace,
   absolute paths, `..` traversal, **blank lines**) or empty.
 
@@ -130,12 +249,16 @@ unselected groups are skipped by design).
 
 ## Adding a group or test module
 
-Register it: add the test modules to `GROUP_TEST_MODULES` and the owned
-paths to `PATH_GROUPS` in `scripts/plan_ci.py`, run
-`python3 scripts/plan_ci.py --emit-registry`, and add a matching job to
-the workflow. `tests/test_plan_ci.py` fails if any `tests/test_*.py`
-module is not owned by exactly one registered group, so an unregistered
-suite cannot slip through silently.
+Register it: add the test modules to `GROUP_TEST_MODULES`, a new group's
+current invariant to `GROUP_INVARIANTS`, and the owned paths to
+`PATH_GROUPS` in `scripts/plan_ci.py`, run
+`python3 scripts/plan_ci.py --emit-registry`, add a matching job to the
+workflow, and add the module's record to
+`docs/ci/test-retention-audit.json`. `tests/test_plan_ci.py` fails if
+any `tests/test_*.py` module is not owned by exactly one registered
+group, and `scripts/check_ci_test_retention.py` fails if it has no
+retention record, so an unregistered or unowned suite cannot slip
+through silently.
 
 ## Adding an evidence-bearing docs subtree
 
@@ -146,7 +269,10 @@ that is not ordinary Markdown prose) must be registered in
 allowlist in `tests/test_plan_ci.py`
 (`TestRepositoryTreeCoverage.test_unmapped_evidence_census_fail_closed`)
 with the reason. The census test fails otherwise, so an unclassified
-evidence subtree cannot fall through to the prose rule.
+evidence subtree cannot fall through to the prose rule. Bundle roots
+declared in a retention-audit integrity replacement may classify as
+`repo-integrity` only, because the always-on retired-lineage check
+verifies them.
 
 ## Workflow wiring contract
 
