@@ -43,12 +43,20 @@ def fixture(test: unittest.TestCase, files: dict[str, str]) -> tuple[Path, Path]
     return root, tests
 
 
+# Synthetic scheduling declarations (injected by SchedulingPlanTests): a
+# three-module co-location bundle, three isolated modules, two of them
+# TMPDIR-sensitive.  The real declarations are checked separately against
+# the discovered population.
+SAMPLE_COOLOCATED = frozenset({"test_bundle_a", "test_bundle_b", "test_bundle_c"})
+SAMPLE_ISOLATED = frozenset({"test_iso_evidence_copy", "test_iso_tmp_a", "test_iso_tmp_b"})
+SAMPLE_TMPDIR_SENSITIVE = frozenset({"test_iso_tmp_a", "test_iso_tmp_b"})
+
+
 def sample_units() -> list[runner.Unit]:
     """A miniature population exercising every scheduling declaration."""
     return [runner.Unit(name, (f"{name}.Case.test_x",)) for name in (
-        "test_issue133_arm_c_retry_campaign", "test_issue133_arm_c_retry_direct",
-        "test_issue133_corrected_freeze", "test_issue117_arm_b_retention",
-        "test_issue103_planner", "test_issue117_preflight",
+        "test_bundle_a", "test_bundle_b", "test_bundle_c",
+        "test_iso_evidence_copy", "test_iso_tmp_a", "test_iso_tmp_b",
         "test_other", "test_last")]
 
 
@@ -73,6 +81,25 @@ class DiscoveryAndPlanTests(unittest.TestCase):
 
 class SchedulingPlanTests(unittest.TestCase):
     """Inspect the actual scheduling plan at every supported worker count."""
+
+    def setUp(self):
+        saved = self.real_declarations = (
+            runner.ISOLATED_MODULES, runner.COOLOCATED_MODULES,
+            runner.TMPDIR_SENSITIVE_MODULES)
+
+        def restore():
+            (runner.ISOLATED_MODULES, runner.COOLOCATED_MODULES,
+             runner.TMPDIR_SENSITIVE_MODULES) = saved
+        self.addCleanup(restore)
+        runner.ISOLATED_MODULES = SAMPLE_ISOLATED
+        runner.COOLOCATED_MODULES = SAMPLE_COOLOCATED
+        runner.TMPDIR_SENSITIVE_MODULES = SAMPLE_TMPDIR_SENSITIVE
+
+    def test_real_declarations_name_only_discovered_modules(self):
+        # a retired module must not linger in the runner's declarations
+        discovered = {p.stem for p in (ROOT / "tests").glob("test_*.py")}
+        for declared in self.real_declarations:
+            self.assertLessEqual(declared, discovered)
 
     def assert_schedule_safe(self, jobs: int) -> list[runner.Task]:
         units = sample_units()
@@ -130,7 +157,7 @@ class SchedulingPlanTests(unittest.TestCase):
     def test_schedule_is_safe_at_oversized_jobs(self):
         selected, tasks = runner.build_tasks(sample_units(), 99)
         self.assertEqual(selected, 8)
-        # 8 workers: 3 isolated singleton tasks, the Issue #133 bundle kept
+        # 8 workers: 3 isolated singleton tasks, the co-location bundle kept
         # together as one task, and the other two modules as singletons.
         sizes = sorted(len(t.units) for t in tasks)
         self.assertEqual(sizes, [1, 1, 1, 1, 1, 3])
@@ -147,7 +174,7 @@ class SchedulingPlanTests(unittest.TestCase):
         # requested workers: the deterministic least-loaded assignment is
         # [3,1,1] test counts in 3 buckets (a 4th would stay empty).
         self.assertEqual(sorted(counts), [1, 1, 3])
-        # The Issue #133 bundle stays together in exactly one task.
+        # The co-location bundle stays together in exactly one task.
         bundle_tasks = [t for t in population
                         if any(u.name in runner.COOLOCATED_MODULES for u in t.units)]
         self.assertEqual(len(bundle_tasks), 1)
@@ -430,7 +457,6 @@ class EnvironmentSemanticsTests(unittest.TestCase):
 
     def test_tmpdir_sensitivity_classification(self):
         self.assertEqual(runner.tmpdir_mode_for(["test_issue103_planner"]), "inherited")
-        self.assertEqual(runner.tmpdir_mode_for(["test_issue117_preflight"]), "inherited")
         self.assertEqual(runner.tmpdir_mode_for(["test_issue103_planner", "test_other"]), "inherited")
         self.assertEqual(runner.tmpdir_mode_for(["test_issue117_arm_b_retention"]), "private")
         self.assertEqual(runner.tmpdir_mode_for(["test_other"]), "private")

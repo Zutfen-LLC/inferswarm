@@ -57,12 +57,23 @@ check establishes current byte consistency and declared scope; it does not
 grant acceptance or execution authority and does not replace review of a
 manifest change.
 
-Issue #137 is the first additive Issue #117 slice using this lifecycle:
+Issue #137 is the first additive Issue #117 slice using this lifecycle. Its
+bundle was generated once by `scripts/issue137_manifest.py`; that builder is
+now a frozen producer (it hashes #137 test files that Issue #246 retired), and
+the accepted bundle is verified by the finalizer's `issue137-bundle-verify`
+stage and `scripts/check_ci_test_retention.py`.
 
-```bash
-python3 scripts/issue137_manifest.py --write
-python3 scripts/issue137_manifest.py --check
-```
+## Retired test rows
+
+An accepted manifest may list a test file that was later deleted because it
+protected no current invariant (Issue #246). The manifest bytes are never
+rewritten. Instead [`docs/ci/retired-test-rows.json`](ci/retired-test-rows.json)
+records one exact tombstone per retired row: the manifest path, the SHA-256 of
+the accepted manifest bytes, the target path, the SHA-256 the manifest stores
+for it, the reason, and the Issue #246 authority. Row verification treats a
+missing target as passing only when one tombstone matches all four identities;
+any change to the manifest or the stored digest voids the tombstone, and a
+tombstone never excuses a target that is present.
 
 The older Issue #74, #99, #101, and #103 manifests predate this policy. Their
 CI/status and legacy verifier rows remain as historical snapshots but are no
