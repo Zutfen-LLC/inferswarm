@@ -3244,180 +3244,182 @@
    "test_count_at_audit": 104
   },
   "test_issue241_comparator_producer": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 19,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The R8-I3 Phase-3 comparator/2 producer stays exact-head gated, canonical-prefix bound, device-attributed, and fail-closed on malformed or stale comparator evidence.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
-   ],
-   "scripts_imported": [
-    "scripts/issue241_comparator_producer.py",
-    "scripts/issue241_constants.py",
-    "scripts/issue241_census.py",
-    "scripts/issue241_placement.py",
-    "scripts/issue241_placement_producer.py",
-    "scripts/issue241_dispatch.py",
-    "scripts/issue241_practicality.py"
-   ]
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3 Phase-3 comparator/2 producer stays exact-head gated, canonical-prefix bound, device-attributed, and fail-closed on malformed or stale comparator evidence.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_comparator_producer.py",
+     "scripts/issue241_constants.py",
+     "scripts/issue241_census.py",
+     "scripts/issue241_placement.py",
+     "scripts/issue241_placement_producer.py",
+     "scripts/issue241_dispatch.py",
+     "scripts/issue241_practicality.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current open #241 qualification contract; required before any fresh replacement-card physical cascade.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current open #241 qualification contract; required before any fresh replacement-card physical cascade.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 19
- },
   "test_issue241_host_producer": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 10,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The R8-I3 Phase-1 host/census producer derives the replacement-card subject from retained observations and refuses stale dispatch or identity drift.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
-   ],
-   "scripts_imported": [
-    "scripts/issue241_host_producer.py",
-    "scripts/issue241_dispatch.py",
-    "scripts/issue241_constants.py"
-   ]
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 10,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3 Phase-1 host/census producer derives the replacement-card subject from retained observations and refuses stale dispatch or identity drift.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_host_producer.py",
+     "scripts/issue241_dispatch.py",
+     "scripts/issue241_constants.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current open #241 replacement-card qualification contract.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 10
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current open #241 replacement-card qualification contract.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 10
- },
   "test_issue241_measured_practicality": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 6,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The R8-I3 Phase-4 practicality reducer uses retained measured walls and frozen comparator identities without promoting diagnostic data into qualification authority.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
-   ],
-   "scripts_imported": [
-    "scripts/issue241_constants.py",
-    "scripts/issue241_dispatch.py",
-    "scripts/issue241_practicality.py",
-    "scripts/issue241_comparator.py"
-   ]
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 6,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3 Phase-4 practicality reducer uses retained measured walls and frozen comparator identities without promoting diagnostic data into qualification authority.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_constants.py",
+     "scripts/issue241_dispatch.py",
+     "scripts/issue241_practicality.py",
+     "scripts/issue241_comparator.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current open #241 practicality/terminal contract.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 6
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current open #241 practicality/terminal contract.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 6
- },
   "test_issue241_physical_producer": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 52,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The bounded R8-I3 physical executor cannot perform device/model work without live exact-head dispatch and preserves the frozen placement/identity contract.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
-   ],
-   "scripts_imported": [
-    "scripts/issue241_constants.py",
-    "scripts/issue241_placement.py",
-    "scripts/issue241_placement_producer.py",
-    "scripts/issue241_physical.py",
-    "scripts/issue241_dispatch.py"
-   ]
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 52,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The bounded R8-I3 physical executor cannot perform device/model work without live exact-head dispatch and preserves the frozen placement/identity contract.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_constants.py",
+     "scripts/issue241_placement.py",
+     "scripts/issue241_placement_producer.py",
+     "scripts/issue241_physical.py",
+     "scripts/issue241_dispatch.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current open #241 physical-dispatch safety contract.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 52
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current open #241 physical-dispatch safety contract.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 52
- },
   "test_issue241_placement_producer": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 15,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The R8-I3 Phase-2 placement producer cross-binds fresh subject identity, dispatch authority, residency, and placement observations before comparator execution.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
-   ],
-   "scripts_imported": [
-    "scripts/issue241_constants.py",
-    "scripts/issue241_census.py",
-    "scripts/issue241_dispatch.py",
-    "scripts/issue241_physical.py",
-    "scripts/issue241_placement_producer.py"
-   ]
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3 Phase-2 placement producer cross-binds fresh subject identity, dispatch authority, residency, and placement observations before comparator execution.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_constants.py",
+     "scripts/issue241_census.py",
+     "scripts/issue241_dispatch.py",
+     "scripts/issue241_physical.py",
+     "scripts/issue241_placement_producer.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current open #241 placement contract.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 15
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current open #241 placement contract.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 15
- },
   "test_issue241_r8i3_rx580": {
-  "baseline_group": "vulkan-v0-b",
-  "baseline_serial_seconds": null,
-  "baseline_test_count": 202,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The R8-I3 replacement RX580 subject freeze, comparator/2 semantics, exact-head dispatch, phase-0 preservation, and historical-vs-current subject separation stay prospectively bound and fail closed.",
-  "lineage": "R8-I3 RX580 comparator/2 (#241)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-   "evidence_read": [
-    "docs/qualification/qwen38-vulkan-v1/",
-    "docs/qualification/qwen38-vulkan-v2-rx580/"
+   "baseline_group": "vulkan-v0-b",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 202,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3 replacement RX580 subject freeze, comparator/2 semantics, exact-head dispatch, phase-0 preservation, and historical-vs-current subject separation stay prospectively bound and fail closed.",
+   "lineage": "R8-I3 RX580 comparator/2 (#241)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/qualification/qwen38-vulkan-v1/",
+     "docs/qualification/qwen38-vulkan-v2-rx580/"
+    ],
+    "scripts_imported": [
+     "scripts/issue241_campaign.py",
+     "scripts/issue241_census.py",
+     "scripts/issue241_comparator.py",
+     "scripts/issue241_constants.py",
+     "scripts/issue241_dispatch.py",
+     "scripts/issue241_observer_patch.py",
+     "scripts/issue241_physical.py",
+     "scripts/issue241_placement.py",
+     "scripts/issue241_placement_producer.py",
+     "scripts/issue241_practicality.py",
+     "scripts/issue241_supersession.py",
+     "scripts/issue241_phase0.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current direct consumer-Polaris comparator/2 qualification path blocking R8-J.",
+   "referenced_by_scripts": [
+    "scripts/issue241_constants.py"
    ],
-   "scripts_imported": [
-    "scripts/issue241_campaign.py",
-    "scripts/issue241_census.py",
-    "scripts/issue241_comparator.py",
-    "scripts/issue241_constants.py",
-    "scripts/issue241_dispatch.py",
-    "scripts/issue241_observer_patch.py",
-    "scripts/issue241_physical.py",
-    "scripts/issue241_placement.py",
-    "scripts/issue241_placement_producer.py",
-    "scripts/issue241_practicality.py",
-    "scripts/issue241_supersession.py",
-    "scripts/issue241_phase0.py"
-   ]
+   "replacement": null,
+   "test_count_at_audit": 202
   },
-  "pinned_by_evidence": [],
-  "rationale": "Current direct consumer-Polaris comparator/2 qualification path blocking R8-J.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "test_count_at_audit": 202
- },
   "test_issue244_r8i5_v340l_import": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.05,
@@ -3700,7 +3702,7 @@
   },
   "test_issue86_v3_methodology": {
    "baseline_group": "issue-83-95",
-   "baseline_serial_seconds": 21.0,
+   "baseline_serial_seconds": 21,
    "baseline_test_count": 96,
    "category": "HISTORICAL_ONLY",
    "disposition": "integrity-replacement",
