@@ -54,36 +54,44 @@ def _amd(bdf: str) -> dict[str, Any]:
     return {"pci_id": f"{vendor}:{device}", "used_mib": used / (1024 * 1024)}
 
 def _device_identity(arm: str, env: dict[str, str]) -> dict[str, Any]:
+    """Full frozen-subject identity for the executing arm.
+
+    Correction pass 8 (2026-09-24, live Phase-3 execution): the previous
+    implementation populated only the Vulkan-summary and UUID/PCI fields
+    and then handed the result to census.identity_problems, which also
+    requires vendor/device/subsystem/revision/link-width/driver/ICD
+    fields — every one of those was observed as None and Phase 3 failed
+    closed on its first run on the real host. The CPU fake-runner tests
+    never saw this because their fixture supplies a full identity dict.
+
+    The identity is now derived through the SAME raw-observation seam the
+    Phase-2 producer uses (_observe_arm_identity + derive_identity_from_raw),
+    so both arms' acceptance-bearing boundaries observe identical fields
+    from identical raw sources. The strict single-GPU-per-ICD and
+    arm-specific UUID/BDF binding checks of the original implementation
+    are retained.
+    """
     cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
     bdf = cfg["bdf"]
-    text = _command(["vulkaninfo", "--summary"], env=env)
-    gpus: list[dict[str, str]] = []
-    for line in text.splitlines():
-        s = line.strip()
-        if re.fullmatch(r"GPU\d+:", s): gpus.append({})
-        elif gpus and "=" in s:
-            k, _, v = s.partition("="); gpus[-1][k.strip()] = v.strip()
-    if len(gpus) != 1 or not gpus[0].get("deviceName"):
+    observation = phase2_producer._observe_arm_identity(arm)
+    identity = observation["identity"]
+    summary = observation["raw"].get("vulkaninfo_summary", "")
+    gpus = phase2_producer._vulkan_devices(summary)
+    if (identity.get("selected_device_present") is False
+            or len(gpus) != 1 or not gpus[0].get("deviceName")):
         raise ValueError("ICD must expose exactly one named Vulkan GPU")
-    gpu = gpus[0]
-    result = {"bdf": bdf, "vulkan_device_name": gpu["deviceName"],
-              "vulkan_device_uuid": gpu.get("deviceUUID"),
-              "vulkan_api_version": gpu.get("apiVersion"),
-              "vulkan_driver_name": gpu.get("driverName"),
-              "vulkan_driver_info": gpu.get("driverInfo"),
-              "vulkan_summary": text}
     if arm == "B":
-        nv = _nvidia()
-        if bdf not in nv: raise ValueError("reference BDF absent from NVIDIA observation")
-        result["gpu_uuid"] = nv[bdf]["gpu_uuid"]
+        if identity.get("gpu_uuid") != cfg["gpu_uuid"]:
+            raise ValueError("reference gpu_uuid absent or mismatched")
     else:
-        amd = _amd(bdf)
-        uuid = gpu.get("deviceUUID", "").replace("-", "")
+        uuid = (identity.get("vulkan_device_uuid") or "").replace("-", "")
         if len(uuid) != 32 or not re.fullmatch(r"[0-9a-fA-F]{32}", uuid):
             raise ValueError("RADV deviceUUID absent or malformed")
         mapped = _bdf(f"{uuid[:8]}:{uuid[8:10]}:{uuid[10:12]}.{int(uuid[12:14],16)&7}")
-        if mapped != bdf: raise ValueError("RADV UUID does not map to selected BDF")
-        result.update(pci_id=amd["pci_id"])
+        if mapped != bdf:
+            raise ValueError("RADV UUID does not map to selected BDF")
+    result = dict(identity)
+    result["vulkan_summary"] = observation["raw"].get("vulkaninfo_summary", "")
     return result
 
 def _device_sample(arm: str, stage: str) -> dict[str, Any]:

@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 from scripts import issue241_comparator_producer as producer
 from scripts import issue241_constants as C
+from scripts import issue241_census as census_mod
 from scripts import issue241_placement as placement
 from scripts import issue241_placement_producer as p2
 from scripts import issue241_dispatch as dispatch
@@ -342,6 +343,89 @@ class ComparatorProducerTests(unittest.TestCase):
                     request=C.REQUEST_CONTRACT, prompt="fixture", output_dir=self.root,
                     timeout_s=10)
         self.assertEqual(killed, [(2345, producer.signal.SIGTERM), (2345, producer.signal.SIGKILL)])
+
+    def test_device_identity_satisfies_frozen_predicate_for_both_arms(self):
+        """Correction-pass-8 regression: the Phase-3 identity observation
+        must populate EVERY field census.identity_problems checks (the
+        old implementation supplied only the Vulkan-summary subset and
+        every sysfs-derived field was observed as None on the real host,
+        failing the first live run closed). The observer seam is patched
+        with the canonical raw-source fixture; the derivation from raw
+        values to predicate-passing identity is the code under test."""
+        from tests.test_issue241_placement_producer import identity_observer
+        for arm in ("B", "C"):
+            with patch.object(producer.phase2_producer,
+                              "_observe_arm_identity",
+                              return_value=identity_observer(arm)):
+                identity = producer._device_identity(
+                    arm, {"VK_ICD_FILENAMES": (C.REFERENCE_ARM if arm == "B"
+                                               else C.CANDIDATE_ARM)["icd"]})
+            problems = census_mod.identity_problems(arm, identity)
+            self.assertEqual(problems, [], f"arm {arm}: {problems}")
+            self.assertIn("vulkan_summary", identity)
+
+    def test_device_identity_field_coverage_is_total(self):
+        """Structural control: whatever the observer returns, the frozen
+        predicate's checked fields must all be present (non-None), so a
+        future partial observation cannot silently pass by omission."""
+        from tests.test_issue241_placement_producer import identity_observer
+        checked = {"vendor_id", "device_id", "subsystem_vendor_id",
+                   "subsystem_device_id", "revision", "bdf", "link_width",
+                   "max_link_width", "max_link_speed", "driver_in_use",
+                   "vulkan_icd", "vulkan_device_name", "vulkan_device_uuid",
+                   "pci_id"}
+        for arm in ("B", "C"):
+            with patch.object(producer.phase2_producer,
+                              "_observe_arm_identity",
+                              return_value=identity_observer(arm)):
+                identity = producer._device_identity(
+                    arm, {"VK_ICD_FILENAMES": (C.REFERENCE_ARM if arm == "B"
+                                               else C.CANDIDATE_ARM)["icd"]})
+            missing = {f for f in checked if identity.get(f) is None}
+            self.assertEqual(missing, set(), f"arm {arm} missing {missing}")
+            if arm == "B":
+                self.assertIsNotNone(identity.get("gpu_uuid"))
+
+    def test_device_identity_binds_arm_uuid_and_bdf(self):
+        """The original strictness checks are retained: a mismatched
+        reference GPU UUID and a RADV deviceUUID not mapping to the
+        selected BDF must both fail closed."""
+        from tests.test_issue241_placement_producer import identity_observer
+        observation = identity_observer("B")
+        observation["identity"]["gpu_uuid"] = "GPU-00000000-0000-0000-0000-000000000000"
+        with patch.object(producer.phase2_producer, "_observe_arm_identity",
+                          return_value=observation):
+            with self.assertRaisesRegex(ValueError, "gpu_uuid"):
+                producer._device_identity("B", {})
+        observation = identity_observer("C")
+        # bus-encoded Polaris UUID for a DIFFERENT BDF (01:00.0)
+        observation["identity"]["vulkan_device_uuid"] = (
+            "00000000-0100-0000-0000-000000000000")
+        with patch.object(producer.phase2_producer, "_observe_arm_identity",
+                          return_value=observation):
+            with self.assertRaisesRegex(ValueError, "RADV UUID"):
+                producer._device_identity("C", {})
+
+    def test_old_partial_identity_observation_rejected(self):
+        """Old-defect proof: the pre-correction field set (Vulkan summary
+        subset only, as the old _device_identity produced) must FAIL the
+        frozen predicate — proving the fix was necessary, not cosmetic."""
+        old_fields = {"bdf", "vulkan_device_name", "vulkan_device_uuid",
+                      "vulkan_api_version", "vulkan_driver_name",
+                      "vulkan_driver_info", "vulkan_summary"}
+        for arm in ("B", "C"):
+            cfg = C.REFERENCE_ARM if arm == "B" else C.CANDIDATE_ARM
+            partial = {"bdf": cfg["bdf"],
+                       "vulkan_device_name": cfg["vulkan_device_name"],
+                       "vulkan_device_uuid": cfg["vulkan_device_uuid"]}
+            partial = {k: v for k, v in partial.items() if k in old_fields}
+            if arm == "B":
+                partial["gpu_uuid"] = cfg["gpu_uuid"]
+            else:
+                partial["pci_id"] = cfg["pci_id"]
+            problems = census_mod.identity_problems(arm, partial)
+            self.assertTrue(problems, f"arm {arm}: partial identity passed")
+
 
 if __name__ == "__main__":
     unittest.main()
