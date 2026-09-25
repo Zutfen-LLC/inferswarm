@@ -112,7 +112,8 @@
    "invariant": "Current R8-I Qwen heterogeneous-Vulkan qualification authority: methodology freeze, holdout custody, comparator semantics, and the accepted R8-I4 V340L import. Current R8/Qwen work joins this group.",
    "test_modules": [
     "test_issue237_r8i_methodology",
-    "test_issue244_r8i5_v340l_import"
+    "test_issue244_r8i5_v340l_import",
+    "test_issue248_diagnostic"
    ]
   },
   "repo-integrity": {
@@ -284,6 +285,9 @@
   "docs/investigations/qwen38-flash-next-r8-h-vulkan/": [
    "r8i-qwen-qualification",
    "repo-integrity"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/": [
+   "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
    "r8i-qwen-qualification"
@@ -1247,6 +1251,24 @@
    "r8i-qwen-qualification"
   ],
   "scripts/issue237_unseal_preflight.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_analysis.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_health.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_identity.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue248_terminal.py": [
    "r8i-qwen-qualification"
   ],
   "scripts/issue35_coarse_concurrent.py": [

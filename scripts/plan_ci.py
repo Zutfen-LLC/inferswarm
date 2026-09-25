@@ -206,6 +206,10 @@ GROUP_TEST_MODULES = {
     "r8i-qwen-qualification": [
         "test_issue237_r8i_methodology",
         "test_issue244_r8i5_v340l_import",
+        # Issue #248 R8-I3A: reference-arm Vulkan row nondeterminism
+        # diagnosis (diagnostic-only follow-up to the accepted #241
+        # blocked terminal; same R8-I qualification lineage).
+        "test_issue248_diagnostic",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -619,6 +623,14 @@ PATH_GROUPS = {
     "scripts/issue237_thresholds.py": ["r8i-qwen-qualification"],
     "scripts/issue237_unseal_preflight.py": ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/":
+        ["r8i-qwen-qualification"],
+    "scripts/issue248_analysis.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_diagnostic.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_health.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_identity.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_physical.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_terminal.py": ["r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":
         ["r8i-qwen-qualification"],
     "docs/hardware/pcie-slot-ledger.md": ["r8i-qwen-qualification"],
     # R8-A/B Qwen lineage; R8-A/R8-B evidence also feeds the #237

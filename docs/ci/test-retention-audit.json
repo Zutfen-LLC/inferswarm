@@ -3268,6 +3268,31 @@
    "replacement": null,
    "test_count_at_audit": 5
   },
+  "test_issue248_diagnostic": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.28,
+   "baseline_test_count": 39,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3A diagnostic (#248) tooling keeps the accepted #241 blocked terminal read-only: namespace/authority gates, exact accepted identities, digest-only determinism, and mutation-tested fail-closed boundaries.",
+   "lineage": "R8-I3A reference-row nondeterminism diagnosis (#248)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/MANIFEST.sha256"
+   ],
+   "rationale": "Current #248 diagnostic authority; physical probes run only under a maintainer diagnostic dispatch at this head.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 39
+  },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.17,
