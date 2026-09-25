@@ -66,7 +66,7 @@ ACCEPTED_248_MANIFEST_SELF_DIGEST = (
     "af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc")
 
 DIAGNOSTIC_ISSUE = 250
-DIAGNOSTIC_PR_NUMBER = 0  # bound after PR creation; tests verify binding
+DIAGNOSTIC_PR_NUMBER = 251  # bound post-creation; verified live 2026-09-25
 DIAGNOSTIC_KIND = "R8-I3B"
 
 # Dispatch phrase prefix — the exact phrase is matched as an exact
