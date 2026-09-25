@@ -113,7 +113,8 @@
    "test_modules": [
     "test_issue237_r8i_methodology",
     "test_issue244_r8i5_v340l_import",
-    "test_issue248_diagnostic"
+    "test_issue248_diagnostic",
+    "test_issue250_diagnostic"
    ]
   },
   "repo-integrity": {
@@ -287,6 +288,9 @@
    "repo-integrity"
   ],
   "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/": [
+   "r8i-qwen-qualification"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
    "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
@@ -1271,6 +1275,12 @@
   "scripts/issue248_terminal.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_phase0.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1501,6 +1511,9 @@
   ],
   "tests/test_issue222_r7c.py": [
    "issue-222-r7c"
+  ],
+  "tests/test_issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
    "repo-integrity"
