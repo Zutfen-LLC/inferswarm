@@ -632,20 +632,27 @@ def _fork_units(units: list[str], variant: str) -> list[str]:
 
 
 def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
-                    *, case4096_authority: Any = None,
-                    dispatch_authority: Any = None) -> dict[str, Any]:
+                    expected_head: str, repo_root: Path | None = None,
+                    *, authority_fetcher: Any = None) -> dict[str, Any]:
     """The strict retained-byte terminal authority; no caller-selected label.
 
-    ``case4096_authority`` must be a LIVE dispatch authority payload when
-    (and only when) the plan contains case-4096 units;
-    ``dispatch_authority`` is the namespace-keyed LIVE dispatch authority
-    map (see ``issue248_terminal.derive_terminal``). Neither defaults to
-    a bypass: omitting them blocks, never authorizes.
+    Round-4 correction (maintainer NO-GO comment 5825967767): this
+    wrapper no longer accepts ``case4096_authority`` or
+    ``dispatch_authority`` payloads of any kind. The reduction
+    live-fetches every unique frozen diagnostic namespace itself
+    through the canonical seam (see
+    ``issue248_terminal.derive_terminal``); ``expected_head`` is the
+    exact reviewed head every live fetch and retained unit receipt
+    must bind, and ``repo_root`` is the clean worktree the live fetch
+    re-checks. ``authority_fetcher`` is the TEST-ONLY fetch-injection
+    seam — production callers pass nothing, which resolves to the REAL
+    live GitHub fetcher; omission never authorizes.
     """
     import issue248_terminal as terminal
     return terminal.derive_terminal(evidence_root, namespace, plan,
-                                    case4096_authority=case4096_authority,
-                                    dispatch_authority=dispatch_authority)
+                                    expected_head,
+                                    repo_root=repo_root,
+                                    authority_fetcher=authority_fetcher)
 
 
 def _platform_health(base: Path,

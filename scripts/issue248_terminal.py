@@ -193,85 +193,69 @@ def _plan_has_case4096(plan: dict[str, Any]) -> bool:
     return False
 
 
-def _validate_live_authority(authority: Any,
-                             expected_namespace: str | None = None
-                             ) -> tuple[dict[str, Any] | None, list[str]]:
-    """Validate a LIVE dispatch payload through the ONE canonical validator.
+def _live_namespace_authorities(repo_root: Path, expected_head: str,
+                                authority_fetcher: Any = None
+                                ) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Live-fetch the dispatch authority for EVERY frozen probe namespace.
 
-    This is the SAME complete diagnostic-dispatch validator physical
-    execution gates on (``D.validate_authority_payload``): exact
-    ``R8I3A PHYSICAL DISPATCH #248`` stripped line, exact ``head=<sha>``
-    body line matching the payload head, exactly one
-    ``diagnostic-namespace=`` line, OWNER/MEMBER association, PR #249
-    binding via issue_url, live PR open/unmerged and Issue #248 open
-    state flags, and a created-at timestamp. There is deliberately NO
-    second, weaker authority parser anywhere in the reduction (round-3
-    blocker 3): case-4096 and ordinary units consume this one validator,
-    and only AFTER it succeeds is the single ``case-4096:<reason>``
-    line additionally parsed (inside the validator itself, from the
-    comment body bytes — never from a caller-supplied summary).
-    """
-    if not isinstance(authority, dict):
-        return None, ["live dispatch authority payload is not an object"]
-    head = authority.get("head_sha")
-    if (not isinstance(head, str)
-            or not re.fullmatch(r"[0-9a-f]{40}", head)):
-        return None, ["live dispatch authority head_sha is not a 40-hex sha"]
-    try:
-        validated = D.validate_authority_payload(authority, head)
-    except D.DiagnosticError as exc:
-        return None, [f"live diagnostic dispatch authority rejected: {exc}"]
-    if (expected_namespace is not None
-            and validated.get("namespace") != expected_namespace):
-        return None, [
-            "live dispatch authority namespace "
-            f"{validated.get('namespace')!r} does not scope the probe "
-            f"namespace {expected_namespace!r}"]
-    return validated, []
+    Round-4 correction (maintainer NO-GO comment 5825967767): the
+    reduction must never accept a ready-made authority payload or map
+    as production authority — a synthetic ``dispatch_map()`` plus
+    matching fabricated unit receipts is internally self-consistent
+    and would pass the structural validator without any of it ever
+    having come from GitHub. Instead the reducer derives the unique
+    diagnostic namespaces consumed by the frozen plan and invokes the
+    SAME canonical live-fetch seam physical execution gates on
+    (``D.require_live_dispatch`` -> ``D.fetch_dispatch_authority`` ->
+    ``D.validate_authority_payload``): there is deliberately NO second,
+    reduced authority implementation anywhere in the reduction.
 
-
-def _namespace_authorities(dispatch_authority: Any,
-                           case4096_authority: Any
-                           ) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Validate the namespace-keyed live dispatch authority map.
-
-    Each frozen diagnostic phase uses its own ``d248-`` namespace, so the
-    reduction authority input is a map keyed by namespace (round-3
-    blocker 2); one comment cannot authorize all namespaces. Every
-    payload is validated through the canonical full validator and its
-    parsed namespace must equal the map key it is registered under.
-    ``case4096_authority`` (round-2 shape) is a single live payload
-    registered under its own validated namespace.
+    Production callers pass ``authority_fetcher=None``, which resolves
+    to the REAL live GitHub fetcher (clean exact-head worktree, live
+    PR OPEN/unmerged/base-main/head equality, Issue OPEN, OWNER/MEMBER
+    top-level comment with the exact phrase/head/namespace stripped
+    lines). Tests inject a fetch FUNCTION whose contract mirrors the
+    real fetcher's output; a prevalidated payload map is never an
+    input, and any fetch loss fails closed below.
     """
     authorities: dict[str, dict[str, Any]] = {}
     problems: list[str] = []
-    if dispatch_authority is not None:
-        if not isinstance(dispatch_authority, dict):
-            return {}, ["dispatch_authority must be a namespace-keyed map"]
-        for key, payload in dispatch_authority.items():
-            validated, errors = _validate_live_authority(payload, key)
-            if errors or validated is None:
-                problems.extend(f"dispatch authority[{key}]: {e}"
-                                for e in errors)
-                continue
-            authorities[key] = validated
-    if case4096_authority is not None:
-        validated, errors = _validate_live_authority(case4096_authority)
-        if errors or validated is None:
-            problems.extend(f"case-4096 live authority: {e}" for e in errors)
-        else:
-            authorities.setdefault(validated["namespace"], validated)
-    # One reduction consumes units from ONE PR-head generation (round-3
-    # blocker 2 item 4): every validated namespace authority must bind
-    # the SAME exact head. A stale-head dispatch is internally
-    # self-consistent (its body head line matches its own head_sha), so
-    # only this cross-binding rejects it.
-    heads = {v["head_sha"] for v in authorities.values()}
-    if len(heads) > 1:
-        problems.append(
-            "dispatch authorities bind different heads "
-            f"({sorted(heads)}); a single reduction must consume units "
-            "from one exact-head dispatch generation")
+    seen: set[str] = set()
+    # Deterministic fetch order: the unique namespaces of the frozen
+    # probe plan (repeat, placement, regime, observer-ladder — the
+    # canonical probe shares the observer namespace and is fetched once).
+    for probe_namespace in FROZEN_PROBE_NAMESPACE.values():
+        if probe_namespace in seen:
+            continue
+        seen.add(probe_namespace)
+        try:
+            validated = D.require_live_dispatch(
+                repo_root, expected_head, probe_namespace,
+                revalidate_authority=authority_fetcher)
+        except D.DiagnosticError as exc:
+            problems.append(
+                "live dispatch authority for namespace "
+                f"{probe_namespace} rejected: {exc}")
+            continue
+        except Exception as exc:  # network/OS/git loss must fail closed
+            problems.append(
+                "live dispatch fetch for namespace "
+                f"{probe_namespace} failed: {exc!r}")
+            continue
+        if validated.get("namespace") != probe_namespace:
+            problems.append(
+                "live dispatch authority scope "
+                f"{validated.get('namespace')!r} does not match the "
+                f"required namespace {probe_namespace!r}")
+            continue
+        if validated.get("head_sha") != expected_head:
+            problems.append(
+                "live dispatch authority for namespace "
+                f"{probe_namespace} binds head "
+                f"{validated.get('head_sha')!r} != expected reviewed "
+                f"head {expected_head!r}")
+            continue
+        authorities[probe_namespace] = validated
     return authorities, problems
 
 
@@ -577,35 +561,58 @@ def _later_probe_variation(reduced: dict[str, Any]) -> bool:
 
 
 def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
+                    expected_head: str, repo_root: Path | None = None,
                     *, health_verifier=None,
-                    case4096_authority: Any = None,
-                    dispatch_authority: Any = None) -> dict[str, Any]:
+                    authority_fetcher: Any = None) -> dict[str, Any]:
     """Derive a terminal from retained bytes; health_verifier is never trusted.
 
     Vulkan localization is intentionally unreachable: the frozen producer has
     no validated one-factor Vulkan runtime control. A runtime-initialization
     contrast by itself does not establish Vulkan causality.
 
-    ``dispatch_authority`` is the round-3 terminal-authority input: a
-    namespace-keyed map of LIVE dispatch payloads (fetched by the caller
-    through ``D.fetch_dispatch_authority`` at reduction time), one per
-    frozen probe namespace whose units this reduction consumes. Every
-    payload is validated through the ONE canonical full diagnostic
-    dispatch validator; every terminal-bearing unit receipt's authority
-    block must equal the canonical block derived from its namespace's
-    payload. Missing authority blocks, wrong comment ID / head /
-    namespace / digest, or an authority payload that fails full
-    validation make the reduction ``R8I3_REDUCER_BLOCKED_INCOMPLETE`` —
-    valid numerical/runtime/health evidence never overcomes invalid
-    dispatch provenance. ``case4096_authority`` (round-2 shape) is a
-    single live payload validated the SAME way and additionally parsed
-    for its exact ``case-4096:<reason>`` line; its precomputed block is
-    ignored.
+    Round-4 correction (maintainer NO-GO comment 5825967767): this
+    reducer performs its OWN live authority resolution for every
+    unique frozen diagnostic namespace the reduction consumes
+    (``d248-ref-repeats``, ``d248-placement-rungs``,
+    ``d248-regime-sweep``, ``d248-observer-ladder`` — the canonical
+    probe shares the observer namespace). A caller-supplied authority
+    payload or map is NO LONGER an input of any kind: the required
+    namespaces are derived mechanically from the frozen plan and each
+    is fetched through the canonical live seam
+    ``D.require_live_dispatch`` (production default
+    ``D.fetch_dispatch_authority``; clean exact-head worktree, live
+    PR OPEN/unmerged/base-main/head equality, Issue OPEN, OWNER/MEMBER
+    top-level PR conversation comment carrying the exact dispatch
+    phrase / ``head=<sha>`` / single ``diagnostic-namespace=`` stripped
+    lines). Every terminal-bearing unit receipt's authority block must
+    equal the canonical block re-derived from its namespace's LIVE
+    payload, all namespace authorities must bind the same exact-head
+    generation, and case-4096 permission derives ONLY from the
+    live-fetched regime-namespace comment body. Missing authority
+    blocks, wrong comment ID / head / namespace / digest, a deleted or
+    edited or stale comment, a closed PR/issue, a moved PR head, an
+    unavailable fetch, or any payload failing full validation make the
+    reduction ``R8I3_REDUCER_BLOCKED_INCOMPLETE`` — valid
+    numerical/runtime/health evidence never overcomes invalid dispatch
+    provenance.
+
+    ``authority_fetcher`` is a TEST-ONLY injection seam: a callable
+    with the real fetcher's ``((repo_root, expected_head, namespace,
+    github_api) -> validated payload)`` contract. Production callers
+    pass nothing, which resolves to the REAL live GitHub fetcher —
+    omission never falls back to trusting caller-supplied authority.
     """
     if (not isinstance(namespace, str)
             or not re.fullmatch(r"d248-[a-z0-9][a-z0-9-]*", namespace)
             or "--" in namespace):
         return _blocked(str(namespace), ["invalid diagnostic namespace"])
+    if (not isinstance(expected_head, str)
+            or not re.fullmatch(r"[0-9a-f]{40}", expected_head)):
+        return _blocked(str(namespace),
+                        ["expected reviewed head is not a 40-hex sha"])
+    if repo_root is None:
+        repo_root = Path.cwd()
+    repo_root = Path(repo_root)
     if not isinstance(plan, dict) or not isinstance(plan.get("probes"), dict):
         return _blocked(namespace, ["missing frozen plan"])
     probes = plan["probes"]
@@ -631,22 +638,32 @@ def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
         return _blocked(namespace, [str(exc)])
     reduced: dict[str, Any] = {}
     problems: list[str] = []
-    # The namespace-keyed LIVE dispatch authority map validates FIRST
-    # (round-3 blocker 2): every probe population below requires a
-    # fully validated live dispatch payload for its namespace before any
-    # retained unit can be terminal-bearing.
-    authorities, authority_problems = _namespace_authorities(
-        dispatch_authority, case4096_authority)
+    # The reducer LIVE-FETCHES every unique frozen probe namespace FIRST
+    # (round-4 correction): no probe population below can be
+    # terminal-bearing until its namespace's dispatch authority was
+    # fetched through the canonical live seam at reduction time. Any
+    # fetch/validation loss fails closed.
+    authorities, authority_problems = _live_namespace_authorities(
+        repo_root, expected_head, authority_fetcher)
     problems.extend(authority_problems)
+    # One exact-head generation: every live namespace authority must
+    # bind the SAME exact expected head (each fetch already required
+    # head == expected_head, so surviving payloads agree by
+    # construction; the cross-binding is asserted, not assumed).
+    heads = {v["head_sha"] for v in authorities.values()}
+    if len(heads) > 1 or (authorities and heads != {expected_head}):
+        problems.append(
+            "live dispatch authorities do not bind one exact-head "
+            f"generation (heads={sorted(heads)}, expected={expected_head})")
     permission = None
-    if case4096_authority is not None and not authority_problems:
-        validated4096, _ = _validate_live_authority(case4096_authority)
-        if validated4096 is not None:
-            permission = _case4096_permission(validated4096)
+    regime_authority = authorities.get(FROZEN_PROBE_NAMESPACE["regime"])
+    if regime_authority is not None:
+        permission = _case4096_permission(regime_authority)
     if _plan_has_case4096(plan) and permission is None:
         problems.append(
-            "case-4096 units planned but no valid live case-4096 dispatch "
-            "authority was supplied for this reduction")
+            "case-4096 units planned but the live regime-namespace "
+            "dispatch fetched for this reduction carries no valid "
+            "case-4096 authorization line")
     try:
         expected_by_family = {name: set(probes[name]["units"])
                               for name in ("repeat", "placement", "regime", "canonical")}

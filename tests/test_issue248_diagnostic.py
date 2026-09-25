@@ -1587,11 +1587,43 @@ def dispatch_payload(namespace: str, *, head: str = DISPATCH_HEAD,
 
 
 def dispatch_map(**overrides) -> dict:
-    """The namespace-keyed LIVE dispatch authority map for the fixture."""
+    """The namespace-keyed synthetic dispatch authority fixture map.
+
+    Round-4 OLD-DEFECT SHAPE: this map is the attack payload a forger
+    constructs — it is NEVER passed to the reducer as authority. It is
+    returned only through an injected test fetch FUNCTION (the seam
+    that models the real live GitHub fetch) or used to stamp forged
+    retained receipts that the reducer must reject.
+    """
     out = {}
     for namespace in set(T.FROZEN_PROBE_NAMESPACE.values()):
         out[namespace] = dispatch_payload(namespace, **overrides)
     return out
+
+
+class fetch_seam:
+    """Test-only authority FETCH FUNCTION (models the live GitHub seam).
+
+    Contract mirrors ``D.fetch_dispatch_authority``: called by the
+    REDUCER itself once per namespace with
+    ``(repo_root, expected_head, namespace, github_api)``; returns the
+    validated authority payload, or raises ``D.DiagnosticError`` when
+    that namespace has no live dispatch. Records every call so tests
+    assert the reducer performed (or did not perform) the fetch.
+    """
+
+    def __init__(self, payloads: dict, *, missing: tuple = ()):
+        self.payloads = payloads
+        self.missing = tuple(missing)
+        self.calls: list[str] = []
+
+    def __call__(self, repo_root, expected_head, namespace, github_api=None):
+        self.calls.append(namespace)
+        if namespace in self.missing or namespace not in self.payloads:
+            raise D.DiagnosticError(
+                f"no valid dispatch authority for head {expected_head} "
+                f"namespace {namespace}")
+        return self.payloads[namespace]
 
 
 def tag(variant: str, index: int) -> str:
@@ -1809,13 +1841,27 @@ class RetainedTerminalMatrix(unittest.TestCase):
         (d / "unit.json").write_text(json.dumps(receipt, sort_keys=True))
 
     def derive(self, p=None, dispatch=None, case4096_authority=None,
-               health_verifier=None):
-        return T.derive_terminal(self.root, NS, p or self.p,
-                                 dispatch_authority=(
-                                     self.dispatch if dispatch is None
-                                     else dispatch),
-                                 case4096_authority=case4096_authority,
-                                 health_verifier=health_verifier)
+               health_verifier=None, fetcher=None, expect_fetch=None):
+        """Invoke the reducer with a FETCH seam, never a payload map.
+
+        ``dispatch``/``case4096_authority`` remain as fixture controls
+        ONLY for stamping retained receipts (self.dispatch); they are
+        never passed to the reducer. The reducer live-fetches each
+        namespace through ``fetcher`` (default: a seam over the current
+        ``self.dispatch`` payloads — the model of a coherent live
+        GitHub state matching the retained receipts).
+        """
+        if dispatch is not None:
+            self.dispatch = dispatch
+        seam = fetcher
+        if seam is None:
+            seam = fetch_seam(self.dispatch)
+        out = T.derive_terminal(self.root, NS, p or self.p, DISPATCH_HEAD,
+                                authority_fetcher=seam,
+                                health_verifier=health_verifier)
+        if expect_fetch is not None:
+            self.assertEqual(seam.calls, list(expect_fetch))
+        return out
 
     def test_population_requires_exactly_eight_integer_tokens(self):
         unit = self.p["probes"]["repeat"]["units"][0]
@@ -2581,6 +2627,221 @@ class Case4096FullAuthorityMatrix(RetainedTerminalMatrix):
     def test_fully_valid_dispatch_with_exact_case4096_line_accepted(self):
         live = self._live_authority()
         out = self._derive_with_4096(live)
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        self.assertIsNone(out["blocked"])
+
+
+class ReducerLiveFetchMatrix(RetainedTerminalMatrix):
+    """Round-4 correction (maintainer NO-GO comment 5825967767): the
+    reducer must LIVE-FETCH every frozen diagnostic namespace through
+    the canonical seam itself. A caller-supplied payload map is not an
+    input of any kind; synthetic payloads authorize ONLY when returned
+    through the injected fetch function (the model of the live GitHub
+    seam). Fixtures inherit fully valid numerical/runtime/health
+    evidence, so every BLOCKED below is proven to come from authority
+    loss, not evidence loss.
+    """
+
+    UNIQUE_NAMESPACES = [
+        T.FROZEN_PROBE_NAMESPACE[name]
+        for name in ("repeat", "placement", "regime", "observer")]
+
+    def _seam(self, **payload_overrides):
+        payloads = dispatch_map(**payload_overrides)
+        return fetch_seam(payloads)
+
+    def test_reducer_invokes_the_seam_itself_per_namespace_in_order(self):
+        seam = self._seam()
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=seam)
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        # Every UNIQUE frozen namespace fetched exactly once, in the
+        # frozen plan order (canonical shares the observer namespace).
+        self.assertEqual(seam.calls, self.UNIQUE_NAMESPACES)
+
+    def test_production_default_resolves_to_the_real_live_fetcher(self):
+        # Structural proof: with authority_fetcher=None the reducer
+        # calls D.require_live_dispatch with revalidate_authority=None,
+        # whose own default IS D.fetch_dispatch_authority (the real
+        # live GitHub fetch). Omission never falls back to trusting
+        # caller-supplied authority.
+        recorded = []
+
+        def fake_require(repo_root, expected_head, namespace,
+                         revalidate_authority=None, github_api=None):
+            recorded.append((namespace, revalidate_authority))
+            return self.dispatch[namespace]
+
+        original = D.require_live_dispatch
+        D.require_live_dispatch = fake_require
+        try:
+            out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD)
+        finally:
+            D.require_live_dispatch = original
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        self.assertEqual(recorded,
+                         [(ns, None) for ns in self.UNIQUE_NAMESPACES])
+
+    def test_old_defect_synthetic_map_is_not_an_input(self):
+        # OLD-DEFECT PROOF (round 4): the completely synthetic
+        # namespace-keyed dispatch_map() — the exact fixture that
+        # authorized terminal reduction at head 9b848455 — can no
+        # longer even be PASSED to the reducer: the payload-map
+        # parameters are structurally removed.
+        with self.assertRaises(TypeError):
+            T.derive_terminal(self.root, NS, self.p,
+                              dispatch_authority=self.dispatch)
+        with self.assertRaises(TypeError):
+            T.derive_terminal(self.root, NS, self.p,
+                              case4096_authority=self.dispatch[
+                                  T.FROZEN_PROBE_NAMESPACE["regime"]])
+
+    def test_old_defect_matching_receipts_with_github_fetch_loss_blocks(self):
+        # OLD-DEFECT PROOF (round 4): a fabricated unit-receipt tree
+        # whose authority blocks match the synthetic map — internally
+        # self-consistent, exactly the forgery the old head accepted —
+        # is BLOCKED when the live fetch is unavailable (zero valid
+        # fetch results; GitHub down / comment deleted).
+        seam = fetch_seam({}, missing=tuple(self.UNIQUE_NAMESPACES))
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=seam)
+        self.assertEqual(seam.calls, self.UNIQUE_NAMESPACES)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_synthetic_payloads_authorize_only_through_the_fetch_seam(self):
+        # The same synthetic objects ARE accepted when returned by the
+        # injected fetch function, which models the live-fetch seam:
+        # this is the only route a payload can take.
+        out = self.derive()
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        self.assertIsNone(out["blocked"])
+
+    def test_fetch_absent_per_namespace_blocks(self):
+        # Mutation controls 2-5: any ONE frozen namespace with no live
+        # dispatch authority blocks the whole reduction.
+        for ns in self.UNIQUE_NAMESPACES:
+            with self.subTest(namespace=ns):
+                seam = fetch_seam(dispatch_map(), missing=(ns,))
+                out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                        authority_fetcher=seam)
+                self.assertIsNone(out["terminal"])
+                self.assertEqual(out["blocked"], T.BLOCKED)
+                self.assertTrue(any(ns in x for x in out["problems"]))
+
+    def test_one_namespace_stale_head_blocks(self):
+        # Mutation control 6: one namespace's fetched payload binds a
+        # head other than the exact expected reviewed head.
+        stale = dispatch_map()
+        stale[T.FROZEN_PROBE_NAMESPACE["placement"]] = dispatch_payload(
+            T.FROZEN_PROBE_NAMESPACE["placement"], head="b" * 40)
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(stale))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_two_valid_looking_namespaces_different_heads_blocks(self):
+        # Mutation control 14: fetch returns fully coherent payloads for
+        # every namespace but one binds a different PR head — the
+        # per-fetch exact-head requirement rejects it, and the
+        # one-head-generation cross-binding is asserted in the reducer.
+        mixed = dispatch_map()
+        mixed[T.FROZEN_PROBE_NAMESPACE["regime"]] = dispatch_payload(
+            T.FROZEN_PROBE_NAMESPACE["regime"], head="c" * 40)
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(mixed))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_pr_closed_blocks(self):
+        # Mutation control 7.
+        closed = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["observer"]
+        closed[ns] = dispatch_payload(ns, open_pr=False)
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(closed))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_issue_closed_blocks(self):
+        # Mutation control 8.
+        closed = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["repeat"]
+        closed[ns] = dispatch_payload(ns, issue_open=False)
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(closed))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_wrong_phrase_blocks(self):
+        # Mutation control 9.
+        bad = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["regime"]
+        bad[ns] = dispatch_payload(ns)
+        bad[ns]["body"] = bad[ns]["body"].replace(
+            D.DIAGNOSTIC_DISPATCH_PHRASE, "R8I3 PHYSICAL DISPATCH #248")
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(bad))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_wrong_scope_blocks(self):
+        # Mutation control 10: the fetched comment scopes a different
+        # diagnostic namespace than the one being fetched.
+        bad = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["placement"]
+        payload = dispatch_payload(
+            "d248-wrong-scope", comment_id=DISPATCH_COMMENT_ID + 3)
+        payload["namespace"] = ns  # payload field claims the right ns...
+        bad[ns] = payload          # ...but the body line scopes another
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(bad))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_wrong_pr_binding_blocks(self):
+        # Mutation control 11.
+        bad = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["repeat"]
+        payload = dispatch_payload(ns)
+        payload["issue_url"] = (
+            "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/242")
+        bad[ns] = payload
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(bad))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_one_namespace_non_member_author_blocks(self):
+        # Mutation control 12.
+        bad = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["observer"]
+        bad[ns] = dispatch_payload(ns, author_association="CONTRIBUTOR")
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(bad))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_live_authority_changed_from_retained_receipts_blocks(self):
+        # Mutation control 13: the retained unit receipts are stamped
+        # with a coherent authority, but the LIVE fetch now returns a
+        # DIFFERENT current comment for that namespace (the dispatch
+        # comment was superseded) — the per-unit cross-binding fails.
+        rotated = dispatch_map()
+        ns = T.FROZEN_PROBE_NAMESPACE["regime"]
+        rotated[ns] = dispatch_payload(ns, comment_id=DISPATCH_COMMENT_ID + 11)
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=fetch_seam(rotated))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("authority binding mismatch" in x
+                            for x in out["problems"]))
+
+    def test_all_namespace_authorities_same_reviewed_head_proceeds(self):
+        # Mutation control 15 (with control 1): every namespace fetched
+        # live and binding the same exact reviewed head proceeds.
+        out = T.derive_terminal(self.root, NS, self.p, DISPATCH_HEAD,
+                                authority_fetcher=self._seam())
         self.assertEqual(out["terminal"], T.TERMINALS[4])
         self.assertIsNone(out["blocked"])
 
