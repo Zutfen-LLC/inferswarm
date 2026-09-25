@@ -797,7 +797,11 @@ def r8e_captured_rows(unit_dir: Path) -> dict[int, bytes]:
             continue
         m = re.search(r"\.pos(\d+)\.f32$", p.name)
         if m:
-            out[int(m.group(1))] = p.read_bytes()
+            pos = int(m.group(1))
+            # Keep duplicate handling aligned with issue248_terminal._population.
+            if pos in out:
+                raise DiagnosticError("duplicate r8e position")
+            out[pos] = p.read_bytes()
     return out
 
 

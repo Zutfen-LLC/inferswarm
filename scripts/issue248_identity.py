@@ -445,15 +445,22 @@ def intervention_problems(arm: str, observation: dict[str, Any],
 # ---------------------------------------------------------------------------
 
 def _sysfs_device_dir(bdf: str) -> Path:
-    """Resolve a frozen 16-character BDF to the host's sysfs directory."""
+    """Resolve either supported BDF spelling to its sysfs directory."""
     root = Path("/sys/bus/pci/devices")
-    short_domain_bdf = f"{int(bdf[:8], 16):04x}{bdf[8:]}"
-    normalized = root / short_domain_bdf
-    if normalized.exists():
-        return normalized
-    literal = root / bdf
-    if literal.exists():
-        return literal
+    if re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", bdf):
+        candidates = [root / bdf]
+    elif re.fullmatch(r"[0-9a-f]{8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", bdf):
+        candidates = [root / f"{int(bdf[:8], 16):04x}{bdf[8:]}", root / bdf]
+    else:
+        raise IdentityError(f"invalid PCI BDF: {bdf!r}")
+    try:
+        existing = [path for path in candidates if path.exists()]
+    except OSError as exc:
+        raise IdentityError(f"cannot inspect sysfs device directory for {bdf}") from exc
+    if len(existing) == 1:
+        return existing[0]
+    if len(existing) > 1:
+        raise IdentityError(f"ambiguous sysfs device directory for {bdf}")
     raise IdentityError(f"sysfs device directory missing for {bdf}")
 
 

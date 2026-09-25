@@ -115,7 +115,7 @@ def _validate_journal(raw: bytes, start: datetime, end: datetime) -> None:
     # negative observation; it is not an absent artifact. Command success,
     # exact window, and the retained (possibly zero-byte) stdout are bound
     # separately in the receipt.
-    if not text.strip() or text.strip() == "-- No entries --":
+    if text in ("", "-- No entries --\n"):
         return
     for index, line in enumerate(text.splitlines(), 1):
         # short-iso-precise timestamps are required on every journal row;

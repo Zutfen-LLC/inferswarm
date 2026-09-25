@@ -296,7 +296,9 @@ class FixtureAndIdentityTests(unittest.TestCase):
         self.assertEqual(fixtures["case-3072"]["rendered_length"], 3077)
 
     def test_sysfs_device_dir_prefers_existing_four_hex_domain(self):
-        with patch.object(I.Path, "exists", return_value=True):
+        def exists(path):
+            return str(path) == "/sys/bus/pci/devices/0000:03:00.0"
+        with patch.object(I.Path, "exists", exists):
             path = I._sysfs_device_dir("00000000:03:00.0")
         self.assertEqual(str(path), "/sys/bus/pci/devices/0000:03:00.0")
 
@@ -306,6 +308,18 @@ class FixtureAndIdentityTests(unittest.TestCase):
         with patch.object(I.Path, "exists", exists):
             path = I._sysfs_device_dir("00000000:03:00.0")
         self.assertEqual(str(path), "/sys/bus/pci/devices/00000000:03:00.0")
+
+    def test_sysfs_device_dir_resolves_short_domain_form(self):
+        def exists(path):
+            return str(path) == "/sys/bus/pci/devices/0000:03:00.0"
+        with patch.object(I.Path, "exists", exists):
+            path = I._sysfs_device_dir("0000:03:00.0")
+        self.assertEqual(str(path), "/sys/bus/pci/devices/0000:03:00.0")
+
+    def test_sysfs_device_dir_rejects_malformed_bdfs(self):
+        for bdf in ("not-a-bdf", "zzzz:03:00.0", "000g0000:03:00.0"):
+            with self.subTest(bdf=bdf), self.assertRaises(I.IdentityError):
+                I._sysfs_device_dir(bdf)
 
     def test_identity_driver_link_uses_normalized_sysfs_directory(self):
         source = (REPO / "scripts" / "issue248_identity.py").read_text()
@@ -397,6 +411,11 @@ class CustodyTests(unittest.TestCase):
             live_row = Path(env["LLAMA_OBSERVE_LOGITS"] + ".pos0.f32")
             live_row.write_bytes(b"live row")
             self.assertEqual(D.r8e_captured_rows(Path(tmp)), {0: b"live row"})
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "obs.r8e.jsonl.pos0.f32").write_bytes(b"first")
+            (Path(tmp) / "other.r8e.pos0.f32").write_bytes(b"second")
+            with self.assertRaisesRegex(D.DiagnosticError, "duplicate r8e position"):
+                D.r8e_captured_rows(Path(tmp))
         env = D.launch_env("B", observer="off", **base)
         self.assertNotIn("LLAMA_OBSERVE_CAPTURE", env)
         self.assertNotIn("LLAMA_OBSERVE_LOGITS", env)
@@ -1330,6 +1349,15 @@ class Issue248HealthTests(unittest.TestCase):
         start = datetime.fromisoformat(self.START)
         end = datetime.fromisoformat(self.END)
         H._validate_journal(b"-- No entries --\n", start, end)
+
+    def test_padded_or_repeated_journal_sentinel_is_rejected(self):
+        start = datetime.fromisoformat(self.START)
+        end = datetime.fromisoformat(self.END)
+        for raw in (b"  -- No entries --\n",
+                    b"-- No entries --\n-- No entries --\n"):
+            with self.subTest(raw=raw), self.assertRaisesRegex(
+                    H.PlatformHealthError, "lacks timestamp"):
+                H._validate_journal(raw, start, end)
 
     def test_timestamped_journal_row_is_accepted(self):
         start = datetime.fromisoformat(self.START)
