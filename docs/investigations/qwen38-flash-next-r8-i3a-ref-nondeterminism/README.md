@@ -9,9 +9,17 @@ terminal `R8I3_COMPARATOR_V2_BLOCKED` (campaign head
 `78400bcfe9de5464fdbceca9c05c9eb1938ccd3487d7d053043d5be50a52a0eb`).
 The blocked terminal is NOT reopened, reinterpreted, or relaxed here.
 
+Status: PHYSICAL DIAGNOSTIC TERMINAL RETAINED (2026-09-25).
+`R8I3_REF_NONDETERMINISM_UNRESOLVED` — machine-derived from the 31-unit
+physical campaign executed under the four exact-head dispatch comments
+at PR #249 head `3f36ef1a…` (GO `5835802760`). See FINAL-REPORT.md (the
+issue's 17-point report) and evidence/physical/ (reduction record,
+campaign log, attestations, 534-row external SHA256SUMS self-digest
+`af9dfd0f…`). Awaiting maintainer review of the terminal; the accepted
+#241 blocked terminal is untouched.
+
 Phase-0 status: COMPLETE (retained-byte analysis committed under
-`evidence/phase0/`; see METHODOLOGY.md for the frozen diagnostic plan
-awaiting maintainer dispatch).
+`evidence/phase0/`).
 
 Key Phase-0 findings (all mechanically derived from retained bytes)
 -------------------------------------------------------------------

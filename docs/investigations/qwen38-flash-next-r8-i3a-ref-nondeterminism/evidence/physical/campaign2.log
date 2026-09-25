@@ -1,0 +1,65 @@
+ATTTESTATION: opened fc76fa30722b wall=295.6s
+RUN  d248-ref-repeats:repeat:case-3072:8:comparator:1
+DONE d248-ref-repeats:repeat:case-3072:8:comparator:1 wall=63.6s rows=8
+RUN  d248-ref-repeats:repeat:case-3072:8:comparator:2
+DONE d248-ref-repeats:repeat:case-3072:8:comparator:2 wall=60.4s rows=8
+RUN  d248-ref-repeats:repeat:case-3072:8:comparator:3
+DONE d248-ref-repeats:repeat:case-3072:8:comparator:3 wall=60.5s rows=8
+RUN  d248-ref-repeats:repeat:case-3072:8:comparator:4
+DONE d248-ref-repeats:repeat:case-3072:8:comparator:4 wall=62.6s rows=8
+RUN  d248-ref-repeats:repeat:case-3072:8:comparator:5
+DONE d248-ref-repeats:repeat:case-3072:8:comparator:5 wall=62.7s rows=8
+RUN  d248-placement-rungs:rung:case-3072:1:comparator:1
+DONE d248-placement-rungs:rung:case-3072:1:comparator:1 wall=66.8s rows=8
+RUN  d248-placement-rungs:rung:case-3072:1:comparator:2
+DONE d248-placement-rungs:rung:case-3072:1:comparator:2 wall=64.7s rows=8
+RUN  d248-placement-rungs:rung:case-3072:2:comparator:1
+DONE d248-placement-rungs:rung:case-3072:2:comparator:1 wall=65.6s rows=8
+RUN  d248-placement-rungs:rung:case-3072:2:comparator:2
+DONE d248-placement-rungs:rung:case-3072:2:comparator:2 wall=65.8s rows=8
+RUN  d248-placement-rungs:rung:case-3072:4:comparator:1
+DONE d248-placement-rungs:rung:case-3072:4:comparator:1 wall=65.5s rows=8
+RUN  d248-placement-rungs:rung:case-3072:4:comparator:2
+DONE d248-placement-rungs:rung:case-3072:4:comparator:2 wall=63.5s rows=8
+RUN  d248-placement-rungs:rung:case-3072:6:comparator:1
+DONE d248-placement-rungs:rung:case-3072:6:comparator:1 wall=62.7s rows=8
+RUN  d248-placement-rungs:rung:case-3072:6:comparator:2
+DONE d248-placement-rungs:rung:case-3072:6:comparator:2 wall=64.5s rows=8
+RUN  d248-placement-rungs:rung:case-3072:8:comparator:1
+DONE d248-placement-rungs:rung:case-3072:8:comparator:1 wall=62.7s rows=8
+RUN  d248-placement-rungs:rung:case-3072:8:comparator:2
+DONE d248-placement-rungs:rung:case-3072:8:comparator:2 wall=60.5s rows=8
+RUN  d248-regime-sweep:regime:case-256:8:comparator:1
+DONE d248-regime-sweep:regime:case-256:8:comparator:1 wall=35.8s rows=8
+RUN  d248-regime-sweep:regime:case-256:8:comparator:2
+DONE d248-regime-sweep:regime:case-256:8:comparator:2 wall=27.4s rows=8
+RUN  d248-regime-sweep:regime:case-1024:8:comparator:1
+DONE d248-regime-sweep:regime:case-1024:8:comparator:1 wall=33.6s rows=8
+RUN  d248-regime-sweep:regime:case-1024:8:comparator:2
+DONE d248-regime-sweep:regime:case-1024:8:comparator:2 wall=33.7s rows=8
+RUN  d248-regime-sweep:regime:case-3072:8:comparator:1
+DONE d248-regime-sweep:regime:case-3072:8:comparator:1 wall=60.5s rows=8
+RUN  d248-regime-sweep:regime:case-3072:8:comparator:2
+DONE d248-regime-sweep:regime:case-3072:8:comparator:2 wall=62.7s rows=8
+RUN  d248-observer-ladder:observer:case-3072:8:comparator:1
+DONE d248-observer-ladder:observer:case-3072:8:comparator:1 wall=62.5s rows=8
+RUN  d248-observer-ladder:observer:case-3072:8:comparator:2
+DONE d248-observer-ladder:observer:case-3072:8:comparator:2 wall=62.6s rows=8
+RUN  d248-observer-ladder:observer:case-3072:8:comparator-dual:1
+DONE d248-observer-ladder:observer:case-3072:8:comparator-dual:1 wall=62.6s rows=8
+RUN  d248-observer-ladder:observer:case-3072:8:comparator-dual:2
+DONE d248-observer-ladder:observer:case-3072:8:comparator-dual:2 wall=62.5s rows=8
+RUN  d248-observer-ladder:observer:case-3072:8:r8e-only:1
+DONE d248-observer-ladder:observer:case-3072:8:r8e-only:1 wall=167.8s rows=0
+RUN  d248-observer-ladder:observer:case-3072:8:r8e-only:2
+DONE d248-observer-ladder:observer:case-3072:8:r8e-only:2 wall=62.6s rows=0
+RUN  d248-observer-ladder:observer:case-3072:8:comparator-off:1
+DONE d248-observer-ladder:observer:case-3072:8:comparator-off:1 wall=62.7s rows=0
+RUN  d248-observer-ladder:observer:case-3072:8:comparator-off:2
+DONE d248-observer-ladder:observer:case-3072:8:comparator-off:2 wall=60.4s rows=0
+RUN  d248-observer-ladder:canonical:case-3072:8:comparator:1
+DONE d248-observer-ladder:canonical:case-3072:8:comparator:1 wall=165.9s rows=0
+RUN  d248-observer-ladder:canonical:case-3072:8:comparator:2
+DONE d248-observer-ladder:canonical:case-3072:8:comparator:2 wall=63.5s rows=0
+ATTTESTATION: closed 9b6f9150c03f wall=294.9s
+CAMPAIGN-POPULATION-COMPLETE

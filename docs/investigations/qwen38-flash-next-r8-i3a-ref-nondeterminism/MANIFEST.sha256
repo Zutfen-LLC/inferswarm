@@ -1,6 +1,15 @@
 2c6eb010c9a0c8250acea632d553d4dfa33c5fa9fc6fc1c9a08d9a4dda0f10f5  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/phase0/phase0-analysis.json
+2e160ceefbec0a077ea79f6df2bddbb5ea5b5618ff6f0b7823945b8ed530360f  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/campaign2.log
+cd964b1028839124f37af0021b6af645cf156b1cd3d079c86e506c282436472c  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/driver-state.jsonl
+8029f14d17f545d8c5eb52fa20f4c9621680d851623d90bb20893a526c9d77d4  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/model-attestation-close.json
+229ad50fcb9c03929fbe2d23a00f1014180df267a5e7db843090bd5fac7ce535  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/model-attestation-open.json
+9b19f9b2386fc15ee0bac4455fdc1659550031fd0b81c59cd1e078783cf48b95  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/physical-verification.txt
+f917a099289ac93a5067814da09044feab168e4775b74a637a0888fc3a713403  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/RESULT.md
+af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/SHA256SUMS
+0b12c5f8da0b24eaba4ec4a9d2d3043245eb1841938ea520c83031307d515894  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/terminal-reduction.json
+247a9fbcafcccdcaa572c0ffaef987a4134be559216c2f93d2528f6a29fbf42c  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/FINAL-REPORT.md
 ea11faa116a706e85aa6415745c2484b5be63c329c3a1c7b3eaaff0a9f94daa4  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/METHODOLOGY-AMENDMENT-001.md
 4d2caa6f5fe3bb02bd4efe3d8fe9dc8dbae435e4fb05f2ffa1ab2f2208a3279a  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/METHODOLOGY-AMENDMENT-002.md
 e465bea588c792a21b20e80276091ffe1f11555d78e1fdb903af01103ab30863  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/METHODOLOGY-AMENDMENT-003.md
 a90f5c3434992caa5bac9bd4e026ddcd02b8b67826e9283d2e62b2212b692c71  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/METHODOLOGY.md
-f9652b752401affb5ec2473109bdfe9f44e0323fc981b184fd66306ab20980a5  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/README.md
+247d0af1e338a368f45af63bf457a6137254a8057dc179e3fd74446ee5305451  docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/README.md
