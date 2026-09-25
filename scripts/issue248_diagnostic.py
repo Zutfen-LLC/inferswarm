@@ -601,6 +601,213 @@ def verify_binary(path: Path, binary_id: str) -> str:
     return digest
 
 
+# ---------------------------------------------------------------------------
+# Campaign-level model attestation (maintainer correction 2026-09-25)
+# ---------------------------------------------------------------------------
+# Per-unit full SHA-256 of all three ~72.5 GiB members added a complete
+# model read to every unit without materially improving the model-identity
+# guarantee. The corrected design: ONE cryptographic opening attestation
+# (full three-member hash against the accepted #241 values + per-member
+# stat witness), cheap fail-closed file/topology/stat identity checks
+# immediately before every unit, and ONE closing full re-hash bound to
+# the opening. No unit re-hashes the model on the unchanged path.
+MODEL_ATTESTATION_OPEN_SCHEMA = (
+    "inferswarm.issue248.model-attestation-open/1")
+MODEL_ATTESTATION_CLOSE_SCHEMA = (
+    "inferswarm.issue248.model-attestation-close/1")
+MODEL_ATTESTATION_OPEN_NAME = "model-attestation-open.json"
+MODEL_ATTESTATION_CLOSE_NAME = "model-attestation-close.json"
+# The stat fields a witness carries (observed via lstat; atime is
+# deliberately NOT witnessed because reads legitimately update it).
+WITNESS_STAT_KEYS = ("bytes", "device", "inode", "mtime_ns", "ctime_ns")
+
+
+def attestation_canonical_digest(doc: dict[str, Any]) -> str:
+    """Canonical digest of an attestation minus its own digest field."""
+    payload = {key: value for key, value in doc.items()
+               if key not in ("attestation_sha256", "closing_sha256")}
+    return sha256_bytes(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
+
+
+def observe_model_stats(model_dir: Path,
+                        stat_fn: Callable[[Path], Any] | None = None,
+                        ) -> dict[str, dict[str, Any]]:
+    """Live per-member file-identity observation (lstat; no byte reads).
+
+    Enforces the exact split topology (no extra/missing member) and
+    rejects symlinked or non-regular members. Returns
+    ``{member name: {bytes, device, inode, mtime_ns, ctime_ns,
+    symlink, regular_file}}``.
+    """
+    import stat as stat_module
+    stat_fn = stat_fn or os.lstat
+    model_dir = Path(model_dir)
+    if not model_dir.is_dir():
+        raise DiagnosticError(
+            f"model dir is not a directory: {model_dir}")
+    present = sorted(p.name for p in model_dir.iterdir()
+                     if p.suffix == ".gguf")
+    if present != sorted(MODEL_MEMBERS):
+        raise DiagnosticError(
+            f"unexpected split topology in {model_dir}: {present}")
+    out: dict[str, dict[str, Any]] = {}
+    for member in MODEL_MEMBERS:
+        path = model_dir / member
+        info = stat_fn(path)
+        mode = info.st_mode
+        if stat_module.S_ISLNK(mode):
+            raise DiagnosticError(f"model member is a symlink: {path}")
+        if not stat_module.S_ISREG(mode):
+            raise DiagnosticError(
+                f"model member is not a regular file: {path}")
+        out[member] = {
+            "bytes": info.st_size, "device": info.st_dev,
+            "inode": info.st_ino, "mtime_ns": info.st_mtime_ns,
+            "ctime_ns": info.st_ctime_ns,
+            "symlink": False, "regular_file": True}
+    return out
+
+
+def build_model_attestation(model_dir: Path, expected_head: str, *,
+                            hasher: Callable[[Path], str] | None = None,
+                            stat_observer=None) -> dict[str, Any]:
+    """Opening attestation: full three-member hash + stat witnesses.
+
+    Hashes every accepted member against the frozen #241 digests exactly
+    once and records the complete per-member file identity. The doc is
+    self-digesting via :func:`attestation_canonical_digest`.
+    """
+    hasher = hasher or file_sha256
+    stats = (stat_observer or observe_model_stats)(model_dir)
+    members = []
+    for member in MODEL_MEMBERS:
+        path = Path(model_dir) / member
+        digest = hasher(path)
+        if digest != MODEL_MEMBER_SHA256[member]:
+            raise DiagnosticError(
+                f"model member sha mismatch for {member}: {digest} != "
+                f"{MODEL_MEMBER_SHA256[member]}")
+        members.append({"name": member, "path": str(path),
+                        "sha256": digest, **stats[member]})
+    doc: dict[str, Any] = {
+        "schema": MODEL_ATTESTATION_OPEN_SCHEMA,
+        "head_sha": expected_head,
+        "model_dir": str(Path(model_dir)),
+        "members": sorted(members, key=lambda m: m["name"]),
+    }
+    doc["attestation_sha256"] = attestation_canonical_digest(doc)
+    return doc
+
+
+def _validate_member_entries(doc: dict[str, Any]) -> None:
+    members = doc.get("members")
+    if (not isinstance(members, list) or len(members) != len(MODEL_MEMBERS)
+            or any(not isinstance(m, dict) for m in members)):
+        raise DiagnosticError("attestation member population malformed")
+    names = sorted(m["name"] for m in members)
+    if names != sorted(MODEL_MEMBERS) or len(set(names)) != len(names):
+        raise DiagnosticError(
+            "attestation member names do not match the accepted set")
+    for member in members:
+        name = member["name"]
+        if member.get("path") != str(Path(doc["model_dir"]) / name):
+            raise DiagnosticError(f"attestation path mismatch: {name}")
+        if member.get("sha256") != MODEL_MEMBER_SHA256[name]:
+            raise DiagnosticError(
+                f"attestation digest is not the accepted value: {name}")
+        if member.get("symlink") is not False or (
+                member.get("regular_file") is not True):
+            raise DiagnosticError(
+                f"attestation file status malformed: {name}")
+        for key in WITNESS_STAT_KEYS:
+            if type(member.get(key)) is not int or member[key] < 0:
+                raise DiagnosticError(
+                    f"attestation witness field {key} malformed: {name}")
+
+
+def validate_model_attestation(doc: Any,
+                               expected_head: str | None = None,
+                               ) -> dict[str, Any]:
+    """Fail-closed validation of an opening attestation document."""
+    if not isinstance(doc, dict) or doc.get(
+            "schema") != MODEL_ATTESTATION_OPEN_SCHEMA:
+        raise DiagnosticError("opening attestation schema mismatch")
+    head = doc.get("head_sha")
+    if (not isinstance(head, str)
+            or not re.fullmatch(r"[0-9a-f]{40}", head)):
+        raise DiagnosticError("opening attestation head is not a 40-hex sha")
+    if expected_head is not None and head != expected_head:
+        raise DiagnosticError(
+            f"opening attestation binds head {head} != expected "
+            f"{expected_head}")
+    if doc.get("model_dir") != MODEL_DIR:
+        raise DiagnosticError(
+            f"opening attestation model dir mismatch: "
+            f"{doc.get('model_dir')!r}")
+    _validate_member_entries(doc)
+    if doc.get("attestation_sha256") != attestation_canonical_digest(doc):
+        raise DiagnosticError("opening attestation canonical digest mismatch")
+    return doc
+
+
+def validate_closing_attestation(doc: Any,
+                                 opening: dict[str, Any]) -> dict[str, Any]:
+    """Fail-closed validation of the closing re-hash receipt."""
+    if not isinstance(doc, dict) or doc.get(
+            "schema") != MODEL_ATTESTATION_CLOSE_SCHEMA:
+        raise DiagnosticError("closing attestation schema mismatch")
+    if doc.get("opening_attestation_sha256") != opening.get(
+            "attestation_sha256"):
+        raise DiagnosticError(
+            "closing attestation is not bound to the opening attestation")
+    for key in ("head_sha", "model_dir"):
+        if doc.get(key) != opening.get(key):
+            raise DiagnosticError(
+                f"closing attestation {key} differs from the opening")
+    _validate_member_entries(doc)
+    if doc.get("members") != opening.get("members"):
+        raise DiagnosticError(
+            "closing attestation members differ from the opening "
+            "(digest or stat drift between open and close)")
+    if doc.get("closing_sha256") != attestation_canonical_digest(doc):
+        raise DiagnosticError("closing attestation canonical digest mismatch")
+    return doc
+
+
+def attestation_witness(model_dir: Path, attestation: dict[str, Any], *,
+                        stat_observer=None
+                        ) -> tuple[list[str], dict[str, Any] | None]:
+    """Cheap fail-closed pre-unit identity check (no member byte reads).
+
+    Re-observes the live topology/stats and compares every witnessed
+    field against the opening attestation. Returns ``(problems,
+    observed)``; non-empty problems mean STOP — a full re-hash (new
+    campaign attestation) is required before any further execution.
+    """
+    validate_model_attestation(attestation)
+    try:
+        observed = (stat_observer or observe_model_stats)(model_dir)
+    except DiagnosticError as exc:
+        return [str(exc)], None
+    problems: list[str] = []
+    for member in attestation["members"]:
+        name = member["name"]
+        live = observed.get(name)
+        if live is None:
+            problems.append(f"{name}: missing from live model topology")
+            continue
+        for key in WITNESS_STAT_KEYS:
+            if live.get(key) != member.get(key):
+                problems.append(
+                    f"{name}: {key} drift ({live.get(key)!r} != "
+                    f"{member.get(key)!r})")
+    witness = {m["name"]: {key: observed[m["name"]][key]
+                           for key in WITNESS_STAT_KEYS}
+               for m in attestation["members"]} if not problems else None
+    return problems, witness
+
+
 def verify_model_members(model_dir: Path,
                          hasher: Callable[[Path], str] = file_sha256
                          ) -> dict[str, str]:

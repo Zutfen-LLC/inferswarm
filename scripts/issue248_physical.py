@@ -144,13 +144,13 @@ def run_diagnostic_unit(
     model_dir: Path,
     expected_head: str,
     index: int,
+    model_attestation: dict[str, Any],
     execute: Callable[..., dict[str, Any]] | None = None,
     identity_observer: Callable[[str], dict[str, Any]] | None = None,
     revalidate_authority: Callable[[Path, str, str, str],
                                    dict[str, Any]] | None = None,
     request_contract: dict[str, Any] | None = None,
     intervention: dict[str, Any] | None = None,
-    model_hasher: Callable[[Path], str] | None = None,
     health_runner: Callable[..., Any] = H._run_readonly,
     github_api: str = "https://api.github.com",
 ) -> dict[str, Any]:
@@ -162,11 +162,21 @@ def run_diagnostic_unit(
     live revalidation (correction 3) — a cached dict was the corrected
     defect.
 
+    Campaign-level model authority (maintainer correction 2026-09-25):
+    ``model_attestation`` is the campaign OPENING attestation — the
+    single full three-member SHA-256 verification performed before the
+    first physical unit. Every unit performs ONLY the cheap fail-closed
+    stat/topology witness against it and must bind its canonical
+    digest in the receipt; the unit also requires the attestation to
+    equal the append-only retained opening receipt in the evidence
+    root. No unit re-hashes the 72.5 GiB member set on the unchanged
+    path.
+
     Correction gates (maintainer NO-GO round 1), all BEFORE any launch:
-      1. exact three-member model authority — every member of the
-         accepted #241 GGUF set is hashed and compared against the
-         accepted digests; the launched path is DERIVED (member 1),
-         never caller-supplied;
+      1. campaign opening model attestation — the complete accepted
+         three-member GGUF set was hashed once against the accepted
+         digests; the launched path is DERIVED (member 1), never
+         caller-supplied; per-unit stat witness must match exactly;
       2. frozen request contract — the executed request is the frozen
          authority; a caller override must equal it byte/semantically
          or execution fails before launch;
@@ -196,13 +206,14 @@ def run_diagnostic_unit(
     D.validate_namespace(namespace)
     # GATE ORDER (source-checked by tests): namespace shape -> EARLY live
     # dispatch authority (fail fast) -> case authorization -> fixture
-    # identity -> exact model bytes -> binary identity -> local clean head
-    # -> subject identity -> prepare prelaunch custody -> request/env ->
-    # FINAL live dispatch authority (two-pass binding + clean head) ->
-    # launch. The final gate is the LAST governance check before any
-    # physical process exists: the remote PR/issue/comment authority can
-    # move during the model-hash + preflight interval above, and only a
-    # second live observation bound to the first closes that window.
+    # identity -> campaign model attestation witness -> binary identity
+    # -> local clean head -> subject identity -> prepare prelaunch
+    # custody -> request/env -> FINAL live dispatch authority (two-pass
+    # binding + clean head) -> launch. The final gate is the LAST
+    # governance check before any physical process exists: the remote
+    # PR/issue/comment authority can move during the preflight interval
+    # above, and only a second live observation bound to the first
+    # closes that window.
     authority_early = D.require_live_dispatch(
         repo_root, expected_head, namespace,
         revalidate_authority=revalidate_authority, github_api=github_api)
@@ -224,10 +235,36 @@ def run_diagnostic_unit(
                      index)
     fixtures = D.verify_fixtures(repo_root)
     binary_sha = D.verify_binary(Path(binary), binary_id)
-    # Correction 1: the COMPLETE accepted three-member set verifies
-    # before any launch; the launch path is derived member 1.
-    verified_members = D.verify_model_members(
-        Path(model_dir), hasher=model_hasher or D.file_sha256)
+    # Correction 1 (revised 2026-09-25): the COMPLETE accepted
+    # three-member set was cryptographically verified ONCE in the
+    # campaign opening attestation, which must already be durably
+    # retained (append-only) in the evidence root; this unit binds that
+    # exact attestation and performs only the cheap fail-closed
+    # stat/topology witness. Any drift STOPS the campaign — a full
+    # re-hash (new reviewed opening attestation) is required before any
+    # further execution.
+    attestation = D.validate_model_attestation(model_attestation,
+                                               expected_head)
+    retained_opening_path = (Path(evidence_root)
+                             / D.MODEL_ATTESTATION_OPEN_NAME)
+    if (retained_opening_path.is_symlink()
+            or not retained_opening_path.is_file()):
+        raise PhysicalDiagnosticError(
+            "campaign opening model attestation is not retained in the "
+            f"evidence root: {retained_opening_path}")
+    retained_opening = json.loads(retained_opening_path.read_bytes())
+    if attestation != retained_opening:
+        raise PhysicalDiagnosticError(
+            "unit attestation differs from the retained campaign opening")
+    witness_problems, stat_witness = D.attestation_witness(
+        Path(model_dir), attestation)
+    if witness_problems:
+        raise PhysicalDiagnosticError(
+            "model stat witness drift — full re-hash required before "
+            f"further execution: {witness_problems}")
+    if attestation["model_dir"] != str(Path(model_dir)):
+        raise PhysicalDiagnosticError(
+            "attested model dir differs from the launched model dir")
     launch_member = Path(model_dir) / D.MODEL_MEMBER_1
     D._require_clean_head(repo_root, expected_head)
     unit_dir = D.prepare_unit_dir(evidence_root, namespace, tag)
@@ -347,7 +384,8 @@ def run_diagnostic_unit(
         "binary_id": binary_id,
         "binary_sha256": binary_sha,
         "model_dir": str(model_dir),
-        "model_members_sha256": dict(verified_members),
+        "model_attestation_sha256": attestation["attestation_sha256"],
+        "model_stat_witness": stat_witness,
         "model_launch_member": str(launch_member),
         "request_contract": request,
         "request_contract_sha256": D.canonical_request_digest(request),
@@ -398,6 +436,65 @@ def run_diagnostic_unit(
         raise PhysicalDiagnosticError("unexpected R8-E capture")
     _write_json(unit_dir / "unit.json", receipt)
     return receipt
+
+
+def open_campaign_attestation(evidence_root: Path, model_dir: Path,
+                              expected_head: str,
+                              hasher: Callable[[Path], str] | None = None,
+                              ) -> dict[str, Any]:
+    """Build and durably retain the campaign OPENING model attestation.
+
+    Runs the single full three-member SHA-256 verification against the
+    accepted #241 values, writes it append-only at the evidence root
+    (``model-attestation-open.json``), and returns the document. The
+    retained file must not already exist (append-only custody; a new
+    campaign after model drift requires a fresh evidence root or a
+    reviewed re-attestation procedure).
+    """
+    evidence_root = Path(evidence_root)
+    doc = D.build_model_attestation(model_dir, expected_head,
+                                    hasher=hasher or D.file_sha256)
+    target = evidence_root / D.MODEL_ATTESTATION_OPEN_NAME
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError(
+            f"opening attestation already retained (append-only): {target}")
+    evidence_root.mkdir(parents=True, exist_ok=True)
+    _write_json(target, doc)
+    return doc
+
+
+def close_campaign_attestation(evidence_root: Path, model_dir: Path,
+                               expected_head: str,
+                               hasher: Callable[[Path], str] | None = None,
+                               ) -> dict[str, Any]:
+    """Campaign closing full re-hash bound to the retained opening.
+
+    Re-hashes the complete three-member set, requires byte/stat identity
+    with the retained opening attestation, and durably retains the
+    closing receipt (append-only). Called once after the last physical
+    unit of the campaign.
+    """
+    evidence_root = Path(evidence_root)
+    opening_path = evidence_root / D.MODEL_ATTESTATION_OPEN_NAME
+    if opening_path.is_symlink() or not opening_path.is_file():
+        raise PhysicalDiagnosticError(
+            "closing requires a retained opening attestation")
+    opening = json.loads(opening_path.read_bytes())
+    D.validate_model_attestation(opening, expected_head)
+    fresh = D.build_model_attestation(model_dir, expected_head,
+                                      hasher=hasher or D.file_sha256)
+    doc = {key: value for key, value in fresh.items()
+           if key != "attestation_sha256"}
+    doc["schema"] = D.MODEL_ATTESTATION_CLOSE_SCHEMA
+    doc["opening_attestation_sha256"] = opening["attestation_sha256"]
+    doc["closing_sha256"] = D.attestation_canonical_digest(doc)
+    D.validate_closing_attestation(doc, opening)
+    target = evidence_root / D.MODEL_ATTESTATION_CLOSE_NAME
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError(
+            f"closing attestation already retained (append-only): {target}")
+    _write_json(target, doc)
+    return doc
 
 
 def _variant_for(kind: str, observer_mode: str, ngl: int, case: str) -> str:

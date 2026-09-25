@@ -461,6 +461,14 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
             self.member_digests[member] = D.MODEL_MEMBER_SHA256[member]
         self.model_hasher = (
             lambda path: self.member_digests[path.name])
+        # Campaign-level model attestation (2026-09-25): the single
+        # full-set verification happens ONCE here; units bind it and
+        # witness stats only.
+        self._orig_model_dir = D.MODEL_DIR
+        D.MODEL_DIR = str(self.model_dir)
+        self.attestation = P.open_campaign_attestation(
+            self.root / "ev", self.model_dir, HEAD,
+            hasher=self.model_hasher)
         # deterministic binary sha by patching SERVER_BINARIES lookup
         self._orig = dict(D.SERVER_BINARIES)
         D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
@@ -472,6 +480,7 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
     def tearDown(self):
         D.SERVER_BINARIES.clear()
         D.SERVER_BINARIES.update(self._orig)
+        D.MODEL_DIR = self._orig_model_dir
         import issue248_diagnostic
         issue248_diagnostic.subprocess.run = self._orig_run
         self._tmp.cleanup()
@@ -531,34 +540,43 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         kw = dict(
             arm="B", case="case-3072", ngl=8, binary_id="comparator",
             binary=self.bin, model_dir=self.model_dir, expected_head=HEAD,
-            index=1, execute=self._fake_execute(),
+            index=1, model_attestation=self.attestation,
+            execute=self._fake_execute(),
             health_runner=self._fake_health_command,
             identity_observer=self._identity_ok_seam,
-            revalidate_authority=self._live_fetch(),
-            model_hasher=self.model_hasher)
+            revalidate_authority=self._live_fetch())
         kw.update(overrides)
         return kw
 
     def _run(self, **overrides):
-        return P.run_diagnostic_unit(self.repo, self.root / "ev",
-                                     "d248-fake", "repeat", **overrides
-                                     ) if False else P.run_diagnostic_unit(
-            self.repo, self.root / "ev", "d248-fake", "repeat",
+        evidence_root = overrides.pop("evidence_root", self.root / "ev")
+        return P.run_diagnostic_unit(
+            self.repo, evidence_root, "d248-fake", "repeat",
             **self._run_kwargs(**overrides))
 
     def test_positive_path_writes_custody(self):
         receipt = self._run()
         self.assertEqual(receipt["tokens"],
                          [328, 760, 324, 55965, 51624, 29014, 34227, 18030])
-        # Correction 1: the COMPLETE verified member map is bound.
-        self.assertEqual(receipt["model_members_sha256"],
-                         self.member_digests)
-        self.assertEqual(set(receipt["model_members_sha256"]),
-                         set(D.MODEL_MEMBERS))
+        # Campaign attestation binding (2026-09-25): the unit carries the
+        # campaign attestation digest + per-unit stat witness, NOT a
+        # per-unit member hash map.
+        self.assertEqual(receipt["model_attestation_sha256"],
+                         self.attestation["attestation_sha256"])
+        witness = receipt["model_stat_witness"]
+        self.assertEqual(sorted(witness), sorted(D.MODEL_MEMBERS))
+        attested = {m["name"]: m for m in self.attestation["members"]}
+        for member, fields in witness.items():
+            self.assertEqual(
+                {k: fields[k] for k in D.WITNESS_STAT_KEYS},
+                {k: attested[member][k] for k in D.WITNESS_STAT_KEYS})
         # the launch path is DERIVED member 1 under the frozen dir
         self.assertEqual(
             Path(receipt["model_launch_member"]),
             self.model_dir / D.MODEL_MEMBER_1)
+        # no unit re-hash of the full member set occurred (the old
+        # per-unit map is gone)
+        self.assertNotIn("model_members_sha256", receipt)
         # Correction 2: the receipt binds the frozen contract + digest.
         self.assertEqual(receipt["request_contract"], D.REQUEST_CONTRACT)
         self.assertEqual(
@@ -592,9 +610,9 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         receipt = self._run()
         unit = self.root / "ev" / "d248-fake" / receipt["tag"]
         payload = make_authority(head=HEAD, namespace="d248-fake")
-        population, problems = T._population(unit.parent, [receipt["tag"]],
-                                              "repeat", "d248-fake",
-                                              expected_authority=payload)
+        population, problems = T._population(
+            unit.parent, [receipt["tag"]], "repeat", "d248-fake",
+            expected_authority=payload, attestation=self.attestation)
         self.assertEqual(problems, [])
         self.assertEqual(len(population["units"]), 1)
 
@@ -663,7 +681,9 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
 
     # --- Correction 1 negative controls: exact model authority ---------
 
-    def test_model_member1_wrong_bytes_no_launch(self):
+    def test_model_member1_wrong_bytes_no_attestation(self):
+        # Changed member bytes BEFORE the opening attestation: the
+        # campaign cannot even open (the single full hash rejects).
         called = []
         def execute(**kw):
             called.append(kw)
@@ -671,12 +691,13 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         digests = dict(self.member_digests)
         digests[D.MODEL_MEMBERS[0]] = "b" * 64
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute,
-                      model_hasher=lambda p: digests[p.name])
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD,
+                hasher=lambda p: digests[p.name])
         self.assertIn(D.MODEL_MEMBERS[0], str(ctx.exception))
         self.assertEqual(called, [])
 
-    def test_model_member2_wrong_bytes_no_launch(self):
+    def test_model_member2_wrong_bytes_no_attestation(self):
         called = []
         def execute(**kw):
             called.append(kw)
@@ -684,12 +705,13 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         digests = dict(self.member_digests)
         digests[D.MODEL_MEMBERS[1]] = "c" * 64
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute,
-                      model_hasher=lambda p: digests[p.name])
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD,
+                hasher=lambda p: digests[p.name])
         self.assertIn(D.MODEL_MEMBERS[1], str(ctx.exception))
         self.assertEqual(called, [])
 
-    def test_model_member3_wrong_bytes_no_launch(self):
+    def test_model_member3_wrong_bytes_no_attestation(self):
         called = []
         def execute(**kw):
             called.append(kw)
@@ -697,12 +719,13 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         digests = dict(self.member_digests)
         digests[D.MODEL_MEMBERS[2]] = "d" * 64
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute,
-                      model_hasher=lambda p: digests[p.name])
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD,
+                hasher=lambda p: digests[p.name])
         self.assertIn(D.MODEL_MEMBERS[2], str(ctx.exception))
         self.assertEqual(called, [])
 
-    def test_model_member_missing_no_launch(self):
+    def test_model_member_missing_no_attestation(self):
         called = []
         def execute(**kw):
             called.append(kw)
@@ -713,14 +736,17 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         for member in D.MODEL_MEMBERS[1:]:  # member 1 absent
             (self.model_dir / member).write_bytes(b"m" * 64)
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute, model_hasher=self.model_hasher)
-        self.assertIn("missing", str(ctx.exception))
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD,
+                hasher=lambda p: self.member_digests.get(
+                    p.name, "a" * 64))
+        self.assertIn("unexpected split topology", str(ctx.exception))
         self.assertEqual(called, [])
 
-    def test_arbitrary_replacement_model_no_launch(self):
+    def test_arbitrary_replacement_model_no_attestation(self):
         # A competent caller points model_dir at a directory holding a
         # DIFFERENT gguf (with correct member-1 digest even): the split
-        # topology check rejects it before launch.
+        # topology check rejects it before the attestation can open.
         called = []
         def execute(**kw):
             called.append(kw)
@@ -731,14 +757,15 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         (other / "MysteryModel-Q4_K_M-00001-of-00001.gguf").write_bytes(
             b"z" * 64)
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute, model_dir=other,
-                      model_hasher=lambda p: self.member_digests.get(
-                          p.name, "a" * 64))
+            P.open_campaign_attestation(
+                self.root / "ev2", other, HEAD,
+                hasher=lambda p: self.member_digests.get(p.name, "a" * 64))
         self.assertIn("unexpected split topology", str(ctx.exception))
         self.assertEqual(called, [])
 
-    def test_competent_caller_mutates_members2_3_no_launch(self):
-        # member 1 hash is CORRECT, members 2/3 mutated: still no launch.
+    def test_competent_caller_mutates_members2_3_no_attestation(self):
+        # member 1 hash is CORRECT, members 2/3 mutated: still no
+        # attestation (and therefore no unit).
         called = []
         def execute(**kw):
             called.append(kw)
@@ -747,8 +774,9 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         digests[D.MODEL_MEMBERS[1]] = "e" * 64
         digests[D.MODEL_MEMBERS[2]] = "f" * 64
         with self.assertRaises(D.DiagnosticError) as ctx:
-            self._run(execute=execute,
-                      model_hasher=lambda p: digests[p.name])
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD,
+                hasher=lambda p: digests[p.name])
         self.assertIn(D.MODEL_MEMBERS[1], str(ctx.exception))
         self.assertEqual(called, [])
 
@@ -756,7 +784,158 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         # The production hasher path (file bytes) must reject a dir of
         # fake members whose digests cannot match the accepted values.
         with self.assertRaises(D.DiagnosticError):
-            D.verify_model_members(self.model_dir)
+            P.open_campaign_attestation(
+                self.root / "ev2", self.model_dir, HEAD)
+
+    # --- Campaign attestation / witness boundary controls --------------
+
+    def test_post_attestation_member_bytes_change_blocks_unit(self):
+        # The attested member is REWRITTEN after the opening with a
+        # DIFFERENT SIZE: the stat witness (size/mtime/ctime) must stop
+        # the unit even if a caller forges digest claims.
+        member = self.model_dir / D.MODEL_MEMBERS[0]
+        member.write_bytes(b"x" * 65)
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute)
+        self.assertIn("witness drift", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_replaced_inode_same_content_blocks_unit(self):
+        # mv a same-content copy over the member: bytes identical, but
+        # inode/mtime/ctime differ — the unit must stop and require a
+        # full re-hash.
+        member = self.model_dir / D.MODEL_MEMBERS[0]
+        tmp = self.model_dir / "swap.tmp"
+        tmp.write_bytes(member.read_bytes())
+        tmp.replace(member)
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute)
+        self.assertIn("witness drift", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_symlink_substitution_blocks_unit(self):
+        # Replace a member with a symlink to identical content: the
+        # stat observer must reject it outright.
+        member = self.model_dir / D.MODEL_MEMBERS[0]
+        content = member.read_bytes()
+        outside = self.root / "outside.gguf"
+        outside.write_bytes(content)
+        member.unlink()
+        member.symlink_to(outside)
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute)
+        self.assertEqual(called, [])
+
+    def test_size_or_timestamp_change_blocks_unit(self):
+        # Append one byte (size change) / rewrite same size (timestamp
+        # change) — both must stop the unit.
+        member = self.model_dir / D.MODEL_MEMBERS[1]
+        member.write_bytes(member.read_bytes() + b"!")
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute)
+        self.assertIn("witness drift", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_unit_without_retained_opening_blocks_unit(self):
+        # The attestation must equal the append-only retained opening
+        # in the evidence root — an in-memory-only attestation with no
+        # retained receipt cannot authorize a unit.
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        unretained = json.loads(json.dumps(self.attestation))
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute, model_attestation=unretained,
+                      evidence_root=self.root / "ev-empty")
+        self.assertIn("retained", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_unit_attestation_digest_mismatch_blocks_unit(self):
+        # The retained campaign opening receipt is tampered/substituted
+        # (one witness field edited): a unit passing the original
+        # in-memory attestation must fail the retained-equality binding.
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        retained_path = (self.root / "ev" / D.MODEL_ATTESTATION_OPEN_NAME)
+        tampered = json.loads(retained_path.read_bytes())
+        tampered["members"][0]["inode"] += 1
+        retained_path.write_text(json.dumps(tampered, sort_keys=True))
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._run(execute=execute)
+        self.assertIn("differs from the retained", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_unit_bound_to_foreign_attestation_no_launch(self):
+        # A physically distinct copy of the same accepted content,
+        # attested separately, is NOT this campaign's attestation (the
+        # frozen model-dir binding rejects it before anything else).
+        called = []
+        def execute(**kw):
+            called.append(kw)
+            return self._fake_execute()(**kw)
+        import shutil
+        other_dir = self.root / "model-copy"
+        other_dir.mkdir()
+        for member in D.MODEL_MEMBERS:
+            shutil.copyfile(self.model_dir / member, other_dir / member)
+        other_root = self.root / "ev-other"
+        other = P.open_campaign_attestation(
+            other_root, other_dir, HEAD, hasher=self.model_hasher)
+        self.assertNotEqual(other["attestation_sha256"],
+                            self.attestation["attestation_sha256"])
+        with self.assertRaises((P.PhysicalDiagnosticError,
+                                D.DiagnosticError)) as ctx:
+            self._run(execute=execute, model_attestation=other)
+        self.assertIn("model dir mismatch", str(ctx.exception))
+        self.assertEqual(called, [])
+
+    def test_closing_rehash_rejects_drifted_model(self):
+        # Closing full re-hash after a post-attestation SIZE change must
+        # fail (stats differ from the opening) — no closing receipt.
+        member = self.model_dir / D.MODEL_MEMBERS[2]
+        member.write_bytes(b"z" * 65)
+        with self.assertRaises(D.DiagnosticError) as ctx:
+            P.close_campaign_attestation(
+                self.root / "ev", self.model_dir, HEAD,
+                hasher=lambda p: self.member_digests[p.name])
+        self.assertIn("differ from the opening", str(ctx.exception))
+
+    def test_closing_binds_opening_and_accepts_unchanged_model(self):
+        closing = P.close_campaign_attestation(
+            self.root / "ev", self.model_dir, HEAD,
+            hasher=self.model_hasher)
+        self.assertEqual(closing["opening_attestation_sha256"],
+                         self.attestation["attestation_sha256"])
+        # append-only: a second close must fail
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.close_campaign_attestation(
+                self.root / "ev", self.model_dir, HEAD,
+                hasher=self.model_hasher)
+
+    def test_opening_is_append_only(self):
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.open_campaign_attestation(
+                self.root / "ev", self.model_dir, HEAD,
+                hasher=self.model_hasher)
 
     # --- Correction 6 negative controls: subject identity --------------
 
@@ -1758,6 +1937,39 @@ class RetainedTerminalMatrix(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
+        # Campaign-level model attestation fixtures (2026-09-25): a
+        # synthetic opening + closing receipt pair at the evidence root.
+        # Members carry plausible distinct stat identities; unit
+        # receipts bind the opening digest and an identical witness.
+        self.attestation = {
+            "schema": D.MODEL_ATTESTATION_OPEN_SCHEMA,
+            "head_sha": DISPATCH_HEAD,
+            "model_dir": D.MODEL_DIR,
+            "members": sorted(
+                ({"name": name, "path": str(Path(D.MODEL_DIR) / name),
+                  "sha256": D.MODEL_MEMBER_SHA256[name],
+                  "bytes": 1000 + i, "device": 2055, "inode": 70000 + i,
+                  "mtime_ns": 1790000000000000000 + i,
+                  "ctime_ns": 1790000000000000000 + i,
+                  "symlink": False, "regular_file": True}
+                 for i, name in enumerate(D.MODEL_MEMBERS)),
+                key=lambda m: m["name"]),
+        }
+        self.attestation["attestation_sha256"] = (
+            D.attestation_canonical_digest(self.attestation))
+        self.witness = {m["name"]: {k: m[k]
+                                    for k in D.WITNESS_STAT_KEYS}
+                        for m in self.attestation["members"]}
+        closing = {key: value for key, value in self.attestation.items()
+                   if key != "attestation_sha256"}
+        closing["schema"] = D.MODEL_ATTESTATION_CLOSE_SCHEMA
+        closing["opening_attestation_sha256"] = (
+            self.attestation["attestation_sha256"])
+        closing["closing_sha256"] = D.attestation_canonical_digest(closing)
+        (self.root / D.MODEL_ATTESTATION_OPEN_NAME).write_text(
+            json.dumps(self.attestation, sort_keys=True))
+        (self.root / D.MODEL_ATTESTATION_CLOSE_NAME).write_text(
+            json.dumps(closing, sort_keys=True))
         for namespace in set(T.FROZEN_PROBE_NAMESPACE.values()):
             (self.root / namespace).mkdir()
         self.base = self.root / T.FROZEN_PROBE_NAMESPACE["repeat"]
@@ -1821,9 +2033,12 @@ class RetainedTerminalMatrix(unittest.TestCase):
                         if "-ngl" in unit else 8), 19000),
                    "model_dir": D.MODEL_DIR,
                    "model_launch_member": str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                   "model_attestation_sha256": (
+                       self.attestation["attestation_sha256"]),
+                   "model_stat_witness": json.loads(
+                       json.dumps(self.witness)),
                    "request_contract": dict(D.REQUEST_CONTRACT),
                    "request_contract_sha256": D.canonical_request_digest(D.REQUEST_CONTRACT),
-                   "model_members_sha256": dict(D.MODEL_MEMBER_SHA256),
                    "server_env": {"CUDA_VISIBLE_DEVICES": "-1"},
                    "observer_mode": ("comparator-off" if "obs-off" in unit else
                                      "comparator-dual" if "obs-dual" in unit else
@@ -2111,6 +2326,79 @@ class RetainedTerminalMatrix(unittest.TestCase):
         out = self.derive()
         self.assertEqual(out["terminal"], T.TERMINALS[4])
 
+    # --- Campaign model attestation terminal preconditions --------------
+
+    def _assert_attestation_blocked(self, out, needle):
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any(needle in x for x in out["problems"]),
+                        out["problems"])
+
+    def test_missing_opening_attestation_blocks(self):
+        (self.root / D.MODEL_ATTESTATION_OPEN_NAME).unlink()
+        self._assert_attestation_blocked(
+            self.derive(), "campaign model attestation invalid")
+
+    def test_missing_closing_attestation_blocks(self):
+        (self.root / D.MODEL_ATTESTATION_CLOSE_NAME).unlink()
+        self._assert_attestation_blocked(
+            self.derive(), "campaign model attestation invalid")
+
+    def test_opening_attestation_digest_forgery_blocks(self):
+        path = self.root / D.MODEL_ATTESTATION_OPEN_NAME
+        doc = json.loads(path.read_bytes())
+        doc["members"][0]["sha256"] = "f" * 64  # not the accepted digest
+        path.write_text(json.dumps(doc, sort_keys=True))
+        self._assert_attestation_blocked(
+            self.derive(), "campaign model attestation invalid")
+
+    def test_closing_attestation_mismatch_blocks(self):
+        # A closing receipt whose re-hash stats differ from the opening
+        # (model changed between open and close) must block.
+        path = self.root / D.MODEL_ATTESTATION_CLOSE_NAME
+        doc = json.loads(path.read_bytes())
+        doc["members"][1]["bytes"] += 1
+        path.write_text(json.dumps(doc, sort_keys=True))
+        self._assert_attestation_blocked(
+            self.derive(), "campaign model attestation invalid")
+
+    def test_unit_attestation_binding_mismatch_blocks(self):
+        # A unit bound to a different campaign attestation digest is
+        # rejected at population time.
+        unit = self.p["probes"]["repeat"]["units"][0]
+        path = self.unit_dir(unit) / "unit.json"
+        doc = json.loads(path.read_bytes())
+        doc["model_attestation_sha256"] = "e" * 64
+        path.write_text(json.dumps(doc, sort_keys=True))
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertTrue(any(
+            "attestation digest differs" in x or "malformed retained unit"
+            in x for x in out["problems"]), out["problems"])
+
+    def test_unit_stat_witness_mismatch_blocks(self):
+        # A unit whose per-unit stat witness does not match the
+        # attested member identity is rejected at population time.
+        unit = self.p["probes"]["repeat"]["units"][0]
+        path = self.unit_dir(unit) / "unit.json"
+        doc = json.loads(path.read_bytes())
+        doc["model_stat_witness"][D.MODEL_MEMBERS[0]]["inode"] += 1
+        path.write_text(json.dumps(doc, sort_keys=True))
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertTrue(any(
+            "stat witness differs" in x or "malformed retained unit"
+            in x for x in out["problems"]), out["problems"])
+
+    def test_symlinked_opening_attestation_blocks(self):
+        path = self.root / D.MODEL_ATTESTATION_OPEN_NAME
+        doc = path.read_bytes()
+        path.unlink()
+        path.symlink_to(self.root / "elsewhere.json")
+        (self.root / "elsewhere.json").write_bytes(doc)
+        self._assert_attestation_blocked(
+            self.derive(), "campaign model attestation invalid")
+
     def test_execution_contract_mutations_block_frozen_probe(self):
         unit = self.p["probes"]["placement"]["units"][0]
         path = self.unit_dir(unit) / "unit.json"
@@ -2119,8 +2407,8 @@ class RetainedTerminalMatrix(unittest.TestCase):
             ("argv_ngl", lambda r: r["server_argv"].__setitem__(
                 r["server_argv"].index("-ngl") + 1, "8")),
             ("binary", lambda r: r.__setitem__("binary_sha256", "f" * 64)),
-            ("model", lambda r: r["model_members_sha256"].__setitem__(
-                D.MODEL_MEMBER_1, "f" * 64)),
+            ("model", lambda r: r.__setitem__(
+                "model_attestation_sha256", "f" * 64)),
             ("request", lambda r: r["request_contract"].__setitem__("seed", 99)),
             ("executed_binary", lambda r: r["process_attribution"].__setitem__(
                 "server_exe_sha256", "f" * 64)),
@@ -2935,6 +3223,11 @@ class TwoPassAuthorityLaunchControls(unittest.TestCase):
         self.model_hasher = lambda path: self.member_digests[path.name]
         self._orig = dict(D.SERVER_BINARIES)
         D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
+        self._orig_model_dir = D.MODEL_DIR
+        D.MODEL_DIR = str(self.model_dir)
+        self.attestation = P.open_campaign_attestation(
+            self.root / "ev", self.model_dir, HEAD,
+            hasher=self.model_hasher)
         import issue248_diagnostic
         self._orig_run = issue248_diagnostic.subprocess.run
         issue248_diagnostic.subprocess.run = FakeGit(HEAD)
@@ -2942,6 +3235,7 @@ class TwoPassAuthorityLaunchControls(unittest.TestCase):
     def tearDown(self):
         D.SERVER_BINARIES.clear()
         D.SERVER_BINARIES.update(self._orig)
+        D.MODEL_DIR = self._orig_model_dir
         import issue248_diagnostic
         issue248_diagnostic.subprocess.run = self._orig_run
         self._tmp.cleanup()
@@ -2974,7 +3268,7 @@ class TwoPassAuthorityLaunchControls(unittest.TestCase):
                 health_runner=FakeRunnerPhysicalTests._fake_health_command,
                 identity_observer=lambda arm: census_observation(arm),
                 revalidate_authority=self._fetch_pair(first, second),
-                model_hasher=self.model_hasher)
+                model_attestation=self.attestation)
         return calls
 
     def test_first_valid_second_pr_head_moved_zero_runner_calls(self):
@@ -3038,7 +3332,7 @@ class TwoPassAuthorityLaunchControls(unittest.TestCase):
             identity_observer=lambda arm: census_observation(arm),
             revalidate_authority=self._fetch_pair(make_authority,
                                                   make_authority),
-            model_hasher=self.model_hasher)
+            model_attestation=self.attestation)
         self.assertEqual(receipt["authority"]["comment_id"], 123456)
         self.assertEqual(receipt["authority"]["head_sha"], HEAD)
         self.assertIn("dispatch_sha256", receipt["authority"])
@@ -3056,6 +3350,34 @@ class TwoPassAuthorityLaunchControls(unittest.TestCase):
         self.assertLess(early, final)
         self.assertLess(final, bind)
         self.assertLess(bind, runner)
+
+    def test_no_per_unit_model_rehash_on_the_unchanged_path(self):
+        # Structural proof (maintainer correction 2026-09-25 item 8):
+        # the unit runner never hashes model member bytes — none of the
+        # full-set hash entrypoints appear in the unit path, which
+        # binds the campaign attestation and performs only the stat
+        # witness (lstat-only by construction in
+        # D.observe_model_stats).
+        import inspect
+        src = inspect.getsource(P.run_diagnostic_unit)
+        self.assertNotIn("verify_model_members", src)
+        self.assertNotIn("build_model_attestation", src)
+        self.assertNotIn("model_hasher", src)
+        self.assertIn("D.attestation_witness", src)
+        self.assertIn("D.validate_model_attestation", src)
+        # the witness is stat-only: no byte reads of members
+        witness_src = inspect.getsource(D.attestation_witness)
+        self.assertNotIn("file_sha256", witness_src)
+        self.assertNotIn("verify_model_members", witness_src)
+        stats_src = inspect.getsource(D.observe_model_stats)
+        self.assertNotIn("file_sha256", stats_src)
+        self.assertNotIn("read_bytes", stats_src)
+        self.assertNotIn("open(", stats_src)
+        # and the campaign-level helpers are the only full-hash callers
+        open_src = inspect.getsource(P.open_campaign_attestation)
+        close_src = inspect.getsource(P.close_campaign_attestation)
+        self.assertIn("D.build_model_attestation", open_src)
+        self.assertIn("D.build_model_attestation", close_src)
 
 
 if __name__ == "__main__":
