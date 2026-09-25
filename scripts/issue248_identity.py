@@ -444,8 +444,21 @@ def intervention_problems(arm: str, observation: dict[str, Any],
 # Production observer (read-only host reads; injectable in tests)
 # ---------------------------------------------------------------------------
 
+def _sysfs_device_dir(bdf: str) -> Path:
+    """Resolve a frozen 16-character BDF to the host's sysfs directory."""
+    root = Path("/sys/bus/pci/devices")
+    short_domain_bdf = f"{int(bdf[:8], 16):04x}{bdf[8:]}"
+    normalized = root / short_domain_bdf
+    if normalized.exists():
+        return normalized
+    literal = root / bdf
+    if literal.exists():
+        return literal
+    raise IdentityError(f"sysfs device directory missing for {bdf}")
+
+
 def _sysfs(bdf: str, rel: str) -> str:
-    path = Path("/sys/bus/pci/devices") / bdf / rel
+    path = _sysfs_device_dir(bdf) / rel
     if path.is_symlink() or not path.is_file():
         raise IdentityError(f"sysfs source missing: {path}")
     return path.read_text().strip()
@@ -465,7 +478,7 @@ def observe_arm_identity(arm: str) -> dict[str, Any]:
                 "revision", "current_link_width", "max_link_width",
                 "max_link_speed"):
         raw[f"sysfs.{rel}"] = _sysfs(bdf, rel)
-    driver_link = Path("/sys/bus/pci/devices") / bdf / "driver"
+    driver_link = _sysfs_device_dir(bdf) / "driver"
     if not driver_link.is_symlink():
         raise IdentityError(f"kernel driver link missing for {bdf}")
     raw["sysfs.driver"] = driver_link.resolve().name

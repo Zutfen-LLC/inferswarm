@@ -295,6 +295,23 @@ class FixtureAndIdentityTests(unittest.TestCase):
             self.assertIn(case, fixtures)
         self.assertEqual(fixtures["case-3072"]["rendered_length"], 3077)
 
+    def test_sysfs_device_dir_prefers_existing_four_hex_domain(self):
+        with patch.object(I.Path, "exists", return_value=True):
+            path = I._sysfs_device_dir("00000000:03:00.0")
+        self.assertEqual(str(path), "/sys/bus/pci/devices/0000:03:00.0")
+
+    def test_sysfs_device_dir_falls_back_to_literal_full_domain(self):
+        def exists(path):
+            return str(path) == "/sys/bus/pci/devices/00000000:03:00.0"
+        with patch.object(I.Path, "exists", exists):
+            path = I._sysfs_device_dir("00000000:03:00.0")
+        self.assertEqual(str(path), "/sys/bus/pci/devices/00000000:03:00.0")
+
+    def test_identity_driver_link_uses_normalized_sysfs_directory(self):
+        source = (REPO / "scripts" / "issue248_identity.py").read_text()
+        self.assertIn('driver_link = _sysfs_device_dir(bdf) / "driver"', source)
+        self.assertNotIn('Path("/sys/bus/pci/devices") / bdf / "driver"', source)
+
     def test_ladder_sha_is_the_accepted_binding(self):
         # Must equal the #241 frozen constant (same bytes on main).
         self.assertEqual(
@@ -374,6 +391,12 @@ class CustodyTests(unittest.TestCase):
         # dual capture: comparator rows AND r8e row in ONE process
         self.assertEqual(env["LLAMA_OBSERVE_CAPTURE"], "8")
         self.assertTrue(env["LLAMA_OBSERVE_LOGITS"].endswith(".r8e.jsonl"))
+        with tempfile.TemporaryDirectory() as tmp:
+            env = D.launch_env("B", observer="comparator", r8e_capture=True,
+                               **{**base, "out_prefix": Path(tmp) / "obs"})
+            live_row = Path(env["LLAMA_OBSERVE_LOGITS"] + ".pos0.f32")
+            live_row.write_bytes(b"live row")
+            self.assertEqual(D.r8e_captured_rows(Path(tmp)), {0: b"live row"})
         env = D.launch_env("B", observer="off", **base)
         self.assertNotIn("LLAMA_OBSERVE_CAPTURE", env)
         self.assertNotIn("LLAMA_OBSERVE_LOGITS", env)
@@ -1303,6 +1326,17 @@ class Issue248HealthTests(unittest.TestCase):
             self.assertTrue(result["valid"])
             self.assertEqual(result["fatal_findings"], [])
 
+    def test_journalctl_no_entries_sentinel_is_valid_zero_row_observation(self):
+        start = datetime.fromisoformat(self.START)
+        end = datetime.fromisoformat(self.END)
+        H._validate_journal(b"-- No entries --\n", start, end)
+
+    def test_timestamped_journal_row_is_accepted(self):
+        start = datetime.fromisoformat(self.START)
+        end = datetime.fromisoformat(self.END)
+        H._validate_journal(
+            b"2026-09-24T12:00:30-04:00 host kernel: normal\n", start, end)
+
     def test_nonzero_collection_fails_closed_without_fallback(self):
         command = FakeCommand(journal_rc=1)
         with tempfile.TemporaryDirectory() as tmp:
@@ -1815,11 +1849,11 @@ class RetainedTerminalMatrix(unittest.TestCase):
             (d / "unit.json").write_text(json.dumps(receipt, sort_keys=True))
         if "obs-dual" in unit:
             row = row_seed[:1] + bytes([0]) + b"\0" * (T.ROW_BYTES - 2)
-            (d / "capture.r8e.pos0.f32").write_bytes(row)
+            (d / "obs.r8e.jsonl.pos0.f32").write_bytes(row)
             receipt["r8e_row0_sha256"] = hashlib.sha256(row).hexdigest()
         if "obs-r8e" in unit:
             row = row_seed[:1] + bytes([0]) + b"\0" * (T.ROW_BYTES - 2)
-            (d / "capture.r8e.pos0.f32").write_bytes(row)
+            (d / "obs.r8e.jsonl.pos0.f32").write_bytes(row)
             receipt["r8e_row0_sha256"] = hashlib.sha256(row).hexdigest()
         samples = [{"stage": stage, "captured_at": stamp,
                     "nvidia_smi_raw": (
@@ -2125,7 +2159,7 @@ class RetainedTerminalMatrix(unittest.TestCase):
     def test_dual_capture_missing_or_disagreeing_row_blocks(self):
         unit = tag("obs-dual", 1)
         d = self.unit_dir(unit)
-        path = d / "capture.r8e.pos0.f32"
+        path = d / "obs.r8e.jsonl.pos0.f32"
         raw = path.read_bytes()
         path.unlink()
         out = self.derive()

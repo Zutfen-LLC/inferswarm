@@ -792,7 +792,9 @@ def derive_unit_facts(unit_dir: Path) -> dict[str, Any]:
 def r8e_captured_rows(unit_dir: Path) -> dict[int, bytes]:
     """Rows captured by the R8-E path (pos{N}.f32 files)."""
     out: dict[int, bytes] = {}
-    for p in sorted(unit_dir.glob("*.r8e.pos*.f32")):
+    for p in sorted(unit_dir.glob("*.pos*.f32")):
+        if ".r8e" not in p.name:
+            continue
         m = re.search(r"\.pos(\d+)\.f32$", p.name)
         if m:
             out[int(m.group(1))] = p.read_bytes()

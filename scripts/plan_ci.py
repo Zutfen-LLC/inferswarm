@@ -627,6 +627,7 @@ PATH_GROUPS = {
     "scripts/issue248_analysis.py": ["r8i-qwen-qualification"],
     "scripts/issue248_diagnostic.py": ["r8i-qwen-qualification"],
     "scripts/issue248_health.py": ["r8i-qwen-qualification"],
+    "scripts/issue248_identity.py": ["r8i-qwen-qualification"],
     "scripts/issue248_physical.py": ["r8i-qwen-qualification"],
     "scripts/issue248_terminal.py": ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":

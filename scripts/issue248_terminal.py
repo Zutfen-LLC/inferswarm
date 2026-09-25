@@ -414,7 +414,9 @@ def _population(root: Path, units: Any, name: str, namespace: str,
             elif any(unit_dir.glob("obs.row*.f32")):
                 raise ValueError("rowless unit contains unbound observer rows")
             r8e: dict[int, bytes] = {}
-            for path in unit_dir.glob("*.r8e.pos*.f32"):
+            for path in unit_dir.glob("*.pos*.f32"):
+                if ".r8e" not in path.name:
+                    continue
                 match = re.search(r"\.pos(\d+)\.f32$", path.name)
                 if match:
                     pos = int(match.group(1))

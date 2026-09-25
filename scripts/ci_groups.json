@@ -1262,6 +1262,9 @@
   "scripts/issue248_health.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue248_identity.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue248_physical.py": [
    "r8i-qwen-qualification"
   ],
