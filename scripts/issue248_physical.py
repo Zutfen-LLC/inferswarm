@@ -173,9 +173,12 @@ def run_diagnostic_unit(
       3. MANDATORY live dispatch revalidation — the live PR-conversation
          fetch (PR open/unmerged/base-main/exact-head, issue open,
          OWNER/MEMBER comment, exact lines) runs through
-         :func:`D.require_live_dispatch` immediately before the unit;
-         omitting the injection runs the REAL fetcher, never disables
-         verification;
+         :func:`D.require_live_dispatch` TWICE: once early (fail fast)
+         and once as the FINAL governance gate immediately before the
+         physical launch, with both observations bound to the identical
+         comment/head/namespace/association/created-at/body digest
+         (round 3, maintainer NO-GO comment 5824220880); omitting the
+         injection runs the REAL fetcher, never disables verification;
       4. case-4096 authorization derives only from the fetched
          comment's exact ``case-4096:<reason>`` line;
       5. the offline reducer derives the terminal (see derive_terminal);
@@ -191,11 +194,16 @@ def run_diagnostic_unit(
     if kind == "canonical" and binary_id != "canonical":
         raise PhysicalDiagnosticError("canonical kind requires canonical binary")
     D.validate_namespace(namespace)
-    # GATE ORDER (source-checked by tests): namespace shape -> live
-    # dispatch authority -> clean exact head -> case authorization ->
-    # fixture identity -> exact model bytes -> binary identity ->
-    # subject identity -> prepare custody -> launch.
-    authority = D.require_live_dispatch(
+    # GATE ORDER (source-checked by tests): namespace shape -> EARLY live
+    # dispatch authority (fail fast) -> case authorization -> fixture
+    # identity -> exact model bytes -> binary identity -> local clean head
+    # -> subject identity -> prepare prelaunch custody -> request/env ->
+    # FINAL live dispatch authority (two-pass binding + clean head) ->
+    # launch. The final gate is the LAST governance check before any
+    # physical process exists: the remote PR/issue/comment authority can
+    # move during the model-hash + preflight interval above, and only a
+    # second live observation bound to the first closes that window.
+    authority_early = D.require_live_dispatch(
         repo_root, expected_head, namespace,
         revalidate_authority=revalidate_authority, github_api=github_api)
     # case-4096 permission is COMMENT-DERIVED ONLY (correction 4): the
@@ -203,12 +211,12 @@ def run_diagnostic_unit(
     # ``preauthorized_case4096`` key on a caller dict is ignored by the
     # validator and can never manufacture this permission.
     if case == D.CASE_4096:
-        case4096 = authority.get("case4096")
+        case4096 = authority_early.get("case4096")
         if not case4096:
             raise PhysicalDiagnosticError(
                 "case-4096 requires an exact 'case-4096:<reason>' line in "
                 "the live dispatch comment")
-        if case4096.get("comment_id") != authority.get("comment_id"):
+        if case4096.get("comment_id") != authority_early.get("comment_id"):
             raise PhysicalDiagnosticError(
                 "case-4096 authorization is not bound to the live "
                 "dispatch comment")
@@ -254,6 +262,36 @@ def run_diagnostic_unit(
                if not k.startswith("LLAMA_OBSERVE")}
     argv = D.server_argv(Path(binary), launch_member, ngl,
                          PORT_BY_ARM[arm])
+
+    # ------------------------------------------------------------------
+    # FINAL GOVERNANCE GATE (round 3 — maintainer NO-GO comment 5824220880,
+    # blocker 1). Everything above is read-only or prelaunch custody;
+    # the physical launch happens only after this gate passes:
+    #   * a SECOND mandatory live GitHub authority fetch (PR open/unmerged/
+    #     base main/head == authorized head, Issue #248 OPEN, OWNER/MEMBER
+    #     comment, exact phrase/head/namespace lines);
+    #   * the early and late observations bind to the SAME comment ID,
+    #     exact head, namespace, author association, created-at and body
+    #     bytes (canonical dispatch digest) — any remote drift between
+    #     the two fetches aborts with zero runner calls;
+    #   * the local checkout is still the exact authorized clean head;
+    #   * a case-4096 unit re-derives its authorization from the FINAL
+    #     comment bytes.
+    # ------------------------------------------------------------------
+    authority_late = D.require_live_dispatch(
+        repo_root, expected_head, namespace,
+        revalidate_authority=revalidate_authority, github_api=github_api)
+    final_authority = D.bind_authority_observations(
+        authority_early, authority_late)
+    D._require_clean_head(repo_root, expected_head)
+    if case == D.CASE_4096:
+        case4096_final = final_authority.get("case4096")
+        if (not case4096_final
+                or case4096_final.get("comment_id")
+                != final_authority.get("comment_id")):
+            raise PhysicalDiagnosticError(
+                "case-4096 authorization is not bound to the final live "
+                "dispatch comment")
     unit_started_at = datetime.now(timezone.utc).isoformat()
     started = time.monotonic()
 
@@ -335,11 +373,7 @@ def run_diagnostic_unit(
         "subject_identity_schema": I.IDENTITY_SCHEMA,
         "intervention": dict(intervention) if intervention else None,
         "intervention_mode": bool(intervention),
-        "authority": {"comment_id": authority["comment_id"],
-                      "head_sha": authority["head_sha"],
-                      "namespace": authority["namespace"],
-                      "created_at": authority["created_at"],
-                      "case4096": authority.get("case4096")},
+        "authority": D.unit_authority_block(final_authority),
         "wall_time_s": wall,
     }
     meta_path = unit_dir / "obs.meta.json"
@@ -598,16 +632,20 @@ def _fork_units(units: list[str], variant: str) -> list[str]:
 
 
 def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
-                    *, case4096_authority: Any = None) -> dict[str, Any]:
+                    *, case4096_authority: Any = None,
+                    dispatch_authority: Any = None) -> dict[str, Any]:
     """The strict retained-byte terminal authority; no caller-selected label.
 
     ``case4096_authority`` must be a LIVE dispatch authority payload when
-    (and only when) the plan contains case-4096 units; see
-    ``issue248_terminal.derive_terminal``.
+    (and only when) the plan contains case-4096 units;
+    ``dispatch_authority`` is the namespace-keyed LIVE dispatch authority
+    map (see ``issue248_terminal.derive_terminal``). Neither defaults to
+    a bypass: omitting them blocks, never authorizes.
     """
     import issue248_terminal as terminal
     return terminal.derive_terminal(evidence_root, namespace, plan,
-                                    case4096_authority=case4096_authority)
+                                    case4096_authority=case4096_authority,
+                                    dispatch_authority=dispatch_authority)
 
 
 def _platform_health(base: Path,

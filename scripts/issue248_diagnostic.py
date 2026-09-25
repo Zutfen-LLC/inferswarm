@@ -267,6 +267,85 @@ def _require_clean_head(repo_root: Path, expected_head: str) -> None:
         raise DiagnosticError("worktree is dirty; diagnostic requires clean")
 
 
+# ---------------------------------------------------------------------------
+# Dispatch-authority identity (round 3): every terminal-bearing unit binds
+# to the EXACT authorizing comment. The canonical digest covers the comment
+# identity fields AND the full comment body bytes, so a receipt stamped
+# under one comment can never be re-bound to another.
+# ---------------------------------------------------------------------------
+
+AUTHORITY_DIGEST_FIELDS = (
+    "comment_id", "issue_url", "author_association", "created_at",
+    "head_sha", "namespace", "body",
+)
+
+
+def authority_digest(authority: dict[str, Any]) -> str:
+    """Canonical digest of the authorizing comment's binding identity."""
+    if not isinstance(authority, dict):
+        raise DiagnosticError("authority must be a dict")
+    doc: dict[str, Any] = {}
+    for key in AUTHORITY_DIGEST_FIELDS:
+        value = authority.get(key)
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            raise DiagnosticError(
+                f"authority digest field missing or malformed: {key}")
+        doc[key] = value
+    return sha256_bytes(
+        json.dumps(doc, sort_keys=True, separators=(",", ":")).encode())
+
+
+def unit_authority_block(final_authority: dict[str, Any]) -> dict[str, Any]:
+    """The canonical per-unit dispatch-authority block for unit receipts.
+
+    One implementation builds the block the producer stamps into every
+    retained unit receipt; the offline reducer re-derives the SAME block
+    from the live dispatch payload and requires exact equality, so a
+    fabricated or transplanted receipt cannot satisfy the terminal
+    reduction without the real authorizing comment bytes.
+    """
+    if not isinstance(final_authority, dict):
+        raise DiagnosticError("final authority must be a dict")
+    return {
+        "comment_id": final_authority["comment_id"],
+        "head_sha": final_authority["head_sha"],
+        "namespace": final_authority["namespace"],
+        "created_at": final_authority["created_at"],
+        "author_association": final_authority["author_association"],
+        "pr_number": DIAGNOSTIC_PR_NUMBER,
+        "issue_number": DIAGNOSTIC_ISSUE,
+        "dispatch_sha256": authority_digest(final_authority),
+        "case4096": (dict(final_authority["case4096"])
+                     if isinstance(final_authority.get("case4096"), dict)
+                     else None),
+    }
+
+
+def bind_authority_observations(early: Any, late: Any) -> dict[str, Any]:
+    """Require two independently fetched authorities to be the SAME one.
+
+    The live GitHub authority can move during the potentially long
+    interval between the early fail-fast check and physical launch
+    (complete three-member model hashing alone reads ~72.5 GB). Both
+    observations must bind to the identical comment ID, exact head,
+    namespace, author association, created-at timestamp, PR binding and
+    comment body (via the canonical digest); any difference fails closed
+    BEFORE any unit custody exists or any process launches.
+    """
+    if not isinstance(early, dict) or not isinstance(late, dict):
+        raise DiagnosticError(
+            "authority observations must be objects")
+    for key in (*AUTHORITY_DIGEST_FIELDS,):
+        if early.get(key) != late.get(key):
+            raise DiagnosticError(
+                f"live dispatch authority changed between observations: "
+                f"{key}")
+    if authority_digest(early) != authority_digest(late):
+        raise DiagnosticError(
+            "live dispatch authority digest changed between observations")
+    return dict(late)
+
+
 def validate_authority_payload(authority: dict[str, Any],
                                expected_head: str) -> dict[str, Any]:
     """Structurally validate a fetched dispatch authority payload.

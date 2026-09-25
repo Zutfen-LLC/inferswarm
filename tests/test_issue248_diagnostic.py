@@ -92,6 +92,8 @@ def identity_ok(arm: str) -> dict:
 def make_authority(head: str = HEAD, namespace: str = "d248-test-ns",
                    body_extra: list[str] | None = None,
                    open_pr: bool = True, issue_open: bool = True,
+                   comment_id: int = 123456,
+                   author_association: str = "MEMBER",
                    ) -> dict:
     lines = [
         f"{D.DIAGNOSTIC_DISPATCH_PHRASE}",
@@ -101,9 +103,9 @@ def make_authority(head: str = HEAD, namespace: str = "d248-test-ns",
     if body_extra:
         lines.extend(body_extra)
     return {
-        "comment_id": 123456,
+        "comment_id": comment_id,
         "issue_url": f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}",
-        "author_association": "MEMBER",
+        "author_association": author_association,
         "created_at": "2026-09-25T00:00:00Z",
         "body": "\n".join(lines),
         "head_sha": head,
@@ -547,8 +549,10 @@ class FakeRunnerPhysicalTests(unittest.TestCase):
         import issue248_terminal as T
         receipt = self._run()
         unit = self.root / "ev" / "d248-fake" / receipt["tag"]
+        payload = make_authority(head=HEAD, namespace="d248-fake")
         population, problems = T._population(unit.parent, [receipt["tag"]],
-                                              "repeat", "d248-fake")
+                                              "repeat", "d248-fake",
+                                              expected_authority=payload)
         self.assertEqual(problems, [])
         self.assertEqual(len(population["units"]), 1)
 
@@ -1563,6 +1567,31 @@ ROW_BYTES = T.ROW_BYTES
 TOKENS = [1, 2, 3, 4, 5, 6, 7, 8]
 STAMP0 = "2026-09-24T12:00:00+00:00"
 STAMP1 = "2026-09-24T12:01:00+00:00"
+# Round-3 dispatch provenance: one authoritative live dispatch payload
+# per frozen probe namespace (each phase is separately authorized by an
+# exact diagnostic-namespace scope line in its own OWNER/MEMBER comment).
+DISPATCH_HEAD = "a" * 40
+DISPATCH_COMMENT_ID = 5821999901
+
+
+def dispatch_payload(namespace: str, *, head: str = DISPATCH_HEAD,
+                     comment_id: int = DISPATCH_COMMENT_ID,
+                     body_extra: list[str] | None = None,
+                     author_association: str = "MEMBER",
+                     open_pr: bool = True, issue_open: bool = True) -> dict:
+    return make_authority(head=head, namespace=namespace,
+                          comment_id=comment_id,
+                          author_association=author_association,
+                          open_pr=open_pr, issue_open=issue_open,
+                          body_extra=body_extra)
+
+
+def dispatch_map(**overrides) -> dict:
+    """The namespace-keyed LIVE dispatch authority map for the fixture."""
+    out = {}
+    for namespace in set(T.FROZEN_PROBE_NAMESPACE.values()):
+        out[namespace] = dispatch_payload(namespace, **overrides)
+    return out
 
 
 def tag(variant: str, index: int) -> str:
@@ -1605,6 +1634,32 @@ def health_runner(argv, **_kwargs):
         "40, 20, 170, 0\n").encode())
 
 
+def fake_execute_seam(tokens=(328, 760, 324, 55965, 51624, 29014,
+                              34227, 18030)):
+    """Module-level fake execute seam (shared by the TOCTOU controls)."""
+    def execute(argv, env, arm, request, prompt, port, unit_dir):
+        raw = json.dumps({"tokens": list(tokens)}).encode()
+        (unit_dir / "obs.meta.json").write_text("".join(
+            json.dumps({"pos": d, "sampled_winner": t,
+                        "forced_token": -1, "n_vocab": D.N_VOCAB}) + "\n"
+            for d, t in enumerate(tokens)))
+        for d in range(D.DECISIONS):
+            (unit_dir / f"obs.row{d}.f32").write_bytes(
+                struct.pack("<1f", 0.5) * D.N_VOCAB)
+        stamp = datetime.now(timezone.utc).isoformat()
+        return {"tokens": list(tokens), "response_raw": raw,
+                "process_attribution": {"server_pid": 42,
+                                        "server_exe_sha256": D.SERVER_BINARIES["comparator"],
+                                        "server_argv": argv,
+                                        "server_env": env},
+                "device_samples": [{"stage": stage, "captured_at": stamp,
+                                    "nvidia_smi_raw": (
+                                        f"{I.REFERENCE_IDENTITY['gpu_uuid']}, "
+                                        "40, 20, 170, 0\n")}
+                                   for stage in ("before", "during", "after")]}
+    return execute
+
+
 class RetainedTerminalMatrix(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -1613,6 +1668,7 @@ class RetainedTerminalMatrix(unittest.TestCase):
             (self.root / namespace).mkdir()
         self.base = self.root / T.FROZEN_PROBE_NAMESPACE["repeat"]
         self.p = plan()
+        self.dispatch = dispatch_map()
         tags = set()
         for probe in self.p["probes"].values():
             tags.update(probe["units"])
@@ -1634,7 +1690,7 @@ class RetainedTerminalMatrix(unittest.TestCase):
 
     def write_unit(self, unit, *, row_seed=b"a", tokens=None, fatal=False,
                    case_id=None, arm="B", kind=None, raw_mutate=False,
-                   rowless=None):
+                   rowless=None, authority=None):
         d = self.unit_dir(unit)
         d.mkdir(parents=True, exist_ok=True)
         tokens = list(TOKENS if tokens is None else tokens)
@@ -1647,6 +1703,11 @@ class RetainedTerminalMatrix(unittest.TestCase):
                     "rung" if "ngl" in unit else
                     "regime" if "regime" in unit or "case4096" in unit else
                     "canonical" if "canonical" in unit else "observer")
+        # Round 3: every unit receipt carries the canonical dispatch
+        # authority block derived from this namespace's live payload.
+        if authority is None:
+            authority = D.unit_authority_block(
+                self.dispatch[d.parent.name])
         raw = (json.dumps({"tokens": tokens}, separators=(",", ":")) + "\n").encode()
         (d / "response.json.raw").write_bytes(raw)
         receipt = {"schema": "inferswarm.issue248.diagnostic-unit/1",
@@ -1674,7 +1735,8 @@ class RetainedTerminalMatrix(unittest.TestCase):
                                      "comparator-dual" if "obs-dual" in unit else
                                      "r8e-only" if "obs-r8e" in unit else "comparator"),
                    "identity_problems_pre": [], "identity_problems_post": [],
-                   "intervention": None}
+                   "intervention": None,
+                   "authority": authority}
         if "ngl" in unit:
             receipt["ngl"] = int(unit.split("ngl", 1)[1].split("-", 1)[0])
         if "regime" in unit:
@@ -1746,8 +1808,14 @@ class RetainedTerminalMatrix(unittest.TestCase):
             "window": health["window"]}
         (d / "unit.json").write_text(json.dumps(receipt, sort_keys=True))
 
-    def derive(self, p=None):
-        return T.derive_terminal(self.root, NS, p or self.p)
+    def derive(self, p=None, dispatch=None, case4096_authority=None,
+               health_verifier=None):
+        return T.derive_terminal(self.root, NS, p or self.p,
+                                 dispatch_authority=(
+                                     self.dispatch if dispatch is None
+                                     else dispatch),
+                                 case4096_authority=case4096_authority,
+                                 health_verifier=health_verifier)
 
     def test_population_requires_exactly_eight_integer_tokens(self):
         unit = self.p["probes"]["repeat"]["units"][0]
@@ -1805,30 +1873,46 @@ class RetainedTerminalMatrix(unittest.TestCase):
                 if u.startswith("case-4096")]
 
     def _stamp_case4096_authority(self, p, *, comment_id, head_sha, line,
-                                  reason):
-        for unit in self._case4096_units(p):
+                                  reason, live=None):
+        block = D.unit_authority_block(live or self.dispatch[
+            T.FROZEN_PROBE_NAMESPACE["regime"]])
+        block["comment_id"] = comment_id
+        block["head_sha"] = head_sha
+        block["case4096"] = {"comment_id": comment_id, "line": line,
+                             "reason": reason}
+        # Re-stamp EVERY unit of the regime namespace in this plan so
+        # the whole namespace binds to the same coherent authorizing
+        # comment (tests that swap the live payload must not leave the
+        # six ordinary regime units bound to a different body digest).
+        for unit in p["probes"]["regime"]["units"]:
             path = self.unit_dir(unit) / "unit.json"
             receipt = json.loads(path.read_bytes())
-            receipt["authority"] = {"comment_id": comment_id,
-                                    "head_sha": head_sha,
-                                    "case4096": {"comment_id": comment_id,
-                                                 "line": line,
-                                                 "reason": reason}}
+            receipt["authority"] = block
             path.write_text(json.dumps(receipt))
 
-    def _live_authority(self, *, comment_id=5821999901,
-                        head_sha="a" * 40,
+    def _live_authority(self, *, comment_id=DISPATCH_COMMENT_ID,
+                        head_sha=DISPATCH_HEAD,
                         reason="extend the regime ladder"):
         line = f"case-4096:{reason}"
-        return {"comment_id": comment_id, "head_sha": head_sha,
-                "body": "\n".join([
-                    "R8I3 PHYSICAL DISPATCH #248",
-                    f"head={head_sha}",
-                    f"diagnostic-namespace={NS}",
-                    line,
-                ]),
-                "case4096": {"comment_id": comment_id, "line": line,
-                             "reason": "FORGED: different reason"}}
+        # Positive payloads use the REAL frozen dispatch phrase constant,
+        # never a hand-typed weaker spelling (round-3 blocker 3).
+        return {
+            "comment_id": comment_id, "head_sha": head_sha,
+            "issue_url": (f"https://api.github.com/repos/Zutfen-LLC/inferswarm/"
+                          f"issues/{D.DIAGNOSTIC_PR_NUMBER}"),
+            "author_association": "MEMBER",
+            "created_at": "2026-09-25T00:00:00Z",
+            "body": "\n".join([
+                D.DIAGNOSTIC_DISPATCH_PHRASE,
+                f"head={head_sha}",
+                f"diagnostic-namespace={T.FROZEN_PROBE_NAMESPACE['regime']}",
+                line,
+            ]),
+            "namespace": T.FROZEN_PROBE_NAMESPACE["regime"],
+            "open_pr": True, "issue_open": True,
+            "case4096": {"comment_id": comment_id, "line": line,
+                         "reason": "FORGED: different reason"},
+        }
 
     def test_case4096_forged_receipt_authority_cannot_authorize(self):
         # P1 regression: an internally consistent fabricated receipt
@@ -1847,17 +1931,19 @@ class RetainedTerminalMatrix(unittest.TestCase):
     def test_case4096_live_authority_authorizes_only_exact_binding(self):
         p = self._plan_with_case4096()
         live = self._live_authority()
+        # ONE coherent comment: the live payload (with its case-4096
+        # line) is also the regime namespace's dispatch authority here.
+        self.dispatch[T.FROZEN_PROBE_NAMESPACE["regime"]] = live
         self._stamp_case4096_authority(
             p, comment_id=live["comment_id"], head_sha=live["head_sha"],
             line="case-4096:extend the regime ladder",
-            reason="extend the regime ladder")
-        out = T.derive_terminal(self.root, NS, p,
-                                case4096_authority=live)
+            reason="extend the regime ladder", live=live)
+        out = self.derive(p, case4096_authority=live)
         # A live authority whose precomputed case4096 block disagrees is
         # still fine (that block is ignored); the comment body's exact
         # line binds the retained receipts.
         self.assertEqual(out["terminal"],
-                         T.TERMINALS[4], out)  # NOT_REPRODUCED on clean set
+                         T.TERMINALS[4])  # NOT_REPRODUCED on clean set
 
     def test_case4096_live_authority_rejects_head_or_line_mismatch(self):
         p = self._plan_with_case4096()
@@ -1865,9 +1951,8 @@ class RetainedTerminalMatrix(unittest.TestCase):
         self._stamp_case4096_authority(
             p, comment_id=live["comment_id"], head_sha="b" * 40,
             line="case-4096:extend the regime ladder",
-            reason="extend the regime ladder")
-        out = T.derive_terminal(self.root, NS, p,
-                                case4096_authority=live)
+            reason="extend the regime ladder", live=live)
+        out = self.derive(p, case4096_authority=live)
         self.assertIsNone(out["terminal"])
         self.assertEqual(out["blocked"], T.BLOCKED)
         self.assertTrue(any("case-4096" in x for x in out["problems"]))
@@ -1880,9 +1965,8 @@ class RetainedTerminalMatrix(unittest.TestCase):
         self._stamp_case4096_authority(
             p, comment_id=live["comment_id"] + 1, head_sha=live["head_sha"],
             line="case-4096:extend the regime ladder",
-            reason="extend the regime ladder")
-        out = T.derive_terminal(self.root, NS, p,
-                                case4096_authority=live)
+            reason="extend the regime ladder", live=live)
+        out = self.derive(p, case4096_authority=live)
         self.assertIsNone(out["terminal"])
         self.assertEqual(out["blocked"], T.BLOCKED)
         self.assertTrue(any("case-4096" in x for x in out["problems"]))
@@ -1891,16 +1975,15 @@ class RetainedTerminalMatrix(unittest.TestCase):
         p = self._plan_with_case4096()
         live = self._live_authority()
         live["body"] = "\n".join([
-            "R8I3 PHYSICAL DISPATCH #248",
+            D.DIAGNOSTIC_DISPATCH_PHRASE,
             f"head={live['head_sha']}",
             "case-4096:extend the regime ladder",
         ])  # no diagnostic-namespace line
         self._stamp_case4096_authority(
             p, comment_id=live["comment_id"], head_sha=live["head_sha"],
             line="case-4096:extend the regime ladder",
-            reason="extend the regime ladder")
-        out = T.derive_terminal(self.root, NS, p,
-                                case4096_authority=live)
+            reason="extend the regime ladder", live=live)
+        out = self.derive(p, case4096_authority=live)
         self.assertIsNone(out["terminal"])
         self.assertEqual(out["blocked"], T.BLOCKED)
 
@@ -1918,7 +2001,7 @@ class RetainedTerminalMatrix(unittest.TestCase):
 
     def test_complete_clean_raw_evidence_is_not_reproduced(self):
         out = self.derive()
-        self.assertEqual(out["terminal"], T.TERMINALS[4], out)
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
 
     def test_execution_contract_mutations_block_frozen_probe(self):
         unit = self.p["probes"]["placement"]["units"][0]
@@ -2119,8 +2202,8 @@ class RetainedTerminalMatrix(unittest.TestCase):
         self.assertNotEqual(out["terminal"], "R8I3_REF_OBSERVER_PERTURBATION_LOCALIZED")
 
     def test_textual_health_callback_cannot_override_retained_evidence(self):
-        out = T.derive_terminal(self.root, NS, self.p,
-                                health_verifier=lambda *_: {"fatal_states": [], "evidence": ["invented"]})
+        out = self.derive(
+            health_verifier=lambda *_: {"fatal_states": [], "evidence": ["invented"]})
         self.assertEqual(out["terminal"], "R8I3_REF_NONDETERMINISM_NOT_REPRODUCED")
 
     def test_forged_success_receipt_with_raw_identity_drift_blocks(self):
@@ -2155,6 +2238,501 @@ class RetainedTerminalMatrix(unittest.TestCase):
         self.assertIsNone(out["terminal"])
         self.assertEqual(out["blocked"], T.BLOCKED)
 
+
+
+class DispatchProvenanceMatrix(RetainedTerminalMatrix):
+    """Round-3 blocker 2: competent-forgery controls for unit dispatch
+    provenance. Every fixture here is numerically/runtime/health VALID
+    (inherited from the parent fixtures); ONLY the dispatch provenance
+    varies, proving valid evidence cannot overcome invalid provenance.
+    """
+
+    def _rewrite(self, unit, mutate):
+        path = self.unit_dir(unit) / "unit.json"
+        receipt = json.loads(path.read_bytes())
+        mutate(receipt)
+        path.write_text(json.dumps(receipt, sort_keys=True))
+
+    def test_valid_evidence_authority_absent_blocks(self):
+        for unit in self.tags:
+            self._rewrite(unit, lambda r: r.pop("authority", None))
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("dispatch authority" in x for x in out["problems"]))
+
+    def test_valid_evidence_wrong_head_blocks(self):
+        def mutate(r):
+            r["authority"]["head_sha"] = "e" * 40
+        for unit in self.tags:
+            self._rewrite(unit, mutate)
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_valid_evidence_wrong_comment_id_blocks(self):
+        def mutate(r):
+            r["authority"]["comment_id"] = DISPATCH_COMMENT_ID + 99
+        for unit in self.tags:
+            self._rewrite(unit, mutate)
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_valid_evidence_wrong_dispatch_digest_blocks(self):
+        def mutate(r):
+            r["authority"]["dispatch_sha256"] = "f" * 64
+        for unit in self.tags:
+            self._rewrite(unit, mutate)
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_correct_head_wrong_namespace_in_unit_blocks(self):
+        # A unit whose authority block names a different namespace than
+        # the probe namespace containing it (the transplanted-unit shape).
+        def mutate(r):
+            r["authority"]["namespace"] = "d248-other-namespace"
+        for unit in self.tags:
+            self._rewrite(unit, mutate)
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("namespace" in x for x in out["problems"]))
+
+    def test_copied_valid_unit_moved_into_different_probe_namespace_blocks(self):
+        # Copy one fully valid repeat unit's bytes into the placement
+        # namespace under a placement tag shape: the receipt itself is
+        # internally re-bound (tag/namespace/kind), but its authority
+        # digest still names the REPEAT namespace's dispatch — only the
+        # probe-namespace equality check catches it.
+        source = self.unit_dir(self.p["probes"]["repeat"]["units"][0])
+        target_tag = "case-3072-B-ngl1-001"
+        target = self.unit_dir(target_tag)
+        receipt = json.loads((source / "unit.json").read_bytes())
+        receipt["tag"] = target_tag
+        receipt["namespace"] = target.parent.name
+        receipt["kind"] = "rung"
+        receipt["ngl"] = 1
+        receipt["server_argv"] = D.server_argv(
+            Path("/accepted/llama-server"),
+            Path(D.MODEL_DIR) / D.MODEL_MEMBER_1, 1, 19000)
+        target.mkdir(parents=True, exist_ok=True)
+        for name in ("response.json.raw", "identity-pre.json",
+                     "identity-post.json", "obs.meta.json",
+                     "platform-health-receipt.json", "kernel-journal.raw",
+                     "nvidia-smi.csv.raw", "device-samples.json"):
+            if (source / name).is_file():
+                (target / name).write_bytes((source / name).read_bytes())
+        for i in range(8):
+            (target / f"obs.row{i}.f32").write_bytes(
+                (source / f"obs.row{i}.f32").read_bytes())
+        (target / "unit.json").write_text(json.dumps(receipt, sort_keys=True))
+        # The authority block still equals the REPEAT dispatch — the
+        # placement population must reject it via namespace mismatch.
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("namespace" in x for x in out["problems"]))
+
+    def test_two_units_same_namespace_different_comments_blocks(self):
+        # Both units stay in the repeat namespace but one claims a
+        # different (unauthorized) authorizing comment.
+        other = dispatch_payload(T.FROZEN_PROBE_NAMESPACE["repeat"],
+                                 comment_id=DISPATCH_COMMENT_ID + 7)
+        self._rewrite(self.p["probes"]["repeat"]["units"][1],
+                      lambda r: r.__setitem__(
+                          "authority", D.unit_authority_block(other)))
+        out = self.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("authority binding mismatch" in x
+                            for x in out["problems"]))
+
+    def test_no_dispatch_authority_map_blocks(self):
+        # Fully valid evidence, but the reduction was given no live
+        # dispatch authority at all.
+        out = self.derive(dispatch={})
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("no validated live dispatch authority"
+                            in x for x in out["problems"]))
+
+    def test_non_member_dispatch_payload_blocks(self):
+        out = self.derive(dispatch=dispatch_map(author_association="CONTRIBUTOR"))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_closed_pr_or_issue_dispatch_payload_blocks(self):
+        out = self.derive(dispatch=dispatch_map(open_pr=False))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        out = self.derive(dispatch=dispatch_map(issue_open=False))
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_wrong_pr_binding_dispatch_payload_blocks(self):
+        bad = dispatch_map()
+        for payload in bad.values():
+            payload["issue_url"] = (
+                "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/242")
+        out = self.derive(dispatch=bad)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_wrong_phrase_dispatch_payload_blocks(self):
+        bad = dispatch_map()
+        for payload in bad.values():
+            payload["body"] = payload["body"].replace(
+                D.DIAGNOSTIC_DISPATCH_PHRASE, "R8I3 PHYSICAL DISPATCH #248")
+        out = self.derive(dispatch=bad)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_missing_head_line_dispatch_payload_blocks(self):
+        bad = dispatch_map()
+        for payload in bad.values():
+            payload["body"] = payload["body"].replace(
+                f"head={DISPATCH_HEAD}\n", "")
+        out = self.derive(dispatch=bad)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_stale_head_dispatch_payload_blocks(self):
+        bad = dispatch_map(head="b" * 40)
+        out = self.derive(dispatch=bad)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_duplicate_namespace_lines_dispatch_payload_blocks(self):
+        bad = dispatch_map()
+        for payload in bad.values():
+            payload["body"] += f"\ndiagnostic-namespace={payload['namespace']}"
+        out = self.derive(dispatch=bad)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_map_key_mismatch_dispatch_payload_blocks(self):
+        # A payload registered under the WRONG map key (its validated
+        # namespace differs from the key it is filed under).
+        good = dispatch_map()
+        payload = good[T.FROZEN_PROBE_NAMESPACE["repeat"]]
+        del good[T.FROZEN_PROBE_NAMESPACE["repeat"]]
+        good["d248-wrong-key"] = payload
+        out = self.derive(dispatch=good)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_valid_evidence_with_exact_namespace_authority_accepted(self):
+        out = self.derive()
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        self.assertIsNone(out["blocked"])
+
+
+class Case4096FullAuthorityMatrix(RetainedTerminalMatrix):
+    """Round-3 blocker 3: the case-4096 permission must clear the SAME
+    full diagnostic-dispatch validator as ordinary units; the old weaker
+    parser (integer id + 40-hex head + namespace line + case line, no
+    phrase/association/PR-state/issue-state/head-line checks) accepted
+    payloads the real dispatch contract rejects.
+    """
+
+    def _derive_with_4096(self, live, p=None):
+        p = p or self._plan_with_case4096()
+        # ONE coherent authorizing comment: the live payload (which
+        # carries the case-4096 line) is also the regime namespace's
+        # dispatch authority for this reduction.
+        self.dispatch[T.FROZEN_PROBE_NAMESPACE["regime"]] = live
+        self._stamp_case4096_authority(
+            p, comment_id=live["comment_id"], head_sha=live["head_sha"],
+            line="case-4096:extend the regime ladder",
+            reason="extend the regime ladder", live=live)
+        return self.derive(p, case4096_authority=live)
+
+    def test_weaker_r8i3_phrase_rejected(self):
+        # OLD-DEFECT PROOF: the exact wrong phrase the round-2 fixture
+        # used ("R8I3 PHYSICAL DISPATCH #248", missing the A) must now
+        # be rejected by the full validator.
+        live = self._live_authority()
+        live["body"] = live["body"].replace(
+            D.DIAGNOSTIC_DISPATCH_PHRASE, "R8I3 PHYSICAL DISPATCH #248")
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("phrase" in x for x in out["problems"]))
+
+    def test_missing_dispatch_phrase_rejected(self):
+        live = self._live_authority()
+        live["body"] = "\n".join(live["body"].splitlines()[1:])
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_missing_exact_head_line_rejected(self):
+        live = self._live_authority()
+        live["body"] = live["body"].replace(f"head={live['head_sha']}\n", "")
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_stale_head_line_rejected(self):
+        live = self._live_authority(head_sha="c" * 40)
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_non_member_author_rejected(self):
+        live = self._live_authority()
+        live["author_association"] = "CONTRIBUTOR"
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_wrong_pr_binding_rejected(self):
+        live = self._live_authority()
+        live["issue_url"] = (
+            "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/242")
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_closed_pr_state_rejected(self):
+        live = self._live_authority()
+        live["open_pr"] = False
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_closed_issue_state_rejected(self):
+        live = self._live_authority()
+        live["issue_open"] = False
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_wrong_namespace_scope_rejected(self):
+        live = self._live_authority()
+        live["body"] = live["body"].replace(
+            f"diagnostic-namespace={T.FROZEN_PROBE_NAMESPACE['regime']}",
+            "diagnostic-namespace=d248-wrong-scope")
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_duplicate_namespace_lines_rejected(self):
+        live = self._live_authority()
+        live["body"] += (
+            f"\ndiagnostic-namespace={T.FROZEN_PROBE_NAMESPACE['regime']}")
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_absent_case4096_line_rejects_case4096_units_only(self):
+        # A dispatch valid for the regime namespace WITHOUT the
+        # case-4096 line: only the case-4096 population may fail.
+        p = self._plan_with_case4096()
+        live = self._live_authority()
+        live["body"] = "\n".join(
+            line for line in live["body"].splitlines()
+            if not line.startswith("case-4096:"))
+        regime_ns = T.FROZEN_PROBE_NAMESPACE["regime"]
+        self.dispatch[regime_ns] = live
+        self._stamp_case4096_authority(
+            p, comment_id=live["comment_id"], head_sha=live["head_sha"],
+            line="case-4096:extend the regime ladder",
+            reason="extend the regime ladder", live=live)
+        out = self.derive(p, case4096_authority=live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("case-4096" in x for x in out["problems"]))
+
+    def test_duplicate_conflicting_case4096_lines_rejected(self):
+        live = self._live_authority()
+        live["body"] += "\ncase-4096:a conflicting second reason"
+        out = self._derive_with_4096(live)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+
+    def test_fabricated_internally_consistent_receipt_rejected(self):
+        # OLD-DEFECT PROOF (round-2 P1, re-proven through the full
+        # validator): a receipt whose authority block matches itself but
+        # has NO live dispatch payload cannot authorize case-4096.
+        p = self._plan_with_case4096()
+        self._stamp_case4096_authority(
+            p, comment_id=4242, head_sha="d" * 40,
+            line="case-4096:extend the regime ladder",
+            reason="extend the regime ladder")
+        out = self.derive(p)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertTrue(any("case-4096" in x for x in out["problems"]))
+
+    def test_precomputed_case4096_summary_cannot_override_comment_bytes(self):
+        # The payload's own case4096 dict claims a DIFFERENT reason than
+        # the comment body's exact line: the body wins; the receipts are
+        # stamped with the body's line, so this must still authorize.
+        live = self._live_authority()
+        live["case4096"] = {"comment_id": live["comment_id"],
+                            "line": "case-4096:some other reason",
+                            "reason": "some other reason"}
+        out = self._derive_with_4096(live)
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+
+    def test_fully_valid_dispatch_with_exact_case4096_line_accepted(self):
+        live = self._live_authority()
+        out = self._derive_with_4096(live)
+        self.assertEqual(out["terminal"], T.TERMINALS[4])
+        self.assertIsNone(out["blocked"])
+
+
+class TwoPassAuthorityLaunchControls(unittest.TestCase):
+    """Round-3 blocker 1: TOCTOU controls on the two-pass live authority.
+
+    The first fetch is VALID; remote state drifts before the final gate;
+    the runner call list must be EMPTY in every drift case (recorded-call
+    ordering, not eventual rejection).
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.repo = self.root / "repo"
+        (self.repo / "docs/investigations/qwen38-flash-next-r8-b/"
+         "evidence/reference").mkdir(parents=True)
+        source = (REPO / D.FIXTURE_LADDER_REL).read_bytes()
+        (self.repo / D.FIXTURE_LADDER_REL).write_bytes(source)
+        self.bin = self.root / "bin"
+        self.bin.write_bytes(b"x" * 32)
+        self.model_dir = self.root / D.MODEL_DIR.lstrip("/")
+        self.model_dir.mkdir(parents=True)
+        for member in D.MODEL_MEMBERS:
+            (self.model_dir / member).write_bytes(b"m" * 64)
+        self.member_digests = {m: D.MODEL_MEMBER_SHA256[m]
+                               for m in D.MODEL_MEMBERS}
+        self.model_hasher = lambda path: self.member_digests[path.name]
+        self._orig = dict(D.SERVER_BINARIES)
+        D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
+        import issue248_diagnostic
+        self._orig_run = issue248_diagnostic.subprocess.run
+        issue248_diagnostic.subprocess.run = FakeGit(HEAD)
+
+    def tearDown(self):
+        D.SERVER_BINARIES.clear()
+        D.SERVER_BINARIES.update(self._orig)
+        import issue248_diagnostic
+        issue248_diagnostic.subprocess.run = self._orig_run
+        self._tmp.cleanup()
+
+    def _fetch_pair(self, first, second):
+        """A revalidate_authority seam that drifts after the first call."""
+        state = {"calls": 0}
+
+        def fetch(repo_root, expected_head, namespace, github_api):
+            state["calls"] += 1
+            payload = first if state["calls"] == 1 else second
+            if isinstance(payload, Exception):
+                raise payload
+            return payload(head=expected_head, namespace=namespace)
+        return fetch
+
+    def _attempt(self, first, second):
+        calls = []
+
+        def execute(**kw):
+            calls.append(kw)
+            raise AssertionError("runner must not be reached")
+
+        with self.assertRaises((P.PhysicalDiagnosticError, D.DiagnosticError)):
+            P.run_diagnostic_unit(
+                self.repo, self.root / "ev", "d248-toctou", "repeat",
+                arm="B", case="case-3072", ngl=8, binary_id="comparator",
+                binary=self.bin, model_dir=self.model_dir,
+                expected_head=HEAD, index=1, execute=execute,
+                health_runner=FakeRunnerPhysicalTests._fake_health_command,
+                identity_observer=lambda arm: census_observation(arm),
+                revalidate_authority=self._fetch_pair(first, second),
+                model_hasher=self.model_hasher)
+        return calls
+
+    def test_first_valid_second_pr_head_moved_zero_runner_calls(self):
+        def drifted(**kw):
+            payload = make_authority(**kw)
+            payload["open_pr"] = False
+            payload["head_sha"] = "f" * 40
+            return payload
+        calls = self._attempt(make_authority, drifted)
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_pr_closed_zero_runner_calls(self):
+        calls = self._attempt(
+            make_authority,
+            lambda **kw: make_authority(**{**kw, "open_pr": False}))
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_issue_closed_zero_runner_calls(self):
+        calls = self._attempt(
+            make_authority,
+            lambda **kw: make_authority(**{**kw, "issue_open": False}))
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_comment_absent_zero_runner_calls(self):
+        calls = self._attempt(
+            make_authority,
+            D.DiagnosticError("no valid dispatch authority"))
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_namespace_changed_zero_runner_calls(self):
+        def drifted(**kw):
+            kw = dict(kw)
+            kw["namespace"] = kw["namespace"] + "-drifted"
+            return make_authority(**kw)
+        calls = self._attempt(make_authority, drifted)
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_comment_id_differs_fails_closed(self):
+        def drifted(**kw):
+            kw = dict(kw)
+            kw["comment_id"] = 987654321
+            return make_authority(**kw)
+        calls = self._attempt(make_authority, drifted)
+        self.assertEqual(calls, [])
+
+    def test_first_valid_second_body_edited_fails_closed(self):
+        def drifted(**kw):
+            payload = make_authority(**kw)
+            payload["body"] = payload["body"] + "\nedited later"
+            return payload
+        calls = self._attempt(make_authority, drifted)
+        self.assertEqual(calls, [])
+
+    def test_both_checks_identical_current_allows_launch(self):
+        receipt = P.run_diagnostic_unit(
+            self.repo, self.root / "ev", "d248-toctou-ok", "repeat",
+            arm="B", case="case-3072", ngl=8, binary_id="comparator",
+            binary=self.bin, model_dir=self.model_dir, expected_head=HEAD,
+            index=1, execute=fake_execute_seam(),
+            health_runner=FakeRunnerPhysicalTests._fake_health_command,
+            identity_observer=lambda arm: census_observation(arm),
+            revalidate_authority=self._fetch_pair(make_authority,
+                                                  make_authority),
+            model_hasher=self.model_hasher)
+        self.assertEqual(receipt["authority"]["comment_id"], 123456)
+        self.assertEqual(receipt["authority"]["head_sha"], HEAD)
+        self.assertIn("dispatch_sha256", receipt["authority"])
+
+    def test_final_gate_is_last_governance_before_runner(self):
+        # Source-order proof: within run_diagnostic_unit, the runner
+        # invocation comes after the final authority gate + binding +
+        # clean-head recheck, which come after the early gate.
+        import inspect
+        src = inspect.getsource(P.run_diagnostic_unit)
+        final = src.index("FINAL GOVERNANCE GATE")
+        bind = src.index("D.bind_authority_observations")
+        runner = src.index("runner = execute or _real_execute")
+        early = src.index("authority_early = D.require_live_dispatch")
+        self.assertLess(early, final)
+        self.assertLess(final, bind)
+        self.assertLess(bind, runner)
 
 
 if __name__ == "__main__":

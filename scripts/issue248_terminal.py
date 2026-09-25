@@ -193,55 +193,124 @@ def _plan_has_case4096(plan: dict[str, Any]) -> bool:
     return False
 
 
-def _live_case4096_permission(authority: Any,
-                              namespace: str) -> tuple[dict[str, Any] | None,
-                                                       list[str]]:
-    """Re-derive the case-4096 authorization from a LIVE authority payload.
+def _validate_live_authority(authority: Any,
+                             expected_namespace: str | None = None
+                             ) -> tuple[dict[str, Any] | None, list[str]]:
+    """Validate a LIVE dispatch payload through the ONE canonical validator.
 
-    The payload's precomputed ``case4096`` block is ignored exactly like
-    every other caller-supplied summary: the authorization line is parsed
-    from the fetched comment body bytes, must be exactly one nonempty
-    ``case-4096:<reason>`` line, and the comment must carry exactly one
-    ``diagnostic-namespace=`` line scoping it to this reduction. Without
-    this live binding a fabricated, internally consistent receipt could
-    make unauthorized case-4096 evidence terminal-bearing (the reducer
-    cannot trust retained authorization claims about GitHub state).
+    This is the SAME complete diagnostic-dispatch validator physical
+    execution gates on (``D.validate_authority_payload``): exact
+    ``R8I3A PHYSICAL DISPATCH #248`` stripped line, exact ``head=<sha>``
+    body line matching the payload head, exactly one
+    ``diagnostic-namespace=`` line, OWNER/MEMBER association, PR #249
+    binding via issue_url, live PR open/unmerged and Issue #248 open
+    state flags, and a created-at timestamp. There is deliberately NO
+    second, weaker authority parser anywhere in the reduction (round-3
+    blocker 3): case-4096 and ordinary units consume this one validator,
+    and only AFTER it succeeds is the single ``case-4096:<reason>``
+    line additionally parsed (inside the validator itself, from the
+    comment body bytes — never from a caller-supplied summary).
     """
     if not isinstance(authority, dict):
-        return None, ["case-4096 live authority payload is not an object"]
-    comment_id = authority.get("comment_id")
-    head_sha = authority.get("head_sha")
-    body = authority.get("body")
-    if (type(comment_id) is not int or not isinstance(head_sha, str)
-            or not re.fullmatch(r"[0-9a-f]{40}", head_sha)
-            or not isinstance(body, str)):
-        return None, ["case-4096 live authority identity malformed"]
-    lines = [ln.strip() for ln in body.splitlines()]
-    scope = [ln.split("=", 1)[1] for ln in lines
-             if ln.startswith("diagnostic-namespace=")]
-    if scope != [namespace]:
+        return None, ["live dispatch authority payload is not an object"]
+    head = authority.get("head_sha")
+    if (not isinstance(head, str)
+            or not re.fullmatch(r"[0-9a-f]{40}", head)):
+        return None, ["live dispatch authority head_sha is not a 40-hex sha"]
+    try:
+        validated = D.validate_authority_payload(authority, head)
+    except D.DiagnosticError as exc:
+        return None, [f"live diagnostic dispatch authority rejected: {exc}"]
+    if (expected_namespace is not None
+            and validated.get("namespace") != expected_namespace):
         return None, [
-            "case-4096 live authority is not bound to this diagnostic namespace"]
-    c4096 = [ln for ln in lines if ln.startswith("case-4096:")]
-    if len(c4096) != 1:
-        return None, [
-            "case-4096 live authority lacks exactly one authorization line"]
-    reason = c4096[0][len("case-4096:"):].strip()
-    if not reason:
-        return None, ["case-4096 live authorization line has an empty reason"]
-    return {"comment_id": comment_id, "line": c4096[0], "reason": reason,
-            "head_sha": head_sha}, []
+            "live dispatch authority namespace "
+            f"{validated.get('namespace')!r} does not scope the probe "
+            f"namespace {expected_namespace!r}"]
+    return validated, []
+
+
+def _namespace_authorities(dispatch_authority: Any,
+                           case4096_authority: Any
+                           ) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Validate the namespace-keyed live dispatch authority map.
+
+    Each frozen diagnostic phase uses its own ``d248-`` namespace, so the
+    reduction authority input is a map keyed by namespace (round-3
+    blocker 2); one comment cannot authorize all namespaces. Every
+    payload is validated through the canonical full validator and its
+    parsed namespace must equal the map key it is registered under.
+    ``case4096_authority`` (round-2 shape) is a single live payload
+    registered under its own validated namespace.
+    """
+    authorities: dict[str, dict[str, Any]] = {}
+    problems: list[str] = []
+    if dispatch_authority is not None:
+        if not isinstance(dispatch_authority, dict):
+            return {}, ["dispatch_authority must be a namespace-keyed map"]
+        for key, payload in dispatch_authority.items():
+            validated, errors = _validate_live_authority(payload, key)
+            if errors or validated is None:
+                problems.extend(f"dispatch authority[{key}]: {e}"
+                                for e in errors)
+                continue
+            authorities[key] = validated
+    if case4096_authority is not None:
+        validated, errors = _validate_live_authority(case4096_authority)
+        if errors or validated is None:
+            problems.extend(f"case-4096 live authority: {e}" for e in errors)
+        else:
+            authorities.setdefault(validated["namespace"], validated)
+    # One reduction consumes units from ONE PR-head generation (round-3
+    # blocker 2 item 4): every validated namespace authority must bind
+    # the SAME exact head. A stale-head dispatch is internally
+    # self-consistent (its body head line matches its own head_sha), so
+    # only this cross-binding rejects it.
+    heads = {v["head_sha"] for v in authorities.values()}
+    if len(heads) > 1:
+        problems.append(
+            "dispatch authorities bind different heads "
+            f"({sorted(heads)}); a single reduction must consume units "
+            "from one exact-head dispatch generation")
+    return authorities, problems
+
+
+def _case4096_permission(validated: dict[str, Any]) -> dict[str, Any] | None:
+    """The case-4096 permission bound to a FULLY validated dispatch."""
+    permission = validated.get("case4096")
+    if not isinstance(permission, dict):
+        return None
+    return {"comment_id": validated["comment_id"],
+            "head_sha": validated["head_sha"],
+            "namespace": validated["namespace"],
+            "line": permission.get("line"),
+            "reason": permission.get("reason")}
 
 
 def _population(root: Path, units: Any, name: str, namespace: str,
                 *, require_rows: bool = True,
-                case4096_permission: dict[str, Any] | None = None
+                case4096_permission: dict[str, Any] | None = None,
+                expected_authority: dict[str, Any] | None = None
                 ) -> tuple[dict[str, Any], list[str]]:
     facts: list[dict[str, Any]] = []
     problems: list[str] = []
     if (not isinstance(units, list) or not units or
             any(not _safe_tag(u) for u in units) or len(set(units)) != len(units)):
         return {}, [f"{name}: invalid, empty, or duplicate unit plan"]
+    if expected_authority is None:
+        # Round-3 blocker 2: without a validated live dispatch authority
+        # for this probe namespace, NO unit population is admissible —
+        # fully valid numerical/runtime/health bytes cannot overcome
+        # absent dispatch provenance.
+        return {}, [f"{name}: no validated live dispatch authority for "
+                    f"namespace {namespace}"]
+    expected_block = D.unit_authority_block(expected_authority)
+    if expected_block.get("namespace") != namespace:
+        # A unit copied from a different probe namespace carries that
+        # namespace's authority; it can never satisfy this one.
+        return {}, [f"{name}: dispatch authority namespace "
+                    f"{expected_block.get('namespace')!r} != probe "
+                    f"namespace {namespace!r}"]
     for tag in units:
         unit_dir = root / tag
         try:
@@ -259,18 +328,40 @@ def _population(root: Path, units: Any, name: str, namespace: str,
             if (receipt.get("arm") != "B" or not case_match
                     or receipt.get("case_id") != case_match.group(0)):
                 raise ValueError("receipt case/arm binding mismatch")
+            # Round-3 blocker 2: EVERY terminal-bearing unit must carry a
+            # dispatch-authority block that exactly equals the canonical
+            # block re-derived from the LIVE validated dispatch payload
+            # for this probe namespace. The block binds comment ID, exact
+            # PR head SHA, diagnostic namespace, created-at, author
+            # association, PR/issue binding and the canonical digest of
+            # the authorizing comment body — so a fabricated receipt
+            # (no authority), a wrong comment/head/namespace, or a valid
+            # unit transplanted from another probe namespace all fail.
+            authority = receipt.get("authority")
+            if not isinstance(authority, dict):
+                raise ValueError(
+                    "unit receipt carries no dispatch authority block")
+            if authority.get("namespace") != namespace:
+                raise ValueError(
+                    "unit authority namespace does not equal the probe "
+                    "namespace containing the unit")
+            for key, value in expected_block.items():
+                if key == "case4096":
+                    continue
+                if authority.get(key) != value:
+                    raise ValueError(
+                        f"unit dispatch authority binding mismatch: {key}")
             if receipt["case_id"] == "case-4096":
                 # The retained receipt's authority block is only a claim
                 # about GitHub state; the reducer must re-derive the
                 # authorization from the LIVE dispatch comment body (the
                 # payload's precomputed case4096 block is ignored) and
-                # bind it to this exact comment/head/namespace.
-                authority = receipt.get("authority")
-                permission = authority.get("case4096") if isinstance(authority, dict) else None
+                # bind it to this exact comment/head/namespace/line.
+                permission = authority.get("case4096")
                 line = permission.get("line") if isinstance(permission, dict) else None
                 reason = permission.get("reason") if isinstance(permission, dict) else None
                 if (case4096_permission is None
-                        or not isinstance(authority, dict) or not isinstance(permission, dict)
+                        or not isinstance(permission, dict)
                         or type(authority.get("comment_id")) is not int
                         or permission.get("comment_id") != authority.get("comment_id")
                         or authority.get("comment_id") != case4096_permission["comment_id"]
@@ -278,7 +369,9 @@ def _population(root: Path, units: Any, name: str, namespace: str,
                         or not isinstance(line, str) or not line.startswith("case-4096:")
                         or not isinstance(reason, str) or not reason.strip()
                         or line != case4096_permission["line"]
-                        or reason.strip() != case4096_permission["reason"]):
+                        or reason.strip() != case4096_permission["reason"]
+                        or authority.get("dispatch_sha256")
+                        != expected_block["dispatch_sha256"]):
                     raise ValueError(
                         "case-4096 unit is not bound to a live dispatch "
                         "comment's authorization line for this head")
@@ -403,7 +496,8 @@ def _validate_phase2_counts(plan: dict[str, Any]) -> list[str]:
 
 
 def _phase2(plan: dict[str, Any], root: Path,
-            case4096_permission: dict[str, Any] | None = None
+            case4096_permission: dict[str, Any] | None = None,
+            authorities: dict[str, dict[str, Any]] | None = None
             ) -> tuple[dict[str, Any], list[str]]:
     reduced: dict[str, Any] = {}
     problems = _validate_phase2_counts(plan)
@@ -420,7 +514,9 @@ def _phase2(plan: dict[str, Any], root: Path,
         pop, errors = _population(base, spec.get("units"), name, probe_namespace,
                                   case4096_permission=(case4096_permission
                                                        if name == "regime"
-                                                       else None))
+                                                       else None),
+                                  expected_authority=(authorities or {}
+                                                      ).get(probe_namespace))
         reduced[name] = pop
         problems.extend(errors)
         groups: dict[str, list[dict[str, Any]]] = {}
@@ -482,19 +578,29 @@ def _later_probe_variation(reduced: dict[str, Any]) -> bool:
 
 def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
                     *, health_verifier=None,
-                    case4096_authority: Any = None) -> dict[str, Any]:
+                    case4096_authority: Any = None,
+                    dispatch_authority: Any = None) -> dict[str, Any]:
     """Derive a terminal from retained bytes; health_verifier is never trusted.
 
     Vulkan localization is intentionally unreachable: the frozen producer has
     no validated one-factor Vulkan runtime control. A runtime-initialization
     contrast by itself does not establish Vulkan causality.
 
-    When the plan contains case-4096 units, ``case4096_authority`` must be a
-    LIVE dispatch authority payload (fetched by the caller through
-    ``D.fetch_dispatch_authority`` at reduction time); its precomputed
-    ``case4096`` block is ignored and the authorization is re-parsed from
-    the comment body. A retained receipt's own authority block can never
-    authorize case-4096 evidence.
+    ``dispatch_authority`` is the round-3 terminal-authority input: a
+    namespace-keyed map of LIVE dispatch payloads (fetched by the caller
+    through ``D.fetch_dispatch_authority`` at reduction time), one per
+    frozen probe namespace whose units this reduction consumes. Every
+    payload is validated through the ONE canonical full diagnostic
+    dispatch validator; every terminal-bearing unit receipt's authority
+    block must equal the canonical block derived from its namespace's
+    payload. Missing authority blocks, wrong comment ID / head /
+    namespace / digest, or an authority payload that fails full
+    validation make the reduction ``R8I3_REDUCER_BLOCKED_INCOMPLETE`` —
+    valid numerical/runtime/health evidence never overcomes invalid
+    dispatch provenance. ``case4096_authority`` (round-2 shape) is a
+    single live payload validated the SAME way and additionally parsed
+    for its exact ``case-4096:<reason>`` line; its precomputed block is
+    ignored.
     """
     if (not isinstance(namespace, str)
             or not re.fullmatch(r"d248-[a-z0-9][a-z0-9-]*", namespace)
@@ -525,6 +631,22 @@ def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
         return _blocked(namespace, [str(exc)])
     reduced: dict[str, Any] = {}
     problems: list[str] = []
+    # The namespace-keyed LIVE dispatch authority map validates FIRST
+    # (round-3 blocker 2): every probe population below requires a
+    # fully validated live dispatch payload for its namespace before any
+    # retained unit can be terminal-bearing.
+    authorities, authority_problems = _namespace_authorities(
+        dispatch_authority, case4096_authority)
+    problems.extend(authority_problems)
+    permission = None
+    if case4096_authority is not None and not authority_problems:
+        validated4096, _ = _validate_live_authority(case4096_authority)
+        if validated4096 is not None:
+            permission = _case4096_permission(validated4096)
+    if _plan_has_case4096(plan) and permission is None:
+        problems.append(
+            "case-4096 units planned but no valid live case-4096 dispatch "
+            "authority was supplied for this reduction")
     try:
         expected_by_family = {name: set(probes[name]["units"])
                               for name in ("repeat", "placement", "regime", "canonical")}
@@ -551,16 +673,12 @@ def derive_terminal(evidence_root: Path, namespace: str, plan: dict[str, Any],
         rowless_allowed = name == "canonical" or name in (
             "observer:obs-off", "observer:obs-r8e")
         pop, errors = _population(base, units, name,
-                                  probe_namespace, require_rows=not rowless_allowed)
+                                  probe_namespace, require_rows=not rowless_allowed,
+                                  expected_authority=authorities.get(probe_namespace))
         reduced[name] = pop
         problems.extend(errors)
-    # case-4096 authorization is derived ONLY from the live dispatch
-    # comment body supplied at reduction time; a retained receipt's own
-    # authority block is a claim, not authority.
-    permission, permission_problems = _live_case4096_permission(
-        case4096_authority, namespace)
-    problems.extend(permission_problems if _plan_has_case4096(plan) else [])
-    phase2, phase2_errors = _phase2(plan, root, case4096_permission=permission)
+    phase2, phase2_errors = _phase2(plan, root, case4096_permission=permission,
+                                    authorities=authorities)
     reduced.update(phase2)
     problems.extend(phase2_errors)
     if problems:
