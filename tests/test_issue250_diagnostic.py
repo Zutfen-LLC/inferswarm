@@ -301,13 +301,28 @@ class ArmPlanTests(unittest.TestCase):
         units = D.probe_list_for("D-context-transition")
         lengths = sorted({u["ladder_length"] for u in units})
         self.assertEqual(lengths, [1024, 1536, 2048, 2304, 2560, 3072])
+        # correction pass 3 (blocker 4C): 2 screening repeats per
+        # length + 3 predeclared adaptive-confirmation units per
+        # length (executed only for the boundary-adjacent
+        # deterministic length when a LOCALIZED claim needs them).
         for length in lengths:
-            self.assertEqual(
-                len([u for u in units if u["ladder_length"] == length]), 2)
+            screening = [u for u in units
+                         if u["ladder_length"] == length
+                         and not u.get("confirm_extension")]
+            confirm = [u for u in units
+                       if u["ladder_length"] == length
+                       and u.get("confirm_extension")]
+            self.assertEqual(len(screening),
+                             D.ARM_D_SCREEN_REPEATS)
+            self.assertEqual(len(confirm), 3)
+            for u in confirm:
+                self.assertTrue(u["confirm_extension"])
         # ladder runs at the accepted placement; factor = length
         for u in units:
             self.assertEqual(u["argv_delta"], ())
             self.assertEqual(u["ngl"], D.ACCEPTED_MATCHED_NGL)
+        self.assertEqual(D.ARM_D_SCREEN_REPEATS, 2)
+        self.assertEqual(D.ARM_D_CONFIRM_REPEATS, 5)
 
     def test_arm_d_sentence_repeats_predeclared(self):
         self.assertEqual(
@@ -367,6 +382,101 @@ class DeterminismTests(unittest.TestCase):
         with self.assertRaises(D.DiagnosticError):
             D.canonical_token_digest(toks[:7])
 
+
+class PrefixPopulationLawTests(unittest.TestCase):
+    """FROZEN PREFIX POPULATION LAW (correction pass 3, blocker 2)."""
+
+    TAGS = [f"case-3072-B-cpu-only-{i:03d}" for i in range(1, 6)]
+
+    def facts(self, retained, digests):
+        return D.prefix_population_facts(
+            list(self.TAGS), list(retained), digests)
+
+    def test_mismatch_at_unit_2_with_prefix_1_2_is_nondeterministic(self):
+        out = self.facts(self.TAGS[:2],
+                         {self.TAGS[0]: "X", self.TAGS[1]: "Y"})
+        self.assertEqual(out["population"],
+                         "complete_nondeterministic_prefix")
+        self.assertTrue(out["nondeterministic"])
+        self.assertEqual(out["first_mismatch_index"], 1)
+
+    def test_mismatch_at_unit_4_contiguous_is_valid(self):
+        out = self.facts(
+            self.TAGS[:4],
+            {t: ("X" if i < 3 else "Y")
+             for i, t in enumerate(self.TAGS[:4])})
+        self.assertEqual(out["population"],
+                         "complete_nondeterministic_prefix")
+        self.assertTrue(out["nondeterministic"])
+
+    def test_five_identical_is_deterministic(self):
+        out = self.facts(
+            self.TAGS, {t: "X" for t in self.TAGS})
+        self.assertEqual(out["population"], "complete_deterministic")
+        self.assertTrue(out["deterministic"])
+
+    def test_three_identical_is_incomplete_not_deterministic(self):
+        out = self.facts(
+            self.TAGS[:3], {t: "X" for t in self.TAGS[:3]})
+        self.assertEqual(out["population"], "incomplete")
+        self.assertFalse(out["deterministic"])
+        self.assertFalse(out["nondeterministic"])
+
+    def test_gap_001_003_is_invalid(self):
+        out = self.facts(
+            [self.TAGS[0], self.TAGS[2]],
+            {self.TAGS[0]: "X", self.TAGS[2]: "Y"})
+        self.assertEqual(out["population"], "invalid")
+        self.assertIn("contiguous prefix", out["invalid"])
+
+    def test_mismatch_at_002_with_retained_003_is_invalid(self):
+        out = self.facts(
+            self.TAGS[:3],
+            {self.TAGS[0]: "X", self.TAGS[1]: "Y",
+             self.TAGS[2]: "Z"})
+        self.assertEqual(out["population"], "invalid")
+        self.assertIn("past the first mismatch", out["invalid"])
+
+    def test_cherry_picked_subset_is_invalid(self):
+        # 002..005 without 001 is not a prefix from unit 001
+        out = self.facts(
+            self.TAGS[1:],
+            {t: "X" for t in self.TAGS[1:]})
+        self.assertEqual(out["population"], "invalid")
+
+    def test_duplicate_retained_is_invalid(self):
+        out = self.facts(
+            [self.TAGS[0], self.TAGS[0]],
+            {self.TAGS[0]: "X"})
+        self.assertEqual(out["population"], "invalid")
+        self.assertIn("duplicate", out["invalid"])
+
+    def test_single_unit_mismatch_population_is_invalid(self):
+        out = self.facts([self.TAGS[0]], {self.TAGS[0]: "X"})
+        self.assertEqual(out["population"], "incomplete")
+
+    def test_inflight_tail_allows_exactly_one_extra_unit(self):
+        digests = {self.TAGS[0]: "X", self.TAGS[1]: "Y",
+                   self.TAGS[2]: "Y"}
+        out = D.prefix_population_facts(
+            list(self.TAGS), self.TAGS[:3], digests,
+            allow_inflight_tail=True)
+        self.assertEqual(out["population"],
+                         "complete_nondeterministic_prefix")
+        # two extra units past the mismatch is still invalid
+        digests4 = dict(digests, **{self.TAGS[3]: "Y"})
+        out2 = D.prefix_population_facts(
+            list(self.TAGS), self.TAGS[:4], digests4,
+            allow_inflight_tail=True)
+        self.assertEqual(out2["population"], "invalid")
+
+    def test_authority_loss_prefix_without_mismatch_is_not_valid(self):
+        # retained 1..3 all identical then nothing — incomplete, the
+        # reducer must never treat it as deterministic
+        out = self.facts(
+            self.TAGS[:3], {t: "X" for t in self.TAGS[:3]})
+        self.assertFalse(out["deterministic"])
+        self.assertEqual(out["population"], "incomplete")
 
 class TerminalModuleMovedTests(unittest.TestCase):
     """The caller-supplied-boolean terminal path is GONE (blocker 4).

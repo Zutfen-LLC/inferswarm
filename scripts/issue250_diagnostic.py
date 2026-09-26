@@ -65,6 +65,26 @@ model, adapted to #250; tested in test_issue250_diagnostic.py):
     this module exports NO caller-supplied-boolean terminal path and
     no terminal may be selected by hand. Missing or ambiguous
     evidence fails closed to R8I3B_REDUCER_BLOCKED_INCOMPLETE.
+
+Correction pass 3 (maintainer NO-GO comment 5847890177) freezes:
+
+  * the FROZEN PREFIX POPULATION LAW (``prefix_population_facts``):
+    a nondeterministic verdict needs only the contiguous retained
+    prefix that contains the first independently verified row-digest
+    mismatch (execution must have STOPPED at that mismatch); the
+    unexecuted planned tail is not missing evidence. A deterministic
+    claim needs the full predeclared deterministic population (5
+    identical where the arm freezes 5). Populations with gaps,
+    cherry-picked subsets, or execution past the declared stop point
+    are invalid and fail closed.
+  * the Arm-D screening/confirmation geometry: 2 screening repeats
+    per predeclared length establish only ``pair_identical``
+    observations; a D LOCALIZED claim additionally requires the
+    frozen deterministic-confirmation count (5 identical repeats)
+    for the exact boundary-adjacent deterministic length, obtained
+    under the predeclared adaptive extension rule (extend ONLY that
+    condition; first mismatch at any point establishes variability
+    immediately).
 """
 from __future__ import annotations
 
@@ -193,13 +213,30 @@ ARM_B_DEV_NONE_ARGV_DELTA = ("-dev", "none")
 ARM_C_DEV_NONE_ARGV_DELTA = ("-dev", "none")
 ARM_C_SERIAL_ARGV_DELTA = ("-t", "1", "-tb", "1")
 ARM_D_LADDER_LENGTHS = (1024, 1536, 2048, 2304, 2560, 3072)
+ARM_D_SCREEN_REPEATS = 2    # screening pair per length (correction pass 3)
+ARM_D_CONFIRM_REPEATS = 5   # deterministic-confirmation count (5 identical)
 
 # Arm D ladder derivation rule (predeclared; Issue #250 §D: same
 # accepted fixture derivation rule — repeated sentence block with the
-# identical prologue/suffix, length set by sentence repeat count).
+# identical prologue/suffix). CORRECTION PASS 3 (NO-GO 5847890177,
+# blocker 4A): the ladder labels are TEXT GENERATION PARAMETERS
+# (sentence-repeat counts), NOT assumed token lengths. The actual
+# token count of every predeclared prompt is derived before physical
+# Arm-D execution through the pinned-server tokenizer authority
+# (POST /tokenize, add_special=true — the exact tokenize call the
+# pinned /completion path itself makes at server-context.cpp:4579)
+# and retained per unit; the reducer uses the ACTUAL count for any
+# token-count mechanism (e.g. indexer top_k), never the nominal
+# label. Accepted fixtures already demonstrate label!=count
+# (case-1024 => 1022 tokens; case-3072 => 3077 tokens).
 ARM_D_LADDER_SENTENCE_REPEATS = {
     1024: 68, 1536: 102, 2048: 136, 2304: 153, 2560: 171, 3072: 204,
 }
+
+# Model-architecture token-count mechanism boundary (phase0
+# MODEL_ARCH_FACTS "qwen4exp.attention.indexer.top_k"); the reducer
+# compares ACTUAL prompt token counts against this value.
+INDEXER_TOP_K = 2048
 
 # Same-process (Arm B) request-contract extension: id_slot pinning is
 # required to make repeated requests land on the SAME slot. The
@@ -521,10 +558,20 @@ def _arm_units(arm: str) -> list[dict[str, Any]]:
         ]
     if arm == "D-context-transition":
         # Only reached when A-C do not localize. Predeclared length
-        # ladder between 1022 (deterministic) and 3077 (variable),
-        # same accepted fixture derivation rule, 2 repeats per length
-        # at the ACCEPTED placement (the factor here is prompt length,
-        # not the backend). Ladder frozen BEFORE any execution.
+        # ladder between 1022 (deterministic) and 3077 (variable)
+        # tokens, same accepted fixture derivation rule, at the
+        # ACCEPTED placement (the factor here is prompt length, not
+        # the backend). Ladder frozen BEFORE any execution.
+        # CORRECTION PASS 3 (NO-GO 5847890177, blocker 4C): the
+        # prospective deterministic-confirmation rule. Units 001/002
+        # per length are the SCREENING pair (2 repeats — establishes
+        # only a pair-identical observation, never a deterministic
+        # claim). Units 003-005 per length are the PREDECLARED
+        # ADAPTIVE CONFIRMATION extension: executed ONLY for the
+        # exact boundary-adjacent deterministic length when a
+        # LOCALIZED claim would depend on it (never for unrelated
+        # ladder points); a first mismatch at ANY point establishes
+        # variability immediately (screening or confirmation).
         out = []
         for length in ARM_D_LADDER_LENGTHS:
             for i in (1, 2):
@@ -532,6 +579,13 @@ def _arm_units(arm: str) -> list[dict[str, Any]]:
                     "tag": f"case-{length}-B-ladder-{length}-00{i}",
                     "argv_delta": (), "ngl": ACCEPTED_MATCHED_NGL,
                     "request": "accepted", "ladder_length": length})
+            for i in (3, 4, 5):
+                out.append({
+                    "tag": (f"case-{length}-B-ladder-{length}-"
+                            f"00{i}-confirm"),
+                    "argv_delta": (), "ngl": ACCEPTED_MATCHED_NGL,
+                    "request": "accepted", "ladder_length": length,
+                    "confirm_extension": True})
         return out
     raise DiagnosticError(f"unknown arm: {arm}")
 
@@ -586,6 +640,149 @@ def judge_repeat_determinism(digests: list[str]) -> dict[str, Any]:
         "unique": unique,
         "deterministic_claim_valid": deterministic and
         len(digests) >= DETERM_MIN_REPEATS,
+    }
+
+
+# ---------------------------------------------------------------------------
+# FROZEN PREFIX POPULATION LAW (correction pass 3, NO-GO 5847890177
+# blocker 2). Machine-enforced; the reducer derives the stop reason
+# mechanically from the retained rows/custody, never from a
+# caller-supplied ``stopped_early`` boolean.
+# ---------------------------------------------------------------------------
+PREFIX_LAW_MIN_MISMATCH_UNITS = 2
+
+
+def prefix_population_facts(
+        planned_tags: list[str],
+        retained_tags: list[str],
+        row_digests: dict[str, Any],
+        deterministic_required: int = DETERM_MIN_REPEATS,
+        allow_inflight_tail: bool = False,
+        ) -> dict[str, Any]:
+    """Judge one condition's retained population under the frozen law.
+
+    ``planned_tags``: the frozen ordered unit plan (index order ==
+    execution order). ``retained_tags``: the VALID retained units
+    actually present (already per-unit verified). ``row_digests``:
+    per-tag digest tuple (or any hashable equality subject; row
+    digests in practice). A condition is:
+
+    * ``deterministic`` ONLY when every planned unit is retained and
+      ALL digests are identical (>= deterministic_required).
+    * ``nondeterministic`` (mismatch-triggered early stop) when the
+      retained units form a CONTIGUOUS PREFIX of the plan starting at
+      index 0, at least two units exist, the first digest mismatch
+      occurs WITHIN the retained prefix, and execution stopped at the
+      first mismatch (no later planned unit retained) — except units
+      already unavoidably in flight under the frozen in-flight rule
+      (``allow_inflight_tail`` marks conditions whose producer
+      executes fixed batches; the in-flight units immediately after
+      the mismatch unit are retained-but-excused, NEVER units past
+      the first mismatch+batch boundary).
+    * otherwise ``invalid`` (fail closed): gaps inside the retained
+      prefix, retained units past the declared stop point, duplicates,
+      unordered indexes, or an all-identical population below the
+      deterministic threshold.
+    """
+    planned = list(planned_tags)
+    retained = list(retained_tags)
+    if len(set(retained)) != len(retained):
+        return _pp_invalid("duplicate retained tags", retained, planned)
+    index_of = {tag: i for i, tag in enumerate(planned)}
+    unknown = [t for t in retained if t not in index_of]
+    if unknown:
+        return _pp_invalid(f"retained units not in the frozen plan: "
+                           f"{sorted(unknown)}", retained, planned)
+    indexes = sorted(index_of[t] for t in retained)
+    if not indexes:
+        return _pp_invalid("no retained units", retained, planned)
+    if indexes != list(range(len(indexes))):
+        return _pp_invalid(
+            f"retained units are not a contiguous prefix from unit 001 "
+            f"(indexes {indexes})", retained, planned)
+    n = len(indexes)
+    digests = [row_digests[t] for t in
+               sorted(retained, key=lambda t: index_of[t])]
+    unique = []
+    for d in digests:
+        if d not in unique:
+            unique.append(d)
+    first_mismatch_at = None if len(unique) == 1 else next(
+        i for i in range(1, n) if digests[i] != digests[0])
+    planned_tail = planned[n:]
+    if first_mismatch_at is None:
+        # all identical: deterministic ONLY at the full frozen count
+        if n < deterministic_required or planned_tail:
+            return {
+                "population": "incomplete",
+                "deterministic": False,
+                "nondeterministic": False,
+                "n": n,
+                "first_mismatch_index": None,
+                "stop_reason": (
+                    "identical rows below the deterministic claim count"
+                    if n < deterministic_required else
+                    "identical rows but the planned population is "
+                    "incomplete"),
+                "planned": planned, "retained": retained,
+                "invalid": None,
+            }
+        return {
+            "population": "complete_deterministic",
+            "deterministic": True,
+            "nondeterministic": False,
+            "n": n,
+            "first_mismatch_index": None,
+            "stop_reason": None,
+            "planned": planned, "retained": retained,
+            "invalid": None,
+        }
+    # A verified mismatch exists inside the retained prefix.
+    # Stop law: no execution past the mismatch unit, except the
+    # explicitly frozen in-flight allowance (units at indexes
+    # first_mismatch_at+1 .. first_mismatch_at+inflight bound when the
+    # arm freezes batch execution). Without the allowance, the prefix
+    # must END exactly at the first-mismatch unit.
+    allowed_end = first_mismatch_at + 1
+    if allow_inflight_tail:
+        # frozen rule: at most the immediately following unit may be
+        # already in flight (batch-of-2 producers); any unit beyond
+        # that, or any retained unit after a NON-mismatch unit when a
+        # mismatch already answered, is execution past the stop point.
+        allowed_end = first_mismatch_at + 2
+    if n > allowed_end:
+        return _pp_invalid(
+            f"execution continued past the first mismatch (mismatch at "
+            f"unit {first_mismatch_at + 1}, retained {n} units) without "
+            f"a predeclared reason", retained, planned)
+    if n < PREFIX_LAW_MIN_MISMATCH_UNITS:
+        return _pp_invalid(
+            "fewer than two retained units cannot establish a mismatch",
+            retained, planned)
+    return {
+        "population": "complete_nondeterministic_prefix",
+        "deterministic": False,
+        "nondeterministic": True,
+        "n": n,
+        "first_mismatch_index": first_mismatch_at,
+        "stop_reason": "mismatch_triggered_stop",
+        "planned": planned, "retained": retained,
+        "invalid": None,
+    }
+
+
+def _pp_invalid(reason: str, retained: list[str],
+                planned: list[str]) -> dict[str, Any]:
+    return {
+        "population": "invalid",
+        "deterministic": False,
+        "nondeterministic": False,
+        "n": len(retained),
+        "first_mismatch_index": None,
+        "stop_reason": None,
+        "planned": planned,
+        "retained": retained,
+        "invalid": reason,
     }
 
 

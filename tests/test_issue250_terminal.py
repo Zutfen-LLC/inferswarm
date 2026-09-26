@@ -141,7 +141,8 @@ class CampaignFixture:
     def __init__(self, test, *, arm_a_rows="vary", arm_b_fresh="vary",
                  arm_b_same="deterministic", arm_c_default="vary",
                  arm_c_serial="deterministic", arm_d_rows=None,
-                 arm_d_progress=None):
+                 arm_d_progress=None, arm_d_confirm_lengths=None,
+                 arm_d_confirm_mismatch_at=None):
         import subprocess
         import tempfile
         self.test = test
@@ -196,8 +197,36 @@ class CampaignFixture:
         self._build_arm_a(arm_a_rows)
         self._build_arm_b(arm_b_fresh, arm_b_same)
         self._build_arm_c(arm_c_default, arm_c_serial)
+        if arm_d_rows is not None:
+            # retained tokenizer authority precedes Arm-D execution
+            # (correction pass 3, blocker 4A)
+            self._derive_ladder_authority()
+        self.arm_d_confirm_lengths = (
+            arm_d_confirm_lengths if arm_d_confirm_lengths is not None
+            else None)  # None => default boundary-adjacent rule
+        self.arm_d_confirm_mismatch_at = arm_d_confirm_mismatch_at
         self._build_arm_d(arm_d_rows, arm_d_progress)
         self._build_contrast()
+
+    def _derive_ladder_authority(self):
+        def fake_tokenize(prompt: str):
+            ids = [abs(hash(prompt)) % 32000 + 1
+                   for _ in range(len(prompt.split()))]
+            # deterministic in-process: map lengths monotonically so
+            # the reducer sees a real bracketing ladder
+            counts = {68: 1022, 102: 1534, 136: 2053, 153: 2303,
+                      171: 2567, 204: 3077}
+            repeats = None
+            for block in (prompt.count(
+                    "The lighthouse keeper counted"),):
+                repeats = block
+            count = counts.get(repeats, len(ids))
+            return count, list(range(count))
+        P.derive_ladder_token_authority(
+            self.repo, self.evidence, self.head,
+            binary=self.bin, binary_id="comparator",
+            model_dir=self.model_dir,
+            tokenize=fake_tokenize)
 
     def _restore(self):
         D.SERVER_BINARIES.update(self.saved_binaries)
@@ -246,16 +275,24 @@ class CampaignFixture:
         (unit_dir / "obs.meta.json").write_text(
             "\n".join(meta_lines) + "\n")
 
-    def fake_execute(self, seed_key, progress_lines=None):
+    def fake_execute(self, seed_key, progress_lines=None,
+                     prompt_tokens=None):
         def execute(argv, env, request, prompt, port, unit_dir):
             self._write_rows(unit_dir, seed_key)
+            # the retained log must carry the ACTUAL token count from
+            # the retained tokenizer authority (blocker 4A) plus the
+            # progress rungs
+            tokens = (prompt_tokens
+                      if prompt_tokens is not None else PROMPT_TOKENS)
             if progress_lines is not None:
-                (unit_dir / "server.log").write_text(
-                    "\n".join(progress_lines) + "\n")
+                body = "\n".join(progress_lines) + "\n"
+                body += (f"slot print_timing: prompt eval time = "
+                         f"1.0 ms / {tokens} tokens\n")
+                (unit_dir / "server.log").write_text(body)
             else:
                 (unit_dir / "server.log").write_text(
                     "slot print_timing: prompt eval time = 1.0 ms / "
-                    f"{PROMPT_TOKENS} tokens\n")
+                    f"{tokens} tokens\n")
             now = utcnow()
             return {
                 "returncode": 0, "tokens": list(TOKENS),
@@ -275,37 +312,48 @@ class CampaignFixture:
         return execute
 
     def _run_unit(self, namespace, arm, tag, seed_key,
-                  progress_lines=None):
+                  progress_lines=None, prompt_tokens=None):
         P.run_diagnostic_unit(
             repo_root=self.repo, evidence_root=self.evidence,
             namespace=namespace, arm=arm, tag=tag,
             binary=self.bin, binary_id="comparator",
             model_dir=self.model_dir, expected_head=self.head,
             model_attestation=self.attestation,
-            execute=self.fake_execute(seed_key, progress_lines),
+            execute=self.fake_execute(seed_key, progress_lines,
+                                      prompt_tokens),
             identity_observer=lambda: raw_identity(),
             revalidate_authority=self.authority_fn(namespace, arm),
             health_runner=health_runner)
 
     def _build_arm_a(self, mode):
         plan = D.probe_list_for("A-vulkan-necessity")
+        # HONEST PRODUCER SHAPE (correction pass 3, blocker 2): in
+        # "vary" mode the first row mismatch answers the discriminator
+        # at unit 002 — execution stops there (frozen early-stop law);
+        # units 003..005 are never run. In "det" mode all five planned
+        # units run with identical rows (frozen deterministic count).
         for i, spec in enumerate(plan):
-            seed = (f"{spec['tag']}" if mode == "vary"
-                    else f"arm-a-fixed") if mode != "vary" else (
-                f"{spec['tag']}-varying")
+            if mode == "vary" and i >= 2:
+                break
+            seed_key = (f"{spec['tag']}-varying" if mode == "vary"
+                        else "arm-a-fixed")
+            if mode == "vary" and i == 0:
+                seed_key = "armA-vary-baseline"
             self._run_unit("d250-arm-a", "A-vulkan-necessity",
-                           spec["tag"],
-                           f"armA-{mode}-{i}" if mode == "vary"
-                           else "armA-fixed")
+                           spec["tag"], seed_key)
 
     def _build_arm_b(self, fresh_mode, same_mode):
-        for i, spec in enumerate(
-                u for u in D.probe_list_for("B-process-init")
-                if not u.get("same_process")):
+        plan = [u for u in D.probe_list_for("B-process-init")
+                if not u.get("same_process")]
+        for i, spec in enumerate(plan):
+            if fresh_mode == "vary" and i >= 2:
+                break
+            seed_key = (f"armB-fresh-varying-{i}"
+                        if fresh_mode == "vary" else "armB-fresh-fixed")
+            if fresh_mode == "vary" and i == 0:
+                seed_key = "armB-fresh-baseline"
             self._run_unit(
-                "d250-arm-b", "B-process-init", spec["tag"],
-                f"armB-fresh-{fresh_mode}-{i}"
-                if fresh_mode == "vary" else "armB-fresh-fixed")
+                "d250-arm-b", "B-process-init", spec["tag"], seed_key)
         # same-process lifecycle via the real producer
         P.run_same_process_lifecycle(
             repo_root=self.repo, evidence_root=self.evidence,
@@ -322,14 +370,27 @@ class CampaignFixture:
 
     def _fake_same_process(self, mode):
         def execute(argv, env, request, prompt, port, unit_dir,
-                    repeats, expected_prompt_tokens):
+                    repeats, expected_prompt_tokens,
+                    preflight_request=None):
             import hashlib
             records = []
             now = utcnow()
             pid = 777
+            base_task_id = 50
+            # HONEST PRODUCER SHAPE (blocker 2): nondeterministic
+            # lifecycles stop at the FIRST row mismatch (request 002)
+            # — the frozen early-stop law — and report
+            # stop_kind=mismatch_stop. Deterministic lifecycles run
+            # all five planned requests.
+            stop_kind = "completed_all"
+            stop_reason = None
+            baseline = None
             for index in range(repeats):
+                if preflight_request is not None:
+                    preflight_request(index)
                 key = ("same-fixed" if mode == "deterministic"
-                       else f"same-varying-{index}")
+                       else ("same-vary-baseline" if index == 0
+                             else f"same-varying-{index}"))
                 seed = hashlib.sha256(key.encode()).digest()
                 row_files = {}
                 meta_lines = []
@@ -339,10 +400,14 @@ class CampaignFixture:
                     row_files[f"obs.row{d}.f32"] = row
                     meta_lines.append(json.dumps(
                         {"pos": d, "sampled_winner": TOKENS[d]}))
+                task_id = base_task_id + index
                 log_slice = (
-                    f"slot get_availabl: id  3 | task {index} | "
-                    f"selected slot by id (3)\n"
-                    f"slot print_timing: id  3 | task {index} | prompt "
+                    f"0.01.000.000 I slot get_availabl: id  3 | "
+                    f"task -1 | selected slot by id (3)\n"
+                    f"0.01.000.001 I slot launch_slot_: id  3 | "
+                    f"task {task_id} | processing task, is_child = 0\n"
+                    f"0.01.000.002 I slot print_timing: id  3 | "
+                    f"task {task_id} | prompt "
                     f"eval time = 1.0 ms / {expected_prompt_tokens} "
                     f"tokens\n").encode()
                 records.append({
@@ -358,6 +423,18 @@ class CampaignFixture:
                         expected_prompt_tokens),
                     "request_contract": dict(request),
                 })
+                if mode != "deterministic":
+                    digests = tuple(hashlib.sha256(
+                        row_files[f"obs.row{d}.f32"]).hexdigest()
+                        for d in range(D.DECISIONS))
+                    if baseline is None:
+                        baseline = digests
+                    elif digests != baseline:
+                        stop_kind = "mismatch_stop"
+                        stop_reason = (
+                            f"first row-digest mismatch at request "
+                            f"{index}")
+                        break
             return {
                 "server_pid": pid,
                 "process_attribution": {
@@ -372,38 +449,97 @@ class CampaignFixture:
                          "GPU-d5c05739-96c1-7e49-89b6-"
                          "bf54c2121c55, 42.0, 140.0, 170.0, 0\n"}
                     for s in ("before", "during", "after")],
+                "stop_kind": stop_kind,
+                "stop_reason": stop_reason,
             }
         return execute
 
     def _build_arm_c(self, default_mode, serial_mode):
-        for i, spec in enumerate(
-                u for u in D.probe_list_for("C-cpu-threads")):
+        plan = D.probe_list_for("C-cpu-threads")
+        default_vary_count = 0
+        serial_vary_count = 0
+        for i, spec in enumerate(plan):
             serial = "thr1" in spec["tag"]
             mode = serial_mode if serial else default_mode
+            if mode == "vary":
+                if serial:
+                    serial_vary_count += 1
+                    if serial_vary_count > 2:
+                        break  # early-stop after the mismatch unit
+                else:
+                    default_vary_count += 1
+                    if default_vary_count > 2:
+                        break
+            seed_key = (
+                f"armC-{'serial' if serial else 'default'}-varying-{i}"
+                if mode == "vary"
+                else f"armC-{'serial' if serial else 'default'}-fixed")
+            if mode == "vary" and i == 0 and not serial:
+                seed_key = "armC-default-baseline"
+            if mode == "vary" and serial and serial_vary_count == 1:
+                seed_key = "armC-serial-baseline"
             self._run_unit(
-                "d250-arm-c", "C-cpu-threads", spec["tag"],
-                f"armC-{'serial' if serial else 'default'}-{mode}-{i}"
-                if mode == "vary" else
-                f"armC-{'serial' if serial else 'default'}-fixed")
+                "d250-arm-c", "C-cpu-threads", spec["tag"], seed_key)
 
     def _build_arm_d(self, rows_mode, progress):
-        """rows_mode: None (no arm D) | dict length->'det'/'var'."""
+        """rows_mode: None (no arm D) | dict length->'det'/'var'.
+
+        HONEST PRODUCER SHAPE (correction pass 3, blocker 4C): the
+        2-repeat screening pair runs at every length; a 'det' length
+        whose LOCALIZED claim would depend on it (the last
+        deterministic length before the boundary) is extended through
+        its predeclared confirm units 003-005 to reach the frozen
+        deterministic-confirmation count of 5. Unrelated ladder
+        points are NOT extended. A 'var' length stops at the first
+        mismatch within its screening pair.
+        """
         if rows_mode is None:
             return
+        # actual token counts from the retained tokenizer authority
+        # (the fixture's fake tokenizer map; blocker 4A)
+        authority = json.loads(
+            (self.evidence / P.LADDER_TOKEN_AUTHORITY_NAME).read_bytes())
+        actual = {int(k): v["actual_token_count"]
+                  for k, v in authority["lengths"].items()}
+        det_lengths = sorted(n for n, m in rows_mode.items() if m == "det")
+        last_det = det_lengths[-1] if det_lengths else None
+        # confirm-extension policy: None => default frozen adaptive
+        # rule (boundary-adjacent deterministic length only); a set
+        # => exactly those lengths extended (empty => none extended)
+        if self.arm_d_confirm_lengths is None:
+            confirm_lengths = ({last_det} if last_det is not None
+                               else set())
+        else:
+            confirm_lengths = set(self.arm_d_confirm_lengths)
+        mismatch_length = self.arm_d_confirm_mismatch_at
         for spec in D.probe_list_for("D-context-transition"):
             length = spec["ladder_length"]
             tag = spec["tag"]
             mode = rows_mode[length]
+            confirm = bool(spec.get("confirm_extension"))
             idx = tag.rsplit("-", 1)[1]
+            # adaptive confirmation: only the predeclared boundary
+            # condition executes its confirm units
+            if confirm and length not in confirm_lengths:
+                continue
+            if mode == "var" and idx not in ("001", "002"):
+                continue
             progress_lines = (progress or {}).get(length, [
                 "slot print_timing: prompt processing, n_tokens = 512",
                 "slot print_timing: prompt processing, n_tokens = 1024",
             ])
+            seed = (f"armD-{length}-det" if mode == "det"
+                    else f"armD-{length}-var-{idx}")
+            # a mismatch injected inside the confirm extension of a
+            # "det" length makes that length variable — the first
+            # mismatch establishes variability immediately
+            if (mismatch_length == length and confirm
+                    and mode == "det" and tag.endswith("-003-confirm")):
+                seed = f"armD-{length}-confirm-mismatch"
             self._run_unit(
-                "d250-arm-d", "D-context-transition", tag,
-                f"armD-{length}-{mode}-{idx}"
-                if mode == "var" else f"armD-{length}-det",
-                progress_lines=progress_lines)
+                "d250-arm-d", "D-context-transition", tag, seed,
+                progress_lines=progress_lines,
+                prompt_tokens=actual[length])
 
     # ---------------- contrast tree ----------------
     def _build_contrast(self):
@@ -516,6 +652,107 @@ class TerminalMatrixTests(unittest.TestCase):
         self.assertIn("backend-participation",
                       out["basis"]["localized_factor"])
 
+    def test_pair_identical_without_confirmation_is_unresolved(self):
+        # blocker 4C: 2 identical screening rows are NOT a
+        # deterministic condition; without the confirm extension the
+        # D claim cannot localize
+        # det side actual tokens (1022, 1534) all < top_k 2048;
+        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # indexer_top_k_boundary fires at (1536, 2048)
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        progress = {
+            1024: ["prompt processing, n_tokens = 512",
+                   "prompt processing, n_tokens = 1024"],
+            1536: ["prompt processing, n_tokens = 512",
+                   "prompt processing, n_tokens = 1024",
+                   "prompt processing, n_tokens = 1536"],
+            2048: ["prompt processing, n_tokens = 512",
+                   "prompt processing, n_tokens = 1024",
+                   "prompt processing, n_tokens = 1536",
+                   "prompt processing, n_tokens = 2048"],
+            2304: ["prompt processing, n_tokens = 768",
+                   "prompt processing, n_tokens = 1536",
+                   "prompt processing, n_tokens = 2304"],
+            2560: ["prompt processing, n_tokens = 512",
+                   "prompt processing, n_tokens = 1024",
+                   "prompt processing, n_tokens = 1536",
+                   "prompt processing, n_tokens = 2048",
+                   "prompt processing, n_tokens = 2560"],
+            3072: ["prompt processing, n_tokens = 512",
+                   "prompt processing, n_tokens = 1024",
+                   "prompt processing, n_tokens = 1536",
+                   "prompt processing, n_tokens = 2048",
+                   "prompt processing, n_tokens = 2560",
+                   "prompt processing, n_tokens = 2565",
+                   "prompt processing, n_tokens = 3073"],
+        }
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=progress,
+                          arm_d_confirm_lengths=set())
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("pair-identical", out["basis"]["reason"])
+
+    def test_confirmed_boundary_localizes(self):
+        # det side actual tokens (1022, 1534) all < top_k 2048;
+        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # indexer_top_k_boundary fires at (1536, 2048)
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        progress = {length: [
+            "prompt processing, n_tokens = 512",
+            "prompt processing, n_tokens = 1024"] for length in ladder}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=progress)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["transition_predicate"],
+                         "indexer_top_k_boundary")
+
+    def test_unconfirmed_length_cannot_localize(self):
+        # same ladder but NO confirm extension executed anywhere
+        # det side actual tokens (1022, 1534) all < top_k 2048;
+        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # indexer_top_k_boundary fires at (1536, 2048)
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        progress = {length: [
+            "prompt processing, n_tokens = 512",
+            "prompt processing, n_tokens = 1024"] for length in ladder}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=progress,
+                          arm_d_confirm_lengths=set())
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("pair-identical", out["basis"]["reason"])
+
+    def test_mismatch_within_confirm_extension_establishes_variability(self):
+        # first mismatch at ANY point (including inside the confirm
+        # extension) immediately establishes variability — the
+        # deterministic side then fails confirmation => UNRESOLVED
+        # det side actual tokens (1022, 1534) all < top_k 2048;
+        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # indexer_top_k_boundary fires at (1536, 2048)
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        progress = {length: [
+            "prompt processing, n_tokens = 512",
+            "prompt processing, n_tokens = 1024"] for length in ladder}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=progress,
+                          arm_d_confirm_mismatch_at=1536)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+
     def test_a_to_b_localizes(self):
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="deterministic")
@@ -572,12 +809,13 @@ class TerminalMatrixTests(unittest.TestCase):
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
         self.assertEqual(out["basis"]["transition_predicate"],
-                         "ubatch_geometry_split")
+                         "midstream_ubatch_split")
 
     def test_d_complete_without_mechanism_is_unresolved(self):
         ladder = {length: "var" for length in D.ARM_D_LADDER_LENGTHS}
         ladder[1024] = "det"
-        # uniform progress everywhere -> no predicate fires
+        # plain final-remainder progress everywhere -> no predicate
+        # fires (wall-clock-sampled rungs are not geometry evidence)
         progress = {length: [
             "prompt processing, n_tokens = 512",
             "prompt processing, n_tokens = 1024"] for length in ladder}
@@ -903,21 +1141,41 @@ class ContrastMutationTests(unittest.TestCase):
 
 
 class TransitionPredicateTests(unittest.TestCase):
+    # CORRECTION PASS 3 (blocker 4B): the retired _non_uniform_
+    # progress predicate (ANY unequal cumulative steps => causal
+    # transition) is UNSOUND — pinned print_timings_pp gates progress
+    # lines on a 3s WALL-CLOCK sample, so step sequences are timing
+    # artifacts. Its old-defect behavior is asserted as REMOVED and
+    # replaced by the source-proven midstream-split signature.
 
-    def test_non_uniform_progress_detection(self):
-        self.assertTrue(T._non_uniform_progress(
+    def test_retired_non_uniform_progress_is_removed(self):
+        self.assertFalse(hasattr(T, "_non_uniform_progress"))
+
+    def test_midstream_split_signature_shape(self):
+        # retained #248 case-3072 shape: midstream 5-token step
+        # 2560->2565 with continuation = signature PRESENT
+        self.assertTrue(T._midstream_split_signature(
             [512, 1024, 1536, 2048, 2560, 2565, 3073]))
-        self.assertFalse(T._non_uniform_progress([512, 1024]))
-        self.assertFalse(T._non_uniform_progress([100]))
+        # ordinary final remainder: a sub-512 tail step that
+        # TERMINATES the sequence — no midstream split
+        self.assertFalse(T._midstream_split_signature(
+            [512, 1024, 1536, 2048, 2560, 3068]))
+        # too few rungs to distinguish remainder from split
+        self.assertFalse(T._midstream_split_signature([512, 1024]))
+        self.assertFalse(T._midstream_split_signature([100]))
 
     def test_predicates_are_frozen(self):
         self.assertEqual(
             sorted(T.TRANSITION_PREDICATES),
-            ["checkpoint_resegmentation", "indexer_top_k_boundary",
-             "ubatch_geometry_split"])
+            ["indexer_top_k_boundary", "midstream_ubatch_split"])
         for spec in T.TRANSITION_PREDICATES.values():
             self.assertTrue(spec["requires"])
             self.assertTrue(spec["binds"])
+        # retired predicate names must not silently return
+        self.assertNotIn("checkpoint_resegmentation",
+                         T.TRANSITION_PREDICATES)
+        self.assertNotIn("ubatch_geometry_split",
+                         T.TRANSITION_PREDICATES)
 
     def test_localized_factors_frozen(self):
         self.assertEqual(

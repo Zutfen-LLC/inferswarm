@@ -3300,7 +3300,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The R8-I3B runtime-boundary localization (#250) tooling keeps the accepted #241/#248 terminals read-only: d250 namespace/authority gates, exact accepted identities, proven pinned-build controls (-dev none CPU-only, thread regimes, frozen ladder), digest-only determinism, and mechanical terminal derivation with fail-closed boundaries.",
+      "invariant": "The R8-I3B runtime-boundary localization (#250 correction pass 3) tooling keeps the accepted #241/#248 terminals read-only: d250 namespace/authority gates, exact accepted identities, proven pinned-build controls (-dev none CPU-only, thread regimes, frozen text-parameter ladder), digest-only determinism under the FROZEN PREFIX POPULATION LAW (valid mismatch early-stop; deterministic claims only at the frozen repeat count; gaps/cherry-picks/execution past the stop point fail closed), and mechanical terminal derivation with fail-closed boundaries.",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -3330,7 +3330,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The R8-I3B physical producer (#250 correction pass 2) runs only under a revalidated live maintainer dispatch at the exact head: frozen arm plans, namespace<->arm exact binding, campaign model attestation with per-unit stat witnesses, append-only raw custody, accepted #248 identity/health reuse, and the same-process Arm-B lifecycle with reset proofs.",
+      "invariant": "The R8-I3B physical producer (#250 correction pass 3) runs only under a revalidated live maintainer dispatch at the exact head: frozen arm plans, namespace<->arm exact binding, campaign model attestation with per-unit stat witnesses, append-only raw custody, accepted #248 identity/health reuse, PER-REQUEST live authority revalidation inside the same-process Arm-B lifecycle with generation cross-binding and fail-closed truncation, TASK-BOUND reset proofs (fresh-task launch + full prompt eval; delayed prior-task evidence cannot certify a request), the frozen prefix population law with mismatch-triggered early stop, and Arm-D tokenizer-authority receipts binding runtime prompt-eval counts to ACTUAL token counts.",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -3361,7 +3361,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 2) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast, enforcing the sequential A->B->C->D reachability law with fail-closed boundaries.",
+      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 3) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations, deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with source-proven transition predicates only (indexer top_k boundary measured in tokens; midstream ubatch split signature) and requires the boundary-adjacent deterministic length to reach the frozen confirmation count before any LOCALIZED claim.",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {

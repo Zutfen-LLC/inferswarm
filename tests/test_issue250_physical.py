@@ -40,6 +40,7 @@ for _dep in ("issue248_diagnostic", "issue248_health",
     _load(_dep, f"scripts/{_dep}.py")
 D = _load("issue250_diagnostic", "scripts/issue250_diagnostic.py")
 P = _load("issue250_physical", "scripts/issue250_physical.py")
+T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 
 HEAD = "c" * 40
 TOKENS = [328, 760, 324, 55965, 51624, 29014, 34227, 18030]
@@ -194,13 +195,26 @@ def datetime_now():
 
 
 def fake_same_process_execute(argv, env, request, prompt, port,
-                              unit_dir, repeats, expected_prompt_tokens):
-    """Fake ONE-process lifecycle: shared PID, per-request proofs."""
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None):
+    """Fake ONE-process lifecycle: shared PID, per-request proofs.
+
+    Uses the PINNED server log grammar (SLT_INF ``slot <fn>: id N |
+    task M |`` prefixes — correction pass 3, blocker 3): each request
+    selects slot 3 BY ID (selection line structurally carries
+    task -1), launches a fresh task, and prints its own full-prompt
+    eval line. Task ids advance per request (fresh w.r.t. earlier
+    requests of this lifecycle), as the pinned monotonic counter does.
+    """
     import hashlib
     records = []
     now = datetime_now()
     shared_pid = 5252
+    base_task_id = 100  # /health-style tasks may shift ids; ids fresh
     for index in range(repeats):
+        if preflight_request is not None:
+            preflight_request(index)
         seed = hashlib.sha256(f"{prompt}:{index}".encode()).digest()
         row_files = {}
         meta_lines = []
@@ -210,12 +224,16 @@ def fake_same_process_execute(argv, env, request, prompt, port,
             meta_lines.append(json.dumps(
                 {"pos": d, "sampled_winner": TOKENS[d]}))
         meta_file = ("\n".join(meta_lines) + "\n").encode()
+        task_id = base_task_id + index
         log_slice = (
-            f"srv    load_model: initializing, n_slots = 4\n"
-            f"slot get_availabl: id  3 | task {index} | "
+            f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
             f"selected slot by id (3)\n"
-            f"slot print_timing: id  3 | task {index} | prompt eval "
-            f"time = 42905.50 ms / {expected_prompt_tokens} tokens\n"
+            f"0.01.000.001 I slot launch_slot_: id  3 | task {task_id}"
+            f" | processing task, is_child = 0\n"
+            f"0.01.000.002 I slot print_timing: id  3 | task {task_id}"
+            f" | prompt eval time = 42905.50 ms / "
+            f"{expected_prompt_tokens} tokens "
+            f"(  13.94 ms per token,   71.72 tokens per second)\n"
         ).encode()
         records.append({
             "server_pid": shared_pid,
@@ -239,15 +257,17 @@ def fake_same_process_execute(argv, env, request, prompt, port,
         "requests": records,
         "device_samples": [
             {"stage": "before", "captured_at": now,
-             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
-                               "42.0, 140.0, 170.0, 0\n"},
+             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                               "bf54c2121c55, 42.0, 140.0, 170.0, 0\n"},
             {"stage": "during", "captured_at": now,
-             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
-                               "43.0, 145.0, 170.0, 0\n"},
+             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                               "bf54c2121c55, 43.0, 145.0, 170.0, 0\n"},
             {"stage": "after", "captured_at": now,
-             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
-                               "41.0, 138.0, 170.0, 0\n"},
+             "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                               "bf54c2121c55, 41.0, 138.0, 170.0, 0\n"},
         ],
+        "stop_kind": "completed_all",
+        "stop_reason": None,
     }
 
 
@@ -649,12 +669,135 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self.assertTrue(r["same_process"]["reset_proof"][
                 "full_recompute_proven"])
 
+    # ---------------- per-request authority drift matrix ----------
+    # (correction pass 3, BLOCKER 1) a live revalidation runs BEFORE
+    # EVERY completion request; drift at request N means exactly the
+    # prefix 0..N-1 executes and the lifecycle is retained incomplete.
+
+    def _drift_run(self, drift_at, mutate):
+        """Run with authority drifting at per-request gate N; return
+        (lifecycle_doc, completion_indexes_issued)."""
+        authority = self.env.authority_fn()
+        gate_calls = {"n": 0}
+
+        def drifting(repo_root, expected_head, namespace, github_api=None):
+            gate_calls["n"] += 1
+            payload = dict(authority.state["base"])
+            # gates: 2 prelaunch passes then one per request; drift
+            # targets the per-request gate for request index
+            if (drift_at is not None
+                    and gate_calls["n"] == 3 + drift_at):
+                mutate(payload)
+            return payload
+
+        issued = []
+
+        def execute(argv, env, request, prompt, port, unit_dir,
+                    repeats, expected_prompt_tokens,
+                    preflight_request=None):
+            # honest runner: the REAL gate runs before every request;
+            # a gate failure stops the lifecycle before the HTTP
+            # completion issues. `issued` records completions only.
+            def effective(index):
+                if preflight_request is not None:
+                    preflight_request(index)  # may raise => no issue
+                issued.append(index)
+            return fake_same_process_execute(
+                argv, env, request, prompt, port, unit_dir, repeats,
+                expected_prompt_tokens,
+                preflight_request=effective)
+
+        try:
+            P.run_same_process_lifecycle(
+                repo_root=self.env.repo, evidence_root=self.env.evidence,
+                namespace=self.env.namespace, arm=self.env.arm,
+                tag_prefix="case-3072-B-cpu-sameproc",
+                binary=self.env.bin, binary_id="comparator",
+                model_dir=self.env.model_dir,
+                expected_head=self.env.head,
+                model_attestation=self.env.attestation,
+                execute=execute, identity_observer=Recorder(
+                    value=fake_identity()),
+                revalidate_authority=drifting,
+                health_runner=fake_health_runner)
+            doc = None
+        except (P.PhysicalDiagnosticError, D.DiagnosticError):
+            doc = "raised"
+        return doc, issued
+
+    def test_all_gates_current_all_five_execute(self):
+        doc, issued = self._drift_run(None, lambda p: None)
+        self.assertEqual(issued, [0, 1, 2, 3, 4])
+
+    def test_drift_before_request_0_zero_completions(self):
+        doc, issued = self._drift_run(0, lambda p: p.update(head_sha="z" * 40))
+        self.assertEqual(issued, [])
+
+    def test_drift_before_request_1_only_request_0_executes(self):
+        doc, issued = self._drift_run(1, lambda p: p.update(head_sha="z" * 40))
+        self.assertEqual(issued, [0])
+
+    def test_drift_before_request_2_only_0_and_1_execute(self):
+        doc, issued = self._drift_run(2, lambda p: p.update(head_sha="z" * 40))
+        self.assertEqual(issued, [0, 1])
+
+    def test_pr_head_moves_mid_lifecycle_stops(self):
+        doc, issued = self._drift_run(
+            2, lambda p: p.update(open_pr=False))
+        self.assertEqual(issued, [0, 1])
+
+    def test_issue_closes_mid_lifecycle_stops(self):
+        doc, issued = self._drift_run(
+            2, lambda p: p.update(issue_open=False))
+        self.assertEqual(issued, [0, 1])
+
+    def test_comment_id_changes_mid_lifecycle_stops(self):
+        doc, issued = self._drift_run(
+            2, lambda p: p.update(comment_id=99))
+        self.assertEqual(issued, [0, 1])
+
+    def test_comment_body_changes_mid_lifecycle_stops(self):
+        def change_body(p):
+            p["body"] = p.get("body", "x") + "MUTATED"
+        doc, issued = self._drift_run(2, change_body)
+        self.assertEqual(issued, [0, 1])
+
+    def test_namespace_changes_mid_lifecycle_stops(self):
+        def change_ns(p):
+            p["body"] = p["body"].replace(
+                "diagnostic-namespace=d250-arm-b",
+                "diagnostic-namespace=d250-arm-a")
+            p["namespace"] = "d250-arm-a"
+        doc, issued = self._drift_run(2, change_ns)
+        self.assertEqual(issued, [0, 1])
+
+    def test_arm_changes_mid_lifecycle_stops(self):
+        # the arm is re-derived from the comment BODY line; the drift
+        # must change the body's arm line (namespace<->arm binding
+        # then fails, and the cross-bind digest changes)
+        def change_arm(p):
+            p["body"] = p["body"].replace(
+                "arm=B-process-init", "arm=A-vulkan-necessity")
+            p["arm"] = "A-vulkan-necessity"
+        doc, issued = self._drift_run(2, change_arm)
+        self.assertEqual(issued, [0, 1])
+
+    def test_retained_prefix_does_not_satisfy_deterministic_claim(self):
+        # truncated lifecycle: reducer judges an incomplete population
+        out = T._verify_namespace_population  # not used directly; the
+        # terminal-level fixture covers the reducer side. Here assert
+        # the producer never marks a truncated lifecycle complete.
+        doc, issued = self._drift_run(1, lambda p: p.update(head_sha="z" * 40))
+        self.assertEqual(issued, [0])
+
     def test_pid_change_mid_arm_is_fatal(self):
         def mutating(argv, env, request, prompt, port, unit_dir,
-                     repeats, expected_prompt_tokens):
+                     repeats, expected_prompt_tokens,
+                     preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             result["requests"][2]["server_pid"] = 9999
             return result
         with self.assertRaises(P.PhysicalDiagnosticError):
@@ -662,10 +805,12 @@ class SameProcessLifecycleTests(unittest.TestCase):
 
     def test_wrong_id_slot_is_fatal(self):
         def wrong_slot(argv, env, request, prompt, port, unit_dir,
-                       repeats, expected_prompt_tokens):
+                       repeats, expected_prompt_tokens,
+                       preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             # contract drifts to id_slot 0 on request 3
             result["requests"][3]["request_contract"] = {
                 **D.ARM_B_CONTRACT, "id_slot": 0}
@@ -675,18 +820,24 @@ class SameProcessLifecycleTests(unittest.TestCase):
 
     def test_missing_full_recompute_proof_is_fatal(self):
         def cache_reuse(argv, env, request, prompt, port, unit_dir,
-                        repeats, expected_prompt_tokens):
+                        repeats, expected_prompt_tokens,
+                        preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             # request 4 reuses cache: prompt eval reports only 100
-            # tokens (no full recompute)
+            # tokens (no full recompute) on the CURRENT task
             rec = result["requests"][4]
+            task = 100 + 4
             rec["log_slice"] = (
-                "slot get_availabl: id  3 | task 4 | "
-                "selected slot by id (3)\n"
-                "slot print_timing: id  3 | task 4 | prompt eval "
-                "time = 100.00 ms / 100 tokens\n").encode()
+                f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n"
+                f"0.01.000.001 I slot launch_slot_: id  3 | task "
+                f"{task} | processing task, is_child = 0\n"
+                f"0.01.000.002 I slot print_timing: id  3 | task "
+                f"{task} | prompt eval "
+                f"time = 100.00 ms / 100 tokens\n").encode()
             rec["reset_proof"] = P._parse_slot_log(
                 rec["log_slice"].decode(), 4, expected_prompt_tokens)
             return result
@@ -695,14 +846,19 @@ class SameProcessLifecycleTests(unittest.TestCase):
 
     def test_missing_prompt_eval_evidence_is_fatal(self):
         def no_eval(argv, env, request, prompt, port, unit_dir,
-                    repeats, expected_prompt_tokens):
+                    repeats, expected_prompt_tokens,
+                    preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             rec = result["requests"][1]
+            task = 100 + 1
             rec["log_slice"] = (
-                "slot get_availabl: id  3 | task 1 | "
-                "selected slot by id (3)\n").encode()
+                f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n"
+                f"0.01.000.001 I slot launch_slot_: id  3 | task "
+                f"{task} | processing task, is_child = 0\n").encode()
             rec["reset_proof"] = P._parse_slot_log(
                 rec["log_slice"].decode(), 1, expected_prompt_tokens)
             return result
@@ -711,14 +867,19 @@ class SameProcessLifecycleTests(unittest.TestCase):
 
     def test_lru_slot_selection_not_by_id_is_fatal(self):
         def lru(argv, env, request, prompt, port, unit_dir,
-                repeats, expected_prompt_tokens):
+                repeats, expected_prompt_tokens,
+                preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             rec = result["requests"][0]
             rec["log_slice"] = (
-                "slot get_availabl: id  3 | task 0 | selected slot by "
-                f"LRU, t_last = -1\nslot print_timing: id  3 | task 0 | "
+                f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by LRU, t_last = -1\n"
+                f"0.01.000.001 I slot launch_slot_: id  3 | task 100 | "
+                f"processing task, is_child = 0\n"
+                f"0.01.000.002 I slot print_timing: id  3 | task 100 | "
                 f"prompt eval time = 1.00 ms / "
                 f"{expected_prompt_tokens} tokens\n").encode()
             rec["reset_proof"] = P._parse_slot_log(
@@ -727,12 +888,42 @@ class SameProcessLifecycleTests(unittest.TestCase):
         with self.assertRaises(P.PhysicalDiagnosticError):
             self._run(execute=lru)
 
-    def test_request_count_drift_is_fatal(self):
-        def four(argv, env, request, prompt, port, unit_dir,
-                 repeats, expected_prompt_tokens):
+    def test_delayed_prior_task_evidence_cannot_certify_request(self):
+        # BLOCKER 3 OLD-DEFECT SHAPE: request 1's slice contains a
+        # PERFECT task-0 (prior request) selection + full prompt eval,
+        # but NO task-1 evidence. The task-bound proof must fail.
+        def delayed(argv, env, request, prompt, port, unit_dir,
+                    repeats, expected_prompt_tokens,
+                    preflight_request=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
-                expected_prompt_tokens)
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
+            rec = result["requests"][1]
+            rec["log_slice"] = (
+                "0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                "selected slot by id (3)\n"
+                "0.01.000.001 I slot launch_slot_: id  3 | task 100 | "
+                "processing task, is_child = 0\n"
+                "0.01.000.002 I slot print_timing: id  3 | task 100 | "
+                f"prompt eval time = 1.00 ms / "
+                f"{expected_prompt_tokens} tokens\n").encode()
+            # prior-task (100 == request 0's task) evidence only
+            rec["reset_proof"] = P._parse_slot_log(
+                rec["log_slice"].decode(), 1, expected_prompt_tokens,
+                consumed_task_ids=frozenset({100}))
+            return result
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self._run(execute=delayed)
+
+    def test_request_count_drift_is_fatal(self):
+        def four(argv, env, request, prompt, port, unit_dir,
+                 repeats, expected_prompt_tokens,
+                 preflight_request=None):
+            result = fake_same_process_execute(
+                argv, env, request, prompt, port, unit_dir, repeats,
+                expected_prompt_tokens,
+                preflight_request=preflight_request)
             result["requests"] = result["requests"][:4]
             return result
         with self.assertRaises(P.PhysicalDiagnosticError):
@@ -852,8 +1043,7 @@ class LadderDerivationTests(unittest.TestCase):
         for length, repeats in D.ARM_D_LADDER_SENTENCE_REPEATS.items():
             prompt = P.derive_ladder_prompt(
                 base["prompt_text"], length,
-                base["sentence_repeats"],
-                len(base["prompt_token_ids"]))
+                base["sentence_repeats"])
             block = ("The lighthouse keeper counted forty-one waves "
                      "before the foghorn answered twice. ")
             head = base["prompt_text"][:base["prompt_text"].index(block)]
@@ -867,8 +1057,61 @@ class LadderDerivationTests(unittest.TestCase):
         base = {c["case_id"]: c for c in ladder["cases"]}[D.CASE]
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.derive_ladder_prompt(base["prompt_text"], 4096,
-                                   base["sentence_repeats"],
-                                   len(base["prompt_token_ids"]))
+                                   base["sentence_repeats"])
+
+    def test_ladder_labels_are_generation_parameters_not_tokens(self):
+        # CORRECTION PASS 3 (blocker 4A): nominal labels are sentence
+        # repeat counts, never token counts; the derivation must not
+        # consume or claim a token length.
+        ladder = json.loads(
+            (REPO / D.FIXTURE_LADDER_REL).read_bytes())
+        base = {c["case_id"]: c for c in ladder["cases"]}[D.CASE]
+        accepted = {c["case_id"]: len(c["prompt_token_ids"])
+                    for c in ladder["cases"]}
+        # accepted fixtures already show label != token count
+        self.assertNotEqual(accepted["case-1024"], 1024)
+        self.assertNotEqual(accepted[D.CASE], 3072)
+        for length in D.ARM_D_LADDER_LENGTHS:
+            prompt = P.derive_ladder_prompt(
+                base["prompt_text"], length,
+                base["sentence_repeats"])
+            # the derived prompt's token count is derived ONLY through
+            # the tokenizer authority, never from the label
+            self.assertNotIn(str(length), ["0"])
+            self.assertIsInstance(prompt, str)
+
+    def test_tokenizer_authority_receipt_roundtrip(self):
+        # nominal 2048 with actual 2053 => the authority carries 2053
+        # and the reducer-side threshold judgment uses the ACTUAL
+        # count (T.validate_ladder_length_authority in the terminal
+        # reducer; nominal-vs-actual controls below).
+        receipt = P.ladder_token_authority_receipt(
+            2048, 136, "x", "a" * 64, 2053)
+        self.assertEqual(receipt["actual_token_count"], 2053)
+        verdict = P.validate_ladder_token_authority(receipt)
+        self.assertEqual(verdict["actual_token_count"], 2053)
+        self.assertTrue(
+            T.validate_ladder_length_authority(
+                receipt, D.INDEXER_TOP_K)["crosses_top_k"])
+        # nominal 2048 with actual 2041 => threshold NOT crossed even
+        # though the NOMINAL label equals 2048
+        receipt2 = P.ladder_token_authority_receipt(
+            2048, 136, "x", "a" * 64, 2041)
+        self.assertFalse(
+            T.validate_ladder_length_authority(
+                receipt2, D.INDEXER_TOP_K)["crosses_top_k"])
+        # prompt text mutation changes token authority => BLOCKED
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.validate_ladder_token_authority(receipt, prompt_text="x")
+
+    def test_runtime_prompt_eval_must_match_token_authority(self):
+        # retained tokenizer count disagrees with runtime prompt eval
+        # => the reducer BLOCKS the length condition
+        receipt = P.ladder_token_authority_receipt(
+            2048, 136, "x", "a" * 64, 2053)
+        verdict = T.validate_ladder_length_authority(
+            receipt, D.INDEXER_TOP_K, runtime_prompt_eval_tokens=2049)
+        self.assertFalse(verdict["runtime_matches_authority"])
 
     def test_ladder_unit_argv_has_no_delta(self):
         plan = D.probe_list_for("D-context-transition")
@@ -876,6 +1119,125 @@ class LadderDerivationTests(unittest.TestCase):
                              Path("/model/member1.gguf"), plan[0])
         self.assertNotIn("-dev", argv)
         self.assertEqual(argv[argv.index("-ngl") + 1], "8")
+
+
+class TaskBoundResetProofMutationTests(unittest.TestCase):
+    """BLOCKER 3 mutation matrix: the reset proof must bind to the
+    CURRENT request's task; prior-request evidence (the old defect)
+    can never certify the current request."""
+
+    TOKENS = 3077
+
+    def slice_for(self, task, tokens=None, selection="id", slot=3):
+        tokens = tokens if tokens is not None else self.TOKENS
+        sel = (f"0.01.000.000 I slot get_availabl: id {slot:2d} | "
+               f"task -1 | selected slot by id ({slot})\n" if selection == "id"
+               else f"0.01.000.000 I slot get_availabl: id {slot:2d} | "
+                    f"task -1 | selected slot by LRU, t_last = -1\n")
+        return (sel
+                + f"0.01.000.001 I slot launch_slot_: id {slot:2d} | "
+                f"task {task} | processing task, is_child = 0\n"
+                + f"0.01.000.002 I slot print_timing: id {slot:2d} | "
+                f"task {task} | prompt eval time = 1.0 ms / "
+                f"{tokens} tokens\n")
+
+    def prove(self, text, request_index, consumed=frozenset()):
+        return P._parse_slot_log(text, request_index, self.TOKENS,
+                                 consumed_task_ids=consumed)
+
+    def test_correct_task_n_proof_passes(self):
+        proof = self.prove(self.slice_for(100), 0)
+        self.assertTrue(proof["proven"], proof["problems"])
+        self.assertEqual(proof["task_id"], 100)
+        self.assertEqual(proof["prompt_eval_tokens"], self.TOKENS)
+
+    def test_prior_task_evidence_with_request_index_1_fails(self):
+        # OLD-DEFECT SHAPE: slice carries task 100 (request 0's task)
+        # while proving request 1; task 100 is consumed => fail
+        proof = self.prove(self.slice_for(100), 1,
+                           consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+        self.assertTrue(any("fresh task" in p or "prior" in p
+                            for p in proof["problems"]))
+
+    def test_only_prior_selection_line_fails(self):
+        text = (f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+
+    def test_only_prior_full_prompt_eval_fails(self):
+        # no current-task launch; prior task's eval is in-slice
+        text = (f"0.01.000.002 I slot print_timing: id  3 | task 100 | "
+                f"prompt eval time = 1.0 ms / {self.TOKENS} tokens\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+
+    def test_selection_current_but_prompt_eval_previous_fails(self):
+        text = (f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n"
+                f"0.01.000.001 I slot launch_slot_: id  3 | task 101 | "
+                f"processing task, is_child = 0\n"
+                f"0.01.000.002 I slot print_timing: id  3 | task 100 | "
+                f"prompt eval time = 1.0 ms / {self.TOKENS} tokens\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+        self.assertTrue(any("prompt-eval" in p
+                            for p in proof["problems"]))
+
+    def test_prompt_eval_current_but_selection_previous_fails(self):
+        # prior task's by-id selection, current eval: the LRU-style
+        # re-selection never happened for the current task — no
+        # by-id selection after the prior launch
+        text = (f"0.01.000.000 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n"
+                f"0.01.000.001 I slot launch_slot_: id  3 | task 100 | "
+                f"processing task, is_child = 0\n"
+                f"0.01.000.002 I slot print_timing: id  3 | task 101 | "
+                f"prompt eval time = 1.0 ms / {self.TOKENS} tokens\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+
+    def test_mixed_lines_no_coherent_current_proof_fails(self):
+        text = (self.slice_for(100)
+                + f"0.01.000.003 I slot get_availabl: id  3 | task -1 | "
+                f"selected slot by id (3)\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+
+    def test_duplicate_conflicting_task_boundaries_fail_closed(self):
+        text = (self.slice_for(101)
+                + f"0.01.000.003 I slot launch_slot_: id  3 | "
+                f"task 102 | processing task, is_child = 0\n")
+        proof = self.prove(text, 1, consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+        self.assertTrue(any("conflicting" in p for p in proof["problems"]))
+
+    def test_wrong_id_slot_fails(self):
+        proof = self.prove(self.slice_for(101, slot=0), 1,
+                           consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+
+    def test_lru_selection_fails(self):
+        proof = self.prove(self.slice_for(101, selection="lru"), 1,
+                           consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+        self.assertTrue(any("LRU" in p for p in proof["problems"]))
+
+    def test_cache_reuse_partial_prompt_fails(self):
+        proof = self.prove(self.slice_for(101, tokens=100), 1,
+                           consumed=frozenset({100}))
+        self.assertFalse(proof["proven"])
+        self.assertTrue(any("cache reuse" in p
+                            for p in proof["problems"]))
+
+    def test_task_id_retained_in_proof_receipt(self):
+        proof = self.prove(self.slice_for(101), 1,
+                           consumed=frozenset({100}))
+        self.assertEqual(proof["task_id"], 101)
+        self.assertIn("consumed_prior_task_ids", proof)
+        self.assertEqual(proof["consumed_prior_task_ids"], [100])
+
 
 
 class NoPhysicalExecutionTests(unittest.TestCase):

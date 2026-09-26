@@ -95,6 +95,29 @@ is mechanically localized; never burn repeats to reconfirm a mismatch
 (first row mismatch suffices for "nondeterministic"); a DETERMINISTIC
 claim requires the predeclared 5 identical repeats.
 
+FROZEN PREFIX POPULATION LAW (correction pass 3, NO-GO 5847890177
+blocker 2; machine-enforced by `prefix_population_facts` in
+scripts/issue250_diagnostic.py and the retained-byte reducer):
+  - A condition is a COMPLETE NONDETERMINISTIC population when the
+    retained units form a contiguous prefix from unit 001, at least
+    two valid units exist, the first row-digest mismatch appears
+    within that retained prefix, and execution STOPPED at the first
+    mismatch (only already-in-flight units under the frozen batch
+    rule are excused). The unexecuted planned tail is NOT missing
+    evidence.
+  - A DETERMINISTIC claim requires ALL predeclared units retained
+    and identical (5 where the arm freezes 5). Three identical units
+    are incomplete, never deterministic.
+  - INVALID (fail closed): gaps inside the retained prefix (001+003),
+    execution past the declared stop point, cherry-picked subsets,
+    quarantined-result substitution, retained later units omitted
+    from reduction, duplicates, malformed tag/index ordering.
+  - For Arm-B same-process, a TRUNCATED lifecycle (authority/process/
+    error loss) is an INCOMPLETE population — distinct from a valid
+    mismatch-triggered stop; the reducer derives the stop reason
+    mechanically from retained rows/custody and never trusts a
+    producer stop claim.
+
 Namespace d250-arm-a (Vulkan-necessity discriminator; §A):
   - Condition "cpu-only-devnone": the exact accepted case-3072
     workload, binary, model, request, and observation seam, with
@@ -152,10 +175,32 @@ Namespace d250-arm-b (fresh-process/runtime-initialization; §B):
         one server launch, one shared PID, per-request rows/
         responses/log slices, one shared identity/health record;
         five separate processes CANNOT satisfy this arm.
+  - PER-REQUEST LIVE AUTHORITY GATE (correction pass 3, NO-GO
+    5847890177 blocker 1): every completion request begins under
+    CURRENT authority — a live revalidation runs through the
+    canonical #250 fetch path immediately before EACH request, and
+    every observation must cross-bind to the SAME original dispatch
+    generation (same comment ID, head, namespace, arm, author
+    association, created-at, body digest). A drift before request N
+    stops the lifecycle BEFORE request N issues: no later request
+    executes, the completed prefix stays retained append-only, and
+    the lifecycle is marked incomplete (fail-closed); the server
+    process being already running NEVER excuses a failed gate.
   - Reset-equivalence proof retained per request (re-derived by the
-    reducer from the retained log slice): slot 3 selected BY ID,
-    `prompt eval` covering the full 3077 tokens each repeat (no
-    cache reuse), per-request boundaries.
+    reducer from the retained log slice), TASK-BOUND to the current
+    request (correction pass 3, NO-GO 5847890177 blocker 3): the
+    proof must show slot 3 selected BY ID, exactly ONE fresh task
+    launched on slot 3 after that selection (task id not consumed by
+    any earlier request of this lifecycle), and a `prompt eval` line
+    for THAT task covering the full 3077 tokens (no cache reuse).
+    Delayed evidence from request N−1's task can never certify
+    request N. Grammar basis: pinned SLT_INF log prefixes
+    (`slot <fn>: id N | task M |`), where selection lines carry the
+    structural `task -1` and launch/timing lines carry the real task
+    id; task ids come from the pinned monotonic counter and are NOT
+    request-index-equal (health/next-response tasks consume the same
+    counter), so the producer DISCOVERS the task id from the log and
+    the reducer re-derives it.
   - Interpretation: fresh varies + same-process deterministic ⇒
     process/runtime initialization is a necessary boundary; both vary
     ⇒ C. If fresh-process CPU-only evidence turns deterministic in
@@ -180,14 +225,63 @@ Namespace d250-arm-d (long-context transition; §D):
   - Only if A–C do not localize. Predeclared length ladder, SAME
     fixture derivation rule as the accepted ladder (repeated
     sentence block, identical prologue/suffix; lengths 1024, 1536,
-    2048, 2304, 2560, 3072 rendered lengths, 2 repeats each,
-    accepted placement). The ladder is frozen in
-    scripts/issue250_diagnostic.py BEFORE any execution.
+    2048, 2304, 2560, 3072 rendered lengths, accepted placement).
+    The ladder is frozen in scripts/issue250_diagnostic.py BEFORE
+    any execution.
+  - TOKEN-COUNT AUTHORITY (correction pass 3, NO-GO 5847890177
+    blocker 4A): the ladder labels are TEXT GENERATION PARAMETERS
+    (sentence-repeat counts), NOT token lengths. BEFORE any physical
+    Arm-D execution, every predeclared prompt is tokenized through
+    the pinned-server `/tokenize` authority (the same tokenizer the
+    pinned /completion path uses; the derivation launches the
+    accepted binary ONCE and serves ONLY /tokenize requests —
+    tokenization is not diagnostic execution), and the receipt is
+    retained append-only per length: nominal label, sentence-repeat
+    count, prompt text digest, token ids (or authoritative
+    token-count receipt), actual token count. The producer binds
+    the runtime/server prompt-eval count to that actual count; the
+    reducer uses the ACTUAL token count (never the nominal label)
+    for any token-count mechanism (indexer top_k = 2048), and BLOCKS
+    a length whose runtime prompt-eval count disagrees with the
+    retained tokenizer authority. If the actual counts do not
+    bracket/cross a frozen mechanism threshold as intended, the D
+    predicate is reported unavailable/unresolved — no retrospective
+    length retrofit after observing outcomes (a prospective frozen
+    amendment requires review before execution).
+  - SCREENING + ADAPTIVE CONFIRMATION (correction pass 3, NO-GO
+    5847890177 blocker 4C): 2 screening repeats per length are a
+    bracketing observation ONLY — two equal rows are
+    `pair_identical`, NOT a deterministic condition. A D LOCALIZED
+    claim whose deterministic side is the last deterministic length
+    requires the frozen deterministic-confirmation count (5 total
+    identical repeats) for exactly that boundary-adjacent condition,
+    obtained through the PREDECLARED confirm-extension units
+    (`-003-confirm`..`-005-confirm`, frozen in the plan before any
+    execution); unrelated ladder points are never extended. A first
+    mismatch at ANY point (including inside the confirmation
+    extension) immediately establishes variability.
   - Goal: earliest repeatable deterministic→variable transition;
-    then map that transition to a source/log-identified mechanism
-    (graph shape, chunking, kernel/path selection, allocation/init
-    boundary). A length threshold without an identified execution
-    transition is reported as unresolved, never claimed as causal.
+    then map that transition to a source-proven mechanism. A length
+    threshold without an identified execution transition is
+    reported as unresolved, never claimed as causal. The frozen
+    transition predicates (blocker 4B) are:
+    (a) `indexer_top_k_boundary` — the boundary between the last
+        deterministic and first variable length, measured in ACTUAL
+        token counts, equals the qwen4exp indexer top_k crossing
+        (model-architecture fact, phase0 MODEL_ARCH_FACTS);
+    (b) `midstream_ubatch_split` — retained cumulative prompt-
+        progress counts show a strictly sub-batch (512) step
+        STRICTLY BETWEEN two continuing rungs (the hybrid-memory
+        rollback-tail grouping signature; an ordinary final
+        remainder terminates the sequence and cannot satisfy it),
+        present at every variable length and absent at every
+        deterministic length.
+    The retired `checkpoint_resegmentation` and
+    `ubatch_geometry_split`/non-uniform-progress predicates are
+    UNSOUND from pinned source (checkpoint evidence logs at DBG
+    only — absent under the frozen non-verbose launch shape;
+    progress lines are 3s wall-clock samples, not ubatch
+    boundaries) and are removed from the vocabulary.
 
 4. Unit retention and custody (unchanged from #248 discipline)
 --------------------------------------------------------------

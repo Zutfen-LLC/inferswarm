@@ -93,13 +93,12 @@ SERVER_BATCH_SIZE = 512
 SERVER_READY_TIMEOUT_S = 1800
 HTTP_TIMEOUT_S = 1200
 
-# Same-process reset-evidence proof shapes, derived from the PINNED
-# server's actual log lines (server-context.cpp:1831 + retained #248
-# evidence shape):
-#   "slot get_availabl: id  3 | task 0 | selected slot by id (3)"
-#     -> an id_slot request selects slot 3 BY ID (not LRU/LCP)
-#   "prompt eval time = ... /  3077 tokens"
-#     -> the FULL prompt was re-processed (no cache reuse) per request
+# Same-process reset-evidence grammar. CORRECTION PASS 3: the old
+# unanchored SLOT_BY_ID_RE / PROMPT_EVAL_RE (any slot-3 line + any
+# 3077-token prompt-eval line anywhere in the slice) admitted delayed
+# prior-task evidence; superseded by the task-bound state machine at
+# SELECTION_BY_ID_RE / LAUNCH_TASK_RE / PROMPT_EVAL_TASK_RE below.
+# Kept (unused by proofs) only for documentation continuity.
 SLOT_BY_ID_RE = re.compile(
     r"slot get_availabl[^\n]*\bid\s+3\b[^\n]*selected slot by id")
 PROMPT_EVAL_RE = re.compile(
@@ -491,7 +490,7 @@ def close_campaign_attestation(evidence_root: Path, model_dir: Path,
 # ---------------------------------------------------------------------------
 
 def derive_ladder_prompt(base_prompt: str, length: int,
-                         base_repeats: int, base_tokens: int) -> str:
+                         base_repeats: int) -> str:
     """Derive a ladder-length prompt by the accepted derivation rule.
 
     The accepted ladder fixtures are a frozen prologue + N repeats of
@@ -500,15 +499,19 @@ def derive_ladder_prompt(base_prompt: str, length: int,
     the frozen ARM_D_LADDER_SENTENCE_REPEATS table (predeclared in
     scripts/issue250_diagnostic.py before any execution; never picked
     after seeing outputs).
+
+    CORRECTION PASS 3 (NO-GO 5847890177, blocker 4A): the old
+    signature carried ``base_tokens`` but never used it, implying the
+    nominal ladder label was a token length. It is not: the label is
+    a TEXT GENERATION PARAMETER. The actual token count is derived
+    separately through the pinned-server tokenizer authority
+    (``tokenize_prompt`` / tokenizer receipts) and retained per unit.
     """
     if length not in D.ARM_D_LADDER_SENTENCE_REPEATS:
         raise PhysicalDiagnosticError(
             f"length {length} is not in the predeclared ladder")
-    if base_repeats <= 0 or base_tokens <= 0:
+    if base_repeats <= 0:
         raise PhysicalDiagnosticError("malformed base fixture")
-    # The repeated sentence block is derived from the accepted
-    # case-3072 fixture itself: total chars minus prologue/suffix
-    # split proportionally to the repeat count.
     return _scale_sentence_block(base_prompt, base_repeats,
                                  D.ARM_D_LADDER_SENTENCE_REPEATS[length])
 
@@ -528,6 +531,231 @@ def _scale_sentence_block(prompt: str, base_repeats: int,
         raise PhysicalDiagnosticError(
             "base fixture is not a prologue+N-blocks+suffix shape")
     return head + block * target_repeats + tail
+
+
+def ladder_token_authority_receipt(nominal_length: int,
+                                   sentence_repeats: int,
+                                   prompt_text: str,
+                                   prompt_sha256: str,
+                                   token_count: int,
+                                   token_ids: list[int] | None = None,
+                                   ) -> dict[str, Any]:
+    """Build the per-ladder-length tokenizer-authority receipt.
+
+    Binds: nominal ladder label (TEXT PARAMETER, not a token count),
+    sentence-repeat count, prompt text digest, and the ACTUAL token
+    count derived through the pinned tokenizer authority (server
+    /tokenize receipt or authoritative fixture token ids). Retained
+    append-only per unit; the reducer recomputes the digest binding.
+    """
+    if nominal_length not in D.ARM_D_LADDER_SENTENCE_REPEATS:
+        raise PhysicalDiagnosticError(
+            f"nominal length {nominal_length} not in the frozen ladder")
+    if sentence_repeats != D.ARM_D_LADDER_SENTENCE_REPEATS[
+            nominal_length]:
+        raise PhysicalDiagnosticError(
+            f"sentence repeats {sentence_repeats} do not match the "
+            f"frozen ladder entry for {nominal_length}")
+    if (not isinstance(prompt_text, str) or not prompt_text
+            or not re.fullmatch(r"[0-9a-f]{64}", prompt_sha256)
+            or type(token_count) is not int or token_count <= 0):
+        raise PhysicalDiagnosticError("malformed token authority inputs")
+    if token_ids is not None and (not isinstance(token_ids, list)
+                                  or len(token_ids) != token_count
+                                  or any(type(t) is not int
+                                         for t in token_ids)):
+        raise PhysicalDiagnosticError(
+            "token id population does not match the token count")
+    return {
+        "nominal_length": nominal_length,
+        "sentence_repeats": sentence_repeats,
+        "prompt_sha256": prompt_sha256,
+        "actual_token_count": token_count,
+        "token_ids_sha256": (
+            D.sha256_bytes(
+                json.dumps(token_ids, separators=(",", ":")).encode())
+            if token_ids is not None else None),
+        "token_ids": token_ids,
+        "authority": "pinned_server_tokenize_endpoint",
+    }
+
+
+def validate_ladder_token_authority(receipt: Any,
+                                    prompt_text: str | None = None,
+                                    ) -> dict[str, Any]:
+    """Fail-closed validation of a retained token-authority receipt,
+    recomputing the prompt-text digest when the prompt is supplied."""
+    if not isinstance(receipt, dict):
+        raise PhysicalDiagnosticError(
+            "ladder token authority receipt is not an object")
+    nominal = receipt.get("nominal_length")
+    repeats = receipt.get("sentence_repeats")
+    if nominal not in D.ARM_D_LADDER_SENTENCE_REPEATS:
+        raise PhysicalDiagnosticError("unknown nominal ladder length")
+    if repeats != D.ARM_D_LADDER_SENTENCE_REPEATS[nominal]:
+        raise PhysicalDiagnosticError(
+            "token authority receipt does not match the frozen ladder")
+    count = receipt.get("actual_token_count")
+    if type(count) is not int or count <= 0:
+        raise PhysicalDiagnosticError("actual token count malformed")
+    sha = receipt.get("prompt_sha256")
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha):
+        raise PhysicalDiagnosticError("prompt digest malformed")
+    if prompt_text is not None and D.sha256_bytes(
+            prompt_text.encode()) != sha:
+        raise PhysicalDiagnosticError(
+            "token authority receipt binds a different prompt text")
+    ids = receipt.get("token_ids")
+    if ids is not None:
+        if (not isinstance(ids, list) or len(ids) != count
+                or any(type(t) is not int for t in ids)):
+            raise PhysicalDiagnosticError("token id population malformed")
+        if receipt.get("token_ids_sha256") != D.sha256_bytes(
+                json.dumps(ids, separators=(",", ":")).encode()):
+            raise PhysicalDiagnosticError(
+                "token id digest binding mismatch")
+    elif receipt.get("token_ids_sha256") is not None:
+        raise PhysicalDiagnosticError(
+            "token id digest present without token ids")
+    return dict(receipt)
+
+
+LADDER_TOKEN_AUTHORITY_NAME = "ladder-token-authority.json"
+LADDER_TOKEN_AUTHORITY_SCHEMA = (
+    "inferswarm.issue250.ladder-token-authority/1")
+
+
+def tokenize_prompt(port: int, prompt: str,
+                    http_post: Callable[[str, bytes], Any] | None = None,
+                    ) -> tuple[int, list[int]]:
+    """Tokenize one prompt through the PINNED server's /tokenize
+    endpoint (add_special defaults true server-side; parse_special
+    true — mirroring the pinned /completion tokenize call at
+    server-context.cpp:4579). Returns (token_count, token_ids)."""
+    if http_post is None:
+        http_post = _http_json_post
+    body = json.dumps({"content": prompt}).encode()
+    doc = http_post(f"http://127.0.0.1:{port}/tokenize", body)
+    tokens = doc.get("tokens") if isinstance(doc, dict) else None
+    if (not isinstance(tokens, list) or not tokens
+            or any(type(t) is not int for t in tokens)):
+        raise PhysicalDiagnosticError(
+            f"malformed tokenize response: {str(doc)[:200]}")
+    return len(tokens), list(tokens)
+
+
+def _http_json_post(url: str, body: bytes) -> Any:
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"},
+        method="POST")
+    with urllib.request.urlopen(req, timeout=120) as response:
+        if response.status != 200:
+            raise PhysicalDiagnosticError(
+                f"tokenize HTTP status {response.status}")
+        return json.loads(response.read(16 * 1024 * 1024))
+
+
+def derive_ladder_token_authority(
+        repo_root: Path, evidence_root: Path, expected_head: str,
+        *, binary: Path, binary_id: str, model_dir: Path,
+        tokenize: Callable[[str], tuple[int, list[int]]] | None = None,
+        http_post: Callable[[str, bytes], Any] | None = None,
+        ) -> dict[str, Any]:
+    """Derive and retain the campaign ladder-token-authority document.
+
+    CORRECTION PASS 3 (NO-GO 5847890177, blocker 4A): BEFORE any
+    physical Arm-D execution, every predeclared ladder prompt is
+    tokenized through the pinned tokenizer authority — the accepted
+    comparator binary itself serving /tokenize (the same tokenizer the
+    pinned /completion path uses). The document retains, per nominal
+    ladder length: nominal label (TEXT PARAMETER), sentence-repeat
+    count, prompt text digest, actual token ids (full population), and
+    the actual token count. Append-only; regeneration is refused.
+
+    ``tokenize`` is the injectable seam (tests pass a fake; production
+    launches the accepted binary once and serves every prompt through
+    /tokenize with NO completion requests — tokenization is not
+    diagnostic execution).
+    """
+    repo_root = Path(repo_root)
+    D._require_clean_head(repo_root, expected_head)
+    fixtures = verify_fixtures(repo_root)
+    binary_sha = verify_binary(Path(binary), binary_id)
+    base = fixtures[D.CASE]
+    lengths: dict[str, Any] = {}
+    for length in D.ARM_D_LADDER_LENGTHS:
+        prompt = derive_ladder_prompt(
+            base["prompt_text"], length, base["sentence_repeats"])
+        if tokenize is not None:
+            count, ids = tokenize(prompt)
+        else:
+            count, ids = tokenize_prompt(PORT, prompt, http_post=http_post)
+        lengths[str(length)] = ladder_token_authority_receipt(
+            length, D.ARM_D_LADDER_SENTENCE_REPEATS[length], prompt,
+            D.sha256_bytes(prompt.encode()), count, token_ids=ids)
+    doc = {
+        "schema": LADDER_TOKEN_AUTHORITY_SCHEMA,
+        "head_sha": expected_head,
+        "binary_id": binary_id,
+        "binary_sha256": binary_sha,
+        "authority": "pinned_server_tokenize_endpoint",
+        "method": ("accepted comparator binary /tokenize; add_special "
+                   "server default (true) + parse_special true — the "
+                   "same tokenize call the pinned /completion path "
+                   "makes (server-context.cpp:4579)"),
+        "lengths": lengths,
+    }
+    root = Path(evidence_root)
+    target = root / LADDER_TOKEN_AUTHORITY_NAME
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError(
+            f"ladder token authority already retained (append-only): "
+            f"{target}")
+    root.mkdir(parents=True, exist_ok=True)
+    _write_json(target, doc)
+    return doc
+
+
+def load_ladder_token_authority(evidence_root: Path,
+                                expected_head: str) -> dict[str, Any]:
+    """Load and fail-closed validate the retained token authority."""
+    path = Path(evidence_root) / LADDER_TOKEN_AUTHORITY_NAME
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError(
+            f"retained ladder token authority missing: {path}")
+    doc = json.loads(path.read_bytes())
+    if not isinstance(doc, dict) or doc.get(
+            "schema") != LADDER_TOKEN_AUTHORITY_SCHEMA:
+        raise PhysicalDiagnosticError(
+            "ladder token authority schema mismatch")
+    if doc.get("head_sha") != expected_head:
+        raise PhysicalDiagnosticError(
+            "ladder token authority binds a different head")
+    binary_id = doc.get("binary_id")
+    if not isinstance(binary_id, str) or doc.get(
+            "binary_sha256") != D.SERVER_BINARIES.get(binary_id):
+        raise PhysicalDiagnosticError(
+            "ladder token authority binary binding mismatch")
+    lengths = doc.get("lengths")
+    if (not isinstance(lengths, dict)
+            or sorted(lengths) != sorted(
+                str(n) for n in D.ARM_D_LADDER_LENGTHS)):
+        raise PhysicalDiagnosticError(
+            "ladder token authority does not cover exactly the frozen "
+            "ladder lengths")
+    for key, entry in lengths.items():
+        validate_ladder_token_authority(entry)
+        if entry["nominal_length"] != int(key):
+            raise PhysicalDiagnosticError(
+                "ladder token authority key/entry mismatch")
+    return doc
+
+
+def validate_ladder_token_authority_entry(entry: Any,
+                                          prompt_text: str) -> dict[str, Any]:
+    """Validate one retained entry against the exact prompt text the
+    unit will send (digest recompute — prompt mutation is fatal)."""
+    return validate_ladder_token_authority(entry, prompt_text)
 
 
 # ---------------------------------------------------------------------------
@@ -826,12 +1054,27 @@ def run_diagnostic_unit(
         length = unit["ladder_length"]
         base = fixtures[D.CASE]
         prompt = derive_ladder_prompt(
-            base["prompt_text"], length,
-            base["sentence_repeats"], len(base["prompt_token_ids"]))
-        prompt_token_ids = None  # ladder token count recorded at runtime
+            base["prompt_text"], length, base["sentence_repeats"])
+        prompt_token_ids = None  # ladder token ids live in the authority
+        # CORRECTION PASS 3 (blocker 4A): the ACTUAL token count comes
+        # from the retained campaign ladder-token-authority document,
+        # derived BEFORE physical Arm-D execution through the pinned
+        # tokenizer (see derive_ladder_token_authority). No ladder unit
+        # can execute without it — a nominal label is never a token
+        # count.
+        authority_doc = load_ladder_token_authority(
+            evidence_root, expected_head)
+        entry = authority_doc["lengths"].get(str(length))
+        if entry is None:
+            raise PhysicalDiagnosticError(
+                f"retained ladder token authority does not cover "
+                f"nominal length {length}")
+        validate_ladder_token_authority_entry(entry, prompt)
+        token_authority = entry
     else:
         prompt = fixtures[D.CASE]["prompt_text"]
         prompt_token_ids = fixtures[D.CASE]["prompt_token_ids"]
+        token_authority = None
 
     unit_dir = prepare_unit_dir(evidence_root, namespace, tag)
 
@@ -883,7 +1126,8 @@ def run_diagnostic_unit(
         identity_pre=identity_pre, identity_observer=identity_observer,
         problems_pre=problems_pre, final_authority=final_authority,
         unit_started_at=unit_started_at, unit_ended_at=unit_ended_at,
-        wall=wall, health_runner=health_runner)
+        wall=wall, health_runner=health_runner,
+        token_authority=token_authority)
 
 
 def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
@@ -893,7 +1137,8 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
                            identity_pre, identity_observer, problems_pre,
                            final_authority, unit_started_at, unit_ended_at,
                            wall, health_runner,
-                           same_process_block=None) -> dict[str, Any]:
+                           same_process_block=None,
+                           token_authority=None) -> dict[str, Any]:
     """Post-execution custody: identity postcheck, rows, health, receipt."""
     identity_post = (identity_observer or _observe_arm_identity)()
     problems_post = I.identity_problems(ARM, identity_post)
@@ -947,6 +1192,8 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
         "request_contract_sha256": D.canonical_request_digest(request),
         "prompt_len": len(prompt),
         "prompt_token_ids": prompt_token_ids,
+        "prompt_sha256": D.sha256_bytes(prompt.encode()),
+        "ladder_token_authority": token_authority,
         "server_argv": argv,
         "server_env": {k: env[k] for k in sorted(env)
                        if k.startswith(("LLAMA_", "VK_", "CUDA_"))},
@@ -1007,26 +1254,166 @@ def unit_authority_block(final_authority: dict[str, Any]) -> dict[str, Any]:
 
 # ---------------------------------------------------------------------------
 # Same-process Arm-B lifecycle (correction pass 2: one process, five
-# equivalent requests, reset semantics proven per request)
+# equivalent requests, reset semantics proven per request).
+#
+# CORRECTION PASS 3 (NO-GO 5847890177, blockers 1+3):
+#   * authority is revalidated LIVE before EACH completion request
+#     (not only before the launch) and cross-bound to the original
+#     dispatch generation;
+#   * the reset proof is bound to the CURRENT request's task identity
+#     through the pinned server's ACTUAL log grammar.
+#
+# Pinned grammar (llama.cpp b29c606e, server-common.h SLT_INF prefix
+# ``slot %12s: id %2d | task %d |``; verified against the retained
+# #248 evidence logs):
+#   selection : "slot get_availabl: id  3 | task -1 | selected slot
+#                by id (3)"          (slot.task is unset during
+#               get_available_slot -> the task field is STRUCTURALLY
+#               -1 here; task identity therefore comes from the
+#               launch line, not the selection line)
+#   launch    : "slot launch_slot_: id  3 | task 7 | processing task,
+#                is_child = 0"
+#   timing    : "slot print_timing: id  3 | task 7 | prompt eval time
+#                =  48215.02 ms /  3077 tokens (...)"
+# Every request consumes a fresh task id from the server's monotonic
+# counter (server-queue.cpp get_new_id: ``id++``; /health consumes no
+# task id, but NEXT_RESPONSE/control tasks may — task ids are NOT
+# assumed equal to request indexes). The proof is therefore a
+# REQUEST-DELIMITED LOG STATE MACHINE: selection-by-id(slot 3) ->
+# launch(slot 3, task N, processing task) -> prompt-eval(slot 3,
+# task N, EXACTLY the expected token count), with N fresh w.r.t. all
+# task ids consumed by earlier requests of the SAME lifecycle.
 # ---------------------------------------------------------------------------
 
+_SLOT_LINE = r"slot\s+[^\s:]+:\s*id\s+{id}\s*\|\s*task\s*(-?\d+)\s*\|"
+
+
+def _slot_line_re(slot_id: int) -> re.Pattern[str]:
+    return re.compile(_SLOT_LINE.format(id=slot_id))
+
+
+SELECTION_BY_ID_RE = re.compile(
+    r"slot\s+get_availabl:[^\n]*\bid\s+3\b[^\n]*task\s+-1\b[^\n]*"
+    r"selected slot by id\s*\(3\)")
+# a non-by-id selection (LRU/LCP) mentioning slot 3 must NOT satisfy
+# the selected-by-id requirement
+SELECTION_NOT_BY_ID_RE = re.compile(
+    r"slot\s+get_availabl:[^\n]*\bid\s+3\b[^\n]*"
+    r"selected slot by (?!id)")
+LAUNCH_TASK_RE = re.compile(
+    _SLOT_LINE.format(id=3).replace("(-?\\d+)", "(-?\\d+)") +
+    r"[^\n]*processing task")
+PROMPT_EVAL_TASK_RE = re.compile(
+    r"slot\s+[^\s:]+:\s*id\s+3\s*\|\s*task\s+(\d+)\s*\|[^\n]*"
+    r"prompt eval time\s*=\s*[0-9.]+ ms\s*/\s*(\d+)\s*tokens")
+
+
 def _parse_slot_log(text: str, request_index: int,
-                    expected_prompt_tokens: int) -> dict[str, Any]:
+                    expected_prompt_tokens: int,
+                    consumed_task_ids: frozenset[int] | set[int] = frozenset(),
+                    ) -> dict[str, Any]:
     """Prove reset semantics for one same-process request from the
-    retained server-log slice: slot 3 selected BY ID, full prompt
-    re-evaluated (no cache reuse)."""
-    slot_by_id = bool(SLOT_BY_ID_RE.search(text))
-    prompt_evals = [int(m.group(1))
-                    for m in PROMPT_EVAL_RE.finditer(text)]
-    full_recompute = [n for n in prompt_evals
-                      if n == expected_prompt_tokens]
+    retained server-log slice, BOUND to the current request's task.
+
+    Fail-closed requirements (all must hold):
+      1. the LAST selection line for slot 3 in the slice selects BY
+         ID (an LRU/LCP selection is fatal);
+      2. after that selection, slot 3 launches EXACTLY ONE task N
+         ("processing task");
+      3. a prompt-eval line for slot 3 | task N covers EXACTLY
+         ``expected_prompt_tokens`` (full recompute; a smaller count
+         is cache reuse and is fatal);
+      4. task N is FRESH: not among ``consumed_task_ids`` (the task
+         ids proven by earlier requests of this lifecycle) — delayed
+         evidence from request N-1 carries request N-1's task id and
+         CANNOT certify request N;
+      5. exactly one fresh task boundary exists (two unseen task ids
+         is ambiguous -> fail closed).
+
+    Returns the mechanically parsed task id and evidence; raises
+    nothing (callers check ``proven``).
+    """
+    consumed = set(consumed_task_ids)
+    selection_matches = list(SELECTION_BY_ID_RE.finditer(text))
+    lru_matches = list(SELECTION_NOT_BY_ID_RE.finditer(text))
+    last_selection_end = (
+        selection_matches[-1].end() if selection_matches else -1)
+    # a non-by-id selection AFTER the last by-id selection means the
+    # slot was re-selected without id pinning (fatal); before it, an
+    # earlier request's LRU line is historical noise only if a later
+    # by-id selection exists for the fresh task
+    late_lru = [m for m in lru_matches if m.start() > last_selection_end]
+    launches = [(m.start(), int(m.group(1)))
+                for m in LAUNCH_TASK_RE.finditer(text)
+                if m.start() > last_selection_end]
+    evals = [(m.start(), int(m.group(1)), int(m.group(2)))
+             for m in PROMPT_EVAL_TASK_RE.finditer(text)]
+    fresh_launches = [(pos, tid) for pos, tid in launches
+                      if tid not in consumed]
+    problems: list[str] = []
+    if not selection_matches:
+        problems.append("no slot-3 selected-by-id line in slice")
+    if late_lru:
+        problems.append("slot 3 selected by LRU/LCP after the by-id "
+                        "selection")
+    if not fresh_launches:
+        problems.append(
+            "no launch of a FRESH task on slot 3 after the by-id "
+            "selection (delayed prior-task evidence cannot certify "
+            "this request)")
+    if len({tid for _, tid in fresh_launches}) > 1:
+        problems.append("multiple conflicting fresh task boundaries")
+    task_id: int | None = None
+    prompt_eval_tokens: int | None = None
+    if fresh_launches:
+        task_id = fresh_launches[-1][1]
+        task_evals = [n for _, tid, n in evals if tid == task_id]
+        if not task_evals:
+            problems.append(
+                f"no prompt-eval line for the current task {task_id}")
+        else:
+            prompt_eval_tokens = task_evals[-1]
+            if prompt_eval_tokens != expected_prompt_tokens:
+                problems.append(
+                    f"prompt eval covers {prompt_eval_tokens} tokens != "
+                    f"expected {expected_prompt_tokens} (cache reuse or "
+                    f"wrong-task evidence)")
+        prior_evals = sorted({tid for _, tid, _ in evals
+                              if tid in consumed})
+        if prior_evals:
+            problems.append(
+                f"slice carries delayed prompt-eval evidence of prior "
+                f"tasks {prior_evals}")
+    proven = not problems
     return {
         "request_index": request_index,
-        "slot_selected_by_id": slot_by_id,
-        "prompt_eval_token_counts": prompt_evals,
-        "full_recompute_proven": bool(full_recompute),
-        "full_recompute_count": len(full_recompute),
+        "task_id": task_id,
+        "slot_selected_by_id": bool(selection_matches) and not late_lru,
+        "launch_proven": bool(fresh_launches),
+        "prompt_eval_tokens": prompt_eval_tokens,
+        "full_recompute_proven": (
+            proven and prompt_eval_tokens == expected_prompt_tokens),
+        "consumed_prior_task_ids": sorted(consumed),
+        "problems": problems,
+        "proven": proven,
     }
+
+
+def _validate_reset_proof(proof: dict[str, Any], index: int) -> int:
+    """Fail-closed check of one parsed reset proof; returns task id."""
+    if (not isinstance(proof, dict) or not proof.get("proven")
+            or proof.get("request_index") != index
+            or type(proof.get("task_id")) is not int
+            or not proof.get("slot_selected_by_id")
+            or not proof.get("launch_proven")
+            or not proof.get("full_recompute_proven")):
+        detail = (proof.get("problems") if isinstance(proof, dict)
+                  else "malformed proof")
+        raise PhysicalDiagnosticError(
+            f"same-process request {index} lacks a task-bound reset "
+            f"proof (slot-by-id + fresh-task launch + full prompt "
+            f"recompute): {detail}")
+    return proof["task_id"]
 
 
 def run_same_process_lifecycle(
@@ -1049,6 +1436,19 @@ def run_same_process_lifecycle(
     one shared process identity bound to every request, teardown after
     the arm population. Five separate processes would NOT satisfy
     Arm B and are structurally impossible here.
+
+    CORRECTION PASS 3 (NO-GO 5847890177, blocker 1): authority is
+    revalidated LIVE immediately before EACH completion request —
+    not only before the launch — through the canonical fetch path,
+    and every per-request observation must cross-bind to the SAME
+    original dispatch generation (same comment id/head/namespace/arm/
+    author association/created-at/body digest). A drift at request N
+    stops the lifecycle BEFORE request N issues: already-completed
+    request evidence stays retained (append-only), the lifecycle is
+    marked incomplete (fail-closed), and no later request executes.
+    The ``preflight_request`` callback is the ONLY mechanism by which
+    the runner may request a gate check; the runner itself never
+    fetches authority and cannot bypass the gate.
     """
     repo_root = Path(repo_root).resolve(strict=True)
     D.validate_namespace_arm_binding(namespace, arm)
@@ -1062,12 +1462,40 @@ def run_same_process_lifecycle(
         raise PhysicalDiagnosticError(
             f"same-process population is frozen at "
             f"{D.DETERM_MIN_REPEATS} requests, plan lists {len(same_units)}")
+
+    # Per-request live authority revalidation (blocker 1): every
+    # completion request begins under CURRENT authority, cross-bound
+    # to the original dispatch generation.
+    request_authorities: list[dict[str, Any]] = []
+    request_gate_calls: list[int] = []
+    generation_anchor: dict[str, Any] | None = None
+
+    def _request_gate(index: int) -> None:
+        request_gate_calls.append(index)
+        payload = require_live_dispatch(
+            repo_root, expected_head, namespace,
+            revalidate_authority=revalidate_authority,
+            github_api=github_api)
+        if payload.get("arm") != arm:
+            raise PhysicalDiagnosticError(
+                f"per-request authority at request {index} binds arm "
+                f"{payload.get('arm')!r} != {arm!r}")
+        D._require_clean_head(repo_root, expected_head)
+        nonlocal generation_anchor
+        if generation_anchor is None:
+            generation_anchor = payload
+        else:
+            # cross-bind EVERY observation to the original generation
+            D.bind_authority_observations(generation_anchor, payload)
+        request_authorities.append(dict(payload))
+
     authority_early = require_live_dispatch(
         repo_root, expected_head, namespace,
         revalidate_authority=revalidate_authority, github_api=github_api)
     if authority_early.get("arm") != arm:
         raise PhysicalDiagnosticError(
             "live dispatch arm does not match the executing arm")
+    generation_anchor = dict(authority_early)
     D._require_clean_head(repo_root, expected_head)
     fixtures = verify_fixtures(repo_root)
     binary_sha = verify_binary(Path(binary), binary_id)
@@ -1135,7 +1563,8 @@ def run_same_process_lifecycle(
     result = runner(argv=argv, env=env, request=request, prompt=prompt,
                     port=PORT, unit_dir=lifecycle_dir,
                     repeats=D.DETERM_MIN_REPEATS,
-                    expected_prompt_tokens=expected_prompt_tokens)
+                    expected_prompt_tokens=expected_prompt_tokens,
+                    preflight_request=_request_gate)
     wall = time.monotonic() - started
     ended_at = _utcnow()
 
@@ -1144,12 +1573,35 @@ def run_same_process_lifecycle(
     if type(shared_pid) is not int or shared_pid <= 0:
         raise PhysicalDiagnosticError("lifecycle carried no server PID")
     per_request = result.get("requests")
-    if (not isinstance(per_request, list)
-            or len(per_request) != D.DETERM_MIN_REPEATS):
+    if not isinstance(per_request, list):
         raise PhysicalDiagnosticError(
-            "same-process lifecycle must retain exactly "
-            f"{D.DETERM_MIN_REPEATS} per-request records")
+            "same-process lifecycle returned no request records")
+    stop_kind = result.get("stop_kind", "completed_all")
+    stop_reason = result.get("stop_reason")
+    if stop_kind not in ("completed_all", "truncated", "mismatch_stop"):
+        raise PhysicalDiagnosticError(
+            f"lifecycle stop kind malformed: {stop_kind!r}")
+    truncated = stop_kind == "truncated"
+    mismatch_stop = stop_kind == "mismatch_stop"
+    # A drift/proof failure truncates the lifecycle: retain the
+    # completed prefix append-only and mark the lifecycle INCOMPLETE
+    # (fail-closed; the reducer never treats the partial prefix as a
+    # complete deterministic same-process population). A MISMATCH STOP
+    # is the frozen early-stop law firing: the retained prefix is a
+    # COMPLETE nondeterministic population.
+    if truncated and not per_request:
+        raise PhysicalDiagnosticError(
+            f"same-process lifecycle truncated before any request: "
+            f"{stop_reason}")
+    if request_gate_calls != list(range(len(per_request))):
+        raise PhysicalDiagnosticError(
+            f"per-request authority gate not executed before every "
+            f"completion request (gate calls: {request_gate_calls})")
+    if len(request_authorities) != len(per_request):
+        raise PhysicalDiagnosticError(
+            "per-request authority observation count mismatch")
     request_records = []
+    consumed_task_ids: set[int] = set()
     for index, record in enumerate(per_request):
         for field in ("tokens", "response_raw", "log_slice",
                       "row_files", "meta_file", "reset_proof"):
@@ -1161,13 +1613,23 @@ def run_same_process_lifecycle(
                 f"same-process request {index} executed on a different "
                 f"PID ({record.get('server_pid')!r} != {shared_pid}); "
                 "PID changes mid-arm are fatal")
+        # task-bound reset proof (blocker 3): re-derive from the
+        # retained log slice with the consumed-task set; the runner's
+        # own proof must agree exactly.
+        rederived = _parse_slot_log(
+            record["log_slice"].decode("utf-8", errors="replace"),
+            index, expected_prompt_tokens,
+            consumed_task_ids=frozenset(consumed_task_ids))
         proof = record["reset_proof"]
         if (not isinstance(proof, dict)
-                or not proof.get("slot_selected_by_id")
-                or not proof.get("full_recompute_proven")):
+                or proof.get("task_id") != rederived["task_id"]
+                or not rederived["proven"]):
             raise PhysicalDiagnosticError(
-                f"same-process request {index} lacks reset-equivalence "
-                "proof (slot-by-id + full prompt recompute)")
+                f"same-process request {index} lacks a task-bound reset "
+                f"proof (slot-by-id + fresh-task launch + full prompt "
+                f"recompute): {rederived['problems']}")
+        task_id = _validate_reset_proof(rederived, index)
+        consumed_task_ids.add(task_id)
         tokens = record["tokens"]
         if (not isinstance(tokens, list) or len(tokens) != D.DECISIONS
                 or any(type(t) is not int for t in tokens)):
@@ -1179,6 +1641,16 @@ def run_same_process_lifecycle(
         if contract != D.ARM_B_CONTRACT:
             raise PhysicalDiagnosticError(
                 f"same-process request {index} contract drift")
+        # per-request authority receipt binding (blocker 1): the
+        # observation CURRENT at this request, with its digest.
+        authority_receipt = unit_authority_block(request_authorities[index])
+        if authority_receipt["dispatch_sha256"] != D.authority_digest(
+                request_authorities[index]):
+            raise PhysicalDiagnosticError(
+                f"same-process request {index} authority receipt digest "
+                "mismatch")
+        record["_authority"] = authority_receipt
+        record["_reset_proof_verified"] = rederived
         request_records.append(record)
 
     # Retain per-request custody under each planned tag.
@@ -1271,7 +1743,7 @@ def run_same_process_lifecycle(
             "identity_problems_pre": problems_pre,
             "identity_problems_post": problems_post,
             "subject_identity_schema": I.IDENTITY_SCHEMA,
-            "authority": unit_authority_block(final_authority),
+            "authority": record["_authority"],
             "wall_time_s": wall,
             "same_process": {
                 "lifecycle_schema": LIFECYCLE_SCHEMA,
@@ -1296,7 +1768,15 @@ def run_same_process_lifecycle(
         "shared_server_pid": shared_pid,
         "process_attribution": result.get("process_attribution"),
         "request_count": len(request_records),
+        "planned_request_count": D.DETERM_MIN_REPEATS,
+        "complete": not truncated,
+        "stop_kind": stop_kind,
+        "stop_reason": stop_reason,
         "reset_proofs": [r["reset_proof"] for r in request_records],
+        "verified_reset_proofs": [r["_reset_proof_verified"]
+                                  for r in request_records],
+        "per_request_authorities": [r["_authority"]
+                                    for r in request_records],
         "platform_health": health_receipt,
         "identity_problems_pre": problems_pre,
         "identity_problems_post": problems_post,
@@ -1320,12 +1800,20 @@ def run_same_process_lifecycle(
 def _real_same_process_execute(
         argv: list[str], env: dict[str, str], request: dict[str, Any],
         prompt: str, port: int, unit_dir: Path, repeats: int,
-        expected_prompt_tokens: int) -> dict[str, Any]:
-    """ONE server launch; ``repeats`` sequential requests; teardown."""
+        expected_prompt_tokens: int,
+        preflight_request: Callable[[int], None] | None = None,
+        ) -> dict[str, Any]:
+    """ONE server launch; ``repeats`` sequential requests; teardown.
+
+    CORRECTION PASS 3 (blocker 1): before EVERY completion request the
+    producer calls ``preflight_request(index)`` — the lifecycle's live
+    authority revalidation seam. A gate failure raises before the HTTP
+    completion is issued; the server is torn down and no later request
+    executes (fail-closed mid-lifecycle stop).
+    """
     samples = [_device_sample() | {"stage": "before"}]
     full_env = {**os.environ, **env}
     log_path = unit_dir / "server.log.full"
-    log_offsets: list[int] = []
     with log_path.open("wb") as log_file:
         proc = subprocess.Popen(
             argv, env=full_env, stdout=log_file, stderr=subprocess.STDOUT,
@@ -1350,8 +1838,24 @@ def _real_same_process_execute(
             thread = threading.Thread(target=sample_loop, daemon=True)
             thread.start()
             records = []
+            consumed_task_ids: set[int] = set()
+            stop_kind = "completed_all"
+            stop_reason: str | None = None
+            baseline_rows: list[str] | None = None
             try:
                 for index in range(repeats):
+                    # LIVE authority gate BEFORE the HTTP completion
+                    # (blocker 1); a drift retains the completed prefix
+                    # and stops here (fail-closed truncation).
+                    if preflight_request is not None:
+                        try:
+                            preflight_request(index)
+                        except Exception as exc:
+                            stop_kind = "truncated"
+                            stop_reason = (
+                                f"authority-revalidation failure before "
+                                f"request {index}: {exc}")
+                            break
                     offset_before = log_path.stat().st_size
                     raw, response = _http_completion(port, request, prompt)
                     time.sleep(0.2)  # let the slot log flush
@@ -1362,7 +1866,15 @@ def _real_same_process_execute(
                         "tokens", response.get("tokens_predicted"))
                     proof = _parse_slot_log(
                         log_slice.decode("utf-8", errors="replace"),
-                        index, expected_prompt_tokens)
+                        index, expected_prompt_tokens,
+                        consumed_task_ids=frozenset(consumed_task_ids))
+                    if not proof["proven"]:
+                        stop_kind = "truncated"
+                        stop_reason = (
+                            f"reset-proof failure at request {index}: "
+                            f"{proof['problems']}")
+                        break
+                    consumed_task_ids.add(proof["task_id"])
                     row_files = {}
                     for d in range(D.DECISIONS):
                         name = f"obs.row{d}.f32"
@@ -1390,6 +1902,21 @@ def _real_same_process_execute(
                     meta_dst = unit_dir / f"req{index + 1}.obs.meta.json"
                     if meta_src.exists():
                         meta_src.replace(meta_dst)
+                    # FROZEN EARLY-STOP LAW (correction pass 3, blocker
+                    # 2): the first row-digest mismatch answers the
+                    # discriminator — never burn further repeats. A
+                    # mismatch stop is a VALID completion cause,
+                    # distinct from truncation.
+                    row_digests = [D.row_digest(row_files[
+                        f"obs.row{d}.f32"]) for d in range(D.DECISIONS)]
+                    if baseline_rows is None:
+                        baseline_rows = row_digests
+                    elif row_digests != baseline_rows:
+                        stop_kind = "mismatch_stop"
+                        stop_reason = (
+                            f"first row-digest mismatch at request "
+                            f"{index}")
+                        break
             finally:
                 stop.set()
                 thread.join(timeout=2)
@@ -1400,7 +1927,9 @@ def _real_same_process_execute(
             return {"server_pid": proc.pid,
                     "process_attribution": attribution,
                     "requests": records,
-                    "device_samples": samples}
+                    "device_samples": samples,
+                    "stop_kind": stop_kind,
+                    "stop_reason": stop_reason}
         finally:
             if proc.poll() is None:
                 os.killpg(proc.pid, signal.SIGTERM)

@@ -91,40 +91,41 @@ LOCALIZED_FACTORS = {
                             "(bound by frozen transition predicate)",
 }
 
-# Frozen Arm-D transition predicates (predeclared BEFORE any Arm-D
-# execution). A length transition alone never establishes causality:
-# LOCALIZED at D requires retained evidence matching one of these
-# mechanical predicates — a concrete execution transition identified
-# from retained source/runtime evidence, bound to the observed
-# deterministic->variable length boundary. Each predicate names the
-# retained evidence it consumes; none is derivable from length alone.
+# Frozen Arm-D transition predicates (correction pass 3, NO-GO
+# 5847890177 blocker 4B; predeclared BEFORE any Arm-D execution). A
+# length transition alone never establishes causality: LOCALIZED at D
+# requires retained evidence matching one of these mechanical
+# predicates — a concrete execution transition identified from
+# retained source/runtime evidence, bound to the observed
+# deterministic->variable length boundary, measured in the correct
+# runtime units. Each predicate names the retained evidence it
+# consumes; none is derivable from the nominal length alone.
 TRANSITION_PREDICATES = {
-    "ubatch_geometry_split": {
-        "requires": "server-log prompt-processing progress lines "
-                    "showing a ubatch split shape present at every "
-                    "variable length and absent at every deterministic "
-                    "length (retained per-unit server.log)",
-        "binds": "the earliest variable ladder length must carry the "
-                 "split shape and the latest deterministic length "
-                 "must not",
-    },
     "indexer_top_k_boundary": {
         "requires": "model-architecture fact "
                     "qwen4exp.attention.indexer.top_k = 2048 crossed "
                     "between the last deterministic and first variable "
-                    "rendered length (phase0 MODEL_ARCH_FACTS + ladder "
-                    "rendered lengths)",
-        "binds": "the deterministic->variable boundary must equal the "
-                 "top_k crossing length, not merely fall below it",
+                    "length MEASURED IN ACTUAL PROMPT TOKEN COUNTS "
+                    "(retained tokenizer-authority receipts, not "
+                    "nominal ladder labels)",
+        "binds": "every deterministic length's actual token count < "
+                 "top_k <= every variable length's actual token count; "
+                 "the boundary in tokens is the crossing itself",
     },
-    "checkpoint_resegmentation": {
-        "requires": "server-log prompt-processing progress lines "
-                    "showing hybrid-memory checkpoint resegmentation "
-                    "(non-uniform split geometry) beginning exactly at "
-                    "the boundary length",
-        "binds": "resegmentation evidence present at the first "
-                 "variable length and absent at the last deterministic "
-                 "length, with no other logged execution change",
+    "midstream_ubatch_split": {
+        "requires": "retained per-unit server-log cumulative prompt "
+                    "progress lines showing a MIDSTREAM sub-batch step "
+                    "(a step < 512 strictly between two continuing "
+                    "rungs — the llama-memory-hybrid.cpp "
+                    "TAG_RECURRENT_ROLLBACK_SPLITS tail-grouping "
+                    "signature; final remainders cannot satisfy it) "
+                    "present at every variable length and absent at "
+                    "every deterministic length",
+        "binds": "the earliest variable ladder length must carry the "
+                 "midstream split signature and the latest "
+                 "deterministic length must not; no competing frozen "
+                 "execution-path transition may be introduced, else "
+                 "the terminal stays UNRESOLVED",
     },
 }
 
@@ -146,32 +147,81 @@ def _ok(terminal: str, reduction: dict[str, Any], basis: dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# Arm-D transition predicate evaluation (frozen, mechanical)
+# Arm-D transition predicate evaluation (frozen, mechanical).
+#
+# CORRECTION PASS 3 (NO-GO 5847890177, blocker 4B): the old
+# ``_non_uniform_progress`` predicate (ANY unequal cumulative steps)
+# is RETIRED as causal evidence. Pinned-source facts that make it
+# unsound:
+#   * server-context.cpp print_timings_pp emits ``prompt processing,
+#     n_tokens = N`` lines on a WALL-CLOCK sampling gate
+#     (t_prompt_total >= 3000 ms; sampled in the batch-fill loop), so
+#     the cumulative counts are TIME-sampled checkpoints of ONE
+#     ubatch stream, not per-ubatch boundaries; an ordinary final
+#     remainder (512*5+5 then 508) produces unequal steps with no
+#     execution-path change at all;
+#   * hybrid-memory checkpoint resegmentation evidence
+#     (``main/do_checkpoint``) is logged at DBG level only
+#     (server-context.cpp:3904 SLT_DBG) and is ABSENT from the frozen
+#     non-verbose launch shape, so it can never honestly fire from
+#     retained logs under the frozen argv.
+# The frozen predicate set is therefore reduced to the two retained-
+# byte-observable, source-proven transitions:
+#   * ``indexer_top_k_boundary`` — a TOKEN-COUNT mechanism: the
+#     boundary between the last deterministic and first variable
+#     length, measured in ACTUAL prompt token counts (tokenizer
+#     authority), equals the qwen4exp indexer top_k crossing
+#     (top_k=2048; model arch fact from phase0 MODEL_ARCH_FACTS).
+#   * ``midstream_ubatch_split`` — an EXECUTION-GEOMETRY signature
+#     mechanically derived from the retained cumulative progress
+#     counts: a strictly sub-n_batch (512) step occurring STRICTLY
+#     BETWEEN two continuing rungs (the rollback-tail grouping
+#     constraint of llama-memory-hybrid.cpp split_equal
+#     TAG_RECURRENT_ROLLBACK_SPLITS: trailing tokens must stay in the
+#     same ubatch), present at every variable length and absent at
+#     every deterministic length. Ordinary final remainders cannot
+#     satisfy it (a final remainder TERMINATES the sequence; a
+#     midstream sub-512 step resumes above it).
+# A length threshold alone still fires nothing.
 # ---------------------------------------------------------------------------
 
-def _non_uniform_progress(counts: list[int]) -> bool:
-    """True when the cumulative prompt-progress steps are unequal.
+UBATCH_N_BATCH = 512  # frozen accepted launch shape --batch-size 512
 
-    The pinned server logs cumulative ``prompt processing, n_tokens``
-    progress lines; unequal steps (e.g. 512*5 then 5 then 508 for a
-    3077-token prompt) are the retained signature of hybrid
-    memory-driven ubatch split geometry.
-    """
+
+def _progress_run_steps(counts: list[int]) -> list[int]:
+    """Ordered cumulative->step deltas (mechanical, no semantics)."""
     if len(counts) < 2:
+        return []
+    return [b - a for a, b in zip(counts, counts[1:])]
+
+
+def _midstream_split_signature(counts: list[int]) -> bool:
+    """True when the retained cumulative prompt-progress counts carry
+    a MIDSTREAM sub-batch step: a step < UBATCH_N_BATCH that is not
+    the final step (later counts continue past it). Source-proven
+    shape: llama-memory-hybrid.cpp split_equal emits the recurrent
+    rollback-tail grouping (trailing tokens held for the next ubatch),
+    visible as a sub-512 resumption boundary mid-stream. A final
+    remainder (last step < 512 with nothing after it) does NOT
+    satisfy this predicate."""
+    if len(counts) < 3:
         return False
-    steps = [b - a for a, b in zip(counts, counts[1:])]
-    return len(set(steps)) > 1
+    steps = _progress_run_steps(counts)
+    return any(step < UBATCH_N_BATCH for step in steps[:-1])
 
 
 def _evaluate_transition_predicates(
         ladder_facts: dict[int, dict[str, Any]]) -> dict[str, Any] | None:
     """Evaluate the frozen Arm-D predicates from retained ladder facts.
 
-    ``ladder_facts`` maps rendered length -> {"row_deterministic": bool,
-    "prompt_progress_counts": [...]} derived from retained bytes. A
-    predicate FIRES only on the mechanical shape it names; a length
-    threshold alone fires nothing. Returns the fired predicate
-    description or None.
+    ``ladder_facts`` maps nominal length -> {"row_deterministic":
+    bool, "prompt_progress_counts": [...], "actual_token_count": int,
+    "pair_identical": bool, "deterministic_confirmed": bool}
+    (all derived from retained bytes + the tokenizer authority).
+    A predicate FIRES only on the mechanical shape it names, and only
+    on a VALID boundary (monotone deterministic->variable, the
+    deterministic side confirmed at the frozen count). Returns the
+    fired predicate description or None.
     """
     lengths = sorted(ladder_facts)
     if not lengths:
@@ -181,35 +231,33 @@ def _evaluate_transition_predicates(
            and ladder_facts[n]["unit_count"] >= 2]
     if not det or not var:
         return None
-    # The observed boundary: last deterministic length, first variable.
     if max(det) >= min(var):
         return None  # interleaved — no monotone boundary exists
     boundary = (max(det), min(var))
 
-    # ubatch_geometry_split / checkpoint_resegmentation: non-uniform
-    # final-step geometry present at EVERY variable length and absent
-    # at EVERY deterministic length.
-    shapes = {n: _non_uniform_progress(
-        ladder_facts[n]["prompt_progress_counts"]) for n in lengths}
-    if all(shapes[n] for n in var) and not any(shapes[n] for n in det):
-        return {
-            "predicate": "ubatch_geometry_split",
-            "boundary": boundary,
-            "mechanism": TRANSITION_PREDICATES["ubatch_geometry_split"],
-        }
-    if any(shapes[n] for n in var) and not any(shapes[n] for n in det):
-        return {
-            "predicate": "checkpoint_resegmentation",
-            "boundary": boundary,
-            "mechanism": TRANSITION_PREDICATES["checkpoint_resegmentation"],
-        }
-    # indexer_top_k_boundary: boundary == top_k crossing (2048).
-    if boundary[0] < 2048 <= boundary[1] and all(
-            n < 2048 for n in det) and all(n >= 2048 for n in var):
+    # indexer_top_k_boundary: measured in ACTUAL token counts.
+    top_k = D.INDEXER_TOP_K
+    det_tokens = [ladder_facts[n]["actual_token_count"] for n in det]
+    var_tokens = [ladder_facts[n]["actual_token_count"] for n in var]
+    if (all(t < top_k for t in det_tokens)
+            and all(t >= top_k for t in var_tokens)
+            and max(det_tokens) < top_k <= min(var_tokens)):
         return {
             "predicate": "indexer_top_k_boundary",
             "boundary": boundary,
+            "boundary_actual_tokens": (max(det_tokens), min(var_tokens)),
             "mechanism": TRANSITION_PREDICATES["indexer_top_k_boundary"],
+        }
+
+    # midstream_ubatch_split: split signature at every variable
+    # length, absent at every deterministic length.
+    shapes = {n: _midstream_split_signature(
+        ladder_facts[n]["prompt_progress_counts"]) for n in lengths}
+    if all(shapes[n] for n in var) and not any(shapes[n] for n in det):
+        return {
+            "predicate": "midstream_ubatch_split",
+            "boundary": boundary,
+            "mechanism": TRANSITION_PREDICATES["midstream_ubatch_split"],
         }
     return None
 
@@ -233,8 +281,14 @@ def _ladder_split_shapes(text: str) -> list[int]:
 # Per-unit retained-byte verification (fail-closed)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Retained-population verification under the FROZEN PREFIX POPULATION
+# LAW (correction pass 3, NO-GO 5847890177 blocker 2)
+# ---------------------------------------------------------------------------
+
 UNIT_SAFE_TAG = re.compile(
-    r"case-\d+-B-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{3}")
+    r"case-\d+-B-[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{3}"
+    r"(?:-confirm)?")
 
 
 def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
@@ -347,6 +401,33 @@ def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
             or actual.get("server_exe_sha256") != receipt["binary_sha256"]
             or actual.get("server_argv") != argv):
         raise ValueError("process attribution mismatch")
+    # Arm-D ladder token authority (correction pass 3, blocker 4A):
+    # the receipt must bind the retained tokenizer-authority entry and
+    # the runtime prompt-eval count must EQUAL the actual token count.
+    if spec.get("ladder_length"):
+        token_authority = receipt.get("ladder_token_authority")
+        try:
+            entry = P.validate_ladder_token_authority(token_authority)
+        except Exception as exc:
+            raise ValueError(
+                f"ladder token authority malformed: {exc}")
+        if entry["nominal_length"] != spec["ladder_length"]:
+            raise ValueError(
+                "ladder token authority nominal length differs from "
+                "the unit plan")
+        log_text = (unit_dir / "server.log").read_text(
+            errors="replace")
+        eval_counts = [int(m.group(1)) for m in re.finditer(
+            r"prompt eval time\s*=\s*[0-9.]+ ms\s*/\s*(\d+)\s*tokens",
+            log_text)]
+        actual_count = entry["actual_token_count"]
+        if (not eval_counts
+                or eval_counts[-1] != actual_count
+                or any(n != actual_count for n in eval_counts)):
+            raise ValueError(
+                f"runtime prompt-eval counts {eval_counts} disagree "
+                f"with the retained tokenizer authority "
+                f"({actual_count} tokens) — BLOCKED")
     # raw response + token digests
     raw = (unit_dir / "response.json.raw").read_bytes()
     if receipt.get("response_raw_sha256") != hashlib.sha256(raw).hexdigest():
@@ -439,14 +520,23 @@ def _verify_namespace_population(
         authority: dict[str, Any], attestation: dict[str, Any],
         tags: list[str], request_kind_for_tag: Callable[[str], str],
         extra_expected: set[str] | None = None,
+        allow_inflight_tail: bool = False,
         ) -> tuple[dict[str, Any], list[str]]:
-    """Verify the complete frozen unit population of one arm namespace.
+    """Verify one condition's retained population under the FROZEN
+    PREFIX POPULATION LAW (correction pass 3, blocker 2).
 
-    Fails closed on: missing units, quarantined-only units, unplanned
-    current units, any per-unit verification failure. ``extra_expected``
-    covers planned population verified by a different verifier (the
-    Arm-B same-process units): those dirs are expected to exist but
-    are not re-verified here.
+    OLD DEFECT: required every planned tag to exist, defeating the
+    frozen early-stop law — a correctly stopped early-mismatch
+    condition was classified incomplete. CORRECTED: the population is
+    judged by ``D.prefix_population_facts`` from the RETAINED bytes:
+    a contiguous retained prefix containing the first verified
+    row-digest mismatch (execution stopped there) is a COMPLETE
+    NONDETERMINISTIC population; the unexecuted planned tail is not
+    missing evidence. A deterministic claim still requires the full
+    predeclared population, all identical. Gaps, cherry-picking,
+    quarantined-result substitution, or execution past the declared
+    stop point fail closed. Quarantined siblings and unplanned
+    current units remain problems.
     """
     base = D.namespace_dir(root, namespace)
     problems: list[str] = []
@@ -466,19 +556,35 @@ def _verify_namespace_population(
     if unplanned:
         problems.append(
             f"{arm}: unplanned current units present: {sorted(unplanned)}")
+    retained: list[str] = []
     for tag in tags:
         if tag not in current:
-            problems.append(f"{arm}: planned unit missing from evidence: "
-                            f"{tag}")
-            continue
+            continue  # prefix law: the unexecuted tail is not missing
         try:
             facts.append(_verify_unit_receipt(
                 base / tag, namespace, arm, tag, expected_head,
                 authority, attestation, request_kind_for_tag(tag)))
+            retained.append(tag)
         except (OSError, ValueError, TypeError, KeyError,
                 json.JSONDecodeError) as exc:
             problems.append(f"{arm}: malformed retained unit {tag}: {exc}")
-    return {"units": facts}, problems
+    if problems:
+        return {"units": facts, "retained_tags": retained}, problems
+    by_tag = {f["tag"]: f for f in facts}
+    digests = {t: tuple(by_tag[t]["row_sha256"]) for t in retained}
+    prefix = D.prefix_population_facts(
+        tags, retained, digests,
+        allow_inflight_tail=allow_inflight_tail)
+    out: dict[str, Any] = {"units": facts, "retained_tags": retained,
+                           "prefix_law": prefix}
+    if prefix["population"] == "invalid":
+        problems.append(
+            f"{arm}: invalid retained population: {prefix['invalid']}")
+    elif prefix["population"] == "incomplete":
+        # not a failure by itself: deterministic-claim sufficiency is
+        # judged by the sequential law; carry the facts upward.
+        out["population_incomplete"] = True
+    return out, problems
 
 
 # ---------------------------------------------------------------------------
@@ -591,13 +697,22 @@ def _require_manifest_row(rows: dict[str, str], rel: str, raw: bytes
 def _verify_same_process_units(
         root: Path, namespace: str, arm: str, expected_head: str,
         authority: dict[str, Any], attestation: dict[str, Any],
+        expected_prompt_tokens: int = 3077,
         ) -> tuple[dict[str, Any], list[str]]:
     """Verify the Arm-B same-process population from retained bytes.
 
     Requires: one shared lifecycle record binding ONE PID to all five
-    requests; per-request reset proofs (slot-by-id + full recompute)
-    re-derived from the retained log slices; request-history
+    requests; per-request TASK-BOUND reset proofs (selection-by-id ->
+    fresh-task launch -> full-prompt eval, re-derived from the retained
+    log slices against the consumed task-id set — correction pass 3,
+    blocker 3); per-request authority blocks (blocker 1) that each
+    equal the live-validated authority generation; request-history
     invariance (same frozen Arm-B contract, same shared PID).
+
+    PREFIX LAW (blocker 2): an authority/process/error-truncated
+    lifecycle is an INCOMPLETE population, never a valid
+    nondeterministic early-stop — the reducer distinguishes
+    mismatch-triggered stops (valid) from truncation (fail-closed).
     """
     base = D.namespace_dir(root, namespace)
     problems: list[str] = []
@@ -614,9 +729,36 @@ def _verify_same_process_units(
     shared_pid = lifecycle.get("shared_server_pid")
     if type(shared_pid) is not int or shared_pid <= 0:
         return {}, [f"{arm}: lifecycle binds no shared PID"]
+    # Lifecycle completion cause (correction pass 3, blockers 1+2).
+    # A TRUNCATED lifecycle (authority/process/error loss mid-
+    # sequence) is an INCOMPLETE population — the retained prefix is
+    # readable evidence but can never satisfy a deterministic
+    # same-process claim. A MISMATCH STOP is the frozen early-stop
+    # law firing: the retained prefix IS a complete nondeterministic
+    # population (the reducer re-derives the mismatch mechanically
+    # from the retained rows below — it never trusts the claim).
+    stop_kind = lifecycle.get("stop_kind", "completed_all")
+    if stop_kind not in ("completed_all", "truncated", "mismatch_stop"):
+        return {}, [f"{arm}: lifecycle stop kind malformed: "
+                    f"{stop_kind!r}"]
+    planned = lifecycle.get("planned_request_count", len(tags))
+    if stop_kind == "truncated":
+        return {}, [f"{arm}: same-process lifecycle TRUNCATED "
+                    f"(retained {lifecycle.get('request_count')}/"
+                    f"{planned} requests; reason="
+                    f"{lifecycle.get('stop_reason')!r}) — an "
+                    "authority/process/error-loss partial prefix is "
+                    "not a valid population"]
+    if stop_kind == "mismatch_stop" and lifecycle.get(
+            "request_count", 0) < D.PREFIX_LAW_MIN_MISMATCH_UNITS:
+        return {}, [f"{arm}: mismatch-stop lifecycle retained fewer "
+                    "than two requests"]
     if lifecycle.get("request_count") != len(tags):
-        return {}, [f"{arm}: lifecycle request count != planned "
-                    f"{len(tags)}"]
+        # mismatch_stop retains a prefix < planned; completed_all must
+        # cover every planned request
+        if stop_kind != "mismatch_stop":
+            return {}, [f"{arm}: lifecycle request count != planned "
+                        f"{len(tags)}"]
     authority_block = lifecycle.get("authority")
     expected_block = P.unit_authority_block(authority)
     for key, value in expected_block.items():
@@ -624,9 +766,31 @@ def _verify_same_process_units(
                 authority_block.get(key) != value):
             return {}, [f"{arm}: lifecycle authority binding mismatch "
                         f"({key})"]
+    # per-request authority observations (correction pass 3, blocker 1)
+    per_request_authorities = lifecycle.get("per_request_authorities")
+    if (not isinstance(per_request_authorities, list)
+            or len(per_request_authorities)
+            != lifecycle.get("request_count")
+            or any(not isinstance(a, dict) for a in
+                   per_request_authorities)):
+        return {}, [f"{arm}: lifecycle lacks one bound authority "
+                    "observation per retained request"]
+    for index, block in enumerate(per_request_authorities):
+        for key, value in expected_block.items():
+            if block.get(key) != value:
+                return {}, [f"{arm}: request {index} authority "
+                            f"observation mismatch ({key})"]
     units = []
+    consumed_task_ids: set[int] = set()
+    retained_count = lifecycle.get("request_count", len(same_specs))
     for spec in same_specs:
         tag = spec["tag"]
+        index = same_specs.index(spec)
+        # PREFIX LAW (blocker 2): a mismatch-stop lifecycle retains
+        # only the executed prefix; the unexecuted planned tail is not
+        # malformed — it is not missing evidence either.
+        if (stop_kind == "mismatch_stop" and index >= retained_count):
+            continue
         try:
             fact = _verify_unit_receipt(
                 base / tag, namespace, arm, tag, expected_head,
@@ -646,40 +810,92 @@ def _verify_same_process_units(
                 f"{arm}: unit {tag} not bound to the shared lifecycle "
                 "PID/requests")
             continue
-        proof = sp["reset_proof"]
-        if (not proof.get("slot_selected_by_id")
-                or not proof.get("full_recompute_proven")):
-            problems.append(
-                f"{arm}: unit {tag} reset proof lacks slot-by-id or full "
-                "recompute evidence")
-            continue
-        # Re-derive the reset proof from the retained log slice bytes.
+        index = sp["request_index"]
+        # Re-derive the TASK-BOUND reset proof from the retained log
+        # slice bytes against the consumed task-id set (blocker 3):
+        # delayed prior-task evidence must fail this request.
         log_raw = (base / tag / "server.log").read_bytes()
         rederived = P._parse_slot_log(
             log_raw.decode("utf-8", errors="replace"),
-            proof["request_index"], 3077)
-        if (not rederived["slot_selected_by_id"]
-                or not rederived["full_recompute_proven"]):
+            index, expected_prompt_tokens,
+            consumed_task_ids=frozenset(consumed_task_ids))
+        if not rederived["proven"]:
             problems.append(
                 f"{arm}: unit {tag} retained log slice does not prove "
-                "reset semantics")
+                f"task-bound reset semantics: {rederived['problems']}")
+            continue
+        # the receipt's own proof must agree with the re-derivation
+        if sp["reset_proof"].get("task_id") != rederived["task_id"]:
+            problems.append(
+                f"{arm}: unit {tag} reset-proof task binding disagrees "
+                "with the retained log bytes")
+            continue
+        consumed_task_ids.add(rederived["task_id"])
+        # per-request authority block equality (blocker 1)
+        if receipt.get("authority") != per_request_authorities[index]:
+            problems.append(
+                f"{arm}: unit {tag} authority block differs from the "
+                "lifecycle's per-request observation")
             continue
         units.append(fact)
     if problems:
         return {"units": units, "shared_pid": shared_pid}, problems
     indexes = sorted(u["receipt"]["same_process"]["request_index"]
                      for u in units)
-    if indexes != list(range(len(tags))):
+    expected_indexes = (list(range(lifecycle.get("request_count")))
+                        if stop_kind == "mismatch_stop"
+                        else list(range(len(tags))))
+    if indexes != expected_indexes:
         problems.append(
             f"{arm}: lifecycle request indexes are not a complete "
             f"sequence: {indexes}")
+        return {"units": units, "shared_pid": shared_pid}, problems
+    # MISMATCH STOP (blocker 2): re-derive the nondeterminism
+    # MECHANICALLY from the retained row digests — never trust the
+    # producer's stop claim. The retained prefix must actually contain
+    # the first row-digest mismatch.
+    if stop_kind == "mismatch_stop":
+        row_tuples = [tuple(u["row_sha256"]) for u in units]
+        if len(set(row_tuples)) == 1:
+            problems.append(
+                f"{arm}: lifecycle claims a mismatch stop but the "
+                "retained rows are all identical — the claim is not "
+                "supported by retained bytes")
+    prefix = D.prefix_population_facts(
+        [u["tag"] for u in same_specs],
+        [u["receipt"]["tag"] for u in units],
+        {u["receipt"]["tag"]: tuple(u["row_sha256"])
+         for u in units},
+        deterministic_required=len(tags))
     return {"units": units, "shared_pid": shared_pid,
-            "lifecycle": lifecycle}, problems
+            "lifecycle": lifecycle, "prefix_law": prefix}, problems
 
 
 # ---------------------------------------------------------------------------
 # Condition determinism derivation
 # ---------------------------------------------------------------------------
+
+def _walk_condition(pop: dict[str, Any]) -> dict[str, Any]:
+    """Convert one verified population's prefix-law facts into the
+    sequential-walk decision (correction pass 3, blocker 2).
+
+    OLD DEFECT: the walk required the full planned population, so a
+    correctly stopped early-mismatch condition was BLOCKED. CORRECTED:
+    a ``complete_nondeterministic_prefix`` (contiguous retained prefix
+    containing the first verified mismatch, execution stopped there)
+    is a VALID nondeterministic verdict — the walk proceeds to the
+    next arm. Only genuinely incomplete/invalid populations block.
+    """
+    prefix = pop.get("prefix_law") or {}
+    return {
+        "deterministic": bool(prefix.get("deterministic")),
+        "nondeterministic": bool(prefix.get("nondeterministic")),
+        "n": prefix.get("n", 0),
+        "population": prefix.get("population"),
+        "invalid": prefix.get("invalid"),
+        "stop_reason": prefix.get("stop_reason"),
+    }
+
 
 def _condition_determinism(units: list[dict[str, Any]]) -> dict[str, Any]:
     """Derive a condition's determinism from unit row/token digests."""
@@ -763,11 +979,44 @@ def _arm_c_facts(root: Path, expected_head: str, authority: dict[str, Any],
     return {"default": default_pop, "serial": serial_pop}, problems
 
 
+def validate_ladder_length_authority(receipt: dict[str, Any],
+                                     top_k: int,
+                                     runtime_prompt_eval_tokens:
+                                     int | None = None,
+                                     ) -> dict[str, Any]:
+    """Reduce one ladder length's token authority against the frozen
+    token-count mechanism (correction pass 3, blocker 4A).
+
+    Uses the ACTUAL token count — never the nominal ladder label —
+    for the ``indexer.top_k`` boundary judgment, and (when the
+    runtime/server prompt-eval count is retained) fails closed unless
+    runtime and tokenizer authority agree byte-for-byte on count.
+    """
+    actual = receipt.get("actual_token_count")
+    if type(actual) is not int or actual <= 0:
+        raise D.DiagnosticError(
+            "ladder token authority lacks an actual token count")
+    runtime_match = True
+    if runtime_prompt_eval_tokens is not None:
+        runtime_match = (runtime_prompt_eval_tokens == actual)
+    return {
+        "nominal_length": receipt.get("nominal_length"),
+        "actual_token_count": actual,
+        "crosses_top_k": actual > top_k,
+        "runtime_matches_authority": runtime_match,
+    }
+
+
 def _arm_d_facts(root: Path, expected_head: str, authority: dict[str, Any],
                  attestation: dict[str, Any],
                  ) -> tuple[dict[str, Any], list[str]]:
     plan = D.probe_list_for("D-context-transition")
     problems: list[str] = []
+    # Retained tokenizer authority (blocker 4A): mandatory for Arm D.
+    try:
+        token_doc = P.load_ladder_token_authority(root, expected_head)
+    except Exception as exc:
+        return {}, [f"D: ladder token authority invalid: {exc}"]
     by_length: dict[int, list[dict[str, Any]]] = {}
     for spec in plan:
         length = spec["ladder_length"]
@@ -779,16 +1028,33 @@ def _arm_d_facts(root: Path, expected_head: str, authority: dict[str, Any],
                 expected_head, authority, attestation, "accepted")
         except (OSError, ValueError, TypeError, KeyError,
                 json.JSONDecodeError) as exc:
-            problems.append(f"D: malformed retained unit {tag}: {exc}")
+            # unexecuted planned units are fine (prefix law); record
+            # nothing for them unless the directory exists (malformed
+            # retained bytes still fail closed)
+            if (base / tag).exists() or (base / tag).is_symlink():
+                problems.append(f"D: malformed retained unit {tag}: {exc}")
             continue
         log_raw = (base / tag / "server.log").read_bytes()
         by_length.setdefault(length, []).append({
             **fact, "prompt_progress_counts": _ladder_split_shapes(
-                log_raw.decode("utf-8", errors="replace"))})
+                log_raw.decode("utf-8", errors="replace")),
+            "confirm_extension": bool(spec.get("confirm_extension"))})
     unplanned = _unplanned_arm_d_units(root)
     if unplanned:
         problems.append(f"D: unplanned current units: {unplanned}")
-    return {"by_length": by_length}, problems
+    if problems:
+        return {"by_length": by_length}, problems
+    # Screening population: every length needs BOTH screening units
+    # (the ladder is a predeclared 2-repeat scan at every length).
+    for length in D.ARM_D_LADDER_LENGTHS:
+        screening = [u for u in by_length.get(length, [])
+                     if not u["confirm_extension"]]
+        if len(screening) != D.ARM_D_SCREEN_REPEATS:
+            problems.append(
+                f"D: length {length} screening population is not the "
+                f"predeclared pair ({len(screening)}/2)")
+    return {"by_length": by_length,
+            "token_authority": token_doc}, problems
 
 
 def _unplanned_arm_d_units(root: Path) -> list[str]:
@@ -896,7 +1162,7 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     if problems:
         return _blocked(problems, reduction)
     cpu_units = arm_a.get("units", [])
-    cpu = _condition_determinism(cpu_units)
+    cpu = _walk_condition(arm_a)
     arm_a["cpu_only_devnone"] = cpu
     contrast = arm_a.get("contrast") or {}
     contrast_varies = (contrast.get("row_deterministic") is False)
@@ -922,15 +1188,17 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
             "reason": "CPU-only deterministic but the accepted contrast "
                       "did not establish nonzero-Vulkan variation",
         })
-    if not cpu["deterministic"] and cpu["n"] and not cpu[
-            "rows_strictly_identical"]:
-        # CPU-only VARIES: Vulkan participation NOT necessary.
+    if cpu["nondeterministic"]:
+        # CPU-only VARIES (valid early-stop prefix or full varying
+        # population): Vulkan participation NOT necessary.
         # Arm B becomes REQUIRED; no terminal is emitted here.
         pass
     else:
-        # cpu n==0 or ambiguous identical rows below claim threshold
+        # incomplete (identical rows below claim threshold, or zero
+        # units) or invalid — both fail closed
         return _blocked(
-            ["arm A CPU-only determinism incomplete/ambiguous"], reduction)
+            ["arm A CPU-only determinism incomplete/ambiguous"],
+            reduction)
 
     # ---------------- Arm B (required: A CPU-only varies) ----------
     authority_b = _fetch("d250-arm-b", "B-process-init")
@@ -942,8 +1210,8 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     reduction["arms"]["B-process-init"] = arm_b
     if problems:
         return _blocked(problems, reduction)
-    fresh = _condition_determinism(arm_b["fresh"].get("units", []))
-    same = _condition_determinism(arm_b["same_process"].get("units", []))
+    fresh = _walk_condition(arm_b["fresh"])
+    same = _walk_condition(arm_b["same_process"])
     arm_b["cpu_fresh"] = fresh
     arm_b["cpu_same_process"] = same
     if fresh["deterministic"]:
@@ -963,8 +1231,14 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
             "nondeterministic_condition":
                 "fresh-process CPU-only repeats (-dev none)",
         })
-    if not (fresh["n"] and same["n"] and not same["deterministic"]):
-        return _blocked(["arm B evidence incomplete"], reduction)
+    if not (fresh["nondeterministic"] and same["nondeterministic"]):
+        # BLOCKED covers: missing/incomplete same-process population
+        # (INCLUDING authority-loss truncation — a partial same-process
+        # prefix without a proven mismatch can never satisfy a
+        # deterministic same-process claim, per the frozen prefix law)
+        return _blocked([f"arm B evidence incomplete "
+                         f"(fresh={fresh['population']}, "
+                         f"same_process={same['population']})"], reduction)
 
     # ---------------- Arm C (required: B leaves variation) ---------
     authority_c = _fetch("d250-arm-c", "C-cpu-threads")
@@ -976,8 +1250,8 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     reduction["arms"]["C-cpu-threads"] = arm_c
     if problems:
         return _blocked(problems, reduction)
-    default = _condition_determinism(arm_c["default"].get("units", []))
-    serial = _condition_determinism(arm_c["serial"].get("units", []))
+    default = _walk_condition(arm_c["default"])
+    serial = _walk_condition(arm_c["serial"])
     arm_c["cpu_default_threads"] = default
     arm_c["cpu_serial"] = serial
     if serial["deterministic"]:
@@ -995,8 +1269,9 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
                 "arms A/B fresh CPU-only units)",
             "default_condition_units": default["n"],
         })
-    if not (serial["n"] and not serial["deterministic"]):
-        return _blocked(["arm C evidence incomplete"], reduction)
+    if not serial["nondeterministic"]:
+        return _blocked([f"arm C evidence incomplete "
+                         f"(serial={serial['population']})"], reduction)
 
     # ---------------- Arm D (required: A-C did not localize) -------
     authority_d = _fetch("d250-arm-d", "D-context-transition")
@@ -1008,15 +1283,35 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     reduction["arms"]["D-context-transition"] = arm_d
     if problems:
         return _blocked(problems, reduction)
+    token_doc = arm_d.get("token_authority") or {}
     ladder_facts: dict[int, dict[str, Any]] = {}
     for length, units in sorted(arm_d["by_length"].items()):
-        if len(units) < 2:
-            problems.append(f"D: length {length} lacks repeat pairs")
+        row_tuples = [tuple(u["row_sha256"]) for u in units]
+        pair = [tuple(u["row_sha256"]) for u in units
+                if not u["confirm_extension"]]
+        if len(pair) != D.ARM_D_SCREEN_REPEATS:
+            problems.append(f"D: length {length} lacks its screening "
+                            "pair")
             continue
-        row_tuples = {tuple(u["row_sha256"]) for u in units}
+        token_entry = (token_doc.get("lengths") or {}).get(str(length))
+        if not token_entry:
+            problems.append(
+                f"D: length {length} lacks tokenizer authority")
+            continue
         ladder_facts[length] = {
-            "row_deterministic": len(row_tuples) == 1,
-            "prompt_progress_counts": units[0]["prompt_progress_counts"],
+            # screening pair judgement ONLY (2 equal rows are NOT a
+            # deterministic condition — correction pass 3, blocker 4C)
+            "row_deterministic": len(set(pair)) == 1,
+            "pair_identical": len(set(pair)) == 1,
+            # deterministic CONFIRMATION: all retained units (screen +
+            # adaptive confirm extension) identical at the frozen
+            # confirmation count
+            "deterministic_confirmed": (
+                len(set(row_tuples)) == 1
+                and len(row_tuples) >= D.ARM_D_CONFIRM_REPEATS),
+            "actual_token_count": token_entry["actual_token_count"],
+            "prompt_progress_counts": units[0][
+                "prompt_progress_counts"],
             "unit_count": len(units),
         }
     if problems or len(ladder_facts) != len(D.ARM_D_LADDER_LENGTHS):
@@ -1024,6 +1319,27 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     fired = _evaluate_transition_predicates(ladder_facts)
     arm_d["ladder"] = ladder_facts
     if fired is not None:
+        # D LOCALIZED gate (correction pass 3, blockers 4A/4B/4C):
+        # the deterministic side must be CONFIRMED at the frozen
+        # count, the variable side mechanically mismatched, the
+        # boundary monotone, and the fired predicate source-proven.
+        boundary_det, boundary_var = fired["boundary"]
+        if not ladder_facts[boundary_det]["deterministic_confirmed"]:
+            return _ok(UNRESOLVED, reduction, {
+                "reason": (
+                    "candidate transition observed but the "
+                    "boundary-adjacent deterministic length is only "
+                    "pair-identical (screening), not confirmed at the "
+                    "frozen deterministic count; the adaptive "
+                    "confirmation extension must run before a "
+                    "LOCALIZED claim"),
+                "ladder": {str(k): {
+                    "pair_identical": v["pair_identical"],
+                    "deterministic_confirmed":
+                        v["deterministic_confirmed"],
+                    "actual_token_count": v["actual_token_count"]}
+                    for k, v in ladder_facts.items()},
+            })
         return _ok(LOCALIZED, reduction, {
             "localized_factor": LOCALIZED_FACTORS["D-context-transition"],
             "arm": "D-context-transition",
@@ -1036,6 +1352,9 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
         "reason": "bounded controls reproduce the instability but no "
                   "smallest runtime/execution boundary was mechanically "
                   "bound by the frozen transition predicates",
-        "ladder": {str(k): v["row_deterministic"]
-                   for k, v in ladder_facts.items()},
+        "ladder": {str(k): {
+            "pair_identical": v["pair_identical"],
+            "deterministic_confirmed": v["deterministic_confirmed"],
+            "actual_token_count": v["actual_token_count"]}
+            for k, v in ladder_facts.items()},
     })
