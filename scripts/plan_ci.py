@@ -212,8 +212,11 @@ GROUP_TEST_MODULES = {
         "test_issue248_diagnostic",
         # Issue #250 R8-I3B: option-1 runtime-boundary localization
         # (follow-up to the accepted #248 terminal; phase-0 source
-        # reconstruction + frozen discriminator tooling).
+        # reconstruction + frozen discriminator tooling + physical
+        # producer/retained-byte reducer, correction pass 2).
         "test_issue250_diagnostic",
+        "test_issue250_physical",
+        "test_issue250_terminal",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -636,7 +639,11 @@ PATH_GROUPS = {
     "scripts/issue248_terminal.py": ["r8i-qwen-qualification"],
     "scripts/issue250_phase0.py": ["r8i-qwen-qualification"],
     "scripts/issue250_diagnostic.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_physical.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_terminal.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_diagnostic.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_physical.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
         "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":

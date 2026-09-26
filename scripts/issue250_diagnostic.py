@@ -18,33 +18,53 @@ model, adapted to #250; tested in test_issue250_diagnostic.py):
     phase, qualification, and predictive (c237-) namespaces are
     refused lexically — including the #248 diagnostic namespaces, so
     an #248 dispatch can never authorize #250 execution.
+  * Every namespace is EXACTLY BOUND to its discriminator arm
+    (correction pass 2, blocker 5): ``d250-arm-a`` <-> Arm A
+    ``A-vulkan-necessity``, ``d250-arm-b`` <-> ``B-process-init``,
+    ``d250-arm-c`` <-> ``C-cpu-threads``, ``d250-arm-d`` <->
+    ``D-context-transition``. A dispatch comment pairing a valid
+    namespace with any other (or unknown) arm is a protocol error.
   * No physical entrypoint runs without a MAINTAINER DISPATCH
     AUTHORITY revalidated LIVE immediately before every unit: an
     OWNER/MEMBER top-level comment on PR #(this PR) carrying the
     dispatch phrase + ``head=<sha>`` + ``diagnostic-namespace=<d250-…>``
-    as exact stripped lines, plus live OPEN/unmerged PR state and
-    OPEN issue state. There is no production path that accepts a
-    cached authority (the runner takes no authority parameter).
+    + ``arm=<frozen arm>`` as exact stripped lines, plus live
+    OPEN/unmerged PR state and OPEN issue state. There is no
+    production path that accepts a cached authority (the runner takes
+    no authority parameter).
   * Every discriminator arm runs at the EXACT accepted subject
     semantics except the ONE declared factor: same accepted binaries,
-    same three-member model set (all digests verified before any
-    launch), same fixture ladder (sha-verified), same BYTE-EXACT
-    accepted request contract (extras rejected), same identity
-    discipline (fresh raw observations pre AND post; single-factor
-    DIAGNOSTIC_ONLY interventions only).
-  * Arm A2 CPU-only control uses ``-dev none`` — the PROVEN true
-    CPU-only control of the pinned build (issue250_phase0 PINNED_
-    CONTROLS) — NOT ``-ngl 0`` (which keeps the Vulkan backend in
-    the scheduler with op_offload/KV-offload possible).
+    same three-member model set (campaign attestation + per-unit
+    stat witness), same fixture ladder (sha-verified), same
+    BYTE-EXACT accepted request contract (extras rejected), same
+    identity discipline (fresh raw observations pre AND post).
+  * CPU-only causal geometry (correction pass 2, blocker 2): Arm A
+    establishes whether Vulkan participation is necessary. If the
+    true CPU-only ``-dev none`` condition still varies, Arms B and C
+    CONTINUE from that same CPU-only condition (B: fresh CPU-only
+    processes vs equivalent same-process CPU-only repeats; C: default
+    CPU threading vs ``-t 1 -tb 1`` serial CPU regime). No Vulkan
+    device backend is reintroduced in B or C. Arm D (only reached
+    when A-C do not localize) runs at the ACCEPTED placement because
+    its factor is the prompt length, not the backend.
+  * Arm-A nonzero-Vulkan contrast (correction pass 2, blocker 3) is
+    the ACCEPTED #248 retained ``ngl=1`` case-3072 result, consumed
+    as READ-ONLY contrast authority with digest/provenance
+    verification (CONTRAST_* constants). It is never represented as
+    fresh #250 execution, and no fresh ngl-based comparator units
+    are planned. No ``ngl=8`` accepted-condition reproduction exists
+    anywhere in Issue #250.
   * case-4096 never executes (out of scope for #250; refused
     outright, no preauthorization path exists in this module).
   * Determinism is judged ONLY on independently computed digests of
     rows/tokens; timing is metadata.
   * Retained bytes are append-only with ``-quarantined`` siblings.
-  * The terminal is derived MECHANICALLY by the offline reducer from
-    retained unit bytes against the frozen arm plan; missing or
-    ambiguous evidence fails closed to
-    R8I3B_REDUCER_BLOCKED_INCOMPLETE, never a hand-selected terminal.
+  * The terminal is derived MECHANICALLY by the offline
+    retained-byte reducer (scripts/issue250_physical.py
+    ``derive_terminal``) directly from the retained evidence tree;
+    this module exports NO caller-supplied-boolean terminal path and
+    no terminal may be selected by hand. Missing or ambiguous
+    evidence fails closed to R8I3B_REDUCER_BLOCKED_INCOMPLETE.
 """
 from __future__ import annotations
 
@@ -131,23 +151,77 @@ REQUEST_CONTRACT = {
 }
 REQUEST_CONTRACT_KEYS = frozenset(REQUEST_CONTRACT)
 
-# Frozen discriminator geometry (Issue #250 §A–§D).
+# ---------------------------------------------------------------------------
+# Arm-A nonzero-Vulkan contrast authority (correction pass 2, blocker 3).
+#
+# FROZEN RULE (the preferred option; no fresh ngl reproduction is
+# planned anywhere in Issue #250): the nonzero-Vulkan side of the
+# Arm-A contrast is the ACCEPTED #248 retained ngl=1 case-3072
+# placement result, consumed as READ-ONLY contrast authority. Its
+# two retained fresh-process units carry byte-distinct full rows at
+# every decision (row nondeterminism), while sharing identical
+# tokens. Verification is mechanical (see issue250_physical.
+# verify_historical_contrast): every consumed file digest must match
+# a row of the accepted #248 SHA256SUMS manifest whose own bytes
+# hash to the accepted self-digest, the unit receipts must bind the
+# accepted #248 result head + placement namespace + the dispatch
+# comment that authorized them, and row digests are recomputed from
+# the retained row bytes — the contrast is DERIVED, never asserted.
+# The historical fact this frozen rule consumes: at ngl=1 (minimal
+# nonzero Vulkan participation; the output layer alone offloaded),
+# the retained case-3072 rows VARY across fresh processes.
+# ---------------------------------------------------------------------------
+CONTRAST_PROVENANCE = "accepted_248_retained_ngl1_readonly"
+CONTRAST_NAMESPACE = "d248-placement-rungs"
+CONTRAST_CASE = "case-3072"
+CONTRAST_UNITS = (
+    "case-3072-B-ngl1-001",
+    "case-3072-B-ngl1-002",
+)
+CONTRAST_NGL = 1
+CONTRAST_EXPECTED_ROW_DETERMINISTIC = False
+CONTRAST_MIN_UNITS = 2
+
+# Frozen discriminator geometry (Issue #250 §A–§D; correction pass 2
+# blockers 2+3: B and C continue from Arm A's CPU-only condition).
 CASE = "case-3072"
-ACCEPTED_MATCHED_NGL = 8
+ACCEPTED_MATCHED_NGL = 8      # Arm D ladder placement only (length factor)
 MIN_REPEATS = 3
-DETERM_MIN_REPEATS = 5   # deterministic claim requires 5 identical
+DETERM_MIN_REPEATS = 5        # deterministic claim requires 5 identical
 ARM_A2_DEV_NONE_ARGV_DELTA = ("-dev", "none")
-ARM_C_THREADS = ("1",)
+ARM_B_DEV_NONE_ARGV_DELTA = ("-dev", "none")
+ARM_C_DEV_NONE_ARGV_DELTA = ("-dev", "none")
+ARM_C_SERIAL_ARGV_DELTA = ("-t", "1", "-tb", "1")
 ARM_D_LADDER_LENGTHS = (1024, 1536, 2048, 2304, 2560, 3072)
+
+# Arm D ladder derivation rule (predeclared; Issue #250 §D: same
+# accepted fixture derivation rule — repeated sentence block with the
+# identical prologue/suffix, length set by sentence repeat count).
+ARM_D_LADDER_SENTENCE_REPEATS = {
+    1024: 68, 1536: 102, 2048: 136, 2304: 153, 2560: 171, 3072: 204,
+}
 
 # Same-process (Arm B) request-contract extension: id_slot pinning is
 # required to make repeated requests land on the SAME slot. The
 # accepted contract has no id_slot key; the frozen diagnostic contract
-# for Arm B is the accepted contract + id_slot:3, and this extension
-# is DECLARED in METHODOLOGY (maintainer-reviewed) rather than silent.
+# for Arm B same-process requests is the accepted contract + id_slot:3,
+# and this extension is DECLARED in METHODOLOGY (maintainer-reviewed)
+# rather than silent.
 ARM_B_CONTRACT = dict(REQUEST_CONTRACT)
 ARM_B_CONTRACT["id_slot"] = 3
 ARM_B_EXTRA_KEYS = frozenset({"id_slot"})
+ARM_B_ID_SLOT = 3
+
+# ---------------------------------------------------------------------------
+# Namespace <-> arm exact binding (correction pass 2, blocker 5)
+# ---------------------------------------------------------------------------
+NAMESPACE_ARM_BINDING = {
+    "d250-arm-a": "A-vulkan-necessity",
+    "d250-arm-b": "B-process-init",
+    "d250-arm-c": "C-cpu-threads",
+    "d250-arm-d": "D-context-transition",
+}
+ARM_NAMESPACE_BINDING = {arm: ns for ns, arm in NAMESPACE_ARM_BINDING.items()}
 
 
 class DiagnosticError(RuntimeError):
@@ -200,6 +274,44 @@ def validate_namespace(namespace: str) -> str:
 def namespace_dir(root: Path, namespace: str) -> Path:
     validate_namespace(namespace)
     return Path(root) / namespace
+
+
+def _require_clean_head(repo_root: Path, expected_head: str) -> None:
+    """HEAD must be exactly the authorized head with an empty worktree."""
+    import subprocess
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True,
+        text=True, check=True).stdout.strip()
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=repo_root, capture_output=True,
+        text=True, check=True).stdout
+    if head != expected_head:
+        raise DiagnosticError(
+            f"HEAD drift: {head} != authorized {expected_head}")
+    if status.strip():
+        raise DiagnosticError("worktree is dirty; diagnostic requires clean")
+
+
+def validate_namespace_arm_binding(namespace: str, arm: str) -> str:
+    """Require the EXACT frozen namespace<->arm pair (fail-closed).
+
+    Correction pass 2, blocker 5: a syntactically valid namespace
+    paired with any arm other than its frozen partner is a protocol
+    error, as is any unknown namespace or arm.
+    """
+    validate_namespace(namespace)
+    if arm not in ARM_NAMESPACE_BINDING:
+        raise DiagnosticError(f"unknown arm: {arm!r}")
+    if namespace not in NAMESPACE_ARM_BINDING:
+        raise DiagnosticError(
+            f"namespace is not one of the four frozen arm namespaces: "
+            f"{namespace!r}")
+    expected = NAMESPACE_ARM_BINDING[namespace]
+    if arm != expected:
+        raise DiagnosticError(
+            f"namespace/arm binding violation: {namespace!r} must pair "
+            f"with arm {expected!r}, got {arm!r}")
+    return arm
 
 
 # ---------------------------------------------------------------------------
@@ -337,62 +449,82 @@ def validate_authority_payload(authority: dict[str, Any],
         raise DiagnosticError(
             "case-4096 is out of scope for Issue #250; a case-4096 line "
             "in a #250 dispatch is a protocol error")
-    # Any arm other than the frozen arm vocabulary is refused.
+    # Any arm other than the frozen arm vocabulary is refused, and the
+    # arm must be EXACTLY the namespace's frozen partner (correction
+    # pass 2, blocker 5).
     arms = [ln.split("=", 1)[1] for ln in lines
             if ln.startswith("arm=")]
     if len(arms) != 1 or arms[0] not in ARM_PLANS:
         raise DiagnosticError(
             f"exactly one frozen arm required (one of {sorted(ARM_PLANS)}), "
             f"found {arms}")
+    validate_namespace_arm_binding(namespace, arms[0])
     return dict(authority, namespace=namespace, arm=arms[0])
 
 
 # ---------------------------------------------------------------------------
-# Frozen discriminator arm plans (Issue #250 §A–§D, minimum geometry)
+# Frozen discriminator arm plans (Issue #250 §A–§D; correction pass 2:
+# one-factor causal geometry, CPU-only inheritance for B and C)
 # ---------------------------------------------------------------------------
 
 def _arm_units(arm: str) -> list[dict[str, Any]]:
     """Predeclared unit geometry per arm (fresh process per unit unless
     the arm is same-process by definition)."""
     if arm == "A-vulkan-necessity":
-        # CPU-only (-dev none) at the exact accepted workload, 3 repeats
-        # minimum; extend to 5 before a deterministic claim.
+        # Condition "cpu-only-devnone" only: the exact accepted
+        # case-3072 workload with `-dev none` appended (the PROVEN true
+        # CPU-only control). 3 repeats minimum; extend to 5 before a
+        # deterministic claim. The nonzero-Vulkan side of the contrast
+        # is the ACCEPTED #248 retained ngl=1 result (CONTRAST_*),
+        # consumed read-only — no fresh comparator units are planned.
         return [{"tag": f"{CASE}-B-devnone-00{i}", "argv_delta":
                  ARM_A2_DEV_NONE_ARGV_DELTA, "ngl": 0,
                  "request": "accepted"}
                 for i in (1, 2, 3, 4, 5)]
     if arm == "B-process-init":
-        # Arm 1: 5 fresh-process units at accepted placement (reproduce);
-        # Arm 2: ONE process, 5 same-process repeats (id_slot pinned,
-        # cache_prompt=false proven full reset).
+        # Only reached when Arm A's CPU-only condition VARIES. Both
+        # conditions inherit that same CPU-only `-dev none` condition;
+        # the only conceptual factor changed is process/runtime
+        # lifetime (correction pass 2, blocker 2).
+        # Arm 1: independent fresh CPU-only processes (5 units).
+        # Arm 2: ONE controlled CPU-only process, 5 sequential
+        # equivalent requests (id_slot=3 pinned, cache_prompt=false
+        # proven full reset), retained as one shared-process lifecycle
+        # record — NOT five separate process units.
         return [
-            {"tag": f"{CASE}-B-fresh-00{i}", "argv_delta": (),
-             "ngl": ACCEPTED_MATCHED_NGL, "request": "accepted"}
+            {"tag": f"{CASE}-B-cpu-fresh-00{i}",
+             "argv_delta": ARM_B_DEV_NONE_ARGV_DELTA, "ngl": 0,
+             "request": "accepted"}
             for i in (1, 2, 3, 4, 5)
         ] + [
-            {"tag": f"{CASE}-B-sameproc-00{i}", "argv_delta": (),
-             "ngl": ACCEPTED_MATCHED_NGL, "request": "arm-b",
-             "same_process": True}
+            {"tag": f"{CASE}-B-cpu-sameproc-00{i}",
+             "argv_delta": ARM_B_DEV_NONE_ARGV_DELTA, "ngl": 0,
+             "request": "arm-b", "same_process": True}
             for i in (1, 2, 3, 4, 5)
         ]
     if arm == "C-cpu-threads":
-        # Default 14-thread regime (2 units reproduce) vs serial regime
-        # -t 1 -tb 1 (5 units).
+        # Only reached when CPU-only variation survives Arm B. Remains
+        # CPU-only `-dev none`. ONE conceptual threading-regime factor:
+        # accepted/default CPU threading (2 reproduction units) vs the
+        # serial CPU regime `-t 1 -tb 1` (5 units). Nothing else
+        # changes (no batch/ubatch/NUMA/affinity/polling/warmup/Vulkan).
         return [
-            {"tag": f"{CASE}-B-thr14-00{i}", "argv_delta": (),
-             "ngl": ACCEPTED_MATCHED_NGL, "request": "accepted"}
+            {"tag": f"{CASE}-B-cpu-thr-default-00{i}",
+             "argv_delta": ARM_C_DEV_NONE_ARGV_DELTA, "ngl": 0,
+             "request": "accepted"}
             for i in (1, 2)
         ] + [
-            {"tag": f"{CASE}-B-thr1-00{i}",
-             "argv_delta": ("-t", "1", "-tb", "1"),
-             "ngl": ACCEPTED_MATCHED_NGL, "request": "accepted"}
+            {"tag": f"{CASE}-B-cpu-thr1-00{i}",
+             "argv_delta": ARM_C_DEV_NONE_ARGV_DELTA + ARM_C_SERIAL_ARGV_DELTA,
+             "ngl": 0, "request": "accepted"}
             for i in (1, 2, 3, 4, 5)
         ]
     if arm == "D-context-transition":
-        # Predeclared length ladder between 1022 (deterministic) and
-        # 3077 (variable), same fixture derivation rule, 2 repeats per
-        # length at the accepted placement. Ladder frozen BEFORE any
-        # execution; never picked after seeing outputs.
+        # Only reached when A-C do not localize. Predeclared length
+        # ladder between 1022 (deterministic) and 3077 (variable),
+        # same accepted fixture derivation rule, 2 repeats per length
+        # at the ACCEPTED placement (the factor here is prompt length,
+        # not the backend). Ladder frozen BEFORE any execution.
         out = []
         for length in ARM_D_LADDER_LENGTHS:
             for i in (1, 2):
@@ -419,9 +551,6 @@ def probe_list_for(arm: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Determinism judgement (digest-only)
 # ---------------------------------------------------------------------------
-
-CANONICAL_TOKENS = None  # set by reduce from retained bytes
-
 
 def canonical_token_digest(tokens: list[int]) -> str:
     if (not isinstance(tokens, list) or len(tokens) != DECISIONS
@@ -458,51 +587,6 @@ def judge_repeat_determinism(digests: list[str]) -> dict[str, Any]:
         "deterministic_claim_valid": deterministic and
         len(digests) >= DETERM_MIN_REPEATS,
     }
-
-
-# ---------------------------------------------------------------------------
-# Terminal derivation (offline, fail-closed)
-# ---------------------------------------------------------------------------
-
-REQUIRED_ARMS = ("A-vulkan-necessity",)
-
-
-def derive_terminal(reduction: dict[str, Any]) -> str:
-    """Mechanically derive the #250 terminal from a COMPLETE reduction.
-
-    Decision tree (frozen):
-      * reducer incomplete -> R8I3B_REDUCER_BLOCKED_INCOMPLETE
-      * localized: exactly one smallest boundary factor demonstrated
-        by a one-factor control pair (deterministic condition vs
-        nondeterministic condition), with the weaker interpretations
-        excluded by the retained evidence;
-      * else unresolved.
-    """
-    if not isinstance(reduction, dict):
-        raise DiagnosticError("reduction must be a dict")
-    if not reduction.get("complete"):
-        return REDUCER_BLOCKED
-    arms = reduction.get("arms", {})
-    for arm in reduction.get("required_arms", REQUIRED_ARMS):
-        if arm not in arms:
-            return REDUCER_BLOCKED
-    a = arms.get("A-vulkan-necessity", {})
-    det_map = a.get("condition_determinism", {})
-    cpu = det_map.get("cpu_only_devnone")
-    accepted = det_map.get("accepted_ngl8")
-    if cpu is None or accepted is None:
-        return REDUCER_BLOCKED
-    if cpu["deterministic"] and not accepted["deterministic"]:
-        return "R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED"
-    if cpu["deterministic"] and accepted["deterministic"]:
-        # CPU-only deterministic AND accepted condition now also
-        # deterministic: reproduction failed -> unresolved (honest).
-        return "R8I3B_REFERENCE_RUNTIME_UNRESOLVED"
-    if not cpu["deterministic"]:
-        # CPU-only varies: Vulkan participation NOT necessary; single
-        # localized boundary not yet demonstrated by arm A alone.
-        return "R8I3B_REFERENCE_RUNTIME_UNRESOLVED"
-    return "R8I3B_REFERENCE_RUNTIME_UNRESOLVED"
 
 
 def terminal_vocabulary() -> tuple[str, ...]:

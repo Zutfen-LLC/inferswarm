@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Issue #250 (R8-I3B) — diagnostic-only tests.
+"""Issue #250 (R8-I3B) — diagnostic-only tests (correction pass 2).
 
 CPU-only, fake-runner tests: no physical execution, no GPU, no model
 reads. Mutation controls must assert the probe list is EMPTY when a
 gate denies, custody forgery is caught, and every terminal path of
-the frozen decision tree is exercised by direct reducer invocation
-with retained-byte fixtures (never by asserting on vocabulary alone).
+the frozen sequential law is exercised by direct retained-byte
+reducer invocation (never by asserting on vocabulary alone).
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ def _load(name: str, rel: str):
     spec = importlib.util.spec_from_file_location(
         name, REPO / rel)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -69,6 +70,47 @@ class NamespaceTests(unittest.TestCase):
     def test_namespace_dir_gates(self):
         with self.assertRaises(D.DiagnosticError):
             D.namespace_dir(Path("/tmp"), "d248-ref-repeats")
+
+
+class NamespaceArmBindingTests(unittest.TestCase):
+    """Correction pass 2, blocker 5: exact namespace<->arm pairing."""
+
+    def test_exact_pairs_pass(self):
+        for ns, arm in D.NAMESPACE_ARM_BINDING.items():
+            self.assertEqual(
+                D.validate_namespace_arm_binding(ns, arm), arm)
+
+    def test_cross_pairs_rejected(self):
+        # every mismatched (namespace, arm) combination is refused
+        namespaces = sorted(D.NAMESPACE_ARM_BINDING)
+        arms = sorted(D.ARM_NAMESPACE_BINDING)
+        for ns in namespaces:
+            for arm in arms:
+                if D.NAMESPACE_ARM_BINDING[ns] == arm:
+                    continue
+                with self.assertRaises(D.DiagnosticError):
+                    D.validate_namespace_arm_binding(ns, arm)
+
+    def test_unknown_arm_rejected(self):
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_namespace_arm_binding("d250-arm-a", "A-vulkan-necessity-v2")
+
+    def test_unknown_namespace_rejected(self):
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_namespace_arm_binding("d250-arm-z", "A-vulkan-necessity")
+
+    def test_binding_is_exact_mapping(self):
+        self.assertEqual(
+            D.NAMESPACE_ARM_BINDING,
+            {"d250-arm-a": "A-vulkan-necessity",
+             "d250-arm-b": "B-process-init",
+             "d250-arm-c": "C-cpu-threads",
+             "d250-arm-d": "D-context-transition"})
+        # injective in both directions (no duplicate namespace/arm)
+        self.assertEqual(len(set(D.NAMESPACE_ARM_BINDING)),
+                         len(D.NAMESPACE_ARM_BINDING))
+        self.assertEqual(len(set(D.ARM_NAMESPACE_BINDING)),
+                         len(D.ARM_NAMESPACE_BINDING))
 
 
 class ContractTests(unittest.TestCase):
@@ -170,6 +212,31 @@ class AuthorityTests(unittest.TestCase):
         with self.assertRaises(D.DiagnosticError):
             D.validate_authority_payload(a, self.HEAD)
 
+    def test_namespace_arm_cross_pair_refused_in_payload(self):
+        # d250-arm-a + arm=C (the maintainer's demonstrated forgery)
+        a = make_authority(head=self.HEAD, namespace="d250-arm-a",
+                           arm="C-cpu-threads")
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_authority_payload(a, self.HEAD)
+        # every cross pair is refused at the payload validator too
+        for ns, arm in (("d250-arm-a", "B-process-init"),
+                        ("d250-arm-a", "C-cpu-threads"),
+                        ("d250-arm-a", "D-context-transition"),
+                        ("d250-arm-b", "A-vulkan-necessity"),
+                        ("d250-arm-b", "C-cpu-threads"),
+                        ("d250-arm-c", "A-vulkan-necessity"),
+                        ("d250-arm-d", "B-process-init")):
+            with self.assertRaises(D.DiagnosticError):
+                D.validate_authority_payload(
+                    make_authority(head=self.HEAD, namespace=ns, arm=arm),
+                    self.HEAD)
+
+    def test_duplicate_arm_lines_refused(self):
+        a = make_authority(head=self.HEAD)
+        a["body"] += "\narm=A-vulkan-necessity"
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_authority_payload(a, self.HEAD)
+
     def test_binding_two_observations(self):
         a = make_authority(head=self.HEAD)
         b = make_authority(head=self.HEAD)
@@ -194,17 +261,41 @@ class ArmPlanTests(unittest.TestCase):
             self.assertEqual(u["argv_delta"], ("-dev", "none"))
             self.assertNotIn(("-ngl", "0"), [tuple(u["argv_delta"])])
 
-    def test_arm_c_single_thread_regime(self):
+    def test_arm_a_declares_no_fresh_vulkan_units(self):
+        # blocker 3: the nonzero-Vulkan side is retained #248
+        # evidence only; the frozen plan carries NO fresh ngl units.
+        units = D.probe_list_for("A-vulkan-necessity")
+        for u in units:
+            self.assertEqual(u["ngl"], 0)
+        self.assertNotIn("ngl8", json.dumps(units))
+        self.assertNotIn("accepted-condition", json.dumps(units))
+
+    def test_arm_b_is_cpu_only(self):
+        # blocker 2: B inherits the CPU-only condition; no ngl=8.
+        units = D.probe_list_for("B-process-init")
+        fresh = [u for u in units if not u.get("same_process")]
+        same = [u for u in units if u.get("same_process")]
+        self.assertEqual(len(fresh), 5)
+        self.assertEqual(len(same), 5)
+        for u in units:
+            self.assertEqual(tuple(u["argv_delta"]), ("-dev", "none"))
+            self.assertEqual(u["ngl"], 0)
+        for u in same:
+            self.assertEqual(u["request"], "arm-b")
+
+    def test_arm_c_is_cpu_only_single_thread_regime(self):
         units = D.probe_list_for("C-cpu-threads")
-        thr1 = [u for u in units if "-thr1-" in u["tag"]]
-        thr14 = [u for u in units if "-thr14-" in u["tag"]]
+        thr1 = [u for u in units if "thr1" in u["tag"]]
+        default = [u for u in units if "thr-default" in u["tag"]]
         self.assertEqual(len(thr1), 5)
-        self.assertEqual(len(thr14), 2)
+        self.assertEqual(len(default), 2)
         for u in thr1:
             self.assertEqual(tuple(u["argv_delta"]),
-                             ("-t", "1", "-tb", "1"))
-        for u in thr14:
-            self.assertEqual(u["argv_delta"], ())
+                             ("-dev", "none", "-t", "1", "-tb", "1"))
+        for u in default:
+            self.assertEqual(tuple(u["argv_delta"]), ("-dev", "none"))
+        for u in units:
+            self.assertEqual(u["ngl"], 0)
 
     def test_arm_d_ladder_predeclared(self):
         units = D.probe_list_for("D-context-transition")
@@ -213,15 +304,15 @@ class ArmPlanTests(unittest.TestCase):
         for length in lengths:
             self.assertEqual(
                 len([u for u in units if u["ladder_length"] == length]), 2)
+        # ladder runs at the accepted placement; factor = length
+        for u in units:
+            self.assertEqual(u["argv_delta"], ())
+            self.assertEqual(u["ngl"], D.ACCEPTED_MATCHED_NGL)
 
-    def test_arm_b_same_process_units_declared(self):
-        units = D.probe_list_for("B-process-init")
-        same = [u for u in units if u.get("same_process")]
-        fresh = [u for u in units if not u.get("same_process")]
-        self.assertEqual(len(same), 5)
-        self.assertEqual(len(fresh), 5)
-        for u in same:
-            self.assertEqual(u["request"], "arm-b")
+    def test_arm_d_sentence_repeats_predeclared(self):
+        self.assertEqual(
+            sorted(D.ARM_D_LADDER_SENTENCE_REPEATS),
+            [1024, 1536, 2048, 2304, 2560, 3072])
 
     def test_unknown_arm_refused(self):
         with self.assertRaises(D.DiagnosticError):
@@ -236,6 +327,17 @@ class ArmPlanTests(unittest.TestCase):
         # D ladder never includes 4096.
         for u in D.probe_list_for("D-context-transition"):
             self.assertNotEqual(u["ladder_length"], 4096)
+
+    def test_contrast_constants_frozen(self):
+        # blocker 3: the contrast rule is the accepted #248 retained
+        # ngl=1 result, consumed read-only.
+        self.assertEqual(D.CONTRAST_PROVENANCE,
+                         "accepted_248_retained_ngl1_readonly")
+        self.assertEqual(D.CONTRAST_NGL, 1)
+        self.assertEqual(
+            D.CONTRAST_UNITS,
+            ("case-3072-B-ngl1-001", "case-3072-B-ngl1-002"))
+        self.assertFalse(D.CONTRAST_EXPECTED_ROW_DETERMINISTIC)
 
 
 class DeterminismTests(unittest.TestCase):
@@ -266,53 +368,18 @@ class DeterminismTests(unittest.TestCase):
             D.canonical_token_digest(toks[:7])
 
 
-class TerminalTests(unittest.TestCase):
-    """Direct reducer-invocation tests over the frozen decision tree."""
+class TerminalModuleMovedTests(unittest.TestCase):
+    """The caller-supplied-boolean terminal path is GONE (blocker 4).
 
-    def _red(self, complete=True, arms=None, required=None):
-        return {
-            "complete": complete,
-            "arms": arms or {},
-            "required_arms": required or D.REQUIRED_ARMS,
-        }
+    The retained-byte reducer lives in scripts/issue250_terminal.py
+    (tested directly in test_issue250_terminal.py); the diagnostic
+    spine exports no terminal-derivation function that accepts a
+    reduction dict.
+    """
 
-    def test_incomplete_fails_closed(self):
-        self.assertEqual(D.derive_terminal(self._red(complete=False)),
-                         D.REDUCER_BLOCKED)
-
-    def test_missing_arm_fails_closed(self):
-        self.assertEqual(
-            D.derive_terminal(self._red(arms={})), D.REDUCER_BLOCKED)
-
-    def test_cpu_only_deterministic_localizes(self):
-        arms = {"A-vulkan-necessity": {"condition_determinism": {
-            "cpu_only_devnone": {"deterministic": True},
-            "accepted_ngl8": {"deterministic": False}}}}
-        self.assertEqual(
-            D.derive_terminal(self._red(arms=arms)),
-            "R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED")
-
-    def test_cpu_only_varies_unresolved(self):
-        arms = {"A-vulkan-necessity": {"condition_determinism": {
-            "cpu_only_devnone": {"deterministic": False},
-            "accepted_ngl8": {"deterministic": False}}}}
-        self.assertEqual(
-            D.derive_terminal(self._red(arms=arms)),
-            "R8I3B_REFERENCE_RUNTIME_UNRESOLVED")
-
-    def test_reproduction_failure_unresolved(self):
-        arms = {"A-vulkan-necessity": {"condition_determinism": {
-            "cpu_only_devnone": {"deterministic": True},
-            "accepted_ngl8": {"deterministic": True}}}}
-        self.assertEqual(
-            D.derive_terminal(self._red(arms=arms)),
-            "R8I3B_REFERENCE_RUNTIME_UNRESOLVED")
-
-    def test_missing_condition_fails_closed(self):
-        arms = {"A-vulkan-necessity": {"condition_determinism": {
-            "cpu_only_devnone": {"deterministic": True}}}}
-        self.assertEqual(
-            D.derive_terminal(self._red(arms=arms)), D.REDUCER_BLOCKED)
+    def test_no_caller_dict_terminal_in_diagnostic_module(self):
+        self.assertFalse(hasattr(D, "derive_terminal"))
+        self.assertFalse(hasattr(D, "REQUIRED_ARMS"))
 
     def test_terminal_vocabulary_frozen(self):
         self.assertEqual(
@@ -409,7 +476,9 @@ class Phase0Tests(unittest.TestCase):
 
 
 class SelfContainmentImportScan(unittest.TestCase):
-    """The diagnostic module must not import campaign/unmerged modules."""
+    """The diagnostic/phase-0 modules must not import #248 modules;
+    the physical/terminal modules reuse them deliberately (declared,
+    maintainer-authorized reuse of the accepted implementations)."""
 
     def test_no_forbidden_imports(self):
         src = (REPO / "scripts/issue250_diagnostic.py").read_text()
@@ -420,6 +489,207 @@ class SelfContainmentImportScan(unittest.TestCase):
         for bad in ("import issue241", "from issue241",
                     "import issue248", "from issue248"):
             self.assertNotIn(bad, src0)
+
+    def test_physical_module_declared_reuse(self):
+        # The physical producer's #248 reuse is the two ACCEPTED raw
+        # evidence helpers only (health + identity), plus the #250
+        # spine; never the #248 authority model.
+        src = (REPO / "scripts/issue250_physical.py").read_text()
+        self.assertIn("import issue250_diagnostic as D", src)
+        self.assertIn("import issue248_health as H", src)
+        self.assertIn("import issue248_identity as I", src)
+        for bad in ("import issue248_diagnostic",
+                    "import issue248_physical",
+                    "import issue248_terminal",
+                    "import issue241"):
+            self.assertNotIn(bad, src)
+        src_t = (REPO / "scripts/issue250_terminal.py").read_text()
+        for bad in ("import issue248_diagnostic",
+                    "import issue248_physical",
+                    "import issue248_terminal",
+                    "import issue241"):
+            self.assertNotIn(bad, src_t)
+
+
+OLD_HEAD = "ac589445a31adcf34ef7c8f23d3abd509b7a0806"
+OLD_REVIEWED_HEAD_COMMENT = "PR #251 comment 5840630050"
+
+
+class OldDefectProofs(unittest.TestCase):
+    """Old-defect proofs for the reviewed ac58944 head (NO-GO 5840630050).
+
+    Each test first PROVES the defect existed at the old head (from
+    retained git bytes, fail-safe if the object is unreachable), then
+    proves the corrected head REFUSES the defect.
+    """
+
+    def _old_source(self, relpath: str) -> str:
+        import subprocess
+        try:
+            out = subprocess.run(
+                ["git", "show", f"{OLD_HEAD}:{relpath}"],
+                cwd=REPO, capture_output=True, text=True, check=True)
+            return out.stdout
+        except subprocess.CalledProcessError:
+            self.skipTest(f"old head object {OLD_HEAD[:7]} unreachable")
+
+    def test_old_defect_1_no_physical_execution_entrypoint(self):
+        # OLD: no producer module existed; the diagnostic module had
+        # no execution entrypoint (zero run_* functions).
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertNotIn("def run_diagnostic_unit", old)
+        self.assertNotIn("def run_same_process_lifecycle", old)
+        # CORRECTED: the dedicated physical producer exists.
+        src = (REPO / "scripts" / "issue250_physical.py").read_text()
+        self.assertIn("def run_diagnostic_unit", src)
+        self.assertIn("def run_same_process_lifecycle", src)
+
+    def test_old_defect_2_b_and_c_used_matched_ngl8(self):
+        # OLD: B and C units carried ACCEPTED_MATCHED_NGL = 8.
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertIn("ACCEPTED_MATCHED_NGL = 8", old)
+        old_b = None
+        for line in old.splitlines():
+            if "B-process-init" in line or old_b:
+                old_b = (old_b or "") + line + "\n"
+                if "return" in line and old_b.count("return") > 1:
+                    break
+        # the old plan bound matched ngl=8 to every B/C unit
+        self.assertIn('"ngl": ACCEPTED_MATCHED_NGL', old)
+        # CORRECTED: every B and C unit is CPU-only -dev none; no
+        # ngl=8 anywhere in #250 tooling.
+        for unit in D.probe_list_for("B-process-init"):
+            self.assertEqual(
+                tuple(unit["argv_delta"]), ("-dev", "none"))
+            self.assertEqual(unit["ngl"], 0)
+        for unit in D.probe_list_for("C-cpu-threads"):
+            if "thr1" not in unit["tag"]:
+                self.assertEqual(
+                    tuple(unit["argv_delta"]), ("-dev", "none"))
+                self.assertEqual(unit["ngl"], 0)
+            else:
+                # serial adds ONLY -t 1 -tb 1 on the CPU-only base
+                self.assertEqual(
+                    tuple(unit["argv_delta"]),
+                    ("-dev", "none", "-t", "1", "-tb", "1"))
+                self.assertEqual(unit["ngl"], 0)
+        # CORRECTED head: no plan unit carries ngl=8; the only
+        # accepted-placement ngl is the Arm-D ladder (declared,
+        # length factor). The module docstring's prohibition sentence
+        # may NAME ngl=8 as excluded; the plan geometry must not use it.
+        for arm in ("A-vulkan-necessity", "B-process-init",
+                    "C-cpu-threads"):
+            for unit in D.probe_list_for(arm):
+                self.assertNotEqual(unit["ngl"], 8)
+        meth = (REPO / "docs" / "investigations" /
+                "qwen38-flash-next-r8-i3b-ref-runtime-boundary" /
+                "METHODOLOGY.md").read_text()
+        # ngl=8 may appear ONLY inside the prohibition sentence; no
+        # line may PLAN fresh ngl=8 reproduction (the old defect)
+        ngl8_lines = [ln for ln in meth.splitlines() if "ngl=8" in ln]
+        self.assertTrue(ngl8_lines)
+        for ln in ngl8_lines:
+            self.assertIn("no `ngl=8`", ln)
+
+    def test_old_defect_3_arm_a_plan_lacked_expected_contrast(self):
+        # OLD: derive_terminal expected accepted_ngl8 while the Arm-A
+        # plan contained ONLY -dev none units (no ngl=1 contrast).
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertIn('det_map.get("accepted_ngl8")', old)
+        # the old head planned ONLY -dev none units for Arm A (the
+        # expected contrast condition was never declared as units) and
+        # had no retained-contrast constants at all
+        self.assertIn("-B-devnone-00", old)      # devnone units planned
+        self.assertNotIn("CONTRAST_PROVENANCE", old)
+        self.assertNotIn("CONTRAST_UNITS", old)
+        self.assertNotIn("ngl1", old)
+        # CORRECTED: the contrast is the retained #248 ngl=1 evidence,
+        # declared read-only in the plan and consumed by the reducer.
+        src = (REPO / "scripts" / "issue250_diagnostic.py").read_text()
+        self.assertIn("CONTRAST_PROVENANCE", src)
+        self.assertIn("d248-placement-rungs", src)
+        self.assertIn("ngl1", src)
+        plan_a = [u for u in D.probe_list_for("A-vulkan-necessity")]
+        self.assertTrue(plan_a)
+        self.assertTrue(all(u["ngl"] == 0 and
+                            tuple(u["argv_delta"]) == ("-dev", "none")
+                            for u in plan_a))
+        # and the reducer consumes the contrast via retained bytes
+        src_t = (REPO / "scripts" / "issue250_terminal.py").read_text()
+        self.assertIn("verify_historical_contrast", src_t)
+        self.assertIn("CONTRAST_AUTHORITY_HEAD", src_t)
+
+    def test_old_defect_4_caller_supplied_reduction_terminal(self):
+        # OLD: derive_terminal(reduction) trusted caller booleans and
+        # could emit a terminal from caller-supplied "deterministic".
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertIn('reduction.get("complete")', old)
+        self.assertIn('cpu["deterministic"]', old)
+        # CORRECTED: the corrected module has no derive_terminal and
+        # accepts no reduction dict; the retained-byte reducer has no
+        # such parameter. (Lazy load: this file is frozen import-free
+        # of #248 modules, and issue250_terminal pulls 248 helpers.)
+        src = (REPO / "scripts" / "issue250_diagnostic.py").read_text()
+        self.assertNotIn("def derive_terminal", src)
+        import inspect
+        # issue250_terminal imports the physical module (which imports
+        # the accepted 248 helpers) by exact module names; wire the
+        # whole dependency chain under those names, then load the
+        # terminal module. This test method is the ONLY place this
+        # file loads #248-dependent modules (the module-level frozen
+        # import-free boundary applies to module scope).
+        for _dep in ("issue248_diagnostic", "issue248_health",
+                     "issue248_identity"):
+            if _dep not in sys.modules:
+                _load(_dep, f"scripts/{_dep}.py")
+        if "issue250_physical" not in sys.modules:
+            _load("issue250_physical", "scripts/issue250_physical.py")
+        sys.modules.pop("issue250_terminal", None)
+        terminal = _load("issue250_terminal", "scripts/issue250_terminal.py")
+        params = inspect.signature(terminal.derive_terminal).parameters
+        for banned in ("reduction", "terminal", "deterministic",
+                       "localized_factor", "condition_summary"):
+            self.assertNotIn(banned, params)
+        # and a caller-constructed dict CANNOT produce a terminal
+        self.assertFalse(hasattr(D, "derive_terminal"))
+
+    def test_old_defect_5_premature_unresolved_on_cpu_only_variation(self):
+        # OLD: CPU-only variation immediately returned UNRESOLVED.
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertIn(
+            "CPU-only varies: Vulkan participation NOT necessary", old)
+        # CORRECTED: A-variation makes B REQUIRED (never early
+        # UNRESOLVED); the premature path is gone from the reducer —
+        # the direct behavioral proof is the terminal matrix
+        # (test_cpu_only_variation_requires_b_not_unresolved in
+        # tests/test_issue250_terminal.py).
+        import inspect
+        src_t = (REPO / "scripts" / "issue250_terminal.py").read_text()
+        # the corrected reducer makes B REQUIRED (pass-through, no
+        # terminal) when CPU-only varies — the premature UNRESOLVED
+        # path is structurally gone
+        self.assertIn("Arm B becomes REQUIRED; no terminal is emitted",
+                      src_t)
+
+    def test_old_defect_6_namespace_arm_cross_pair_accepted(self):
+        # OLD: validate_authority_payload validated namespace and arm
+        # independently; d250-arm-a + arm=C passed structural checks.
+        old = self._old_source("scripts/issue250_diagnostic.py")
+        self.assertIn("arms[0] not in ARM_PLANS", old)
+        # prove the cross-pair passed at the old head: old validation
+        # never compared namespace to arm
+        self.assertNotIn("NAMESPACE_ARM_PAIRS", old)
+        self.assertNotIn("validate_namespace_arm_binding", old)
+        # CORRECTED: the exact pair is required.
+        self.assertTrue(hasattr(D, "validate_namespace_arm_binding"))
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_namespace_arm_binding("d250-arm-a", "C-cpu-threads")
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_namespace_arm_binding("d250-arm-a", "B-process-init")
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_namespace_arm_binding("d250-arm-b", "A-vulkan-necessity")
+        for ns, arm in D.NAMESPACE_ARM_BINDING.items():
+            D.validate_namespace_arm_binding(ns, arm)  # exact pairs pass
 
 
 if __name__ == "__main__":

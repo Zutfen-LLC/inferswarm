@@ -105,44 +105,75 @@ Namespace d250-arm-a (Vulkan-necessity discriminator; §A):
   - Units: fresh process per unit; 3 repeats minimum; extend to 5
     before calling the condition deterministic; retained full rows
     through the same observer seam.
+  - NONZERO-VULKAN CONTRAST (frozen rule, correction pass 2): the
+    nonzero-Vulkan side of the Arm-A comparison is the ACCEPTED #248
+    RETAINED `ngl=1` case-3072 result (`d248-placement-rungs`
+    units `case-3072-B-ngl1-001/002`, dispatched under PR #249 at
+    head 3f36ef1a, retained under the #248 evidence root whose
+    534-row SHA256SUMS self-digests to af9dfd0f…), consumed as
+    READ-ONLY contrast authority with digest/provenance verification
+    (scripts/issue250_terminal.verify_historical_contrast: manifest
+    self-digest, per-file digest rows, unit head/namespace/PR/issue
+    binding, row nondeterminism re-derived from the retained row
+    bytes). At ngl=1 — the minimal nonzero Vulkan participation
+    already established by #248, where only the output layer is
+    GPU-resident — the retained rows VARY across fresh processes.
+    This is historical authority, never fresh #250 execution and
+    never represented as such; no `ngl=8` accepted-condition
+    reproduction exists anywhere in Issue #250, and no fresh ngl
+    comparator units are planned.
   - Interpretation (frozen): CPU-only varies ⇒ Vulkan participation
     NOT necessary ⇒ proceed to B. CPU-only deterministic (5/5) while
-    the accepted ngl=8 condition remains variable (established by
-    #248 5/5 varying fresh pairs; the arm re-establishes 2 fresh
-    accepted-condition units only to confirm continued variation
-    under today's runtime) ⇒ zero-vs-nonzero Vulkan participation is
-    a DEMONSTRATED boundary — but Vulkan itself is NOT called the
-    root cause without a smaller mechanism; terminal
-    R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED names the LOCALIZED
-    FACTOR (backend participation boundary), with the smaller
-    mechanism left to the follow-up issue per #250 §Decision.
+    the accepted ngl=1 contrast remains variable ⇒ zero-vs-nonzero
+    Vulkan participation is a DEMONSTRATED boundary — but Vulkan
+    itself is NOT called the root cause without a smaller mechanism;
+    terminal R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED names the
+    LOCALIZED FACTOR (backend participation boundary), with the
+    smaller mechanism left to the follow-up issue per #250 §Decision.
 
 Namespace d250-arm-b (fresh-process/runtime-initialization; §B):
-  - Only if CPU-only still varies. Two conditions compared:
-    (1) independent fresh processes (5 units, accepted condition);
-    (2) ONE controlled process, 5 repeated equivalent requests with
-        request/cache-history semantics PROVEN equivalent: the
-        pinned server honors per-request `id_slot`; requests carry
-        id_slot=3 (the LRU-selected slot of every accepted unit) and
-        the accepted cache_prompt=false (source-verified to force
-        n_past=0, keep_first(0), full seq_rm(0,-1) wipe → full
-        recompute from position 0). The id_slot extension is the one
-        DECLARED contract deviation, reviewed here; every other key
-        is byte-exact accepted.
-  - Reset-equivalence proof retained per unit: server log must show
-    slot 3 selected by id, `prompt eval` 3077 tokens each repeat (no
-    cache reuse), graphs-reused count increments only within-decode.
+  - Only if CPU-only still varies (correction pass 2: B INHERITS
+    Arm A's CPU-only condition). Both conditions run `-dev none`;
+    no Vulkan device backend is reintroduced. The only conceptual
+    factor changed is process/runtime lifetime:
+    (1) independent fresh CPU-only processes (5 units,
+        `case-3072-B-cpu-fresh-00N`);
+    (2) ONE controlled CPU-only process, 5 repeated equivalent
+        requests with request/cache-history semantics PROVEN
+        equivalent: the pinned server honors per-request `id_slot`;
+        requests carry id_slot=3 (the LRU-selected slot of every
+        accepted unit) and the accepted cache_prompt=false
+        (source-verified to force n_past=0, keep_first(0), full
+        seq_rm(0,-1) wipe → full recompute from position 0). The
+        id_slot extension is the one DECLARED contract deviation,
+        reviewed here; every other key is byte-exact accepted.
+        Executed by the dedicated same-process lifecycle producer
+        (`scripts/issue250_physical.run_same_process_lifecycle`):
+        one server launch, one shared PID, per-request rows/
+        responses/log slices, one shared identity/health record;
+        five separate processes CANNOT satisfy this arm.
+  - Reset-equivalence proof retained per request (re-derived by the
+    reducer from the retained log slice): slot 3 selected BY ID,
+    `prompt eval` covering the full 3077 tokens each repeat (no
+    cache reuse), per-request boundaries.
   - Interpretation: fresh varies + same-process deterministic ⇒
     process/runtime initialization is a necessary boundary; both vary
-    ⇒ C.
+    ⇒ C. If fresh-process CPU-only evidence turns deterministic in
+    Arm B after Arm A varied, the cross-arm contradiction fails
+    closed to R8I3B_REDUCER_BLOCKED_INCOMPLETE (frozen rule).
 
 Namespace d250-arm-c (CPU-parallelism; §C):
-  - Only if CPU-only remains variable. ONE conceptual threading
-    regime intervention: `-t 1 -tb 1` (serial CPU regime covering
-    prefill AND generation), 5 units, against the accepted/default
-    14-thread regime (2 units, same-day reproduction). No other
-    batch/NUMA/affinity/scheduling changes. If serial ALSO varies ⇒
-    D. (A serial deterministic + default varying result localizes
+  - Only if CPU-only remains variable after B. INHERITS the CPU-only
+    `-dev none` condition (correction pass 2: no Vulkan device
+    backend is reintroduced). ONE conceptual threading regime
+    intervention: `-t 1 -tb 1` (serial CPU regime covering prefill
+    AND generation), 5 units (`case-3072-B-cpu-thr1-00N`), against
+    the default 14-thread CPU-only regime (2 reproduction units,
+    `case-3072-B-cpu-thr-default-00N`; the default condition's
+    VARIATION is already established by the A/B fresh CPU-only
+    units of the same geometry). No batch/ubatch/NUMA/affinity/
+    polling/priority/warmup/request/model changes. If serial ALSO
+    varies ⇒ D. (Serial deterministic + default varying localizes
     CPU parallel execution/order as a necessary boundary.)
 
 Namespace d250-arm-d (long-context transition; §D):
@@ -171,10 +202,17 @@ favorable repeat; retain failed units.
 
 5. Terminal derivation (mechanical)
 -----------------------------------
-scripts/issue250_diagnostic.derive_terminal over the retained
-reduction; the decision tree is frozen above; incomplete/ambiguous
-evidence fails closed to R8I3B_REDUCER_BLOCKED_INCOMPLETE. Neither
-terminal qualifies comparator/2.
+scripts/issue250_terminal.derive_terminal(evidence_root, head) — the
+retained-byte reducer (correction pass 2): re-derives every
+conclusion from retained unit receipts, raw responses, observer
+rows/metadata, server logs, identity pre/post, platform-health
+receipts, campaign attestations, and the live dispatch-authority
+binding. Caller-supplied determinism/factor/terminal/condition
+values are not inputs. The sequential A→B→C→D reachability law and
+the frozen Arm-D transition predicates are enforced mechanically;
+incomplete/ambiguous evidence fails closed to
+R8I3B_REDUCER_BLOCKED_INCOMPLETE. Neither terminal qualifies
+comparator/2.
 
 6. Hard prohibitions (enforced by tooling + tests)
 --------------------------------------------------

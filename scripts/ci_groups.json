@@ -114,7 +114,9 @@
     "test_issue237_r8i_methodology",
     "test_issue244_r8i5_v340l_import",
     "test_issue248_diagnostic",
-    "test_issue250_diagnostic"
+    "test_issue250_diagnostic",
+    "test_issue250_physical",
+    "test_issue250_terminal"
    ]
   },
   "repo-integrity": {
@@ -1281,6 +1283,12 @@
   "scripts/issue250_phase0.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue250_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_terminal.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1513,6 +1521,12 @@
    "issue-222-r7c"
   ],
   "tests/test_issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_terminal.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

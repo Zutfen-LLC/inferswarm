@@ -3295,8 +3295,8 @@
     },
     "test_issue250_diagnostic": {
       "baseline_group": "r8i-qwen-qualification",
-      "baseline_serial_seconds": 0.1,
-      "baseline_test_count": 44,
+      "baseline_serial_seconds": 0.15,
+      "baseline_test_count": 56,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
@@ -3321,7 +3321,68 @@
         "scripts/issue250_phase0.py",
         "scripts/issue250_diagnostic.py"
       ],
-      "test_count_at_audit": 44
+      "test_count_at_audit": 56
+    },
+    "test_issue250_physical": {
+      "baseline_group": "r8i-qwen-qualification",
+      "baseline_serial_seconds": 2.5,
+      "baseline_test_count": 34,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "r8i-qwen-qualification",
+      "invariant": "The R8-I3B physical producer (#250 correction pass 2) runs only under a revalidated live maintainer dispatch at the exact head: frozen arm plans, namespace<->arm exact binding, campaign model attestation with per-unit stat witnesses, append-only raw custody, accepted #248 identity/health reuse, and the same-process Arm-B lifecycle with reset proofs.",
+      "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+          "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+        ],
+        "scripts_imported": [
+          "issue248_health",
+          "issue248_identity"
+        ]
+      },
+      "pinned_by_evidence": [
+        "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY.md"
+      ],
+      "rationale": "Current #250 physical producer authority; executes only under maintainer diagnostic dispatch at the reviewed head (fake-runner suite here).",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "source_modules": [
+        "scripts/issue250_physical.py"
+      ],
+      "test_count_at_audit": 34
+    },
+    "test_issue250_terminal": {
+      "baseline_group": "r8i-qwen-qualification",
+      "baseline_serial_seconds": 55.0,
+      "baseline_test_count": 33,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "r8i-qwen-qualification",
+      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 2) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast, enforcing the sequential A->B->C->D reachability law with fail-closed boundaries.",
+      "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+          "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/terminal-reduction.json"
+        ],
+        "scripts_imported": [
+          "issue250_physical"
+        ]
+      },
+      "pinned_by_evidence": [
+        "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY.md"
+      ],
+      "rationale": "Current #250 terminal-reducer authority; offline retained-byte reduction only, zero physical execution.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "source_modules": [
+        "scripts/issue250_terminal.py"
+      ],
+      "test_count_at_audit": 33
     },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",
