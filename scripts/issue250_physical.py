@@ -289,6 +289,25 @@ V0_PLACEMENT_NGL = 1
 V0_PLACEMENT_BACKEND = "Vulkan"
 V0_PLACEMENT_EMBEDDING = "CPU"
 V0_PLACEMENT_OUTPUT_PROJECTION = "Vulkan"
+# Phase-0 pinned-source law: i_gpu_start = n_layer + 1 - ngl;
+# ngl=1 offloads the output head, not the input embedding.
+V0_SOURCE_PIN = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
+V0_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
+V0_RADV_ICD = "/usr/share/vulkan/icd.d/radeon_icd.json"
+V0_BINDING_SCHEMA = "inferswarm.issue250.v0-selector-binding/1"
+V0_EXCLUDED_NOISE_BYTES = 64 * 1024 * 1024  # accepted #243 bound
+V0_MIN_SELECTED_BYTES = V0_EXCLUDED_NOISE_BYTES
+V0_BINDING_PRODUCER = "issue250_physical.py:v0-load-only-binding/1"
+V0_OBSERVER_LIBS = {
+    "libllama-server-impl.so": "4c20f44656c19d30f5c10cd40ca3493e6850db2fd86d46f7944943527e67206c",
+    "libllama-common.so.0": "218474f78c6749cf72b694451ee8df6a7a56d47e94468c92b1ee730b9aefa5eb",
+    "libmtmd.so.0": "1341b0fa4d4e9e3cd9e1ec930b5b990b171058086711f7eaa406a14b41ad16d1",
+    "libllama.so.0": "2f86df90a3187c006be6be097714e4c6fb612566f8c604c8551acf8fc9938775",
+    "libggml.so.0": "f02894a957a21603c59a44a38b0e27adb9b88d904175e3c26a8cfff2d99a82b6",
+    "libggml-base.so.0": "179340356d779c4a7d442c283a0a52d74f6770752fbfaad2cfedf3e383086b2b",
+    "libggml-cpu.so.0": "dd1d2904df703f8cf6e9048a17fc0757e3679a8edc351b803889137bbeef365f",
+    "libggml-vulkan.so.0": "df589e63511f8154e14ee19be14d5e20e573b81f3b518c7a8eb10d1b1a85e7fe",
+}
 
 
 def v0_probe_plan() -> list[dict[str, Any]]:
@@ -354,35 +373,157 @@ def validate_v0_dispatch(namespace: str, arm: str,
     return dict(authority)
 
 
-def v0_server_argv(binary: Path, model_member: Path, port: int = PORT,
-                   *, vulkan_device_index: int | None = None,
-                   validated_adapter: dict[str, Any] | None = None) -> list[str]:
-    """Build AMD ngl=1 argv only after a pinned binary selector proof.
-
-    The ordinary producer's default seam is NVIDIA-specific; it must never
-    silently claim AMD placement. A future AMD adapter must supply and verify
-    the selected Vulkan device identity AND the pinned binary's actual
-    --device selector grammar before this launch shape is usable. An index
-    is not itself a valid llama.cpp --device selector.
-    """
-    if type(vulkan_device_index) is not int or vulkan_device_index < 0:
-        raise PhysicalDiagnosticError(
-            "AMD Vulkan placement is unverified; explicit device identity required")
-    if (not isinstance(validated_adapter, dict)
-            or not re.fullmatch(r"[0-9a-f]{64}", str(
-                validated_adapter.get("pinned_binary_sha256", "")))
-            or validated_adapter.get("vulkan_device_index") != vulkan_device_index
-            or validated_adapter.get("selector_verified_from_pinned_help") is not True
-            or not isinstance(validated_adapter.get("selector"), str)
-            or not re.fullmatch(r"Vulkan[0-9]+", validated_adapter["selector"])):
-        raise PhysicalDiagnosticError(
-            "V0 pinned server --device selector adapter unverified; "
-            "an integer Vulkan index cannot authorize a CLI selector")
+def v0_server_argv(binary: Path, model_member: Path, port: int = PORT) -> list[str]:
+    """The frozen ordinary argv; AMD device selection is ONLY in the env."""
     return [str(binary), "--model", str(model_member), "-ngl", "1",
             "--ctx-size", str(SERVER_CTX_SIZE),
             "--batch-size", str(SERVER_BATCH_SIZE),
-            "--host", "127.0.0.1", "--port", str(port),
-            "--device", validated_adapter["selector"]]
+            "--host", "127.0.0.1", "--port", str(port)]
+
+
+def v0_environment(index: int, unit_dir: Path, binding: dict[str, Any]
+                   ) -> dict[str, str]:
+    """Accepted #243 RADV/visible-devices selector, bound to a record."""
+    if (type(index) is not int or index < 0
+            or str(index) not in binding.get("mapping", {})):
+        raise PhysicalDiagnosticError("unvalidated AMD Vulkan selector index")
+    return {"VK_ICD_FILENAMES": V0_RADV_ICD,
+            "GGML_VK_VISIBLE_DEVICES": str(index),
+            "CUDA_VISIBLE_DEVICES": "-1", "LLAMA_OBSERVE_CAPTURE": "8",
+            "LLAMA_OBSERVE_OUT": str(unit_dir / "obs"),
+            "LLAMA_OBSERVE_FORCE": "",
+            "LD_LIBRARY_PATH": str(Path(binding["binary_lib_dir"]))}
+
+
+def _v0_digest(record: dict[str, Any]) -> str:
+    return D.sha256_bytes(json.dumps(
+        {k: v for k, v in record.items() if k != "canonical_digest_sha256"},
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode())
+
+
+def _v0_dies() -> dict[str, str]:
+    """Read the live DRM card->PCI mapping; never freeze historical BDFs."""
+    dies: dict[str, str] = {}
+    for card in sorted(Path("/sys/class/drm").glob("card[0-9]*")):
+        dev = card / "device"
+        if not dev.is_dir() or not (dev / "vendor").is_file():
+            continue
+        if (dev / "vendor").read_text().strip().lower() != "0x1002":
+            continue
+        if (dev / "device").read_text().strip().lower() != "0x6864":
+            continue
+        bdf = dev.resolve().name
+        if not re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]", bdf):
+            raise PhysicalDiagnosticError("AMD DRM mapping has invalid BDF")
+        dies[bdf] = card.name
+    if len(dies) != 2 or len(set(dies.values())) != 2:
+        raise PhysicalDiagnosticError("exactly two distinct V340L dies required")
+    return dies
+
+
+def _v0_vram(dies: dict[str, str]) -> dict[str, int]:
+    return {bdf: int((Path("/sys/class/drm") / card / "device" /
+                       "mem_info_vram_used").read_text().strip())
+            for bdf, card in dies.items()}
+
+
+def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
+                                 index: int, live: dict[str, Any],
+                                 binary_sha: str, *,
+                                 verify_lib_dir: bool = True) -> dict[str, Any]:
+    """Authenticate a fresh two-index, two-die #243-style physical binding.
+
+    Record is prospective load-only evidence, NOT fabricated by this
+    repository-only pass. The selected index is never inferred from ordering.
+    Live enumeration/DRM/driver identity must still match at launch.
+    """
+    if not isinstance(record, dict) or record.get("schema") != V0_BINDING_SCHEMA:
+        raise PhysicalDiagnosticError("V0 selector binding record missing")
+    if (record.get("canonical_digest_sha256") != _v0_digest(record)
+            or record.get("expected_pr_head") != expected_head
+            or record.get("host") != "inferswarm05"
+            or record.get("producer") != V0_BINDING_PRODUCER
+            or record.get("source_pin") != V0_SOURCE_PIN
+            or record.get("binary_sha256") != V0_COMPARATOR_SHA
+            or binary_sha != V0_COMPARATOR_SHA
+            or record.get("icd") != V0_RADV_ICD
+            or record.get("cuda_visible_devices") != "-1"
+            or not isinstance(record.get("binary_lib_dir"), str)
+            or not isinstance(record.get("binary_path"), str)
+            or str(Path(record["binary_path"]).parent) != record["binary_lib_dir"]
+            or (verify_lib_dir and not Path(record["binary_lib_dir"]).is_dir())
+            or record.get("binary_lib_dir") != live.get("binary_lib_dir")
+            or record.get("enumeration_sha256") != live.get("enumeration_sha256")
+            or record.get("icd_sha256") != live.get("icd_sha256")
+            or record.get("runtime_identity") != live.get("runtime_identity")
+            or record.get("drm_cards") != live.get("drm_cards")):
+        raise PhysicalDiagnosticError("V0 selector binding digest/head/runtime identity mismatch")
+    mapping = record.get("mapping")
+    cards = record.get("drm_cards")
+    if (type(index) is not int or index < 0 or not isinstance(mapping, dict)
+            or not isinstance(cards, dict) or len(cards) != 2
+            or set(mapping) != {"0", "1"} or str(index) not in mapping
+            or set(live.get("vulkan_indices", [])) != {0, 1}
+            or live.get("index") != index or live.get("vendor_id") != "0x1002"
+            or live.get("device_id") != "0x6864"):
+        raise PhysicalDiagnosticError("V0 unvalidated index or AMD enumeration")
+    selected: set[str] = set()
+    for key, entry in mapping.items():
+        if not isinstance(entry, dict):
+            raise PhysicalDiagnosticError("V0 selector mapping malformed")
+        a, b = entry.get("selected_bdf"), entry.get("excluded_bdf")
+        if (a not in cards or b not in cards or a == b
+                or entry.get("selected_card") != cards[a]
+                or entry.get("excluded_card") != cards[b]):
+            raise PhysicalDiagnosticError("V0 selector BDF/card mismatch")
+        before, after = entry.get("vram_before"), entry.get("vram_after")
+        if (not isinstance(before, dict) or not isinstance(after, dict)
+                or set(before) != set(cards) or set(after) != set(cards)
+                or any(type(v) is not int or v < 0 for v in
+                       list(before.values()) + list(after.values()))
+                or after[a] - before[a] <= V0_MIN_SELECTED_BYTES
+                or after[b] - before[b] >= V0_EXCLUDED_NOISE_BYTES):
+            raise PhysicalDiagnosticError("V0 selected/excluded die residency unproven")
+        selected.add(str(a))
+    if len(selected) != 2:
+        raise PhysicalDiagnosticError("V0 duplicate selector-to-BDF mapping")
+    entry = mapping[str(index)]
+    return entry
+
+
+def _v0_verify_probe_records(record: dict[str, Any], root: Path,
+                             authority: dict[str, Any]) -> None:
+    """Bind selected/excluded delta claims to retained load-only probes."""
+    probes = record.get("preflight_probe_sha256")
+    directory = Path(root) / "v0-selector-preflight"
+    if (not isinstance(probes, dict) or set(probes) != {"0", "1"}
+            or record.get("dispatch_sha256") != D.authority_digest(authority)
+            or directory.is_symlink() or not directory.is_dir()):
+        raise PhysicalDiagnosticError("V0 preflight probe custody/dispatch missing")
+    for idx in (0, 1):
+        path = directory / f"index-{idx}.json"
+        if (path.is_symlink() or not path.is_file()
+                or D.file_sha256(path) != probes[str(idx)]):
+            raise PhysicalDiagnosticError("V0 preflight probe bytes drift")
+        try:
+            probe = json.loads(path.read_bytes())
+        except (ValueError, OSError) as exc:
+            raise PhysicalDiagnosticError("V0 preflight probe unreadable") from exc
+        entry = record["mapping"][str(idx)]
+        attr = probe.get("process_attribution", {})
+        env = attr.get("server_env", {})
+        if (probe.get("index") != idx
+                or probe.get("vram_before") != entry["vram_before"]
+                or probe.get("vram_after") != entry["vram_after"]
+                or attr.get("server_exe_sha256") != V0_COMPARATOR_SHA
+                or env.get("VK_ICD_FILENAMES") != V0_RADV_ICD
+                or env.get("GGML_VK_VISIBLE_DEVICES") != str(idx)
+                or env.get("CUDA_VISIBLE_DEVICES") != "-1"
+                or env.get("LD_LIBRARY_PATH") != record["binary_lib_dir"]
+                or attr.get("server_argv") != v0_server_argv(
+                    Path(record["binary_path"]),
+                    Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)):
+            raise PhysicalDiagnosticError("V0 preflight probe/selector identity mismatch")
 
 
 def _v0_retained_rows(root: Path, count: int, head: str,
@@ -441,87 +582,185 @@ def _v0_retained_rows(root: Path, count: int, head: str,
                 or receipt["server_pid"] <= 0
                 or not isinstance(receipt.get("amd_device"), dict)
                 or receipt["amd_device"].get("vendor_id") != "0x1002"
-                or not isinstance(receipt["amd_device"].get("validated_adapter"), dict)
-                or receipt["amd_device"]["validated_adapter"].get("selector") !=
-                   f"Vulkan{receipt['amd_device'].get('index')}"
-                or receipt["amd_device"]["validated_adapter"].get(
-                    "selector_verified_from_pinned_help") is not True
-                or receipt["amd_device"]["validated_adapter"].get(
-                    "pinned_binary_sha256") != receipt.get("binary_sha256")
+                or receipt.get("binary_sha256") != V0_COMPARATOR_SHA
+                or not isinstance(receipt.get("v0_selector_binding"), dict)
+                or receipt["v0_selector_binding"].get("expected_pr_head") != head
+                or receipt["v0_selector_binding"].get("source_pin") != V0_SOURCE_PIN
+                or receipt["v0_selector_binding"].get("binary_sha256") != V0_COMPARATOR_SHA
+                or receipt["v0_selector_binding"].get("canonical_digest_sha256")
+                   != _v0_digest(receipt["v0_selector_binding"])
+                or not isinstance(receipt.get("server_env"), dict)
+                or receipt["server_env"].get("VK_ICD_FILENAMES") != V0_RADV_ICD
+                or receipt["server_env"].get("CUDA_VISIBLE_DEVICES") != "-1"
+                or receipt["server_env"].get("GGML_VK_VISIBLE_DEVICES")
+                   != str(receipt["amd_device"].get("index"))
                 or not isinstance(receipt.get("server_argv"), list)
-                or "--device" not in receipt["server_argv"]
-                or receipt["server_argv"][
-                    receipt["server_argv"].index("--device") + 1:
-                    receipt["server_argv"].index("--device") + 2] !=
-                   [receipt["amd_device"]["validated_adapter"]["selector"]]):
+                or not receipt["server_argv"]
+                or receipt["server_argv"][0] !=
+                   receipt["v0_selector_binding"].get("binary_path")
+                or receipt.get("model_launch_member") !=
+                   str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
+                or receipt["server_argv"] != v0_server_argv(
+                    Path(receipt["server_argv"][0]),
+                    Path(receipt.get("model_launch_member", "")), PORT)
+                or receipt.get("placement_source_law") !=
+                   {"source_pin": V0_SOURCE_PIN, "ngl": 1,
+                    "embedding": "CPU", "output_projection": "Vulkan"}):
             raise PhysicalDiagnosticError("V0 predecessor retained byte/custody mismatch")
+        binding = receipt["v0_selector_binding"]
+        device = receipt["amd_device"]
+        validate_v0_selector_binding(binding, head, device["index"],
+                                     device, receipt["binary_sha256"],
+                                     verify_lib_dir=False)
+        _v0_verify_probe_records(binding, root, authority)
+        if (receipt.get("process_attribution", {}).get("server_env")
+                != receipt["server_env"]
+                or receipt.get("process_attribution", {}).get("server_argv")
+                   != receipt["server_argv"]
+                or receipt.get("process_attribution", {}).get("server_exe_sha256")
+                   != V0_COMPARATOR_SHA):
+            raise PhysicalDiagnosticError("V0 predecessor process attribution mismatch")
+        _v0_verify_placement(directory, device, {
+            "vulkan_device_index": device["index"], "backend": receipt.get("backend"),
+            "cuda_participation": False if receipt["server_env"].get(
+                "CUDA_VISIBLE_DEVICES") == "-1" else None,
+            "vram_before": receipt.get("vram_before"),
+            "vram_after": receipt.get("vram_after")}, binding)
         rows.append(digest)
     return rows
 
 
 def _v0_observe_device(index: int) -> dict[str, Any]:
-    """Identify the Vulkan index from live enumeration; no assumed AMD index."""
+    """Non-model RADV enumeration + live sysfs identity on inferswarm05."""
+    import platform
+    if socket.gethostname() != "inferswarm05":
+        raise PhysicalDiagnosticError("V0 host must be inferswarm05")
+    icd = Path(V0_RADV_ICD)
+    if not icd.is_file():
+        raise PhysicalDiagnosticError("RADV ICD unavailable")
     result = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
-                            text=True, timeout=30, check=True)
+                            text=True, timeout=30, check=True,
+                            env={**os.environ, "VK_ICD_FILENAMES": V0_RADV_ICD,
+                                 "CUDA_VISIBLE_DEVICES": "-1"})
     blocks = re.split(r"(?=GPU[0-9]+:\s*)", result.stdout)
+    devices = {}
     for block in blocks:
-        if re.match(rf"GPU{index}:\s*", block) and re.search(
-                r"vendorID\s*=\s*0x1002\b", block, re.I):
-            name = re.search(r"deviceName\s*=\s*(.+)", block)
-            if name:
-                return {"index": index, "vendor_id": "0x1002",
-                        "name": name.group(1).strip(),
-                        "enumeration_sha256": D.sha256_bytes(
-                            result.stdout.encode())}
-    raise PhysicalDiagnosticError("selected Vulkan device is not observed AMD")
+        m = re.match(r"GPU(\d+):\s*", block)
+        if m:
+            devices[int(m.group(1))] = {
+                key: match.group(1).strip() for key, pattern in {
+                    "vendor_id": r"vendorID\s*=\s*(0x[0-9a-f]+)",
+                    "device_id": r"deviceID\s*=\s*(0x[0-9a-f]+)",
+                    "name": r"deviceName\s*=\s*(.+)",
+                    "driver_id": r"driverID\s*=\s*(.+)",
+                    "driver_info": r"driverInfo\s*=\s*(.+)",
+                    "driver_version": r"driverVersion\s*=\s*(.+)",
+                    "api_version": r"apiVersion\s*=\s*(.+)",
+                }.items() if (match := re.search(pattern, block, re.I))}
+    if (set(devices) != {0, 1} or index not in devices
+            or any(x.get("vendor_id") != "0x1002"
+                   or x.get("device_id") != "0x6864"
+                   or x.get("driver_id") != "DRIVER_ID_MESA_RADV"
+                   for x in devices.values())):
+        raise PhysicalDiagnosticError("two V340L RADV Vulkan indices not observed")
+    runtime = {"kernel": platform.release(),
+               "vulkan_instance": (re.search(
+                   r"Vulkan Instance Version:\s*(\S+)", result.stdout) or
+                   [None, ""])[1], "devices": devices}
+    return {"index": index, **devices[index],
+            "vulkan_indices": sorted(devices),
+            "enumeration_sha256": D.sha256_bytes(result.stdout.encode()),
+            "icd_sha256": D.file_sha256(icd),
+            "runtime_identity": runtime, "drm_cards": _v0_dies(),
+            "binary_lib_dir": ""}
 
 
 def _v0_verify_placement(unit_dir: Path, device: dict[str, Any],
-                         result: dict[str, Any]) -> None:
-    """Require actual layer and tensor-placement observations, not argv."""
-    log = unit_dir / "server.log"
-    if log.is_symlink() or not log.is_file():
-        raise PhysicalDiagnosticError("V0 server placement log missing")
-    text = log.read_text(errors="replace")
-    # A claimed launch flag or generic GPU-offload count proves neither the
-    # output projection nor the embedding tensor. Explicit runtime observations
-    # are mandatory; unsupported pinned builds stop rather than infer them.
-    required = (r"offloading .*layer.* to GPU", r"output.*(?:Vulkan|GPU)",
-                r"(?:token_embd|embedding).*CPU")
-    if (not all(re.search(pattern, text, re.I) for pattern in required)
+                         result: dict[str, Any],
+                         binding: dict[str, Any] | None = None) -> None:
+    """Pinned source law + selected/excluded-die runtime residency."""
+    if (not isinstance(binding, dict) or binding.get("source_pin") != V0_SOURCE_PIN
+            or binding.get("binary_sha256") != V0_COMPARATOR_SHA
             or device.get("vendor_id") != "0x1002"
-            or result.get("vulkan_device_index") != device.get("index")):
-        raise PhysicalDiagnosticError(
-            "V0 AMD Vulkan layer/embedding/output placement unverified")
-    # These unstructured strings do not prove tensor placement on the pinned
-    # binary. Until an independently validated per-tensor observer exists,
-    # production MUST stop rather than promote a plausible log to evidence.
-    raise PhysicalDiagnosticError(
-        "V0 pinned binary has no validated per-tensor placement observer")
+            or result.get("vulkan_device_index") != device.get("index")
+            or result.get("backend") != "Vulkan"
+            or result.get("cuda_participation") is not False):
+        raise PhysicalDiagnosticError("V0 pinned source/backend/AMD placement unverified")
+    entry = binding["mapping"][str(device["index"])]
+    before, after = result.get("vram_before"), result.get("vram_after")
+    a, b = entry["selected_bdf"], entry["excluded_bdf"]
+    if (not isinstance(before, dict) or not isinstance(after, dict)
+            or set(before) != set(binding["drm_cards"])
+            or set(after) != set(before)
+            or any(type(v) is not int or v < 0 for v in
+                   list(before.values()) + list(after.values()))
+            or after[a] - before[a] <= V0_MIN_SELECTED_BYTES
+            or after[b] - before[b] >= V0_EXCLUDED_NOISE_BYTES):
+        raise PhysicalDiagnosticError("V0 selected/excluded physical die residency unverified")
 
 
 def _verify_v0_amd_binary(binary: Path, binary_id: str) -> str:
-    """NVIDIA executable SHA cannot attest a separately built AMD binary."""
-    raise PhysicalDiagnosticError(
-        "V0 AMD build at pinned llama.cpp source and full-row observation "
-        "seam is not yet mechanically attested")
+    """Exact observer executable AND its dynamic Vulkan library family."""
+    if (V0_SOURCE_PIN != D.LLAMA_PIN
+            or V0_COMPARATOR_SHA != D.SERVER_BINARIES["comparator"]
+            or binary_id != "comparator"
+            or verify_binary(binary, binary_id) != V0_COMPARATOR_SHA):
+        raise PhysicalDiagnosticError("V0 requires exact pinned comparator observer")
+    for name, digest in V0_OBSERVER_LIBS.items():
+        path = binary.parent / name
+        if not path.is_file() or D.file_sha256(path) != digest:
+            raise PhysicalDiagnosticError(f"V0 observer library mismatch: {name}")
+    env = {**os.environ, "LD_LIBRARY_PATH": str(binary.parent),
+           "VK_ICD_FILENAMES": V0_RADV_ICD, "CUDA_VISIBLE_DEVICES": "-1"}
+    dep = subprocess.run(["ldd", str(binary)], env=env, capture_output=True,
+                         text=True, timeout=20, check=True)
+    if ("not found" in dep.stdout or "libggml-vulkan.so.0" not in dep.stdout
+            or any(str(binary.parent / name) not in dep.stdout
+                   for name in V0_OBSERVER_LIBS)):
+        raise PhysicalDiagnosticError("V0 observer dynamic loader incompatibility")
+    help_run = subprocess.run([str(binary), "--help"], env=env,
+                              capture_output=True, timeout=30)
+    if help_run.returncode != 0 or b"--n-gpu-layers" not in (
+            help_run.stdout + help_run.stderr):
+        raise PhysicalDiagnosticError("V0 observer non-model execution failed")
+    return V0_COMPARATOR_SHA
+
+
+def _v0_check_live_process(proc: subprocess.Popen, argv: list[str],
+                           env: dict[str, str]) -> None:
+    """Read back the live server's actual argv/environment, not caller claims."""
+    observed_env = dict(chunk.split(b"=", 1) for chunk in
+                        Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0")
+                        if b"=" in chunk)
+    if (any(observed_env.get(k.encode()) != v.encode()
+            for k, v in env.items())
+            or Path(f"/proc/{proc.pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")
+               != [x.encode() for x in argv]):
+        raise PhysicalDiagnosticError("V0 process argv/environment drift")
 
 
 def _real_v0_execute(argv: list[str], env: dict[str, str],
                      request: dict[str, Any], prompt: str, port: int,
-                     unit_dir: Path, timeout_budget: dict[str, Any]) -> dict[str, Any]:
-    """AMD fresh process; never call the NVIDIA-specific A-D runner."""
+                     unit_dir: Path, timeout_budget: dict[str, Any],
+                     device_binding: dict[str, Any]) -> dict[str, Any]:
+    """AMD fresh process, selected/excluded VRAM measured while loaded."""
+    dies = device_binding["drm_cards"]
+    before = _v0_vram(dies)
     with (unit_dir / "server.log").open("wb") as log:
         proc = subprocess.Popen(argv, env={**os.environ, **env}, stdout=log,
                                 stderr=subprocess.STDOUT, start_new_session=True)
         try:
             _wait_healthy(proc, port)
+            after = _v0_vram(dies)
             attribution = _proc_attribution(proc, argv, env)
+            _v0_check_live_process(proc, argv, env)
             raw, response = _http_completion(
                 port, request, prompt, timeout_s=timeout_budget["budget_s"])
             return {"response_raw": raw, "tokens": response.get("tokens"),
                     "process_attribution": attribution,
-                    "vulkan_device_index": timeout_budget["vulkan_device_index"],
+                    "vulkan_device_index": int(env["GGML_VK_VISIBLE_DEVICES"]),
+                    "vram_before": before, "vram_after": after,
+                    "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": timeout_budget}
         finally:
             if proc.poll() is None:
@@ -531,6 +770,145 @@ def _real_v0_execute(argv: list[str], env: dict[str, str],
                 except subprocess.TimeoutExpired:
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.wait(timeout=5)
+
+
+def _v0_probe_load(binary: Path, model_member: Path, index: int,
+                   dies: dict[str, str], probe_dir: Path) -> dict[str, Any]:
+    """Future dispatch-only load/health probe; NEVER request completion."""
+    argv = v0_server_argv(binary, model_member)
+    env = {"VK_ICD_FILENAMES": V0_RADV_ICD,
+           "GGML_VK_VISIBLE_DEVICES": str(index),
+           "CUDA_VISIBLE_DEVICES": "-1",
+           "LD_LIBRARY_PATH": str(binary.parent)}
+    before = _v0_vram(dies)
+    with (probe_dir / f"index-{index}.server.log").open("wb") as log:
+        proc = subprocess.Popen(argv, env={**os.environ, **env},
+                                stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=True)
+        try:
+            _wait_healthy(proc, PORT)
+            after = _v0_vram(dies)
+            attribution = _proc_attribution(proc, argv, env)
+            _v0_check_live_process(proc, argv, env)
+            return {"index": index, "vram_before": before,
+                    "vram_after": after, "process_attribution": attribution}
+        finally:
+            if proc.poll() is None:
+                os.killpg(proc.pid, signal.SIGTERM)
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait(timeout=5)
+
+
+def run_v0_binding_preflight(repo_root: Path, evidence_root: Path, *,
+                             binary: Path, model_dir: Path, expected_head: str,
+                             model_attestation: dict[str, Any],
+                             revalidate_authority: Callable[..., dict[str, Any]] | None = None,
+                             probe_load: Callable[..., dict[str, Any]] | None = None,
+                             device_observer: Callable[[int], dict[str, Any]] | None = None,
+                             github_api: str = "https://api.github.com"
+                             ) -> dict[str, Any]:
+    """Prospective post-dispatch #243-style two-index physical binding.
+
+    This function is NOT called by repository validation. No preflight load
+    may occur until fresh exact-head V0 dispatch, cost/model/clean-head
+    authorities all pass. The evidence root is append-only on any failure.
+    """
+    root = Path(evidence_root)
+    validate_evidence_generation(root)
+    _admit_retained_cost(root, TB.V0_CONDITION, V0_NAMESPACE, V0_ARM)
+    early = require_live_dispatch(repo_root, expected_head, V0_NAMESPACE,
+                                  revalidate_authority, github_api)
+    D._require_clean_head(Path(repo_root), expected_head)
+    binary_sha = _verify_v0_amd_binary(Path(binary), "comparator")
+    attestation = validate_model_attestation(model_attestation, expected_head)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if (opening.is_symlink() or not opening.is_file()
+            or json.loads(opening.read_bytes()) != attestation):
+        raise PhysicalDiagnosticError("V0 preflight model attestation absent")
+    problems, _ = attestation_witness(Path(model_dir), attestation)
+    if problems or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError("V0 preflight model witness drift")
+    target = root / "v0-selector-binding.json"
+    probe_dir = root / "v0-selector-preflight"
+    if (target.exists() or target.is_symlink() or probe_dir.exists()
+            or probe_dir.is_symlink()):
+        raise PhysicalDiagnosticError("V0 selector preflight already retained")
+    observer = device_observer or _v0_observe_device
+    live = observer(0)
+    if (live.get("vulkan_indices") != [0, 1]
+            or live.get("vendor_id") != "0x1002"
+            or live.get("device_id") != "0x6864"
+            or not isinstance(live.get("drm_cards"), dict)):
+        raise PhysicalDiagnosticError("V0 preflight V340L substrate unavailable")
+    live["binary_lib_dir"] = str(Path(binary).parent)
+    late = require_live_dispatch(repo_root, expected_head, V0_NAMESPACE,
+                                 revalidate_authority, github_api)
+    if D.authority_digest(early) != D.authority_digest(late):
+        raise PhysicalDiagnosticError("V0 preflight dispatch drift")
+    D._require_clean_head(Path(repo_root), expected_head)
+    _admit_retained_cost(root, TB.V0_CONDITION, V0_NAMESPACE, V0_ARM)
+    probe_dir.mkdir()  # append-only; any failed probe remains visible
+    mapping: dict[str, Any] = {}
+    for index in (0, 1):
+        current = observer(index)
+        current["binary_lib_dir"] = str(Path(binary).parent)
+        if any(current.get(k) != live.get(k) for k in (
+                "vulkan_indices", "enumeration_sha256", "icd_sha256",
+                "runtime_identity", "drm_cards")):
+            raise PhysicalDiagnosticError("V0 preflight enumeration drift")
+        # Revalidate dispatch before EVERY physical load-only probe.
+        new = require_live_dispatch(repo_root, expected_head, V0_NAMESPACE,
+                                    revalidate_authority, github_api)
+        if D.authority_digest(new) != D.authority_digest(early):
+            raise PhysicalDiagnosticError("V0 preflight dispatch changed")
+        D._require_clean_head(Path(repo_root), expected_head)
+        _admit_retained_cost(root, TB.V0_CONDITION, V0_NAMESPACE, V0_ARM)
+        probe = (probe_load or _v0_probe_load)(
+            Path(binary), Path(model_dir) / D.MODEL_MEMBER_1,
+            index, live["drm_cards"], probe_dir)
+        before, after = probe["vram_before"], probe["vram_after"]
+        dies = live["drm_cards"]
+        if (probe.get("index") != index or set(before) != set(dies)
+                or set(after) != set(dies)):
+            raise PhysicalDiagnosticError("V0 preflight malformed probe")
+        selected = max(dies, key=lambda b: after[b] - before[b])
+        excluded = next(b for b in dies if b != selected)
+        entry = {"selected_bdf": selected, "excluded_bdf": excluded,
+                 "selected_card": dies[selected], "excluded_card": dies[excluded],
+                 "vram_before": before, "vram_after": after}
+        if (after[selected] - before[selected] <= V0_MIN_SELECTED_BYTES
+                or after[excluded] - before[excluded] >= V0_EXCLUDED_NOISE_BYTES
+                or probe.get("process_attribution", {}).get("server_exe_sha256")
+                   != V0_COMPARATOR_SHA
+                or probe["process_attribution"].get("server_argv") !=
+                   v0_server_argv(Path(binary), Path(model_dir) / D.MODEL_MEMBER_1)
+                or probe["process_attribution"].get("server_env", {}).get(
+                    "GGML_VK_VISIBLE_DEVICES") != str(index)):
+            raise PhysicalDiagnosticError("V0 preflight selector/residency unproven")
+        mapping[str(index)] = entry
+        _write_json(probe_dir / f"index-{index}.json", probe)
+    if mapping["0"]["selected_bdf"] == mapping["1"]["selected_bdf"]:
+        raise PhysicalDiagnosticError("V0 preflight duplicate selector-to-BDF")
+    record = {"schema": V0_BINDING_SCHEMA, "host": "inferswarm05",
+              "producer": V0_BINDING_PRODUCER, "expected_pr_head": expected_head,
+              "source_pin": V0_SOURCE_PIN, "binary_sha256": binary_sha,
+              "binary_path": str(Path(binary)),
+              "binary_lib_dir": str(Path(binary).parent),
+              "icd": V0_RADV_ICD, "cuda_visible_devices": "-1",
+              "enumeration_sha256": live["enumeration_sha256"],
+              "icd_sha256": live["icd_sha256"],
+              "runtime_identity": live["runtime_identity"],
+              "drm_cards": live["drm_cards"], "mapping": mapping,
+              "preflight_probe_sha256": {str(i): D.file_sha256(
+                  probe_dir / f"index-{i}.json") for i in (0, 1)},
+              "dispatch_sha256": D.authority_digest(early)}
+    record["canonical_digest_sha256"] = _v0_digest(record)
+    validate_v0_selector_binding(record, expected_head, 0, live, binary_sha)
+    _write_json(target, record)
+    return record
 
 
 def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
@@ -573,23 +951,25 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
             or device.get("vendor_id") != "0x1002"
             or not device.get("name")):
         raise PhysicalDiagnosticError("V0 AMD device identity unverified")
-    if (device.get("validated_adapter", {}).get("pinned_binary_sha256")
-            != binary_sha):
-        raise PhysicalDiagnosticError("V0 adapter binary hash mismatch")
+    # A physical #243-style load-only binding is a required future artifact;
+    # this correction creates no model load and cannot fabricate one.
+    binding_path = root / "v0-selector-binding.json"
+    if binding_path.is_symlink() or not binding_path.is_file():
+        raise PhysicalDiagnosticError("fresh V0 selector binding record missing")
+    try:
+        binding = json.loads(binding_path.read_bytes())
+    except (ValueError, OSError) as exc:
+        raise PhysicalDiagnosticError("V0 selector binding unreadable") from exc
+    device["binary_lib_dir"] = str(Path(binary).parent)
+    selected = validate_v0_selector_binding(
+        binding, expected_head, vulkan_device_index, device, binary_sha)
+    _v0_verify_probe_records(binding, root, early)
     fixture = fixtures[D.CASE]
     if len(fixture["prompt_token_ids"]) != TB.V0_PROMPT_TOKENS:
         raise PhysicalDiagnosticError("V0 frozen prompt-token count drift")
     request = D.validate_request_contract(D.REQUEST_CONTRACT)
     budget = TB.v0_request_timeout(len(fixture["prompt_token_ids"]))
-    # An observer-provided adapter flag is NOT proof of the pinned server's
-    # CLI syntax or Vulkan-device mapping. Reject until the executable's
-    # actual help and device enumeration can be verified and cross-bound.
-    if device_observer is None:
-        raise PhysicalDiagnosticError(
-            "V0 pinned binary selector adapter not validated; no AMD launch")
-    argv = v0_server_argv(Path(binary), Path(model_dir) / D.MODEL_MEMBER_1,
-                          vulkan_device_index=vulkan_device_index,
-                          validated_adapter=device.get("validated_adapter"))
+    argv = v0_server_argv(Path(binary), Path(model_dir) / D.MODEL_MEMBER_1)
     budget["vulkan_device_index"] = vulkan_device_index
     late = require_live_dispatch(repo_root, expected_head, namespace,
                                  revalidate_authority, github_api)
@@ -599,14 +979,13 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
     _v0_retained_rows(root, index, expected_head, late)
     _admit_retained_cost(root, TB.V0_CONDITION, namespace, arm)
     unit_dir = prepare_unit_dir(root, namespace, tag)
-    env = {"CUDA_VISIBLE_DEVICES": "-1", "LLAMA_OBSERVE_CAPTURE": "8",
-           "LLAMA_OBSERVE_OUT": str(unit_dir / "obs"),
-           "LLAMA_OBSERVE_FORCE": ""}
+    env = v0_environment(vulkan_device_index, unit_dir, binding)
     try:
         result = (execute or _real_v0_execute)(
             argv=argv, env=env, request=request, prompt=fixture["prompt_text"],
-            port=PORT, unit_dir=unit_dir, timeout_budget=budget)
-        _v0_verify_placement(unit_dir, device, result)
+            port=PORT, unit_dir=unit_dir, timeout_budget=budget,
+            device_binding=binding)
+        _v0_verify_placement(unit_dir, device, result, binding)
     except Exception as exc:
         # The partial unit is permanently retained, never silently retried or
         # selected around. Manual quarantine is required for any rerun.
@@ -626,7 +1005,8 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
             or type(attribution.get("server_pid")) is not int
             or attribution["server_pid"] <= 0
             or attribution.get("server_exe_sha256") != binary_sha
-            or attribution.get("server_argv") != argv):
+            or attribution.get("server_argv") != argv
+            or attribution.get("server_env") != env):
         raise PhysicalDiagnosticError("V0 fresh process attribution unverified")
     for prior_tag in V0_UNIT_TAGS[:index]:
         prior = json.loads((root / namespace / prior_tag / "unit.json").read_bytes())
@@ -638,6 +1018,14 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
                "decision0_row_sha256": D.sha256_bytes(row),
                "row_bytes": len(row), "authority_sha256": D.authority_digest(late),
                "placement_verified": True, "amd_device": device,
+               "v0_selector_binding": binding,
+               "selected_bdf": selected["selected_bdf"],
+               "excluded_bdf": selected["excluded_bdf"],
+               "vram_before": result["vram_before"],
+               "vram_after": result["vram_after"],
+               "placement_source_law": {
+                   "source_pin": V0_SOURCE_PIN, "ngl": 1,
+                   "embedding": "CPU", "output_projection": "Vulkan"},
                "case_id": D.CONTRAST_CASE, "ngl": 1, "backend": "Vulkan",
                "embedding_placement": "CPU",
                "output_projection_placement": "Vulkan",
@@ -655,7 +1043,9 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
                "fresh_process": True,
                "server_pid": attribution["server_pid"],
                "binary_sha256": binary_sha, "model_stat_witness": witness,
-               "server_argv": argv, "timeout_policy": budget,
+               "server_argv": argv, "server_env": env,
+               "process_attribution": attribution,
+               "timeout_policy": budget,
                "response_raw_sha256": D.sha256_bytes(result["response_raw"])}
     _write_json(unit_dir / "unit.json", receipt)
     return receipt

@@ -229,7 +229,9 @@ class CampaignFixture:
         self.bin = self.root / "llama-server"
         self.bin.write_bytes(b"fake-accepted-build")
         self.saved_binaries = dict(D.SERVER_BINARIES)
+        self.saved_v0_comparator_sha = P.V0_COMPARATOR_SHA
         D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
+        setattr(P, "V0_COMPARATOR_SHA", D.SERVER_BINARIES["comparator"])
         self.model_dir = self.root / "srvmodel"
         self.model_dir.mkdir()
         self.model_files = {}
@@ -315,6 +317,51 @@ class CampaignFixture:
             "result_head": D.ACCEPTED_248_RESULT_HEAD,
         }
         base = self.evidence / D.V0_NAMESPACE
+        cards = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
+        live = {"index": 0, "vendor_id": "0x1002", "device_id": "0x6864",
+                "name": "AMD V340L synthetic", "vulkan_indices": [0, 1],
+                "enumeration_sha256": "a" * 64, "icd_sha256": "b" * 64,
+                "runtime_identity": {"kernel": "synthetic"},
+                "drm_cards": cards, "binary_lib_dir": str(self.bin.parent)}
+        binding = {"schema": P.V0_BINDING_SCHEMA,
+                   "expected_pr_head": self.head, "host": "inferswarm05",
+                   "producer": P.V0_BINDING_PRODUCER,
+                   "source_pin": P.V0_SOURCE_PIN,
+                   "binary_sha256": P.V0_COMPARATOR_SHA,
+                   "binary_path": str(self.bin),
+                   "icd": P.V0_RADV_ICD, "cuda_visible_devices": "-1",
+                   "binary_lib_dir": str(self.bin.parent),
+                   "enumeration_sha256": live["enumeration_sha256"],
+                   "icd_sha256": live["icd_sha256"],
+                   "runtime_identity": live["runtime_identity"],
+                   "drm_cards": cards, "mapping": {}}
+        for idx, selected in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
+            excluded = next(b for b in cards if b != selected)
+            binding["mapping"][str(idx)] = {
+                "selected_bdf": selected, "excluded_bdf": excluded,
+                "selected_card": cards[selected], "excluded_card": cards[excluded],
+                "vram_before": {selected: 0, excluded: 0},
+                "vram_after": {selected: 512 * 1024 * 1024, excluded: 0}}
+        probe_dir = self.evidence / "v0-selector-preflight"
+        probe_dir.mkdir()
+        binding["preflight_probe_sha256"] = {}
+        binding["dispatch_sha256"] = D.authority_digest(self.v0_authority)
+        for idx in (0, 1):
+            entry = binding["mapping"][str(idx)]
+            probe = {"index": idx, "vram_before": entry["vram_before"],
+                     "vram_after": entry["vram_after"],
+                     "process_attribution": {
+                         "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                         "server_argv": P.v0_server_argv(
+                             self.bin, Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                         "server_env": {"VK_ICD_FILENAMES": P.V0_RADV_ICD,
+                                        "GGML_VK_VISIBLE_DEVICES": str(idx),
+                                        "CUDA_VISIBLE_DEVICES": "-1",
+                                        "LD_LIBRARY_PATH": str(self.bin.parent)}}}
+            path = probe_dir / f"index-{idx}.json"
+            path.write_text(json.dumps(probe))
+            binding["preflight_probe_sha256"][str(idx)] = D.file_sha256(path)
+        binding["canonical_digest_sha256"] = P._v0_digest(binding)
         for index, tag in enumerate(D.V0_UNIT_TAGS[:2], 1):
             unit = base / tag
             unit.mkdir(parents=True)
@@ -327,12 +374,15 @@ class CampaignFixture:
                 "evidence_generation": P.EVIDENCE_GENERATION,
                 "authority_sha256": D.authority_digest(self.v0_authority),
                 "placement_verified": True,
-                "amd_device": {"index": 0, "vendor_id": "0x1002",
-                               "validated_adapter": {
-                                   "selector": "Vulkan0",
-                                   "vulkan_device_index": 0,
-                                   "selector_verified_from_pinned_help": True,
-                                   "pinned_binary_sha256": D.SERVER_BINARIES["comparator"]}},
+                "amd_device": live, "v0_selector_binding": binding,
+                "selected_bdf": "0000:07:00.0",
+                "excluded_bdf": "0000:0b:00.0",
+                "vram_before": {"0000:07:00.0": 0, "0000:0b:00.0": 0},
+                "vram_after": {"0000:07:00.0": 512 * 1024 * 1024,
+                               "0000:0b:00.0": 0},
+                "placement_source_law": {"source_pin": P.V0_SOURCE_PIN,
+                                         "ngl": 1, "embedding": "CPU",
+                                         "output_projection": "Vulkan"},
                 "decision0_row_sha256": hashlib.sha256(row).hexdigest(),
                 "row_bytes": D.ROW_BYTES, "case_id": D.CONTRAST_CASE,
                 "ngl": 1, "backend": "Vulkan",
@@ -349,10 +399,18 @@ class CampaignFixture:
                 "request_contract_sha256": D.canonical_request_digest(D.REQUEST_CONTRACT),
                 "fresh_process": True, "server_pid": index + 40000,
                 "binary_sha256": D.SERVER_BINARIES["comparator"],
-                "server_argv": [str(self.bin), "--model",
-                                str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
-                                "-ngl", "1", "--device", "Vulkan0"],
+                "server_argv": P.v0_server_argv(
+                    self.bin, Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                "server_env": {"VK_ICD_FILENAMES": P.V0_RADV_ICD,
+                               "GGML_VK_VISIBLE_DEVICES": "0",
+                               "CUDA_VISIBLE_DEVICES": "-1",
+                               "LD_LIBRARY_PATH": str(self.bin.parent)},
             }
+            receipt["process_attribution"] = {
+                "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                "server_pid": receipt["server_pid"],
+                "server_argv": receipt["server_argv"],
+                "server_env": receipt["server_env"]}
             (unit / "unit.json").write_text(json.dumps(receipt))
 
     def _derive_ladder_authority(self):
@@ -416,6 +474,7 @@ class CampaignFixture:
 
     def _restore(self):
         D.SERVER_BINARIES.update(self.saved_binaries)
+        setattr(P, "V0_COMPARATOR_SHA", self.saved_v0_comparator_sha)
         D.MODEL_DIR = self.saved_model_dir
 
     # ---------------- authority ----------------
@@ -918,10 +977,11 @@ class V0EvidenceBridgeTests(unittest.TestCase):
                            ("output_projection_placement", "CPU"),
                            ("placement_verified", False),
                            ("amd_device", {**original["amd_device"],
-                                           "validated_adapter": {
-                                               **original["amd_device"]["validated_adapter"],
-                                               "selector": "Vulkan1"}}),
-                           ("server_argv", original["server_argv"][:-1] + ["Vulkan1"]),
+                                           "index": 1}),
+                           ("server_env", {**original["server_env"],
+                                           "GGML_VK_VISIBLE_DEVICES": "1"}),
+                           ("server_argv", original["server_argv"] +
+                            ["--device", "Vulkan1"]),
                            ("head_sha", "a" * 40),
                            ("authority_sha256", "0" * 64)):
             receipt_path.write_text(json.dumps({**original, key: wrong}))

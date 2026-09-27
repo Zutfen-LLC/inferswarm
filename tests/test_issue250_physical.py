@@ -14,7 +14,9 @@ drift, server restart, wrong request contract.
 """
 from __future__ import annotations
 
+import copy
 import importlib.util
+import tempfile
 import json
 import os
 import struct
@@ -2440,23 +2442,13 @@ class V0ProspectivePlanTests(unittest.TestCase):
                 with self.assertRaises(P.PhysicalDiagnosticError):
                     P.validate_v0_dispatch(namespace, arm, candidate)
 
-    def test_v0_amd_argv_fails_closed_without_explicit_vulkan_device(self):
-        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "placement is unverified"):
-            P.v0_server_argv(Path("/server"), Path("/model"))
-        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "selector adapter unverified"):
+    def test_v0_amd_argv_uses_only_environment_bound_selector(self):
+        argv = P.v0_server_argv(Path("/server"), Path("/model"))
+        self.assertEqual(argv[argv.index("-ngl") + 1], "1")
+        self.assertNotIn("--device", argv)
+        with self.assertRaises(TypeError):
             P.v0_server_argv(Path("/server"), Path("/model"),
                              vulkan_device_index=1)
-        argv = P.v0_server_argv(Path("/server"), Path("/model"),
-                                vulkan_device_index=1,
-                                validated_adapter={
-                                    "pinned_binary_sha256": D.SERVER_BINARIES["comparator"],
-                                    "vulkan_device_index": 1,
-                                    "selector_verified_from_pinned_help": True,
-                                    "selector": "Vulkan1"})
-        self.assertEqual(argv[argv.index("-ngl") + 1], "1")
-        self.assertEqual(argv[argv.index("--device") + 1], "Vulkan1")
 
     def test_v0_timeout_cost_is_separate_and_prospective(self):
         cost = TB.v0_cost_record()
@@ -2587,7 +2579,7 @@ class V0ProducerAdmissionTests(unittest.TestCase):
             D.CASE: {"prompt_text": "fixture", "prompt_token_ids": [1] * 3077}}))
         self.enterContext(mock.patch.object(P, "verify_binary", return_value="f" * 64))
         self.enterContext(mock.patch.object(P, "_verify_v0_amd_binary",
-                                            return_value="f" * 64))
+                                            return_value=P.V0_COMPARATOR_SHA))
         self.enterContext(mock.patch.object(P, "validate_model_attestation",
                                             return_value={"model_dir": D.MODEL_DIR}))
         self.enterContext(mock.patch.object(P, "attestation_witness", return_value=([], {})))
@@ -2602,18 +2594,69 @@ class V0ProducerAdmissionTests(unittest.TestCase):
                 "offloading 1 repeating layer to GPU\n"
                 "output projection: Vulkan\nembedding: CPU\n")
             return {"response_raw": b"{}", "vulkan_device_index": 0,
+                    "vram_before": {"0000:07:00.0": 0, "0000:0b:00.0": 0},
+                    "vram_after": {"0000:07:00.0": 512 * 1024 * 1024,
+                                   "0000:0b:00.0": 0},
+                    "backend": "Vulkan", "cuda_participation": False,
                     "process_attribution": {"server_pid": 100 + len(self.calls),
-                                             "server_exe_sha256": "f" * 64,
-                                             "server_argv": kw["argv"]}}
+                                             "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                                             "server_argv": kw["argv"],
+                                             "server_env": kw["env"]}}
 
         self.runner = runner
         self.device = lambda index: {"index": index, "vendor_id": "0x1002",
-                                     "name": "AMD test fixture",
-                                     "validated_adapter": {
-                                         "pinned_binary_sha256": "f" * 64,
-                                         "vulkan_device_index": index,
-                                         "selector_verified_from_pinned_help": True,
-                                         "selector": f"Vulkan{index}"}}
+                                     "device_id": "0x6864", "name": "AMD test fixture",
+                                     "vulkan_indices": [0, 1],
+                                     "enumeration_sha256": "a" * 64,
+                                     "icd_sha256": "b" * 64,
+                                     "runtime_identity": {"kernel": "synthetic"},
+                                     "drm_cards": {"0000:07:00.0": "card1",
+                                                   "0000:0b:00.0": "card2"}}
+        binary_dir = self.root
+        binding = {"schema": P.V0_BINDING_SCHEMA,
+                   "expected_pr_head": self.head, "host": "inferswarm05",
+                   "producer": P.V0_BINDING_PRODUCER,
+                   "source_pin": P.V0_SOURCE_PIN,
+                   "binary_sha256": P.V0_COMPARATOR_SHA,
+                   "binary_path": str(self.root / "bin"),
+                   "icd": P.V0_RADV_ICD, "cuda_visible_devices": "-1",
+                   "binary_lib_dir": str(binary_dir),
+                   "enumeration_sha256": "a" * 64,
+                   "icd_sha256": "b" * 64,
+                   "runtime_identity": {"kernel": "synthetic"},
+                   "drm_cards": self.device(0)["drm_cards"],
+                   "mapping": {}}
+        for idx, selected in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
+            excluded = next(b for b in binding["drm_cards"] if b != selected)
+            binding["mapping"][str(idx)] = {
+                "selected_bdf": selected, "excluded_bdf": excluded,
+                "selected_card": binding["drm_cards"][selected],
+                "excluded_card": binding["drm_cards"][excluded],
+                "vram_before": {selected: 0, excluded: 0},
+                "vram_after": {selected: 512 * 1024 * 1024, excluded: 0}}
+        probe_dir = self.evidence / "v0-selector-preflight"
+        probe_dir.mkdir()
+        binding["preflight_probe_sha256"] = {}
+        binding["dispatch_sha256"] = D.authority_digest(
+            self.authority(self.repo, self.head, P.V0_NAMESPACE))
+        for idx in (0, 1):
+            entry = binding["mapping"][str(idx)]
+            probe = {"index": idx,
+                     "vram_before": entry["vram_before"],
+                     "vram_after": entry["vram_after"],
+                     "process_attribution": {
+                         "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                         "server_argv": P.v0_server_argv(
+                             self.root / "bin", Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                         "server_env": {"VK_ICD_FILENAMES": P.V0_RADV_ICD,
+                                        "GGML_VK_VISIBLE_DEVICES": str(idx),
+                                        "CUDA_VISIBLE_DEVICES": "-1",
+                                        "LD_LIBRARY_PATH": str(binary_dir)}}}
+            probe_path = probe_dir / f"index-{idx}.json"
+            probe_path.write_text(json.dumps(probe))
+            binding["preflight_probe_sha256"][str(idx)] = D.file_sha256(probe_path)
+        binding["canonical_digest_sha256"] = P._v0_digest(binding)
+        (self.evidence / "v0-selector-binding.json").write_text(json.dumps(binding))
 
     def _run(self, tag, authority=None):
         return P.run_v0_unit(self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
@@ -2673,13 +2716,18 @@ class V0ProducerAdmissionTests(unittest.TestCase):
             self._run(P.V0_UNIT_TAGS[0])
         self.assertEqual(self.calls, [])
 
-    def test_unvalidated_tensor_placement_does_not_emit_receipt(self):
+    def test_excluded_die_residency_does_not_emit_receipt(self):
         self._enable_cpu_fake_execution()
-        # Restore the real verifier for this test, bypassing the mock seam.
+        original = self.runner
+        def sibling_runner(**kw):
+            result = original(**kw)
+            result["vram_after"]["0000:0b:00.0"] = 512 * 1024 * 1024
+            return result
+        self.runner = sibling_runner
         with mock.patch.object(P, "_v0_verify_placement",
                                self.real_placement_verifier):
             with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                        "validated per-tensor placement"):
+                                        "selected/excluded physical die residency"):
                 self._run(P.V0_UNIT_TAGS[0])
         failed = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0]
         self.assertTrue((failed / "failure.json").is_file())
@@ -2700,6 +2748,259 @@ class NoPhysicalExecutionTests(unittest.TestCase):
         # the real execute seams exist but tests only inject fakes
         self.assertTrue(callable(P._real_execute))
         self.assertTrue(callable(P._real_same_process_execute))
+
+
+class V0AMDAdapterTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.head = "d" * 40
+        self.cards = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
+        self.live = {"index": 0, "vendor_id": "0x1002", "device_id": "0x6864",
+                     "name": "synthetic V340L", "vulkan_indices": [0, 1],
+                     "enumeration_sha256": "a" * 64, "icd_sha256": "b" * 64,
+                     "runtime_identity": {"kernel": "synthetic", "devices": {"0": "RADV"}},
+                     "drm_cards": self.cards, "binary_lib_dir": str(self.root)}
+        self.record = {"schema": P.V0_BINDING_SCHEMA, "host": "inferswarm05",
+                       "producer": P.V0_BINDING_PRODUCER,
+                       "expected_pr_head": self.head, "source_pin": P.V0_SOURCE_PIN,
+                       "binary_sha256": P.V0_COMPARATOR_SHA,
+                       "binary_path": str(self.root / "llama-server"),
+                       "binary_lib_dir": str(self.root), "icd": P.V0_RADV_ICD,
+                       "cuda_visible_devices": "-1",
+                       "enumeration_sha256": self.live["enumeration_sha256"],
+                       "icd_sha256": self.live["icd_sha256"],
+                       "runtime_identity": self.live["runtime_identity"],
+                       "drm_cards": self.cards, "mapping": {}}
+        for idx, a in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
+            b = next(b for b in self.cards if b != a)
+            self.record["mapping"][str(idx)] = {
+                "selected_bdf": a, "excluded_bdf": b,
+                "selected_card": self.cards[a], "excluded_card": self.cards[b],
+                "vram_before": {a: 0, b: 0},
+                "vram_after": {a: 512 * 1024 * 1024, b: 0}}
+        self.sign()
+
+    def sign(self):
+        self.record["canonical_digest_sha256"] = P._v0_digest(self.record)
+
+    def validate(self, record=None, index=0, live=None, head=None, sha=None):
+        return P.validate_v0_selector_binding(
+            self.record if record is None else record,
+            self.head if head is None else head, index,
+            self.live if live is None else live,
+            P.V0_COMPARATOR_SHA if sha is None else sha)
+
+    def test_exact_source_and_comparator_identity(self):
+        self.assertEqual(P.V0_SOURCE_PIN,
+                         "b29c606e28a01b1bc8c1351026a0fae616bf6c4")
+        self.assertEqual(P.V0_COMPARATOR_SHA,
+                         "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad")
+        self.assertNotEqual(P.V0_COMPARATOR_SHA, D.SERVER_BINARIES["canonical"])
+        self.assertEqual(self.validate()["selected_bdf"], "0000:07:00.0")
+        self.assertEqual(self.validate(index=1, live={**self.live, "index": 1})[
+            "selected_bdf"], "0000:0b:00.0")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(sha=D.SERVER_BINARIES["canonical"])
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(sha="0" * 64)
+
+    def test_binary_verifier_accepts_only_observer_and_exact_libraries(self):
+        binary = self.root / "llama-server"
+        binary.write_bytes(b"synthetic; hash verification separately mocked")
+        for name in P.V0_OBSERVER_LIBS:
+            (self.root / name).write_bytes(b"synthetic library")
+        ldd = "\n".join(f"{n} => {self.root / n}" for n in P.V0_OBSERVER_LIBS)
+        def run(argv, **kw):
+            if argv[0] == "ldd":
+                return mock.Mock(stdout=ldd, returncode=0)
+            return mock.Mock(stdout=b"--n-gpu-layers", stderr=b"", returncode=0)
+        with mock.patch.object(P, "verify_binary", return_value=P.V0_COMPARATOR_SHA), \
+             mock.patch.object(D, "file_sha256", side_effect=lambda p: P.V0_OBSERVER_LIBS[p.name]), \
+             mock.patch.object(P.subprocess, "run", side_effect=run):
+            self.assertEqual(P._verify_v0_amd_binary(binary, "comparator"),
+                             P.V0_COMPARATOR_SHA)
+        for wrong in (D.SERVER_BINARIES["canonical"], "0" * 64):
+            with mock.patch.object(P, "verify_binary", return_value=wrong):
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._verify_v0_amd_binary(binary, "comparator")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._verify_v0_amd_binary(binary, "canonical")
+
+    def test_resigned_selector_binding_mutations_fail_independently(self):
+        cases = {
+            "source pin": lambda r: r.update(source_pin="0" * 40),
+            "wrong ICD": lambda r: r.update(icd="/tmp/fake.json"),
+            "NVIDIA ICD": lambda r: r.update(icd="/usr/share/vulkan/icd.d/nvidia_icd.json"),
+            "CUDA": lambda r: r.update(cuda_visible_devices="0"),
+            "missing selector": lambda r: r["mapping"].pop("0"),
+            "wrong BDF": lambda r: r["mapping"]["0"].update(selected_bdf="0000:ff:00.0"),
+            "swapped BDF": lambda r: r["mapping"]["0"].update(
+                selected_bdf="0000:0b:00.0", excluded_bdf="0000:07:00.0"),
+            "duplicate map": lambda r: r["mapping"].update(
+                {"1": copy.deepcopy(r["mapping"]["0"])}),
+            "excluded residency": lambda r: r["mapping"]["0"]["vram_after"].update(
+                {"0000:0b:00.0": 512 * 1024 * 1024}),
+            "stale head": lambda r: r.update(expected_pr_head="e" * 40),
+            "wrong library directory": lambda r: r.update(binary_lib_dir="/missing"),
+            "wrong Mesa": lambda r: r["runtime_identity"].update(kernel="wrong"),
+            "wrong ICD digest": lambda r: r.update(icd_sha256="0" * 64),
+            "wrong vendor": lambda r: r.update(host="inferswarm-nvidia"),
+            "wrong binary": lambda r: r.update(binary_sha256=D.SERVER_BINARIES["canonical"]),
+        }
+        for name, mutation in cases.items():
+            with self.subTest(name=name):
+                bad = copy.deepcopy(self.record)
+                mutation(bad)
+                bad["canonical_digest_sha256"] = P._v0_digest(bad)
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self.validate(record=bad)
+        bad = copy.deepcopy(self.record)
+        bad["canonical_digest_sha256"] = "0" * 64
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(record=bad)
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(head="f" * 40)
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(index=2)
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(live={**self.live, "vendor_id": "0x10de"})
+
+    def test_source_law_requires_ngl1_vulkan_and_physical_die_evidence(self):
+        result = {"vulkan_device_index": 0, "backend": "Vulkan",
+                  "cuda_participation": False,
+                  "vram_before": {b: 0 for b in self.cards},
+                  "vram_after": {"0000:07:00.0": 512 * 1024 * 1024,
+                                 "0000:0b:00.0": 0}}
+        P._v0_verify_placement(self.root, self.live, result, self.record)
+        for changed in ({"vulkan_device_index": 1}, {"backend": "CUDA"},
+                        {"cuda_participation": True},
+                        {"vram_after": {"0000:07:00.0": 0,
+                                        "0000:0b:00.0": 512 * 1024 * 1024}}):
+            with self.subTest(changed=changed), self.assertRaises(P.PhysicalDiagnosticError):
+                P._v0_verify_placement(self.root, self.live,
+                                       {**result, **changed}, self.record)
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0_verify_placement(self.root, self.live, result,
+                                   {**self.record, "source_pin": "0" * 40})
+
+    def test_frozen_argv_and_selector_environment(self):
+        argv = P.v0_server_argv(self.root / "llama-server", Path(D.MODEL_DIR) /
+                                D.MODEL_MEMBER_1)
+        self.assertEqual(argv[argv.index("-ngl") + 1], "1")
+        self.assertNotIn("--device", argv)
+        env = P.v0_environment(0, self.root, self.record)
+        self.assertEqual(env["VK_ICD_FILENAMES"], P.V0_RADV_ICD)
+        self.assertEqual(env["GGML_VK_VISIBLE_DEVICES"], "0")
+        self.assertEqual(env["CUDA_VISIBLE_DEVICES"], "-1")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0_environment(2, self.root, self.record)
+        with self.assertRaises(TypeError):
+            P.v0_server_argv(self.root / "llama-server", Path("/model"),
+                             vulkan_device_index=0)
+
+    def test_stale_dispatch_preflight_has_zero_load_probes(self):
+        evidence = self.root / "evidence"
+        evidence.mkdir()
+        P.retain_cost_planning_record(evidence)
+        calls = []
+        def forbidden(*args):
+            calls.append(args)
+            raise AssertionError("load-only probe reached")
+        with mock.patch.object(P, "require_live_dispatch",
+                               side_effect=P.PhysicalDiagnosticError("stale dispatch")):
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError, "stale dispatch"):
+                P.run_v0_binding_preflight(self.root, evidence,
+                    binary=self.root / "llama-server", model_dir=Path(D.MODEL_DIR),
+                    expected_head=self.head, model_attestation={},
+                    probe_load=forbidden)
+        self.assertEqual(calls, [])
+        self.assertFalse((evidence / "v0-selector-preflight").exists())
+    def test_live_preflight_process_rejects_environment_and_argv_drift(self):
+        argv = ["/observer-bin/llama-server", "-ngl", "1"]
+        env = {"VK_ICD_FILENAMES": P.V0_RADV_ICD,
+               "GGML_VK_VISIBLE_DEVICES": "0", "CUDA_VISIBLE_DEVICES": "-1"}
+        proc = mock.Mock(pid=31415)
+        observed_env = b"\0".join(
+            f"{k}={v}".encode() for k, v in env.items()) + b"\0"
+        observed_argv = b"\0".join(x.encode() for x in argv) + b"\0"
+        def proc_bytes(path):
+            return observed_env if str(path).endswith("/environ") else observed_argv
+        with mock.patch.object(Path, "read_bytes", proc_bytes):
+            P._v0_check_live_process(proc, argv, env)
+        with mock.patch.object(Path, "read_bytes", lambda p: (
+                observed_env.replace(b"GGML_VK_VISIBLE_DEVICES=0",
+                                     b"GGML_VK_VISIBLE_DEVICES=1")
+                if str(p).endswith("/environ") else observed_argv)):
+            with self.assertRaises(P.PhysicalDiagnosticError):
+                P._v0_check_live_process(proc, argv, env)
+        with mock.patch.object(Path, "read_bytes", lambda p: (
+                observed_env if str(p).endswith("/environ") else
+                observed_argv.replace(b"-ngl\0", b"--device\0"))):
+            with self.assertRaises(P.PhysicalDiagnosticError):
+                P._v0_check_live_process(proc, argv, env)
+
+    def test_post_dispatch_preflight_fake_probes_build_reducible_binding(self):
+        evidence = self.root / "evidence"
+        evidence.mkdir()
+        P.retain_cost_planning_record(evidence)
+        (evidence / P.MODEL_ATTESTATION_OPEN_NAME).write_text(
+            json.dumps({"model_dir": D.MODEL_DIR}))
+        authority = {"comment_id": 123, "head_sha": self.head,
+                     "namespace": P.V0_NAMESPACE, "arm": P.V0_ARM,
+                     "issue_url": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/251",
+                     "author_association": "MEMBER",
+                     "created_at": "2026-09-27T00:00:00Z",
+                     "body": "synthetic V0 authority"}
+        calls = []
+        def observer(index):
+            return {**self.live, "index": index}
+        def probe(binary, model, index, dies, directory):
+            calls.append(index)
+            a = list(dies)[index]
+            before = {b: 0 for b in dies}
+            after = {b: (512 * 1024 * 1024 if b == a else 0) for b in dies}
+            return {"index": index, "vram_before": before, "vram_after": after,
+                    "process_attribution": {
+                        "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                        "server_argv": P.v0_server_argv(binary, model),
+                        "server_env": {"VK_ICD_FILENAMES": P.V0_RADV_ICD,
+                                       "GGML_VK_VISIBLE_DEVICES": str(index),
+                                       "CUDA_VISIBLE_DEVICES": "-1",
+                                       "LD_LIBRARY_PATH": str(binary.parent)}}}
+        with mock.patch.object(P, "require_live_dispatch", return_value=authority), \
+             mock.patch.object(D, "_require_clean_head"), \
+             mock.patch.object(P, "_verify_v0_amd_binary", return_value=P.V0_COMPARATOR_SHA), \
+             mock.patch.object(P, "validate_model_attestation",
+                               return_value={"model_dir": D.MODEL_DIR}), \
+             mock.patch.object(P, "attestation_witness", return_value=([], {})):
+            record = P.run_v0_binding_preflight(
+                self.root, evidence, binary=self.root / "llama-server",
+                model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+                model_attestation={}, revalidate_authority=None,
+                probe_load=probe, device_observer=observer)
+        self.assertEqual(calls, [0, 1])
+        self.assertEqual(record["mapping"]["0"]["selected_bdf"],
+                         "0000:07:00.0")
+        self.assertEqual(record["mapping"]["1"]["selected_bdf"],
+                         "0000:0b:00.0")
+        self.assertEqual(json.loads((evidence / "v0-selector-binding.json").read_text()),
+                         record)
+        P._v0_verify_probe_records(record, evidence, authority)
+        self.assertEqual(self.validate(record=record)["selected_bdf"],
+                         "0000:07:00.0")
+        with mock.patch.object(P, "require_live_dispatch", return_value=authority), \
+             mock.patch.object(D, "_require_clean_head"), \
+             mock.patch.object(P, "_verify_v0_amd_binary", return_value=P.V0_COMPARATOR_SHA), \
+             mock.patch.object(P, "validate_model_attestation",
+                               return_value={"model_dir": D.MODEL_DIR}), \
+             mock.patch.object(P, "attestation_witness", return_value=([], {})):
+            with self.assertRaises(P.PhysicalDiagnosticError):
+                P.run_v0_binding_preflight(self.root, evidence,
+                    binary=self.root / "llama-server", model_dir=Path(D.MODEL_DIR),
+                    expected_head=self.head, model_attestation={}, probe_load=probe)
+        self.assertEqual(calls, [0, 1])
 
 
 if __name__ == "__main__":

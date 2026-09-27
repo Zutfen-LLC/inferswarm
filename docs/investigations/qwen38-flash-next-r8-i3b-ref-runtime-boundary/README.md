@@ -54,7 +54,7 @@ Contents:
   amendment; frozen text preserved. Its §3 claim that deterministic
   C1 alone can LOCALIZE and that only variable C1 can access C2 is
   historical and expressly superseded by AMENDMENT-004.
-- `METHODOLOGY-AMENDMENT-004.md` — current Issue #250 prospective
+- `METHODOLOGY-AMENDMENT-004.md` — prior Issue #250 prospective
   ordering/authority clarification plus Arm-C terminal
   contract: C1 (four threads) is informative but never terminal on its
   own; completed C1 deterministic **or** variable with no separately
@@ -72,14 +72,18 @@ Contents:
   diagnostic only, does not promote AMD (or NVIDIA) as GPU/reference authority,
   and its AMD 2-then-3 screen and stop law remain bounded to that population.
   Every physical leg still needs exact-head dispatch; cost admission is a
-  separate gate, not dispatch authority. The current V0 producer deliberately
-  fails closed before launch: an AMD-host binary/CLI selector and per-tensor
-  placement observer have not been independently attested at the pinned build.
-  Synthetic runner tests establish the prospective population and custody
-  contract, not readiness to execute AMD inference. A separately reviewed
-  exact-head correction must validate and wire that adapter before any V0
-  dispatch could result in physical work. Frozen `METHODOLOGY.md` and
-  amendments 001–003 remain historical and untouched.
+  separate gate, not dispatch authority. Its original V0 adapter stop claim
+  is historical and superseded only by AMENDMENT-005; C1/C2 and V0 reduction
+  laws remain unchanged.
+- `METHODOLOGY-AMENDMENT-005.md` — current narrow repository-only V0 AMD
+  adapter correction. Reuses #243 RADV + `GGML_VK_VISIBLE_DEVICES` binding
+  on inferswarm05 and the exact #250 comparator observer binary; #250 Phase-0
+  pinned-source law supplies ngl=1 output-vs-embedding placement while fresh
+  selector/BDF + selected/excluded-die VRAM evidence supplies physical-device
+  attribution. Binary `--help` succeeded unchanged on inferswarm05 but no
+  model load or V0 population occurred. Future load-only binding and V0 units
+  still require independent fresh exact-head dispatch and retained cost/model
+  authority. No `--device VulkanN` or per-tensor log observer is invented.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

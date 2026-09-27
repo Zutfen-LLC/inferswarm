@@ -125,6 +125,10 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
         if (len(tags) not in (2, 3)
                 or set(tags) != set(D.V0_UNIT_TAGS[:len(tags)])):
             raise ValueError("V0 requires a contiguous two/three-unit prefix")
+        # Reuse the producer's exact selector/BDF, source-law, residency,
+        # environment and process-custody validator before reducing rows.
+        P._v0_retained_rows(Path(evidence_root), len(tags), expected_head,
+                            authority)
         amd_rows = []
         pids = set()
         for tag in D.V0_UNIT_TAGS[:len(tags)]:
@@ -173,21 +177,10 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
             pid = rec.get("server_pid")
             argv = rec.get("server_argv")
             device = rec.get("amd_device", {})
-            adapter = device.get("validated_adapter", {})
-            if (not isinstance(adapter, dict)
-                    or not isinstance(argv, list) or "-ngl" not in argv
-                    or argv[argv.index("-ngl") + 1:argv.index("-ngl") + 2] != ["1"]
-                    or "--model" not in argv
-                    or argv[argv.index("--model") + 1:argv.index("--model") + 2]
-                       != [rec["model_launch_member"]]
-                    or "--device" not in argv
-                    or argv[argv.index("--device") + 1:argv.index("--device") + 2]
-                       != [adapter.get("selector")]
-                    or adapter.get("selector") != f"Vulkan{device['index']}"
-                    or adapter.get("vulkan_device_index") != device["index"]
-                    or adapter.get("selector_verified_from_pinned_help") is not True
-                    or adapter.get("pinned_binary_sha256") != rec.get("binary_sha256")
-                    or rec.get("binary_sha256") != D.SERVER_BINARIES["comparator"]
+            if (not isinstance(argv, list)
+                    or argv != P.v0_server_argv(
+                        Path(argv[0]), Path(rec["model_launch_member"]), P.PORT)
+                    or rec.get("binary_sha256") != P.V0_COMPARATOR_SHA
                     or type(pid) is not int or pid <= 0 or pid in pids):
                 raise ValueError("V0 process/AMD placement attribution unproven")
             pids.add(pid)
