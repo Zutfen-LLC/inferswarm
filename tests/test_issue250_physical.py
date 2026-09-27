@@ -1754,7 +1754,11 @@ class LadderDerivationTests(unittest.TestCase):
         # nominal 2048 with actual 2053 => the authority carries 2053
         # and the reducer-side threshold judgment uses the ACTUAL
         # count (T.validate_ladder_length_authority in the terminal
-        # reducer; nominal-vs-actual controls below).
+        # reducer; nominal-vs-actual controls below). CORRECTION
+        # PASS 5 (NO-GO 5852014883): the boundary is the explicit
+        # all-cells/selective pair — 2051 itself is NOT selective
+        # (width = min(2051, 2051) = 2051 covers the full
+        # population); 2052 is the first selective-side count.
         receipt = P.ladder_token_authority_receipt(
             2048, 136, "x", "a" * 64, 2053)
         self.assertEqual(receipt["actual_token_count"], 2053)
@@ -1762,14 +1766,44 @@ class LadderDerivationTests(unittest.TestCase):
         self.assertEqual(verdict["actual_token_count"], 2053)
         self.assertTrue(
             T.validate_ladder_length_authority(
-                receipt, D.INDEXER_TOPK_WIDTH)["crosses_top_k"])
+                receipt, D.INDEXER_ALL_CELLS_MAX,
+                D.INDEXER_SELECTIVE_MIN)["crosses_top_k"])
+        self.assertTrue(
+            T.validate_ladder_length_authority(
+                receipt, D.INDEXER_ALL_CELLS_MAX,
+                D.INDEXER_SELECTIVE_MIN)["selective_side"])
+        # equality control: actual 2051 is STILL all-cells and must
+        # NOT satisfy the selective-side predicate
+        eq = P.ladder_token_authority_receipt(
+            2048, 136, "x", "a" * 64, 2051)
+        v2051 = T.validate_ladder_length_authority(
+            eq, D.INDEXER_ALL_CELLS_MAX, D.INDEXER_SELECTIVE_MIN)
+        self.assertFalse(v2051["crosses_top_k"])
+        self.assertFalse(v2051["selective_side"])
+        self.assertTrue(v2051["all_cells_side"])
+        # 2050: all-cells side; cannot be considered selective
+        v2050 = T.validate_ladder_length_authority(
+            P.ladder_token_authority_receipt(
+                2048, 136, "x", "a" * 64, 2050),
+            D.INDEXER_ALL_CELLS_MAX, D.INDEXER_SELECTIVE_MIN)
+        self.assertFalse(v2050["crosses_top_k"])
+        self.assertTrue(v2050["all_cells_side"])
+        # 2052: FIRST selective-side count
+        v2052 = T.validate_ladder_length_authority(
+            P.ladder_token_authority_receipt(
+                2048, 136, "x", "a" * 64, 2052),
+            D.INDEXER_ALL_CELLS_MAX, D.INDEXER_SELECTIVE_MIN)
+        self.assertTrue(v2052["crosses_top_k"])
+        self.assertTrue(v2052["selective_side"])
+        self.assertFalse(v2052["all_cells_side"])
         # nominal 2048 with actual 2041 => threshold NOT crossed even
         # though the NOMINAL label equals 2048
         receipt2 = P.ladder_token_authority_receipt(
             2048, 136, "x", "a" * 64, 2041)
         self.assertFalse(
             T.validate_ladder_length_authority(
-                receipt2, D.INDEXER_TOPK_WIDTH)["crosses_top_k"])
+                receipt2, D.INDEXER_ALL_CELLS_MAX,
+                D.INDEXER_SELECTIVE_MIN)["crosses_top_k"])
         # prompt text mutation changes token authority => BLOCKED
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_ladder_token_authority(receipt, prompt_text="x")
@@ -1780,7 +1814,8 @@ class LadderDerivationTests(unittest.TestCase):
         receipt = P.ladder_token_authority_receipt(
             2048, 136, "x", "a" * 64, 2053)
         verdict = T.validate_ladder_length_authority(
-            receipt, D.INDEXER_TOPK_WIDTH, runtime_prompt_eval_tokens=2049)
+            receipt, D.INDEXER_ALL_CELLS_MAX,
+            D.INDEXER_SELECTIVE_MIN, runtime_prompt_eval_tokens=2049)
         self.assertFalse(verdict["runtime_matches_authority"])
 
     def test_ladder_unit_argv_has_no_delta(self):

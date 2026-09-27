@@ -93,11 +93,13 @@ the bare metadata constant. Pinned-source audit (llama.cpp tree
     KV-cell count at the decision-0 row equals the ACTUAL retained
     prompt token count (retained tokenizer-authority receipts; the
     reducer never uses nominal labels);
-  - why the condition changes execution behavior: below the width,
-    ggml_top_k's selection covers every KV cell (k == n_kv: the
-    selected-cell mask unmasks everything — dense attention,
-    identical numerics to no selection); at/above the width the
-    top-k tensor actively shapes the KQ mask via ggml_set_rows
+  - why the condition changes execution behavior: through 2051
+    cells, ggml_top_k's selection covers every KV cell (width ==
+    n_kv: the selected-cell mask unmasks everything — dense
+    attention, identical numerics to no selection); starting at
+    2052 cells the capped width is smaller than the population
+    (min(2052, 2051) = 2051 < 2052) and the top-k tensor actively
+    shapes the KQ mask via ggml_set_rows
     (src/models/qwen4exp.cpp:724-737) — attention in the 12 QSA
     layers runs over the selected cells only, a genuinely different
     computation graph (GGML_OP_TOP_K + partial_sort +
@@ -105,13 +107,23 @@ the bare metadata constant. Pinned-source audit (llama.cpp tree
   - why ordinary timing/batching cannot mimic the signal: the width
     is a pure function of the retained token COUNT (n_kv), not of
     wall-clock scheduling; no sampling cadence, ubatch boundary, or
-    thread interleaving changes which side of 2051 a given retained
-    prompt falls on.
-  The frozen reducer threshold is `INDEXER_TOPK_WIDTH = 2051`
-  (INDEXER_TOP_K + INDEXER_COMPRESS_RATIO - 1). A boundary whose
-  deterministic side is >= 2051 or whose variable side is < 2051
-  does not fire the predicate and D ends
-  R8I3B_REFERENCE_RUNTIME_UNRESOLVED.
+    thread interleaving changes which side of the 2051/2052
+    execution boundary a given retained prompt falls on.
+  The frozen reducer boundary pair is `INDEXER_ALL_CELLS_MAX = 2051`
+  (= `INDEXER_TOP_K + INDEXER_COMPRESS_RATIO - 1` =
+  `INDEXER_TOPK_WIDTH`) and `INDEXER_SELECTIVE_MIN = 2052`
+  (`INDEXER_ALL_CELLS_MAX + 1`). The predicate may fire only when
+  every deterministic-side ACTUAL count is <= 2051 and every
+  variable-side ACTUAL count is >= 2052. A variable-side actual
+  count of exactly 2051 is NOT selective (width = min(2051, 2051) =
+  2051 = the full population), so a boundary whose variable side is
+  <= 2051 or whose deterministic side is >= 2052 does not fire the
+  predicate and D ends
+  R8I3B_REFERENCE_RUNTIME_UNRESOLVED. (The pass-4 text here
+  originally stated the dense/selective split as "below vs
+  at/above 2051" with a `>= 2051` variable-side rule — an
+  off-by-one at equality corrected by AMENDMENT-002; see
+  METHODOLOGY-AMENDMENT-002.md.)
 
 D unchanged in all other respects: nominal labels remain generation
 parameters only; actual token counts come from the tokenizer

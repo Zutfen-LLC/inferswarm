@@ -179,7 +179,8 @@ class CampaignFixture:
                  arm_b_same="deterministic", arm_c_default="vary",
                  arm_c_serial="deterministic", arm_d_rows=None,
                  arm_d_progress=None, arm_d_confirm_lengths=None,
-                 arm_d_confirm_mismatch_at=None):
+                 arm_d_confirm_mismatch_at=None,
+                 arm_d_token_counts=None):
         import subprocess
         import tempfile
         self.test = test
@@ -190,6 +191,11 @@ class CampaignFixture:
         self.evidence = self.root / "evidence"
         self.repo.mkdir()
         self.evidence.mkdir()
+        # CORRECTION PASS 5 (NO-GO 5852014883): optional override of
+        # the ladder's ACTUAL token counts, keyed by nominal ladder
+        # length, for the 2050/2051/2052 execution-boundary equality
+        # controls (translated to sentence-repeat keys below).
+        self.arm_d_token_counts = arm_d_token_counts
 
         def git(*args):
             subprocess.run(["git", *args], cwd=self.repo, check=True,
@@ -254,6 +260,12 @@ class CampaignFixture:
         process-attribution block the reducer demands."""
         counts = {68: 1022, 102: 1534, 136: 2053, 153: 2303,
                   171: 2567, 204: 3077}
+        if self.arm_d_token_counts:
+            # pass-5 equality controls: remap nominal ladder length
+            # -> actual token count through the sentence-repeat key
+            for length, count in self.arm_d_token_counts.items():
+                repeats = D.ARM_D_LADDER_SENTENCE_REPEATS[length]
+                counts[repeats] = count
 
         def prompt_count(prompt: str) -> int:
             return counts.get(
@@ -726,8 +738,9 @@ class TerminalMatrixTests(unittest.TestCase):
         # blocker 4C: 2 identical screening rows are NOT a
         # deterministic condition; without the confirm extension the
         # D claim cannot localize
-        # det side actual tokens (1022, 1534) all < top_k 2048;
-        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # det side actual tokens (1022, 1534) all <= 2051
+        # (all-cells side); var side (2053, 2303, 2567, 3077) all
+        # >= 2052 (selective side) — the
         # indexer_top_k_boundary fires at (1536, 2048)
         ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
                   2560: "var", 3072: "var"}
@@ -767,8 +780,9 @@ class TerminalMatrixTests(unittest.TestCase):
         self.assertIn("pair-identical", out["basis"]["reason"])
 
     def test_confirmed_boundary_localizes(self):
-        # det side actual tokens (1022, 1534) all < top_k 2048;
-        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # det side actual tokens (1022, 1534) all <= 2051
+        # (all-cells side); var side (2053, 2303, 2567, 3077) all
+        # >= 2052 (selective side) — the
         # indexer_top_k_boundary fires at (1536, 2048)
         ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
                   2560: "var", 3072: "var"}
@@ -786,8 +800,9 @@ class TerminalMatrixTests(unittest.TestCase):
 
     def test_unconfirmed_length_cannot_localize(self):
         # same ladder but NO confirm extension executed anywhere
-        # det side actual tokens (1022, 1534) all < top_k 2048;
-        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # det side actual tokens (1022, 1534) all <= 2051
+        # (all-cells side); var side (2053, 2303, 2567, 3077) all
+        # >= 2052 (selective side) — the
         # indexer_top_k_boundary fires at (1536, 2048)
         ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
                   2560: "var", 3072: "var"}
@@ -807,8 +822,9 @@ class TerminalMatrixTests(unittest.TestCase):
         # first mismatch at ANY point (including inside the confirm
         # extension) immediately establishes variability — the
         # deterministic side then fails confirmation => UNRESOLVED
-        # det side actual tokens (1022, 1534) all < top_k 2048;
-        # var side (2053, 2303, 2567, 3077) all >= 2048 — the
+        # det side actual tokens (1022, 1534) all <= 2051
+        # (all-cells side); var side (2053, 2303, 2567, 3077) all
+        # >= 2052 (selective side) — the
         # indexer_top_k_boundary fires at (1536, 2048)
         ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
                   2560: "var", 3072: "var"}
@@ -1306,6 +1322,260 @@ class TransitionPredicateTests(unittest.TestCase):
             sorted(T.LOCALIZED_FACTORS),
             ["A-vulkan-necessity", "B-process-init", "C-cpu-threads",
              "D-context-transition"])
+
+
+class IndexerBoundaryEqualityTests(unittest.TestCase):
+    """CORRECTION PASS 5 (NO-GO 5852014883): the exact source
+    arithmetic of the indexer top-k selection-width execution
+    boundary, at and around equality.
+
+    Pinned runtime law (src/models/qwen4exp.cpp build_qsa_top_k):
+    width = min(n_kv, indexer_top_k + r - 1) = min(n_kv, 2051) for
+    top_k=2048, r=4. At n_kv = 2051 the width EQUALS the population
+    (every cell still selected — all-cells/dense-equivalent side);
+    the first population where selection can exclude a cell is
+    n_kv = 2052. The old predicate encoded the selective transition
+    as ">= 2051" — wrong at equality — and is retained here as an
+    explicit old-defect regression (test E).
+    """
+
+    def _fixture(self, **kw):
+        fixture = CampaignFixture(self, **kw)
+        self.addCleanup(fixture.restore_contrast_constant)
+        return fixture
+
+    def _ladder_progress(self):
+        return {length: [
+            "prompt processing, n_tokens = 512",
+            "prompt processing, n_tokens = 1024",
+        ] for length in D.ARM_D_LADDER_LENGTHS}
+
+    # --- exact source arithmetic (cases A/B/C + law) ---
+
+    def test_source_arithmetic_constants(self):
+        self.assertEqual(D.INDEXER_TOP_K, 2048)
+        self.assertEqual(D.INDEXER_COMPRESS_RATIO, 4)
+        self.assertEqual(D.INDEXER_TOPK_WIDTH,
+                         D.INDEXER_TOP_K + D.INDEXER_COMPRESS_RATIO - 1)
+        self.assertEqual(D.INDEXER_ALL_CELLS_MAX, 2051)
+        self.assertEqual(D.INDEXER_SELECTIVE_MIN, 2052)
+        self.assertEqual(D.INDEXER_SELECTIVE_MIN,
+                         D.INDEXER_ALL_CELLS_MAX + 1)
+        # the law itself, at the three decisive populations
+        width = lambda n_kv: min(n_kv, D.INDEXER_TOPK_WIDTH)  # noqa: E731
+        self.assertEqual(width(2050), 2050)   # all-cells
+        self.assertEqual(width(2051), 2051)   # STILL all-cells (== n_kv)
+        self.assertEqual(width(2052), 2051)   # first width < population
+        self.assertLess(width(2052), 2052)
+
+    def test_evaluate_predicate_direct_2050_2051_2052(self):
+        # Direct unit-level exercise of the reducer predicate on
+        # ladder-fact dictionaries (the same shape derive_terminal
+        # builds): cases A (2050), B (2051), C (2052).
+        def facts(det_count, var_count):
+            return {
+                1024: {"row_deterministic": True, "unit_count": 5,
+                       "prompt_progress_counts": [], "pair_identical":
+                       True, "deterministic_confirmed": True,
+                       "actual_token_count": det_count},
+                2048: {"row_deterministic": False, "unit_count": 2,
+                       "prompt_progress_counts": [], "pair_identical":
+                       False, "deterministic_confirmed": False,
+                       "actual_token_count": var_count},
+            }
+
+        # B: variable side at exactly 2051 — STILL all-cells; the
+        # selective-side predicate MUST NOT be satisfied
+        out = T._evaluate_transition_predicates(facts(1534, 2051))
+        self.assertIsNone(out)
+        # E (incorrect equality case): deterministic < 2051 and
+        # variable exactly 2051 — MUST NOT fire
+        out = T._evaluate_transition_predicates(facts(1534, 2051))
+        self.assertIsNone(out)
+        # A: 2050 on the variable side is all-cells; no localization
+        out = T._evaluate_transition_predicates(facts(1534, 2050))
+        self.assertIsNone(out)
+        # C: 2052 is the first selective-side count — predicate fires
+        out = T._evaluate_transition_predicates(facts(1534, 2052))
+        self.assertIsNotNone(out)
+        self.assertEqual(out["predicate"], "indexer_top_k_boundary")
+        self.assertEqual(out["all_cells_max"], 2051)
+        self.assertEqual(out["selective_min"], 2052)
+        # D: boundary det=2051 / var=2052 — det 2051 is on the
+        # all-cells side, so the predicate MAY fire
+        out = T._evaluate_transition_predicates(facts(2051, 2052))
+        self.assertIsNotNone(out)
+        self.assertEqual(out["boundary_actual_tokens"], (2051, 2052))
+
+    def test_det_side_2052_is_not_all_cells(self):
+        # deterministic side at 2052 (selective side) cannot satisfy
+        # the all-cells-side requirement — no fire
+        def facts(det_count, var_count):
+            return {
+                1024: {"row_deterministic": True, "unit_count": 5,
+                       "prompt_progress_counts": [], "pair_identical":
+                       True, "deterministic_confirmed": True,
+                       "actual_token_count": det_count},
+                2048: {"row_deterministic": False, "unit_count": 2,
+                       "prompt_progress_counts": [], "pair_identical":
+                       False, "deterministic_confirmed": False,
+                       "actual_token_count": var_count},
+            }
+        self.assertIsNone(T._evaluate_transition_predicates(
+            facts(2052, 2053)))
+
+    # --- full-reducer equality regressions (retained-byte path) ---
+
+    def test_variable_side_exactly_2051_cannot_localize(self):
+        # OLD-DEFECT REGRESSION (equality at 2051): the pass-4
+        # reducer accepted a variable-side actual count of exactly
+        # 2051 as being on the selective side (>= 2051) and emitted
+        # LOCALIZED. At equality width = min(2051, 2051) = 2051
+        # covers the FULL population, so 2051 is all-cells and the
+        # corrected head MUST end UNRESOLVED for this evidence.
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        counts = {2048: 2051}  # only the first variable length moves
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress(),
+                          arm_d_token_counts=counts)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("no smallest runtime/execution boundary",
+                      out["basis"]["reason"])
+
+    def test_det_boundary_side_at_exactly_2051_can_localize(self):
+        # D: deterministic actual 2051 / variable actual 2052+ — the
+        # deterministic side sits ON the all-cells maximum, all other
+        # frozen D gates satisfied, so the predicate MAY fire.
+        ladder = {1024: "det", 1536: "det", 2048: "det", 2304: "var",
+                  2560: "var", 3072: "var"}
+        counts = {2048: 2051}  # last deterministic length at the max
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress(),
+                          arm_d_token_counts=counts)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["transition_predicate"],
+                         "indexer_top_k_boundary")
+        self.assertEqual(out["basis"]["mechanism"]["binds"].count(
+            "2051"), 2)
+
+    def test_real_ladder_1534_to_2053_still_fires(self):
+        # F: real prospective ladder example — deterministic side
+        # actual count 1534, variable side actual count 2053; the
+        # predicate still fires when all confirmation/gating
+        # conditions are satisfied (the default fixture counts).
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress())
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["transition_predicate"],
+                         "indexer_top_k_boundary")
+        self.assertEqual(out["basis"]["boundary"], (1536, 2048))
+        # boundary actuals under the default fixture counts
+        self.assertEqual(out["basis"]["boundary_actual_tokens"],
+                         (1534, 2053))
+
+    def test_all_counts_below_or_equal_2051_no_localization(self):
+        # G: every ladder count on the all-cells side (<= 2051) —
+        # the ladder varies, but no deterministic->selective
+        # crossing exists, so no localization.
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        counts = {2048: 2051, 2304: 2049, 2560: 2050, 3072: 2051}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress(),
+                          arm_d_token_counts=counts)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("no smallest runtime/execution boundary",
+                      out["basis"]["reason"])
+
+    def test_all_counts_selective_no_crossing(self):
+        # H: every count >= 2052 (all selective side) — no
+        # deterministic->selective crossing; no localization.
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        counts = {1024: 2052, 1536: 2054, 2048: 2053, 2304: 2060,
+                  2560: 2070, 3072: 3077}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress(),
+                          arm_d_token_counts=counts)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("no smallest runtime/execution boundary",
+                      out["basis"]["reason"])
+
+    def test_non_monotone_boundary_no_localization(self):
+        # I: interleaved/non-monotone determinism (a variable length
+        # below a deterministic one in ladder order) — the monotone
+        # deterministic->variable boundary does not exist; no
+        # localization regardless of counts.
+        ladder = {1024: "det", 1536: "var", 2048: "det", 2304: "var",
+                  2560: "var", 3072: "var"}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress())
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("no smallest runtime/execution boundary",
+                      out["basis"]["reason"])
+
+    def test_nominal_label_irrelevant_against_actual_count(self):
+        # J: the nominal label 2048 is irrelevant when the ACTUAL
+        # token count sits on the other side of the boundary. A
+        # length NOMINALLY labeled 2048 whose actual count is 2051
+        # is all-cells (not selective) — and one whose actual count
+        # is 2052 IS selective despite the same nominal label.
+        # (Covers both label!=count directions at the boundary.)
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        counts = {2048: 2052}  # nominal 2048, ACTUAL 2052: selective
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress(),
+                          arm_d_token_counts=counts)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["transition_predicate"],
+                         "indexer_top_k_boundary")
+        # boundary actuals: nominal-2048 length judged by its ACTUAL
+        # 2052, not its label
+        self.assertEqual(out["basis"]["boundary_actual_tokens"],
+                         (1534, 2052))
+
+    def test_localized_wording_names_execution_boundary(self):
+        # the terminal interpretation stays narrow: the localized
+        # factor names the QSA all-cells -> selective-mask execution
+        # boundary, not an ultimate numerical root cause
+        ladder = {1024: "det", 1536: "det", 2048: "var", 2304: "var",
+                  2560: "var", 3072: "var"}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=self._ladder_progress())
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["arm"], "D-context-transition")
+        self.assertIn("execution-path transition",
+                      out["basis"]["localized_factor"])
+        self.assertIn("frozen transition predicate",
+                      out["basis"]["localized_factor"])
 
 
 if __name__ == "__main__":

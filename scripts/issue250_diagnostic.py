@@ -241,17 +241,30 @@ ARM_D_LADDER_SENTENCE_REPEATS = {
 # constant — it is at the top-k SELECTION WIDTH:
 #   width = std::min<int64_t>(n_kv, indexer_top_k + r - 1)
 # where r is the per-layer compress ratio (4 for every QSA layer of
-# this model: GGUF qwen4exp.attention.compress_ratios). Below the
-# width the selection covers every KV cell (ggml_top_k with
-# k == n_kv: no masking effect, dense attention); at/above it the
-# top-k tensor actively shapes the KQ mask (ggml_set_rows unmasks
-# only the selected cells) in the 12 QSA layers. The frozen
-# mechanical boundary is therefore top_k + r - 1 = 2051 KV cells;
-# for the single-sequence frozen launch shape the KV-cell count at
-# the decision-0 row equals the retained actual prompt token count.
+# this model: GGUF qwen4exp.attention.compress_ratios).
+# CORRECTION PASS 5 (NO-GO 5852014883): the sides of that law are
+# EXACT AT EQUALITY. width = min(n_kv, 2051) equals n_kv for every
+# population THROUGH 2051 cells, so the top-k selection still
+# covers EVERY KV cell there (ggml_top_k with k == n_kv: the
+# selected-cell mask unmasks everything — dense attention,
+# numerics identical to no selection): that is the ALL-CELLS side,
+# n_kv <= 2051. Only from 2052 cells on is the capped width
+# smaller than the population (min(2052, 2051) = 2051 < 2052), so
+# the top-k tensor actively shapes the KQ mask via ggml_set_rows
+# (unmasking only the selected cells) in the 12 QSA layers: that
+# is the SELECTIVE side, n_kv >= 2052. The selective transition is
+# never encoded as ">= 2051" anywhere. For the single-sequence
+# frozen launch shape the KV-cell count at the decision-0 row
+# equals the retained actual prompt token count.
 INDEXER_TOP_K = 2048
 INDEXER_COMPRESS_RATIO = 4
+# Source-law selection-width cap: width = min(n_kv, 2051).
 INDEXER_TOPK_WIDTH = INDEXER_TOP_K + INDEXER_COMPRESS_RATIO - 1  # 2051
+# Explicit execution-boundary pair derived from the source law.
+# All-cells / dense-equivalent side: n_kv <= 2051.
+INDEXER_ALL_CELLS_MAX = INDEXER_TOPK_WIDTH  # 2051
+# First population where the selection can exclude a cell.
+INDEXER_SELECTIVE_MIN = INDEXER_ALL_CELLS_MAX + 1  # 2052
 
 # Same-process (Arm B) request-contract extension: id_slot pinning is
 # required to make repeated requests land on the SAME slot. The

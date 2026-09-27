@@ -121,14 +121,20 @@ LOCALIZED_FACTORS = {
 TRANSITION_PREDICATES = {
     "indexer_top_k_boundary": {
         "requires": "model-architecture fact "
-                    "qwen4exp.attention.indexer.top_k = 2048 crossed "
-                    "between the last deterministic and first variable "
-                    "length MEASURED IN ACTUAL PROMPT TOKEN COUNTS "
+                    "qwen4exp.attention.indexer.top_k = 2048 with "
+                    "compress ratio r = 4: the source-proven QSA "
+                    "selection-width law width = min(n_kv, 2048 + 4 "
+                    "- 1) = min(n_kv, 2051) crosses between the last "
+                    "deterministic and first variable length "
+                    "MEASURED IN ACTUAL PROMPT TOKEN COUNTS "
                     "(retained tokenizer-authority receipts, not "
                     "nominal ladder labels)",
-        "binds": "every deterministic length's actual token count < "
-                 "top_k <= every variable length's actual token count; "
-                 "the boundary in tokens is the crossing itself",
+        "binds": "every deterministic length's actual token count "
+                 "<= 2051 (all-cells side: the selection still "
+                 "covers the full population) AND every variable "
+                 "length's actual token count >= 2052 (selective "
+                 "side: the capped width is smaller than the "
+                 "population); equality at 2051 is NOT selective",
     },
 }
 
@@ -243,25 +249,34 @@ def _evaluate_transition_predicates(
     boundary = (max(det), min(var))
 
     # indexer_top_k_boundary: measured in ACTUAL token counts against
-    # the SOURCE-PROVEN selection-width threshold (correction pass 4,
-    # blocker 3 audit): the pinned tree's build_qsa_top_k computes
-    # width = min(n_kv, indexer_top_k + r - 1); below the width every
-    # KV cell is selected (dense), at/above it the top-k selection
-    # actively masks the QSA attention. Ordinary timing/batching
-    # cannot mimic the signal: the width is a function of the token
-    # COUNT alone (single-sequence frozen launch shape => n_kv equals
-    # the actual prompt token count), not of wall-clock scheduling.
-    threshold = D.INDEXER_TOPK_WIDTH
+    # the SOURCE-PROVEN selection-width law (correction pass 4,
+    # blocker 3 audit; equality corrected in pass 5, NO-GO
+    # 5852014883): the pinned tree's build_qsa_top_k computes
+    # width = min(n_kv, indexer_top_k + r - 1) with r = 4, i.e.
+    # width = min(n_kv, 2051). At every population THROUGH 2051
+    # cells the width equals n_kv, so every KV cell is selected
+    # (dense / all-cells side, n_kv <= 2051 — 2051 itself is NOT
+    # selective); from 2052 cells on the capped width is smaller
+    # than the population and the top-k selection actively masks
+    # the QSA attention (selective side, n_kv >= 2052). Ordinary
+    # timing/batching cannot mimic the signal: the width is a
+    # function of the token COUNT alone (single-sequence frozen
+    # launch shape => n_kv equals the actual prompt token count),
+    # not of wall-clock scheduling.
+    all_cells_max = D.INDEXER_ALL_CELLS_MAX
+    selective_min = D.INDEXER_SELECTIVE_MIN
     det_tokens = [ladder_facts[n]["actual_token_count"] for n in det]
     var_tokens = [ladder_facts[n]["actual_token_count"] for n in var]
-    if (all(t < threshold for t in det_tokens)
-            and all(t >= threshold for t in var_tokens)
-            and max(det_tokens) < threshold <= min(var_tokens)):
+    if (all(t <= all_cells_max for t in det_tokens)
+            and all(t >= selective_min for t in var_tokens)
+            and max(det_tokens) <= all_cells_max
+            and min(var_tokens) >= selective_min):
         return {
             "predicate": "indexer_top_k_boundary",
             "boundary": boundary,
             "boundary_actual_tokens": (max(det_tokens), min(var_tokens)),
-            "threshold_cells": threshold,
+            "all_cells_max": all_cells_max,
+            "selective_min": selective_min,
             "mechanism": TRANSITION_PREDICATES["indexer_top_k_boundary"],
         }
     # No surviving source-proven predicate fires: ubatch geometry is
@@ -1020,29 +1035,45 @@ def _arm_c_facts(root: Path, expected_head: str, authority: dict[str, Any],
 
 
 def validate_ladder_length_authority(receipt: dict[str, Any],
-                                     top_k: int,
+                                     all_cells_max: int,
+                                     selective_min: int | None = None,
                                      runtime_prompt_eval_tokens:
                                      int | None = None,
                                      ) -> dict[str, Any]:
     """Reduce one ladder length's token authority against the frozen
-    token-count mechanism (correction pass 3, blocker 4A).
+    token-count mechanism (correction pass 3, blocker 4A; boundary
+    sides corrected in pass 5, NO-GO 5852014883).
 
     Uses the ACTUAL token count — never the nominal ladder label —
-    for the ``indexer.top_k`` boundary judgment, and (when the
-    runtime/server prompt-eval count is retained) fails closed unless
-    runtime and tokenizer authority agree byte-for-byte on count.
+    for the ``indexer.top_k`` selection-width boundary judgment, and
+    (when the runtime/server prompt-eval count is retained) fails
+    closed unless runtime and tokenizer authority agree byte-for-byte
+    on count.
+
+    ``all_cells_max`` is the source-law all-cells maximum (2051):
+    a count <= all_cells_max is on the dense/all-cells side (the
+    selection width still covers the full population — 2051 itself
+    is NOT selective). ``selective_min`` (default
+    all_cells_max + 1 = 2052) is the first count on the selective
+    side. A legacy call passing the old single ``top_k``-style
+    threshold positionally still receives a meaningful dense-side
+    comparison; keyword use is explicit.
     """
     actual = receipt.get("actual_token_count")
     if type(actual) is not int or actual <= 0:
         raise D.DiagnosticError(
             "ladder token authority lacks an actual token count")
+    if selective_min is None:
+        selective_min = all_cells_max + 1
     runtime_match = True
     if runtime_prompt_eval_tokens is not None:
         runtime_match = (runtime_prompt_eval_tokens == actual)
     return {
         "nominal_length": receipt.get("nominal_length"),
         "actual_token_count": actual,
-        "crosses_top_k": actual > top_k,
+        "crosses_top_k": actual >= selective_min,
+        "all_cells_side": actual <= all_cells_max,
+        "selective_side": actual >= selective_min,
         "runtime_matches_authority": runtime_match,
     }
 
@@ -1385,6 +1416,9 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
             "arm": "D-context-transition",
             "transition_predicate": fired["predicate"],
             "boundary": fired["boundary"],
+            "boundary_actual_tokens": fired["boundary_actual_tokens"],
+            "all_cells_max": fired["all_cells_max"],
+            "selective_min": fired["selective_min"],
             "mechanism": fired["mechanism"],
         })
     # All reachable arms complete; no causal mechanism bound.

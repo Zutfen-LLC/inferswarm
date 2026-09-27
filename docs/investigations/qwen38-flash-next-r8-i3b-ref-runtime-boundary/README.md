@@ -24,6 +24,15 @@ Contents:
   re-bound to the source-proven selection-width threshold
   2048+4-1=2051 KV cells), Arm-B drift-prefix durable custody
   (blocker 1). Dated amendment; the frozen text is preserved.
+  §B's boundary sides were later corrected at equality by
+  AMENDMENT-002 (2051 is all-cells, not selective).
+- `METHODOLOGY-AMENDMENT-002.md` — correction pass 5 (NO-GO
+  5852014883): exact execution-boundary semantics for
+  `indexer_top_k_boundary` — width = min(n_kv, 2051) covers the
+  full population through 2051 cells (all-cells side,
+  n_kv <= 2051); selection becomes genuinely selective only from
+  2052 cells (selective side, n_kv >= 2052); equality controls
+  at 2050/2051/2052. Dated amendment; frozen text preserved.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,
