@@ -40,6 +40,7 @@ for _dep in ("issue248_diagnostic", "issue248_health",
              "issue248_identity"):
     _load(_dep, f"scripts/{_dep}.py")
 D = _load("issue250_diagnostic", "scripts/issue250_diagnostic.py")
+TB = _load("issue250_timeout", "scripts/issue250_timeout.py")
 P = _load("issue250_physical", "scripts/issue250_physical.py")
 T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 
@@ -148,7 +149,8 @@ def fake_health_runner(argv, **kw):
     raise AssertionError(f"unexpected health argv: {argv}")
 
 
-def fake_execute(argv, env, request, prompt, port, unit_dir):
+def fake_execute(argv, env, request, prompt, port, unit_dir,
+                     timeout_budget=None):
     """A fake server launch writing observer outputs + a response."""
     import hashlib
     import time
@@ -175,7 +177,7 @@ def fake_execute(argv, env, request, prompt, port, unit_dir):
             "server_exe_sha256": D.SERVER_BINARIES["comparator"],
             "server_argv": list(argv),
             "server_env": dict(env),
-        },
+        },                "timeout_budget": timeout_budget,
         "device_samples": [
             {"stage": "before", "captured_at": now,
              "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, "
@@ -197,7 +199,7 @@ def datetime_now():
 
 def fake_same_process_execute(argv, env, request, prompt, port,
                               unit_dir, repeats,
-                              expected_prompt_tokens,
+                              expected_prompt_tokens, timeout_s=None,
                               preflight_request=None):
     """Fake ONE-process lifecycle: shared PID, per-request proofs.
 
@@ -710,7 +712,7 @@ class SameProcessLifecycleTests(unittest.TestCase):
 
         def execute(argv, env, request, prompt, port, unit_dir,
                     repeats, expected_prompt_tokens,
-                    preflight_request=None):
+                    preflight_request=None, timeout_s=None):
             # honest runner: the REAL gate runs before every request;
             # a gate failure stops the lifecycle before the HTTP
             # completion issues. `issued` records completions only.
@@ -807,9 +809,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
         self.assertEqual(issued, [0])
 
     def test_pid_change_mid_arm_is_fatal(self):
-        def mutating(argv, env, request, prompt, port, unit_dir,
-                     repeats, expected_prompt_tokens,
-                     preflight_request=None):
+        def mutating(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -820,9 +823,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self._run(execute=mutating)
 
     def test_wrong_id_slot_is_fatal(self):
-        def wrong_slot(argv, env, request, prompt, port, unit_dir,
-                       repeats, expected_prompt_tokens,
-                       preflight_request=None):
+        def wrong_slot(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -835,9 +839,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self._run(execute=wrong_slot)
 
     def test_missing_full_recompute_proof_is_fatal(self):
-        def cache_reuse(argv, env, request, prompt, port, unit_dir,
-                        repeats, expected_prompt_tokens,
-                        preflight_request=None):
+        def cache_reuse(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -861,9 +866,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self._run(execute=cache_reuse)
 
     def test_missing_prompt_eval_evidence_is_fatal(self):
-        def no_eval(argv, env, request, prompt, port, unit_dir,
-                    repeats, expected_prompt_tokens,
-                    preflight_request=None):
+        def no_eval(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -882,9 +888,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self._run(execute=no_eval)
 
     def test_lru_slot_selection_not_by_id_is_fatal(self):
-        def lru(argv, env, request, prompt, port, unit_dir,
-                repeats, expected_prompt_tokens,
-                preflight_request=None):
+        def lru(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -908,9 +915,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
         # BLOCKER 3 OLD-DEFECT SHAPE: request 1's slice contains a
         # PERFECT task-0 (prior request) selection + full prompt eval,
         # but NO task-1 evidence. The task-bound proof must fail.
-        def delayed(argv, env, request, prompt, port, unit_dir,
-                    repeats, expected_prompt_tokens,
-                    preflight_request=None):
+        def delayed(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -933,9 +941,10 @@ class SameProcessLifecycleTests(unittest.TestCase):
             self._run(execute=delayed)
 
     def test_request_count_drift_is_fatal(self):
-        def four(argv, env, request, prompt, port, unit_dir,
-                 repeats, expected_prompt_tokens,
-                 preflight_request=None):
+        def four(argv, env, request, prompt, port,
+                              unit_dir, repeats,
+                              expected_prompt_tokens,
+                              preflight_request=None, timeout_s=None):
             result = fake_same_process_execute(
                 argv, env, request, prompt, port, unit_dir, repeats,
                 expected_prompt_tokens,
@@ -1028,7 +1037,7 @@ class ArmBDriftPrefixCustodyTests(unittest.TestCase):
 
         def execute(argv, env, request, prompt, port, unit_dir,
                     repeats, expected_prompt_tokens,
-                    preflight_request=None):
+                    preflight_request=None, timeout_s=None):
             import hashlib
 
             def effective(index):

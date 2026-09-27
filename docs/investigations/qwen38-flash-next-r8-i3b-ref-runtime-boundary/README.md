@@ -33,6 +33,22 @@ Contents:
   n_kv <= 2051); selection becomes genuinely selective only from
   2052 cells (selective side, n_kv >= 2052); equality controls
   at 2050/2051/2052. Dated amendment; frozen text preserved.
+- `METHODOLOGY-AMENDMENT-003.md` — correction pass 6 (two defects
+  exposed by the retained failed v1 Arm-A execution): the global
+  1200 s HTTP timeout is RETIRED in favor of the per-arm/unit
+  timeout-budget authority (scripts/issue250_timeout.py; frozen
+  rates incl. the retained ~2.25 tok/s CPU-only measurement);
+  a frozen prospective COST GATE (12 h deterministic-proof
+  ceiling) classifies the old ~5.3 h/unit serial Arm-C regime as
+  NOT auto-reachable; Arm C is amended to the bounded C1
+  reduced-parallelism probe (`-t 4 -tb 4`, namespace d250-arm-c1)
+  with the serial `-t 1 -tb 1` regime retained ONLY behind the
+  separate d250-arm-c2 maintainer gate; evidence generation
+  identifiers frozen (v1 root retained read-only as the defect
+  record under gen-1-v1-timeout-defect; canonical reruns use
+  gen-2-pass6); dispatch comment 5852485456 is bound to
+  1c86e97 and mechanically stale at any moved head. Dated
+  amendment; frozen text preserved.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

@@ -116,7 +116,8 @@
     "test_issue248_diagnostic",
     "test_issue250_diagnostic",
     "test_issue250_physical",
-    "test_issue250_terminal"
+    "test_issue250_terminal",
+    "test_issue250_pass6_corrections"
    ]
   },
   "repo-integrity": {
@@ -1289,6 +1290,9 @@
   "scripts/issue250_terminal.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue250_timeout.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1521,6 +1525,9 @@
    "issue-222-r7c"
   ],
   "tests/test_issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_pass6_corrections.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_issue250_physical.py": [

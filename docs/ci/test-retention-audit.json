@@ -3323,6 +3323,38 @@
       ],
       "test_count_at_audit": 67
     },
+    "test_issue250_pass6_corrections": {
+      "baseline_group": "r8i-qwen-qualification",
+      "baseline_serial_seconds": 2.0,
+      "baseline_test_count": 29,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "r8i-qwen-qualification",
+      "invariant": "Correction pass 6 (AMENDMENT-003) producer/authority contract for #250: the retired global 1200 s HTTP timeout never returns to the request path (the retained v1 defect constant stays pinned as the defect record only); every request deadline is derived by the frozen per-arm/unit timeout-budget authority (rate basis incl. the retained ~2.25 tok/s CPU-only measurement; 1.5 safety factor; 1920 s startup/decode margin; bounded [1800 s, 14400 s] sanity bounds; gated-C2-only 36000 s ceiling) and is mechanically bound to the frozen unit/arm plan; receipts retain the budget and its full derivation and fail closed on any mutation; the frozen prospective cost gate classifies the ~5.3 h/unit serial Arm-C regime as blocked_requires_separate_authorization and keeps Arm A authorized / Arm B conditional; the C1 (-t 4 -tb 4) bounded probe is the only automatic Arm-C discriminator and C1 authority can never authorize serial C2 (dedicated d250-arm-c2 namespace + explicit gate line + C1-varied gate record binding both authority digests); the v1 evidence generation gen-1-v1-timeout-defect is retired read-only and canonical writes require gen-2-pass6 with no cross-generation mixing; dispatch comment 5852485456 binds only head 1c86e97 and is mechanically stale at any moved head.",
+      "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+        ],
+        "scripts_imported": [
+          "issue250_timeout",
+          "issue250_physical",
+          "issue250_diagnostic",
+          "issue250_terminal"
+        ]
+      },
+      "pinned_by_evidence": [
+        "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY-AMENDMENT-003.md"
+      ],
+      "rationale": "Current #250 correction-pass-6 authority: timeout-budget law, cost gate, C1/C2 authority separation, evidence-generation custody, stale-dispatch regression; offline only, zero physical execution.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "source_modules": [
+        "scripts/issue250_timeout.py"
+      ],
+      "test_count_at_audit": 29
+    },
     "test_issue250_physical": {
       "baseline_group": "r8i-qwen-qualification",
       "baseline_serial_seconds": 16.8,

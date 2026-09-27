@@ -34,25 +34,59 @@ Sequential terminal law (Issue #250 §A–§D; frozen):
        initialization boundary.
      * both vary => Arm C becomes required.
      * missing B evidence when required => REDUCER_BLOCKED.
-  C. Arm C (d250-arm-c) — required only when B leaves CPU-only
-     variation unlocalized.
-     * default-threading CPU-only varies AND serial (-t 1 -tb 1)
-       CPU-only deterministic => LOCALIZED, factor = CPU parallel
-       execution/order boundary.
-     * serial also varies => Arm D becomes required.
+  C. AMENDED (correction pass 6, AMENDMENT-003) — the automatic
+     discriminator is now the BOUNDED C1 reduced-parallelism probe
+     (namespace d250-arm-c1, `-t 4 -tb 4`) after the d250-arm-c
+     default-threading reproduction pair:
+     * C1 deterministic (5/5 identical rows) while default CPU-only
+       is proven varying
+       => LOCALIZED, factor = CPU thread-regime / parallelism
+          boundary — stating the EXACT regimes (default 14-thread
+          vs frozen reduced -t 4 -tb 4) and explicitly NOT claiming
+          single-thread execution was tested.
+     * C1 also varies => the bounded C1 probe did NOT localize.
+       Serial C2 (-t 1 -tb 1) remains OPTIONAL and UNEXECUTED unless
+       its own d250-arm-c2 maintainer gate has actually closed
+       (explicit c2-serial-gate dispatch + retained C1-varied gate
+       record). Without a closed C2 gate this is a MAINTAINER REVIEW
+       STOP (R8I3B_REDUCER_BLOCKED_INCOMPLETE with an explicit
+       review reason) — never a silent fall-through to Arm D and
+       never a premature UNRESOLVED.
+     * With a closed C2 gate: serial deterministic => LOCALIZED
+       (classic serial-regime boundary); serial also varies => Arm D
+       becomes required.
      * missing C evidence when required => REDUCER_BLOCKED.
-  D. Arm D (d250-arm-d) — required only when A–C do not localize.
-     * Derives each predeclared length's exact row repeatability.
+  D. Arm D (d250-arm-d) — required only when A-C do not localize
+     UNDER THE AMENDED REACHABILITY (i.e. Arm C's bounded methodology
+     genuinely completed, including a closed C2 gate when C1
+     varied). Preserves every accepted pass-3/4/5 correction:
+     attributed tokenizer authority, actual token counts,
+     indexer_top_k_boundary sides, screening pair + 5-repeat
+     confirmation, no retrospective ladder selection.
      * LOCALIZED only if retained source/runtime evidence
        mechanically identifies the corresponding execution transition
        and a FROZEN predicate binds it to the observed
        deterministic->variable boundary (see TRANSITION_PREDICATES).
      * Otherwise => R8I3B_REFERENCE_RUNTIME_UNRESOLVED.
 
-UNRESOLVED may be emitted only after every reachable arm is complete.
-Unreachable later-arm evidence can never override an earlier
-localization (later namespaces are simply not consumed once a
-terminal is derived at an earlier arm).
+UNRESOLVED may be emitted only after every reachable arm is complete
+UNDER THE AMENDED REACHABILITY. Unreachable later-arm evidence can
+never override an earlier localization (later namespaces are simply
+not consumed once a terminal is derived at an earlier arm).
+
+CORRECTION PASS 6 (AMENDMENT-003) additional reduction preconditions:
+
+  * EVIDENCE GENERATION: only ONE canonical generation
+    (gen-2-pass6) is accepted. The retained v1 failed units
+    (gen-1-v1-timeout-defect — zero-row, timeout-killed) are
+    historical defect evidence: a generation mismatch, mixed
+    generations, or v1 markers in consumed namespaces fail closed.
+  * TIMEOUT POLICY BINDING: every consumed unit receipt must carry a
+    timeout_policy block that recomputes exactly from the frozen
+    per-unit budget law (issue250_timeout.verify_timeout_budget_block).
+    Receipts without it (e.g. v1-era receipts) cannot be consumed
+    for a canonical terminal — they are the defect record, not
+    canonical evidence.
 """
 from __future__ import annotations
 
@@ -64,6 +98,7 @@ from typing import Any, Callable
 
 import issue250_diagnostic as D
 import issue250_physical as P
+import issue250_timeout as TB
 import issue248_health as H
 import issue248_identity as I
 
@@ -75,21 +110,48 @@ BLOCKED = D.REDUCER_BLOCKED
 TERMINALS = (LOCALIZED, UNRESOLVED)
 
 # Sequential arm ladder (namespace, arm) in reachability order.
+# AMENDMENT-003: Arm C is split — d250-arm-c (default reproduction
+# pair) feeds d250-arm-c1 (the bounded reduced-parallelism probe).
+# The gated serial namespace d250-arm-c2 is NOT part of the automatic
+# ladder; it is consumed only through the explicit gate below.
 ARM_LADDER = (
     ("d250-arm-a", "A-vulkan-necessity"),
     ("d250-arm-b", "B-process-init"),
     ("d250-arm-c", "C-cpu-threads"),
+    ("d250-arm-c1", "C1-reduced-parallelism"),
     ("d250-arm-d", "D-context-transition"),
 )
 
+# AMENDMENT-003 localized-factor vocabulary. The C1 boundary names the
+# EXACT tested regimes and must never claim single-thread coverage.
 LOCALIZED_FACTORS = {
     "A-vulkan-necessity": "backend-participation boundary "
                           "(zero vs nonzero Vulkan participation)",
     "B-process-init": "fresh-process/runtime-initialization boundary",
     "C-cpu-threads": "CPU parallel execution/order boundary",
+    "C1-reduced-parallelism": (
+        "CPU thread-regime / parallelism boundary (default 14-thread "
+        "regime varies while the frozen reduced -t 4 -tb 4 regime is "
+        "deterministic; single-thread execution was NOT tested)"),
+    "C2-serial": (
+        "CPU thread-regime / parallelism boundary (default 14-thread "
+        "regime varies while the serial -t 1 -tb 1 regime is "
+        "deterministic; maintainer-gated C2 serial population)"),
     "D-context-transition": "long-context execution-path transition "
                             "(bound by frozen transition predicate)",
 }
+
+# AMENDMENT-003 maintainer-review stop: the bounded C1 probe ran and
+# ALSO varied, and the serial C2 gate has NOT closed. This is a
+# non-terminal blocked state with an explicit review reason — the
+# bounded Arm-C methodology did not localize, serial C2 remains
+# optional/unexecuted due to cost, and Arm D is NOT auto-reached.
+ARM_C1_VARIED_C2_UNGATED = (
+    "arm C1 bounded probe completed and ALSO varies; the serial C2 "
+    "deep discriminator remains optional/unexecuted (separate "
+    "d250-arm-c2 maintainer gate required; cost-gated by "
+    "AMENDMENT-003) — maintainer review required before any further "
+    "arm executes")
 
 # Frozen Arm-D transition predicates (correction pass 4, NO-GO
 # 5851078451, blocker 3; supersedes the pass-3 set). A length
@@ -363,6 +425,23 @@ def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
                 f"unit dispatch authority binding mismatch: {key}")
     if authority.get("head_sha") != expected_head:
         raise ValueError("unit authority head mismatch")
+    # AMENDMENT-003: the canonical evidence generation must be exact
+    # (no v1 defect-record units, no mixed generations).
+    if receipt.get("evidence_generation") != P.EVIDENCE_GENERATION:
+        raise ValueError(
+            f"unit evidence generation "
+            f"{receipt.get('evidence_generation')!r} != canonical "
+            f"{P.EVIDENCE_GENERATION!r} (v1 defect-record units are "
+            "never canonical reduction inputs)")
+    # AMENDMENT-003: the receipt's timeout policy must recompute
+    # EXACTLY from the frozen per-unit budget law (mutation / absent
+    # policy / wrong budget all fail closed).
+    try:
+        TB.verify_timeout_budget_block(
+            receipt.get("timeout_policy"), spec)
+    except Exception as exc:
+        raise ValueError(
+            f"timeout policy binding invalid: {exc}") from None
     # binary authority
     if (receipt.get("binary_sha256")
             != D.SERVER_BINARIES.get(receipt.get("binary_id"))):
@@ -405,8 +484,10 @@ def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
     argv = receipt.get("server_argv")
     if not isinstance(argv, list) or not argv or not argv[0]:
         raise ValueError("server argv missing")
-    if argv != P.server_argv(Path(argv[0]),
-                             Path(receipt["model_launch_member"]), spec):
+    if argv != P.server_argv(
+            Path(argv[0]),
+            Path(receipt["model_launch_member"]), spec,
+            c2_verification=(arm == D.ARM_C2_NAME)):
         raise ValueError("server argv differs from frozen geometry")
     env = receipt.get("server_env")
     if not isinstance(env, dict):
@@ -1015,23 +1096,94 @@ def _arm_b_facts(root: Path, expected_head: str, authority: dict[str, Any],
 
 
 def _arm_c_facts(root: Path, expected_head: str, authority: dict[str, Any],
-                 attestation: dict[str, Any],
+                 attestation: dict[str, Any], repo_root: Path,
+                 authority_fetcher: Any = None,
                  ) -> tuple[dict[str, Any], list[str]]:
-    plan = D.probe_list_for("C-cpu-threads")
-    default_tags = [u["tag"] for u in plan if "thr-default" in u["tag"]]
-    serial_tags = [u["tag"] for u in plan if "thr1" in u["tag"]]
+    """AMENDMENT-003: verify the amended Arm-C shape.
+
+    * d250-arm-c: the default-threading CPU-only reproduction pair.
+    * d250-arm-c1: the bounded reduced-parallelism probe (5 units,
+      prefix early-stop law). Verified against its own live authority.
+    * d250-arm-c2 (optional): consumed ONLY when the serial gate
+      closed — a c1-varied gate record binding BOTH the C1 and C2
+      authority digests must be retained at the root; otherwise the
+      serial condition is reported absent-with-gate-closed=False and
+      the sequential walk decides (maintainer stop when C1 varied).
+    """
     problems: list[str] = []
     default_pop, default_problems = _verify_namespace_population(
         root, "d250-arm-c", "C-cpu-threads", expected_head,
-        authority, attestation, default_tags, lambda tag: "accepted",
-        extra_expected=set(serial_tags))
-    serial_pop, serial_problems = _verify_namespace_population(
-        root, "d250-arm-c", "C-cpu-threads", expected_head,
-        authority, attestation, serial_tags, lambda tag: "accepted",
-        extra_expected=set(default_tags))
+        authority, attestation,
+        [u["tag"] for u in D.probe_list_for("C-cpu-threads")],
+        lambda tag: "accepted")
     problems.extend(default_problems)
-    problems.extend(serial_problems)
-    return {"default": default_pop, "serial": serial_pop}, problems
+    c1_authority = None
+    if authority is not None:
+        try:
+            c1_authority = P.require_live_dispatch(
+                repo_root, expected_head, "d250-arm-c1",
+                revalidate_authority=authority_fetcher)
+        except Exception as exc:
+            problems.append(
+                f"live dispatch authority for d250-arm-c1 rejected: "
+                f"{exc}")
+            c1_authority = None
+    c1_pop: dict[str, Any] = {}
+    if c1_authority is not None:
+        c1_pop, c1_problems = _verify_namespace_population(
+            root, "d250-arm-c1", "C1-reduced-parallelism",
+            expected_head, c1_authority, attestation,
+            [u["tag"] for u in D.probe_list_for(
+                "C1-reduced-parallelism")],
+            lambda tag: "accepted")
+        problems.extend(c1_problems)
+    else:
+        c1_pop = {"units": [], "retained_tags": []}
+    # Serial population: consumed ONLY through the explicit gate.
+    serial_gate_closed = D.c1_dispatch_c2_unlocked(
+        root, expected_head=expected_head)
+    serial_pop: dict[str, Any] = {"units": [], "retained_tags": [],
+                                  "gate_closed": serial_gate_closed}
+    if serial_gate_closed:
+        c2_authority = None
+        if authority is not None:
+            try:
+                c2_authority = P.require_live_dispatch(
+                    repo_root, expected_head, D.C2_SERIAL_NAMESPACE,
+                    revalidate_authority=authority_fetcher)
+            except Exception as exc:
+                problems.append(
+                    f"live dispatch authority for {D.C2_SERIAL_NAMESPACE} "
+                    f"rejected: {exc}")
+        if c2_authority is not None:
+            gate_doc = _load_c2_gate_record(root)
+            if gate_doc is not None and gate_doc.get(
+                    "c2_authority_sha256") == D.authority_digest(
+                    c2_authority):
+                serial_pop, serial_problems = _verify_namespace_population(
+                    root, D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME,
+                    expected_head, c2_authority, attestation,
+                    [u["tag"] for u in D.probe_list_for(D.ARM_C2_NAME)],
+                    lambda tag: "accepted")
+                serial_pop["gate_closed"] = True
+                problems.extend(serial_problems)
+            else:
+                problems.append(
+                    "c2 gate record does not bind the live d250-arm-c2 "
+                    "authority digest")
+    return {"default": default_pop, "c1": c1_pop, "serial": serial_pop,
+            "c1_authority": c1_authority}, problems
+
+
+def _load_c2_gate_record(root: Path) -> dict[str, Any] | None:
+    path = Path(root) / D.C2_GATE_RECORD_NAME
+    if path.is_symlink() or not path.is_file():
+        return None
+    try:
+        doc = json.loads(path.read_bytes())
+    except (OSError, json.JSONDecodeError):
+        return None
+    return doc if isinstance(doc, dict) else None
 
 
 def validate_ladder_length_authority(receipt: dict[str, Any],
@@ -1197,6 +1349,30 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     if attestation is None:  # defensive narrowing; unreachable
         return _blocked(["campaign model attestation invalid"])
 
+    # CORRECTION PASS 6 (AMENDMENT-003): the canonical generation is a
+    # reduction precondition. A retired-generation path/marker, or a
+    # retained cost-planning record whose generation field was
+    # mutated, fails closed — v1 defect evidence can never mix into a
+    # canonical terminal.
+    try:
+        canonical_generation = P.validate_evidence_generation(root)
+    except Exception as exc:
+        return _blocked([f"evidence generation binding invalid: {exc}"])
+    cost_record_path = root / "cost-planning-record.json"
+    if cost_record_path.is_file() and not cost_record_path.is_symlink():
+        try:
+            cost_record = json.loads(cost_record_path.read_bytes())
+            retained_gen = cost_record.get("evidence_generation")
+        except Exception as exc:
+            return _blocked(
+                [f"cost planning record unreadable: {exc}"])
+        if retained_gen not in (None, canonical_generation):
+            return _blocked(
+                [f"cost planning record generation mismatch: "
+                 f"{retained_gen!r} != canonical "
+                 f"{canonical_generation!r} (no mixing across "
+                 "generations)"])
+
     # Live authority for the FIRST reachable namespace decides the
     # ladder walk; every namespace consumed here is fetched live and
     # every retained receipt must bind it exactly.
@@ -1312,37 +1488,109 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
                          f"same_process={same['population']})"], reduction)
 
     # ---------------- Arm C (required: B leaves variation) ---------
+    # AMENDMENT-003: the d250-arm-c reproduction pair, then the
+    # bounded C1 reduced-parallelism probe; serial C2 only behind its
+    # explicit gate. Reducer-state indication of the gate status is
+    # carried in the reduction record.
     authority_c = _fetch("d250-arm-c", "C-cpu-threads")
     if authority_c is None:
         return _blocked(problems, reduction)
     arm_c, c_problems = _arm_c_facts(
-        root, expected_head, authority_c, attestation)
+        root, expected_head, authority_c, attestation,
+        Path(repo_root), authority_fetcher=authority_fetcher)
     problems.extend(c_problems)
     reduction["arms"]["C-cpu-threads"] = arm_c
     if problems:
         return _blocked(problems, reduction)
     default = _walk_condition(arm_c["default"])
+    c1 = _walk_condition(arm_c["c1"])
     serial = _walk_condition(arm_c["serial"])
     arm_c["cpu_default_threads"] = default
+    arm_c["cpu_c1_reduced_parallelism"] = c1
     arm_c["cpu_serial"] = serial
-    if serial["deterministic"]:
-        # NOTE: default has only 2 reproduction units — a deterministic
-        # CLAIM needs 5, but the default condition's VARIATION is
-        # already established by Arms A/B fresh CPU-only units (same
-        # condition geometry); variation is what C contrasts against.
+    if default["deterministic"]:
+        # The default-threading CPU-only condition was already proven
+        # VARYING at arms A/B (same geometry). A deterministic C pair
+        # contradicts that evidence — fail closed (frozen rule).
+        return _blocked(
+            ["arm C default-threading CPU-only deterministic while "
+             "arms A/B CPU-only varied (contradictory evidence)"],
+            reduction)
+    if not default["nondeterministic"]:
+        return _blocked(
+            [f"arm C evidence incomplete "
+             f"(default={default['population']})"], reduction)
+    if c1.get("population") is None:
+        # C1 evidence absent while the amended methodology requires it
+        # before any serial/D consideration — fail closed.
+        return _blocked(
+            ["arm C1 bounded probe evidence missing"], reduction)
+    reduction["arm_c_gate_status"] = {
+        "c2_serial_gate_closed":
+            arm_c["serial"].get("gate_closed") is True,
+        "c2_serial_executed":
+            bool(arm_c["serial"].get("retained_tags")),
+    }
+    if c1["deterministic"]:
+        # C1 DETERMINISTIC while default CPU-only varies: localization
+        # to the thread-regime boundary — naming the EXACT regimes.
+        # Single-thread execution was NOT tested and is never claimed.
         return _ok(LOCALIZED, reduction, {
-            "localized_factor": LOCALIZED_FACTORS["C-cpu-threads"],
-            "arm": "C-cpu-threads",
+            "localized_factor":
+                LOCALIZED_FACTORS["C1-reduced-parallelism"],
+            "arm": "C1-reduced-parallelism",
             "deterministic_condition":
-                "serial CPU-only -t 1 -tb 1 (5/5 identical rows)",
+                "reduced-parallelism CPU-only -t 4 -tb 4 "
+                "(identical rows at the frozen deterministic count)",
             "nondeterministic_condition":
-                "default-threading CPU-only (varies; established at "
-                "arms A/B fresh CPU-only units)",
-            "default_condition_units": default["n"],
+                "default-threading CPU-only 14-thread regime (varies; "
+                "established at arms A/B/C fresh CPU-only units)",
+            "tested_regimes": {
+                "default": "14-thread (accepted default)",
+                "reduced": "-t 4 -tb 4 (frozen C1 regime)",
+            },
+            "single_thread_tested": False,
+        })
+    if not c1["nondeterministic"]:
+        return _blocked(
+            [f"arm C1 evidence incomplete (c1={c1['population']})"],
+            reduction)
+    # C1 VARIES. The bounded probe did not localize. Serial C2 is the
+    # only remaining Arm-C discriminator — and ONLY its explicit gate
+    # decides whether it ran.
+    # gate status lives on the RAW serial population dict (the walked
+    # condition drops non-walk keys).
+    if arm_c["serial"].get("gate_closed") is not True:
+        # MAINTAINER REVIEW STOP: never silently fall through to D,
+        # never emit a premature UNRESOLVED.
+        return _blocked([ARM_C1_VARIED_C2_UNGATED], reduction)
+    if not arm_c["serial"].get("retained_tags"):
+        return _blocked(
+            ["c2 serial gate closed but no serial population is "
+             "retained"], reduction)
+    if serial["deterministic"]:
+        return _ok(LOCALIZED, reduction, {
+            "localized_factor": LOCALIZED_FACTORS["C2-serial"],
+            "arm": "C2-serial",
+            "deterministic_condition":
+                "serial CPU-only -t 1 -tb 1 (identical rows at the "
+                "frozen deterministic count; maintainer-gated C2 "
+                "population)",
+            "nondeterministic_condition":
+                "default-threading CPU-only 14-thread regime (varies; "
+                "established at arms A/B/C fresh CPU-only units)",
+            "tested_regimes": {
+                "default": "14-thread (accepted default)",
+                "serial": "-t 1 -tb 1 (gated C2 regime)",
+            },
         })
     if not serial["nondeterministic"]:
-        return _blocked([f"arm C evidence incomplete "
-                         f"(serial={serial['population']})"], reduction)
+        return _blocked(
+            [f"arm C2 evidence incomplete "
+             f"(serial={serial['population']})"], reduction)
+    # Serial also varies (gate closed): the bounded Arm-C methodology
+    # is genuinely complete — Arm D becomes required.
+    pass
 
     # ---------------- Arm D (required: A-C did not localize) -------
     authority_d = _fetch("d250-arm-d", "D-context-transition")

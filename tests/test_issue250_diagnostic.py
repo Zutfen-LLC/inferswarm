@@ -30,6 +30,12 @@ def _load(name: str, rel: str):
 
 P0 = _load("issue250_phase0", "scripts/issue250_phase0.py")
 D = _load("issue250_diagnostic", "scripts/issue250_diagnostic.py")
+# AMENDMENT-003: the timeout/cost authority module loads under BOTH
+# import mechanisms (file-location loader here; package-style import
+# inside scripts/ when issue250_physical imports it).
+TB = _load("issue250_timeout", "scripts/issue250_timeout.py")
+for _name in ("issue250_diagnostic",):
+    sys.modules[_name] = {"issue250_diagnostic": D}[_name]
 
 
 def make_authority(head: str = "f" * 40, namespace: str = "d250-arm-a",
@@ -105,7 +111,11 @@ class NamespaceArmBindingTests(unittest.TestCase):
             {"d250-arm-a": "A-vulkan-necessity",
              "d250-arm-b": "B-process-init",
              "d250-arm-c": "C-cpu-threads",
+             "d250-arm-c1": "C1-reduced-parallelism",
              "d250-arm-d": "D-context-transition"})
+        # AMENDMENT-003: the serial C2 namespace is NOT part of the
+        # auto-reachable binding map at all.
+        self.assertNotIn(D.C2_SERIAL_NAMESPACE, D.NAMESPACE_ARM_BINDING)
         # injective in both directions (no duplicate namespace/arm)
         self.assertEqual(len(set(D.NAMESPACE_ARM_BINDING)),
                          len(D.NAMESPACE_ARM_BINDING))
@@ -283,19 +293,30 @@ class ArmPlanTests(unittest.TestCase):
         for u in same:
             self.assertEqual(u["request"], "arm-b")
 
-    def test_arm_c_is_cpu_only_single_thread_regime(self):
+    def test_arm_c_amended_split_regimes(self):
+        # AMENDMENT-003: d250-arm-c authorizes ONLY the default-thread
+        # reproduction pair; the C1 probe and gated serial regime live
+        # in their own arms.
         units = D.probe_list_for("C-cpu-threads")
-        thr1 = [u for u in units if "thr1" in u["tag"]]
-        default = [u for u in units if "thr-default" in u["tag"]]
-        self.assertEqual(len(thr1), 5)
-        self.assertEqual(len(default), 2)
-        for u in thr1:
+        self.assertEqual(len(units), 2)
+        for u in units:
+            self.assertEqual(tuple(u["argv_delta"]), ("-dev", "none"))
+            self.assertEqual(u["ngl"], 0)
+            self.assertIn("thr-default", u["tag"])
+        c1 = D.probe_list_for("C1-reduced-parallelism")
+        self.assertEqual(len(c1), 5)
+        for u in c1:
+            self.assertEqual(tuple(u["argv_delta"]),
+                             ("-dev", "none", "-t", "4", "-tb", "4"))
+            self.assertEqual(u["ngl"], 0)
+        c2 = D.probe_list_for(D.ARM_C2_NAME)
+        self.assertEqual(len(c2), 5)
+        for u in c2:
             self.assertEqual(tuple(u["argv_delta"]),
                              ("-dev", "none", "-t", "1", "-tb", "1"))
-        for u in default:
-            self.assertEqual(tuple(u["argv_delta"]), ("-dev", "none"))
-        for u in units:
             self.assertEqual(u["ngl"], 0)
+            # the frozen plan never carries the launch flag
+            self.assertNotIn("c2_serial_authorized", u)
 
     def test_arm_d_ladder_predeclared(self):
         units = D.probe_list_for("D-context-transition")

@@ -12,6 +12,20 @@ adapted to Issue #250's frozen discriminator geometry
 binding, CPU-only inheritance for B and C, retained-byte terminal
 reduction with the sequential A->B->C->D reachability law.
 
+CORRECTION PASS 6 (METHODOLOGY-AMENDMENT-003): the retained failed
+Arm-A v1 unit exposed the producer timeout defect (global
+HTTP_TIMEOUT_S = 1200 vs a ~1368 s legitimate CPU-only case-3072
+prefill at the retained 2.25 tok/s). The global constant is retired:
+every request now runs under the frozen per-condition
+TIMEOUT-BUDGET AUTHORITY (scripts/issue250_timeout.py), receipts
+retain the budget + derivation inputs, the Arm-C serial regime moved
+behind the separate d250-arm-c2 maintainer gate (C1
+reduced-parallelism probe is the bounded automatic discriminator),
+and canonical execution is bound to the fresh evidence generation
+EVIDENCE_GENERATION (gen-2-pass6) — the read-only v1 generation
+(gen-1-v1-timeout-defect) is rejected as a write target and can
+never mix into a canonical reduction.
+
 Every entrypoint gates FIRST and only then performs any work:
 no qualification path exists here, comparator/2 methodology is
 untouched, no threshold exists, no holdout access is possible, and
@@ -73,8 +87,98 @@ from pathlib import Path
 from typing import Any, Callable
 
 import issue250_diagnostic as D
+import issue250_timeout as TB
 import issue248_health as H
 import issue248_identity as I
+
+# ---------------------------------------------------------------------------
+# FROZEN EVIDENCE GENERATION (correction pass 6, AMENDMENT-003). The
+# failed v1 tree is historical DEFECT evidence: read-only, never a
+# canonical write target, never mixable into a canonical reduction.
+# ---------------------------------------------------------------------------
+EVIDENCE_GENERATION = "gen-2-pass6"
+RETIRED_EVIDENCE_GENERATIONS = frozenset({
+    "gen-1-v1-timeout-defect",       # the retained failed Arm-A v1 run
+    "gen-1", "v1", "gen-1-v1",       # lexical near-misses, refused too
+})
+RETIRED_V1_EVIDENCE_ROOT = TB.V1_EVIDENCE_ROOT
+
+
+def validate_evidence_generation(root: Path) -> str:
+    """Fail-closed generation binding for a canonical evidence root.
+
+    Refuses: the retired v1 generation paths/identifiers (the defect
+    record is immutable), symlinked roots, and — critically — any
+    root that already carries a foreign generation marker. Returns
+    the canonical generation this producer writes.
+    """
+    root = Path(root)
+    if root.is_symlink():
+        raise PhysicalDiagnosticError(
+            "canonical evidence root may not be a symlink")
+    resolved = str(root)
+    for marker in RETIRED_EVIDENCE_GENERATIONS:
+        if f"/{marker}" in resolved or resolved.endswith(f"-{marker}"):
+            raise PhysicalDiagnosticError(
+                f"refusing retired v1 evidence generation {marker!r} as "
+                f"a canonical write target (read-only defect record): "
+                f"{resolved}")
+    marker_path = root / "evidence-generation.json"
+    if marker_path.is_symlink():
+        raise PhysicalDiagnosticError(
+            "generation marker is a symlink")
+    if marker_path.is_file():
+        try:
+            doc = json.loads(marker_path.read_bytes())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PhysicalDiagnosticError(
+                f"generation marker unreadable: {exc}") from exc
+        gen = doc.get("generation") if isinstance(doc, dict) else None
+        if gen != EVIDENCE_GENERATION:
+            raise PhysicalDiagnosticError(
+                f"evidence root belongs to generation {gen!r}; this "
+                f"producer writes only {EVIDENCE_GENERATION!r} "
+                "(no mixing across generations)")
+    return EVIDENCE_GENERATION
+
+
+def write_generation_marker(evidence_root: Path) -> dict[str, Any]:
+    """Retain the canonical generation marker (append-only, once)."""
+    root = Path(evidence_root)
+    if root.is_symlink() or not root.is_dir():
+        raise PhysicalDiagnosticError(
+            f"evidence root missing: {root}")
+    marker = root / "evidence-generation.json"
+    if marker.exists() or marker.is_symlink():
+        raise PhysicalDiagnosticError(
+            f"generation marker already retained (append-only): {marker}")
+    doc = {
+        "schema": "inferswarm.issue250.evidence-generation/1",
+        "generation": EVIDENCE_GENERATION,
+        "predecessor_generation": TB.V1_EVIDENCE_GENERATION,
+        "predecessor_disposition": (
+            "retained read-only as the timeout-defect record; never a "
+            "canonical reduction input"),
+        "predecessor_root": TB.V1_EVIDENCE_ROOT,
+        "created_by": "METHODOLOGY-AMENDMENT-003",
+    }
+    _write_json(marker, doc)
+    return doc
+
+
+def retain_cost_planning_record(evidence_root: Path) -> dict[str, Any]:
+    """Retain the frozen prospective cost-planning record (once)."""
+    root = Path(evidence_root)
+    target = root / "cost-planning-record.json"
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError(
+            f"cost planning record already retained (append-only): "
+            f"{target}")
+    doc = TB.cost_planning_record()
+    doc["evidence_generation"] = EVIDENCE_GENERATION
+    _write_json(target, doc)
+    return doc
+
 
 UNIT_SCHEMA = "inferswarm.issue250.diagnostic-unit/1"
 LIFECYCLE_SCHEMA = "inferswarm.issue250.same-process-lifecycle/1"
@@ -93,7 +197,17 @@ ARM = "B"     # every #250 unit executes on the accepted reference arm
 SERVER_CTX_SIZE = 8192
 SERVER_BATCH_SIZE = 512
 SERVER_READY_TIMEOUT_S = 1800
-HTTP_TIMEOUT_S = 1200
+# CORRECTION PASS 6 (AMENDMENT-003): the GLOBAL request timeout is
+# RETIRED. The old frozen constant HTTP_TIMEOUT_S = 1200 predates
+# CPU-only execution and killed a legitimate Arm-A case-3072 prefill
+# at 83% (retained v1 server.log: 2.25 tok/s, cancel at t = 1143.45 s).
+# Request deadlines now come ONLY from the frozen per-condition
+# TIMEOUT-BUDGET AUTHORITY (issue250_timeout.request_timeout_budget,
+# mechanically bound to the unit plan; receipts retain budget +
+# derivation inputs). No global constant exists anymore; the defect
+# value is retained ONLY as the timeout module's defect record
+# (issue250_timeout.DEFECT_HTTP_TIMEOUT_S / LEGACY_FIXED_TIMEOUT_S).
+assert TB.DEFECT_HTTP_TIMEOUT_S == 1200  # defect record stays pinned
 
 # Same-process reset-evidence grammar. CORRECTION PASS 3: the old
 # unanchored SLOT_BY_ID_RE / PROMPT_EVAL_RE (any slot-3 line + any
@@ -1228,16 +1342,30 @@ def validate_ladder_token_authority_entry(entry: Any,
 # ---------------------------------------------------------------------------
 
 def server_argv(binary: Path, model_member: Path, unit: dict[str, Any],
-                port: int = PORT) -> list[str]:
+                port: int = PORT, c2_verification: bool = False,
+                ) -> list[str]:
     """Exact accepted launch shape with the unit's declared argv delta.
 
     Base shape is byte-identical to the accepted #248 producer
     (--ctx-size 8192 --batch-size 512, -ngl placement, host/port); the
     unit's frozen ``argv_delta`` appends exactly the one declared
-    factor tokens (e.g. ``-dev none``, ``-t 1 -tb 1``). Arm D ladder
+    factor tokens (e.g. ``-dev none``, ``-t 4 -tb 4``). Arm D ladder
     units run at the accepted placement (length is the factor).
+
+    CORRECTION PASS 6 (AMENDMENT-003): serial `-t 1 -tb 1` units are
+    REFUSED here unless ``allow_c2_serial=True`` — and that flag is
+    accepted only from the dedicated C2 path, which itself requires
+    the d250-arm-c2 gate (c2_launch_allowed). No generic unit path can
+    launch a serial regime.
     """
     delta = tuple(unit.get("argv_delta", ()))
+    is_serial = (delta == ("-dev", "none") + D.ARM_C2_ARGV_DELTA)
+    if is_serial and not (unit.get("c2_serial_authorized")
+                          or c2_verification):
+        raise PhysicalDiagnosticError(
+            "serial `-t 1 -tb 1` (C2) units are not launchable through "
+            "the generic path: they require the dedicated d250-arm-c2 "
+            "maintainer gate (AMENDMENT-003)")
     if unit.get("ladder_length"):
         if delta:
             raise PhysicalDiagnosticError(
@@ -1255,6 +1383,59 @@ def server_argv(binary: Path, model_member: Path, unit: dict[str, Any],
             "--host", "127.0.0.1", "--port", str(port)]
     argv.extend(delta)
     return argv
+
+
+def c2_launch_allowed(namespace: str, arm: str, authority: dict[str, Any],
+                      expected_head: str, evidence_root: Path) -> None:
+    """The ONLY path that may launch a serial `-t 1 -tb 1` (C2) unit.
+
+    Fail-closed mechanical conjunction (AMENDMENT-003): the dedicated
+    d250-arm-c2 namespace, the C2-serial arm, an authority whose
+    comment carries the explicit c2-serial-gate line AND validates at
+    the expected head, and the retained C1-varied gate record signed
+    by this very authority. Any other shape raises — in particular, a
+    d250-arm-c or d250-arm-c1 dispatch can never satisfy this (the
+    dedicated validators refuse those pairings outright).
+    """
+    if namespace != D.C2_SERIAL_NAMESPACE or arm != D.ARM_C2_NAME:
+        raise PhysicalDiagnosticError(
+            f"serial C2 launch requires the {D.C2_SERIAL_NAMESPACE!r} "
+            f"namespace and the {D.ARM_C2_NAME!r} arm (got "
+            f"{namespace!r}/{arm!r}) — no generic Arm-C or C1 dispatch "
+            "can authorize serial units")
+    payload = D.validate_authority_payload(
+        dict(authority), expected_head)
+    if payload.get("namespace") != D.C2_SERIAL_NAMESPACE:
+        raise PhysicalDiagnosticError(
+            "c2 authority payload is not a d250-arm-c2 dispatch")
+    if not D.c1_dispatch_c2_unlocked(
+            evidence_root, expected_head, c2_authority=payload):
+        raise PhysicalDiagnosticError(
+            "serial C2 launch refused: the frozen C1-varied gate "
+            f"record is absent or does not bind this authority "
+            f"({D.C2_GATE_RECORD_NAME})")
+
+
+def timeout_budget_condition_is_c2(unit: dict[str, Any]) -> bool:
+    return TB.unit_condition(unit) == "arm-c2-serial"
+
+
+def c2_unit(unit: dict[str, Any]) -> dict[str, Any]:
+    """Mark a C2-serial plan unit as gate-authorized (dedicated path).
+
+    The RETURNED copy carries ``c2_serial_authorized`` so
+    ``server_argv`` accepts it; the copy is produced only AFTER
+    ``c2_launch_allowed`` succeeded (the dedicated C2 driver calls
+    them in that order). The frozen plan itself never carries the
+    flag.
+    """
+    if tuple(unit.get("argv_delta", ())) != \
+            (("-dev", "none") + D.ARM_C2_ARGV_DELTA):
+        raise PhysicalDiagnosticError(
+            "c2_unit refuses non-serial units")
+    out = dict(unit)
+    out["c2_serial_authorized"] = True
+    return out
 
 
 def launch_env(out_prefix: Path) -> dict[str, str]:
@@ -1326,12 +1507,30 @@ def _device_sample() -> dict[str, Any]:
 
 
 def _http_completion(port: int, request: dict[str, Any],
-                     prompt: str) -> tuple[bytes, dict[str, Any]]:
+                     prompt: str, timeout_s: float | None = None,
+                     ) -> tuple[bytes, dict[str, Any]]:
+    """One completion POST under the unit's frozen timeout budget.
+
+    CORRECTION PASS 6 (AMENDMENT-003): the retired global
+    HTTP_TIMEOUT_S = 1200 constant is GONE from the request path.
+    ``timeout_s`` is the unit's derived budget
+    (issue250_timeout.request_timeout_budget) — production callers
+    MUST pass it; the None default exists so stale callers fail
+    loudly (ValueError) instead of silently inheriting any constant.
+    A timeout is still a FAILED request/unit and never numerical
+    evidence.
+    """
+    if timeout_s is None:
+        raise ValueError(
+            "refusing an unbounded completion request: pass the "
+            "unit's frozen timeout budget (issue250_timeout."
+            "request_timeout_budget) — the retired global 1200 s "
+            "constant killed a legitimate CPU-only prefill at 83%")
     payload = json.dumps({**request, "prompt": prompt}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/completion", data=payload,
         headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as response:
+    with urllib.request.urlopen(req, timeout=timeout_s) as response:
         if response.status != 200:
             raise PhysicalDiagnosticError(
                 f"completion HTTP status {response.status}")
@@ -1380,8 +1579,16 @@ def _observe_arm_identity() -> dict[str, Any]:
 
 def _real_execute(argv: list[str], env: dict[str, str],
                   request: dict[str, Any], prompt: str, port: int,
-                  unit_dir: Path) -> dict[str, Any]:
-    """Launch one fresh server process; issue one completion; tear down."""
+                  unit_dir: Path,
+                  timeout_budget: dict[str, Any] | None = None,
+                  ) -> dict[str, Any]:
+    """Launch one fresh server process; issue one completion; tear down.
+
+    CORRECTION PASS 6 (AMENDMENT-003): production callers pass the
+    unit's frozen ``timeout_budget``; the completion deadline is
+    budget["budget_s"]. The budget dict is mirrored into the result
+    so the unit receipt retains the exact policy (invariant D).
+    """
     samples = [_device_sample() | {"stage": "before"}]
     full_env = {**os.environ, **env}
     log_path = unit_dir / "server.log"
@@ -1409,7 +1616,13 @@ def _real_execute(argv: list[str], env: dict[str, str],
             thread = threading.Thread(target=sample_loop, daemon=True)
             thread.start()
             try:
-                raw, response = _http_completion(port, request, prompt)
+                if timeout_budget is None:
+                    raise PhysicalDiagnosticError(
+                        "_real_execute requires the unit's frozen "
+                        "timeout budget (AMENDMENT-003)")
+                raw, response = _http_completion(
+                    port, request, prompt,
+                    timeout_s=timeout_budget["budget_s"])
             finally:
                 stop.set()
                 thread.join(timeout=2)
@@ -1420,6 +1633,7 @@ def _real_execute(argv: list[str], env: dict[str, str],
             tokens = response.get("tokens", response.get("tokens_predicted"))
             return {"returncode": proc.poll(),
                     "tokens": tokens, "response_raw": raw,
+                    "timeout_budget": timeout_budget,
                     "process_attribution": attribution,
                     "device_samples": samples}
         finally:
@@ -1470,8 +1684,12 @@ def run_diagnostic_unit(
     the real implementations. There is NO authority parameter.
     """
     repo_root = Path(repo_root).resolve(strict=True)
-    # Namespace<->arm exact binding (blocker 5) FIRST.
-    D.validate_namespace_arm_binding(namespace, arm)
+    # Namespace<->arm exact binding (blocker 5) FIRST. AMENDMENT-003:
+    # the dedicated d250-arm-c2 <-> C2-serial pairing is validated by
+    # its own gate (c2_launch_allowed) instead of the auto-reachable
+    # binding map — no generic dispatch can ever reach it.
+    if not (namespace == D.C2_SERIAL_NAMESPACE and arm == D.ARM_C2_NAME):
+        D.validate_namespace_arm_binding(namespace, arm)
     plan = D.probe_list_for(arm)
     tags = [u["tag"] for u in plan]
     if tag not in tags:
@@ -1489,6 +1707,10 @@ def run_diagnostic_unit(
         raise PhysicalDiagnosticError(
             "live dispatch arm does not match the executing arm")
     D._require_clean_head(repo_root, expected_head)
+    # CORRECTION PASS 6: canonical execution writes ONLY the fresh
+    # evidence generation (the v1 defect tree is rejected outright).
+    canonical_generation = validate_evidence_generation(
+        Path(evidence_root))
     fixtures = verify_fixtures(repo_root)
     binary_sha = verify_binary(Path(binary), binary_id)
     attestation = validate_model_attestation(model_attestation,
@@ -1557,9 +1779,36 @@ def run_diagnostic_unit(
         request_contract if request_contract is not None
         else D.REQUEST_CONTRACT)
 
+    if TB.unit_condition(unit) == "arm-c2-serial":
+        # DEDICATED C2 GATE (AMENDMENT-003): the retained C1-varied
+        # record + the explicit-gate dispatch must BOTH bind before
+        # the serial unit is marked launchable.
+        c2_launch_allowed(namespace, arm, authority_early,
+                          expected_head, Path(evidence_root))
+        unit = c2_unit(unit)
     out_prefix = unit_dir / "obs"
     env = launch_env(out_prefix)
     argv = server_argv(Path(binary), launch_member, unit)
+    # TIMEOUT-BUDGET AUTHORITY (AMENDMENT-003): the frozen per-unit
+    # budget, derived from the retained planning basis BEFORE launch.
+    # C2-serial units are refused by the budget law unless the
+    # dedicated d250-arm-c2 gate already fired (c2_launch_allowed).
+    expected_prompt_tokens = (
+        len(prompt_token_ids) if prompt_token_ids is not None
+        else TB.DEFAULT_PROMPT_TOKENS)
+    timeout_budget = TB.request_timeout_budget(
+        unit, prompt_tokens=expected_prompt_tokens,
+        c2_serial_gate_authorized=(
+            TB.unit_condition(unit) == "arm-c2-serial"))
+    timeout_budget["timeout_policy_sha256"] = TB.timeout_budget_digest(
+        timeout_budget)
+    TB.verify_timeout_budget_block(
+        timeout_budget, unit, prompt_tokens=expected_prompt_tokens)
+    if timeout_budget["condition"] == "arm-c2-serial" and not unit.get(
+            "c2_serial_authorized"):
+        raise PhysicalDiagnosticError(
+            "serial C2 unit reached the launch path without the "
+            "d250-arm-c2 gate (AMENDMENT-003)")
 
     # FINAL GOVERNANCE GATE: second live fetch bound to the first;
     # remote drift between preflight and launch => zero runner calls.
@@ -1577,7 +1826,8 @@ def run_diagnostic_unit(
     started = time.monotonic()
     runner = execute or _real_execute
     result = runner(argv=argv, env=env, request=request,
-                    prompt=prompt, port=PORT, unit_dir=unit_dir)
+                    prompt=prompt, port=PORT, unit_dir=unit_dir,
+                    timeout_budget=timeout_budget)
     wall = time.monotonic() - started
     unit_ended_at = _utcnow()
 
@@ -1592,7 +1842,8 @@ def run_diagnostic_unit(
         problems_pre=problems_pre, final_authority=final_authority,
         unit_started_at=unit_started_at, unit_ended_at=unit_ended_at,
         wall=wall, health_runner=health_runner,
-        token_authority=token_authority)
+        token_authority=token_authority,
+        canonical_generation=canonical_generation)
 
 
 def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
@@ -1603,7 +1854,9 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
                            final_authority, unit_started_at, unit_ended_at,
                            wall, health_runner,
                            same_process_block=None,
-                           token_authority=None) -> dict[str, Any]:
+                           token_authority=None,
+                           canonical_generation=EVIDENCE_GENERATION,
+                           ) -> dict[str, Any]:
     """Post-execution custody: identity postcheck, rows, health, receipt."""
     identity_post = (identity_observer or _observe_arm_identity)()
     problems_post = I.identity_problems(ARM, identity_post)
@@ -1679,6 +1932,11 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
         "identity_problems_post": problems_post,
         "subject_identity_schema": I.IDENTITY_SCHEMA,
         "authority": unit_authority_block(final_authority),
+        # CORRECTION PASS 6 (AMENDMENT-003): receipts identify the
+        # evidence generation and retain the exact timeout policy that
+        # governed the request (budget + derivation inputs + digest).
+        "evidence_generation": canonical_generation,
+        "timeout_policy": result.get("timeout_budget"),
         "wall_time_s": wall,
     }
     meta_path = unit_dir / "obs.meta.json"
@@ -1975,7 +2233,18 @@ def run_same_process_lifecycle(
             "live dispatch arm does not match the executing arm")
     generation_anchor = dict(authority_early)
     D._require_clean_head(repo_root, expected_head)
+    # CORRECTION PASS 6: same-process Arm-B requests are CPU-only
+    # prefills too — the lifecycle runs under the SAME frozen
+    # timeout-budget authority and writes ONLY the canonical
+    # generation.
+    canonical_generation = validate_evidence_generation(
+        Path(evidence_root))
     fixtures = verify_fixtures(repo_root)
+    lifecycle_budget = TB.request_timeout_budget(
+        same_units[0],
+        prompt_tokens=len(fixtures[D.CASE]["prompt_token_ids"]))
+    lifecycle_budget["timeout_policy_sha256"] = TB.timeout_budget_digest(
+        lifecycle_budget)
     binary_sha = verify_binary(Path(binary), binary_id)
     attestation = validate_model_attestation(model_attestation,
                                              expected_head)
@@ -2042,7 +2311,8 @@ def run_same_process_lifecycle(
                     port=PORT, unit_dir=lifecycle_dir,
                     repeats=D.DETERM_MIN_REPEATS,
                     expected_prompt_tokens=expected_prompt_tokens,
-                    preflight_request=_request_gate)
+                    preflight_request=_request_gate,
+                    timeout_s=lifecycle_budget["budget_s"])
     wall = time.monotonic() - started
     ended_at = _utcnow()
 
@@ -2262,6 +2532,9 @@ def run_same_process_lifecycle(
             "identity_problems_post": problems_post,
             "subject_identity_schema": I.IDENTITY_SCHEMA,
             "authority": record["_authority"],
+            # CORRECTION PASS 6: generation + timeout policy binding.
+            "evidence_generation": canonical_generation,
+            "timeout_policy": lifecycle_budget,
             "wall_time_s": wall,
             "same_process": {
                 "lifecycle_schema": LIFECYCLE_SCHEMA,
@@ -2309,6 +2582,8 @@ def run_same_process_lifecycle(
                                   for r in request_records],
         "per_request_authorities": [r["_authority"]
                                     for r in request_records],
+        "evidence_generation": canonical_generation,
+        "timeout_policy": lifecycle_budget,
         "platform_health": health_receipt,
         "identity_problems_pre": problems_pre,
         "identity_problems_post": problems_post,
@@ -2334,6 +2609,7 @@ def _real_same_process_execute(
         prompt: str, port: int, unit_dir: Path, repeats: int,
         expected_prompt_tokens: int,
         preflight_request: Callable[[int], None] | None = None,
+        timeout_s: float | None = None,
         ) -> dict[str, Any]:
     """ONE server launch; ``repeats`` sequential requests; teardown.
 
@@ -2342,6 +2618,10 @@ def _real_same_process_execute(
     authority revalidation seam. A gate failure raises before the HTTP
     completion is issued; the server is torn down and no later request
     executes (fail-closed mid-lifecycle stop).
+
+    CORRECTION PASS 6 (AMENDMENT-003): every completion runs under the
+    lifecycle's frozen timeout budget (``timeout_s``); production
+    callers must pass it (None fails closed).
     """
     samples = [_device_sample() | {"stage": "before"}]
     full_env = {**os.environ, **env}
@@ -2389,7 +2669,13 @@ def _real_same_process_execute(
                                 f"request {index}: {exc}")
                             break
                     offset_before = log_path.stat().st_size
-                    raw, response = _http_completion(port, request, prompt)
+                    if timeout_s is None:
+                        raise PhysicalDiagnosticError(
+                            "same-process completion refuses an unbounded "
+                            "request: the lifecycle timeout budget is "
+                            "required (AMENDMENT-003)")
+                    raw, response = _http_completion(
+                        port, request, prompt, timeout_s=timeout_s)
                     time.sleep(0.2)  # let the slot log flush
                     with log_path.open("rb") as stream:
                         stream.seek(offset_before)

@@ -45,6 +45,7 @@ for _dep in ("issue248_diagnostic", "issue248_health",
              "issue248_identity"):
     _load(_dep, f"scripts/{_dep}.py")
 D = _load("issue250_diagnostic", "scripts/issue250_diagnostic.py")
+TB = _load("issue250_timeout", "scripts/issue250_timeout.py")
 P = _load("issue250_physical", "scripts/issue250_physical.py")
 T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 
@@ -53,13 +54,17 @@ TOKENS = [328, 760, 324, 55965, 51624, 29014, 34227, 18030]
 PROMPT_TOKENS = 3077
 
 
-def make_authority(namespace, arm, head=HEAD, comment_id=1):
-    body = "\n".join([
+def make_authority(namespace, arm, head=HEAD, comment_id=1,
+                   extra_line=None):
+    lines = [
         D.DIAGNOSTIC_DISPATCH_PHRASE,
         f"head={head}",
         f"diagnostic-namespace={namespace}",
         f"arm={arm}",
-    ])
+    ]
+    if extra_line:
+        lines.append(extra_line)
+    body = "\n".join(lines)
     return {
         "comment_id": comment_id,
         "issue_url": f"https://api.github.com/repos/Zutfen-LLC/"
@@ -177,7 +182,8 @@ class CampaignFixture:
 
     def __init__(self, test, *, arm_a_rows="vary", arm_b_fresh="vary",
                  arm_b_same="deterministic", arm_c_default="vary",
-                 arm_c_serial="deterministic", arm_d_rows=None,
+                 arm_c_serial="deterministic", arm_c2_gate=False,
+                 arm_d_rows=None,
                  arm_d_progress=None, arm_d_confirm_lengths=None,
                  arm_d_confirm_mismatch_at=None,
                  arm_d_token_counts=None):
@@ -240,6 +246,9 @@ class CampaignFixture:
         self._build_arm_a(arm_a_rows)
         self._build_arm_b(arm_b_fresh, arm_b_same)
         self._build_arm_c(arm_c_default, arm_c_serial)
+        if arm_c2_gate:
+            self._write_c2_gate_record()
+            self._build_arm_c2(arm_c_serial)
         if arm_d_rows is not None:
             # retained tokenizer authority precedes Arm-D execution
             # (correction pass 3, blocker 4A)
@@ -315,8 +324,9 @@ class CampaignFixture:
         D.MODEL_DIR = self.saved_model_dir
 
     # ---------------- authority ----------------
-    def authority_fn(self, namespace, arm):
-        base = make_authority(namespace, arm, head=self.head)
+    def authority_fn(self, namespace, arm, extra_line=None):
+        base = make_authority(namespace, arm, head=self.head,
+                              extra_line=extra_line)
 
         def fetch(repo_root, expected_head, ns, github_api=None):
             if ns != namespace:
@@ -337,8 +347,13 @@ class CampaignFixture:
         for ns, arm in (("d250-arm-a", "A-vulkan-necessity"),
                         ("d250-arm-b", "B-process-init"),
                         ("d250-arm-c", "C-cpu-threads"),
+                        ("d250-arm-c1", "C1-reduced-parallelism"),
+                        (D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME),
                         ("d250-arm-d", "D-context-transition")):
-            base = make_authority(ns, arm, head=self.head)
+            base = make_authority(
+                ns, arm, head=self.head,
+                extra_line=(D.C2_GATE_REQUIRED_LINE
+                            if ns == D.C2_SERIAL_NAMESPACE else None))
             if ns in self.authorities:
                 base = self.authorities[ns]
             by_ns[ns] = base
@@ -359,7 +374,8 @@ class CampaignFixture:
 
     def fake_execute(self, seed_key, progress_lines=None,
                      prompt_tokens=None):
-        def execute(argv, env, request, prompt, port, unit_dir):
+        def execute(argv, env, request, prompt, port, unit_dir,
+                timeout_budget=None):
             self._write_rows(unit_dir, seed_key)
             # the retained log must carry the ACTUAL token count from
             # the retained tokenizer authority (blocker 4A) plus the
@@ -383,7 +399,7 @@ class CampaignFixture:
                 "process_attribution": {
                     "server_pid": 4000 + abs(hash(seed_key)) % 100,
                     "server_exe_sha256": D.SERVER_BINARIES["comparator"],
-                    "server_argv": list(argv), "server_env": dict(env)},
+                    "server_argv": list(argv), "server_env": dict(env)},                "timeout_budget": timeout_budget,
                 "device_samples": [
                     {"stage": s, "captured_at": now,
                      "nvidia_smi_raw":
@@ -404,7 +420,11 @@ class CampaignFixture:
             execute=self.fake_execute(seed_key, progress_lines,
                                       prompt_tokens),
             identity_observer=lambda: raw_identity(),
-            revalidate_authority=self.authority_fn(namespace, arm),
+            revalidate_authority=self.authority_fn(
+                namespace, arm,
+                extra_line=(D.C2_GATE_REQUIRED_LINE
+                            if namespace == D.C2_SERIAL_NAMESPACE
+                            else None)),
             health_runner=health_runner)
 
     def _build_arm_a(self, mode):
@@ -453,7 +473,7 @@ class CampaignFixture:
     def _fake_same_process(self, mode):
         def execute(argv, env, request, prompt, port, unit_dir,
                     repeats, expected_prompt_tokens,
-                    preflight_request=None):
+                    preflight_request=None, timeout_s=None):
             import hashlib
             records = []
             now = utcnow()
@@ -536,32 +556,87 @@ class CampaignFixture:
             }
         return execute
 
-    def _build_arm_c(self, default_mode, serial_mode):
-        plan = D.probe_list_for("C-cpu-threads")
+    def _build_arm_c(self, default_mode, c1_mode):
+        """AMENDMENT-003 shape: d250-arm-c default reproduction pair
+        (2 units) + the d250-arm-c1 bounded reduced-parallelism probe
+        (5 units, early stop). ``serial_mode`` now drives C1; the
+        gated serial C2 population is NOT built by this fixture."""
         default_vary_count = 0
-        serial_vary_count = 0
-        for i, spec in enumerate(plan):
-            serial = "thr1" in spec["tag"]
-            mode = serial_mode if serial else default_mode
+        c1_vary_count = 0
+        for i, spec in enumerate(D.probe_list_for("C-cpu-threads")):
+            mode = default_mode
             if mode == "vary":
-                if serial:
-                    serial_vary_count += 1
-                    if serial_vary_count > 2:
-                        break  # early-stop after the mismatch unit
-                else:
-                    default_vary_count += 1
-                    if default_vary_count > 2:
-                        break
-            seed_key = (
-                f"armC-{'serial' if serial else 'default'}-varying-{i}"
-                if mode == "vary"
-                else f"armC-{'serial' if serial else 'default'}-fixed")
-            if mode == "vary" and i == 0 and not serial:
+                default_vary_count += 1
+                if default_vary_count > 2:
+                    break
+            seed_key = (f"armC-default-varying-{i}"
+                        if mode == "vary" else "armC-default-fixed")
+            if mode == "vary" and i == 0:
                 seed_key = "armC-default-baseline"
-            if mode == "vary" and serial and serial_vary_count == 1:
-                seed_key = "armC-serial-baseline"
             self._run_unit(
                 "d250-arm-c", "C-cpu-threads", spec["tag"], seed_key)
+        c1_plan = D.probe_list_for("C1-reduced-parallelism")
+        for i, spec in enumerate(c1_plan):
+            mode = c1_mode
+            if mode == "vary":
+                c1_vary_count += 1
+                if c1_vary_count > 2:
+                    break  # early-stop after the mismatch unit
+            seed_key = (f"armC1-varying-{i}"
+                        if mode == "vary" else "armC1-fixed")
+            if mode == "vary" and i == 0:
+                seed_key = "armC1-baseline"
+            self._run_unit(
+                "d250-arm-c1", "C1-reduced-parallelism",
+                spec["tag"], seed_key)
+
+    def _c1_c2_authorities(self):
+        by_ns = {}
+        for ns, arm in (("d250-arm-c1", "C1-reduced-parallelism"),
+                        (D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME)):
+            base = make_authority(
+                ns, arm, head=self.head,
+                extra_line=(D.C2_GATE_REQUIRED_LINE
+                            if ns == D.C2_SERIAL_NAMESPACE else None))
+            if ns in self.authorities:
+                base = self.authorities[ns]
+            by_ns[ns] = base
+        return by_ns
+
+    def _write_c2_gate_record(self):
+        """Frozen c1-varied gate record binding BOTH the C1 and C2
+        authority digests (written BEFORE the C2 units execute — the
+        dispatch authority itself demands the closed gate)."""
+        by_ns = self._c1_c2_authorities()
+        gate = {
+            "schema": D.C2_GATE_RECORD_SCHEMA,
+            "head_sha": self.head,
+            "c1_completed_variable": True,
+            "c1_authority_sha256": D.authority_digest(
+                by_ns["d250-arm-c1"]),
+            "c2_authority_sha256": D.authority_digest(
+                by_ns[D.C2_SERIAL_NAMESPACE]),
+        }
+        (self.evidence / D.C2_GATE_RECORD_NAME).write_text(
+            json.dumps(gate, indent=2, sort_keys=True) + "\n")
+
+    def _build_arm_c2(self, c1_mode):
+        """Gated serial C2 population. Only meaningful when C1 also
+        varied (a deterministic C1 localizes before serial work)."""
+        if c1_mode != "vary":
+            raise ValueError("C2 gate only makes sense when C1 varied")
+        for i, spec in enumerate(D.probe_list_for(D.ARM_C2_NAME)):
+            # HONEST PRODUCER SHAPE (frozen early-stop law): in "vary"
+            # mode the first mismatch answers at unit 002 — units
+            # 003..005 are never run.
+            if c1_mode == "vary" and i >= 2:
+                break
+            seed_key = (f"armC2-varying-{i}" if c1_mode == "vary"
+                        else "armC2-fixed")
+            if c1_mode == "vary" and i == 0:
+                seed_key = "armC2-baseline"
+            self._run_unit(D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME,
+                           spec["tag"], seed_key)
 
     def _build_arm_d(self, rows_mode, progress):
         """rows_mode: None (no arm D) | dict length->'det'/'var'.
@@ -728,7 +803,8 @@ class TerminalMatrixTests(unittest.TestCase):
     def test_a_localizes(self):
         f = self._fixture(arm_a_rows="det", arm_b_fresh=None or "vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=None)
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=None)
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
         self.assertIn("backend-participation",
@@ -772,7 +848,8 @@ class TerminalMatrixTests(unittest.TestCase):
         }
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress,
                           arm_d_confirm_lengths=set())
         out = f.derive()
@@ -791,7 +868,8 @@ class TerminalMatrixTests(unittest.TestCase):
             "prompt processing, n_tokens = 1024"] for length in ladder}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress)
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
@@ -811,7 +889,8 @@ class TerminalMatrixTests(unittest.TestCase):
             "prompt processing, n_tokens = 1024"] for length in ladder}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress,
                           arm_d_confirm_lengths=set())
         out = f.derive()
@@ -833,7 +912,8 @@ class TerminalMatrixTests(unittest.TestCase):
             "prompt processing, n_tokens = 1024"] for length in ladder}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress,
                           arm_d_confirm_mismatch_at=1536)
         out = f.derive()
@@ -853,8 +933,12 @@ class TerminalMatrixTests(unittest.TestCase):
                           arm_c_serial="deterministic")
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
-        self.assertIn("CPU parallel execution/order",
+        # AMENDMENT-003: C1 localization names the EXACT regimes and
+        # never claims single-thread coverage.
+        self.assertIn("CPU thread-regime / parallelism boundary",
                       out["basis"]["localized_factor"])
+        self.assertIn("-t 4 -tb 4", out["basis"]["localized_factor"])
+        self.assertIs(out["basis"]["single_thread_tested"], False)
 
     def test_a_to_b_to_c_to_d_old_midstream_shape_cannot_localize(self):
         # CORRECTION PASS 4 (NO-GO 5851078451, blocker 3) FLIPPED
@@ -894,7 +978,8 @@ class TerminalMatrixTests(unittest.TestCase):
         }
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress)
         out = f.derive()
         self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
@@ -911,7 +996,8 @@ class TerminalMatrixTests(unittest.TestCase):
             "prompt processing, n_tokens = 1024"] for length in ladder}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress)
         out = f.derive()
         self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
@@ -983,7 +1069,8 @@ class TerminalMatrixTests(unittest.TestCase):
         ladder = {length: "var" for length in D.ARM_D_LADDER_LENGTHS}
         f = self._fixture(arm_a_rows="det", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder)
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder)
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED)
         self.assertIn("backend-participation",
@@ -1295,7 +1382,8 @@ class TransitionPredicateTests(unittest.TestCase):
         ] for length in ladder}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=progress)
         out = f.derive()
         self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
@@ -1321,6 +1409,7 @@ class TransitionPredicateTests(unittest.TestCase):
         self.assertEqual(
             sorted(T.LOCALIZED_FACTORS),
             ["A-vulkan-necessity", "B-process-init", "C-cpu-threads",
+             "C1-reduced-parallelism", "C2-serial",
              "D-context-transition"])
 
 
@@ -1438,7 +1527,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
         counts = {2048: 2051}  # only the first variable length moves
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress(),
                           arm_d_token_counts=counts)
         out = f.derive()
@@ -1455,7 +1545,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
         counts = {2048: 2051}  # last deterministic length at the max
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress(),
                           arm_d_token_counts=counts)
         out = f.derive()
@@ -1474,7 +1565,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
                   2560: "var", 3072: "var"}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress())
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
@@ -1494,7 +1586,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
         counts = {2048: 2051, 2304: 2049, 2560: 2050, 3072: 2051}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress(),
                           arm_d_token_counts=counts)
         out = f.derive()
@@ -1511,7 +1604,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
                   2560: 2070, 3072: 3077}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress(),
                           arm_d_token_counts=counts)
         out = f.derive()
@@ -1528,7 +1622,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
                   2560: "var", 3072: "var"}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress())
         out = f.derive()
         self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
@@ -1547,7 +1642,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
         counts = {2048: 2052}  # nominal 2048, ACTUAL 2052: selective
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress(),
                           arm_d_token_counts=counts)
         out = f.derive()
@@ -1567,7 +1663,8 @@ class IndexerBoundaryEqualityTests(unittest.TestCase):
                   2560: "var", 3072: "var"}
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
-                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_c_serial="vary",
+                          arm_c2_gate=True, arm_d_rows=ladder,
                           arm_d_progress=self._ladder_progress())
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))

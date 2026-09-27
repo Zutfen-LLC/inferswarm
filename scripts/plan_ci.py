@@ -217,6 +217,10 @@ GROUP_TEST_MODULES = {
         "test_issue250_diagnostic",
         "test_issue250_physical",
         "test_issue250_terminal",
+        # Correction pass 6 (AMENDMENT-003): timeout-budget authority,
+        # cost gate, C1/C2 authority separation, evidence generation,
+        # stale-dispatch regressions.
+        "test_issue250_pass6_corrections",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -641,9 +645,12 @@ PATH_GROUPS = {
     "scripts/issue250_diagnostic.py": ["r8i-qwen-qualification"],
     "scripts/issue250_physical.py": ["r8i-qwen-qualification"],
     "scripts/issue250_terminal.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_timeout.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_diagnostic.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_physical.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_pass6_corrections.py":
+        ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
         "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":

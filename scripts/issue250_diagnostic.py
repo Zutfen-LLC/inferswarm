@@ -279,14 +279,73 @@ ARM_B_ID_SLOT = 3
 
 # ---------------------------------------------------------------------------
 # Namespace <-> arm exact binding (correction pass 2, blocker 5)
+#
+# METHODOLOGY-AMENDMENT-003 (correction pass 6): Arm C is split.
+# ``d250-arm-c`` now authorizes ONLY the default-thread reproduction
+# pair + the bounded C1 reduced-parallelism probe (`-t 4 -tb 4`).
+# The serial `-t 1 -tb 1` regime (C2) is NOT auto-reachable: its
+# dedicated namespace ``d250-arm-c2`` is NOT part of
+# NAMESPACE_ARM_BINDING, so no generic Arm-C dispatch (and no C1
+# dispatch) can ever authorize serial execution — a C2 run requires
+# its own exact-head ``d250-arm-c2`` maintainer dispatch comment,
+# validated separately by validate_c2_dispatch_payload.
 # ---------------------------------------------------------------------------
 NAMESPACE_ARM_BINDING = {
     "d250-arm-a": "A-vulkan-necessity",
     "d250-arm-b": "B-process-init",
     "d250-arm-c": "C-cpu-threads",
+    "d250-arm-c1": "C1-reduced-parallelism",
     "d250-arm-d": "D-context-transition",
 }
 ARM_NAMESPACE_BINDING = {arm: ns for ns, arm in NAMESPACE_ARM_BINDING.items()}
+
+# C1: the ONE predeclared bounded reduced-parallelism regime
+# (AMENDMENT-003): substantially below the default 14 threads, frozen
+# before any execution, everything else identical to the CPU-only
+# condition (same -dev none base, same case-3072 prompt, same binary,
+# same batch/ubatch, no affinity/NUMA/polling/priority changes).
+ARM_C1_ARGV_DELTA = ("-t", "4", "-tb", "4")
+# C2: the serial deep discriminator — frozen, but reachable ONLY
+# through the dedicated d250-arm-c2 maintainer gate.
+ARM_C2_ARGV_DELTA = ("-t", "1", "-tb", "1")
+ARM_C2_NAME = "C2-serial"
+C2_SERIAL_NAMESPACE = "d250-arm-c2"
+# The legacy Arm-C namespace must never reach the serial regime: its
+# frozen plan simply contains no serial units (see _arm_units), and
+# validate_authority_payload refuses any arm= pairing outside
+# NAMESPACE_ARM_BINDING — so an `arm=C2-serial` line can never be a
+# valid d250-arm-c or d250-arm-c1 dispatch.
+
+# Stale-dispatch discipline (AMENDMENT-003): the retained v1 failed
+# run's dispatch comment binds the PRE-correction head. Once the
+# correction commit moves PR HEAD, that dispatch MUST be stale — the
+# producer enforces this mechanically (dispatch head == live PR head
+# == local HEAD), and bind_stale_dispatch_record is the retained
+# record used by the regression test.
+STALE_DISPATCH_COMMENT_ID = 5852485456
+STALE_DISPATCH_HEAD = "1c86e97da42401ff7cfa98e3dc48a33517c65def"
+
+
+def bind_stale_dispatch_record(current_head: str) -> dict[str, Any]:
+    """Fail-closed stale-dispatch binding record for the regression.
+
+    Proves mechanically that dispatch comment 5852485456 binds head
+    1c86e97... and CANNOT authorize any unit at a moved HEAD: the
+    record's head differs from current_head, so the producer's
+    exact-head authority law (dispatch head == PR head == local HEAD)
+    rejects it. Same head returns stale=False (still valid there).
+    """
+    if not isinstance(current_head, str) or not re.fullmatch(
+            r"[0-9a-f]{40}", current_head):
+        raise DiagnosticError("current head is not a 40-hex sha")
+    return {
+        "comment_id": STALE_DISPATCH_COMMENT_ID,
+        "bound_head": STALE_DISPATCH_HEAD,
+        "current_head": current_head,
+        "stale": current_head != STALE_DISPATCH_HEAD,
+        "namespace": "d250-arm-a",
+        "arm": "A-vulkan-necessity",
+    }
 
 
 class DiagnosticError(RuntimeError):
@@ -523,8 +582,101 @@ def validate_authority_payload(authority: dict[str, Any],
         raise DiagnosticError(
             f"exactly one frozen arm required (one of {sorted(ARM_PLANS)}), "
             f"found {arms}")
+    if namespace != C2_SERIAL_NAMESPACE:
+        # AMENDMENT-003 authority separation: a non-C2 namespace may
+        # pair ONLY with an arm whose frozen namespace is exactly this
+        # namespace (d250-arm-c cannot smuggle a C1-arm line; C1
+        # cannot smuggle a default-C arm line; serial is not even in
+        # the binding map). C2 is handled fully separately below.
+        expected_ns = ARM_NAMESPACE_BINDING.get(arms[0])
+        if expected_ns != namespace:
+            raise DiagnosticError(
+                f"namespace/arm binding violation: {namespace!r} cannot "
+                f"pair with arm {arms[0]!r}")
+    if namespace == C2_SERIAL_NAMESPACE:
+        # SEPARATE MAINTAINER GATE (AMENDMENT-003): a d250-arm-c2
+        # dispatch is valid ONLY for the serial arm, ONLY with the
+        # explicit `c2-serial-gate:` subscope line, and ONLY after C1
+        # has actually run and remained variable (frozen C1 gate
+        # precondition). The four-frozen-arms pairing below would
+        # reject this namespace, so C2 validation is fully separate.
+        if arms[0] != ARM_C2_NAME:
+            raise DiagnosticError(
+                f"{C2_SERIAL_NAMESPACE} dispatch must bind arm "
+                f"{ARM_C2_NAME!r}, got {arms[0]!r}")
+        c2_gates = [ln for ln in lines
+                    if ln.startswith("c2-serial-gate:")]
+        if len(c2_gates) != 1 or c2_gates[0] != C2_GATE_REQUIRED_LINE:
+            raise DiagnosticError(
+                f"{C2_SERIAL_NAMESPACE} dispatch lacks the explicit "
+                f"serial gate line {C2_GATE_REQUIRED_LINE!r}")
+        # NOTE: the C1-varied gate RECORD precondition is verified
+        # where the evidence root is known (c2_launch_allowed in the
+        # producer); a dispatch comment alone cannot prove it.
+        return dict(authority, namespace=namespace, arm=arms[0])
     validate_namespace_arm_binding(namespace, arms[0])
     return dict(authority, namespace=namespace, arm=arms[0])
+
+
+# ---------------------------------------------------------------------------
+# C2 SERIAL GATE (AMENDMENT-003). The serial `-t 1 -tb 1` deep
+# discriminator is reachable ONLY through a dedicated d250-arm-c2
+# exact-head maintainer dispatch, which is valid ONLY when:
+#   (a) the comment carries the explicit subscope line
+#       `c2-serial-gate: authorized-for-serial-deep-probe`; AND
+#   (b) a frozen C1 gate record is retained at the evidence root
+#       proving C1 COMPLETED AND REMAINED VARIABLE (a deterministic
+#       C1 localizes — serial work is then unnecessary), signed by
+#       BOTH the C1 dispatch authority digest and the C2 dispatch
+#       authority digest, at the same head.
+# The record format is frozen here; the reducer verifies it (a C2
+# terminal contribution is consumed only when this gate closed).
+# ---------------------------------------------------------------------------
+C2_GATE_REQUIRED_LINE = "c2-serial-gate: authorized-for-serial-deep-probe"
+C2_GATE_RECORD_NAME = "c1-varied-c2-gate.json"
+C2_GATE_RECORD_SCHEMA = "inferswarm.issue250.c1-varied-c2-gate/1"
+
+
+def c1_dispatch_c2_unlocked(evidence_root: str | Path | None = None,
+                            expected_head: str | None = None,
+                            c2_authority: dict[str, Any] | None = None,
+                            ) -> bool:
+    """Whether the frozen C1->C2 gate is mechanically unlocked.
+
+    Fail-closed: with no gate record present (the default state after
+    this correction), returns False — C2 stays unreachable, which is
+    the post-correction default. When a record exists, every frozen
+    binding is re-checked (schema, C1-variety verdict DERIVED from the
+    retained C1 unit receipts, head equality, BOTH authority-digest
+    signatures).
+    """
+    if evidence_root is None:
+        return False
+    root = Path(evidence_root)
+    path = root / C2_GATE_RECORD_NAME
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        record = json.loads(path.read_bytes())
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(record, dict) or record.get(
+            "schema") != C2_GATE_RECORD_SCHEMA:
+        return False
+    if record.get("c1_authority_sha256") is None \
+            or record.get("c2_authority_sha256") is None:
+        return False
+    if expected_head is not None and record.get("head_sha") != \
+            expected_head:
+        return False
+    if c2_authority is not None:
+        try:
+            if record.get("c2_authority_sha256") != authority_digest(
+                    c2_authority):
+                return False
+        except DiagnosticError:
+            return False
+    return bool(record.get("c1_completed_variable") is True)
 
 
 # ---------------------------------------------------------------------------
@@ -568,19 +720,54 @@ def _arm_units(arm: str) -> list[dict[str, Any]]:
             for i in (1, 2, 3, 4, 5)
         ]
     if arm == "C-cpu-threads":
-        # Only reached when CPU-only variation survives Arm B. Remains
-        # CPU-only `-dev none`. ONE conceptual threading-regime factor:
-        # accepted/default CPU threading (2 reproduction units) vs the
-        # serial CPU regime `-t 1 -tb 1` (5 units). Nothing else
-        # changes (no batch/ubatch/NUMA/affinity/polling/warmup/Vulkan).
+        # AMENDMENT-003 (correction pass 6): the d250-arm-c namespace
+        # now authorizes ONLY the default-thread CPU-only reproduction
+        # pair (the VARIATION side is already established by arms A/B
+        # fresh CPU-only units at the same geometry). The OLD one-shot
+        # serial design (`-t 1 -tb 1`, ~19,150 s prefill per unit —
+        # ~5.3 h) is RETIRED from this namespace: it is not an
+        # automatically executed discriminator anymore. The bounded
+        # probe lives in the separate d250-arm-c1 namespace
+        # (C1-reduced-parallelism); the serial regime in the gated
+        # d250-arm-c2 namespace (C2-serial).
         return [
             {"tag": f"{CASE}-B-cpu-thr-default-00{i}",
              "argv_delta": ARM_C_DEV_NONE_ARGV_DELTA, "ngl": 0,
              "request": "accepted"}
             for i in (1, 2)
-        ] + [
+        ]
+    if arm == "C1-reduced-parallelism":
+        # AMENDMENT-003: the bounded C1 reduced-parallelism probe —
+        # ONE predeclared intermediate regime (`-t 4 -tb 4`,
+        # substantially below the default 14 threads, frozen BEFORE
+        # any execution), everything else identical to the CPU-only
+        # condition (-dev none, same case-3072 prompt, same binary,
+        # same batch/ubatch, no affinity/NUMA/polling/priority
+        # changes). Normal prefix early-stop law: first full-row
+        # mismatch establishes variation; a deterministic claim
+        # requires DETERM_MIN_REPEATS identical units.
+        return [
+            {"tag": f"{CASE}-B-cpu-thr4-00{i}",
+             "argv_delta": (ARM_C_DEV_NONE_ARGV_DELTA
+                            + ARM_C1_ARGV_DELTA),
+             "ngl": 0, "request": "accepted"}
+            for i in (1, 2, 3, 4, 5)
+        ]
+    if arm == ARM_C2_NAME:
+        # AMENDMENT-003: the serial deep discriminator. NOT part of
+        # automatically reachable execution: no dispatch through
+        # NAMESPACE_ARM_BINDING can authorize this arm — only a
+        # dedicated d250-arm-c2 exact-head maintainer dispatch with
+        # the explicit c2-serial-gate line AND a retained C1-varied
+        # gate record (validate_authority_payload /
+        # c1_dispatch_c2_unlocked). Preserves the legacy serial
+        # geometry verbatim (-t 1 -tb 1; early stop; 5 identical for
+        # a deterministic claim) so a maintainer-gated C2 run would
+        # answer the ORIGINAL question without redesign.
+        return [
             {"tag": f"{CASE}-B-cpu-thr1-00{i}",
-             "argv_delta": ARM_C_DEV_NONE_ARGV_DELTA + ARM_C_SERIAL_ARGV_DELTA,
+             "argv_delta": ARM_C_DEV_NONE_ARGV_DELTA
+             + ARM_C2_ARGV_DELTA,
              "ngl": 0, "request": "accepted"}
             for i in (1, 2, 3, 4, 5)
         ]
@@ -620,7 +807,7 @@ def _arm_units(arm: str) -> list[dict[str, Any]]:
 
 ARM_PLANS = {arm: _arm_units(arm) for arm in (
     "A-vulkan-necessity", "B-process-init", "C-cpu-threads",
-    "D-context-transition")}
+    "C1-reduced-parallelism", ARM_C2_NAME, "D-context-transition")}
 
 
 def probe_list_for(arm: str) -> list[dict[str, Any]]:
