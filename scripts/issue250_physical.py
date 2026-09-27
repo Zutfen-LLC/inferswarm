@@ -439,7 +439,21 @@ def _v0_retained_rows(root: Path, count: int, head: str,
                 or receipt.get("row_bytes") != D.ROW_BYTES
                 or type(receipt.get("server_pid")) is not int
                 or receipt["server_pid"] <= 0
-                or receipt.get("amd_device", {}).get("vendor_id") != "0x1002"):
+                or not isinstance(receipt.get("amd_device"), dict)
+                or receipt["amd_device"].get("vendor_id") != "0x1002"
+                or not isinstance(receipt["amd_device"].get("validated_adapter"), dict)
+                or receipt["amd_device"]["validated_adapter"].get("selector") !=
+                   f"Vulkan{receipt['amd_device'].get('index')}"
+                or receipt["amd_device"]["validated_adapter"].get(
+                    "selector_verified_from_pinned_help") is not True
+                or receipt["amd_device"]["validated_adapter"].get(
+                    "pinned_binary_sha256") != receipt.get("binary_sha256")
+                or not isinstance(receipt.get("server_argv"), list)
+                or "--device" not in receipt["server_argv"]
+                or receipt["server_argv"][
+                    receipt["server_argv"].index("--device") + 1:
+                    receipt["server_argv"].index("--device") + 2] !=
+                   [receipt["amd_device"]["validated_adapter"]["selector"]]):
             raise PhysicalDiagnosticError("V0 predecessor retained byte/custody mismatch")
         rows.append(digest)
     return rows

@@ -146,8 +146,9 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
                     or rec.get("evidence_generation") != P.EVIDENCE_GENERATION
                     or rec.get("authority_sha256") != D.authority_digest(authority)
                     or rec.get("placement_verified") is not True
-                    or rec.get("amd_device", {}).get("vendor_id") != "0x1002"
-                    or type(rec.get("amd_device", {}).get("index")) is not int
+                    or not isinstance(rec.get("amd_device"), dict)
+                    or rec["amd_device"].get("vendor_id") != "0x1002"
+                    or type(rec["amd_device"].get("index")) is not int
                     or rec.get("decision0_row_sha256") != digest
                     or rec.get("row_bytes") != D.ROW_BYTES
                     or rec.get("case_id") != D.CONTRAST_CASE
@@ -172,14 +173,20 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
             pid = rec.get("server_pid")
             argv = rec.get("server_argv")
             device = rec.get("amd_device", {})
-            if (not isinstance(argv, list) or "-ngl" not in argv
+            adapter = device.get("validated_adapter", {})
+            if (not isinstance(adapter, dict)
+                    or not isinstance(argv, list) or "-ngl" not in argv
                     or argv[argv.index("-ngl") + 1:argv.index("-ngl") + 2] != ["1"]
                     or "--model" not in argv
                     or argv[argv.index("--model") + 1:argv.index("--model") + 2]
                        != [rec["model_launch_member"]]
                     or "--device" not in argv
                     or argv[argv.index("--device") + 1:argv.index("--device") + 2]
-                       != [str(device["index"])]
+                       != [adapter.get("selector")]
+                    or adapter.get("selector") != f"Vulkan{device['index']}"
+                    or adapter.get("vulkan_device_index") != device["index"]
+                    or adapter.get("selector_verified_from_pinned_help") is not True
+                    or adapter.get("pinned_binary_sha256") != rec.get("binary_sha256")
                     or rec.get("binary_sha256") != D.SERVER_BINARIES["comparator"]
                     or type(pid) is not int or pid <= 0 or pid in pids):
                 raise ValueError("V0 process/AMD placement attribution unproven")

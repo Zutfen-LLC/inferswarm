@@ -327,7 +327,12 @@ class CampaignFixture:
                 "evidence_generation": P.EVIDENCE_GENERATION,
                 "authority_sha256": D.authority_digest(self.v0_authority),
                 "placement_verified": True,
-                "amd_device": {"index": 0, "vendor_id": "0x1002"},
+                "amd_device": {"index": 0, "vendor_id": "0x1002",
+                               "validated_adapter": {
+                                   "selector": "Vulkan0",
+                                   "vulkan_device_index": 0,
+                                   "selector_verified_from_pinned_help": True,
+                                   "pinned_binary_sha256": D.SERVER_BINARIES["comparator"]}},
                 "decision0_row_sha256": hashlib.sha256(row).hexdigest(),
                 "row_bytes": D.ROW_BYTES, "case_id": D.CONTRAST_CASE,
                 "ngl": 1, "backend": "Vulkan",
@@ -346,7 +351,7 @@ class CampaignFixture:
                 "binary_sha256": D.SERVER_BINARIES["comparator"],
                 "server_argv": [str(self.bin), "--model",
                                 str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
-                                "-ngl", "1", "--device", "0"],
+                                "-ngl", "1", "--device", "Vulkan0"],
             }
             (unit / "unit.json").write_text(json.dumps(receipt))
 
@@ -912,6 +917,11 @@ class V0EvidenceBridgeTests(unittest.TestCase):
                            ("embedding_placement", "Vulkan"),
                            ("output_projection_placement", "CPU"),
                            ("placement_verified", False),
+                           ("amd_device", {**original["amd_device"],
+                                           "validated_adapter": {
+                                               **original["amd_device"]["validated_adapter"],
+                                               "selector": "Vulkan1"}}),
+                           ("server_argv", original["server_argv"][:-1] + ["Vulkan1"]),
                            ("head_sha", "a" * 40),
                            ("authority_sha256", "0" * 64)):
             receipt_path.write_text(json.dumps({**original, key: wrong}))
