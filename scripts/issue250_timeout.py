@@ -67,6 +67,7 @@ physical execution performed by this correction):
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from typing import Any
@@ -75,6 +76,7 @@ import issue250_diagnostic as D
 
 SCHEMA = "inferswarm.issue250.timeout-budget/1"
 COST_RECORD_SCHEMA = "inferswarm.issue250.cost-planning-record/1"
+COST_EVIDENCE_GENERATION = "gen-2-pass6"
 
 
 class TimeoutBudgetError(D.DiagnosticError):
@@ -336,6 +338,16 @@ def cost_planning_record(
     return record
 
 
+def canonical_cost_planning_record() -> dict[str, Any]:
+    """Generation-bound exact planning authority with a canonical digest."""
+    record = cost_planning_record()
+    record["evidence_generation"] = COST_EVIDENCE_GENERATION
+    payload = json.dumps(record, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=False).encode("utf-8")
+    record["canonical_digest_sha256"] = hashlib.sha256(payload).hexdigest()
+    return record
+
+
 def evaluate_cost_gate(condition: str,
                        record: dict[str, Any] | None = None,
                        ) -> dict[str, Any]:
@@ -348,10 +360,32 @@ def evaluate_cost_gate(condition: str,
     conditions, mutated metadata (disposition/ceiling tampering), or
     missing fields fail closed.
     """
-    record = record or cost_planning_record()
+    if record is None:
+        # Pure helper callers may omit custody; producers must pass the
+        # actual retained record loaded from their evidence root.
+        record = canonical_cost_planning_record()
+    expected = canonical_cost_planning_record()
     if not isinstance(record, dict) or record.get(
             "schema") != COST_RECORD_SCHEMA:
         raise TimeoutBudgetError("cost planning record schema mismatch")
+    try:
+        supplied = dict(record)
+        digest = supplied.pop("canonical_digest_sha256")
+        canonical = json.dumps(supplied, sort_keys=True, separators=(",", ":"),
+                               ensure_ascii=False, allow_nan=False).encode("utf-8")
+        expected_bytes = json.dumps(
+            {k: v for k, v in expected.items()
+             if k != "canonical_digest_sha256"},
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False).encode("utf-8")
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise TimeoutBudgetError("malformed cost planning record") from exc
+    if (record.get("evidence_generation") != COST_EVIDENCE_GENERATION
+            or digest != hashlib.sha256(canonical).hexdigest()
+            or canonical != expected_bytes
+            or digest != expected["canonical_digest_sha256"]):
+        raise TimeoutBudgetError(
+            "cost planning record differs from canonical derivation or digest")
     if record.get("campaign_cost_ceiling_s") != CAMPAIGN_COST_CEILING_S:
         raise TimeoutBudgetError(
             "cost planning record ceiling mutation detected")

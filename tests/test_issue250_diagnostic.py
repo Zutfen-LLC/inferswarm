@@ -13,6 +13,7 @@ import importlib.util
 import json
 import struct
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -261,6 +262,54 @@ class AuthorityTests(unittest.TestCase):
         b = make_authority(head=self.HEAD)
         b["body"] += "\nextra line"
         self.assertNotEqual(D.authority_digest(a), D.authority_digest(b))
+
+    def test_c2_dedicated_dispatch_accepts_either_completed_c1_verdict(self):
+        a = make_authority(head=self.HEAD, namespace="d250-arm-c2",
+                           arm="C2-serial")
+        a["body"] += "\n" + D.C2_GATE_REQUIRED_LINE
+        self.assertEqual(D.validate_authority_payload(a, self.HEAD)["arm"],
+                         "C2-serial")
+        a["body"] = a["body"].replace(D.C2_GATE_REQUIRED_LINE, "")
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_authority_payload(a, self.HEAD)
+
+    def test_c2_gate_binds_both_authorities_and_completed_c1_verdict(self):
+        c1 = make_authority(head=self.HEAD, namespace="d250-arm-c1",
+                            arm="C1-reduced-parallelism")
+        c2 = make_authority(head=self.HEAD, namespace="d250-arm-c2",
+                            arm=D.ARM_C2_NAME)
+        c2["body"] += "\n" + D.C2_GATE_REQUIRED_LINE
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for verdict in ("deterministic", "variable"):
+                record = {"schema": D.C2_GATE_RECORD_SCHEMA,
+                          "head_sha": self.HEAD, "c1_completed": True,
+                          "c1_verdict": verdict,
+                          "c1_authority_sha256": D.authority_digest(c1),
+                          "c2_authority_sha256": D.authority_digest(c2)}
+                path = root / D.C2_GATE_RECORD_NAME
+                path.write_text(json.dumps(record))
+                kwargs = {"expected_head": self.HEAD,
+                          "c1_authority": c1, "c2_authority": c2,
+                          "c1_verdict": verdict}
+                self.assertTrue(D.c1_dispatch_c2_unlocked(root, **kwargs))
+                # The physical gate cannot use just the C2 comment and a
+                # self-asserted record: C1 must be independently derived.
+                self.assertFalse(D.c1_dispatch_c2_unlocked(
+                    root, expected_head=self.HEAD, c2_authority=c2))
+                other = ("variable" if verdict == "deterministic" else
+                         "deterministic")
+                self.assertFalse(D.c1_dispatch_c2_unlocked(
+                    root, **{**kwargs, "c1_verdict": other}))
+                for field in ("c1_completed", "c1_authority_sha256",
+                              "c2_authority_sha256"):
+                    bad = dict(record)
+                    bad[field] = False if field == "c1_completed" else "0" * 64
+                    path.write_text(json.dumps(bad))
+                    self.assertFalse(D.c1_dispatch_c2_unlocked(root, **kwargs))
+            path.unlink()
+            (root / "c1-varied-c2-gate.json").write_text(json.dumps(record))
+            self.assertFalse(D.c1_dispatch_c2_unlocked(root, **kwargs))
 
 
 class ArmPlanTests(unittest.TestCase):

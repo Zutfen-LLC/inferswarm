@@ -21,6 +21,7 @@ import struct
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "scripts"
@@ -358,6 +359,7 @@ class Env:
         self.evidence.mkdir(exist_ok=True)
         P._write_json(self.evidence
                       / P.MODEL_ATTESTATION_OPEN_NAME, self.attestation)
+        P.retain_cost_planning_record(self.evidence)
         return self.attestation
 
     def authority_fn(self, mutations=None):
@@ -366,13 +368,434 @@ class Env:
         state = {"base": base, "mutations": mutations or []}
 
         def fetch(repo_root, expected_head, namespace, github_api=None):
-            payload = dict(state["base"])
-            for mutate in state["mutations"]:
-                mutate(payload)
+            if namespace == self.namespace:
+                payload = dict(state["base"])
+                for mutate in state["mutations"]:
+                    mutate(payload)
+                return payload
+            arms = {"d250-arm-a": "A-vulkan-necessity",
+                    "d250-arm-b": "B-process-init",
+                    "d250-arm-c": "C-cpu-threads",
+                    "d250-arm-c1": "C1-reduced-parallelism",
+                    "d250-arm-c2": D.ARM_C2_NAME,
+                    "d250-arm-d": "D-context-transition"}
+            payload = make_authority(namespace, arms[namespace], self.head)
+            if namespace == D.C2_SERIAL_NAMESPACE:
+                payload["body"] += "\n" + D.C2_GATE_REQUIRED_LINE
             return payload
         fetch.state = state
         return fetch
 
+    def populate_variable(self, namespace, arm):
+        """Retain a real, reducer-verified early-mismatch prefix."""
+        specs = [u for u in D.probe_list_for(arm)
+                 if not u.get("same_process")][:2]
+        assert len(specs) == 2
+        for index, spec in enumerate(specs):
+            if (self.evidence / namespace / spec["tag"] / "unit.json").is_file():
+                continue  # an already-retained valid prefix from this fixture
+            def execute(**kw):
+                result = fake_execute(**kw)
+                if index:
+                    row = kw["unit_dir"] / "obs.row0.f32"
+                    raw = row.read_bytes()
+                    row.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+                return result
+            P.run_diagnostic_unit(
+                self.repo, self.evidence, namespace, arm, spec["tag"],
+                binary=self.bin, binary_id="comparator",
+                model_dir=self.model_dir, expected_head=self.head,
+                model_attestation=self.attestation, execute=execute,
+                identity_observer=fake_identity,
+                revalidate_authority=self.authority_fn(),
+                health_runner=fake_health_runner)
+
+    def populate_b_same_variable(self):
+        def execute(**kw):
+            result = fake_same_process_execute(**{**kw, "repeats": 2})
+            second = result["requests"][1]
+            raw = second["row_files"]["obs.row0.f32"]
+            second["row_files"]["obs.row0.f32"] = (
+                bytes([raw[0] ^ 1]) + raw[1:])
+            result["requests"] = result["requests"][:2]
+            result["stop_kind"] = "mismatch_stop"
+            result["stop_reason"] = "first verified row mismatch"
+            return result
+        P.run_same_process_lifecycle(
+            self.repo, self.evidence, "d250-arm-b", "B-process-init",
+            "case-3072-B-cpu-sameproc", binary=self.bin,
+            binary_id="comparator", model_dir=self.model_dir,
+            expected_head=self.head, model_attestation=self.attestation,
+            execute=execute, identity_observer=fake_identity,
+            revalidate_authority=self.authority_fn(),
+            health_runner=fake_health_runner)
+
+    def populate_through_c(self):
+        self.populate_variable("d250-arm-a", "A-vulkan-necessity")
+        self.populate_variable("d250-arm-b", "B-process-init")
+        self.populate_b_same_variable()
+        self.populate_variable("d250-arm-c", "C-cpu-threads")
+
+    def populate_through_c2(self):
+        self.populate_through_c()
+        self.populate_variable("d250-arm-c1", "C1-reduced-parallelism")
+        fetch = self.authority_fn()
+        c1 = fetch(self.repo, self.head, "d250-arm-c1")
+        c2 = fetch(self.repo, self.head, D.C2_SERIAL_NAMESPACE)
+        P._write_json(self.evidence / D.C2_GATE_RECORD_NAME, {
+            "schema": D.C2_GATE_RECORD_SCHEMA, "head_sha": self.head,
+            "c1_completed": True, "c1_verdict": "variable",
+            "c1_authority_sha256": D.authority_digest(c1),
+            "c2_authority_sha256": D.authority_digest(c2),
+        })
+        self.populate_variable(D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME)
+
+
+class ProducerSequentialReachabilityTests(unittest.TestCase):
+    """The producer, not merely the reducer, enforces verified prefixes."""
+
+    def _fresh(self, env, namespace, arm, runner):
+        return P.run_diagnostic_unit(
+            env.repo, env.evidence, namespace, arm,
+            D.probe_list_for(arm)[0]["tag"],
+            binary=env.bin, binary_id="comparator",
+            model_dir=env.model_dir, expected_head=env.head,
+            model_attestation=env.attestation, execute=runner,
+            identity_observer=fake_identity,
+            revalidate_authority=env.authority_fn(),
+            health_runner=fake_health_runner)
+
+    def test_reached_b_fresh_executes_but_tampered_a_rows_deny(self):
+        env = Env(self, "d250-arm-b", "B-process-init")
+        env.open_attestation()
+        env.populate_variable("d250-arm-a", "A-vulkan-necessity")
+        runner = Recorder(fn=fake_execute)
+        self.assertEqual(self._fresh(env, env.namespace, env.arm, runner)[
+            "arm_id"], "B-process-init")
+        self.assertEqual(len(runner.calls), 1)
+        runner.calls.clear()
+        row = (env.evidence / "d250-arm-a" /
+               D.probe_list_for("A-vulkan-necessity")[0]["tag"] /
+               "obs.row0.f32")
+        raw = row.read_bytes()
+        row.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            self._fresh(env, env.namespace, env.arm, runner)
+        self.assertEqual(runner.calls, [])
+
+    def test_reached_b_loses_predecessor_dispatch_before_launch(self):
+        env = Env(self, "d250-arm-b", "B-process-init")
+        env.open_attestation()
+        env.populate_variable("d250-arm-a", "A-vulkan-necessity")
+        runner = Recorder(fn=fake_execute)
+        fetch = env.authority_fn()
+        reads = 0
+
+        def drift(repo, head, namespace, github_api=None):
+            nonlocal reads
+            payload = fetch(repo, head, namespace, github_api)
+            if namespace == "d250-arm-a":
+                reads += 1
+                if reads > 1:
+                    payload["comment_id"] += 1
+            return payload
+
+        with self.assertRaises((P.PhysicalDiagnosticError,
+                                D.DiagnosticError)):
+            P.run_diagnostic_unit(
+                env.repo, env.evidence, env.namespace, env.arm,
+                D.probe_list_for(env.arm)[0]["tag"],
+                binary=env.bin, binary_id="comparator",
+                model_dir=env.model_dir, expected_head=env.head,
+                model_attestation=env.attestation, execute=runner,
+                identity_observer=fake_identity,
+                revalidate_authority=drift,
+                health_runner=fake_health_runner)
+        self.assertEqual(runner.calls, [])
+        self.assertGreaterEqual(reads, 2)
+
+    def test_unreached_b_same_process_does_not_launch(self):
+        env = Env(self, "d250-arm-b", "B-process-init")
+        env.open_attestation()
+        runner = Recorder(fn=fake_same_process_execute)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            P.run_same_process_lifecycle(
+                env.repo, env.evidence, env.namespace, env.arm,
+                "case-3072-B-cpu-sameproc", binary=env.bin,
+                binary_id="comparator", model_dir=env.model_dir,
+                expected_head=env.head, model_attestation=env.attestation,
+                execute=runner, identity_observer=fake_identity,
+                revalidate_authority=env.authority_fn(),
+                health_runner=fake_health_runner)
+        self.assertEqual(runner.calls, [])
+
+    def test_c_and_c1_require_each_predecessor_and_execute_when_reached(self):
+        env = Env(self, "d250-arm-c", "C-cpu-threads")
+        env.open_attestation()
+        runner = Recorder(fn=fake_execute)
+        env.populate_variable("d250-arm-a", "A-vulkan-necessity")
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            self._fresh(env, env.namespace, env.arm, runner)
+        self.assertEqual(runner.calls, [])
+        env.populate_variable("d250-arm-b", "B-process-init")
+        env.populate_b_same_variable()
+        self.assertEqual(self._fresh(env, env.namespace, env.arm, runner)[
+            "arm_id"], "C-cpu-threads")
+        runner.calls.clear()
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            self._fresh(env, "d250-arm-c1", "C1-reduced-parallelism",
+                        runner)
+        self.assertEqual(runner.calls, [])
+        env.populate_variable("d250-arm-c", "C-cpu-threads")
+        self.assertEqual(self._fresh(
+            env, "d250-arm-c1", "C1-reduced-parallelism", runner)[
+                "arm_id"], "C1-reduced-parallelism")
+
+    def test_d_requires_verified_completed_variable_c2_before_runner(self):
+        env = Env(self, "d250-arm-d", "D-context-transition")
+        env.open_attestation()
+        env.populate_through_c2()
+        runner = Recorder(fn=fake_execute)
+        # Tokenization is an independent gate; mock only that document
+        # while the sequential gate validates REAL retained C2 rows.
+        fixture = P.verify_fixtures(env.repo)[D.CASE]
+        unit = D.probe_list_for(env.arm)[0]
+        length = unit["ladder_length"]
+        prompt = P.derive_ladder_prompt(
+            fixture["prompt_text"], length, fixture["sentence_repeats"])
+        entry = P.ladder_token_authority_receipt(
+            length, D.ARM_D_LADDER_SENTENCE_REPEATS[length], prompt,
+            D.sha256_bytes(prompt.encode()), 100)
+        with mock.patch.object(P, "load_ladder_token_authority",
+                               return_value={"lengths": {str(length): entry}}):
+            self.assertEqual(self._fresh(env, env.namespace, env.arm, runner)[
+                "arm_id"], "D-context-transition")
+            self.assertEqual(len(runner.calls), 1)
+            runner.calls.clear()
+            row = (env.evidence / D.C2_SERIAL_NAMESPACE /
+                   D.probe_list_for(D.ARM_C2_NAME)[0]["tag"] /
+                   "obs.row0.f32")
+            raw = row.read_bytes()
+            row.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                        "sequential"):
+                self._fresh(env, env.namespace, env.arm, runner)
+            self.assertEqual(runner.calls, [])
+
+    def test_d_rejects_complete_deterministic_c2_before_runner(self):
+        env = Env(self, "d250-arm-d", "D-context-transition")
+        env.open_attestation()
+        env.populate_through_c()
+        env.populate_variable("d250-arm-c1", "C1-reduced-parallelism")
+        fetch = env.authority_fn()
+        P._write_json(env.evidence / D.C2_GATE_RECORD_NAME, {
+            "schema": D.C2_GATE_RECORD_SCHEMA, "head_sha": env.head,
+            "c1_completed": True, "c1_verdict": "variable",
+            "c1_authority_sha256": D.authority_digest(
+                fetch(env.repo, env.head, "d250-arm-c1")),
+            "c2_authority_sha256": D.authority_digest(
+                fetch(env.repo, env.head, D.C2_SERIAL_NAMESPACE)),
+        })
+        for spec in D.probe_list_for(D.ARM_C2_NAME):
+            P.run_diagnostic_unit(
+                env.repo, env.evidence, D.C2_SERIAL_NAMESPACE,
+                D.ARM_C2_NAME, spec["tag"], binary=env.bin,
+                binary_id="comparator", model_dir=env.model_dir,
+                expected_head=env.head, model_attestation=env.attestation,
+                execute=fake_execute, identity_observer=fake_identity,
+                revalidate_authority=env.authority_fn(),
+                health_runner=fake_health_runner)
+        runner = Recorder(fn=fake_execute)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "sequential Arm C2 serial"):
+            self._fresh(env, env.namespace, env.arm, runner)
+        self.assertEqual(runner.calls, [])
+
+
+class C2ProducerGateTests(unittest.TestCase):
+    """C2 over-ceiling spend needs independently verified C1 rows."""
+
+    def setUp(self):
+        self.env = Env(self, "d250-arm-c2", D.ARM_C2_NAME)
+        self.env.open_attestation()
+        self.env.populate_through_c()
+        self.c1 = make_authority("d250-arm-c1", "C1-reduced-parallelism",
+                                 self.env.head)
+        self.c2 = make_authority(D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME,
+                                 self.env.head)
+        self.c2["body"] += "\n" + D.C2_GATE_REQUIRED_LINE
+        self.fetches = []
+        self.runner = Recorder(fn=fake_execute)
+        self.real_verify = T._verify_namespace_population
+        self.verify = self.enterContext(mock.patch.object(
+            T, "_verify_namespace_population"))
+        self.enterContext(mock.patch.dict(sys.modules, {"issue250_terminal": T}))
+        self.launch = self.enterContext(mock.patch.object(P, "_real_execute"))
+
+    def _c1_rows(self, verdict="variable", problems=()):
+        tags = [u["tag"] for u in D.probe_list_for(
+            "C1-reduced-parallelism")]
+        retained = tags if verdict == "deterministic" else tags[:2]
+        if verdict == "incomplete":
+            retained = tags[:1]
+        digests = {tag: (("b" if verdict == "variable" and i else "a"),)
+                   for i, tag in enumerate(retained)}
+        population = {"units": [], "retained_tags": retained,
+                      "prefix_law": D.prefix_population_facts(
+                          tags, retained, digests)}
+        self.verify.side_effect = lambda *args, **kwargs: (
+            (population, list(problems)) if args[1] == "d250-arm-c1"
+            else self.real_verify(*args, **kwargs))
+
+    def _gate_record(self, verdict="variable"):
+        P._write_json(self.env.evidence / D.C2_GATE_RECORD_NAME, {
+            "schema": D.C2_GATE_RECORD_SCHEMA, "head_sha": self.env.head,
+            "c1_completed": True, "c1_verdict": verdict,
+            "c1_authority_sha256": D.authority_digest(self.c1),
+            "c2_authority_sha256": D.authority_digest(self.c2),
+        })
+
+    def _fetch(self, repo, head, namespace, github_api=None):
+        self.fetches.append(namespace)
+        if namespace == "d250-arm-c1":
+            return dict(self.c1)
+        if namespace == "d250-arm-c2":
+            return dict(self.c2)
+        return self.env.authority_fn()(repo, head, namespace, github_api)
+
+    def _run(self, namespace="d250-arm-c2", arm=D.ARM_C2_NAME):
+        return P.run_diagnostic_unit(
+            self.env.repo, self.env.evidence, namespace, arm,
+            D.probe_list_for(D.ARM_C2_NAME)[0]["tag"],
+            binary=self.env.bin, binary_id="comparator",
+            model_dir=self.env.model_dir, expected_head=self.env.head,
+            model_attestation=self.env.attestation,
+            execute=self.runner, identity_observer=fake_identity,
+            revalidate_authority=self._fetch,
+            health_runner=fake_health_runner)
+
+    def test_completed_variable_c1_and_both_live_dispatches_admit_c2(self):
+        self._c1_rows()
+        self._gate_record()
+        receipt = self._run()
+        self.assertEqual(receipt["namespace"], D.C2_SERIAL_NAMESPACE)
+        self.assertEqual(len(self.runner.calls), 1)
+        self.assertIn("d250-arm-c1", self.fetches)
+        self.assertIn("d250-arm-c2", self.fetches)
+        self.verify.assert_called()
+        self.launch.assert_not_called()
+
+    def test_valid_c1_gate_does_not_override_corrupt_a_predecessor(self):
+        self._c1_rows()
+        self._gate_record()
+        row = (self.env.evidence / "d250-arm-a" /
+               D.probe_list_for("A-vulkan-necessity")[0]["tag"] /
+               "obs.row0.f32")
+        raw = row.read_bytes()
+        row.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            self._run()
+        self.assertEqual(self.runner.calls, [])
+        self.launch.assert_not_called()
+
+    def test_completed_deterministic_c1_admits_c2(self):
+        self._c1_rows("deterministic")
+        self._gate_record("deterministic")
+        self.assertEqual(self._run()["namespace"], D.C2_SERIAL_NAMESPACE)
+        self.assertEqual(len(self.runner.calls), 1)
+
+    def test_real_retained_c1_rows_admit_c2_and_tamper_denies(self):
+        # Build real producer receipts (fake CPU runner) so the terminal's
+        # actual byte/digest verifier, not a stub verdict, proves C1.
+        self.verify.side_effect = self.real_verify
+        for spec in D.probe_list_for("C1-reduced-parallelism"):
+            P.run_diagnostic_unit(
+                self.env.repo, self.env.evidence, "d250-arm-c1",
+                "C1-reduced-parallelism", spec["tag"],
+                binary=self.env.bin, binary_id="comparator",
+                model_dir=self.env.model_dir, expected_head=self.env.head,
+                model_attestation=self.env.attestation,
+                execute=self.runner, identity_observer=fake_identity,
+                revalidate_authority=self._fetch,
+                health_runner=fake_health_runner)
+        self.runner.calls.clear()
+        self._gate_record("deterministic")
+        self.assertEqual(self._run()["namespace"], D.C2_SERIAL_NAMESPACE)
+        self.assertEqual(len(self.runner.calls), 1)
+        self.runner.calls.clear()
+        row = (self.env.evidence / "d250-arm-c1" /
+               D.probe_list_for("C1-reduced-parallelism")[0]["tag"] /
+               "obs.row0.f32")
+        raw = row.read_bytes()
+        row.write_bytes(bytes([raw[0] ^ 1]) + raw[1:])
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self._run()
+        self.assertEqual(self.runner.calls, [])
+        self.launch.assert_not_called()
+
+    def test_c2_gate_rejects_incomplete_and_corrupt_c1(self):
+        self._gate_record()
+        for verdict, problems in (("incomplete", ()),
+                                  ("variable", ("corrupt row",))):
+            with self.subTest(verdict=verdict, problems=problems):
+                self._c1_rows(verdict, problems)
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self._run()
+                self.assertEqual(self.runner.calls, [])
+                self.launch.assert_not_called()
+
+    def test_c2_gate_rejects_missing_and_mismatched_record(self):
+        self._c1_rows()
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self._run()
+        self._gate_record()
+        gate_path = self.env.evidence / D.C2_GATE_RECORD_NAME
+        valid = json.loads(gate_path.read_bytes())
+        for field, value in (("c1_verdict", "deterministic"),
+                             ("c1_completed", False),
+                             ("c1_authority_sha256", "0" * 64),
+                             ("c2_authority_sha256", "0" * 64),
+                             ("head_sha", "0" * 40)):
+            with self.subTest(field=field):
+                gate_path.write_text(json.dumps({**valid, field: value}))
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self._run()
+                self.assertEqual(self.runner.calls, [])
+        self.launch.assert_not_called()
+
+    def test_c1_live_authority_drift_before_launch_denies(self):
+        self._c1_rows()
+        self._gate_record()
+        original = self._fetch
+        c1_reads = 0
+
+        def drift(repo, head, namespace, github_api=None):
+            nonlocal c1_reads
+            payload = original(repo, head, namespace, github_api)
+            if namespace == "d250-arm-c1":
+                c1_reads += 1
+                if c1_reads > 1:
+                    payload["body"] += "\nchanged after C1 proof"
+            return payload
+
+        self._fetch = drift
+        with self.assertRaises(D.DiagnosticError):
+            self._run()
+        self.assertEqual(self.runner.calls, [])
+        self.launch.assert_not_called()
+
+    def test_generic_c_and_c1_cannot_launch_serial(self):
+        self._c1_rows()
+        self._gate_record()
+        for namespace, arm in (("d250-arm-c", D.ARM_C2_NAME),
+                               ("d250-arm-c1", D.ARM_C2_NAME),
+                               ("d250-arm-c2", "C-cpu-threads")):
+            with self.subTest(namespace=namespace, arm=arm):
+                with self.assertRaises((P.PhysicalDiagnosticError,
+                                        D.DiagnosticError)):
+                    self._run(namespace, arm)
+        self.assertEqual(self.runner.calls, [])
+        self.launch.assert_not_called()
 
 class ProducerGatingTests(unittest.TestCase):
     """Fresh-process producer: gate order + zero-runner-on-denial."""
@@ -380,6 +803,22 @@ class ProducerGatingTests(unittest.TestCase):
     def setUp(self):
         self.env = Env(self)
         self.env.open_attestation()
+
+    def test_arm_b_fresh_without_verified_arm_a_never_calls_runner(self):
+        env = Env(self, "d250-arm-b", "B-process-init")
+        env.open_attestation()
+        runner = Recorder(fn=fake_execute)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "sequential"):
+            P.run_diagnostic_unit(
+                env.repo, env.evidence, env.namespace, env.arm,
+                D.probe_list_for(env.arm)[0]["tag"],
+                binary=env.bin, binary_id="comparator",
+                model_dir=env.model_dir, expected_head=env.head,
+                model_attestation=env.attestation, execute=runner,
+                identity_observer=fake_identity,
+                revalidate_authority=env.authority_fn(),
+                health_runner=fake_health_runner)
+        self.assertEqual(runner.calls, [])
 
     def _run(self, tag="case-3072-B-devnone-001", **over):
         runner = Recorder(fn=fake_execute)
@@ -648,6 +1087,7 @@ class SameProcessLifecycleTests(unittest.TestCase):
         self.env = Env(self, namespace="d250-arm-b",
                        arm="B-process-init")
         self.env.open_attestation()
+        self.env.populate_variable("d250-arm-a", "A-vulkan-necessity")
 
     def _run(self, execute=None, **over):
         runner = Recorder(fn=execute or fake_same_process_execute)
@@ -699,6 +1139,8 @@ class SameProcessLifecycleTests(unittest.TestCase):
         gate_calls = {"n": 0}
 
         def drifting(repo_root, expected_head, namespace, github_api=None):
+            if namespace != self.env.namespace:
+                return authority(repo_root, expected_head, namespace, github_api)
             gate_calls["n"] += 1
             payload = dict(authority.state["base"])
             # gates: 2 prelaunch passes then one per request; drift
@@ -975,6 +1417,8 @@ class SameProcessLifecycleTests(unittest.TestCase):
         calls = {"n": 0}
 
         def drifting(repo_root, expected_head, namespace, github_api=None):
+            if namespace != self.env.namespace:
+                return authority(repo_root, expected_head, namespace, github_api)
             calls["n"] += 1
             payload = dict(authority.state["base"])
             if calls["n"] >= 2:
@@ -1014,6 +1458,7 @@ class ArmBDriftPrefixCustodyTests(unittest.TestCase):
         self.env = Env(self, namespace="d250-arm-b",
                        arm="B-process-init")
         self.env.open_attestation()
+        self.env.populate_variable("d250-arm-a", "A-vulkan-necessity")
 
     def _drift(self, drift_at, mutate=None, row_mismatch_at=None):
         """Drift the per-request gate at request index `drift_at`;
@@ -1026,6 +1471,8 @@ class ArmBDriftPrefixCustodyTests(unittest.TestCase):
 
         def drifting(repo_root, expected_head, namespace,
                      github_api=None):
+            if namespace != self.env.namespace:
+                return authority(repo_root, expected_head, namespace, github_api)
             gate["n"] += 1
             payload = dict(authority.state["base"])
             if drift_at is not None and gate["n"] == 3 + drift_at:

@@ -33,6 +33,12 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 def _load(name: str, rel: str):
+    # The four #250 modules also run together in one unittest process.
+    # Re-loading here after physical tests were imported creates two D/P
+    # singleton sets: fixture binary patches then miss the producers'
+    # module, and predecessor receipts fail identity checks.
+    if name in sys.modules:
+        return sys.modules[name]
     spec = importlib.util.spec_from_file_location(
         name, REPO / rel)
     mod = importlib.util.module_from_spec(spec)
@@ -176,13 +182,13 @@ class FakeServerProc:
 
 
 class CampaignFixture:
-    """Builds a COMPLETE valid #250 evidence tree through the REAL
-    producer paths (fake runners), plus the accepted #248 contrast
-    tree at its frozen shape."""
+    """Builds sequentially reachable #250 evidence through real producers
+    (fake runners), plus the accepted #248 contrast tree."""
 
     def __init__(self, test, *, arm_a_rows="vary", arm_b_fresh="vary",
                  arm_b_same="deterministic", arm_c_default="vary",
                  arm_c_serial="deterministic", arm_c2_gate=False,
+                 arm_c2_mode="vary",
                  arm_d_rows=None,
                  arm_d_progress=None, arm_d_confirm_lengths=None,
                  arm_d_confirm_mismatch_at=None,
@@ -241,23 +247,31 @@ class CampaignFixture:
             self.evidence, self.model_dir, self.head, hasher=hasher)
         P.close_campaign_attestation(
             self.evidence, self.model_dir, self.head, hasher=hasher)
+        P.write_generation_marker(self.evidence)
+        P.retain_cost_planning_record(self.evidence)
 
         self.authorities = {}
         self._build_arm_a(arm_a_rows)
-        self._build_arm_b(arm_b_fresh, arm_b_same)
-        self._build_arm_c(arm_c_default, arm_c_serial)
-        if arm_c2_gate:
-            self._write_c2_gate_record()
-            self._build_arm_c2(arm_c_serial)
-        if arm_d_rows is not None:
-            # retained tokenizer authority precedes Arm-D execution
-            # (correction pass 3, blocker 4A)
-            self._derive_ladder_authority()
         self.arm_d_confirm_lengths = (
             arm_d_confirm_lengths if arm_d_confirm_lengths is not None
             else None)  # None => default boundary-adjacent rule
         self.arm_d_confirm_mismatch_at = arm_d_confirm_mismatch_at
-        self._build_arm_d(arm_d_rows, arm_d_progress)
+        # A deterministic => B unreachable; B fresh deterministic or B
+        # same-process deterministic => C unreachable; C2 deterministic
+        # => D unreachable. No fake producer bypasses these real gates.
+        if arm_a_rows != "det":
+            self._build_arm_b(arm_b_fresh, arm_b_same)
+            if arm_b_fresh == "vary" and arm_b_same != "deterministic":
+                self._build_arm_c(arm_c_default, arm_c_serial)
+                if arm_c2_gate:
+                    self._write_c2_gate_record(arm_c_serial)
+                    self._build_arm_c2(arm_c2_mode)
+                if (arm_d_rows is not None and arm_c2_gate
+                        and arm_c2_mode != "deterministic"):
+                    # retained tokenizer authority precedes Arm-D execution
+                    # (correction pass 3, blocker 4A)
+                    self._derive_ladder_authority()
+                    self._build_arm_d(arm_d_rows, arm_d_progress)
         self._build_contrast()
 
     def _derive_ladder_authority(self):
@@ -324,19 +338,12 @@ class CampaignFixture:
         D.MODEL_DIR = self.saved_model_dir
 
     # ---------------- authority ----------------
-    def authority_fn(self, namespace, arm, extra_line=None):
-        base = make_authority(namespace, arm, head=self.head,
-                              extra_line=extra_line)
-
-        def fetch(repo_root, expected_head, ns, github_api=None):
-            if ns != namespace:
-                raise D.DiagnosticError(
-                    f"no dispatch authority for namespace {ns}")
-            return dict(base)
-        return fetch
-
     def fetch_all(self):
-        """An authority fetcher map for every built namespace."""
+        """One stable fake live dispatch for all campaign namespaces.
+
+        Predecessor checks fetch earlier arms with this SAME fetcher; C2's
+        gate digests must bind the exact bytes later returned by it.
+        """
         by_ns = {}
 
         def fetch(repo_root, expected_head, ns, github_api=None):
@@ -420,11 +427,7 @@ class CampaignFixture:
             execute=self.fake_execute(seed_key, progress_lines,
                                       prompt_tokens),
             identity_observer=lambda: raw_identity(),
-            revalidate_authority=self.authority_fn(
-                namespace, arm,
-                extra_line=(D.C2_GATE_REQUIRED_LINE
-                            if namespace == D.C2_SERIAL_NAMESPACE
-                            else None)),
+            revalidate_authority=self.fetch_all(),
             health_runner=health_runner)
 
     def _build_arm_a(self, mode):
@@ -466,8 +469,7 @@ class CampaignFixture:
             model_attestation=self.attestation,
             execute=self._fake_same_process(same_mode),
             identity_observer=lambda: raw_identity(),
-            revalidate_authority=self.authority_fn(
-                "d250-arm-b", "B-process-init"),
+            revalidate_authority=self.fetch_all(),
             health_runner=health_runner)
 
     def _fake_same_process(self, mode):
@@ -603,15 +605,17 @@ class CampaignFixture:
             by_ns[ns] = base
         return by_ns
 
-    def _write_c2_gate_record(self):
-        """Frozen c1-varied gate record binding BOTH the C1 and C2
+    def _write_c2_gate_record(self, c1_mode):
+        """Frozen C1-completed gate record binding BOTH the C1 and C2
         authority digests (written BEFORE the C2 units execute — the
         dispatch authority itself demands the closed gate)."""
         by_ns = self._c1_c2_authorities()
         gate = {
             "schema": D.C2_GATE_RECORD_SCHEMA,
             "head_sha": self.head,
-            "c1_completed_variable": True,
+            "c1_completed": True,
+            "c1_verdict": ("variable" if c1_mode == "vary"
+                           else "deterministic"),
             "c1_authority_sha256": D.authority_digest(
                 by_ns["d250-arm-c1"]),
             "c2_authority_sha256": D.authority_digest(
@@ -620,20 +624,17 @@ class CampaignFixture:
         (self.evidence / D.C2_GATE_RECORD_NAME).write_text(
             json.dumps(gate, indent=2, sort_keys=True) + "\n")
 
-    def _build_arm_c2(self, c1_mode):
-        """Gated serial C2 population. Only meaningful when C1 also
-        varied (a deterministic C1 localizes before serial work)."""
-        if c1_mode != "vary":
-            raise ValueError("C2 gate only makes sense when C1 varied")
+    def _build_arm_c2(self, c2_mode):
+        """Gated serial C2 population after either completed C1 verdict."""
         for i, spec in enumerate(D.probe_list_for(D.ARM_C2_NAME)):
             # HONEST PRODUCER SHAPE (frozen early-stop law): in "vary"
             # mode the first mismatch answers at unit 002 — units
             # 003..005 are never run.
-            if c1_mode == "vary" and i >= 2:
+            if c2_mode == "vary" and i >= 2:
                 break
-            seed_key = (f"armC2-varying-{i}" if c1_mode == "vary"
+            seed_key = (f"armC2-varying-{i}" if c2_mode == "vary"
                         else "armC2-fixed")
-            if c1_mode == "vary" and i == 0:
+            if c2_mode == "vary" and i == 0:
                 seed_key = "armC2-baseline"
             self._run_unit(D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME,
                            spec["tag"], seed_key)
@@ -801,10 +802,12 @@ class TerminalMatrixTests(unittest.TestCase):
         return fixture
 
     def test_a_localizes(self):
-        f = self._fixture(arm_a_rows="det", arm_b_fresh=None or "vary",
+        f = self._fixture(arm_a_rows="det", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
                           arm_c_serial="vary",
                           arm_c2_gate=True, arm_d_rows=None)
+        self.assertFalse((f.evidence / "d250-arm-b").exists())
+        self.assertFalse((f.evidence / "d250-arm-c").exists())
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
         self.assertIn("backend-participation",
@@ -922,23 +925,91 @@ class TerminalMatrixTests(unittest.TestCase):
     def test_a_to_b_localizes(self):
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="deterministic")
+        self.assertFalse((f.evidence / "d250-arm-c").exists())
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
         self.assertIn("fresh-process/runtime-initialization",
                       out["basis"]["localized_factor"])
 
-    def test_a_to_b_to_c_localizes(self):
+    def test_c1_deterministic_requires_single_thread_followup_before_localization(self):
         f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
                           arm_c_serial="deterministic")
         out = f.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertFalse(out["arm_c_gate_status"]["c2_serial_gate_closed"])
+        self.assertEqual(out["arm_c_gate_status"]["c1_verdict"],
+                         "deterministic")
+
+    def test_c1_varied_without_c2_is_blocked(self):
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary")
+        out = f.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertEqual(out["arm_c_gate_status"]["c1_verdict"],
+                         "variable")
+
+    def test_c2_gate_cannot_launder_the_opposite_c1_verdict(self):
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="deterministic")
+        f._write_c2_gate_record("vary")  # forged C1 claim vs five real rows
+        out = f.derive()
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertIn("completed retained C1 verdict", " ".join(out["problems"]))
+
+    def test_c2_gate_record_without_live_c2_dispatch_is_blocked(self):
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="deterministic")
+        f._write_c2_gate_record("deterministic")
+        normal_fetch = f.fetch_all()
+        def without_c2(repo_root, expected_head, namespace, github_api=None):
+            if namespace == D.C2_SERIAL_NAMESPACE:
+                raise D.DiagnosticError("no C2 dispatch")
+            return normal_fetch(repo_root, expected_head, namespace,
+                                github_api=github_api)
+        out = f.derive(authority_fetcher=without_c2)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertIn(D.C2_SERIAL_NAMESPACE, " ".join(out["problems"]))
+
+    def test_c1_deterministic_with_c2_deterministic_localizes(self):
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="deterministic", arm_c2_gate=True,
+                          arm_c2_mode="deterministic")
+        self.assertFalse((f.evidence / "d250-arm-d").exists())
+        out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
-        # AMENDMENT-003: C1 localization names the EXACT regimes and
-        # never claims single-thread coverage.
-        self.assertIn("CPU thread-regime / parallelism boundary",
-                      out["basis"]["localized_factor"])
-        self.assertIn("-t 4 -tb 4", out["basis"]["localized_factor"])
-        self.assertIs(out["basis"]["single_thread_tested"], False)
+        self.assertEqual(out["basis"]["arm"], D.ARM_C2_NAME)
+        self.assertIn("-t 1 -tb 1", out["basis"]["localized_factor"])
+
+    def test_c1_varied_with_c2_deterministic_localizes(self):
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_c2_gate=True,
+                          arm_c2_mode="deterministic")
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
+        self.assertEqual(out["basis"]["arm"], D.ARM_C2_NAME)
+
+    def test_c1_deterministic_with_c2_varied_reaches_d(self):
+        ladder = {length: "var" for length in D.ARM_D_LADDER_LENGTHS}
+        ladder[1024] = "det"
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="deterministic", arm_c2_gate=True,
+                          arm_c2_mode="vary", arm_d_rows=ladder)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertTrue(out["arm_c_gate_status"]["c2_serial_executed"])
+        self.assertIn("D-context-transition", out["arms"])
+
 
     def test_a_to_b_to_c_to_d_old_midstream_shape_cannot_localize(self):
         # CORRECTION PASS 4 (NO-GO 5851078451, blocker 3) FLIPPED
@@ -1065,12 +1136,29 @@ class TerminalMatrixTests(unittest.TestCase):
         self.assertEqual(out2["blocked"], T.BLOCKED)
 
     def test_unreachable_later_arm_cannot_override_earlier(self):
-        # A localizes; B/C/D evidence EXISTS but is unreachable
-        ladder = {length: "var" for length in D.ARM_D_LADDER_LENGTHS}
+        # A localizes. Synthesize adversarial later-arm records rather
+        # than invoking a producer whose sequential gate correctly
+        # refuses unreachable B/C/D. If the reducer scans them, their
+        # deliberately contradictory claims must fail closed; otherwise
+        # they cannot override verified A.
         f = self._fixture(arm_a_rows="det", arm_b_fresh="vary",
                           arm_b_same="vary", arm_c_default="vary",
                           arm_c_serial="vary",
-                          arm_c2_gate=True, arm_d_rows=ladder)
+                          arm_c2_gate=True)
+        for namespace, arm in (
+                ("d250-arm-b", "B-process-init"),
+                ("d250-arm-c", "C-cpu-threads"),
+                ("d250-arm-c1", "C1-reduced-parallelism"),
+                (D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME),
+                ("d250-arm-d", "D-context-transition")):
+            claimed = f.evidence / namespace / "unreachable-adversarial"
+            claimed.mkdir(parents=True)
+            (claimed / "unit.json").write_text(json.dumps({
+                "namespace": namespace, "arm": arm,
+                "terminal": T.UNRESOLVED,
+                "authority": make_authority(namespace, arm, head=f.head),
+            }))
+            self.assertTrue((claimed / "unit.json").is_file())
         out = f.derive()
         self.assertEqual(out["terminal"], T.LOCALIZED)
         self.assertIn("backend-participation",

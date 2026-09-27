@@ -25,8 +25,11 @@ No test here executes physical diagnostic work.
 """
 
 import copy
+import hashlib
 import importlib.util
 import json
+import tempfile
+from unittest import mock
 import socket
 import sys
 import threading
@@ -39,6 +42,12 @@ sys.path.insert(0, str(REPO / "tests"))
 
 
 def _load(name, rel):
+    # unittest imports every listed module before running any test. Replacing
+    # sys.modules here would split the diagnostic, physical and terminal
+    # suites across different module instances and break their shared
+    # frozen authority/fixture identities during a combined group run.
+    if name in sys.modules:
+        return sys.modules[name]
     spec = importlib.util.spec_from_file_location(name, REPO / rel)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
@@ -51,6 +60,7 @@ for _dep in ("issue248_diagnostic", "issue248_health",
     _load(_dep, f"scripts/{_dep}.py")
 D = _load("issue250_diagnostic", "scripts/issue250_diagnostic.py")
 TB = _load("issue250_timeout", "scripts/issue250_timeout.py")
+I = sys.modules["issue248_identity"]
 P = _load("issue250_physical", "scripts/issue250_physical.py")
 T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 
@@ -330,11 +340,41 @@ class CostGateTests(unittest.TestCase):
         self.assertTrue(
             TB.evaluate_cost_gate("arm-c2-serial")["over_cost_ceiling"])
 
+    def test_cost_gate_rejects_forged_low_cost_and_digest_mutation(self):
+        rec = TB.canonical_cost_planning_record()
+        TB.evaluate_cost_gate("arm-c2-serial", rec)  # fully valid control
+        forged = copy.deepcopy(rec)
+        forged["conditions"]["arm-c2-serial"][
+            "estimated_deterministic_proof_cost_s"] = 1
+        # A self-consistent attacker-supplied digest does not make a
+        # re-derived cost field canonical.
+        body = dict(forged)
+        del body["canonical_digest_sha256"]
+        forged["canonical_digest_sha256"] = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False).encode()).hexdigest()
+        with self.assertRaises(TB.TimeoutBudgetError):
+            TB.evaluate_cost_gate("arm-c2-serial", forged)
+        digest_only = copy.deepcopy(rec)
+        digest_only["canonical_digest_sha256"] = "0" * 64
+        with self.assertRaises(TB.TimeoutBudgetError):
+            TB.evaluate_cost_gate("arm-c2-serial", digest_only)
+
+    def test_cost_gate_requires_generation_and_complete_condition_map(self):
+        rec = TB.canonical_cost_planning_record()
+        TB.evaluate_cost_gate("arm-a-cpu-only", rec)
+        bad_generation = copy.deepcopy(rec)
+        bad_generation["evidence_generation"] = "retired"
+        with self.assertRaises(TB.TimeoutBudgetError):
+            TB.evaluate_cost_gate("arm-a-cpu-only", bad_generation)
+        del rec["conditions"]["arm-c2-serial"]
+        with self.assertRaises(TB.TimeoutBudgetError):
+            TB.evaluate_cost_gate("arm-a-cpu-only", rec)
+
     def test_cost_metadata_mutation_fails_closed(self):
-        rec = TB.cost_planning_record()
+        rec = TB.canonical_cost_planning_record()
         good = copy.deepcopy(rec)
-        good["conditions"]["arm-a-cpu-only"]["disposition"] = \
-            "authorized_by_pass6_dispatch"
+        TB.evaluate_cost_gate("arm-a-cpu-only", good)
         # disposition tampering on any entry fails closed
         bad = copy.deepcopy(rec)
         bad["conditions"]["arm-a-cpu-only"]["disposition"] = \
@@ -376,6 +416,288 @@ class CostGateTests(unittest.TestCase):
                          "authorized_by_pass6_dispatch")
         self.assertFalse(
             TB.TIMEOUT_BASIS["cpu-only-c1-t4"]["measured"])
+
+
+class CostProducerAdmissionTests(unittest.TestCase):
+    """The real producer entrypoints must consume retained cost authority."""
+
+    class ReachedRunner(Exception):
+        pass
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        self.evidence = self.root / "evidence"
+        self.evidence.mkdir()
+        self.model = self.root / "model"
+        self.model.mkdir()
+        self.attestation = {"model_dir": str(self.model)}
+        (self.evidence / P.MODEL_ATTESTATION_OPEN_NAME).write_text(
+            json.dumps(self.attestation))
+        self.calls = []
+        self.authority_calls = 0
+        self.stack = self.enterContext(mock.patch.multiple(
+            P, verify_fixtures=mock.DEFAULT, verify_binary=mock.DEFAULT,
+            validate_model_attestation=mock.DEFAULT,
+            attestation_witness=mock.DEFAULT,
+            launch_env=mock.DEFAULT, server_argv=mock.DEFAULT))
+        self.stack["verify_fixtures"].return_value = {
+            D.CASE: {"prompt_text": "fixture", "prompt_token_ids": [1] * 3077,
+                     "sentence_repeats": 1}}
+        self.stack["verify_binary"].return_value = "f" * 64
+        self.stack["validate_model_attestation"].return_value = self.attestation
+        self.stack["attestation_witness"].return_value = ([], {})
+        self.stack["launch_env"].return_value = {}
+        self.stack["server_argv"].return_value = ["not-executed"]
+        self.enterContext(mock.patch.object(D, "_require_clean_head"))
+        self.enterContext(mock.patch.object(I, "identity_problems", return_value=[]))
+        self.enterContext(mock.patch.object(P, "subprocess"))
+        self.enterContext(mock.patch.object(
+            P, "derive_ladder_prompt", return_value="fixture"))
+        self.enterContext(mock.patch.object(
+            P, "load_ladder_token_authority",
+            return_value={"lengths": {"1024": {}}}))
+        self.enterContext(mock.patch.object(
+            P, "validate_ladder_token_authority_entry"))
+        self.enterContext(mock.patch.object(
+            P, "c2_launch_allowed", return_value=True))
+
+    def _authority(self, repo, head, namespace, github_api=None):
+        self.authority_calls += 1
+        arm = {"d250-arm-a": "A-vulkan-necessity",
+               "d250-arm-b": "B-process-init",
+               "d250-arm-c": "C-cpu-threads",
+               "d250-arm-c1": "C1-reduced-parallelism",
+               "d250-arm-d": "D-context-transition",
+               "d250-arm-c2": "C2-serial"}[namespace]
+        return {
+            "comment_id": 123, "author_association": "MEMBER",
+            "issue_url": ("https://api.github.com/repos/Zutfen-LLC/"
+                          f"inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}"),
+            "created_at": "2026-09-27T00:00:00Z",
+            "body": "\n".join((D.DIAGNOSTIC_DISPATCH_PHRASE,
+                               f"head={head}",
+                               f"diagnostic-namespace={namespace}",
+                               f"arm={arm}")),
+            "head_sha": head, "namespace": namespace, "arm": arm,
+            "open_pr": True, "issue_open": True,
+        }
+
+    def _runner(self, **kwargs):
+        self.calls.append(kwargs)
+        raise self.ReachedRunner
+
+    def _invoke(self, path, *, namespace=None, revalidate_authority=None):
+        names = {
+            "fresh-a": ("d250-arm-a", "A-vulkan-necessity",
+                        "case-3072-B-devnone-001"),
+            "fresh-b": ("d250-arm-b", "B-process-init",
+                        "case-3072-B-cpu-fresh-001"),
+            "same-b": ("d250-arm-b", "B-process-init",
+                       "case-3072-B-cpu-sameproc"),
+            "fresh-c": ("d250-arm-c", "C-cpu-threads",
+                        "case-3072-B-cpu-thr-default-001"),
+            "fresh-c1": ("d250-arm-c1", "C1-reduced-parallelism",
+                         "case-3072-B-cpu-thr4-001"),
+            "fresh-d": ("d250-arm-d", "D-context-transition",
+                        "case-1024-B-ladder-1024-001"),
+            "fresh-c2": ("d250-arm-c2", "C2-serial",
+                         "case-3072-B-cpu-thr1-001"),
+        }
+        ns, arm, tag = names[path]
+        kw = dict(repo_root=self.repo, evidence_root=self.evidence,
+                  namespace=namespace or ns, arm=arm,
+                  binary=self.root / "bin", binary_id="comparator",
+                  model_dir=self.model, expected_head="a" * 40,
+                  model_attestation=self.attestation, execute=self._runner,
+                  identity_observer=lambda: {},
+                  revalidate_authority=(revalidate_authority or self._authority))
+        if path == "same-b":
+            return P.run_same_process_lifecycle(tag_prefix=tag, **kw)
+        return P.run_diagnostic_unit(tag=tag, **kw)
+
+    def _retain(self):
+        return P.retain_cost_planning_record(self.evidence)
+
+    def _write(self, record):
+        (self.evidence / "cost-planning-record.json").write_text(
+            json.dumps(record))
+
+    def test_missing_record_denies_both_paths_before_any_runner_or_process(self):
+        for path in ("fresh-a", "same-b"):
+            with self.subTest(path=path), self.assertRaises(
+                    (P.PhysicalDiagnosticError, TB.TimeoutBudgetError)):
+                self._invoke(path)
+            self.assertEqual(self.calls, [])
+            self.assertEqual(self.authority_calls, 0)
+            self.stack["verify_fixtures"].assert_not_called()
+            self.stack["verify_binary"].assert_not_called()
+            D._require_clean_head.assert_not_called()
+            P.subprocess.Popen.assert_not_called()
+
+    @staticmethod
+    def _resign(record):
+        body = dict(record)
+        body.pop("canonical_digest_sha256", None)
+        record["canonical_digest_sha256"] = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False).encode()).hexdigest()
+
+    def _assert_refused_on_both_paths(self, record):
+        for path in ("fresh-a", "same-b"):
+            with self.subTest(path=path):
+                self._write(record)
+                with self.assertRaises(
+                        (P.PhysicalDiagnosticError, TB.TimeoutBudgetError)):
+                    self._invoke(path)
+                self.assertEqual(self.calls, [])
+                self.assertEqual(self.authority_calls, 0)
+                D._require_clean_head.assert_not_called()
+                P.subprocess.Popen.assert_not_called()
+
+    def test_mutation_matrix_denies_both_paths_even_with_recomputed_digest(self):
+        pristine = self._retain()
+        self.assertEqual(set(pristine), {
+            "schema", "evidence_generation", "created_by",
+            "retained_rate_evidence", "campaign_cost_ceiling_s",
+            "conditions", "canonical_digest_sha256"})
+        for field in pristine:
+            with self.subTest(top_level=field):
+                bad = copy.deepcopy(pristine)
+                if field == "conditions":
+                    bad[field]["arm-d-accepted-placement"]["disposition"] = "forged"
+                elif field == "retained_rate_evidence":
+                    bad[field]["observed_rate_tokens_per_s"] = 9000
+                else:
+                    bad[field] = "forged"
+                if field != "canonical_digest_sha256":
+                    self._resign(bad)
+                self._assert_refused_on_both_paths(bad)
+                missing = copy.deepcopy(pristine)
+                del missing[field]
+                if field != "canonical_digest_sha256":
+                    self._resign(missing)
+                self._assert_refused_on_both_paths(missing)
+        bad = copy.deepcopy(pristine)
+        bad["unexpected"] = "injected"
+        self._resign(bad)
+        self._assert_refused_on_both_paths(bad)
+        for field in pristine["retained_rate_evidence"]:
+            with self.subTest(rate_evidence_field=field):
+                bad = copy.deepcopy(pristine)
+                bad["retained_rate_evidence"][field] = "forged"
+                self._resign(bad)
+                self._assert_refused_on_both_paths(bad)
+        for condition, entry in pristine["conditions"].items():
+            self.assertEqual(set(entry), {
+                "prompt_tokens", "planning_rate_tokens_per_s",
+                "planning_rate_basis_key", "planning_rate_basis",
+                "planning_rate_measured", "estimated_seconds_per_unit",
+                "min_units_to_establish_mismatch", "units_for_deterministic_claim",
+                "estimated_min_mismatch_cost_s",
+                "estimated_deterministic_proof_cost_s", "disposition"})
+            for field, value in entry.items():
+                with self.subTest(condition=condition, entry_field=field):
+                    bad = copy.deepcopy(pristine)
+                    bad["conditions"][condition][field] = (
+                        not value if isinstance(value, bool) else
+                        value + 1 if isinstance(value, (int, float)) else "forged")
+                    self._resign(bad)
+                    self._assert_refused_on_both_paths(bad)
+                    missing = copy.deepcopy(pristine)
+                    del missing["conditions"][condition][field]
+                    self._resign(missing)
+                    self._assert_refused_on_both_paths(missing)
+            extra = copy.deepcopy(pristine)
+            extra["conditions"][condition]["surplus"] = True
+            self._resign(extra)
+            self._assert_refused_on_both_paths(extra)
+
+    def test_forged_low_cost_and_honest_over_ceiling_denied(self):
+        pristine = self._retain()
+        forged = copy.deepcopy(pristine)
+        forged["conditions"]["arm-c2-serial"][
+            "estimated_deterministic_proof_cost_s"] = 1
+        self._write(forged)
+        with self.assertRaises((P.PhysicalDiagnosticError,
+                                TB.TimeoutBudgetError)):
+            self._invoke("fresh-c2")
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.authority_calls, 0)
+        self._write(pristine)
+        # Honest over-ceiling C2 is not a standalone dispatch: this
+        # fixture has no dedicated C2 gate line or completed C1 rows.
+        with self.assertRaises((P.PhysicalDiagnosticError,
+                                D.DiagnosticError)):
+            self._invoke("fresh-c2")
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.authority_calls, 1)
+        D._require_clean_head.assert_not_called()
+        P.subprocess.Popen.assert_not_called()
+
+    def test_cost_record_changed_after_preflight_cannot_reach_runner(self):
+        """Recheck the retained authority at the last launch boundary."""
+        pristine = self._retain()
+        fixtures = self.stack["verify_fixtures"].return_value
+        for path in ("fresh-a", "same-b"):
+            with self.subTest(path=path):
+                self._write(pristine)
+                forged = copy.deepcopy(pristine)
+                forged["conditions"]["arm-a-cpu-only"][
+                    "planning_rate_tokens_per_s"] = 9000
+                self._resign(forged)
+
+                def mutate_after_first_admission(*args, **kwargs):
+                    self._write(forged)
+                    return fixtures
+
+                self.stack["verify_fixtures"].side_effect = (
+                    mutate_after_first_admission)
+                # The later sequential gate is irrelevant to this cost
+                # mutation; isolate the launch ordering itself.
+                with mock.patch.object(P, "_require_sequential_reachability"):
+                    with self.assertRaises((P.PhysicalDiagnosticError,
+                                            TB.TimeoutBudgetError)):
+                        self._invoke(path)
+                self.assertEqual(self.calls, [])
+                P.subprocess.Popen.assert_not_called()
+        self.stack["verify_fixtures"].side_effect = None
+
+    def test_cost_admission_does_not_override_unmet_sequencing(self):
+        self._retain()
+        with self.assertRaises(self.ReachedRunner):
+            self._invoke("fresh-a")
+        self.assertEqual(len(self.calls), 1)
+        self.calls.clear()
+        # These cost-admissible, exact-head dispatched paths remain
+        # unreachable without independently verified predecessor rows.
+        for path in ("fresh-b", "same-b", "fresh-c", "fresh-c1",
+                     "fresh-d"):
+            with self.subTest(path=path), self.assertRaisesRegex(
+                    P.PhysicalDiagnosticError, "sequential"):
+                self._invoke(path)
+            self.assertEqual(self.calls, [])
+        P.subprocess.Popen.assert_not_called()
+
+
+    def test_conditional_b_and_d_require_their_own_dispatch(self):
+        self._retain()
+        wrong = lambda repo, head, namespace, github_api=None: self._authority(
+            repo, head, "d250-arm-a", github_api)
+        for path in ("fresh-b", "same-b", "fresh-d"):
+            with self.subTest(path=path), self.assertRaises(
+                    (P.PhysicalDiagnosticError, D.DiagnosticError)):
+                self._invoke(path, revalidate_authority=wrong)
+            self.assertEqual(self.calls, [])
+            P.subprocess.Popen.assert_not_called()
+        for condition in ("arm-b-fresh", "arm-b-sameproc",
+                          "arm-d-accepted-placement"):
+            verdict = TB.evaluate_cost_gate(condition)
+            self.assertFalse(verdict["auto_reachable"])
+            self.assertFalse(verdict["over_cost_ceiling"])
 
 
 # ---------------------------------------------------------------------------
@@ -446,11 +768,12 @@ class ArmC1C2Tests(unittest.TestCase):
                  "namespace": "d250-arm-c2",
                  "arm": D.ARM_C2_NAME},
                 expected_head=OLD_HEAD)
-        # a gate-record doc missing the C1-varied assertion or either
+        # a gate-record doc missing C1 completion or either
         # digest fails closed (c1_dispatch_c2_unlocked is the law)
         good = {"schema": D.C2_GATE_RECORD_SCHEMA,
                 "head_sha": OLD_HEAD,
-                "c1_completed_variable": True,
+                "c1_completed": True,
+                "c1_verdict": "variable",
                 "c1_authority_sha256": "a" * 64,
                 "c2_authority_sha256": "b" * 64}
         import tempfile
@@ -461,7 +784,8 @@ class ArmC1C2Tests(unittest.TestCase):
             self.assertTrue(
                 D.c1_dispatch_c2_unlocked(root,
                                           expected_head=OLD_HEAD))
-            for bad in ({**good, "c1_completed_variable": False},
+            for bad in ({**good, "c1_completed": False},
+                        {**good, "c1_verdict": "incomplete"},
                         {k: v for k, v in good.items()
                          if k != "c1_authority_sha256"},
                         {k: v for k, v in good.items()

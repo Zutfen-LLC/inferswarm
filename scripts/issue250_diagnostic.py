@@ -597,7 +597,7 @@ def validate_authority_payload(authority: dict[str, Any],
         # SEPARATE MAINTAINER GATE (AMENDMENT-003): a d250-arm-c2
         # dispatch is valid ONLY for the serial arm, ONLY with the
         # explicit `c2-serial-gate:` subscope line, and ONLY after C1
-        # has actually run and remained variable (frozen C1 gate
+        # has actually completed (deterministic OR variable; C1 gate
         # precondition). The four-frozen-arms pairing below would
         # reject this namespace, so C2 validation is fully separate.
         if arms[0] != ARM_C2_NAME:
@@ -610,7 +610,7 @@ def validate_authority_payload(authority: dict[str, Any],
             raise DiagnosticError(
                 f"{C2_SERIAL_NAMESPACE} dispatch lacks the explicit "
                 f"serial gate line {C2_GATE_REQUIRED_LINE!r}")
-        # NOTE: the C1-varied gate RECORD precondition is verified
+        # NOTE: the C1-completed gate RECORD precondition is verified
         # where the evidence root is known (c2_launch_allowed in the
         # producer); a dispatch comment alone cannot prove it.
         return dict(authority, namespace=namespace, arm=arms[0])
@@ -619,36 +619,39 @@ def validate_authority_payload(authority: dict[str, Any],
 
 
 # ---------------------------------------------------------------------------
-# C2 SERIAL GATE (AMENDMENT-003). The serial `-t 1 -tb 1` deep
+# C2 SERIAL GATE (AMENDMENT-004 supersedes 003's C1-varied restriction).
+# The serial `-t 1 -tb 1` deep
 # discriminator is reachable ONLY through a dedicated d250-arm-c2
 # exact-head maintainer dispatch, which is valid ONLY when:
 #   (a) the comment carries the explicit subscope line
 #       `c2-serial-gate: authorized-for-serial-deep-probe`; AND
 #   (b) a frozen C1 gate record is retained at the evidence root
-#       proving C1 COMPLETED AND REMAINED VARIABLE (a deterministic
-#       C1 localizes — serial work is then unnecessary), signed by
+#       proving C1 COMPLETED (either deterministic or variable), signed by
 #       BOTH the C1 dispatch authority digest and the C2 dispatch
 #       authority digest, at the same head.
 # The record format is frozen here; the reducer verifies it (a C2
 # terminal contribution is consumed only when this gate closed).
 # ---------------------------------------------------------------------------
 C2_GATE_REQUIRED_LINE = "c2-serial-gate: authorized-for-serial-deep-probe"
-C2_GATE_RECORD_NAME = "c1-varied-c2-gate.json"
-C2_GATE_RECORD_SCHEMA = "inferswarm.issue250.c1-varied-c2-gate/1"
+C2_GATE_RECORD_NAME = "c1-completed-c2-gate.json"
+C2_GATE_RECORD_SCHEMA = "inferswarm.issue250.c1-completed-c2-gate/1"
 
 
 def c1_dispatch_c2_unlocked(evidence_root: str | Path | None = None,
                             expected_head: str | None = None,
                             c2_authority: dict[str, Any] | None = None,
+                            c1_authority: dict[str, Any] | None = None,
+                            c1_verdict: str | None = None,
                             ) -> bool:
     """Whether the frozen C1->C2 gate is mechanically unlocked.
 
     Fail-closed: with no gate record present (the default state after
     this correction), returns False — C2 stays unreachable, which is
     the post-correction default. When a record exists, every frozen
-    binding is re-checked (schema, C1-variety verdict DERIVED from the
-    retained C1 unit receipts, head equality, BOTH authority-digest
-    signatures).
+    record syntax, head and supplied authority digests are re-checked.
+    Callers MUST independently derive C1 completion from retained rows and
+    pass the resulting verdict and live C1 authority: this helper cannot
+    infer either from a caller-written gate record alone.
     """
     if evidence_root is None:
         return False
@@ -669,6 +672,12 @@ def c1_dispatch_c2_unlocked(evidence_root: str | Path | None = None,
     if expected_head is not None and record.get("head_sha") != \
             expected_head:
         return False
+    # A live C2 comment and a self-asserted gate file cannot prove C1.
+    # Physical callers must derive the verdict from retained C1 rows and
+    # fetch that namespace's live authority independently.
+    if c2_authority is not None and (
+            c1_authority is None or c1_verdict is None):
+        return False
     if c2_authority is not None:
         try:
             if record.get("c2_authority_sha256") != authority_digest(
@@ -676,7 +685,18 @@ def c1_dispatch_c2_unlocked(evidence_root: str | Path | None = None,
                 return False
         except DiagnosticError:
             return False
-    return bool(record.get("c1_completed_variable") is True)
+    if c1_authority is not None:
+        try:
+            if record.get("c1_authority_sha256") != authority_digest(
+                    c1_authority):
+                return False
+        except DiagnosticError:
+            return False
+    if c1_verdict is not None and record.get("c1_verdict") != c1_verdict:
+        return False
+    return (record.get("c1_completed") is True
+            and record.get("c1_verdict") in
+            ("deterministic", "variable"))
 
 
 # ---------------------------------------------------------------------------

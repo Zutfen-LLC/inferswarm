@@ -2,11 +2,11 @@
 
 Option-1 follow-up to the accepted Issue #248 terminal
 `R8I3_REF_NONDETERMINISM_UNRESOLVED` (merged PR #249, main authority
-`bc71774`). STATUS: **Phase 0 complete + frozen tooling + CI green —
-HALTED for maintainer exact-head dispatch.** No physical execution has
-been performed under Issue #250 (and none is authorized by issue
-creation; a later reviewed PR must receive explicit exact-head
-dispatch).
+`bc71774`). STATUS: **Phase 0 complete; Arm-C authority corrected in
+AMENDMENT-004 (2026-09-27); PR #251 remains open and unmerged — HALTED
+for fresh maintainer exact-head review and dispatch.** The first v1
+Arm-A attempt failed and is retained read-only; no physical execution
+under this correction is authorized by issue creation or these docs.
 
 Contents:
 
@@ -48,7 +48,20 @@ Contents:
   record under gen-1-v1-timeout-defect; canonical reruns use
   gen-2-pass6); dispatch comment 5852485456 is bound to
   1c86e97 and mechanically stale at any moved head. Dated
-  amendment; frozen text preserved.
+  amendment; frozen text preserved. Its §3 claim that deterministic
+  C1 alone can LOCALIZE and that only variable C1 can access C2 is
+  historical and expressly superseded by AMENDMENT-004.
+- `METHODOLOGY-AMENDMENT-004.md` — current Issue #250 Arm-C terminal
+  contract: C1 (four threads) is informative but never terminal on its
+  own; completed C1 deterministic **or** variable with no separately
+  authorized serial C2 is BLOCKED. Only actual default-vs-single-thread
+  comparison can LOCALIZE at C2; C2 variation permits D. Dedicated
+  exact-head C2 authority, completed-C1 gate record with both dispatch
+  digests, and cost control remain mandatory. Producer cost admission
+  checks the entire retained `cost-planning-record.json` against the frozen
+  recomputed projection and its canonical SHA-256 before any runner starts;
+  a longer HTTP timeout does not grant spend authority. This does not
+  authorize execution or rewrite the frozen methodology/earlier amendments.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

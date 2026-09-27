@@ -174,10 +174,56 @@ def retain_cost_planning_record(evidence_root: Path) -> dict[str, Any]:
         raise PhysicalDiagnosticError(
             f"cost planning record already retained (append-only): "
             f"{target}")
-    doc = TB.cost_planning_record()
-    doc["evidence_generation"] = EVIDENCE_GENERATION
+    doc = TB.canonical_cost_planning_record()
+    if doc["evidence_generation"] != EVIDENCE_GENERATION:
+        raise PhysicalDiagnosticError("cost record generation differs from producer")
     _write_json(target, doc)
     return doc
+
+
+def _unit_cost_condition(unit: dict[str, Any], arm: str) -> str:
+    """Map frozen execution context, not caller cost, to the cost entry."""
+    condition = TB.unit_condition(unit)
+    if arm == "B-process-init" and condition == "arm-a-cpu-only":
+        return "arm-b-fresh"
+    if arm == "C-cpu-threads" and condition == "arm-a-cpu-only":
+        return "arm-c-default"
+    return condition
+
+
+def _retained_cost_verdict(evidence_root: Path, condition: str,
+                           namespace: str, arm: str) -> dict[str, Any]:
+    """Authenticate canonical prospective cost; this does not admit spend."""
+    path = Path(evidence_root) / "cost-planning-record.json"
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError("retained cost planning record missing")
+    try:
+        record = json.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise PhysicalDiagnosticError("retained cost planning record unreadable") from exc
+    verdict = TB.evaluate_cost_gate(condition, record)
+    if (verdict["namespace"], verdict["arm"]) != (namespace, arm):
+        raise PhysicalDiagnosticError(
+            "cost planning condition is not bound to this dispatch")
+    return verdict
+
+
+def _admit_retained_cost(evidence_root: Path, condition: str,
+                         namespace: str, arm: str, *,
+                         c2_gate_authorized: bool = False) -> dict[str, Any]:
+    """Admit over-ceiling spend only after the separate C2 proof closes."""
+    verdict = _retained_cost_verdict(evidence_root, condition, namespace, arm)
+    if verdict["over_cost_ceiling"] and not (
+            c2_gate_authorized and condition == "arm-c2-serial"
+            and namespace == D.C2_SERIAL_NAMESPACE
+            and arm == D.ARM_C2_NAME):
+        raise PhysicalDiagnosticError(
+            "cost planning condition exceeds the ceiling without "
+            "dedicated verified C2 authorization")
+    # Conditional B/D dispositions are NOT auto-dispatches. The live
+    # exact-head per-arm dispatch AND producer's retained-row sequential
+    # reachability gates still have to pass before any physical launch.
+    return verdict
 
 
 UNIT_SCHEMA = "inferswarm.issue250.diagnostic-unit/1"
@@ -1386,34 +1432,164 @@ def server_argv(binary: Path, model_member: Path, unit: dict[str, Any],
 
 
 def c2_launch_allowed(namespace: str, arm: str, authority: dict[str, Any],
-                      expected_head: str, evidence_root: Path) -> None:
-    """The ONLY path that may launch a serial `-t 1 -tb 1` (C2) unit.
-
-    Fail-closed mechanical conjunction (AMENDMENT-003): the dedicated
-    d250-arm-c2 namespace, the C2-serial arm, an authority whose
-    comment carries the explicit c2-serial-gate line AND validates at
-    the expected head, and the retained C1-varied gate record signed
-    by this very authority. Any other shape raises — in particular, a
-    d250-arm-c or d250-arm-c1 dispatch can never satisfy this (the
-    dedicated validators refuse those pairings outright).
-    """
+                      expected_head: str, evidence_root: Path, *,
+                      repo_root: Path, model_attestation: dict[str, Any],
+                      revalidate_authority: Callable[..., dict[str, Any]] | None,
+                      github_api: str = "https://api.github.com",
+                      ) -> dict[str, Any]:
+    """Authorize C2 only with verified completed C1 and both live digests."""
     if namespace != D.C2_SERIAL_NAMESPACE or arm != D.ARM_C2_NAME:
         raise PhysicalDiagnosticError(
             f"serial C2 launch requires the {D.C2_SERIAL_NAMESPACE!r} "
             f"namespace and the {D.ARM_C2_NAME!r} arm (got "
             f"{namespace!r}/{arm!r}) — no generic Arm-C or C1 dispatch "
             "can authorize serial units")
-    payload = D.validate_authority_payload(
-        dict(authority), expected_head)
+    payload = D.validate_authority_payload(dict(authority), expected_head)
     if payload.get("namespace") != D.C2_SERIAL_NAMESPACE:
         raise PhysicalDiagnosticError(
             "c2 authority payload is not a d250-arm-c2 dispatch")
-    if not D.c1_dispatch_c2_unlocked(
-            evidence_root, expected_head, c2_authority=payload):
+    # The terminal imports physical; import only when the dedicated gate
+    # executes, never at module initialization.
+    import issue250_terminal as T
+
+    root = Path(evidence_root)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if opening.is_symlink() or not opening.is_file():
+        raise PhysicalDiagnosticError("C1 campaign opening attestation missing")
+    try:
+        attestation = json.loads(opening.read_bytes())
+        validate_model_attestation(attestation, expected_head)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
         raise PhysicalDiagnosticError(
-            "serial C2 launch refused: the frozen C1-varied gate "
-            f"record is absent or does not bind this authority "
+            "C1 campaign opening attestation invalid") from exc
+    if attestation != model_attestation:
+        raise PhysicalDiagnosticError(
+            "C1 rows require the retained campaign opening attestation")
+    c1_authority = require_live_dispatch(
+        repo_root, expected_head, "d250-arm-c1",
+        revalidate_authority=revalidate_authority, github_api=github_api)
+    if c1_authority.get("arm") != "C1-reduced-parallelism":
+        raise PhysicalDiagnosticError("C1 live dispatch binds another arm")
+    tags = [u["tag"] for u in D.probe_list_for(
+        "C1-reduced-parallelism")]
+    population, problems = T._verify_namespace_population(
+        root, "d250-arm-c1", "C1-reduced-parallelism",
+        expected_head, c1_authority, attestation, tags,
+        lambda tag: "accepted")
+    verdict = T._walk_condition(population)
+    completed = ("deterministic" if verdict["deterministic"]
+                 else "variable" if verdict["nondeterministic"] else None)
+    if problems or completed is None:
+        raise PhysicalDiagnosticError(
+            "serial C2 launch refused: completed verified C1 rows missing")
+    if not D.c1_dispatch_c2_unlocked(
+            root, expected_head, c2_authority=payload,
+            c1_authority=c1_authority, c1_verdict=completed):
+        raise PhysicalDiagnosticError(
+            "serial C2 launch refused: the frozen C1-completed gate "
+            f"record is absent or does not bind both live authorities "
             f"({D.C2_GATE_RECORD_NAME})")
+    _admit_retained_cost(root, "arm-c2-serial", namespace, arm,
+                         c2_gate_authorized=True)
+    return {"authority": c1_authority, "verdict": completed}
+
+
+def _require_sequential_reachability(
+        repo_root: Path, evidence_root: Path, arm: str,
+        expected_head: str, model_attestation: dict[str, Any],
+        revalidate_authority: Callable[..., dict[str, Any]] | None,
+        github_api: str) -> None:
+    """Verify the predecessor ladder from retained rows, never summaries.
+
+    A condition may be cost-admissible and dispatched yet unreachable.
+    This check runs before any physical runner/process and uses the same
+    exact-head live authority and retained-byte verifiers as the reducer.
+    """
+    if arm == "A-vulkan-necessity":
+        return
+    import issue250_terminal as T
+
+    root = Path(evidence_root)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if opening.is_symlink() or not opening.is_file():
+        raise PhysicalDiagnosticError("sequential campaign attestation missing")
+    try:
+        retained = json.loads(opening.read_bytes())
+        validate_model_attestation(retained, expected_head)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise PhysicalDiagnosticError("sequential campaign attestation invalid") from exc
+    if retained != model_attestation:
+        raise PhysicalDiagnosticError("sequential campaign attestation mismatch")
+
+    def authority(namespace: str, predecessor: str) -> dict[str, Any]:
+        live = require_live_dispatch(
+            repo_root, expected_head, namespace,
+            revalidate_authority=revalidate_authority, github_api=github_api)
+        if live.get("arm") != predecessor:
+            raise PhysicalDiagnosticError(
+                f"sequential {namespace} live dispatch binds wrong arm")
+        return live
+
+    def variable(pop: dict[str, Any], problems: list[str], label: str) -> None:
+        verdict = T._walk_condition(pop)
+        if problems or not verdict["nondeterministic"]:
+            raise PhysicalDiagnosticError(
+                f"sequential {label} requires verified variable rows: "
+                f"{problems or verdict['population']}")
+
+    try:
+        a = authority("d250-arm-a", "A-vulkan-necessity")
+        pop, problems = T._verify_namespace_population(
+            root, "d250-arm-a", "A-vulkan-necessity", expected_head,
+            a, retained, [u["tag"] for u in D.probe_list_for(
+                "A-vulkan-necessity")], lambda tag: "accepted")
+        variable(pop, problems, "Arm A CPU-only")
+        if arm == "B-process-init":
+            return
+
+        b = authority("d250-arm-b", "B-process-init")
+        plan_b = D.probe_list_for("B-process-init")
+        fresh = [u["tag"] for u in plan_b if not u.get("same_process")]
+        same = {u["tag"] for u in plan_b if u.get("same_process")}
+        pop, problems = T._verify_namespace_population(
+            root, "d250-arm-b", "B-process-init", expected_head,
+            b, retained, fresh, lambda tag: "accepted",
+            extra_expected=same)
+        variable(pop, problems, "Arm B fresh")
+        pop, problems = T._verify_same_process_units(
+            root, "d250-arm-b", "B-process-init", expected_head,
+            b, retained)
+        variable(pop, problems, "Arm B same-process")
+        if arm == "C-cpu-threads":
+            return
+
+        c = authority("d250-arm-c", "C-cpu-threads")
+        pop, problems = T._verify_namespace_population(
+            root, "d250-arm-c", "C-cpu-threads", expected_head,
+            c, retained, [u["tag"] for u in D.probe_list_for(
+                "C-cpu-threads")], lambda tag: "accepted")
+        variable(pop, problems, "Arm C default")
+        if arm in ("C1-reduced-parallelism", D.ARM_C2_NAME):
+            return  # C2 additionally checks C1 via c2_launch_allowed.
+        if arm != "D-context-transition":
+            raise PhysicalDiagnosticError("unknown sequential arm")
+
+        c2 = authority(D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME)
+        c2_launch_allowed(
+            D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME, c2, expected_head,
+            root, repo_root=repo_root, model_attestation=retained,
+            revalidate_authority=revalidate_authority, github_api=github_api)
+        pop, problems = T._verify_namespace_population(
+            root, D.C2_SERIAL_NAMESPACE, D.ARM_C2_NAME, expected_head,
+            c2, retained, [u["tag"] for u in D.probe_list_for(
+                D.ARM_C2_NAME)], lambda tag: "accepted")
+        variable(pop, problems, "Arm C2 serial")
+    except PhysicalDiagnosticError:
+        raise
+    except (OSError, ValueError, TypeError, KeyError,
+            D.DiagnosticError) as exc:
+        raise PhysicalDiagnosticError(
+            f"sequential predecessor verification failed: {exc}") from exc
 
 
 def timeout_budget_condition_is_c2(unit: dict[str, Any]) -> bool:
@@ -1672,12 +1848,16 @@ def run_diagnostic_unit(
     """Execute ONE fresh-process diagnostic unit under full gating.
 
     GATE ORDER (fail fast, all before any launch):
-      namespace<->arm exact binding -> EARLY live dispatch authority ->
-      frozen plan membership (arm + tag) -> exact clean local head ->
+      namespace<->arm exact binding -> frozen plan membership ->
+      fresh evidence generation + retained canonical cost admission ->
+      EARLY live dispatch authority -> exact clean local head ->
+      retained-byte sequential predecessor proof (live per-arm dispatch,
+      canonical opening attestation, verified variable rows) ->
       fixture authority -> campaign model attestation + stat witness ->
       binary identity -> request contract -> subject identity (pre) ->
-      prelaunch custody -> FINAL live dispatch authority (two-pass
-      binding + clean head re-check) -> physical launch.
+      prelaunch custody -> FINAL live dispatch authority + repeated
+      sequential proof (two-pass binding + clean head re-check) ->
+      physical launch.
 
     ``execute``/``identity_observer``/``revalidate_authority``/
     ``health_runner`` are injectable test seams; production resolves
@@ -1700,6 +1880,16 @@ def run_diagnostic_unit(
         raise PhysicalDiagnosticError(
             "same-process units run through run_same_process_lifecycle; "
             "the fresh-process unit path cannot satisfy Arm B arm-2")
+    # No runner, subprocess, fixture or model operation precedes cost
+    # admission: even the clean-head Git subprocess runs only afterward.
+    canonical_generation = validate_evidence_generation(Path(evidence_root))
+    condition = _unit_cost_condition(unit, arm)
+    if condition == "arm-c2-serial":
+        # Authenticate the complete retained canonical cost record before
+        # fetching authority; only the dedicated C2 gate may admit spend.
+        _retained_cost_verdict(evidence_root, condition, namespace, arm)
+    else:
+        _admit_retained_cost(evidence_root, condition, namespace, arm)
     authority_early = require_live_dispatch(
         repo_root, expected_head, namespace,
         revalidate_authority=revalidate_authority, github_api=github_api)
@@ -1707,10 +1897,18 @@ def run_diagnostic_unit(
         raise PhysicalDiagnosticError(
             "live dispatch arm does not match the executing arm")
     D._require_clean_head(repo_root, expected_head)
-    # CORRECTION PASS 6: canonical execution writes ONLY the fresh
-    # evidence generation (the v1 defect tree is rejected outright).
-    canonical_generation = validate_evidence_generation(
-        Path(evidence_root))
+    _require_sequential_reachability(
+        repo_root, Path(evidence_root), arm, expected_head,
+        model_attestation, revalidate_authority, github_api)
+    c2_gate = None
+    if condition == "arm-c2-serial":
+        c2_gate = c2_launch_allowed(
+            namespace, arm, authority_early, expected_head,
+            Path(evidence_root), repo_root=repo_root,
+            model_attestation=model_attestation,
+            revalidate_authority=revalidate_authority, github_api=github_api)
+    # The canonical generation and cost record were checked before
+    # dispatch and before any process/subprocess could be started.
     fixtures = verify_fixtures(repo_root)
     binary_sha = verify_binary(Path(binary), binary_id)
     attestation = validate_model_attestation(model_attestation,
@@ -1780,11 +1978,9 @@ def run_diagnostic_unit(
         else D.REQUEST_CONTRACT)
 
     if TB.unit_condition(unit) == "arm-c2-serial":
-        # DEDICATED C2 GATE (AMENDMENT-003): the retained C1-varied
-        # record + the explicit-gate dispatch must BOTH bind before
-        # the serial unit is marked launchable.
-        c2_launch_allowed(namespace, arm, authority_early,
-                          expected_head, Path(evidence_root))
+        # Dedicated C2 cost + C1 proof closed before fixtures/model operations.
+        if c2_gate is None:
+            raise PhysicalDiagnosticError("serial C2 gate not established")
         unit = c2_unit(unit)
     out_prefix = unit_dir / "obs"
     env = launch_env(out_prefix)
@@ -1820,7 +2016,27 @@ def run_diagnostic_unit(
     if final_authority.get("arm") != arm:
         raise PhysicalDiagnosticError(
             "final live dispatch arm does not match the executing arm")
+    if c2_gate is not None:
+        c1_late = require_live_dispatch(
+            repo_root, expected_head, "d250-arm-c1",
+            revalidate_authority=revalidate_authority, github_api=github_api)
+        D.bind_authority_observations(c2_gate["authority"], c1_late)
+        if not D.c1_dispatch_c2_unlocked(
+                evidence_root, expected_head, c2_authority=final_authority,
+                c1_authority=c1_late, c1_verdict=c2_gate["verdict"]):
+            raise PhysicalDiagnosticError("C2 gate record drift before launch")
+        _admit_retained_cost(evidence_root, "arm-c2-serial", namespace, arm,
+                             c2_gate_authorized=True)
+    _require_sequential_reachability(
+        repo_root, Path(evidence_root), arm, expected_head,
+        model_attestation, revalidate_authority, github_api)
     D._require_clean_head(repo_root, expected_head)
+    # A preflight-valid record can be replaced during fixture/identity or
+    # sequential verification. Re-read it immediately before the physical
+    # runner; even a re-signed lower cost never grants launch authority.
+    _admit_retained_cost(
+        evidence_root, condition, namespace, arm,
+        c2_gate_authorized=(c2_gate is not None))
 
     unit_started_at = _utcnow()
     started = time.monotonic()
@@ -2185,6 +2401,8 @@ def run_same_process_lifecycle(
         raise PhysicalDiagnosticError(
             f"same-process population is frozen at "
             f"{D.DETERM_MIN_REPEATS} requests, plan lists {len(same_units)}")
+    canonical_generation = validate_evidence_generation(Path(evidence_root))
+    _admit_retained_cost(evidence_root, "arm-b-sameproc", namespace, arm)
 
     # Per-request live authority revalidation (blocker 1): every
     # completion request begins under CURRENT authority, cross-bound
@@ -2219,6 +2437,9 @@ def run_same_process_lifecycle(
             else:
                 # cross-bind EVERY observation to the original generation
                 D.bind_authority_observations(generation_anchor, payload)
+            _require_sequential_reachability(
+                repo_root, Path(evidence_root), arm, expected_head,
+                model_attestation, revalidate_authority, github_api)
             request_authorities.append(dict(payload))
         except BaseException:
             if request_gate_failed_index is None:
@@ -2233,12 +2454,11 @@ def run_same_process_lifecycle(
             "live dispatch arm does not match the executing arm")
     generation_anchor = dict(authority_early)
     D._require_clean_head(repo_root, expected_head)
-    # CORRECTION PASS 6: same-process Arm-B requests are CPU-only
-    # prefills too — the lifecycle runs under the SAME frozen
-    # timeout-budget authority and writes ONLY the canonical
-    # generation.
-    canonical_generation = validate_evidence_generation(
-        Path(evidence_root))
+    _require_sequential_reachability(
+        repo_root, Path(evidence_root), arm, expected_head,
+        model_attestation, revalidate_authority, github_api)
+    # Timeout-budget authority is still derived for the same retained
+    # generation, whose cost record was admitted before the first subprocess.
     fixtures = verify_fixtures(repo_root)
     lifecycle_budget = TB.request_timeout_budget(
         same_units[0],
@@ -2302,7 +2522,13 @@ def run_same_process_lifecycle(
     if final_authority.get("arm") != arm:
         raise PhysicalDiagnosticError(
             "final live dispatch arm does not match the executing arm")
+    _require_sequential_reachability(
+        repo_root, Path(evidence_root), arm, expected_head,
+        model_attestation, revalidate_authority, github_api)
     D._require_clean_head(repo_root, expected_head)
+    # The shared server is one physical launch. Recheck the retained cost
+    # authority after all prelaunch work, before invoking its runner.
+    _admit_retained_cost(evidence_root, "arm-b-sameproc", namespace, arm)
 
     started_at = _utcnow()
     started = time.monotonic()
