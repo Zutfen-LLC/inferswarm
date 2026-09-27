@@ -60,7 +60,9 @@ import hashlib
 import json
 import os
 import re
+import base64
 import signal
+import socket
 import subprocess
 import threading
 import time
@@ -576,7 +578,6 @@ def ladder_token_authority_receipt(nominal_length: int,
                 json.dumps(token_ids, separators=(",", ":")).encode())
             if token_ids is not None else None),
         "token_ids": token_ids,
-        "authority": "pinned_server_tokenize_endpoint",
     }
 
 
@@ -628,10 +629,19 @@ LADDER_TOKEN_AUTHORITY_SCHEMA = (
 def tokenize_prompt(port: int, prompt: str,
                     http_post: Callable[[str, bytes], Any] | None = None,
                     ) -> tuple[int, list[int]]:
-    """Tokenize one prompt through the PINNED server's /tokenize
-    endpoint (add_special defaults true server-side; parse_special
-    true — mirroring the pinned /completion tokenize call at
-    server-context.cpp:4579). Returns (token_count, token_ids)."""
+    """Tokenize one prompt through a server's /tokenize endpoint.
+
+    CORRECTION PASS 4 (NO-GO 5851078451, blocker 2): this helper is
+    NO LONGER production token authority by itself — it blindly
+    POSTs to ``http://127.0.0.1:<port>/tokenize`` with no proof that
+    the listener is the accepted binary launched with the accepted
+    model. Production tokenization goes through
+    ``launch_tokenizer_server`` + ``_tokenize_via_attributed_server``
+    which launch, attribute, and verify ONE dedicated pinned process
+    (add_special defaults true server-side; parse_special true —
+    mirroring the pinned /completion tokenize call at
+    server-context.cpp:4579). Returns (token_count, token_ids).
+    """
     if http_post is None:
         http_post = _http_json_post
     body = json.dumps({"content": prompt}).encode()
@@ -655,9 +665,228 @@ def _http_json_post(url: str, body: bytes) -> Any:
         return json.loads(response.read(16 * 1024 * 1024))
 
 
+def _port_occupied(port: int) -> bool:
+    """True when something is already listening on the loopback port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(0.5)
+        return probe.connect_ex(("127.0.0.1", port)) == 0
+
+
+# Frozen tokenization-server launch geometry (correction pass 4,
+# blocker 2): the dedicated tokenize-only process uses the EXACT
+# accepted server geometry (same ctx/batch/host/port contract as the
+# campaign launch shape) with NO observer hook — tokenization must
+# not perturb or be perturbed by the observation seam, and it serves
+# ONLY /tokenize requests (never /completion).
+TOKENIZER_SERVER_CTX_SIZE = SERVER_CTX_SIZE
+TOKENIZER_SERVER_BATCH_SIZE = SERVER_BATCH_SIZE
+TOKENIZER_SERVER_PORT = PORT
+TOKENIZER_SCHEMA = "inferswarm.issue250.token-authority-process/1"
+
+
+def tokenizer_server_argv(binary: Path, model_member: Path,
+                          port: int = TOKENIZER_SERVER_PORT,
+                          ) -> list[str]:
+    """FROZEN argv for the dedicated tokenize-only server process.
+
+    Byte-identical geometry to the accepted campaign launch shape
+    (--ctx-size 8192 --batch-size 512, host/port) with NO argv delta:
+    no observer env, no thread regime, no placement change — the
+    tokenizer authority must come from the accepted binary+model
+    under the accepted launch shape.
+    """
+    return [str(binary), "--model", str(model_member),
+            "-ngl", str(D.ACCEPTED_MATCHED_NGL),
+            "--ctx-size", str(TOKENIZER_SERVER_CTX_SIZE),
+            "--batch-size", str(TOKENIZER_SERVER_BATCH_SIZE),
+            "--host", "127.0.0.1", "--port", str(port)]
+
+
+def launch_tokenizer_server(
+        binary: Path, binary_sha: str, model_dir: Path,
+        model_member: Path, *, port: int = TOKENIZER_SERVER_PORT,
+        spawn=None, wait_healthy: Callable[..., None] | None = None,
+        port_occupied: Callable[[int], bool] | None = None,
+        attribution_fn=None, log_dir: Path | None = None,
+        ) -> dict[str, Any]:
+    """Launch and MECHANICALLY ATTRIBUTE the tokenize-only server.
+
+    CORRECTION PASS 4 (NO-GO 5851078451, blocker 2) — the production
+    ladder-token authority producer. Steps (fail-closed at each):
+
+    1. refuse a pre-existing unknown listener on the target port
+       (fail closed; never silently reuse, never kill unrelated
+       processes to obtain the port);
+    2. launch ONE accepted llama-server process under the frozen
+       tokenization geometry above (no observer hook env);
+    3. wait for /health;
+    4. capture PID + process attribution and verify
+       ``/proc/<pid>/exe`` byte SHA == the accepted binary SHA (the
+       listener is PROVEN to be the verified binary);
+    5. bind argv to the exact accepted model member / model dir.
+
+    Returns the process handle: ``{"proc", "attribution", "argv"}``.
+    The caller MUST ``_stop_tokenizer_server`` the process in a
+    finally block. ``spawn``/``wait_healthy``/``port_occupied``/
+    ``attribution_fn`` are test seams; production omission resolves
+    the real implementations.
+    """
+    if port_occupied is None:
+        port_occupied = _port_occupied
+    if spawn is None:
+        spawn = _spawn_server
+    if wait_healthy is None:
+        wait_healthy = _wait_healthy
+    if attribution_fn is None:
+        attribution_fn = _proc_attribution
+    # PRE-EXISTING PORT RULE: an unknown listener fails closed.
+    if port_occupied(port):
+        raise PhysicalDiagnosticError(
+            f"port {port} is already occupied by an unknown process — "
+            f"refusing to attribute token authority to an unverified "
+            f"listener (no unrelated process is killed to obtain the "
+            f"port)")
+    argv = tokenizer_server_argv(Path(binary), Path(model_member),
+                                 port=port)
+    if log_dir is None:
+        log_dir = Path(model_dir).parent / "tokenizer-authority"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    proc = spawn(argv, log_dir / "tokenizer-server.log")
+    try:
+        wait_healthy(proc, port)
+        attribution = attribution_fn(proc, argv, {})
+        exe_sha = attribution.get("server_exe_sha256")
+        if exe_sha != binary_sha:
+            raise PhysicalDiagnosticError(
+                f"tokenizer server executable SHA mismatch: {exe_sha} "
+                f"!= accepted binary {binary_sha}")
+        attribution["model_dir"] = str(Path(model_dir))
+        attribution["model_launch_member"] = str(Path(model_member))
+        attribution["argv"] = list(argv)
+        return {"proc": proc, "attribution": attribution,
+                "argv": argv}
+    except BaseException:
+        if proc.poll() is None:
+            _terminate_process_group(proc)
+        raise
+
+
+def _spawn_server(argv: list[str], log_path: Path
+                  ) -> subprocess.Popen:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = log_path.open("wb")
+    proc = subprocess.Popen(
+        argv, env=dict(os.environ), stdout=log_file,
+        stderr=subprocess.STDOUT, start_new_session=True)
+    return proc
+
+
+def _terminate_process_group(proc: subprocess.Popen) -> None:
+    if proc.poll() is None:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+            proc.wait(timeout=5)
+
+
+def _stop_tokenizer_server(handle: dict[str, Any]) -> None:
+    """Teardown the dedicated tokenizer server process (always runs)."""
+    proc = handle.get("proc")
+    if proc is not None:
+        _terminate_process_group(proc)
+
+
+def _verify_tokenizer_process_still_attributed(
+        handle: dict[str, Any], binary_sha: str) -> None:
+    """Re-verify the live PID + executable mid-authority generation.
+
+    The process answering the tokenize requests must STILL be the
+    attributed process: PID alive, /proc/<pid>/exe SHA unchanged. A
+    process replacement mid-generation fails closed (control 8).
+    """
+    proc = handle["proc"]
+    attribution = handle["attribution"]
+    if proc.poll() is not None:
+        raise PhysicalDiagnosticError(
+            f"tokenizer server exited mid-authority (rc="
+            f"{proc.returncode})")
+    try:
+        exe = os.path.realpath(f"/proc/{proc.pid}/exe")
+    except OSError as exc:
+        raise PhysicalDiagnosticError(
+            f"tokenizer server process vanished mid-authority "
+            f"(pid {proc.pid}): {exc}") from exc
+    if not Path(exe).exists():
+        raise PhysicalDiagnosticError(
+            f"tokenizer server process vanished mid-authority "
+            f"(pid {proc.pid}): no /proc/{proc.pid}/exe")
+    live_sha = D.file_sha256(Path(exe))
+    if live_sha != binary_sha or live_sha != attribution[
+            "server_exe_sha256"]:
+        raise PhysicalDiagnosticError(
+            f"tokenizer server process changed mid-authority: live "
+            f"executable SHA {live_sha} != attributed "
+            f"{attribution['server_exe_sha256']}")
+
+
+def _tokenize_via_attributed_server(
+        port: int, prompt: str, handle: dict[str, Any],
+        binary_sha: str,
+        http_post: Callable[[str, bytes], Any] | None = None,
+        verify_alive: Callable[[dict[str, Any], str], None]
+        | None = None,
+        ) -> tuple[int, list[int], bytes, str]:
+    """Tokenize ONE prompt through the attributed server process.
+
+    Verifies the process attribution immediately before the request,
+    issues ONLY a /tokenize POST, retains the RAW response bytes and
+    their digest alongside the parsed token ids. Returns
+    (count, ids, raw_bytes, raw_sha256).
+    """
+    if verify_alive is None:
+        verify_alive = _verify_tokenizer_process_still_attributed
+    verify_alive(handle, binary_sha)
+    if http_post is None:
+        http_post = _raw_json_post
+    body = json.dumps({"content": prompt}).encode()
+    raw, doc = http_post(f"http://127.0.0.1:{port}/tokenize", body)
+    tokens = doc.get("tokens") if isinstance(doc, dict) else None
+    if (not isinstance(tokens, list) or not tokens
+            or any(type(t) is not int for t in tokens)):
+        raise PhysicalDiagnosticError(
+            f"malformed tokenize response: {str(doc)[:200]}")
+    return len(tokens), list(tokens), raw, D.sha256_bytes(raw)
+
+
+def _raw_json_post(url: str, body: bytes) -> tuple[bytes, Any]:
+    """POST returning (raw_bytes, decoded_json) — custody-grade."""
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"},
+        method="POST")
+    with urllib.request.urlopen(req, timeout=120) as response:
+        if response.status != 200:
+            raise PhysicalDiagnosticError(
+                f"tokenize HTTP status {response.status}")
+        raw = response.read(16 * 1024 * 1024)
+    return raw, json.loads(raw)
+
+
 def derive_ladder_token_authority(
         repo_root: Path, evidence_root: Path, expected_head: str,
         *, binary: Path, binary_id: str, model_dir: Path,
+        attestation: dict[str, Any] | None = None,
+        launch_server: Callable[..., dict[str, Any]] | None = None,
+        stop_server: Callable[[dict[str, Any]], None] | None = None,
+        verify_alive: Callable[[dict[str, Any], str], None]
+        | None = None,
         tokenize: Callable[[str], tuple[int, list[int]]] | None = None,
         http_post: Callable[[str, bytes], Any] | None = None,
         ) -> dict[str, Any]:
@@ -672,37 +901,119 @@ def derive_ladder_token_authority(
     count, prompt text digest, actual token ids (full population), and
     the actual token count. Append-only; regeneration is refused.
 
-    ``tokenize`` is the injectable seam (tests pass a fake; production
-    launches the accepted binary once and serves every prompt through
-    /tokenize with NO completion requests — tokenization is not
-    diagnostic execution).
+    CORRECTION PASS 4 (NO-GO 5851078451, blocker 2): the production
+    path now LAUNCHES AND ATTRIBUTES the pinned server. The tokens
+    are proven to come from ONE accepted llama-server process:
+    exact clean head -> binary file verification -> accepted campaign
+    model attestation binding -> model stat witness -> port free of
+    unknown listeners -> ONE process launched under the frozen
+    tokenization geometry -> healthy -> PID + /proc/<pid>/exe SHA ==
+    accepted binary SHA -> argv bound to the accepted model member ->
+    per-prompt re-attribution + /tokenize ONLY -> raw response bytes
+    + digests retained -> teardown. ``tokenize`` is the TEST-ONLY
+    injection seam (a bare callback returning ids produces
+    NON-production authority — the retained document then names
+    ``test_seam`` and the reducer rejects it for production use);
+    production callers pass nothing.
     """
     repo_root = Path(repo_root)
     D._require_clean_head(repo_root, expected_head)
     fixtures = verify_fixtures(repo_root)
     binary_sha = verify_binary(Path(binary), binary_id)
+    # Campaign model attestation binding: the tokenizer authority
+    # must use the SAME accepted model bytes as the physical
+    # campaign (accepted member digests + opening attestation digest
+    # + live stat witness).
+    if attestation is None:
+        attestation = validate_model_attestation(
+            _load_retained_attestation(evidence_root), expected_head)
+    else:
+        attestation = validate_model_attestation(attestation,
+                                                 expected_head)
+    witness_problems, stat_witness = attestation_witness(
+        Path(model_dir), attestation)
+    if witness_problems:
+        raise PhysicalDiagnosticError(
+            f"tokenizer-authority model stat witness drift: "
+            f"{witness_problems}")
+    if attestation["model_dir"] != str(Path(model_dir)):
+        raise PhysicalDiagnosticError(
+            "attested model dir differs from the tokenizer model dir")
+    launch_member = Path(model_dir) / D.MODEL_MEMBER_1
     base = fixtures[D.CASE]
     lengths: dict[str, Any] = {}
-    for length in D.ARM_D_LADDER_LENGTHS:
-        prompt = derive_ladder_prompt(
-            base["prompt_text"], length, base["sentence_repeats"])
-        if tokenize is not None:
+    process_block: dict[str, Any] | None = None
+    if tokenize is not None:
+        # TEST SEAM ONLY — never production authority.
+        for length in D.ARM_D_LADDER_LENGTHS:
+            prompt = derive_ladder_prompt(
+                base["prompt_text"], length, base["sentence_repeats"])
             count, ids = tokenize(prompt)
-        else:
-            count, ids = tokenize_prompt(PORT, prompt, http_post=http_post)
-        lengths[str(length)] = ladder_token_authority_receipt(
-            length, D.ARM_D_LADDER_SENTENCE_REPEATS[length], prompt,
-            D.sha256_bytes(prompt.encode()), count, token_ids=ids)
+            lengths[str(length)] = ladder_token_authority_receipt(
+                length, D.ARM_D_LADDER_SENTENCE_REPEATS[length], prompt,
+                D.sha256_bytes(prompt.encode()), count, token_ids=ids)
+        process_block = None
+    else:
+        launcher = launch_server or launch_tokenizer_server
+        stopper = stop_server or _stop_tokenizer_server
+        verifier = (verify_alive
+                    or _verify_tokenizer_process_still_attributed)
+        handle = launcher(Path(binary), binary_sha, Path(model_dir),
+                          launch_member)
+        try:
+            for length in D.ARM_D_LADDER_LENGTHS:
+                prompt = derive_ladder_prompt(
+                    base["prompt_text"], length,
+                    base["sentence_repeats"])
+                count, ids, raw, raw_sha = _tokenize_via_attributed_server(
+                    TOKENIZER_SERVER_PORT, prompt, handle, binary_sha,
+                    http_post=http_post, verify_alive=verifier)
+                receipt = ladder_token_authority_receipt(
+                    length, D.ARM_D_LADDER_SENTENCE_REPEATS[length],
+                    prompt, D.sha256_bytes(prompt.encode()), count,
+                    token_ids=ids)
+                receipt["tokenize_response_raw_sha256"] = raw_sha
+                receipt["tokenize_response_bytes"] = len(raw)
+                # retain the RAW response bytes themselves so the
+                # reducer can re-verify the digest against content
+                # (raw mutation control 9)
+                receipt["tokenize_response_raw_b64"] = base64.b64encode(
+                    raw).decode("ascii")
+                lengths[str(length)] = receipt
+            process_block = dict(handle["attribution"])
+            process_block["schema"] = TOKENIZER_SCHEMA
+            process_block["head_sha"] = expected_head
+            process_block["binary_id"] = binary_id
+            process_block["binary_sha256"] = binary_sha
+            process_block["model_attestation_sha256"] = attestation[
+                "attestation_sha256"]
+            process_block["model_stat_witness"] = stat_witness
+            process_block["tokenizer_semantics"] = {
+                "same_accepted_model_bytes": True,
+                "add_special": "server-default-true",
+                "parse_special": True,
+                "reference": ("pinned /completion tokenize call "
+                              "(server-context.cpp:4579)"),
+            }
+        finally:
+            stopper(handle)
     doc = {
         "schema": LADDER_TOKEN_AUTHORITY_SCHEMA,
         "head_sha": expected_head,
         "binary_id": binary_id,
         "binary_sha256": binary_sha,
-        "authority": "pinned_server_tokenize_endpoint",
-        "method": ("accepted comparator binary /tokenize; add_special "
-                   "server default (true) + parse_special true — the "
+        "authority": ("attributed_pinned_server_tokenize_endpoint"
+                      if process_block is not None else "test_seam"),
+        "method": ("dedicated accepted-binary llama-server launched "
+                   "under the frozen tokenization geometry, attributed "
+                   "by PID + /proc/<pid>/exe SHA == accepted binary "
+                   "SHA, serving ONLY /tokenize; add_special "
+                   "server-default (true) + parse_special true — the "
                    "same tokenize call the pinned /completion path "
                    "makes (server-context.cpp:4579)"),
+        "model_attestation_sha256": attestation[
+            "attestation_sha256"],
+        "process_attribution": process_block,
         "lengths": lengths,
     }
     root = Path(evidence_root)
@@ -714,6 +1025,100 @@ def derive_ladder_token_authority(
     root.mkdir(parents=True, exist_ok=True)
     _write_json(target, doc)
     return doc
+
+
+def _load_retained_attestation(evidence_root: Path) -> dict[str, Any]:
+    """Load the retained campaign OPENING attestation (fail-closed)."""
+    path = Path(evidence_root) / MODEL_ATTESTATION_OPEN_NAME
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError(
+            f"campaign opening model attestation is not retained: "
+            f"{path}")
+    return json.loads(path.read_bytes())
+
+
+def validate_token_authority_process_block(block: Any,
+                                           expected_head: str,
+                                           ) -> dict[str, Any]:
+    """Fail-closed validation of the retained token-authority PROCESS
+    ATTRIBUTION (correction pass 4, NO-GO 5851078451, blocker 2).
+
+    Production token authority must be bound to the attributed
+    pinned-server process: schema, exact head, binary id + SHA (the
+    accepted digest), live server PID, executable SHA == the accepted
+    binary SHA, the exact frozen argv (bound to the accepted model
+    member + model dir), the opening model-attestation digest, the
+    per-member stat witness, and the tokenizer-semantics declaration
+    (same accepted model bytes; add_special/parse_special behavior).
+    A document without this block is NOT production authority.
+    """
+    if not isinstance(block, dict):
+        raise PhysicalDiagnosticError(
+            "ladder token authority lacks process attribution — a "
+            "synthetic/unattributed endpoint cannot produce "
+            "production token authority")
+    if block.get("schema") != TOKENIZER_SCHEMA:
+        raise PhysicalDiagnosticError(
+            "token-authority process attribution schema mismatch")
+    if block.get("head_sha") != expected_head:
+        raise PhysicalDiagnosticError(
+            "token-authority process attribution binds a different head")
+    pid = block.get("server_pid")
+    if type(pid) is not int or pid <= 0:
+        raise PhysicalDiagnosticError(
+            "token-authority process attribution lacks a server PID")
+    binary_id = block.get("binary_id")
+    accepted = (D.SERVER_BINARIES.get(binary_id)
+                if isinstance(binary_id, str) else None)
+    if (not isinstance(binary_id, str) or accepted is None
+            or block.get("binary_sha256") != accepted
+            or block.get("server_exe_sha256") != accepted):
+        raise PhysicalDiagnosticError(
+            "token-authority process executable/binary binding "
+            "mismatch (wrong binary id, binary SHA, or /proc/<pid>/exe "
+            "SHA)")
+    argv = block.get("argv")
+    if (not isinstance(argv, list)
+            or argv != tokenizer_server_argv(
+                Path(argv[0]) if argv else Path(""),
+                Path(str(block.get("model_launch_member"))))):
+        raise PhysicalDiagnosticError(
+            "token-authority process argv is not the frozen "
+            "tokenization geometry bound to the accepted model member")
+    if (block.get("model_launch_member")
+            != str(Path(str(block.get("model_dir")))
+                   / D.MODEL_MEMBER_1)):
+        raise PhysicalDiagnosticError(
+            "token-authority process model launch member mismatch")
+    attestation_sha = block.get("model_attestation_sha256")
+    if (not isinstance(attestation_sha, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", attestation_sha)):
+        raise PhysicalDiagnosticError(
+            "token-authority process lacks the opening "
+            "model-attestation digest")
+    # (the doc-level digest binding to the retained campaign opening
+    # is enforced by load_ladder_token_authority, which knows the
+    # evidence root)
+    witness = block.get("model_stat_witness")
+    if (not isinstance(witness, dict)
+            or sorted(witness) != sorted(D.MODEL_MEMBERS)):
+        raise PhysicalDiagnosticError(
+            "token-authority process stat witness population malformed")
+    for member, fields in witness.items():
+        if (not isinstance(fields, dict)
+                or sorted(fields) != sorted(WITNESS_STAT_KEYS)
+                or any(type(fields[k]) is not int for k in
+                       WITNESS_STAT_KEYS)):
+            raise PhysicalDiagnosticError(
+                f"token-authority stat witness malformed: {member}")
+    semantics = block.get("tokenizer_semantics")
+    if (not isinstance(semantics, dict)
+            or semantics.get("same_accepted_model_bytes") is not True
+            or semantics.get("add_special") != "server-default-true"
+            or semantics.get("parse_special") is not True):
+        raise PhysicalDiagnosticError(
+            "token-authority tokenizer semantics declaration malformed")
+    return block
 
 
 def load_ladder_token_authority(evidence_root: Path,
@@ -736,6 +1141,31 @@ def load_ladder_token_authority(evidence_root: Path,
             "binary_sha256") != D.SERVER_BINARIES.get(binary_id):
         raise PhysicalDiagnosticError(
             "ladder token authority binary binding mismatch")
+    # CORRECTION PASS 4 (blocker 2): production authority REQUIRES the
+    # attributed pinned-server process block (a synthetic HTTP
+    # endpoint alone — or a test-seam document — is rejected).
+    if doc.get("authority") != (
+            "attributed_pinned_server_tokenize_endpoint"):
+        raise PhysicalDiagnosticError(
+            "ladder token authority is not bound to an attributed "
+            "pinned-server tokenize process")
+    block = doc.get("process_attribution")
+    validate_token_authority_process_block(block, expected_head)
+    doc_sha = doc.get("model_attestation_sha256")
+    if (not isinstance(doc_sha, str)
+            or block.get("model_attestation_sha256") != doc_sha):
+        raise PhysicalDiagnosticError(
+            "token-authority doc/process-block attestation digest "
+            "binding mismatch")
+    opening_path = Path(evidence_root) / MODEL_ATTESTATION_OPEN_NAME
+    if opening_path.is_file():
+        opening = json.loads(opening_path.read_bytes())
+        if (opening.get("attestation_sha256") != doc_sha
+                or opening.get("schema") != MODEL_ATTESTATION_OPEN_SCHEMA
+                or opening.get("head_sha") != expected_head):
+            raise PhysicalDiagnosticError(
+                "token-authority attestation digest does not match "
+                "the retained campaign opening")
     lengths = doc.get("lengths")
     if (not isinstance(lengths, dict)
             or sorted(lengths) != sorted(
@@ -748,6 +1178,41 @@ def load_ladder_token_authority(evidence_root: Path,
         if entry["nominal_length"] != int(key):
             raise PhysicalDiagnosticError(
                 "ladder token authority key/entry mismatch")
+        raw_sha = entry.get("tokenize_response_raw_sha256")
+        if (not isinstance(raw_sha, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", raw_sha)
+                or type(entry.get("tokenize_response_bytes")) is not int
+                or entry["tokenize_response_bytes"] <= 0):
+            raise PhysicalDiagnosticError(
+                "ladder token authority entry lacks the raw tokenize "
+                "response digest/size binding")
+        raw_b64 = entry.get("tokenize_response_raw_b64")
+        if not isinstance(raw_b64, str):
+            raise PhysicalDiagnosticError(
+                "ladder token authority entry lacks the retained raw "
+                "tokenize response bytes")
+        try:
+            raw_bytes = base64.b64decode(raw_b64, validate=True)
+        except Exception:
+            raise PhysicalDiagnosticError(
+                "ladder token authority raw response bytes are not "
+                "valid base64") from None
+        if (len(raw_bytes) != entry["tokenize_response_bytes"]
+                or D.sha256_bytes(raw_bytes) != raw_sha):
+            raise PhysicalDiagnosticError(
+                "ladder token authority raw response bytes do not "
+                "match the retained digest/size (mutation detected)")
+        ids = entry.get("token_ids")
+        if (not isinstance(ids, list) or len(ids) == 0
+                or any(type(t) is not int for t in ids)
+                or json.loads(raw_bytes).get("tokens") != ids):
+            raise PhysicalDiagnosticError(
+                "ladder token authority token ids do not match the "
+                "retained raw tokenize response (mutation detected)")
+        if entry.get("actual_token_count") != len(ids):
+            raise PhysicalDiagnosticError(
+                "ladder token authority count does not match the "
+                "retained token id population (mutation detected)")
     return doc
 
 
@@ -1465,29 +1930,42 @@ def run_same_process_lifecycle(
 
     # Per-request live authority revalidation (blocker 1): every
     # completion request begins under CURRENT authority, cross-bound
-    # to the original dispatch generation.
+    # to the original dispatch generation. CORRECTION PASS 4 (NO-GO
+    # 5851078451, blocker 1) mechanically separates four concepts that
+    # pass 3 conflated: gate ATTEMPTS (every gate call, including the
+    # one that fails), SUCCESSFUL authority observations, COMPLETED
+    # requests, and the FAILED gate index. A failed gate attempt never
+    # corresponds to a completed request; the accounting below must
+    # hold for BOTH shapes so an authority-drift prefix is retained
+    # durably instead of raising before custody is written.
     request_authorities: list[dict[str, Any]] = []
-    request_gate_calls: list[int] = []
+    request_gate_attempts: list[int] = []
+    request_gate_failed_index: int | None = None
     generation_anchor: dict[str, Any] | None = None
 
     def _request_gate(index: int) -> None:
-        request_gate_calls.append(index)
-        payload = require_live_dispatch(
-            repo_root, expected_head, namespace,
-            revalidate_authority=revalidate_authority,
-            github_api=github_api)
-        if payload.get("arm") != arm:
-            raise PhysicalDiagnosticError(
-                f"per-request authority at request {index} binds arm "
-                f"{payload.get('arm')!r} != {arm!r}")
-        D._require_clean_head(repo_root, expected_head)
-        nonlocal generation_anchor
-        if generation_anchor is None:
-            generation_anchor = payload
-        else:
-            # cross-bind EVERY observation to the original generation
-            D.bind_authority_observations(generation_anchor, payload)
-        request_authorities.append(dict(payload))
+        request_gate_attempts.append(index)
+        try:
+            payload = require_live_dispatch(
+                repo_root, expected_head, namespace,
+                revalidate_authority=revalidate_authority,
+                github_api=github_api)
+            if payload.get("arm") != arm:
+                raise PhysicalDiagnosticError(
+                    f"per-request authority at request {index} binds arm "
+                    f"{payload.get('arm')!r} != {arm!r}")
+            D._require_clean_head(repo_root, expected_head)
+            nonlocal generation_anchor, request_gate_failed_index
+            if generation_anchor is None:
+                generation_anchor = payload
+            else:
+                # cross-bind EVERY observation to the original generation
+                D.bind_authority_observations(generation_anchor, payload)
+            request_authorities.append(dict(payload))
+        except BaseException:
+            if request_gate_failed_index is None:
+                request_gate_failed_index = index
+            raise
 
     authority_early = require_live_dispatch(
         repo_root, expected_head, namespace,
@@ -1583,23 +2061,63 @@ def run_same_process_lifecycle(
             f"lifecycle stop kind malformed: {stop_kind!r}")
     truncated = stop_kind == "truncated"
     mismatch_stop = stop_kind == "mismatch_stop"
-    # A drift/proof failure truncates the lifecycle: retain the
-    # completed prefix append-only and mark the lifecycle INCOMPLETE
-    # (fail-closed; the reducer never treats the partial prefix as a
-    # complete deterministic same-process population). A MISMATCH STOP
-    # is the frozen early-stop law firing: the retained prefix is a
-    # COMPLETE nondeterministic population.
-    if truncated and not per_request:
-        raise PhysicalDiagnosticError(
-            f"same-process lifecycle truncated before any request: "
-            f"{stop_reason}")
-    if request_gate_calls != list(range(len(per_request))):
-        raise PhysicalDiagnosticError(
-            f"per-request authority gate not executed before every "
-            f"completion request (gate calls: {request_gate_calls})")
-    if len(request_authorities) != len(per_request):
-        raise PhysicalDiagnosticError(
-            "per-request authority observation count mismatch")
+    # CORRECTION PASS 4 (NO-GO 5851078451, blocker 1): a drift/proof
+    # failure truncates the lifecycle — the COMPLETED PREFIX IS
+    # RETAINED AND FINALIZED append-only (per-request unit
+    # directories, receipts, shared identity/health custody, and the
+    # lifecycle record), and the lifecycle is marked INCOMPLETE
+    # (fail-closed; the reducer never treats an authority-truncated
+    # prefix as a terminal-complete population). A MISMATCH STOP is
+    # the frozen early-stop law firing: the retained prefix is a
+    # COMPLETE nondeterministic population. Authority gate
+    # accounting: ATTEMPTS are every gate invocation (a failed
+    # attempt corresponds to NO completed request), successful
+    # OBSERVATIONS correspond 1:1 with completed requests. The
+    # runner's preflight hook is the only gate mechanism; the
+    # recorded attempts prove no request was issued without a gate
+    # call, and the failed index is the attempt that fired last.
+    if request_gate_attempts:
+        # monotone, no duplicates, contiguous from 0
+        if (request_gate_attempts
+                != list(range(len(request_gate_attempts)))):
+            raise PhysicalDiagnosticError(
+                f"per-request authority gate attempts are not a "
+                f"contiguous request sequence (attempts: "
+                f"{request_gate_attempts})")
+        last_attempt = request_gate_attempts[-1]
+        if len(per_request) not in (last_attempt, last_attempt + 1):
+            raise PhysicalDiagnosticError(
+                f"per-request authority gate accounting mismatch: "
+                f"{len(per_request)} completed requests vs last gate "
+                f"attempt {last_attempt} — no request may complete "
+                f"without a preceding gate call, and at most the "
+                f"gate-failing request may be absent")
+        if len(request_authorities) != len(per_request):
+            raise PhysicalDiagnosticError(
+                "per-request authority observation count mismatch")
+        if truncated and request_gate_failed_index is not None:
+            if len(per_request) != request_gate_failed_index:
+                raise PhysicalDiagnosticError(
+                    f"truncated lifecycle retained {len(per_request)} "
+                    f"requests but the authority gate failed at index "
+                    f"{request_gate_failed_index} — the failed gate "
+                    f"must correspond to the first unexecuted request")
+        elif truncated and request_gate_failed_index is None:
+            # truncation without a gate failure: the runner reported a
+            # reset-proof/process truncation. No failed gate index is
+            # recorded; the stop_reason carries the cause.
+            pass
+    else:
+        # zero gate attempts: the runner never invoked the preflight
+        # hook — no request may exist (an unfenced request path is
+        # a producer defect, not a lifecycle shape).
+        if per_request:
+            raise PhysicalDiagnosticError(
+                "same-process runner issued requests without any "
+                "authority gate attempt (preflight hook bypassed)")
+        if len(request_authorities) != 0:
+            raise PhysicalDiagnosticError(
+                "per-request authority observation count mismatch")
     request_records = []
     consumed_task_ids: set[int] = set()
     for index, record in enumerate(per_request):
@@ -1769,9 +2287,23 @@ def run_same_process_lifecycle(
         "process_attribution": result.get("process_attribution"),
         "request_count": len(request_records),
         "planned_request_count": D.DETERM_MIN_REPEATS,
-        "complete": not truncated,
+        # complete == the lifecycle answered its question: either
+        # all planned requests executed (completed_all) or the frozen
+        # early-stop law fired on a mechanically derived mismatch
+        # (mismatch_stop). An authority/process truncation is an
+        # INCOMPLETE population (blocker 1).
+        "complete": stop_kind in ("completed_all", "mismatch_stop"),
         "stop_kind": stop_kind,
         "stop_reason": stop_reason,
+        # CORRECTION PASS 4 (NO-GO 5851078451, blocker 1): the
+        # truncated-lifecycle schema mechanically states the authority
+        # accounting — attempted gate calls, successful observations,
+        # and (for authority drift) the FAILED gate index, which has
+        # no corresponding completed request by construction.
+        "gate_attempt_count": len(request_gate_attempts),
+        "successful_gate_count": len(request_authorities),
+        "failed_gate_index": request_gate_failed_index if truncated
+        else None,
         "reset_proofs": [r["reset_proof"] for r in request_records],
         "verified_reset_proofs": [r["_reset_proof_verified"]
                                   for r in request_records],

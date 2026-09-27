@@ -234,9 +234,24 @@ ARM_D_LADDER_SENTENCE_REPEATS = {
 }
 
 # Model-architecture token-count mechanism boundary (phase0
-# MODEL_ARCH_FACTS "qwen4exp.attention.indexer.top_k"); the reducer
-# compares ACTUAL prompt token counts against this value.
+# MODEL_ARCH_FACTS "qwen4exp.attention.indexer.top_k"). CORRECTION
+# PASS 4 (NO-GO 5851078451, blocker 3): the pinned-source audit
+# (950999fe src/models/qwen4exp.cpp build_qsa_top_k) proves the
+# actual execution-path transition is NOT at the bare metadata
+# constant — it is at the top-k SELECTION WIDTH:
+#   width = std::min<int64_t>(n_kv, indexer_top_k + r - 1)
+# where r is the per-layer compress ratio (4 for every QSA layer of
+# this model: GGUF qwen4exp.attention.compress_ratios). Below the
+# width the selection covers every KV cell (ggml_top_k with
+# k == n_kv: no masking effect, dense attention); at/above it the
+# top-k tensor actively shapes the KQ mask (ggml_set_rows unmasks
+# only the selected cells) in the 12 QSA layers. The frozen
+# mechanical boundary is therefore top_k + r - 1 = 2051 KV cells;
+# for the single-sequence frozen launch shape the KV-cell count at
+# the decision-0 row equals the retained actual prompt token count.
 INDEXER_TOP_K = 2048
+INDEXER_COMPRESS_RATIO = 4
+INDEXER_TOPK_WIDTH = INDEXER_TOP_K + INDEXER_COMPRESS_RATIO - 1  # 2051
 
 # Same-process (Arm B) request-contract extension: id_slot pinning is
 # required to make repeated requests land on the SAME slot. The

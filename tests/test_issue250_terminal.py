@@ -133,6 +133,43 @@ def utcnow():
     return datetime.now(timezone.utc).isoformat()
 
 
+class FakeServerProc:
+    """A fake attributed llama-server process (correction pass 4,
+    blocker 2 tests): stands in for the Popen object with poll/return
+    control so the production attribution/verification code paths run
+    unchanged."""
+
+    def __init__(self, exe_sha, pid=31337):
+        self.pid = pid
+        self.exe_sha = exe_sha
+        self.argv: list = []
+        self._terminated = False
+
+    def poll(self):
+        return 0 if self._terminated else None
+
+    def wait(self, timeout=None):
+        self._terminated = True
+        return 0
+
+    @property
+    def returncode(self):
+        return 0
+
+    def verify(self, expected_sha):
+        # production _verify_tokenizer_process_still_attributed reads
+        # /proc/<pid>/exe; the fake seam asserts the same binding
+        if self._terminated:
+            raise P.PhysicalDiagnosticError(
+                "fake tokenizer server exited mid-authority")
+        if self.exe_sha != expected_sha:
+            raise P.PhysicalDiagnosticError(
+                f"fake tokenizer server exe sha drift: {self.exe_sha}")
+
+    def terminate(self):
+        self._terminated = True
+
+
 class CampaignFixture:
     """Builds a COMPLETE valid #250 evidence tree through the REAL
     producer paths (fake runners), plus the accepted #248 contrast
@@ -209,24 +246,57 @@ class CampaignFixture:
         self._build_contrast()
 
     def _derive_ladder_authority(self):
-        def fake_tokenize(prompt: str):
-            ids = [abs(hash(prompt)) % 32000 + 1
-                   for _ in range(len(prompt.split()))]
-            # deterministic in-process: map lengths monotonically so
-            # the reducer sees a real bracketing ladder
-            counts = {68: 1022, 102: 1534, 136: 2053, 153: 2303,
-                      171: 2567, 204: 3077}
-            repeats = None
-            for block in (prompt.count(
-                    "The lighthouse keeper counted"),):
-                repeats = block
-            count = counts.get(repeats, len(ids))
-            return count, list(range(count))
+        """Retain the token authority through an ATTRIBUTED (fake)
+        tokenizer server launch — the production document shape
+        (correction pass 4, NO-GO 5851078451, blocker 2): the fixture
+        exercises the real launch/attribute/verify/teardown path with
+        fake process seams, so the retained document carries the
+        process-attribution block the reducer demands."""
+        counts = {68: 1022, 102: 1534, 136: 2053, 153: 2303,
+                  171: 2567, 204: 3077}
+
+        def prompt_count(prompt: str) -> int:
+            return counts.get(
+                prompt.count("The lighthouse keeper counted"),
+                len(prompt.split()))
+
+        bin_sha = D.SERVER_BINARIES["comparator"]
+        fake_proc = FakeServerProc(bin_sha)
+
+        def fake_spawn(argv, log_path):
+            fake_proc.argv = list(argv)
+            return fake_proc
+
+        def fake_attribution(proc, argv, env):
+            return {"server_pid": proc.pid,
+                    "server_exe_sha256": bin_sha,
+                    "server_argv": list(argv),
+                    "server_env": dict(env)}
+
+        def fake_wait_healthy(proc, port):
+            pass
+
+        def fake_post(url, body):
+            prompt = json.loads(body)["content"]
+            n = prompt_count(prompt)
+            doc = {"tokens": list(range(n))}
+            raw = json.dumps(doc).encode()
+            return raw, doc
+
         P.derive_ladder_token_authority(
             self.repo, self.evidence, self.head,
             binary=self.bin, binary_id="comparator",
             model_dir=self.model_dir,
-            tokenize=fake_tokenize)
+            attestation=self.attestation,
+            launch_server=lambda binary, binary_sha, model_dir,
+                member: P.launch_tokenizer_server(
+                binary, binary_sha, model_dir, member,
+                spawn=fake_spawn, wait_healthy=fake_wait_healthy,
+                port_occupied=lambda port: False,
+                attribution_fn=fake_attribution),
+            stop_server=lambda handle: fake_proc.terminate(),
+            verify_alive=lambda handle, sha: fake_proc.verify(sha),
+            http_post=fake_post)
 
     def _restore(self):
         D.SERVER_BINARIES.update(self.saved_binaries)
@@ -770,12 +840,16 @@ class TerminalMatrixTests(unittest.TestCase):
         self.assertIn("CPU parallel execution/order",
                       out["basis"]["localized_factor"])
 
-    def test_a_to_b_to_c_to_d_localizes_with_predicate(self):
+    def test_a_to_b_to_c_to_d_old_midstream_shape_cannot_localize(self):
+        # CORRECTION PASS 4 (NO-GO 5851078451, blocker 3) FLIPPED
+        # ASSERTION: this exact ladder/progress shape LOCALIZED at D
+        # via midstream_ubatch_split at the pass-3 head; the predicate
+        # is retired (wall-clock-sampled progress counts are not
+        # ubatch boundaries), so the same retained evidence now
+        # yields UNRESOLVED — progress counts alone can never select
+        # LOCALIZED.
         ladder = {1024: "det", 1536: "det", 2048: "det", 2304: "det",
-                  2560: "det", 3072: "det"}
-        # make only 3072 variable and give lengths >=2304 the
-        # non-uniform split geometry (ubatch predicate)
-        ladder[3072] = "var"
+                  2560: "det", 3072: "var"}
         progress = {
             1024: ["prompt processing, n_tokens = 512",
                    "prompt processing, n_tokens = 1024"],
@@ -807,9 +881,9 @@ class TerminalMatrixTests(unittest.TestCase):
                           arm_c_serial="vary", arm_d_rows=ladder,
                           arm_d_progress=progress)
         out = f.derive()
-        self.assertEqual(out["terminal"], T.LOCALIZED, out.get("problems"))
-        self.assertEqual(out["basis"]["transition_predicate"],
-                         "midstream_ubatch_split")
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
+        self.assertIn("no smallest runtime/execution boundary",
+                      out["basis"]["reason"])
 
     def test_d_complete_without_mechanism_is_unresolved(self):
         ladder = {length: "var" for length in D.ARM_D_LADDER_LENGTHS}
@@ -1141,33 +1215,81 @@ class ContrastMutationTests(unittest.TestCase):
 
 
 class TransitionPredicateTests(unittest.TestCase):
-    # CORRECTION PASS 3 (blocker 4B): the retired _non_uniform_
-    # progress predicate (ANY unequal cumulative steps => causal
-    # transition) is UNSOUND — pinned print_timings_pp gates progress
-    # lines on a 3s WALL-CLOCK sample, so step sequences are timing
-    # artifacts. Its old-defect behavior is asserted as REMOVED and
-    # replaced by the source-proven midstream-split signature.
+    # CORRECTION PASS 4 (NO-GO 5851078451, blocker 3): the retired
+    # _non_uniform_progress predicate (pass 2) AND the pass-3
+    # midstream_ubatch_split signature are both UNSOUND — pinned
+    # print_timings_pp gates progress lines on a 3s WALL-CLOCK
+    # sample, so step sequences are timing artifacts with no
+    # ubatch-boundary semantics. Both old-defect behaviors are
+    # asserted as REMOVED; wall-clock progress can never select
+    # LOCALIZED.
+
+    def _fixture(self, **kw):
+        fixture = CampaignFixture(self, **kw)
+        self.addCleanup(fixture.restore_contrast_constant)
+        return fixture
 
     def test_retired_non_uniform_progress_is_removed(self):
         self.assertFalse(hasattr(T, "_non_uniform_progress"))
 
-    def test_midstream_split_signature_shape(self):
-        # retained #248 case-3072 shape: midstream 5-token step
-        # 2560->2565 with continuation = signature PRESENT
-        self.assertTrue(T._midstream_split_signature(
+    def test_midstream_split_signature_retired(self):
+        # CORRECTION PASS 4 (NO-GO 5851078451, blocker 3) FLIPPED
+        # ASSERTION: _midstream_split_signature previously returned
+        # True for the retained #248 case-3072 shape (midstream
+        # 5-token step 2560->2565 with continuation). The predicate is
+        # RETIRED — wall-clock-sampled progress counts cannot identify
+        # ubatch boundaries — so the function is a fail-closed stub
+        # returning False for EVERY input, including the old
+        # signature-bearing shapes.
+        self.assertFalse(T._midstream_split_signature(
             [512, 1024, 1536, 2048, 2560, 2565, 3073]))
-        # ordinary final remainder: a sub-512 tail step that
-        # TERMINATES the sequence — no midstream split
+        # ordinary final remainder shape: also False (no causal claim)
         self.assertFalse(T._midstream_split_signature(
             [512, 1024, 1536, 2048, 2560, 3068]))
-        # too few rungs to distinguish remainder from split
         self.assertFalse(T._midstream_split_signature([512, 1024]))
         self.assertFalse(T._midstream_split_signature([100]))
+        self.assertFalse(T._midstream_split_signature([]))
+        # noisy/sparse arbitrary wall-clock samples: no causal claim
+        self.assertFalse(T._midstream_split_signature(
+            [512, 700, 715, 1536, 1537, 3073]))
+        self.assertFalse(T._midstream_split_signature(
+            [5, 480, 491, 1003, 1004, 2049, 2050, 3073]))
+        self.assertFalse(T._midstream_split_signature(
+            [512, 517, 1024, 1029, 1536]))
+
+    def test_arbitrary_wall_clock_progress_cannot_localize(self):
+        # REQUIRED CONTROL (NO-GO 5851078451, blocker 3): arbitrary
+        # wall-clock progress sequences with sub-512 MIDSTREAM
+        # sampled deltas can never select LOCALIZED. Drive the full
+        # reducer with a ladder whose only distinguishing evidence is
+        # progress shape (no token-count crossing) — the terminal is
+        # UNRESOLVED, not LOCALIZED.
+        ladder = {1024: "det", 1536: "det", 2048: "det", 2304: "det",
+                  2560: "det", 3072: "var"}
+        # every length carries a midstream sub-512 sampled delta —
+        # under the retired predicate this shape was "signature"
+        # evidence; it must carry no causal weight now.
+        progress = {length: [
+            "prompt processing, n_tokens = 512",
+            "prompt processing, n_tokens = 517",
+            "prompt processing, n_tokens = 1024",
+            "prompt processing, n_tokens = 1029",
+            "prompt processing, n_tokens = 1536",
+            "prompt processing, n_tokens = 1541",
+        ] for length in ladder}
+        f = self._fixture(arm_a_rows="vary", arm_b_fresh="vary",
+                          arm_b_same="vary", arm_c_default="vary",
+                          arm_c_serial="vary", arm_d_rows=ladder,
+                          arm_d_progress=progress)
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.UNRESOLVED, out.get("problems"))
 
     def test_predicates_are_frozen(self):
+        # CORRECTION PASS 4 (blocker 3): midstream_ubatch_split is
+        # REMOVED from the frozen predicate vocabulary.
         self.assertEqual(
             sorted(T.TRANSITION_PREDICATES),
-            ["indexer_top_k_boundary", "midstream_ubatch_split"])
+            ["indexer_top_k_boundary"])
         for spec in T.TRANSITION_PREDICATES.values():
             self.assertTrue(spec["requires"])
             self.assertTrue(spec["binds"])
@@ -1175,6 +1297,8 @@ class TransitionPredicateTests(unittest.TestCase):
         self.assertNotIn("checkpoint_resegmentation",
                          T.TRANSITION_PREDICATES)
         self.assertNotIn("ubatch_geometry_split",
+                         T.TRANSITION_PREDICATES)
+        self.assertNotIn("midstream_ubatch_split",
                          T.TRANSITION_PREDICATES)
 
     def test_localized_factors_frozen(self):

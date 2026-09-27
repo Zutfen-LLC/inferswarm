@@ -91,15 +91,33 @@ LOCALIZED_FACTORS = {
                             "(bound by frozen transition predicate)",
 }
 
-# Frozen Arm-D transition predicates (correction pass 3, NO-GO
-# 5847890177 blocker 4B; predeclared BEFORE any Arm-D execution). A
-# length transition alone never establishes causality: LOCALIZED at D
+# Frozen Arm-D transition predicates (correction pass 4, NO-GO
+# 5851078451, blocker 3; supersedes the pass-3 set). A length
+# transition alone never establishes causality: LOCALIZED at D
 # requires retained evidence matching one of these mechanical
 # predicates — a concrete execution transition identified from
 # retained source/runtime evidence, bound to the observed
 # deterministic->variable length boundary, measured in the correct
 # runtime units. Each predicate names the retained evidence it
 # consumes; none is derivable from the nominal length alone.
+#
+# REMOVED (correction pass 4, blocker 3): ``midstream_ubatch_split``.
+# The retained ``prompt processing, n_tokens = ...`` lines are
+# ~3-second WALL-CLOCK samples of ONE cumulative counter (pinned
+# server-context.cpp print_timings_pp gate: t_prompt_total >= 3000
+# ms, sampled inside the batch-fill loop) — they are NOT ubatch
+# boundary events. A sub-512 sampled delta followed by later
+# progress cannot mechanically distinguish an actual scheduler/
+# ubatch split from ordinary throughput variation, timing/sampling
+# alignment, or pauses between samples; the same observable was
+# already declared unsound for ubatch inference when
+# ``ubatch_geometry_split`` was retired, and requiring the short
+# delta to be midstream does not convert a wall-clock artifact into
+# an execution-boundary event. No other retained source/runtime
+# signal identifies actual ubatch boundaries under the frozen launch
+# shape and log level, so ubatch geometry is NOT localizable in
+# Issue #250. Adding instrumentation for it would be a tooling/head
+# change requiring fresh prospective review and exact-head dispatch.
 TRANSITION_PREDICATES = {
     "indexer_top_k_boundary": {
         "requires": "model-architecture fact "
@@ -111,21 +129,6 @@ TRANSITION_PREDICATES = {
         "binds": "every deterministic length's actual token count < "
                  "top_k <= every variable length's actual token count; "
                  "the boundary in tokens is the crossing itself",
-    },
-    "midstream_ubatch_split": {
-        "requires": "retained per-unit server-log cumulative prompt "
-                    "progress lines showing a MIDSTREAM sub-batch step "
-                    "(a step < 512 strictly between two continuing "
-                    "rungs — the llama-memory-hybrid.cpp "
-                    "TAG_RECURRENT_ROLLBACK_SPLITS tail-grouping "
-                    "signature; final remainders cannot satisfy it) "
-                    "present at every variable length and absent at "
-                    "every deterministic length",
-        "binds": "the earliest variable ladder length must carry the "
-                 "midstream split signature and the latest "
-                 "deterministic length must not; no competing frozen "
-                 "execution-path transition may be introduced, else "
-                 "the terminal stays UNRESOLVED",
     },
 }
 
@@ -149,39 +152,37 @@ def _ok(terminal: str, reduction: dict[str, Any], basis: dict[str, Any]
 # ---------------------------------------------------------------------------
 # Arm-D transition predicate evaluation (frozen, mechanical).
 #
-# CORRECTION PASS 3 (NO-GO 5847890177, blocker 4B): the old
-# ``_non_uniform_progress`` predicate (ANY unequal cumulative steps)
-# is RETIRED as causal evidence. Pinned-source facts that make it
-# unsound:
+# CORRECTION PASS 4 (NO-GO 5851078451, blocker 3): the pass-3
+# ``midstream_ubatch_split`` predicate is REMOVED from terminal-bearing
+# authority. Pinned-source facts that make it unsound:
 #   * server-context.cpp print_timings_pp emits ``prompt processing,
 #     n_tokens = N`` lines on a WALL-CLOCK sampling gate
 #     (t_prompt_total >= 3000 ms; sampled in the batch-fill loop), so
 #     the cumulative counts are TIME-sampled checkpoints of ONE
-#     ubatch stream, not per-ubatch boundaries; an ordinary final
-#     remainder (512*5+5 then 508) produces unequal steps with no
-#     execution-path change at all;
+#     ubatch stream, not per-ubatch boundaries; a sub-512 sampled
+#     delta followed by continuing progress cannot distinguish a real
+#     scheduler/ubatch split from throughput variation, sampling
+#     alignment, or pauses between samples;
 #   * hybrid-memory checkpoint resegmentation evidence
 #     (``main/do_checkpoint``) is logged at DBG level only
 #     (server-context.cpp:3904 SLT_DBG) and is ABSENT from the frozen
-#     non-verbose launch shape, so it can never honestly fire from
-#     retained logs under the frozen argv.
-# The frozen predicate set is therefore reduced to the two retained-
-# byte-observable, source-proven transitions:
+#     non-verbose launch shape, so no retained log line identifies an
+#     actual ubatch boundary;
+#   * therefore ubatch geometry is NOT localizable in Issue #250, and
+#     NO instrumentation may be added to preserve the predicate (that
+#     would require a prospectively reviewed tooling/head change and
+#     a fresh exact-head dispatch).
+# The frozen predicate set is reduced to the single retained-byte-
+# observable, source-proven transition:
 #   * ``indexer_top_k_boundary`` — a TOKEN-COUNT mechanism: the
 #     boundary between the last deterministic and first variable
 #     length, measured in ACTUAL prompt token counts (tokenizer
 #     authority), equals the qwen4exp indexer top_k crossing
 #     (top_k=2048; model arch fact from phase0 MODEL_ARCH_FACTS).
-#   * ``midstream_ubatch_split`` — an EXECUTION-GEOMETRY signature
-#     mechanically derived from the retained cumulative progress
-#     counts: a strictly sub-n_batch (512) step occurring STRICTLY
-#     BETWEEN two continuing rungs (the rollback-tail grouping
-#     constraint of llama-memory-hybrid.cpp split_equal
-#     TAG_RECURRENT_ROLLBACK_SPLITS: trailing tokens must stay in the
-#     same ubatch), present at every variable length and absent at
-#     every deterministic length. Ordinary final remainders cannot
-#     satisfy it (a final remainder TERMINATES the sequence; a
-#     midstream sub-512 step resumes above it).
+# The retained ``prompt processing`` progress lines remain DIAGNOSTIC
+# METADATA ONLY (``_ladder_split_shapes`` keeps parsing them into
+# ``prompt_progress_counts`` for the reduction record; they can never
+# select LOCALIZED).
 # A length threshold alone still fires nothing.
 # ---------------------------------------------------------------------------
 
@@ -189,25 +190,31 @@ UBATCH_N_BATCH = 512  # frozen accepted launch shape --batch-size 512
 
 
 def _progress_run_steps(counts: list[int]) -> list[int]:
-    """Ordered cumulative->step deltas (mechanical, no semantics)."""
+    """Ordered cumulative->step deltas (mechanical, no semantics).
+
+    Diagnostic metadata only (correction pass 4, blocker 3): these
+    deltas derive from ~3-second wall-clock samples of one cumulative
+    counter and carry NO ubatch-boundary semantics.
+    """
     if len(counts) < 2:
         return []
     return [b - a for a, b in zip(counts, counts[1:])]
 
 
 def _midstream_split_signature(counts: list[int]) -> bool:
-    """True when the retained cumulative prompt-progress counts carry
-    a MIDSTREAM sub-batch step: a step < UBATCH_N_BATCH that is not
-    the final step (later counts continue past it). Source-proven
-    shape: llama-memory-hybrid.cpp split_equal emits the recurrent
-    rollback-tail grouping (trailing tokens held for the next ubatch),
-    visible as a sub-512 resumption boundary mid-stream. A final
-    remainder (last step < 512 with nothing after it) does NOT
-    satisfy this predicate."""
-    if len(counts) < 3:
-        return False
-    steps = _progress_run_steps(counts)
-    return any(step < UBATCH_N_BATCH for step in steps[:-1])
+    """RETIRED (correction pass 4, NO-GO 5851078451, blocker 3).
+
+    This function always returns False and exists ONLY so any stale
+    caller fails closed instead of inheriting the retired causal
+    semantics: the retained cumulative prompt-progress counts are
+    ~3-second WALL-CLOCK samples of one counter, so a sub-512 sampled
+    delta followed by later progress cannot mechanically identify a
+    scheduler/ubatch boundary (throughput variation, sampling
+    alignment, and pauses between samples produce the same shape).
+    Wall-clock-sampled progress counts can never select a LOCALIZED
+    terminal.
+    """
+    return False
 
 
 def _evaluate_transition_predicates(
@@ -235,38 +242,44 @@ def _evaluate_transition_predicates(
         return None  # interleaved — no monotone boundary exists
     boundary = (max(det), min(var))
 
-    # indexer_top_k_boundary: measured in ACTUAL token counts.
-    top_k = D.INDEXER_TOP_K
+    # indexer_top_k_boundary: measured in ACTUAL token counts against
+    # the SOURCE-PROVEN selection-width threshold (correction pass 4,
+    # blocker 3 audit): the pinned tree's build_qsa_top_k computes
+    # width = min(n_kv, indexer_top_k + r - 1); below the width every
+    # KV cell is selected (dense), at/above it the top-k selection
+    # actively masks the QSA attention. Ordinary timing/batching
+    # cannot mimic the signal: the width is a function of the token
+    # COUNT alone (single-sequence frozen launch shape => n_kv equals
+    # the actual prompt token count), not of wall-clock scheduling.
+    threshold = D.INDEXER_TOPK_WIDTH
     det_tokens = [ladder_facts[n]["actual_token_count"] for n in det]
     var_tokens = [ladder_facts[n]["actual_token_count"] for n in var]
-    if (all(t < top_k for t in det_tokens)
-            and all(t >= top_k for t in var_tokens)
-            and max(det_tokens) < top_k <= min(var_tokens)):
+    if (all(t < threshold for t in det_tokens)
+            and all(t >= threshold for t in var_tokens)
+            and max(det_tokens) < threshold <= min(var_tokens)):
         return {
             "predicate": "indexer_top_k_boundary",
             "boundary": boundary,
             "boundary_actual_tokens": (max(det_tokens), min(var_tokens)),
+            "threshold_cells": threshold,
             "mechanism": TRANSITION_PREDICATES["indexer_top_k_boundary"],
         }
-
-    # midstream_ubatch_split: split signature at every variable
-    # length, absent at every deterministic length.
-    shapes = {n: _midstream_split_signature(
-        ladder_facts[n]["prompt_progress_counts"]) for n in lengths}
-    if all(shapes[n] for n in var) and not any(shapes[n] for n in det):
-        return {
-            "predicate": "midstream_ubatch_split",
-            "boundary": boundary,
-            "mechanism": TRANSITION_PREDICATES["midstream_ubatch_split"],
-        }
+    # No surviving source-proven predicate fires: ubatch geometry is
+    # not localizable from retained evidence under the frozen launch
+    # shape (midstream_ubatch_split retired, correction pass 4,
+    # blocker 3) — the caller reports UNRESOLVED, never a LOCALIZED
+    # claim from wall-clock-sampled progress counts.
     return None
 
 
 def _ladder_split_shapes(text: str) -> list[int]:
     """Parse cumulative prompt-progress counts from a retained server
     log slice. The pinned server emits cumulative
-    ``prompt processing, n_tokens = <n>`` lines; these counts are the
-    retained-byte basis for the Arm-D geometry predicates.
+    ``prompt processing, n_tokens = <n>`` lines (~3-second wall-clock
+    samples). CORRECTION PASS 4 (NO-GO 5851078451, blocker 3): these
+    counts are DIAGNOSTIC METADATA ONLY for the reduction record —
+    they are not ubatch boundary events and can never select a
+    LOCALIZED terminal.
     """
     counts: list[int] = []
     for match in re.finditer(
@@ -729,26 +742,53 @@ def _verify_same_process_units(
     shared_pid = lifecycle.get("shared_server_pid")
     if type(shared_pid) is not int or shared_pid <= 0:
         return {}, [f"{arm}: lifecycle binds no shared PID"]
-    # Lifecycle completion cause (correction pass 3, blockers 1+2).
-    # A TRUNCATED lifecycle (authority/process/error loss mid-
-    # sequence) is an INCOMPLETE population — the retained prefix is
-    # readable evidence but can never satisfy a deterministic
-    # same-process claim. A MISMATCH STOP is the frozen early-stop
-    # law firing: the retained prefix IS a complete nondeterministic
-    # population (the reducer re-derives the mismatch mechanically
-    # from the retained rows below — it never trusts the claim).
+    # Lifecycle completion cause (correction pass 4, NO-GO 5851078451,
+    # blocker 1). A TRUNCATED lifecycle (authority/process/error loss
+    # mid-sequence) is NEVER terminal-complete — even when its
+    # retained prefix happens to contain a row mismatch: the truncated
+    # retained prefix stays valid historical evidence (units are still
+    # verified below when present), but authority/process/error
+    # truncation is not equivalent to the prospectively authorized
+    # mismatch-stop law, so the truncation CAUSE dominates any
+    # accidental mismatch inside the prefix and the population is
+    # reported incomplete (BLOCKED). A MISMATCH STOP is the frozen
+    # early-stop law firing: authority current, the current request
+    # completed, the mismatch mechanically derived from the retained
+    # rows, and the stop occurred because the discriminator was
+    # answered — the retained prefix IS a complete nondeterministic
+    # population.
     stop_kind = lifecycle.get("stop_kind", "completed_all")
     if stop_kind not in ("completed_all", "truncated", "mismatch_stop"):
         return {}, [f"{arm}: lifecycle stop kind malformed: "
                     f"{stop_kind!r}"]
     planned = lifecycle.get("planned_request_count", len(tags))
     if stop_kind == "truncated":
+        # Truncated-lifecycle schema (correction pass 4, blocker 1):
+        # the accounting fields are mechanically validated against the
+        # retained request units — successful gate observations must
+        # equal the retained request count, and the failed gate index
+        # (when present) must not correspond to any retained request.
+        successful = lifecycle.get("successful_gate_count")
+        if type(successful) is not int or successful != lifecycle.get(
+                "request_count"):
+            return {}, [f"{arm}: truncated lifecycle gate accounting "
+                        f"malformed (successful gates {successful!r} "
+                        f"!= retained {lifecycle.get('request_count')!r})"]
+        failed_index = lifecycle.get("failed_gate_index")
+        if failed_index is not None and (type(failed_index) is not int
+                                         or failed_index < 0
+                                         or failed_index >= planned):
+            return {}, [f"{arm}: truncated lifecycle failed gate index "
+                        f"malformed: {failed_index!r}"]
         return {}, [f"{arm}: same-process lifecycle TRUNCATED "
                     f"(retained {lifecycle.get('request_count')}/"
-                    f"{planned} requests; reason="
+                    f"{planned} requests; successful gates="
+                    f"{successful}; failed gate index="
+                    f"{failed_index!r}; reason="
                     f"{lifecycle.get('stop_reason')!r}) — an "
                     "authority/process/error-loss partial prefix is "
-                    "not a valid population"]
+                    "never terminal-complete even if it contains a "
+                    "row mismatch (truncation cause dominates)"]
     if stop_kind == "mismatch_stop" and lifecycle.get(
             "request_count", 0) < D.PREFIX_LAW_MIN_MISMATCH_UNITS:
         return {}, [f"{arm}: mismatch-stop lifecycle retained fewer "

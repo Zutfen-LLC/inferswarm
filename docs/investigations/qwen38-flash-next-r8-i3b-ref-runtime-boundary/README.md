@@ -17,6 +17,13 @@ Contents:
   full reset), C (`-t 1 -tb 1` serial CPU regime vs the default
   14-thread regime), D (predeclared length ladder 1024/1536/2048/2304/
   2560/3072), terminal vocabulary, and the hard prohibitions.
+- `METHODOLOGY-AMENDMENT-001.md` — correction pass 4 (NO-GO
+  5851078451): attributed tokenizer-server process authority
+  (blocker 2), Arm-D predicate vocabulary (blocker 3:
+  `midstream_ubatch_split` retired; `indexer_top_k_boundary`
+  re-bound to the source-proven selection-width threshold
+  2048+4-1=2051 KV cells), Arm-B drift-prefix durable custody
+  (blocker 1). Dated amendment; the frozen text is preserved.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

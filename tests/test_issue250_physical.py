@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import struct
 import sys
 import unittest
@@ -206,15 +207,30 @@ def fake_same_process_execute(argv, env, request, prompt, port,
     task -1), launches a fresh task, and prints its own full-prompt
     eval line. Task ids advance per request (fresh w.r.t. earlier
     requests of this lifecycle), as the pinned monotonic counter does.
+
+    CORRECTION PASS 4 (NO-GO 5851078451, blocker 1): honors the real
+    runner's truncation contract — a preflight (authority-gate)
+    failure BEFORE request N stops the loop, keeps the completed
+    prefix 0..N-1 in the return value, and reports
+    stop_kind="truncated" with the cause instead of propagating.
     """
     import hashlib
     records = []
     now = datetime_now()
     shared_pid = 5252
     base_task_id = 100  # /health-style tasks may shift ids; ids fresh
+    stop_kind = "completed_all"
+    stop_reason = None
     for index in range(repeats):
         if preflight_request is not None:
-            preflight_request(index)
+            try:
+                preflight_request(index)
+            except Exception as exc:
+                stop_kind = "truncated"
+                stop_reason = (
+                    f"authority-revalidation failure before request "
+                    f"{index}: {exc}")
+                break
         seed = hashlib.sha256(f"{prompt}:{index}".encode()).digest()
         row_files = {}
         meta_lines = []
@@ -266,8 +282,8 @@ def fake_same_process_execute(argv, env, request, prompt, port,
              "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
                                "bf54c2121c55, 41.0, 138.0, 170.0, 0\n"},
         ],
-        "stop_kind": "completed_all",
-        "stop_reason": None,
+        "stop_kind": stop_kind,
+        "stop_reason": stop_reason,
     }
 
 
@@ -972,6 +988,317 @@ class SameProcessLifecycleTests(unittest.TestCase):
         self.assertEqual(runner.calls, [])
 
 
+class ArmBDriftPrefixCustodyTests(unittest.TestCase):
+    """CORRECTION PASS 4 (NO-GO 5851078451, BLOCKER 1).
+
+    Durable retention of the completed Arm-B prefix after a
+    per-request authority-gate failure: on drift before request N,
+    every completed request 0..N-1 is retained and finalized
+    (unit directory + receipt), lifecycle.json exists with the
+    truncated schema, and NO unit exists for request N or later.
+    The reducer treats a truncated lifecycle as BLOCKED (never
+    terminal-complete) even if the retained prefix happens to carry
+    a row mismatch — the truncation cause dominates.
+    """
+
+    def setUp(self):
+        self.env = Env(self, namespace="d250-arm-b",
+                       arm="B-process-init")
+        self.env.open_attestation()
+
+    def _drift(self, drift_at, mutate=None, row_mismatch_at=None):
+        """Drift the per-request gate at request index `drift_at`;
+        optionally make request `row_mismatch_at` produce rows that
+        differ from request 0 (accidental mismatch inside the
+        retained prefix). Returns the runner return value and the
+        list of issued completion indexes."""
+        authority = self.env.authority_fn()
+        gate = {"n": 0}
+
+        def drifting(repo_root, expected_head, namespace,
+                     github_api=None):
+            gate["n"] += 1
+            payload = dict(authority.state["base"])
+            if drift_at is not None and gate["n"] == 3 + drift_at:
+                (mutate or (lambda p: p.update(
+                    head_sha="z" * 40)))(payload)
+            return payload
+
+        issued = []
+
+        def execute(argv, env, request, prompt, port, unit_dir,
+                    repeats, expected_prompt_tokens,
+                    preflight_request=None):
+            import hashlib
+
+            def effective(index):
+                if preflight_request is not None:
+                    preflight_request(index)  # may raise => no issue
+                issued.append(index)
+
+            if row_mismatch_at is None:
+                return fake_same_process_execute(
+                    argv, env, request, prompt, port, unit_dir,
+                    repeats, expected_prompt_tokens,
+                    preflight_request=effective)
+            # variant: one request's rows differ from request 0's
+            records = []
+            now = datetime_now()
+            base_rows = None
+            for index in range(repeats):
+                if preflight_request is not None:
+                    try:
+                        preflight_request(index)
+                    except Exception as exc:
+                        break
+                issued.append(index)
+                # deterministic rows across requests (a stable
+                # baseline) EXCEPT at the designated mismatch index
+                seed = hashlib.sha256(
+                    f"{prompt}:baseline".encode()).digest()
+                if index == row_mismatch_at:
+                    seed = hashlib.sha256(
+                        f"{prompt}:{index}:mismatch".encode()).digest()
+                row_files = {}
+                meta_lines = []
+                for d in range(D.DECISIONS):
+                    row = (seed * (D.ROW_BYTES // len(seed)
+                                   + 1))[:D.ROW_BYTES]
+                    row_files[f"obs.row{d}.f32"] = row
+                    meta_lines.append(json.dumps(
+                        {"pos": d, "sampled_winner": TOKENS[d]}))
+                if base_rows is None:
+                    base_rows = row_files
+                mismatch = (index > 0 and row_files != base_rows)
+                meta_file = ("\n".join(meta_lines) + "\n").encode()
+                task_id = 100 + index
+                log_slice = (
+                    f"0.01.000.000 I slot get_availabl: id  3 | "
+                    f"task -1 | selected slot by id (3)\n"
+                    f"0.01.000.001 I slot launch_slot_: id  3 | "
+                    f"task {task_id} | processing task, is_child = 0\n"
+                    f"0.01.000.002 I slot print_timing: id  3 | "
+                    f"task {task_id} | prompt eval time = 42905.50 ms "
+                    f"/ {expected_prompt_tokens} tokens (  13.94 ms "
+                    f"per token,   71.72 tokens per second)\n"
+                ).encode()
+                records.append({
+                    "server_pid": 5252,
+                    "tokens": list(TOKENS),
+                    "response_raw": json.dumps(
+                        {"tokens": TOKENS}).encode(),
+                    "log_slice": log_slice,
+                    "row_files": row_files,
+                    "meta_file": meta_file,
+                    "reset_proof": P._parse_slot_log(
+                        log_slice.decode(), index,
+                        expected_prompt_tokens),
+                    "request_contract": dict(request),
+                })
+                if mismatch:
+                    # honor the frozen early-stop law: the runner
+                    # reports mismatch_stop at the first divergence
+                    return {
+                        "server_pid": 5252,
+                        "process_attribution": {
+                            "server_pid": 5252,
+                            "server_exe_sha256":
+                                D.SERVER_BINARIES["comparator"],
+                            "server_argv": list(argv),
+                            "server_env": dict(env),
+                        },
+                        "requests": records,
+                        "device_samples": [
+                            {"stage": "before", "captured_at": now,
+                             "nvidia_smi_raw": "GPU-d5c05739-96c1-"
+                                               "7e49-89b6-bf54c2121"
+                                               "c55, 42.0, 140.0, "
+                                               "170.0, 0\n"},
+                            {"stage": "during", "captured_at": now,
+                             "nvidia_smi_raw": "GPU-d5c05739-96c1-"
+                                               "7e49-89b6-bf54c2121"
+                                               "c55, 43.0, 145.0, "
+                                               "170.0, 0\n"},
+                            {"stage": "after", "captured_at": now,
+                             "nvidia_smi_raw": "GPU-d5c05739-96c1-"
+                                               "7e49-89b6-bf54c2121"
+                                               "c55, 41.0, 138.0, "
+                                               "170.0, 0\n"},
+                        ],
+                        "stop_kind": "mismatch_stop",
+                        "stop_reason": (
+                            f"first row-digest mismatch at request "
+                            f"{index}"),
+                    }
+            return {
+                "server_pid": 5252,
+                "process_attribution": {
+                    "server_pid": 5252,
+                    "server_exe_sha256":
+                        D.SERVER_BINARIES["comparator"],
+                    "server_argv": list(argv),
+                    "server_env": dict(env),
+                },
+                "requests": records,
+                "device_samples": [
+                    {"stage": "before", "captured_at": now,
+                     "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                                       "bf54c2121c55, 42.0, 140.0, "
+                                       "170.0, 0\n"},
+                    {"stage": "during", "captured_at": now,
+                     "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                                       "bf54c2121c55, 43.0, 145.0, "
+                                       "170.0, 0\n"},
+                    {"stage": "after", "captured_at": now,
+                     "nvidia_smi_raw": "GPU-d5c05739-96c1-7e49-89b6-"
+                                       "bf54c2121c55, 41.0, 138.0, "
+                                       "170.0, 0\n"},
+                ],
+                "stop_kind": "completed_all",
+                "stop_reason": None,
+            }
+
+        out = P.run_same_process_lifecycle(
+            repo_root=self.env.repo, evidence_root=self.env.evidence,
+            namespace=self.env.namespace, arm=self.env.arm,
+            tag_prefix="case-3072-B-cpu-sameproc",
+            binary=self.env.bin, binary_id="comparator",
+            model_dir=self.env.model_dir,
+            expected_head=self.env.head,
+            model_attestation=self.env.attestation,
+            execute=execute, identity_observer=Recorder(
+                value=fake_identity()),
+            revalidate_authority=drifting,
+            health_runner=fake_health_runner)
+        return out, issued
+
+    # ---- required matrix A–F ------------------------------------
+
+    def _unit_tags(self, n):
+        return [f"case-3072-B-cpu-sameproc-{i + 1:03d}"
+                for i in range(n)]
+
+    def _assert_prefix_retained(self, completed, failed_index):
+        ns = self.env.evidence / "d250-arm-b"
+        lifecycle = (ns / "case-3072-B-cpu-sameproc-lifecycle"
+                     / "lifecycle.json")
+        self.assertTrue(lifecycle.is_file(),
+                        "lifecycle.json must be retained")
+        doc = json.loads(lifecycle.read_bytes())
+        self.assertEqual(doc["stop_kind"], "truncated")
+        self.assertFalse(doc["complete"])
+        self.assertEqual(doc["planned_request_count"], 5)
+        self.assertEqual(doc["request_count"], completed)
+        self.assertEqual(doc["successful_gate_count"], completed)
+        self.assertEqual(doc["gate_attempt_count"], completed + 1)
+        self.assertEqual(doc["failed_gate_index"], failed_index)
+        self.assertIsInstance(doc["stop_reason"], str)
+        self.assertTrue(doc["stop_reason"])
+        self.assertEqual(doc["shared_server_pid"], 5252)
+        self.assertEqual(len(doc["per_request_authorities"]),
+                         completed)
+        # completed unit dirs + receipts; nothing for N or later
+        for i, tag in enumerate(self._unit_tags(completed)):
+            unit = ns / tag
+            self.assertTrue(
+                (unit / "unit.json").is_file(),
+                f"request {i} unit receipt missing: {unit}")
+            for name in ("obs.row0.f32", "obs.meta.json",
+                         "response.json.raw", "server.log"):
+                self.assertTrue((unit / name).is_file(),
+                                f"{tag}/{name} missing")
+        for tag in self._unit_tags(5)[completed:]:
+            self.assertFalse(
+                (ns / tag).exists(),
+                f"no unit may exist for a request that never "
+                f"executed: {tag}")
+        return doc
+
+    def test_A_drift_before_request_0_zero_completions(self):
+        out, issued = self._drift(0)
+        self.assertEqual(issued, [])
+        doc = self._assert_prefix_retained(0, 0)
+        self.assertEqual(doc["per_request_authorities"], [])
+        self.assertEqual(doc["reset_proofs"], [])
+
+    def test_B_drift_before_request_1_retains_request_0(self):
+        out, issued = self._drift(1)
+        self.assertEqual(issued, [0])
+        doc = self._assert_prefix_retained(1, 1)
+        # receipt carries its own successful authority block
+        ns = self.env.evidence / "d250-arm-b"
+        receipt = json.loads(
+            (ns / "case-3072-B-cpu-sameproc-001" / "unit.json"
+             ).read_bytes())
+        self.assertIn("dispatch_sha256", receipt["authority"])
+        self.assertEqual(receipt["same_process"]["request_index"], 0)
+
+    def test_C_drift_before_request_2_retains_0_and_1(self):
+        out, issued = self._drift(2)
+        self.assertEqual(issued, [0, 1])
+        self._assert_prefix_retained(2, 2)
+
+    def test_D_drift_before_request_4_retains_first_four(self):
+        out, issued = self._drift(4)
+        self.assertEqual(issued, [0, 1, 2, 3])
+        self._assert_prefix_retained(4, 4)
+
+    def test_E_mismatch_stop_retained_normally(self):
+        out, issued = self._drift(None, row_mismatch_at=2)
+        self.assertEqual(issued, [0, 1, 2])
+        ns = self.env.evidence / "d250-arm-b"
+        doc = json.loads(
+            (ns / "case-3072-B-cpu-sameproc-lifecycle"
+             / "lifecycle.json").read_bytes())
+        self.assertEqual(doc["stop_kind"], "mismatch_stop")
+        # a mismatch_stop prefix is a COMPLETE nondeterministic
+        # population under the frozen early-stop law (correction
+        # pass 4 keeps it distinct from truncation)
+        self.assertTrue(doc["complete"])
+        self.assertIsNone(doc["failed_gate_index"])
+        self.assertEqual(doc["request_count"], 3)
+        self.assertEqual(doc["successful_gate_count"], 3)
+        self.assertEqual(doc["gate_attempt_count"], 3)
+        for tag in self._unit_tags(3):
+            self.assertTrue(
+                (ns / tag / "unit.json").is_file(), tag)
+
+    def test_F_truncation_cause_dominates_accidental_mismatch(self):
+        # REDUCER-side law (see test_issue250_terminal
+        # TruncatedLifecycleReducerTests): a truncated lifecycle is
+        # never terminal-complete even when its retained prefix
+        # happens to contain differing rows. At the PRODUCER the
+        # combination is unreachable by construction — the frozen
+        # early-stop law reports mismatch_stop at the first
+        # divergence BEFORE any later gate can fail — so here we
+        # assert exactly that ordering invariant: with a designated
+        # row mismatch at request 1 and authority drift at request
+        # 2, the mismatch fires first and the lifecycle records
+        # mismatch_stop (cause: the discriminator was answered).
+        out, issued = self._drift(2, row_mismatch_at=1)
+        self.assertEqual(issued, [0, 1])
+        ns = self.env.evidence / "d250-arm-b"
+        doc = json.loads(
+            (ns / "case-3072-B-cpu-sameproc-lifecycle"
+             / "lifecycle.json").read_bytes())
+        self.assertEqual(doc["stop_kind"], "mismatch_stop")
+        self.assertEqual(doc["request_count"], 2)
+        self.assertIsNone(doc["failed_gate_index"])
+
+    def test_no_authority_block_for_failed_request(self):
+        out, issued = self._drift(1)
+        ns = self.env.evidence / "d250-arm-b"
+        doc = json.loads(
+            (ns / "case-3072-B-cpu-sameproc-lifecycle"
+             / "lifecycle.json").read_bytes())
+        # exactly one successful per-request authority block (for
+        # request 0); none manufactured for the failed request
+        self.assertEqual(len(doc["per_request_authorities"]), 1)
+        self.assertNotIn(
+            "case-3072-B-cpu-sameproc-002",
+            [p.name for p in ns.iterdir()])
+
+
 class CampaignAttestationTests(unittest.TestCase):
     def setUp(self):
         self.env = Env(self)
@@ -1035,6 +1362,349 @@ class CampaignAttestationTests(unittest.TestCase):
         self.assertIsNone(witness)
 
 
+class FakeServerProc:
+    """A fake attributed llama-server process (correction pass 4,
+    blocker 2 tests): stands in for the Popen object with poll/
+    returncode control so the production attribution/verification
+    code paths run unchanged."""
+
+    def __init__(self, exe_sha, pid=31337):
+        self.pid = pid
+        self._pid = pid
+        self.exe_sha = exe_sha
+        self.argv: list = []
+        self._terminated = False
+
+    @property
+    def pid(self):
+        return self._pid
+
+    @pid.setter
+    def pid(self, value):
+        self._pid = value
+
+    def poll(self):
+        return 0 if self._terminated else None
+
+    def wait(self, timeout=None):
+        self._terminated = True
+        return 0
+
+    @property
+    def returncode(self):
+        return 0
+
+    def verify(self, expected_sha):
+        # production _verify_tokenizer_process_still_attributed reads
+        # /proc/<pid>/exe; the fake seam asserts the same binding
+        if self._terminated:
+            raise P.PhysicalDiagnosticError(
+                "fake tokenizer server exited mid-authority")
+        if self.exe_sha != expected_sha:
+            raise P.PhysicalDiagnosticError(
+                f"fake tokenizer server exe sha drift: {self.exe_sha}")
+
+    def terminate(self):
+        self._terminated = True
+
+
+class TokenizerProcessAttributionTests(unittest.TestCase):
+    """CORRECTION PASS 4 (NO-GO 5851078451, BLOCKER 2) — the 13
+    required controls. Production ladder-token authority must come
+    from a launched-and-attributed accepted llama-server process;
+    every binding is verified and every mutation fails closed."""
+
+    def setUp(self):
+        self.env = Env(self)
+        self.env.open_attestation()
+        self.bin_sha = D.SERVER_BINARIES["comparator"]
+        self.proc = FakeServerProc(self.bin_sha)
+        self.launched = []
+
+    def _launcher(self, *, exe_sha=None, argv_mutator=None,
+                  model_member=None, port_occupied=lambda port: False):
+        proc = self.proc
+
+        def spawn(argv, log_path):
+            proc.argv = list(argv)
+            return proc
+
+        attribution_exe = exe_sha if exe_sha is not None else self.bin_sha
+
+        def attribution_fn(proc_, argv, env):
+            return {"server_pid": proc_.pid,
+                    "server_exe_sha256": attribution_exe,
+                    "server_argv": list(argv),
+                    "server_env": dict(env)}
+
+        def fake_wait_healthy(proc_, port):
+            pass
+
+        member = model_member
+
+        def launch(binary, binary_sha, model_dir, launch_member):
+            argv = P.tokenizer_server_argv(
+                binary, member or launch_member)
+            if argv_mutator is not None:
+                argv = argv_mutator(list(argv))
+            handle = P.launch_tokenizer_server(
+                binary, binary_sha, model_dir, member or launch_member,
+                spawn=spawn, wait_healthy=fake_wait_healthy,
+                port_occupied=port_occupied,
+                attribution_fn=attribution_fn)
+            self.launched.append(launch_member)
+            return handle
+        return launch
+
+    def _http(self, counts=None, mutate_raw=None):
+        counts = counts or {68: 1022, 102: 1534, 136: 2053,
+                            153: 2303, 171: 2567, 204: 3077}
+
+        def post(url, body):
+            prompt = json.loads(body)["content"]
+            n = counts[prompt.count("The lighthouse keeper counted")]
+            doc = {"tokens": list(range(n))}
+            raw = json.dumps(doc).encode()
+            if mutate_raw is not None:
+                raw = mutate_raw(raw)
+            return raw, json.loads(raw)
+        return post
+
+    def _derive(self, launcher=None, http=None, **over):
+        kw = dict(
+            repo_root=self.env.repo, evidence_root=self.env.evidence,
+            expected_head=self.env.head,
+            binary=self.env.bin, binary_id="comparator",
+            model_dir=self.env.model_dir,
+            attestation=self.env.attestation,
+            launch_server=launcher or self._launcher(),
+            stop_server=lambda handle: self.proc.terminate(),
+            verify_alive=lambda handle, sha: self.proc.verify(sha),
+            http_post=http or self._http())
+        kw.update(over)
+        return P.derive_ladder_token_authority(**kw)
+
+    def _retained(self):
+        return json.loads(
+            (self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+             ).read_bytes())
+
+    # 1. attributed accepted process + correct binary/model =>
+    #    authority accepted
+    def test_1_attributed_process_authority_accepted(self):
+        doc = self._derive()
+        self.assertEqual(
+            doc["authority"],
+            "attributed_pinned_server_tokenize_endpoint")
+        self.assertEqual(doc["process_attribution"]["server_pid"],
+                         31337)
+        self.assertEqual(
+            doc["process_attribution"]["server_exe_sha256"],
+            self.bin_sha)
+        self.assertEqual(doc["process_attribution"]["argv"],
+                         P.tokenizer_server_argv(
+                             self.env.bin,
+                             self.env.model_dir / D.MODEL_MEMBER_1))
+        # and the reducer-side loader accepts the retained document
+        loaded = P.load_ladder_token_authority(
+            self.env.evidence, self.env.head)
+        self.assertEqual(loaded["authority"], doc["authority"])
+
+    # 2. wrong executable SHA => fail
+    def test_2_wrong_executable_sha_fails(self):
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._derive(launcher=self._launcher(exe_sha="b" * 64))
+        self.assertIn("executable SHA mismatch", str(ctx.exception))
+        # the failed launch is torn down (poll() reports exit)
+        self.assertIsNotNone(self.proc.poll())
+
+    # 3. wrong binary id => fail (verify_binary gate)
+    def test_3_wrong_binary_id_fails(self):
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self._derive(binary_id="reference")
+
+    # 4. wrong model launch member => fail
+    def test_4_wrong_model_launch_member_fails(self):
+        other = self.env.model_dir / D.MODEL_MEMBERS[-1]
+        self._derive(launcher=self._launcher(model_member=other))
+        # the producer retained an argv bound to the WRONG member;
+        # the reducer's process-block validation rejects it
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+        self.assertIn("model launch member mismatch",
+                      str(ctx.exception))
+
+    # 5. wrong model-attestation digest => fail
+    def test_5_wrong_attestation_digest_fails(self):
+        # a mutated digest fails the canonical attestation validation
+        bad = json.loads(json.dumps(self.env.attestation))
+        bad["attestation_sha256"] = "c" * 64
+        with self.assertRaises(D.DiagnosticError):
+            self._derive(attestation=bad)
+
+    def test_5b_attestation_digest_binding_retained(self):
+        doc = self._derive()
+        self.assertEqual(
+            doc["process_attribution"]["model_attestation_sha256"],
+            self.env.attestation["attestation_sha256"])
+
+    def test_5c_retained_digest_mutation_rejected(self):
+        # mutate the digest INSIDE the retained process block: the
+        # reducer's process-block validation rejects it
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        doc["process_attribution"][
+            "model_attestation_sha256"] = "c" * 64
+        path.write_bytes(json.dumps(doc).encode())
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+
+    def test_6_changed_stat_witness_fails(self):
+        member = self.env.model_files[D.MODEL_MEMBERS[0]]
+        member.write_bytes(member.read_bytes() + b"x")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self._derive()
+
+    # 7. pre-existing unknown port listener => fail
+    def test_7_preexisting_unknown_port_listener_fails(self):
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._derive(launcher=self._launcher(
+                port_occupied=lambda port: True))
+        self.assertIn("occupied by an unknown process",
+                      str(ctx.exception))
+        self.assertEqual(self.launched, [])
+
+    # 8. process PID changes during authority generation => fail.
+    # The production verifier reads /proc/<pid>/exe; swapping the
+    # attributed PID for a live-but-different process (our own)
+    # must fail the executable binding mid-authority.
+    def test_8_pid_change_mid_authority_fails(self):
+        verify_calls = {"n": 0}
+
+        def verify(handle, sha):
+            verify_calls["n"] += 1
+            if verify_calls["n"] > 2:
+                # process replaced: the attributed PID now names a
+                # DIFFERENT live executable (our own interpreter)
+                handle["proc"].pid = os.getpid()
+                handle["attribution"]["server_exe_sha256"] = "e" * 64
+            P._verify_tokenizer_process_still_attributed(handle, sha)
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self._derive(verify_alive=verify)
+        self.assertTrue(
+            "changed mid-authority" in str(ctx.exception)
+            or "vanished mid-authority" in str(ctx.exception),
+            str(ctx.exception))
+
+    # 9. raw tokenize response mutation => fail
+    def test_9_raw_response_mutation_fails(self):
+        # derive normally, then mutate the RETAINED raw response
+        # bytes: the digest/size binding must catch it
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        entry = doc["lengths"]["2048"]
+        import base64 as b64
+        raw = bytearray(
+            b64.b64decode(entry["tokenize_response_raw_b64"]))
+        raw[raw.index(b"[0,") + 1] = ord("9")
+        entry["tokenize_response_raw_b64"] = b64.b64encode(
+            bytes(raw)).decode("ascii")
+        path.write_bytes(json.dumps(doc).encode())
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+        self.assertIn("raw response bytes do not match",
+                      str(ctx.exception))
+
+    def test_9b_raw_ids_substitution_fails(self):
+        # mutate raw bytes AND token ids consistently BUT leave the
+        # digest: still caught (digest no longer matches content)
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        entry = doc["lengths"]["2048"]
+        import base64 as b64
+        raw = bytearray(
+            b64.b64decode(entry["tokenize_response_raw_b64"]))
+        raw[raw.index(b"[0,") + 1] = ord("9")
+        entry["tokenize_response_raw_b64"] = b64.b64encode(
+            bytes(raw)).decode("ascii")
+        ids = [9] + entry["token_ids"][1:]
+        entry["token_ids"] = ids
+        entry["token_ids_sha256"] = D.sha256_bytes(
+            json.dumps(ids, separators=(",", ":")).encode())
+        path.write_bytes(json.dumps(doc).encode())
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+
+    # 10. retained token ids/count mutation => reducer rejects
+    def test_10_retained_token_mutation_rejected(self):
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        entry = doc["lengths"]["2048"]
+        ids = entry["token_ids"]
+        ids[0] = ids[0] + 1
+        entry["token_ids"] = ids
+        entry["token_ids_sha256"] = D.sha256_bytes(
+            json.dumps(ids, separators=(",", ":")).encode())
+        path.write_bytes(json.dumps(doc).encode())
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+
+    # 11. prompt digest mutation => reducer rejects
+    def test_11_prompt_digest_mutation_rejected(self):
+        # derive, mutate the retained prompt digest, and re-derive
+        # the REAL prompt text from the frozen ladder: the entry
+        # validation must detect the binding loss
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        doc["lengths"]["2048"]["prompt_sha256"] = "d" * 64
+        path.write_bytes(json.dumps(doc).encode())
+        ladder = json.loads(
+            (self.env.repo / D.FIXTURE_LADDER_REL).read_bytes())
+        base = {c["case_id"]: c for c in ladder["cases"]}[D.CASE]
+        prompt = P.derive_ladder_prompt(
+            base["prompt_text"], 2048, base["sentence_repeats"])
+        entry = P.load_ladder_token_authority(
+            self.env.evidence, self.env.head)["lengths"]["2048"]
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.validate_ladder_token_authority_entry(entry, prompt)
+        self.assertIn("different prompt text", str(ctx.exception))
+
+    # 12. authority document without process attribution => rejected
+    def test_12_document_without_attribution_rejected(self):
+        self._derive()
+        path = self.env.evidence / P.LADDER_TOKEN_AUTHORITY_NAME
+        doc = json.loads(path.read_bytes())
+        del doc["process_attribution"]
+        doc["authority"] = "pinned_server_tokenize_endpoint"
+        path.write_bytes(json.dumps(doc).encode())
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+        self.assertIn("attributed", str(ctx.exception))
+
+    # 13. synthetic HTTP endpoint alone cannot produce production
+    #     token authority (the bare `tokenize` test seam names
+    #     itself test_seam and the reducer rejects it)
+    def test_13_synthetic_endpoint_is_not_production_authority(self):
+        doc = self._derive(tokenize=lambda prompt: (10, list(range(10))))
+        self.assertEqual(doc["authority"], "test_seam")
+        self.assertIsNone(doc["process_attribution"])
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.load_ladder_token_authority(self.env.evidence,
+                                          self.env.head)
+        self.assertIn("attributed", str(ctx.exception))
+
+
 class LadderDerivationTests(unittest.TestCase):
     def test_ladder_lengths_predeclared(self):
         ladder = json.loads(
@@ -1092,14 +1762,14 @@ class LadderDerivationTests(unittest.TestCase):
         self.assertEqual(verdict["actual_token_count"], 2053)
         self.assertTrue(
             T.validate_ladder_length_authority(
-                receipt, D.INDEXER_TOP_K)["crosses_top_k"])
+                receipt, D.INDEXER_TOPK_WIDTH)["crosses_top_k"])
         # nominal 2048 with actual 2041 => threshold NOT crossed even
         # though the NOMINAL label equals 2048
         receipt2 = P.ladder_token_authority_receipt(
             2048, 136, "x", "a" * 64, 2041)
         self.assertFalse(
             T.validate_ladder_length_authority(
-                receipt2, D.INDEXER_TOP_K)["crosses_top_k"])
+                receipt2, D.INDEXER_TOPK_WIDTH)["crosses_top_k"])
         # prompt text mutation changes token authority => BLOCKED
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_ladder_token_authority(receipt, prompt_text="x")
@@ -1110,7 +1780,7 @@ class LadderDerivationTests(unittest.TestCase):
         receipt = P.ladder_token_authority_receipt(
             2048, 136, "x", "a" * 64, 2053)
         verdict = T.validate_ladder_length_authority(
-            receipt, D.INDEXER_TOP_K, runtime_prompt_eval_tokens=2049)
+            receipt, D.INDEXER_TOPK_WIDTH, runtime_prompt_eval_tokens=2049)
         self.assertFalse(verdict["runtime_matches_authority"])
 
     def test_ladder_unit_argv_has_no_delta(self):
