@@ -44,7 +44,7 @@ Amended production path (scripts/issue250_physical.py,
 The retained document now carries
 `authority = attributed_pinned_server_tokenize_endpoint` plus a
 `process_attribution` block (schema
-inferswarm.issue250.token-authority-process/1: head, binary id/SHA,
+`inferswarm.issue250.token-authority-process/1`: head, binary id/SHA,
 server PID, executable SHA, exact argv, model dir + launch member,
 opening attestation digest, per-member stat witness, tokenizer
 semantics declaration). `load_ladder_token_authority` fails closed
