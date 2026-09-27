@@ -202,6 +202,60 @@ CONTRAST_NGL = 1
 CONTRAST_EXPECTED_ROW_DETERMINISTIC = False
 CONTRAST_MIN_UNITS = 2
 
+# Issue #250 V0 is a diagnostic reachability gate, never a terminal.
+# The input contract is deliberately exact: records bind all frozen
+# workload/placement identity and retain the complete decision-0 row.
+V0_SCHEMA = "inferswarm.issue250.v0-screen/1"
+V0_NAMESPACE = "d250-arm-v0-amd"  # shared with physical producer
+V0_ARM = "V0-amd-vulkan-concordance"
+V0_UNIT_TAGS = tuple(f"case-3072-V0-amd-vulkan-{i:03d}" for i in range(1, 4))
+V0_NVIDIA_ROW0_SHA256 = (
+    "dff2499b64045f68d1349a363ee5bc888f3f9640c658252778d106fe80715499",
+    "e369c8cb4ec5145f5ff855c0e29a1566795549126a4e135aaff5e94e8ce78ee6",
+)
+V0_STATE_AMD_VARIABLE = "AMD_VARIABLE_A_ELIGIBLE_DISPATCH_REQUIRED"
+V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD = "AMD_IDENTICAL_PAIR_THIRD_REQUIRED"
+V0_STATE_CONCORDANCE_STOP = "CROSS_VENDOR_CONCORDANCE_STOP_BLOCKED"
+V0_STATE_DISAGREEMENT_STOP = "CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED"
+V0_STATE_INVALID = "V0_INVALID_BLOCKED"
+V0_ROW_SLOT = 0
+
+
+def reduce_v0_screen(amd_rows: list[bytes],
+                     nvidia_rows: tuple[str, str]) -> dict[str, Any]:
+    """Pure full-byte comparison AFTER terminal's custody/provenance checks.
+
+    This function is not an evidence verifier and cannot authorize A. The
+    terminal reducer alone reads retained files and grants reachability.
+    """
+    invalid = {"state": V0_STATE_INVALID, "valid": False,
+               "terminal": None, "a_eligible": False}
+    if (type(amd_rows) is not list or len(amd_rows) not in (2, 3)
+            or any(type(row) is not bytes or len(row) != ROW_BYTES
+                   for row in amd_rows)
+            or nvidia_rows != V0_NVIDIA_ROW0_SHA256):
+        return dict(invalid, reason="unverified or incomplete full-row population")
+    rows = [row_digest(row) for row in amd_rows]
+    if rows[0] != rows[1]:
+        if len(rows) != 2:
+            return dict(invalid, reason="third row executed after first mismatch")
+        return {"state": V0_STATE_AMD_VARIABLE, "valid": True,
+                "terminal": None, "a_eligible": True,
+                "dispatch_required": True, "amd_rows": rows}
+    if len(rows) == 2:
+        return {"state": V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD,
+                "valid": True, "terminal": None, "a_eligible": False,
+                "third_required": True, "amd_rows": rows}
+    if rows[2] != rows[0]:
+        return {"state": V0_STATE_AMD_VARIABLE, "valid": True,
+                "terminal": None, "a_eligible": True,
+                "dispatch_required": True, "amd_rows": rows}
+    matched = rows[0] in nvidia_rows
+    return {"state": (V0_STATE_CONCORDANCE_STOP if matched else
+                      V0_STATE_DISAGREEMENT_STOP), "valid": True,
+            "terminal": None, "a_eligible": False, "maintainer_stop": True,
+            "amd_rows": rows, "matched_retained_nvidia": matched}
+
 # Frozen discriminator geometry (Issue #250 §A–§D; correction pass 2
 # blockers 2+3: B and C continue from Arm A's CPU-only condition).
 CASE = "case-3072"

@@ -281,9 +281,372 @@ def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-# ---------------------------------------------------------------------------
-# Live dispatch authority (no cached authority can bypass live fetch)
-# ---------------------------------------------------------------------------
+V0_NAMESPACE = "d250-arm-v0-amd"
+V0_ARM = "V0-amd-vulkan-concordance"
+V0_UNIT_TAGS = tuple(f"case-3072-V0-amd-vulkan-{i:03d}"
+                     for i in range(1, 4))
+V0_PLACEMENT_NGL = 1
+V0_PLACEMENT_BACKEND = "Vulkan"
+V0_PLACEMENT_EMBEDDING = "CPU"
+V0_PLACEMENT_OUTPUT_PROJECTION = "Vulkan"
+
+
+def v0_probe_plan() -> list[dict[str, Any]]:
+    """Return the immutable AMD screen order: two, third only conditionally.
+
+    The runner must stop on the first mismatch. This pure plan carries no
+    dispatch authority and deliberately remains outside the A-D reducer map.
+    """
+    return [{"tag": tag, "arm": V0_ARM, "namespace": V0_NAMESPACE,
+             "fresh_process": True, "ngl": V0_PLACEMENT_NGL,
+             "backend": V0_PLACEMENT_BACKEND,
+             "embedding_placement": V0_PLACEMENT_EMBEDDING,
+             "output_projection_placement": V0_PLACEMENT_OUTPUT_PROJECTION,
+             "screen_index": i, "minimum_first": 2,
+             "third_if_first_two_identical": True,
+             "stop_on_first_mismatch": True}
+            for i, tag in enumerate(V0_UNIT_TAGS, 1)]
+
+
+def validate_v0_dispatch(namespace: str, arm: str,
+                         authority: dict[str, Any],
+                         expected_head: str | None = None) -> dict[str, Any]:
+    """Validate V0 dispatch as an isolated exact namespace/arm authority."""
+    if namespace != V0_NAMESPACE or arm != V0_ARM:
+        raise PhysicalDiagnosticError(
+            "V0 dispatch requires its exact AMD namespace and arm")
+    if not isinstance(authority, dict):
+        raise PhysicalDiagnosticError("V0 dispatch authority is missing")
+    if (authority.get("namespace") != V0_NAMESPACE
+            or authority.get("arm") != V0_ARM):
+        raise PhysicalDiagnosticError("V0 dispatch authority mismatch")
+    # Existing D validator intentionally knows only A-D. Validate the common
+    # attestation facts directly while preserving exact V0 arm isolation.
+    body = authority.get("body")
+    if not isinstance(body, str):
+        raise PhysicalDiagnosticError("V0 dispatch body is missing")
+    lines = [line.strip() for line in body.splitlines()]
+    if (f"diagnostic-namespace={V0_NAMESPACE}" not in lines
+            or f"arm={V0_ARM}" not in lines
+            or sum(x.startswith("diagnostic-namespace=") for x in lines) != 1
+            or sum(x.startswith("arm=") for x in lines) != 1
+            or lines.count(D.DIAGNOSTIC_DISPATCH_PHRASE) != 1):
+        raise PhysicalDiagnosticError("V0 dispatch body binding mismatch")
+    head = authority.get("head_sha")
+    if expected_head is not None and head != expected_head:
+        raise PhysicalDiagnosticError("V0 dispatch stale exact head")
+    if (not isinstance(head, str) or len(head) != 40
+            or any(ch not in "0123456789abcdef" for ch in head)
+            or authority.get("author_association") not in {"OWNER", "MEMBER"}
+            or authority.get("open_pr") is not True
+            or authority.get("issue_open") is not True
+            or type(authority.get("comment_id")) is not int
+            or authority["comment_id"] <= 0
+            or authority["comment_id"] == D.STALE_DISPATCH_COMMENT_ID
+            or f"head={head}" not in lines
+            or sum(x.startswith("head=") for x in lines) != 1
+            or authority.get("issue_url") !=
+               f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}"
+            or not re.fullmatch(
+                r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z",
+                str(authority.get("created_at", "")))):
+        raise PhysicalDiagnosticError("V0 dispatch payload invalid")
+    return dict(authority)
+
+
+def v0_server_argv(binary: Path, model_member: Path, port: int = PORT,
+                   *, vulkan_device_index: int | None = None,
+                   validated_adapter: dict[str, Any] | None = None) -> list[str]:
+    """Build AMD ngl=1 argv only after a pinned binary selector proof.
+
+    The ordinary producer's default seam is NVIDIA-specific; it must never
+    silently claim AMD placement. A future AMD adapter must supply and verify
+    the selected Vulkan device identity AND the pinned binary's actual
+    --device selector grammar before this launch shape is usable. An index
+    is not itself a valid llama.cpp --device selector.
+    """
+    if type(vulkan_device_index) is not int or vulkan_device_index < 0:
+        raise PhysicalDiagnosticError(
+            "AMD Vulkan placement is unverified; explicit device identity required")
+    if (not isinstance(validated_adapter, dict)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(
+                validated_adapter.get("pinned_binary_sha256", "")))
+            or validated_adapter.get("vulkan_device_index") != vulkan_device_index
+            or validated_adapter.get("selector_verified_from_pinned_help") is not True
+            or not isinstance(validated_adapter.get("selector"), str)
+            or not re.fullmatch(r"Vulkan[0-9]+", validated_adapter["selector"])):
+        raise PhysicalDiagnosticError(
+            "V0 pinned server --device selector adapter unverified; "
+            "an integer Vulkan index cannot authorize a CLI selector")
+    return [str(binary), "--model", str(model_member), "-ngl", "1",
+            "--ctx-size", str(SERVER_CTX_SIZE),
+            "--batch-size", str(SERVER_BATCH_SIZE),
+            "--host", "127.0.0.1", "--port", str(port),
+            "--device", validated_adapter["selector"]]
+
+
+def _v0_retained_rows(root: Path, count: int, head: str,
+                      authority: dict[str, Any]) -> list[str]:
+    """Recheck each predecessor against retained full-row bytes and custody."""
+    import hashlib
+    rows = []
+    base = Path(root) / V0_NAMESPACE
+    if base.is_symlink():
+        raise PhysicalDiagnosticError("V0 namespace symlink refused")
+    if base.exists():
+        present = {p.name for p in base.iterdir()
+                   if p.is_dir() or p.is_symlink()}
+        if present != set(V0_UNIT_TAGS[:count]):
+            raise PhysicalDiagnosticError(
+                "V0 unexpected/partial/future unit population; no selective repeats")
+    elif count:
+        raise PhysicalDiagnosticError("V0 predecessor namespace missing")
+    for tag in V0_UNIT_TAGS[:count]:
+        directory = base / tag
+        receipt_path = directory / "unit.json"
+        row_path = directory / "obs.row0.f32"
+        if (directory.is_symlink() or receipt_path.is_symlink()
+                or row_path.is_symlink() or not receipt_path.is_file()
+                or not row_path.is_file()):
+            raise PhysicalDiagnosticError("V0 predecessor retained row missing")
+        try:
+            receipt = json.loads(receipt_path.read_bytes())
+            raw = row_path.read_bytes()
+        except (OSError, ValueError) as exc:
+            raise PhysicalDiagnosticError("V0 predecessor unreadable") from exc
+        digest = hashlib.sha256(raw).hexdigest()
+        if (len(raw) != D.ROW_BYTES or not isinstance(receipt, dict)
+                or receipt.get("schema") != D.V0_SCHEMA
+                or receipt.get("tag") != tag
+                or receipt.get("namespace") != V0_NAMESPACE
+                or receipt.get("arm") != V0_ARM
+                or receipt.get("head_sha") != head
+                or receipt.get("evidence_generation") != EVIDENCE_GENERATION
+                or receipt.get("decision0_row_sha256") != digest
+                or receipt.get("authority_sha256") != D.authority_digest(authority)
+                or receipt.get("placement_verified") is not True
+                or receipt.get("fresh_process") is not True
+                or receipt.get("case_id") != D.CONTRAST_CASE
+                or receipt.get("ngl") != 1
+                or receipt.get("model_dir") != D.MODEL_DIR
+                or receipt.get("model_member_sha256") !=
+                   D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1]
+                or receipt.get("request_contract") != D.REQUEST_CONTRACT
+                or receipt.get("prompt_token_ids") is None
+                or D.sha256_bytes(json.dumps(
+                    receipt["prompt_token_ids"], separators=(",", ":")).encode())
+                   != receipt.get("prompt_sha256")
+                or receipt.get("row_bytes") != D.ROW_BYTES
+                or type(receipt.get("server_pid")) is not int
+                or receipt["server_pid"] <= 0
+                or receipt.get("amd_device", {}).get("vendor_id") != "0x1002"):
+            raise PhysicalDiagnosticError("V0 predecessor retained byte/custody mismatch")
+        rows.append(digest)
+    return rows
+
+
+def _v0_observe_device(index: int) -> dict[str, Any]:
+    """Identify the Vulkan index from live enumeration; no assumed AMD index."""
+    result = subprocess.run(["vulkaninfo", "--summary"], capture_output=True,
+                            text=True, timeout=30, check=True)
+    blocks = re.split(r"(?=GPU[0-9]+:\s*)", result.stdout)
+    for block in blocks:
+        if re.match(rf"GPU{index}:\s*", block) and re.search(
+                r"vendorID\s*=\s*0x1002\b", block, re.I):
+            name = re.search(r"deviceName\s*=\s*(.+)", block)
+            if name:
+                return {"index": index, "vendor_id": "0x1002",
+                        "name": name.group(1).strip(),
+                        "enumeration_sha256": D.sha256_bytes(
+                            result.stdout.encode())}
+    raise PhysicalDiagnosticError("selected Vulkan device is not observed AMD")
+
+
+def _v0_verify_placement(unit_dir: Path, device: dict[str, Any],
+                         result: dict[str, Any]) -> None:
+    """Require actual layer and tensor-placement observations, not argv."""
+    log = unit_dir / "server.log"
+    if log.is_symlink() or not log.is_file():
+        raise PhysicalDiagnosticError("V0 server placement log missing")
+    text = log.read_text(errors="replace")
+    # A claimed launch flag or generic GPU-offload count proves neither the
+    # output projection nor the embedding tensor. Explicit runtime observations
+    # are mandatory; unsupported pinned builds stop rather than infer them.
+    required = (r"offloading .*layer.* to GPU", r"output.*(?:Vulkan|GPU)",
+                r"(?:token_embd|embedding).*CPU")
+    if (not all(re.search(pattern, text, re.I) for pattern in required)
+            or device.get("vendor_id") != "0x1002"
+            or result.get("vulkan_device_index") != device.get("index")):
+        raise PhysicalDiagnosticError(
+            "V0 AMD Vulkan layer/embedding/output placement unverified")
+    # These unstructured strings do not prove tensor placement on the pinned
+    # binary. Until an independently validated per-tensor observer exists,
+    # production MUST stop rather than promote a plausible log to evidence.
+    raise PhysicalDiagnosticError(
+        "V0 pinned binary has no validated per-tensor placement observer")
+
+
+def _verify_v0_amd_binary(binary: Path, binary_id: str) -> str:
+    """NVIDIA executable SHA cannot attest a separately built AMD binary."""
+    raise PhysicalDiagnosticError(
+        "V0 AMD build at pinned llama.cpp source and full-row observation "
+        "seam is not yet mechanically attested")
+
+
+def _real_v0_execute(argv: list[str], env: dict[str, str],
+                     request: dict[str, Any], prompt: str, port: int,
+                     unit_dir: Path, timeout_budget: dict[str, Any]) -> dict[str, Any]:
+    """AMD fresh process; never call the NVIDIA-specific A-D runner."""
+    with (unit_dir / "server.log").open("wb") as log:
+        proc = subprocess.Popen(argv, env={**os.environ, **env}, stdout=log,
+                                stderr=subprocess.STDOUT, start_new_session=True)
+        try:
+            _wait_healthy(proc, port)
+            attribution = _proc_attribution(proc, argv, env)
+            raw, response = _http_completion(
+                port, request, prompt, timeout_s=timeout_budget["budget_s"])
+            return {"response_raw": raw, "tokens": response.get("tokens"),
+                    "process_attribution": attribution,
+                    "vulkan_device_index": timeout_budget["vulkan_device_index"],
+                    "timeout_budget": timeout_budget}
+        finally:
+            if proc.poll() is None:
+                os.killpg(proc.pid, signal.SIGTERM)
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait(timeout=5)
+
+
+def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
+                tag: str, *, binary: Path, binary_id: str, model_dir: Path,
+                expected_head: str, model_attestation: dict[str, Any],
+                execute: Callable[..., dict[str, Any]] | None = None,
+                revalidate_authority: Callable[..., dict[str, Any]] | None = None,
+                vulkan_device_index: int | None = None,
+                device_observer: Callable[[int], dict[str, Any]] | None = None,
+                github_api: str = "https://api.github.com") -> dict[str, Any]:
+    """One canonical V0 unit; exact-head two-pass authority and row order."""
+    if (namespace, arm) != (V0_NAMESPACE, V0_ARM) or tag not in V0_UNIT_TAGS:
+        raise PhysicalDiagnosticError("V0 namespace/arm/plan mismatch")
+    if binary_id != "comparator" or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError("V0 frozen comparator/model identity mismatch")
+    root = Path(evidence_root)
+    validate_evidence_generation(root)
+    _admit_retained_cost(root, TB.V0_CONDITION, namespace, arm)
+    early = require_live_dispatch(repo_root, expected_head, namespace,
+                                  revalidate_authority, github_api)
+    D._require_clean_head(Path(repo_root), expected_head)
+    index = V0_UNIT_TAGS.index(tag)
+    rows = _v0_retained_rows(root, index, expected_head, early)
+    if index == 2 and rows[0] != rows[1]:
+        raise PhysicalDiagnosticError("V0 variable pair forbids third unit")
+    fixtures = verify_fixtures(Path(repo_root))
+    binary_sha = _verify_v0_amd_binary(Path(binary), binary_id)
+    attestation = validate_model_attestation(model_attestation, expected_head)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if opening.is_symlink() or not opening.is_file() or json.loads(
+            opening.read_bytes()) != attestation:
+        raise PhysicalDiagnosticError("V0 opening attestation missing or drifted")
+    problems, witness = attestation_witness(Path(model_dir), attestation)
+    if problems or attestation["model_dir"] != str(Path(model_dir)):
+        raise PhysicalDiagnosticError("V0 model identity drift")
+    if type(vulkan_device_index) is not int or vulkan_device_index < 0:
+        raise PhysicalDiagnosticError("V0 AMD Vulkan device index required")
+    device = (device_observer or _v0_observe_device)(vulkan_device_index)
+    if (device.get("index") != vulkan_device_index
+            or device.get("vendor_id") != "0x1002"
+            or not device.get("name")):
+        raise PhysicalDiagnosticError("V0 AMD device identity unverified")
+    if (device.get("validated_adapter", {}).get("pinned_binary_sha256")
+            != binary_sha):
+        raise PhysicalDiagnosticError("V0 adapter binary hash mismatch")
+    fixture = fixtures[D.CASE]
+    if len(fixture["prompt_token_ids"]) != TB.V0_PROMPT_TOKENS:
+        raise PhysicalDiagnosticError("V0 frozen prompt-token count drift")
+    request = D.validate_request_contract(D.REQUEST_CONTRACT)
+    budget = TB.v0_request_timeout(len(fixture["prompt_token_ids"]))
+    # An observer-provided adapter flag is NOT proof of the pinned server's
+    # CLI syntax or Vulkan-device mapping. Reject until the executable's
+    # actual help and device enumeration can be verified and cross-bound.
+    if device_observer is None:
+        raise PhysicalDiagnosticError(
+            "V0 pinned binary selector adapter not validated; no AMD launch")
+    argv = v0_server_argv(Path(binary), Path(model_dir) / D.MODEL_MEMBER_1,
+                          vulkan_device_index=vulkan_device_index,
+                          validated_adapter=device.get("validated_adapter"))
+    budget["vulkan_device_index"] = vulkan_device_index
+    late = require_live_dispatch(repo_root, expected_head, namespace,
+                                 revalidate_authority, github_api)
+    if D.authority_digest(early) != D.authority_digest(late):
+        raise PhysicalDiagnosticError("V0 live dispatch drift")
+    D._require_clean_head(Path(repo_root), expected_head)
+    _v0_retained_rows(root, index, expected_head, late)
+    _admit_retained_cost(root, TB.V0_CONDITION, namespace, arm)
+    unit_dir = prepare_unit_dir(root, namespace, tag)
+    env = {"CUDA_VISIBLE_DEVICES": "-1", "LLAMA_OBSERVE_CAPTURE": "8",
+           "LLAMA_OBSERVE_OUT": str(unit_dir / "obs"),
+           "LLAMA_OBSERVE_FORCE": ""}
+    try:
+        result = (execute or _real_v0_execute)(
+            argv=argv, env=env, request=request, prompt=fixture["prompt_text"],
+            port=PORT, unit_dir=unit_dir, timeout_budget=budget)
+        _v0_verify_placement(unit_dir, device, result)
+    except Exception as exc:
+        # The partial unit is permanently retained, never silently retried or
+        # selected around. Manual quarantine is required for any rerun.
+        _write_json(unit_dir / "failure.json", {
+            "schema": "inferswarm.issue250.v0-failed-unit/1",
+            "tag": tag, "head_sha": expected_head,
+            "reason": str(exc), "failed_at": _utcnow()})
+        raise
+    row_path = unit_dir / "obs.row0.f32"
+    if row_path.is_symlink() or not row_path.is_file():
+        raise PhysicalDiagnosticError("V0 full decision-0 row missing")
+    row = row_path.read_bytes()
+    if len(row) != D.ROW_BYTES:
+        raise PhysicalDiagnosticError("V0 full decision-0 row malformed")
+    attribution = result.get("process_attribution")
+    if (not isinstance(attribution, dict)
+            or type(attribution.get("server_pid")) is not int
+            or attribution["server_pid"] <= 0
+            or attribution.get("server_exe_sha256") != binary_sha
+            or attribution.get("server_argv") != argv):
+        raise PhysicalDiagnosticError("V0 fresh process attribution unverified")
+    for prior_tag in V0_UNIT_TAGS[:index]:
+        prior = json.loads((root / namespace / prior_tag / "unit.json").read_bytes())
+        if prior["server_pid"] == attribution["server_pid"]:
+            raise PhysicalDiagnosticError("V0 fresh process PID reused")
+    receipt = {"schema": D.V0_SCHEMA, "tag": tag, "namespace": namespace,
+               "arm": arm, "head_sha": expected_head,
+               "evidence_generation": EVIDENCE_GENERATION,
+               "decision0_row_sha256": D.sha256_bytes(row),
+               "row_bytes": len(row), "authority_sha256": D.authority_digest(late),
+               "placement_verified": True, "amd_device": device,
+               "case_id": D.CONTRAST_CASE, "ngl": 1, "backend": "Vulkan",
+               "embedding_placement": "CPU",
+               "output_projection_placement": "Vulkan",
+               "model_dir": str(model_dir),
+               "model_launch_member": str(Path(model_dir) / D.MODEL_MEMBER_1),
+               "model_member_sha256": D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1],
+               "prompt_sha256": D.sha256_bytes(json.dumps(
+                   fixture["prompt_token_ids"], separators=(",", ":")).encode()),
+               "prompt_token_ids": fixture["prompt_token_ids"],
+               "prompt_text_sha256": D.sha256_bytes(
+                   fixture["prompt_text"].encode()),
+               "prompt_len": len(fixture["prompt_token_ids"]),
+               "request_contract": request,
+               "request_contract_sha256": D.canonical_request_digest(request),
+               "fresh_process": True,
+               "server_pid": attribution["server_pid"],
+               "binary_sha256": binary_sha, "model_stat_witness": witness,
+               "server_argv": argv, "timeout_policy": budget,
+               "response_raw_sha256": D.sha256_bytes(result["response_raw"])}
+    _write_json(unit_dir / "unit.json", receipt)
+    return receipt
+
+
 
 def fetch_dispatch_authority(repo_root: Path, expected_head: str,
                              namespace: str,
@@ -299,7 +662,8 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
     ``arm=`` stripped lines with the namespace<->arm pair exactly
     bound (issue250_diagnostic.NAMESPACE_ARM_BINDING).
     """
-    D.validate_namespace(namespace)
+    if namespace != V0_NAMESPACE:
+        D.validate_namespace(namespace)
     D._require_clean_head(Path(repo_root), expected_head)
     headers = {"Accept": "application/vnd.github+json",
                "User-Agent": "inferswarm-issue250-diagnostic"}
@@ -367,8 +731,11 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
             "arm": arms[0] if len(arms) == 1 else None,
         }
         try:
+            if namespace == V0_NAMESPACE:
+                return validate_v0_dispatch(
+                    namespace, V0_ARM, authority, expected_head)
             return D.validate_authority_payload(authority, expected_head)
-        except D.DiagnosticError:
+        except (D.DiagnosticError, PhysicalDiagnosticError):
             continue
     raise D.DiagnosticError(
         f"no valid dispatch authority for head {expected_head} "
@@ -385,6 +752,8 @@ def require_live_dispatch(repo_root: Path, expected_head: str,
         revalidate_authority = fetch_dispatch_authority
     authority = revalidate_authority(repo_root, expected_head, namespace,
                                      github_api)
+    if namespace == V0_NAMESPACE:
+        return validate_v0_dispatch(namespace, V0_ARM, authority, expected_head)
     return D.validate_authority_payload(authority, expected_head)
 
 
@@ -1505,6 +1874,8 @@ def _require_sequential_reachability(
     This check runs before any physical runner/process and uses the same
     exact-head live authority and retained-byte verifiers as the reducer.
     """
+    _require_v0_fallback(repo_root, evidence_root, expected_head,
+                         revalidate_authority, github_api)
     if arm == "A-vulkan-necessity":
         return
     import issue250_terminal as T
@@ -1590,6 +1961,32 @@ def _require_sequential_reachability(
             D.DiagnosticError) as exc:
         raise PhysicalDiagnosticError(
             f"sequential predecessor verification failed: {exc}") from exc
+
+
+def _require_v0_fallback(repo_root: Path, evidence_root: Path,
+                         expected_head: str,
+                         revalidate_authority: Callable[..., dict[str, Any]] | None,
+                         github_api: str) -> None:
+    """No CPU fallback until the retained historical + AMD V0 gate varies.
+
+    The accepted #248 contrast corpus must be mounted under this evidence
+    root as accepted-248-contrast; absence blocks, never guesses a digest.
+    """
+    import issue250_terminal as T
+    try:
+        state = T.derive_v0_state(
+            Path(evidence_root), Path(evidence_root) / "accepted-248-contrast",
+            Path(repo_root), expected_head,
+            authority_fetcher=revalidate_authority, github_api=github_api)
+    except Exception as exc:
+        raise PhysicalDiagnosticError(
+            f"V0 predecessor evidence unavailable: {exc}") from exc
+    if (state.get("valid") is not True
+            or state.get("state") != D.V0_STATE_AMD_VARIABLE
+            or state.get("a_eligible") is not True):
+        raise PhysicalDiagnosticError(
+            f"V0 precedes CPU fallback; verified AMD variability required: "
+            f"{state.get('reason', state.get('state'))}")
 
 
 def timeout_budget_condition_is_c2(unit: dict[str, Any]) -> bool:

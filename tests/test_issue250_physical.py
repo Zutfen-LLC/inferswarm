@@ -297,6 +297,9 @@ class Env:
                  arm="A-vulkan-necessity"):
         import tempfile
         self.test = test
+        # Legacy A-D producer fixtures predate V0. Exercise their original
+        # invariants independently; V0 admission has dedicated tests below.
+        test.enterContext(mock.patch.object(P, "_require_v0_fallback"))
         self.tmp = tempfile.TemporaryDirectory()
         test.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
@@ -2399,6 +2402,288 @@ class TaskBoundResetProofMutationTests(unittest.TestCase):
         self.assertIn("consumed_prior_task_ids", proof)
         self.assertEqual(proof["consumed_prior_task_ids"], [100])
 
+
+
+class V0ProspectivePlanTests(unittest.TestCase):
+    def test_v0_plan_is_three_fresh_units_with_two_then_conditional_third(self):
+        plan = P.v0_probe_plan()
+        self.assertEqual([x["tag"] for x in plan], list(P.V0_UNIT_TAGS))
+        self.assertEqual(len(plan), 3)
+        self.assertTrue(all(x["fresh_process"] and x["ngl"] == 1
+                            and x["backend"] == "Vulkan"
+                            and x["embedding_placement"] == "CPU"
+                            and x["output_projection_placement"] == "Vulkan"
+                            for x in plan))
+        self.assertTrue(all(x["minimum_first"] == 2
+                            and x["third_if_first_two_identical"]
+                            and x["stop_on_first_mismatch"] for x in plan))
+
+    def test_v0_dispatch_requires_exact_namespace_arm_and_body(self):
+        body = "\n".join((D.DIAGNOSTIC_DISPATCH_PHRASE, "head=" + HEAD,
+                           "diagnostic-namespace=" + P.V0_NAMESPACE,
+                           "arm=" + P.V0_ARM))
+        authority = {"namespace": P.V0_NAMESPACE, "arm": P.V0_ARM,
+                     "body": body, "head_sha": HEAD,
+                     "issue_url": f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}",
+                     "created_at": "2026-09-27T00:00:00Z",
+                     "author_association": "MEMBER", "open_pr": True,
+                     "issue_open": True, "comment_id": 5}
+        self.assertEqual(P.validate_v0_dispatch(
+            P.V0_NAMESPACE, P.V0_ARM, authority), authority)
+        for namespace, arm, candidate in (
+                ("d250-arm-a", "A-vulkan-necessity", authority),
+                (P.V0_NAMESPACE, P.V0_ARM,
+                 {**authority, "namespace": "d250-arm-a"}),
+                (P.V0_NAMESPACE, P.V0_ARM,
+                 {**authority, "arm": "A-vulkan-necessity"})):
+            with self.subTest(namespace=namespace, arm=arm):
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P.validate_v0_dispatch(namespace, arm, candidate)
+
+    def test_v0_amd_argv_fails_closed_without_explicit_vulkan_device(self):
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "placement is unverified"):
+            P.v0_server_argv(Path("/server"), Path("/model"))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "selector adapter unverified"):
+            P.v0_server_argv(Path("/server"), Path("/model"),
+                             vulkan_device_index=1)
+        argv = P.v0_server_argv(Path("/server"), Path("/model"),
+                                vulkan_device_index=1,
+                                validated_adapter={
+                                    "pinned_binary_sha256": D.SERVER_BINARIES["comparator"],
+                                    "vulkan_device_index": 1,
+                                    "selector_verified_from_pinned_help": True,
+                                    "selector": "Vulkan1"})
+        self.assertEqual(argv[argv.index("-ngl") + 1], "1")
+        self.assertEqual(argv[argv.index("--device") + 1], "Vulkan1")
+
+    def test_v0_timeout_cost_is_separate_and_prospective(self):
+        cost = TB.v0_cost_record()
+        budget = TB.v0_request_timeout()
+        self.assertEqual(cost["namespace"], P.V0_NAMESPACE)
+        self.assertEqual(cost["arm"], P.V0_ARM)
+        self.assertEqual(cost["min_screen_units"], 2)
+        self.assertEqual(cost["max_screen_units"], 3)
+        self.assertFalse(cost["auto_execution_authorized"])
+        self.assertFalse(budget["auto_execution_authorized"])
+        self.assertEqual(budget["namespace"], P.V0_NAMESPACE)
+        with self.assertRaises(TB.TimeoutBudgetError):
+            TB.v0_cost_record(0)
+
+
+class V0ProducerAdmissionTests(unittest.TestCase):
+    """Real entrypoint, with a runner that must never be reached on denial."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.evidence = self.root / "evidence"
+        self.evidence.mkdir()
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        self.calls = []
+        P.retain_cost_planning_record(self.evidence)
+        self.head = "a" * 40
+
+    def authority(self, repo, head, namespace, github_api=None):
+        return {"comment_id": 77, "issue_url":
+                f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}",
+                "created_at": "2026-09-27T00:00:00Z", "author_association": "MEMBER",
+                "body": "\n".join((D.DIAGNOSTIC_DISPATCH_PHRASE,
+                                    f"head={head}", f"diagnostic-namespace={namespace}",
+                                    f"arm={P.V0_ARM}")),
+                "head_sha": head, "namespace": namespace, "arm": P.V0_ARM,
+                "open_pr": True, "issue_open": True}
+
+    def invoke(self, tag=None, authority=None):
+        def runner(**kw):
+            self.calls.append(kw)
+            raise RuntimeError("runner reached")
+        return P.run_v0_unit(
+            self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
+            tag or P.V0_UNIT_TAGS[0], binary=self.root / "bin",
+            binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+            expected_head=self.head, model_attestation={},
+            execute=runner, revalidate_authority=authority or self.authority)
+
+    def test_stale_and_cross_arm_dispatch_never_reach_runner(self):
+        for change in (lambda a: {**a, "head_sha": "1c86e97da42401ff7cfa98e3dc48a33517c65def"},
+                       lambda a: {**a, "comment_id": D.STALE_DISPATCH_COMMENT_ID},
+                       lambda a: {**a, "arm": "A-vulkan-necessity"},
+                       lambda a: {**a, "namespace": "d250-arm-a"}):
+            with self.subTest(change=change), self.assertRaises(P.PhysicalDiagnosticError):
+                self.invoke(authority=lambda *args: change(self.authority(*args)))
+            self.assertEqual(self.calls, [])
+
+    def test_third_without_identical_verified_pair_never_reaches_runner(self):
+        with self.assertRaises(Exception):
+            self.invoke(tag=P.V0_UNIT_TAGS[2])
+        self.assertEqual(self.calls, [])
+
+    def test_forged_resigned_v0_cost_never_reaches_runner(self):
+        import hashlib
+        cost_path = self.evidence / "cost-planning-record.json"
+        record = json.loads(cost_path.read_bytes())
+        record["conditions"][TB.V0_CONDITION]["estimated_seconds_per_unit"] = 1
+        body = {k: v for k, v in record.items() if k != "canonical_digest_sha256"}
+        record["canonical_digest_sha256"] = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+        cost_path.write_text(json.dumps(record))
+        with self.assertRaises((P.PhysicalDiagnosticError, TB.TimeoutBudgetError)):
+            self.invoke()
+        self.assertEqual(self.calls, [])
+
+    def test_cpu_arm_a_cannot_launch_before_verified_v0(self):
+        def cpu_authority(repo, head, namespace, github_api=None):
+            value = self.authority(repo, head, namespace, github_api)
+            value["arm"] = "A-vulkan-necessity"
+            value["body"] = value["body"].replace(
+                f"arm={P.V0_ARM}", "arm=A-vulkan-necessity")
+            return value
+        with mock.patch.object(D, "_require_clean_head"):
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                        "V0 precedes CPU fallback"):
+                P.run_diagnostic_unit(
+                    self.repo, self.evidence, "d250-arm-a",
+                    "A-vulkan-necessity", "case-3072-B-devnone-001",
+                    binary=self.root / "bin", binary_id="comparator",
+                    model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+                    model_attestation={}, execute=lambda **kw: self.calls.append(kw),
+                    revalidate_authority=cpu_authority)
+        self.assertEqual(self.calls, [])
+
+    def test_v0_cost_basis_explicitly_not_measured_amd(self):
+        record = TB.canonical_cost_planning_record()
+        entry = record["conditions"][TB.V0_CONDITION]
+        self.assertFalse(entry["planning_rate_measured"])
+        self.assertIn("not_measured_amd", entry["planning_rate_basis"])
+        self.assertEqual(entry["estimated_min_mismatch_cost_s"],
+                         TB.v0_cost_record()["two_unit_cost_s"])
+        self.assertEqual(TB.evaluate_cost_gate(
+            TB.V0_CONDITION, record)["namespace"], P.V0_NAMESPACE)
+
+    def test_amd_binary_attestation_is_hard_blocker_not_nvidia_digest(self):
+        self._enable_cpu_fake_execution()
+        with mock.patch.object(P, "_verify_v0_amd_binary",
+                               side_effect=P.PhysicalDiagnosticError(
+                                   "AMD seam not attested")):
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                        "AMD seam not attested"):
+                self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(self.calls, [])
+        self.assertFalse((self.evidence / P.V0_NAMESPACE).exists())
+
+    def _enable_cpu_fake_execution(self, rows=None):
+        rows = rows or (b"\0" * D.ROW_BYTES,) * 3
+        self.real_placement_verifier = P._v0_verify_placement
+        # A synthetic CPU runner cannot establish live AMD tensor placement.
+        # Override only that physical observer; real default must fail closed.
+        self.enterContext(mock.patch.object(P, "_v0_verify_placement"))
+        self.enterContext(mock.patch.object(D, "_require_clean_head"))
+        self.enterContext(mock.patch.object(P, "verify_fixtures", return_value={
+            D.CASE: {"prompt_text": "fixture", "prompt_token_ids": [1] * 3077}}))
+        self.enterContext(mock.patch.object(P, "verify_binary", return_value="f" * 64))
+        self.enterContext(mock.patch.object(P, "_verify_v0_amd_binary",
+                                            return_value="f" * 64))
+        self.enterContext(mock.patch.object(P, "validate_model_attestation",
+                                            return_value={"model_dir": D.MODEL_DIR}))
+        self.enterContext(mock.patch.object(P, "attestation_witness", return_value=([], {})))
+        (self.evidence / P.MODEL_ATTESTATION_OPEN_NAME).write_text(
+            json.dumps({"model_dir": D.MODEL_DIR}))
+
+        def runner(**kw):
+            self.calls.append(kw)
+            unit_dir = kw["unit_dir"]
+            (unit_dir / "obs.row0.f32").write_bytes(rows[len(self.calls) - 1])
+            (unit_dir / "server.log").write_text(
+                "offloading 1 repeating layer to GPU\n"
+                "output projection: Vulkan\nembedding: CPU\n")
+            return {"response_raw": b"{}", "vulkan_device_index": 0,
+                    "process_attribution": {"server_pid": 100 + len(self.calls),
+                                             "server_exe_sha256": "f" * 64,
+                                             "server_argv": kw["argv"]}}
+
+        self.runner = runner
+        self.device = lambda index: {"index": index, "vendor_id": "0x1002",
+                                     "name": "AMD test fixture",
+                                     "validated_adapter": {
+                                         "pinned_binary_sha256": "f" * 64,
+                                         "vulkan_device_index": index,
+                                         "selector_verified_from_pinned_help": True,
+                                         "selector": f"Vulkan{index}"}}
+
+    def _run(self, tag, authority=None):
+        return P.run_v0_unit(self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
+                             tag, binary=self.root / "bin", binary_id="comparator",
+                             model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+                             model_attestation={}, execute=self.runner,
+                             revalidate_authority=authority or self.authority,
+                             vulkan_device_index=0, device_observer=self.device)
+
+    def test_variable_pair_forbids_third_and_retained_byte_mutation(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,
+                                         b"\1" * D.ROW_BYTES))
+        self._run(P.V0_UNIT_TAGS[0])
+        self._run(P.V0_UNIT_TAGS[1])
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "variable pair"):
+            self._run(P.V0_UNIT_TAGS[2])
+        self.assertEqual(len(self.calls), 2)
+        row = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0] / "obs.row0.f32"
+        row.write_bytes(b"\2" * D.ROW_BYTES)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "byte/custody"):
+            self._run(P.V0_UNIT_TAGS[2])
+        self.assertEqual(len(self.calls), 2)
+
+    def test_identical_pair_permits_third_but_late_dispatch_drift_denies(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
+        first = self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(first["prompt_token_ids"], [1] * 3077)
+        self.assertEqual(first["prompt_text_sha256"], D.sha256_bytes(b"fixture"))
+        self._run(P.V0_UNIT_TAGS[1])
+        calls = [0]
+
+        def drifting(*args):
+            calls[0] += 1
+            value = self.authority(*args)
+            if calls[0] == 2:
+                value["comment_id"] = 78
+            return value
+
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "drift"):
+            self._run(P.V0_UNIT_TAGS[2], authority=drifting)
+        self.assertEqual(len(self.calls), 2)
+        self._run(P.V0_UNIT_TAGS[2])
+        self.assertEqual(len(self.calls), 3)
+
+    def test_future_or_failed_partial_unit_blocks_selective_population(self):
+        self._enable_cpu_fake_execution()
+        future = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[2]
+        future.mkdir(parents=True)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "selective repeats"):
+            self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(self.calls, [])
+        future.rmdir()
+        failed = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0]
+        failed.mkdir()
+        (failed / "failure.json").write_text("{}")
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "selective repeats"):
+            self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(self.calls, [])
+
+    def test_unvalidated_tensor_placement_does_not_emit_receipt(self):
+        self._enable_cpu_fake_execution()
+        # Restore the real verifier for this test, bypassing the mock seam.
+        with mock.patch.object(P, "_v0_verify_placement",
+                               self.real_placement_verifier):
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                        "validated per-tensor placement"):
+                self._run(P.V0_UNIT_TAGS[0])
+        failed = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0]
+        self.assertTrue((failed / "failure.json").is_file())
+        self.assertFalse((failed / "unit.json").exists())
 
 
 class NoPhysicalExecutionTests(unittest.TestCase):

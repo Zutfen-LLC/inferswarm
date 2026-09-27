@@ -453,6 +453,33 @@ class DeterminismTests(unittest.TestCase):
             D.canonical_token_digest(toks[:7])
 
 
+class V0ReducerTests(unittest.TestCase):
+    """Pure byte comparator is non-authoritative; no boolean/SHA input seam."""
+
+    def test_full_row_population(self):
+        a, b = bytes(D.ROW_BYTES), bytes([1]) * D.ROW_BYTES
+        nvidia = D.V0_NVIDIA_ROW0_SHA256
+        self.assertEqual(D.reduce_v0_screen([a, b], nvidia)["state"],
+                         D.V0_STATE_AMD_VARIABLE)
+        self.assertEqual(D.reduce_v0_screen([a, a], nvidia)["state"],
+                         D.V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD)
+        self.assertEqual(D.reduce_v0_screen([a, a, a], nvidia)["state"],
+                         D.V0_STATE_DISAGREEMENT_STOP)
+        self.assertEqual(D.reduce_v0_screen([a, a, b], nvidia)["state"],
+                         D.V0_STATE_AMD_VARIABLE)
+        self.assertEqual(D.reduce_v0_screen([a, b, b], nvidia)["state"],
+                         D.V0_STATE_INVALID)
+        for rows in ([a], [a[:-1], b],
+                     [{"valid": True, "decision0_row_sha256": "a" * 64}, b]):
+            self.assertEqual(D.reduce_v0_screen(rows, nvidia)["state"],
+                             D.V0_STATE_INVALID)
+        self.assertEqual(D.reduce_v0_screen([a, b], ("c" * 64,) * 2)["state"],
+                         D.V0_STATE_INVALID)
+
+    def test_exact_physical_namespace_alignment(self):
+        self.assertEqual(D.V0_NAMESPACE, "d250-arm-v0-amd")
+        self.assertEqual(D.V0_ARM, "V0-amd-vulkan-concordance")
+
 class PrefixPopulationLawTests(unittest.TestCase):
     """FROZEN PREFIX POPULATION LAW (correction pass 3, blocker 2)."""
 

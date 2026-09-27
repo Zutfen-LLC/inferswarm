@@ -251,6 +251,21 @@ class CampaignFixture:
         P.retain_cost_planning_record(self.evidence)
 
         self.authorities = {}
+        self._build_v0()
+        from unittest.mock import patch
+        self.v0_historical_patch = patch.object(
+            T, "verify_v0_historical_rows", return_value=dict(self.v0_history))
+        self.v0_historical_patch.start()
+        test.addCleanup(self.v0_historical_patch.stop)
+        # A preceding diagnostic old-defect proof may reload the named
+        # terminal module while this test file retains its first instance.
+        active_terminal = sys.modules.get("issue250_terminal")
+        if active_terminal is not T:
+            active_patch = patch.object(
+                active_terminal, "verify_v0_historical_rows",
+                return_value=dict(self.v0_history))
+            active_patch.start()
+            test.addCleanup(active_patch.stop)
         self._build_arm_a(arm_a_rows)
         self.arm_d_confirm_lengths = (
             arm_d_confirm_lengths if arm_d_confirm_lengths is not None
@@ -273,6 +288,67 @@ class CampaignFixture:
                     self._derive_ladder_authority()
                     self._build_arm_d(arm_d_rows, arm_d_progress)
         self._build_contrast()
+
+    def _build_v0(self):
+        """Retain a real full-row AMD prefix under the V0 receipt contract.
+
+        Historical #248 is injected only in legacy A-D fixture tests; a
+        separate test exercises its original committed/external bytes.
+        """
+        import hashlib
+        self.v0_authority = make_authority(
+            D.V0_NAMESPACE, D.V0_ARM, self.head, comment_id=248001)
+        v0_case = next(
+            case for case in json.loads(
+                (REPO / D.FIXTURE_LADDER_REL).read_text())["cases"]
+            if case["case_id"] == D.CONTRAST_CASE)
+        self.v0_prompt_tokens = v0_case["prompt_token_ids"]
+        self.v0_history = {
+            "row_sha256": D.V0_NVIDIA_ROW0_SHA256,
+            "prompt_len": PROMPT_TOKENS,
+            "prompt_token_ids": self.v0_prompt_tokens,
+            "prompt_text_sha256": hashlib.sha256(
+                v0_case["prompt_text"].encode()).hexdigest(),
+            "prompt_sha256": hashlib.sha256(json.dumps(
+                self.v0_prompt_tokens, separators=(",", ":")).encode()).hexdigest(),
+            "manifest_self_digest": D.ACCEPTED_248_MANIFEST_SELF_DIGEST,
+            "result_head": D.ACCEPTED_248_RESULT_HEAD,
+        }
+        base = self.evidence / D.V0_NAMESPACE
+        for index, tag in enumerate(D.V0_UNIT_TAGS[:2], 1):
+            unit = base / tag
+            unit.mkdir(parents=True)
+            row = bytes([index]) * D.ROW_BYTES
+            (unit / "obs.row0.f32").write_bytes(row)
+            receipt = {
+                "schema": D.V0_SCHEMA, "tag": tag,
+                "namespace": D.V0_NAMESPACE, "arm": D.V0_ARM,
+                "head_sha": self.head,
+                "evidence_generation": P.EVIDENCE_GENERATION,
+                "authority_sha256": D.authority_digest(self.v0_authority),
+                "placement_verified": True,
+                "amd_device": {"index": 0, "vendor_id": "0x1002"},
+                "decision0_row_sha256": hashlib.sha256(row).hexdigest(),
+                "row_bytes": D.ROW_BYTES, "case_id": D.CONTRAST_CASE,
+                "ngl": 1, "backend": "Vulkan",
+                "embedding_placement": "CPU",
+                "output_projection_placement": "Vulkan",
+                "model_dir": D.MODEL_DIR,
+                "model_launch_member": str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                "model_member_sha256": D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1],
+                "prompt_sha256": self.v0_history["prompt_sha256"],
+                "prompt_token_ids": self.v0_prompt_tokens,
+                "prompt_text_sha256": self.v0_history["prompt_text_sha256"],
+                "prompt_len": PROMPT_TOKENS,
+                "request_contract": D.REQUEST_CONTRACT,
+                "request_contract_sha256": D.canonical_request_digest(D.REQUEST_CONTRACT),
+                "fresh_process": True, "server_pid": index + 40000,
+                "binary_sha256": D.SERVER_BINARIES["comparator"],
+                "server_argv": [str(self.bin), "--model",
+                                str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
+                                "-ngl", "1", "--device", "0"],
+            }
+            (unit / "unit.json").write_text(json.dumps(receipt))
 
     def _derive_ladder_authority(self):
         """Retain the token authority through an ATTRIBUTED (fake)
@@ -350,8 +426,11 @@ class CampaignFixture:
             if ns not in by_ns:
                 raise D.DiagnosticError(
                     f"no dispatch authority for namespace {ns}")
+            if ns == D.V0_NAMESPACE:
+                return dict(self.v0_authority)
             return dict(by_ns[ns])
-        for ns, arm in (("d250-arm-a", "A-vulkan-necessity"),
+        for ns, arm in ((D.V0_NAMESPACE, D.V0_ARM),
+                        ("d250-arm-a", "A-vulkan-necessity"),
                         ("d250-arm-b", "B-process-init"),
                         ("d250-arm-c", "C-cpu-threads"),
                         ("d250-arm-c1", "C1-reduced-parallelism"),
@@ -788,7 +867,123 @@ class CampaignFixture:
             contrast_root=self.contrast_root,
         )
         kw.update(over)
-        return T.derive_terminal(**kw)
+        from unittest.mock import patch
+        # Existing A-D fixture matrix supplies synthetic #248 contrast rows;
+        # patch ONLY historical materialization, never the AMD byte reducer.
+        with patch.object(T, "verify_v0_historical_rows",
+                          return_value=dict(self.v0_history)):
+            return T.derive_terminal(**kw)
+
+
+class V0EvidenceBridgeTests(unittest.TestCase):
+    """The evidence gate checks retained full bytes before Arm A."""
+
+    def _fixture(self):
+        fixture = CampaignFixture(self, arm_a_rows="det")
+        self.addCleanup(fixture.restore_contrast_constant)
+        return fixture
+
+    def test_v0_variable_then_independent_a_dispatch(self):
+        f = self._fixture()
+        out = f.derive()
+        self.assertEqual(out["terminal"], T.LOCALIZED)
+        self.assertEqual(out["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
+        fetch = f.fetch_all()
+        def no_a(repo, head, ns, api):
+            if ns == "d250-arm-a":
+                raise D.DiagnosticError("A dispatch absent")
+            return fetch(repo, head, ns, api)
+        out = f.derive(authority_fetcher=no_a)
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertEqual(out["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
+
+    def test_v0_mutation_and_selective_omission_block_terminal(self):
+        f = self._fixture()
+        unit = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[1]
+        receipt_path = unit / "unit.json"
+        row_path = unit / "obs.row0.f32"
+        original = json.loads(receipt_path.read_text())
+        for key, wrong in (("model_member_sha256", "0" * 64),
+                           ("prompt_sha256", "0" * 64),
+                           ("prompt_token_ids", [0] * PROMPT_TOKENS),
+                           ("prompt_text_sha256", "0" * 64),
+                           ("request_contract", {**D.REQUEST_CONTRACT, "seed": 9}),
+                           ("ngl", 8), ("backend", "CPU"),
+                           ("embedding_placement", "Vulkan"),
+                           ("output_projection_placement", "CPU"),
+                           ("placement_verified", False),
+                           ("head_sha", "a" * 40),
+                           ("authority_sha256", "0" * 64)):
+            receipt_path.write_text(json.dumps({**original, key: wrong}))
+            out = f.derive()
+            self.assertEqual(out["blocked"], T.BLOCKED, key)
+            self.assertEqual(out["v0"]["state"], D.V0_STATE_INVALID, key)
+        receipt_path.write_text(json.dumps(original))
+        raw = row_path.read_bytes()
+        for bad in (raw[:-1], raw[:-1] + bytes([raw[-1] ^ 1])):
+            row_path.write_bytes(bad)
+            self.assertEqual(f.derive()["v0"]["state"], D.V0_STATE_INVALID)
+        row_path.write_bytes(raw)
+        receipt_path.rename(unit / "unit.json-quarantined")
+        self.assertEqual(f.derive()["v0"]["state"], D.V0_STATE_INVALID)
+        receipt_path.write_text(json.dumps(original))
+        extra = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[2]
+        extra.mkdir()
+        self.assertEqual(f.derive()["v0"]["state"], D.V0_STATE_INVALID)
+
+    def test_identical_pair_needs_third_not_a(self):
+        f = self._fixture()
+        first = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[0] / "obs.row0.f32"
+        second = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[1]
+        raw = first.read_bytes()
+        (second / "obs.row0.f32").write_bytes(raw)
+        receipt = json.loads((second / "unit.json").read_text())
+        import hashlib
+        receipt["decision0_row_sha256"] = hashlib.sha256(raw).hexdigest()
+        (second / "unit.json").write_text(json.dumps(receipt))
+        self.assertEqual(f.derive()["v0"]["state"],
+                         D.V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD)
+        third = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[2]
+        third.mkdir()
+        (third / "obs.row0.f32").write_bytes(raw)
+        receipt.update(tag=D.V0_UNIT_TAGS[2], server_pid=40003)
+        (third / "unit.json").write_text(json.dumps(receipt))
+        self.assertEqual(f.derive()["v0"]["state"], D.V0_STATE_DISAGREEMENT_STOP)
+
+    def test_external_248_actual_rows_when_available(self):
+        import os
+        import tempfile
+        import shutil
+        source = os.environ.get("ISSUE250_TEST_248_EVIDENCE_ROOT")
+        if not source:
+            self.skipTest("set ISSUE250_TEST_248_EVIDENCE_ROOT to retained #248 copy")
+        source = Path(source)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / D.CONTRAST_NAMESPACE).mkdir()
+            shutil.copy2(source / "SHA256SUMS", root / "SHA256SUMS")
+            for tag in D.CONTRAST_UNITS:
+                dst = root / D.CONTRAST_NAMESPACE / tag
+                dst.mkdir()
+                for name in ("unit.json", "obs.row0.f32"):
+                    shutil.copy2(source / D.CONTRAST_NAMESPACE / tag / name,
+                                 dst / name)
+            out = T.verify_v0_historical_rows(root, REPO)
+            self.assertEqual(out["row_sha256"], D.V0_NVIDIA_ROW0_SHA256)
+            row = root / D.CONTRAST_NAMESPACE / D.CONTRAST_UNITS[0] / "obs.row0.f32"
+            raw = row.read_bytes()
+            for bad in (raw[:-1], bytes([raw[0] ^ 1]) + raw[1:]):
+                row.write_bytes(bad)
+                with self.assertRaises(ValueError):
+                    T.verify_v0_historical_rows(root, REPO)
+            row.write_bytes(raw)
+            receipt = root / D.CONTRAST_NAMESPACE / D.CONTRAST_UNITS[0] / "unit.json"
+            original = receipt.read_bytes()
+            obj = json.loads(original)
+            obj["authority"]["issue_number"] = 247
+            receipt.write_text(json.dumps(obj))
+            with self.assertRaises(ValueError):
+                T.verify_v0_historical_rows(root, REPO)
 
 
 class TerminalMatrixTests(unittest.TestCase):

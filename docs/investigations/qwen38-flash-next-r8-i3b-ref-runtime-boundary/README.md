@@ -2,9 +2,12 @@
 
 Option-1 follow-up to the accepted Issue #248 terminal
 `R8I3_REF_NONDETERMINISM_UNRESOLVED` (merged PR #249, main authority
-`bc71774`). STATUS: **Phase 0 complete; Arm-C authority corrected in
-AMENDMENT-004 (2026-09-27); PR #251 remains open and unmerged — HALTED
-for fresh maintainer exact-head review and dispatch.** The first v1
+`bc71774`; result head `a2cf9f33d1a056f2eef062b4186c078262e66f63`,
+adjudication comment `5838156612`, retained external 534-row SHA256SUMS
+self-digest `af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc`).
+STATUS: **Phase 0 complete; V0-first issue amendment recorded by maintainer
+comment 5857136762; Arm-C authority corrected in AMENDMENT-004
+(2026-09-27); no physical work is authorized here.** The first v1
 Arm-A attempt failed and is retained read-only; no physical execution
 under this correction is authorized by issue creation or these docs.
 
@@ -51,7 +54,8 @@ Contents:
   amendment; frozen text preserved. Its §3 claim that deterministic
   C1 alone can LOCALIZE and that only variable C1 can access C2 is
   historical and expressly superseded by AMENDMENT-004.
-- `METHODOLOGY-AMENDMENT-004.md` — current Issue #250 Arm-C terminal
+- `METHODOLOGY-AMENDMENT-004.md` — current Issue #250 prospective
+  ordering/authority clarification plus Arm-C terminal
   contract: C1 (four threads) is informative but never terminal on its
   own; completed C1 deterministic **or** variable with no separately
   authorized serial C2 is BLOCKED. Only actual default-vs-single-thread
@@ -62,6 +66,20 @@ Contents:
   recomputed projection and its canonical SHA-256 before any runner starts;
   a longer HTTP timeout does not grant spend authority. This does not
   authorize execution or rewrite the frozen methodology/earlier amendments.
+  The maintainer's V0-first issue amendment supersedes CPU-first ordering
+  only: V0 precedes A–D when freshly reviewed/dispatched; the existing A–D
+  controls remain fallback, not replaced or loosened. V0 is non-terminal and
+  diagnostic only, does not promote AMD (or NVIDIA) as GPU/reference authority,
+  and its AMD 2-then-3 screen and stop law remain bounded to that population.
+  Every physical leg still needs exact-head dispatch; cost admission is a
+  separate gate, not dispatch authority. The current V0 producer deliberately
+  fails closed before launch: an AMD-host binary/CLI selector and per-tensor
+  placement observer have not been independently attested at the pinned build.
+  Synthetic runner tests establish the prospective population and custody
+  contract, not readiness to execute AMD inference. A separately reviewed
+  exact-head correction must validate and wire that adapter before any V0
+  dispatch could result in physical work. Frozen `METHODOLOGY.md` and
+  amendments 001–003 remain historical and untouched.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,
@@ -94,11 +112,12 @@ Key phase-0 findings (all source-cited in the analysis JSON):
    server (Arm B's one DECLARED contract extension).
 
 Tooling: `scripts/issue250_phase0.py` (analysis),
-`scripts/issue250_diagnostic.py` (d250- namespaces, dispatch
-authority, frozen arm plans, digest-only determinism, mechanical
-terminal derivation), `tests/test_issue250_diagnostic.py` (44
-CPU-only tests incl. mutation controls and direct reducer-invocation
-terminal-tree tests).
+`issue250_diagnostic.py` (frozen arm plans, exact-head dispatch, V0 screening
+states), `issue250_physical.py` (future per-unit custody and launch gates),
+`issue250_terminal.py` (retained-byte reduction and V0-first reachability),
+`issue250_timeout.py` (separate prospective V0/A–D costs and timeouts), and
+focused CPU-only `tests/test_issue250_*`. These repository-only tests use
+fixtures; they do not run the case-3072 model or authorize physical work.
 
 Accepted terminals unchanged and read-only: #241
 `R8I3_COMPARATOR_V2_BLOCKED`; #248

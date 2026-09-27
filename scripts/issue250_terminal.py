@@ -83,6 +83,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
@@ -98,6 +99,200 @@ UNRESOLVED = "R8I3B_REFERENCE_RUNTIME_UNRESOLVED"
 BLOCKED = D.REDUCER_BLOCKED
 
 TERMINALS = (LOCALIZED, UNRESOLVED)
+
+
+def derive_v0_state(evidence_root: Path, contrast_root: Path,
+                    repo_root: Path, expected_head: str, *,
+                    authority_fetcher: Any = None,
+                    github_api: str = "https://api.github.com") -> dict[str, Any]:
+    """Read-only V0 evidence reduction; no caller-supplied row or validity facts.
+
+    Both the accepted #248 corpus and AMD observations must pass custody,
+    identity, placement and live dispatch checks before comparing full rows.
+    """
+    invalid = {"state": D.V0_STATE_INVALID, "valid": False,
+               "terminal": None, "a_eligible": False}
+    try:
+        history = verify_v0_historical_rows(Path(contrast_root),
+                                            Path(__file__).resolve().parents[1])
+        authority = P.require_live_dispatch(
+            Path(repo_root), expected_head, D.V0_NAMESPACE,
+            revalidate_authority=authority_fetcher, github_api=github_api)
+        root = Path(evidence_root) / D.V0_NAMESPACE
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError("V0 namespace missing or symlink")
+        tags = [p.name for p in root.iterdir() if p.is_dir() or p.is_symlink()]
+        if (len(tags) not in (2, 3)
+                or set(tags) != set(D.V0_UNIT_TAGS[:len(tags)])):
+            raise ValueError("V0 requires a contiguous two/three-unit prefix")
+        amd_rows = []
+        pids = set()
+        for tag in D.V0_UNIT_TAGS[:len(tags)]:
+            unit = root / tag
+            if unit.is_symlink():
+                raise ValueError("V0 unit symlink")
+            receipt_path, row_path = unit / "unit.json", unit / "obs.row0.f32"
+            if receipt_path.is_symlink() or row_path.is_symlink():
+                raise ValueError("V0 retained file symlink")
+            rec = json.loads(receipt_path.read_bytes())
+            row = row_path.read_bytes()
+            if len(row) != D.ROW_BYTES:
+                raise ValueError("V0 full row width mismatch")
+            digest = hashlib.sha256(row).hexdigest()
+            if (rec.get("schema") != D.V0_SCHEMA or rec.get("tag") != tag
+                    or rec.get("namespace") != D.V0_NAMESPACE
+                    or rec.get("arm") != D.V0_ARM
+                    or rec.get("head_sha") != expected_head
+                    or rec.get("evidence_generation") != P.EVIDENCE_GENERATION
+                    or rec.get("authority_sha256") != D.authority_digest(authority)
+                    or rec.get("placement_verified") is not True
+                    or rec.get("amd_device", {}).get("vendor_id") != "0x1002"
+                    or type(rec.get("amd_device", {}).get("index")) is not int
+                    or rec.get("decision0_row_sha256") != digest
+                    or rec.get("row_bytes") != D.ROW_BYTES
+                    or rec.get("case_id") != D.CONTRAST_CASE
+                    or rec.get("ngl") != 1
+                    or rec.get("backend") != "Vulkan"
+                    or rec.get("embedding_placement") != "CPU"
+                    or rec.get("output_projection_placement") != "Vulkan"
+                    or rec.get("model_dir") != D.MODEL_DIR
+                    or rec.get("model_launch_member") !=
+                       str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
+                    or rec.get("model_member_sha256") !=
+                       D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1]
+                    or rec.get("prompt_sha256") != history["prompt_sha256"]
+                    or rec.get("prompt_token_ids") != history["prompt_token_ids"]
+                    or rec.get("prompt_len") != history["prompt_len"]
+                    or rec.get("prompt_text_sha256") != history["prompt_text_sha256"]
+                    or rec.get("request_contract") != D.REQUEST_CONTRACT
+                    or rec.get("request_contract_sha256") !=
+                       D.canonical_request_digest(D.REQUEST_CONTRACT)
+                    or rec.get("fresh_process") is not True):
+                raise ValueError(f"V0 receipt workload/custody mismatch: {tag}")
+            pid = rec.get("server_pid")
+            argv = rec.get("server_argv")
+            device = rec.get("amd_device", {})
+            if (not isinstance(argv, list) or "-ngl" not in argv
+                    or argv[argv.index("-ngl") + 1:argv.index("-ngl") + 2] != ["1"]
+                    or "--model" not in argv
+                    or argv[argv.index("--model") + 1:argv.index("--model") + 2]
+                       != [rec["model_launch_member"]]
+                    or "--device" not in argv
+                    or argv[argv.index("--device") + 1:argv.index("--device") + 2]
+                       != [str(device["index"])]
+                    or rec.get("binary_sha256") != D.SERVER_BINARIES["comparator"]
+                    or type(pid) is not int or pid <= 0 or pid in pids):
+                raise ValueError("V0 process/AMD placement attribution unproven")
+            pids.add(pid)
+            amd_rows.append(row)
+        result = D.reduce_v0_screen(amd_rows, history["row_sha256"])
+        result["historical_provenance"] = {
+            k: v for k, v in history.items() if k != "prompt_token_ids"}
+        result["v0_authority_sha256"] = D.authority_digest(authority)
+        return result
+    except (OSError, ValueError, KeyError, TypeError, IndexError,
+            __import__("subprocess").CalledProcessError, json.JSONDecodeError,
+            D.DiagnosticError, P.PhysicalDiagnosticError) as exc:
+        return dict(invalid, reason=str(exc))
+
+
+def verify_v0_historical_rows(contrast_root: Path, repo_root: Path
+                              ) -> dict[str, Any]:
+    """Authenticate the exact accepted #248 ngl=1 rows against committed
+    adjudication and the original external retained manifest and bytes."""
+    import subprocess
+    base = ("docs/investigations/"
+            "qwen38-flash-next-r8-i3a-ref-nondeterminism/")
+    def committed(rel: str) -> bytes:
+        return subprocess.run(
+            ["git", "show", f"{D.ACCEPTED_248_RESULT_HEAD}:{base}{rel}"],
+            cwd=repo_root, check=True, capture_output=True).stdout
+    report = committed("FINAL-REPORT.md")
+    manifest = committed("MANIFEST.sha256").decode()
+    reduction_raw = committed("evidence/physical/terminal-reduction.json")
+    for rel, raw in (("FINAL-REPORT.md", report),
+                     ("evidence/physical/terminal-reduction.json", reduction_raw)):
+        name = base + rel
+        expected = [ln.split()[0] for ln in manifest.splitlines()
+                    if ln.split()[1:] == [name]]
+        if len(expected) != 1 or hashlib.sha256(raw).hexdigest() != expected[0]:
+            raise ValueError(f"committed #248 manifest binding mismatch: {rel}")
+    if (D.ACCEPTED_248_TERMINAL.encode() not in report
+            or D.ACCEPTED_248_MANIFEST_SELF_DIGEST.encode() not in report):
+        raise ValueError("committed #248 final report provenance mismatch")
+    reduction = json.loads(reduction_raw)
+    if (reduction.get("terminal") != D.ACCEPTED_248_TERMINAL
+            or reduction.get("complete") is not True
+            or reduction.get("problems") != []
+            or reduction.get("probes", {}).get("placement", {}).get(
+                "contrasts", {}).get("1", {}).get("row_deterministic") is not False):
+        raise ValueError("committed #248 terminal/placement mismatch")
+    entries = {u["receipt"]["tag"]: u["receipt"] for u in reduction[
+        "probes"]["placement"]["units"] if u.get("receipt", {}).get(
+            "tag") in D.CONTRAST_UNITS}
+    if set(entries) != set(D.CONTRAST_UNITS):
+        raise ValueError("committed #248 placement pair missing")
+    rows = _verify_contrast_manifest(contrast_root / "SHA256SUMS")["rows"]
+    digests = []
+    prompts = []
+    for tag in D.CONTRAST_UNITS:
+        rel = f"{D.CONTRAST_NAMESPACE}/{tag}/"
+        path = contrast_root / rel
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError("historical #248 unit missing or symlink")
+        receipt_path, row_path = path / "unit.json", path / "obs.row0.f32"
+        if receipt_path.is_symlink() or row_path.is_symlink():
+            raise ValueError("historical #248 file symlink")
+        receipt_raw, row = receipt_path.read_bytes(), row_path.read_bytes()
+        _require_manifest_row(rows, rel + "unit.json", receipt_raw)
+        _require_manifest_row(rows, rel + "obs.row0.f32", row)
+        receipt = json.loads(receipt_raw)
+        digest = hashlib.sha256(row).hexdigest()
+        auth = receipt.get("authority", {})
+        argv = receipt.get("server_argv", [])
+        env = receipt.get("server_env", {})
+        if (len(row) != D.ROW_BYTES or digest != receipt.get("observer_rows", [None])[0]
+                or digest != D.V0_NVIDIA_ROW0_SHA256[D.CONTRAST_UNITS.index(tag)]
+                or receipt != entries[tag]
+                or receipt.get("namespace") != D.CONTRAST_NAMESPACE
+                or receipt.get("ngl") != 1
+                or receipt.get("case_id") != D.CONTRAST_CASE
+                or receipt.get("binary_sha256") != D.SERVER_BINARIES["comparator"]
+                or receipt.get("model_dir") != D.MODEL_DIR
+                or receipt.get("model_launch_member") != str(
+                    Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
+                or receipt.get("request_contract") != D.REQUEST_CONTRACT
+                or receipt.get("request_contract_sha256") !=
+                   D.canonical_request_digest(D.REQUEST_CONTRACT)
+                or auth.get("head_sha") != CONTRAST_AUTHORITY_HEAD
+                or auth.get("namespace") != D.CONTRAST_NAMESPACE
+                or auth.get("issue_number") != 248
+                or auth.get("pr_number") != 249
+                or argv[argv.index("-ngl") + 1] != "1"
+                or argv[argv.index("--model") + 1] != receipt["model_launch_member"]
+                or env.get("VK_ICD_FILENAMES") !=
+                   "/usr/share/vulkan/icd.d/nvidia_icd.json"
+                or receipt.get("prompt_len") != 3077
+                or len(receipt.get("prompt_token_ids", [])) != 3077):
+            raise ValueError(f"historical #248 placement/workload drift: {tag}")
+        digests.append(digest)
+        prompts.append(receipt["prompt_token_ids"])
+    if digests[0] == digests[1] or prompts[0] != prompts[1]:
+        raise ValueError("historical #248 rows/prompt contradict adjudication")
+    fixture_raw = (repo_root / D.FIXTURE_LADDER_REL).read_bytes()
+    if hashlib.sha256(fixture_raw).hexdigest() != D.FIXTURE_LADDER_SHA256:
+        raise ValueError("accepted fixture ladder drift")
+    case = next(c for c in json.loads(fixture_raw)["cases"]
+                if c["case_id"] == D.CONTRAST_CASE)
+    if case["prompt_token_ids"] != prompts[0]:
+        raise ValueError("historical prompt tokens differ from accepted fixture")
+    return {"row_sha256": tuple(digests), "prompt_len": 3077,
+            "prompt_token_ids": prompts[0],
+            "prompt_text_sha256": D.sha256_bytes(case["prompt_text"].encode()),
+            "prompt_sha256": D.sha256_bytes(json.dumps(
+                prompts[0], separators=(",", ":")).encode()),
+            "manifest_self_digest": D.ACCEPTED_248_MANIFEST_SELF_DIGEST,
+            "result_head": D.ACCEPTED_248_RESULT_HEAD}
 
 # Sequential arm ladder (namespace, arm) in reachability order.
 # AMENDMENT-003: Arm C is split — d250-arm-c (default reproduction
@@ -192,6 +387,7 @@ def _blocked(problems: list[str], reduction: dict[str, Any] | None = None
             list(D.TERMINALS), "blocked": BLOCKED, "complete": False,
             "problems": problems, "arms": (reduction or {}).get("arms", {}),
             "contrast": (reduction or {}).get("contrast"),
+            "v0": (reduction or {}).get("v0"),
             "arm_c_gate_status": (reduction or {}).get("arm_c_gate_status")}
 
 
@@ -200,7 +396,8 @@ def _ok(terminal: str, reduction: dict[str, Any], basis: dict[str, Any]
     return {"schema": SCHEMA, "terminal": terminal,
             "terminal_vocabulary": list(D.TERMINALS), "blocked": None,
             "complete": True, "problems": [], "arms": reduction["arms"],
-            "contrast": reduction.get("contrast"), "basis": basis,
+            "contrast": reduction.get("contrast"), "v0": reduction.get("v0"),
+            "basis": basis,
             "arm_c_gate_status": reduction.get("arm_c_gate_status")}
 
 
@@ -1333,6 +1530,23 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
         # explicitly (no silent cwd trust)
         return _blocked(["repo_root is required for terminal derivation"])
 
+    # V0 precedes the A-D ladder. A retained AMD mismatch is necessary but
+    # never a dispatch: A still needs its own fresh exact-head authority.
+    if contrast_root is None:
+        return _blocked(["accepted #248 retained contrast root is required"],
+                        {"v0": {"state": D.V0_STATE_INVALID, "valid": False,
+                                "a_eligible": False, "terminal": None,
+                                "reason": "accepted #248 root not supplied"}})
+    v0 = derive_v0_state(root, contrast_root, Path(repo_root),
+                         expected_head, authority_fetcher=authority_fetcher,
+                         github_api=github_api)
+    if v0.get("state") != D.V0_STATE_AMD_VARIABLE or not v0.get("a_eligible"):
+        return _blocked([f"V0 gate blocks A: {v0.get('state')}: "
+                         f"{v0.get('reason', 'maintainer stop or third required')}"],
+                        {"v0": v0})
+
+    reduction: dict[str, Any] = {"arms": {}, "contrast": None, "v0": v0}
+
     # Campaign model attestation preconditions (opening + closing).
     attestation: dict[str, Any] | None = None
     try:
@@ -1380,7 +1594,6 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     # Live authority for the FIRST reachable namespace decides the
     # ladder walk; every namespace consumed here is fetched live and
     # every retained receipt must bind it exactly.
-    reduction: dict[str, Any] = {"arms": {}, "contrast": None}
     problems: list[str] = []
 
     def _fetch(namespace: str, arm: str) -> dict[str, Any] | None:

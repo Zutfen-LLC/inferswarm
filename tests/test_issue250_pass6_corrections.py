@@ -287,7 +287,8 @@ class CostGateTests(unittest.TestCase):
             self.assertEqual(entry["min_units_to_establish_mismatch"],
                              TB.MIN_MISMATCH_UNITS)
             self.assertEqual(entry["units_for_deterministic_claim"],
-                             TB.DETERMINISTIC_UNITS)
+                             (TB.V0_SCREEN_MAX_UNITS if cond == TB.V0_CONDITION
+                              else TB.DETERMINISTIC_UNITS))
         # machine-checkable arithmetic (Arm A from the retained rate)
         a = conds["arm-a-cpu-only"]
         self.assertAlmostEqual(
@@ -427,6 +428,8 @@ class CostProducerAdmissionTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
+        # This pass-6 harness tests cost admission, not V0 provenance.
+        self.enterContext(mock.patch.object(P, "_require_v0_fallback"))
         self.root = Path(self.tmp.name)
         self.repo = self.root / "repo"
         self.repo.mkdir()

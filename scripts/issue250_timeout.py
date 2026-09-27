@@ -78,6 +78,56 @@ SCHEMA = "inferswarm.issue250.timeout-budget/1"
 COST_RECORD_SCHEMA = "inferswarm.issue250.cost-planning-record/1"
 COST_EVIDENCE_GENERATION = "gen-2-pass6"
 
+# Prospective V0 AMD/Vulkan screen (Issue #250 amendment, 2026-09-27).
+# Independent condition: never inherits A-D authorization or cost facts.
+V0_NAMESPACE = "d250-arm-v0-amd"
+V0_ARM = "V0-amd-vulkan-concordance"
+V0_CONDITION = "arm-v0-amd-vulkan"
+V0_PROMPT_TOKENS = 3077
+V0_PLANNING_RATE_TOKENS_PER_S = 2.25  # conservative retained v1 CPU proxy; NOT measured AMD
+V0_PLANNING_RATE_BASIS = "prospective_conservative_v1_cpu_2p25_proxy_not_measured_amd"
+V0_STARTUP_MARGIN_S = 1920.0
+V0_SAFETY_FACTOR = 1.5
+V0_MAX_TIMEOUT_S = 14400
+V0_MIN_TIMEOUT_S = 1800
+V0_SCREEN_MIN_UNITS = 2
+V0_SCREEN_MAX_UNITS = 3
+V0_COST_CEILING_S = 43200.0
+
+
+def v0_cost_record(prompt_tokens: int = V0_PROMPT_TOKENS) -> dict[str, Any]:
+    """Frozen prospective cost only; this does not authorize execution."""
+    if type(prompt_tokens) is not int or prompt_tokens <= 0:
+        raise TimeoutBudgetError("malformed V0 planning inputs")
+    per_unit = math.ceil(prompt_tokens / V0_PLANNING_RATE_TOKENS_PER_S
+                         * V0_SAFETY_FACTOR + V0_STARTUP_MARGIN_S)
+    return {"namespace": V0_NAMESPACE, "arm": V0_ARM,
+            "condition": V0_CONDITION, "prompt_tokens": prompt_tokens,
+            "planning_rate_tokens_per_s": V0_PLANNING_RATE_TOKENS_PER_S,
+            "planning_rate_basis": V0_PLANNING_RATE_BASIS,
+            "min_screen_units": V0_SCREEN_MIN_UNITS,
+            "max_screen_units": V0_SCREEN_MAX_UNITS,
+            "estimated_seconds_per_unit": per_unit,
+            "two_unit_cost_s": per_unit * 2,
+            "three_unit_cost_s": per_unit * 3,
+            "cost_ceiling_s": V0_COST_CEILING_S,
+            "auto_execution_authorized": False}
+
+
+def v0_request_timeout(prompt_tokens: int = V0_PROMPT_TOKENS) -> dict[str, Any]:
+    """Compute the V0 per-request budget without granting dispatch authority."""
+    record = v0_cost_record(prompt_tokens)
+    raw = record["estimated_seconds_per_unit"]
+    if raw > V0_MAX_TIMEOUT_S:
+        raise TimeoutBudgetError("V0 request exceeds frozen timeout ceiling")
+    budget = min(max(raw, V0_MIN_TIMEOUT_S), V0_MAX_TIMEOUT_S)
+    return {"schema": SCHEMA, "namespace": V0_NAMESPACE, "arm": V0_ARM,
+            "condition": V0_CONDITION, "expected_prompt_tokens": prompt_tokens,
+            "planning_rate_tokens_per_s": V0_PLANNING_RATE_TOKENS_PER_S,
+            "rate_basis_id": V0_PLANNING_RATE_BASIS,
+            "budget_s": budget, "max_timeout_s": V0_MAX_TIMEOUT_S,
+            "auto_execution_authorized": False}
+
 
 class TimeoutBudgetError(D.DiagnosticError):
     """Raised when a timeout-budget/cost-gate boundary is violated."""
@@ -126,6 +176,11 @@ DEFAULT_CPU_THREADS = 14
 # understate cost; tests assert the serial planning rate still implies
 # a multi-hour unit). They are never treated as measured facts.
 TIMEOUT_BASIS = {
+    "v0-amd-vulkan": {
+        "rate_tokens_per_s": V0_PLANNING_RATE_TOKENS_PER_S,
+        "basis": V0_PLANNING_RATE_BASIS,
+        "measured": False,
+    },
     "cpu-only-default-threads": {
         "rate_tokens_per_s": 2.25,
         "basis": "retained_v1_failed_unit_server_log",
@@ -200,7 +255,7 @@ DETERMINISTIC_UNITS = 5         # DETERM_MIN_REPEATS mirror
 # projects ~9.3 h; the serial regime projects ~29.3 h).
 CAMPAIGN_COST_CEILING_S = 43200.0
 
-COST_CONDITIONS = ("arm-a-cpu-only", "arm-b-fresh", "arm-b-sameproc",
+COST_CONDITIONS = (V0_CONDITION, "arm-a-cpu-only", "arm-b-fresh", "arm-b-sameproc",
                    "arm-c-default", "arm-c1-reduced", "arm-c2-serial",
                    "arm-d-accepted-placement")
 
@@ -215,6 +270,7 @@ ARM_C2_ARGV_DELTA = ("-t", "1", "-tb", "1")
 # Planning-rate map: condition -> TIMEOUT_BASIS key. Frozen; unknown
 # conditions fail closed.
 CONDITION_RATE_BASIS = {
+    V0_CONDITION: "v0-amd-vulkan",
     "arm-a-cpu-only": "cpu-only-default-threads",
     "arm-b-fresh": "cpu-only-default-threads",
     "arm-b-sameproc": "cpu-only-default-threads",
@@ -226,6 +282,7 @@ CONDITION_RATE_BASIS = {
 
 # FROZEN DISPOSITIONS (the cost gate's authority content).
 COST_DISPOSITIONS = {
+    V0_CONDITION: "authorized_by_v0_dispatch",
     "arm-a-cpu-only": "authorized_by_pass6_dispatch",
     "arm-b-fresh": "conditional_not_dispatched",
     "arm-b-sameproc": "conditional_not_dispatched",
@@ -243,6 +300,7 @@ COST_DISPOSITIONS = {
 # issue250_diagnostic.C2_SERIAL_NAMESPACE): only the dedicated
 # d250-arm-c2 namespace can ever authorize serial execution.
 CONDITION_NAMESPACE = {
+    V0_CONDITION: (V0_NAMESPACE, V0_ARM),
     "arm-a-cpu-only": ("d250-arm-a", "A-vulkan-necessity"),
     "arm-b-fresh": ("d250-arm-b", "B-process-init"),
     "arm-b-sameproc": ("d250-arm-b", "B-process-init"),
@@ -293,6 +351,22 @@ def cost_planning_record(
         raise TimeoutBudgetError("malformed planning-record inputs")
     conditions: dict[str, Any] = {}
     for condition in COST_CONDITIONS:
+        if condition == V0_CONDITION:
+            v0 = v0_cost_record(prompt_tokens)
+            conditions[condition] = {
+                "prompt_tokens": prompt_tokens,
+                "planning_rate_tokens_per_s": V0_PLANNING_RATE_TOKENS_PER_S,
+                "planning_rate_basis_key": "v0-amd-vulkan",
+                "planning_rate_basis": V0_PLANNING_RATE_BASIS,
+                "planning_rate_measured": False,
+                "estimated_seconds_per_unit": v0["estimated_seconds_per_unit"],
+                "min_units_to_establish_mismatch": V0_SCREEN_MIN_UNITS,
+                "units_for_deterministic_claim": V0_SCREEN_MAX_UNITS,
+                "estimated_min_mismatch_cost_s": v0["two_unit_cost_s"],
+                "estimated_deterministic_proof_cost_s": v0["three_unit_cost_s"],
+                "disposition": COST_DISPOSITIONS[condition],
+            }
+            continue
         basis = _planning_rate(condition)
         rate = float(basis["rate_tokens_per_s"])
         # Exact-fraction serial estimate for the frozen record: the
@@ -408,7 +482,8 @@ def evaluate_cost_gate(condition: str,
             f"cost record disposition mutation detected for "
             f"{condition}: {entry['disposition']!r}")
     namespace, arm = condition_namespace(condition)
-    auto_reachable = entry["disposition"] == "authorized_by_pass6_dispatch"
+    auto_reachable = entry["disposition"] in (
+        "authorized_by_pass6_dispatch", "authorized_by_v0_dispatch")
     over_ceiling = (entry["estimated_deterministic_proof_cost_s"]
                     > CAMPAIGN_COST_CEILING_S)
     return {
