@@ -972,6 +972,9 @@ class V0EvidenceBridgeTests(unittest.TestCase):
             self.assertEqual(out["row_sha256"], D.V0_NVIDIA_ROW0_SHA256)
             row = root / D.CONTRAST_NAMESPACE / D.CONTRAST_UNITS[0] / "obs.row0.f32"
             raw = row.read_bytes()
+            self.assertEqual(D.reduce_v0_screen(
+                [raw, raw, raw], out["row_sha256"])["state"],
+                D.V0_STATE_CONCORDANCE_STOP)
             for bad in (raw[:-1], bytes([raw[0] ^ 1]) + raw[1:]):
                 row.write_bytes(bad)
                 with self.assertRaises(ValueError):
@@ -984,6 +987,29 @@ class V0EvidenceBridgeTests(unittest.TestCase):
             receipt.write_text(json.dumps(obj))
             with self.assertRaises(ValueError):
                 T.verify_v0_historical_rows(root, REPO)
+            receipt.write_bytes(original)
+            # The authenticated retained NVIDIA row also drives the
+            # integration gate: three identical AMD screening receipts
+            # can only STOP, never emit a #250 terminal or reach CPU A.
+            f = self._fixture()
+            for index, tag in enumerate(D.V0_UNIT_TAGS, 1):
+                unit = f.evidence / D.V0_NAMESPACE / tag
+                unit.mkdir(exist_ok=True)
+                (unit / "obs.row0.f32").write_bytes(raw)
+                receipt_path = unit / "unit.json"
+                if index == 3:
+                    receipt = json.loads((f.evidence / D.V0_NAMESPACE /
+                                          D.V0_UNIT_TAGS[1] / "unit.json").read_text())
+                    receipt.update(tag=tag, server_pid=40003)
+                else:
+                    receipt = json.loads(receipt_path.read_text())
+                receipt["decision0_row_sha256"] = out["row_sha256"][0]
+                receipt_path.write_text(json.dumps(receipt))
+            stopped = f.derive()
+            self.assertEqual(stopped["v0"]["state"], D.V0_STATE_CONCORDANCE_STOP)
+            self.assertEqual(stopped["blocked"], T.BLOCKED)
+            self.assertIsNone(stopped.get("terminal"))
+            self.assertFalse(stopped["v0"]["a_eligible"])
 
 
 class TerminalMatrixTests(unittest.TestCase):

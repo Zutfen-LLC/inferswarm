@@ -476,6 +476,20 @@ class V0ReducerTests(unittest.TestCase):
         self.assertEqual(D.reduce_v0_screen([a, b], ("c" * 64,) * 2)["state"],
                          D.V0_STATE_INVALID)
 
+    def test_same_winner_is_not_full_row_equality(self):
+        import struct
+        # Vocabulary index zero wins in both rows. Alter only a losing
+        # logit: token/winner equality must not mask a full-row mismatch.
+        first = struct.pack("<f", 1.0) + bytes(D.ROW_BYTES - 4)
+        second = first[:4] + struct.pack("<f", 0.25) + first[8:]
+        self.assertEqual(max(range(D.ROW_BYTES // 4), key=lambda i:
+                             struct.unpack_from("<f", first, 4 * i)[0]), 0)
+        self.assertEqual(max(range(D.ROW_BYTES // 4), key=lambda i:
+                             struct.unpack_from("<f", second, 4 * i)[0]), 0)
+        result = D.reduce_v0_screen([first, second], D.V0_NVIDIA_ROW0_SHA256)
+        self.assertEqual(result["state"], D.V0_STATE_AMD_VARIABLE)
+        self.assertFalse(result["terminal"])
+
     def test_exact_physical_namespace_alignment(self):
         self.assertEqual(D.V0_NAMESPACE, "d250-arm-v0-amd")
         self.assertEqual(D.V0_ARM, "V0-amd-vulkan-concordance")
