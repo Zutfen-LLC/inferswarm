@@ -121,7 +121,22 @@ Contents:
   (three byte-identical fresh-process AMD rows ≠ both retained #248
   NVIDIA Vulkan rows → CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED).
   Distinguishes current NVIDIA variability from stable cross-vendor
-  Vulkan difference before any CPU Arm A spend. Vulkan-only (NVIDIA
+  Vulkan difference before any CPU Arm A spend. The comparison subject
+  is EXACTLY the accepted #248 Arm-B reference GPU (UUID
+  `GPU-d5c05739…`, BDF `00000000:03:00.0`, driver `610.57.04`,
+  NVIDIA ICD, Vulkan UUID/API/driver), bound through an append-only
+  V0n screen-identity freeze derived from FRESH
+  `issue248_identity.observe_arm_identity("B")` with zero identity
+  problems — #248 identity machinery reused verbatim, no V0n-local
+  schema, and vendor/device/driver-ID alone is never physical
+  identity. Every unit reobserves the complete identity BEFORE launch
+  and AFTER execution, requiring exact equality with the freeze; any
+  drift rejects the unit before it becomes numerical evidence, and
+  the retained population must share one freeze digest and one
+  physical subject (mixed-identity/mixed-freeze populations are
+  invalid). GPU residency is measured by a targeted nvidia-smi query
+  selecting exactly one row matching BOTH accepted UUID and BDF.
+  Vulkan-only (NVIDIA
   ICD + `GGML_VK_VISIBLE_DEVICES=0` + `CUDA_VISIBLE_DEVICES=-1` +
   link-family CUDA exclusion); same model/prompt/request/binary/seam/
   placement as V0; same 2-then-conditional-third screen law; four

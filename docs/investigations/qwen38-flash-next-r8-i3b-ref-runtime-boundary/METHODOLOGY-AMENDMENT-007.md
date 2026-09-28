@@ -27,8 +27,12 @@ ineligible.
 That result cannot distinguish (a) historical NVIDIA/Vulkan
 fresh-process variability persisting in the current window from (b) a
 stable current cross-vendor Vulkan numerical difference, because the
-NVIDIA side of the comparison is ~3 days old and was produced under a
-different driver/runtime state. Before spending tens of CPU-hours on
+NVIDIA side of the comparison is ~3 days old. (No driver difference is
+claimed or assumed: accepted #248 authority freezes NVIDIA driver
+`610.57.04`, and the V0n freeze re-observes the live driver through
+the same #248 machinery — the current window is bound to whatever the
+fresh observation shows, with any drift from the accepted identity
+failing closed.) Before spending tens of CPU-hours on
 Arm A, one bounded current-window NVIDIA leg answers which hypothesis
 the campaign is actually facing. The V0n leg is that leg, and nothing
 more: it decides NO vendor's numerical authority, emits NO Issue #250
@@ -58,9 +62,22 @@ any comparison; a CUDA-produced row cannot satisfy them.
 
 Same accepted case-3072 semantic subject as V0:
 
-- host `inferswarm01`; NVIDIA RTX 3060 (GA106, PCI `10de:2504`),
-  exactly ONE NVIDIA Vulkan device enumerated (index 0), driver
-  `DRIVER_ID_NVIDIA_PROPRIETARY` (current 610.57.04);
+- host `inferswarm01`; the physical subject is EXACTLY the accepted
+  #248 Arm-B reference GPU — GPU UUID
+  `GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55`, BDF `00000000:03:00.0`,
+  PCI `10de:2504` with the #248-frozen subsystem/revision/link
+  identity, NVIDIA driver `610.57.04`, NVIDIA ICD
+  `/usr/share/vulkan/icd.d/nvidia_icd.json`, Vulkan device UUID
+  `d5c05739-96c1-7e49-89b6-bf54c2121c55` (name `NVIDIA GeForce RTX
+  3060`, API `1.4.341`, `NVIDIA proprietary 610.57.04`), selector
+  `GGML_VK_VISIBLE_DEVICES=0`, `CUDA_VISIBLE_DEVICES=-1`. Identity
+  authority is the accepted #248 machinery
+  (`scripts/issue248_identity.py`: `REFERENCE_IDENTITY`,
+  `observe_arm_identity("B")`, `identity_problems("B", ...)`,
+  `derive_identity_from_raw("B", ...)`) reused verbatim — V0n defines
+  NO parallel identity schema and never weakens #248 semantics.
+  Vendor/device/driver-ID alone is never accepted as physical
+  identity; a same-model RTX 3060 with a different UUID/BDF rejects;
 - **Vulkan backend only**: `VK_ICD_FILENAMES=nvidia_icd.json`,
   `GGML_VK_VISIBLE_DEVICES=0`;
 - **CUDA exclusion**: `CUDA_VISIBLE_DEVICES=-1` in every server
@@ -84,9 +101,44 @@ Same accepted case-3072 semantic subject as V0:
   receipt);
 - full decision-0 vocabulary row, exactly 993280 bytes, compared only
   by complete-row bytes / canonical SHA-256;
-- placement/residency evidence: selected-GPU memory delta under the
-  loaded model must exceed 64 MiB (the accepted #243 noise bound),
-  measured via `nvidia-smi` while the server is loaded.
+- placement/residency evidence: GPU memory delta under the loaded
+  model must exceed 64 MiB (the accepted #243 noise bound), measured
+  via a TARGETED `nvidia-smi` query that parses every returned GPU
+  row and selects exactly one row matching BOTH the accepted GPU UUID
+  and the accepted BDF — never an unqualified one-line population,
+  never enumeration order; zero matches, duplicate matches, and
+  malformed rows all fail closed, and the selected row is retained in
+  the receipt as residency evidence.
+
+## V0n screen-identity freeze (NO-GO correction, comment 5874443020)
+
+Before unit 1, an append-only V0n screen freeze
+(`v0n-screen-freeze.json` in the V0n evidence root) is retained from
+a FRESH `issue248_identity.observe_arm_identity("B")` observation
+with `identity_problems("B", ...) == []`, derived through the
+accepted machinery, and bound to the exact PR head + live V0n
+dispatch authority + pinned comparator/source. The freeze carries the
+complete subject identity (every #248 field above plus the
+screen-start kernel and Vulkan-instance runtime identity), the
+Vulkan selector law, the CUDA-off law, the observer library family,
+and a canonical digest; every consumer re-authenticates it against
+the ACCEPTED #248 CONSTANTS field-by-field (a re-signed freeze whose
+identity no longer equals the accepted authority fails closed even
+with internally consistent digests).
+
+Per-unit identity law: EVERY unit re-observes the complete Arm-B
+identity live BEFORE launch and again AFTER execution, requiring
+exact equality with the same freeze both times; any drift
+(driver/runtime/ICD/Vulkan/UUID/BDF/selector) invalidates the unit —
+no physical run from a drifted identity may become numerical
+evidence. Retained-population law: every `unit.json` binds the
+freeze's canonical digest, the full frozen identity, its pre-launch
+and post-execution observation digests, the exact UUID/BDF/selector
+environment, and all prior binary/model/prompt/request/process/
+full-row custody; `_v0n_retained_rows` rejects mixed-identity
+populations, mixed freeze digests, PID reuse, and any non-993280
+byte row; `derive_v0n_state` fails to `CURRENT_NVIDIA_INVALID_BLOCKED`
+before any numerical comparison on any violation.
 
 ## Namespace, arm, dispatch, and evidence-root law
 
@@ -163,14 +215,24 @@ preflight law) is untouched:
 - `scripts/issue250_timeout.py`: `arm-v0n-nvidia-vulkan` cost condition
   (same planning-rate proxy and ceiling law as V0; disposition
   `authorized_by_v0n_dispatch`);
-- `tests/test_issue250_v0n_nvidia.py`: 56 regressions covering the 18
+- `tests/test_issue250_v0n_nvidia.py`: 88 regressions covering the
   directive requirements (Vulkan-not-CUDA identity, CUDA rejection,
-  backend/device/BDF-drift rejection, wrong-ngl rejection, placement
-  rejection, binary/source/model/prompt/request rejection, PID-reuse
-  rejection, first-pair-mismatch stop, third-repeat law, concordance
-  stop, stable-disagreement stop, variable-stays-variable, full-row
-  not winner-only comparison, retained-#248 Vulkan authentication,
-  no-terminal law, no-auto-CPU-arm law, stale-dispatch rejection).
+  backend/device rejection, wrong-ngl rejection, placement rejection,
+  binary/source/model/prompt/request rejection, PID-reuse rejection,
+  first-pair-mismatch stop, third-repeat law, concordance stop,
+  stable-disagreement stop, variable-stays-variable, full-row not
+  winner-only comparison, retained-#248 Vulkan authentication,
+  no-terminal law, no-auto-CPU-arm law, stale-dispatch rejection) AND
+  the NO-GO correction identity law (exact accepted #248 Arm-B
+  identity pass; wrong-UUID/wrong-BDF/UUID-BDF-cross-binding-mismatch/
+  different-same-model-RTX-3060/wrong-PCI-subsystem-revision/changed-
+  NVIDIA-driver/changed-kernel-driver/changed-ICD/changed-Vulkan-
+  UUID-API-driver-name rejection; re-signed/tampered freeze and mixed
+  freeze digests rejection; pre-launch drift rejecting before runner
+  invocation; post-execution drift preventing row acceptance; units
+  with different runtime identities unable to form a screen; targeted
+  residency UUID+BDF selection with missing/duplicate/mismatch/mal-
+  formed rejection).
 
 This amendment creates no model load, no inference request, and no
 physical execution of any kind.

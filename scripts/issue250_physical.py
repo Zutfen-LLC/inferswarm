@@ -71,6 +71,7 @@ issue250_diagnostic-validated form below).
 from __future__ import annotations
 
 import hashlib
+import copy
 import json
 import os
 import re
@@ -353,6 +354,33 @@ V0N_MIN_RESIDENCY_BYTES = 64 * 1024 * 1024  # ngl=1 output-layer residency bound
 # AMD V0 dispatch — AMD-only authority, consumed at its own head).
 V0N_STALE_DISPATCH_COMMENT_IDS = frozenset({
     5852485456, 5862772797, 5868617068})
+# --- V0n screen-identity freeze (NO-GO correction, comment 5874443020) ---
+# The V0n screen subject is EXACTLY the accepted #248 Arm-B reference
+# GPU. Physical identity authority is the accepted main module
+# scripts/issue248_identity.py (REFERENCE_IDENTITY / observe_arm_identity
+# ("B") / derive_identity_from_raw / identity_problems) — V0n adds NO
+# parallel identity schema and never weakens #248 semantics. The freeze
+# below additionally binds the mid-screen runtime identity (kernel,
+# Vulkan instance) observed at screen start: every unit must reobserve
+# and equal the SAME complete identity before launch and after
+# execution.
+V0N_FREEZE_NAME = "v0n-screen-freeze.json"
+V0N_FREEZE_SCHEMA = "inferswarm.issue250.v0n-screen-freeze/1"
+V0N_FREEZE_PRODUCER = "issue250_physical.write_v0n_screen_freeze"
+V0N_IDENTITY_ARM = "B"  # accepted #248 reference arm authority
+# Every accepted #248 identity field the V0n freeze binds (derived
+# fresh from raw bytes; never copied from constants at observe time).
+V0N_IDENTITY_FIELDS = (
+    "host", "gpu_uuid", "bdf", "pci_id", "subsystem_vendor_id",
+    "subsystem_device_id", "revision", "negotiated_width", "max_width",
+    "max_link_speed_capability", "kernel_driver", "nvidia_driver", "icd",
+    "vulkan_device_name", "vulkan_device_uuid", "vulkan_api",
+    "vulkan_driver", "selector",
+)
+V0N_RUNTIME_FIELDS = ("kernel", "vulkan_instance")
+V0N_SELECTOR_KEYS = ("VK_ICD_FILENAMES", "GGML_VK_VISIBLE_DEVICES",
+                     "CUDA_VISIBLE_DEVICES")
+_V0N_BDF_RE = re.compile(r"^[0-9a-f]{8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$")
 
 
 def v0_probe_plan() -> list[dict[str, Any]]:
@@ -1262,20 +1290,319 @@ def v0n_environment(unit_dir: Path) -> dict[str, str]:
             "LD_LIBRARY_PATH": "{{BINARY_LIB_DIR}}"}
 
 
-def _v0n_observe_device() -> dict[str, Any]:
-    """Non-model NVIDIA Vulkan enumeration on inferswarm01 (read-only).
+def _v0n_observe_runtime() -> dict[str, str]:
+    """Live kernel + Vulkan-instance runtime identity (read-only).
 
-    Requires EXACTLY ONE NVIDIA Vulkan device (the RTX 3060 that
-    produced the retained #248 rows); an enumeration exposing a second
-    device, a non-NVIDIA vendor, a wrong device ID, or a non-NVIDIA-
-    proprietary driver fails closed. CUDA visibility is explicitly off.
+    The two fields that can drift MID-SCREEN without changing any PCI
+    identity: the running kernel release and the Vulkan loader/instance
+    version servicing the NVIDIA ICD. Frozen at screen start inside the
+    V0n freeze and reobserved before/after every unit.
     """
     import platform
+    if socket.gethostname() != V0N_HOST:
+        raise PhysicalDiagnosticError("V0n host must be inferswarm01")
+    proc = subprocess.run(
+        ["vulkaninfo", "--summary"], capture_output=True, text=True,
+        timeout=30, check=True,
+        env={**os.environ, "VK_ICD_FILENAMES": V0N_NVIDIA_ICD,
+             "CUDA_VISIBLE_DEVICES": "-1"})
+    match = re.search(r"Vulkan Instance Version:\s*(\S+)", proc.stdout)
+    kernel = platform.release()
+    if not match or not kernel:
+        raise PhysicalDiagnosticError("V0n runtime identity unobservable")
+    return {"kernel": kernel, "vulkan_instance": match.group(1)}
+
+
+def v0n_identity_from_observation(observation: dict[str, Any],
+                                  runtime: dict[str, Any] | None = None
+                                  ) -> dict[str, Any]:
+    """Complete V0n subject identity from a FRESH #248 Arm-B observation.
+
+    Reuses the accepted main authority ``scripts/issue248_identity.py``
+    EXACTLY: the observation must carry a raw block, derive cleanly
+    through ``derive_identity_from_raw("B", ...)`` and have ZERO
+    ``identity_problems("B", ...)``. No V0n-local identity schema, no
+    weakened comparison: a missing/malformed raw source or any frozen-
+    field drift fails closed here. The returned identity additionally
+    cross-binds the V0n launch law (NVIDIA ICD + Vulkan selector index
+    + CUDA removed) to the SAME accepted physical subject.
+    """
+    if not isinstance(observation, dict):
+        raise PhysicalDiagnosticError("V0n identity observation malformed")
+    problems = I.identity_problems(V0N_IDENTITY_ARM, observation)
+    if problems:
+        raise PhysicalDiagnosticError(
+            "V0n subject identity problems: " + "; ".join(problems))
+    derived = I.derive_identity_from_raw(
+        V0N_IDENTITY_ARM, observation["raw"])
+    identity = {"identity_schema": I.IDENTITY_SCHEMA}
+    for field in V0N_IDENTITY_FIELDS:
+        if field == "selector":
+            identity["selector"] = dict(
+                I.frozen_identity(V0N_IDENTITY_ARM)["selector"])
+        else:
+            identity[field] = derived[field]
+    # Cross-bind the selector/index/environment law to the accepted
+    # subject: the units launch through the SAME NVIDIA ICD and the
+    # SAME frozen Vulkan selector index with CUDA removed.
+    if (identity["icd"] != V0N_NVIDIA_ICD
+            or identity["selector"]["GGML_VK_VISIBLE_DEVICES"] != "0"
+            or identity["selector"]["CUDA_VISIBLE_DEVICES"] != "-1"):
+        raise PhysicalDiagnosticError(
+            "V0n selector law diverges from the accepted #248 subject")
+    if runtime is not None:
+        for field in V0N_RUNTIME_FIELDS:
+            value = runtime.get(field) if isinstance(runtime, dict) else None
+            if not isinstance(value, str) or not value:
+                raise PhysicalDiagnosticError(
+                    f"V0n runtime identity field missing: {field}")
+            identity[f"runtime_{field}"] = value
+    return identity
+
+
+def _v0n_identity_digest(identity: dict[str, Any]) -> str:
+    return D.sha256_bytes(json.dumps(
+        identity, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False).encode())
+
+
+def _v0n_identity_matches(frozen_identity: dict[str, Any],
+                          observed: dict[str, Any]) -> None:
+    """Require a fresh identity to EQUAL the retained freeze identity.
+
+    Both sides are COMPLETE derived identities. Any drift in any bound
+    field — GPU UUID, BDF, PCI/subsystem/revision/link identity,
+    kernel/NVIDIA driver, ICD, Vulkan device UUID/name/API/driver,
+    selector, or the mid-screen runtime fields — fails closed.
+    """
+    if not isinstance(frozen_identity, dict) or not isinstance(observed, dict):
+        raise PhysicalDiagnosticError("V0n identity record malformed")
+    for field in sorted(set(frozen_identity) | set(observed)):
+        if frozen_identity.get(field) != observed.get(field):
+            raise PhysicalDiagnosticError(
+                f"V0n subject identity drift: {field} (observed "
+                f"{observed.get(field)!r} != frozen "
+                f"{frozen_identity.get(field)!r})")
+
+
+def _v0n_identity_matches_authority(identity: Any) -> bool:
+    """An identity record equals the accepted #248 authority constants.
+
+    Authority is NOT proven by the record's own digest (self-consistent
+    forgeries recompute digests). It is proven field-by-field against
+    ``issue248_identity.frozen_identity("B")`` — the accepted constants
+    — plus the required runtime fields and the accepted selector law.
+    """
+    if not isinstance(identity, dict):
+        return False
+    try:
+        frozen = I.frozen_identity(V0N_IDENTITY_ARM)
+    except Exception:
+        return False
+    if identity.get("identity_schema") != I.IDENTITY_SCHEMA:
+        return False
+    for field in V0N_IDENTITY_FIELDS:
+        if identity.get(field) != frozen[field]:
+            return False
+    for field in V0N_RUNTIME_FIELDS:
+        value = identity.get(f"runtime_{field}")
+        if not isinstance(value, str) or not value:
+            return False
+    return True
+
+
+def _v0n_freeze_digest(record: dict[str, Any]) -> str:
+    """Canonical digest over the freeze record (same law as _v0_digest)."""
+    return _v0_digest(record)
+
+
+def _v0n_require_freeze_authority(freeze: dict[str, Any],
+                                  authority: dict[str, Any]) -> None:
+    """The freeze is bound to exactly the live dispatch authority."""
+    if freeze.get("dispatch_sha256") != D.authority_digest(authority):
+        raise PhysicalDiagnosticError(
+            "V0n screen freeze dispatch authority mismatch")
+
+
+def _verify_v0n_selector_law(freeze: dict[str, Any]) -> None:
+    """The freeze's selector/index law matches the frozen launch env.
+
+    The unit environment (v0n_environment) and the freeze must select
+    the SAME Vulkan index through the SAME NVIDIA ICD with CUDA
+    removed — the cross-binding between the #248 physical subject and
+    the selector the units actually launch under.
+    """
+    selector = freeze.get("vulkan_selector")
+    cuda_law = freeze.get("cuda_law")
+    if (not isinstance(selector, dict)
+            or selector.get("GGML_VK_VISIBLE_DEVICES") != "0"
+            or selector.get("VK_ICD_FILENAMES") != V0N_NVIDIA_ICD
+            or not isinstance(cuda_law, dict)
+            or cuda_law.get("CUDA_VISIBLE_DEVICES") != "-1"):
+        raise PhysicalDiagnosticError(
+            "V0n selector/index law diverges from the retained freeze")
+
+
+def _read_v0n_screen_freeze(root: Path, expected_head: str) -> dict[str, Any]:
+    """Load and fully authenticate the retained V0n screen freeze.
+
+    The freeze is the ONLY identity authority for the V0n screening
+    population: it binds the accepted #248 Arm-B subject identity
+    (UUID/BDF/PCI/driver/ICD/Vulkan + selector law + runtime identity)
+    to the exact PR head, the V0n namespace/arm, the pinned comparator
+    and the live dispatch authority. A re-signed or tampered freeze
+    whose identity no longer equals the accepted #248 constants fails
+    closed even when its canonical digest is internally consistent.
+    """
+    path = Path(root) / V0N_FREEZE_NAME
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError("V0n screen freeze record missing")
+    try:
+        record = json.loads(path.read_bytes())
+    except (ValueError, OSError) as exc:
+        raise PhysicalDiagnosticError("V0n screen freeze unreadable") from exc
+    if not isinstance(record, dict):
+        raise PhysicalDiagnosticError("V0n screen freeze malformed")
+    identity = record.get("subject_identity")
+    if (record.get("schema") != V0N_FREEZE_SCHEMA
+            or record.get("producer") != V0N_FREEZE_PRODUCER
+            or record.get("expected_pr_head") != expected_head
+            or record.get("namespace") != V0N_NAMESPACE
+            or record.get("arm") != V0N_ARM
+            or record.get("identity_arm") != V0N_IDENTITY_ARM
+            or not isinstance(identity, dict)
+            or not _v0n_identity_matches_authority(identity)
+            or identity.get("gpu_uuid") != record.get("gpu_uuid")
+            or identity.get("bdf") != record.get("bdf")
+            or record.get("subject_identity_sha256")
+               != _v0n_identity_digest(identity)
+            or record.get("source_pin") != V0N_SOURCE_PIN
+            or record.get("binary_sha256") != V0N_COMPARATOR_SHA
+            or record.get("llama_source_pin") != V0N_SOURCE_PIN
+            or record.get("icd") != V0N_NVIDIA_ICD
+            or record.get("vulkan_selector") != {
+                "GGML_VK_VISIBLE_DEVICES": "0",
+                "VK_ICD_FILENAMES": V0N_NVIDIA_ICD}
+            or record.get("cuda_law") != {
+                "CUDA_VISIBLE_DEVICES": "-1",
+                "link_family_cuda_exclusion": True}
+            or record.get("observer_libraries") != dict(V0_OBSERVER_LIBS)
+            or record.get("canonical_digest_sha256")
+               != _v0n_freeze_digest(record)
+            or not isinstance(record.get("dispatch_sha256"), str)):
+        raise PhysicalDiagnosticError(
+            "V0n screen freeze digest/head/identity-authority mismatch")
+    return record
+
+
+def write_v0n_screen_freeze(repo_root: Path, evidence_root: Path, *,
+                            binary: Path, binary_id: str,
+                            model_dir: Path, expected_head: str,
+                            model_attestation: dict[str, Any],
+                            revalidate_authority: Callable[..., dict[str, Any]] | None = None,
+                            identity_observer: Callable[[], dict[str, Any]] | None = None,
+                            runtime_observer: Callable[[], dict[str, Any]] | None = None,
+                            github_api: str = "https://api.github.com"
+                            ) -> dict[str, Any]:
+    """Freeze the V0n screen identity from FRESH #248 Arm-B authority.
+
+    PROSPECTIVE, repository-only: no model load, no probe, no inference
+    unit. Must run AFTER the V0n dispatch is live and BEFORE the first
+    V0n unit. The identity is NOT re-invented: a fresh
+    ``issue248_identity.observe_arm_identity("B")`` raw observation is
+    required to have zero identity problems, the complete identity is
+    derived through the accepted machinery, and the freeze binds it to
+    the exact PR head + live dispatch authority + pinned comparator.
+    Append-only: an existing freeze is refused, so no later unit can
+    silently re-choose a different physical subject.
+    """
+    if binary_id != "comparator" or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError(
+            "V0n freeze frozen comparator/model identity mismatch")
+    root = Path(evidence_root)
+    validate_evidence_generation(root)
+    _admit_retained_cost(root, TB.V0N_CONDITION, V0N_NAMESPACE, V0N_ARM)
+    early = require_live_dispatch(repo_root, expected_head, V0N_NAMESPACE,
+                                  revalidate_authority, github_api)
+    D._require_clean_head(Path(repo_root), expected_head)
+    target = root / V0N_FREEZE_NAME
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError("V0n screen freeze already retained")
+    if (root / V0N_NAMESPACE).exists():
+        raise PhysicalDiagnosticError(
+            "V0n screen freeze must precede the first inference unit")
+    binary_sha = _verify_v0n_binary(Path(binary), binary_id)
+    attestation = validate_model_attestation(model_attestation, expected_head)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if (opening.is_symlink() or not opening.is_file()
+            or json.loads(opening.read_bytes()) != attestation):
+        raise PhysicalDiagnosticError(
+            "V0n screen freeze model attestation absent")
+    problems, _ = attestation_witness(Path(model_dir), attestation)
+    if problems or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError("V0n screen freeze model witness drift")
+    if identity_observer is not None:
+        observation = identity_observer()
+    else:
+        observation = I.observe_arm_identity(V0N_IDENTITY_ARM)
+    runtime = (runtime_observer or _v0n_observe_runtime)()
+    identity = v0n_identity_from_observation(observation, runtime=runtime)
+    late = require_live_dispatch(repo_root, expected_head, V0N_NAMESPACE,
+                                 revalidate_authority, github_api)
+    if D.authority_digest(early) != D.authority_digest(late):
+        raise PhysicalDiagnosticError("V0n screen freeze dispatch drift")
+    D._require_clean_head(Path(repo_root), expected_head)
+    _admit_retained_cost(root, TB.V0N_CONDITION, V0N_NAMESPACE, V0N_ARM)
+    record = {
+        "schema": V0N_FREEZE_SCHEMA, "producer": V0N_FREEZE_PRODUCER,
+        "expected_pr_head": expected_head,
+        "namespace": V0N_NAMESPACE, "arm": V0N_ARM,
+        "identity_arm": V0N_IDENTITY_ARM,
+        "identity_authority": (
+            "scripts/issue248_identity.py — accepted #248 Arm-B reference "
+            "machinery (observe_arm_identity/identity_problems/"
+            "derive_identity_from_raw); no V0n-local identity schema"),
+        "subject_identity": identity,
+        "subject_identity_sha256": _v0n_identity_digest(identity),
+        "gpu_uuid": identity["gpu_uuid"], "bdf": identity["bdf"],
+        "icd": V0N_NVIDIA_ICD,
+        "vulkan_selector": {"GGML_VK_VISIBLE_DEVICES": "0",
+                            "VK_ICD_FILENAMES": V0N_NVIDIA_ICD},
+        "cuda_law": {"CUDA_VISIBLE_DEVICES": "-1",
+                     "link_family_cuda_exclusion": True},
+        "source_pin": V0N_SOURCE_PIN, "llama_source_pin": V0N_SOURCE_PIN,
+        "binary_sha256": binary_sha,
+        "comparator_sha256": V0N_COMPARATOR_SHA,
+        "observer_libraries": dict(V0_OBSERVER_LIBS),
+        "dispatch_sha256": D.authority_digest(early),
+    }
+    record["canonical_digest_sha256"] = _v0n_freeze_digest(record)
+    _write_json(target, record)
+    # Re-authenticate the retained bytes exactly as later consumers will.
+    frozen = _read_v0n_screen_freeze(root, expected_head)
+    if frozen["canonical_digest_sha256"] != record["canonical_digest_sha256"]:
+        raise PhysicalDiagnosticError("V0n screen freeze retention mismatch")
+    return record
+
+
+def _v0n_observe_device() -> dict[str, Any]:
+    """Fresh V0n device observation bound to #248 Arm-B authority.
+
+    Read-only: the accepted #248 raw identity observation (sysfs +
+    nvidia-smi + ICD inventory + per-ICD vulkaninfo), the live runtime
+    identity, and the NVIDIA Vulkan enumeration. The returned record
+    carries the COMPLETE derived subject identity so callers can
+    require exact equality with the retained V0n freeze — vendor/
+    device/driver-ID alone is never physical identity.
+    """
     if socket.gethostname() != V0N_HOST:
         raise PhysicalDiagnosticError("V0n host must be inferswarm01")
     icd = Path(V0N_NVIDIA_ICD)
     if not icd.is_file():
         raise PhysicalDiagnosticError("NVIDIA ICD unavailable")
+    observation = I.observe_arm_identity(V0N_IDENTITY_ARM)
+    runtime = _v0n_observe_runtime()
+    identity = v0n_identity_from_observation(observation, runtime=runtime)
     result = subprocess.run(
         ["vulkaninfo", "--summary"], capture_output=True, text=True,
         timeout=30, check=True,
@@ -1302,18 +1629,21 @@ def _v0n_observe_device() -> dict[str, Any]:
             or devices[0].get("driver_id") != V0N_DRIVER_ID):
         raise PhysicalDiagnosticError(
             "exactly one NVIDIA RTX 3060 Vulkan device required")
-    runtime = {"kernel": platform.release(),
-               "vulkan_instance": (re.search(
-                   r"Vulkan Instance Version:\s*(\S+)", result.stdout) or
-                   [None, ""])[1],
-               "devices": {str(i): entry
-                           for i, entry in devices.items()}}
+    import platform
+    runtime_record = {"kernel": platform.release(),
+                      "vulkan_instance": (re.search(
+                          r"Vulkan Instance Version:\s*(\S+)", result.stdout)
+                          or [None, ""])[1],
+                      "devices": {str(i): entry
+                                  for i, entry in devices.items()}}
     return {"index": 0, **devices[0],
             "vulkan_indices": sorted(devices),
             "enumeration_sha256": D.sha256_bytes(result.stdout.encode()),
             "icd_sha256": D.file_sha256(icd),
-            "runtime_identity": runtime,
-            "host": V0N_HOST}
+            "runtime_identity": runtime_record,
+            "host": V0N_HOST,
+            "subject_identity": identity,
+            "subject_identity_sha256": _v0n_identity_digest(identity)}
 
 
 def _verify_v0n_binary(binary: Path, binary_id: str) -> str:
@@ -1353,26 +1683,71 @@ def _verify_v0n_binary(binary: Path, binary_id: str) -> str:
     return V0N_COMPARATOR_SHA
 
 
-def _v0n_gpu_vram_bytes() -> int:
-    """Live selected-GPU memory via nvidia-smi (read-only query)."""
-    proc = subprocess.run(
-        ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+def _v0n_gpu_vram_bytes(smi_runner: Callable[..., Any] | None = None,
+                        gpu_uuid: str | None = None,
+                        bdf: str | None = None
+                        ) -> tuple[int, dict[str, Any]]:
+    """Live memory usage of the ACCEPTED physical GPU (read-only).
+
+    Targets the accepted #248 subject by BOTH GPU UUID and BDF — never
+    enumeration order, never an unqualified one-line population. Parses
+    every returned GPU row, requires exactly one row matching BOTH the
+    accepted UUID and the accepted BDF, and returns only that row's
+    memory. Zero matches, duplicate matches, and malformed rows all
+    fail closed. (Defaults resolve the accepted #248 authority
+    constants; tests inject explicit values.)
+    """
+    frozen = I.frozen_identity(V0N_IDENTITY_ARM)
+    uuid = gpu_uuid if gpu_uuid is not None else frozen["gpu_uuid"]
+    bus = bdf if bdf is not None else frozen["bdf"]
+    run = smi_runner or subprocess.run
+    proc = run(
+        ["nvidia-smi",
+         "--query-gpu=uuid,pci.bus_id,memory.used",
+         "--format=csv,noheader,nounits"],
         capture_output=True, text=True, timeout=30, check=True)
-    lines = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
-    if len(lines) != 1 or not lines[0].isdigit():
-        raise PhysicalDiagnosticError("V0n single-GPU nvidia-smi read failed")
-    return int(lines[0]) * 1024 * 1024
+    rows: list[tuple[str, str, str]] = []
+    evidence: dict[str, Any] = {"gpu_uuid": uuid, "bdf": bus,
+                                "population": []}
+    for line in str(proc.stdout).splitlines():
+        fields = [f.strip() for f in line.split(",")]
+        if not any(fields):
+            continue
+        evidence["population"].append(fields)
+        if len(fields) != 3 or not fields[0].startswith("GPU-") \
+                or not _V0N_BDF_RE.fullmatch(fields[1]) \
+                or not fields[2].isdigit():
+            raise PhysicalDiagnosticError(
+                "V0n nvidia-smi GPU row malformed")
+        rows.append((fields[0], fields[1], fields[2]))
+    matches = [r for r in rows if r[0] == uuid and r[1] == bus]
+    if len(matches) != 1:
+        raise PhysicalDiagnosticError(
+            f"V0n targeted nvidia-smi read requires exactly one row "
+            f"matching accepted UUID+BDF, found {len(matches)} of "
+            f"{len(rows)} GPU row(s)")
+    evidence["selected_row"] = list(matches[0])
+    return int(matches[0][2]) * 1024 * 1024, evidence
 
 
 def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
                           result: dict[str, Any],
-                          binary_lib_dir: str) -> None:
+                          binary_lib_dir: str,
+                          freeze: dict[str, Any] | None = None
+                          ) -> None:
     """Pinned source law + NVIDIA Vulkan backend + no-CUDA + residency.
 
     Fail closed if: CUDA participation is not explicitly false; the
     backend is not Vulkan; the selected device index/identity drifts
     from the live enumeration; or the selected-GPU residency delta
     under the ngl=1 load does not exceed the frozen bound.
+
+    CORRECTION (NO-GO 5874443020): when the retained V0n freeze is
+    supplied, the observation's COMPLETE derived subject identity
+    (UUID/BDF/PCI/driver/ICD/Vulkan/runtime) must EQUAL the freeze —
+    vendor/device/driver-ID alone is no longer sufficient physical
+    identity, and the residency evidence must name the accepted UUID+BDF
+    row it measured.
     """
     if (device.get("vendor_id") != V0N_GPU_VENDOR_ID
             or device.get("device_id") != V0N_GPU_DEVICE_ID
@@ -1382,27 +1757,46 @@ def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
             or result.get("cuda_participation") is not False):
         raise PhysicalDiagnosticError(
             "V0n pinned source/NVIDIA Vulkan placement unverified")
+    if freeze is not None:
+        _v0n_identity_matches(freeze["subject_identity"],
+                              device.get("subject_identity"))
     before, after = result.get("vram_before"), result.get("vram_after")
     if (type(before) is not int or type(after) is not int
             or before < 0 or after < 0
             or after - before <= V0N_MIN_RESIDENCY_BYTES):
         raise PhysicalDiagnosticError(
             "V0n selected-GPU ngl=1 residency unverified")
-    del binary_lib_dir
+    if freeze is not None:
+        identity = freeze["subject_identity"]
+        selected = ((vram_evidence or {}).get("selected_row")
+                    if isinstance(vram_evidence := result.get(
+                        "vram_evidence"), dict) else None)
+        if (not isinstance(selected, list) or len(selected) != 3
+                or selected[0] != identity["gpu_uuid"]
+                or selected[1] != identity["bdf"]):
+            raise PhysicalDiagnosticError(
+                "V0n residency not measured on the accepted UUID+BDF row")
+    del unit_dir, binary_lib_dir
 
 
 def _real_v0n_execute(argv: list[str], env: dict[str, str],
                       request: dict[str, Any], prompt: str, port: int,
                       unit_dir: Path, timeout_budget: dict[str, Any]
                       ) -> dict[str, Any]:
-    """NVIDIA fresh-process unit; GPU residency measured while loaded."""
-    before = _v0n_gpu_vram_bytes()
+    """NVIDIA fresh-process unit; GPU residency measured while loaded.
+
+    Residency is measured on the ACCEPTED physical GPU (targeted
+    UUID+BDF selection via _v0n_gpu_vram_bytes), never an unqualified
+    one-line population; the evidence block naming the selected row is
+    retained in the result.
+    """
+    before, vram_before_evidence = _v0n_gpu_vram_bytes()
     with (unit_dir / "server.log").open("wb") as log:
         proc = subprocess.Popen(argv, env={**os.environ, **env}, stdout=log,
                                 stderr=subprocess.STDOUT, start_new_session=True)
         try:
             _wait_healthy(proc, port)
-            after = _v0n_gpu_vram_bytes()
+            after, vram_after_evidence = _v0n_gpu_vram_bytes()
             attribution = _proc_attribution(proc, argv, env)
             _v0_check_live_process(proc, argv, env)
             raw, response = _http_completion(
@@ -1411,6 +1805,8 @@ def _real_v0n_execute(argv: list[str], env: dict[str, str],
                     "process_attribution": attribution,
                     "vulkan_device_index": int(env["GGML_VK_VISIBLE_DEVICES"]),
                     "vram_before": before, "vram_after": after,
+                    "vram_evidence": {"before": vram_before_evidence,
+                                      "after": vram_after_evidence},
                     "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": timeout_budget}
         finally:
@@ -1436,11 +1832,14 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
 
     Mirrors run_v0_unit with the NVIDIA-current law: no two-index AMD
     selector preflight (exactly one NVIDIA Vulkan device exists), no
-    cross-die freeze; instead the single NVIDIA device identity is
-    re-observed live per unit and bound to the retained receipt.
-    Fails closed on any identity/backend/placement/custody mismatch and
-    on any attempt to execute the third unit without a verified
-    byte-identical first pair.
+    cross-die freeze; instead the retained V0n screen freeze binds the
+    accepted #248 Arm-B subject identity (UUID/BDF/PCI/driver/ICD/
+    Vulkan/runtime + selector law) and EVERY unit reobserves that
+    complete identity live BEFORE launch and again AFTER execution,
+    requiring exact equality with the freeze both times (NO-GO
+    correction 5874443020). Fails closed on any identity/backend/
+    placement/custody mismatch and on any attempt to execute the third
+    unit without a verified byte-identical first pair.
     """
     if ((namespace, arm) != (V0N_NAMESPACE, V0N_ARM)
             or tag not in V0N_UNIT_TAGS):
@@ -1454,6 +1853,11 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
     early = require_live_dispatch(repo_root, expected_head, namespace,
                                   revalidate_authority, github_api)
     D._require_clean_head(Path(repo_root), expected_head)
+    # The retained V0n screen freeze is the population's identity
+    # authority: it must exist, authenticate against the accepted #248
+    # constants, and bind exactly the live dispatch.
+    freeze = _read_v0n_screen_freeze(root, expected_head)
+    _v0n_require_freeze_authority(freeze, early)
     index = V0N_UNIT_TAGS.index(tag)
     rows = _v0n_retained_rows(root, index, expected_head, early)
     if index == 2 and rows[0] != rows[1]:
@@ -1484,6 +1888,14 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
     D._require_clean_head(Path(repo_root), expected_head)
     _v0n_retained_rows(root, index, expected_head, late)
     _admit_retained_cost(root, TB.V0N_CONDITION, namespace, arm)
+    # PRE-LAUNCH identity law: reobserve the complete #248 Arm-B
+    # identity fresh and require EXACT equality with the retained
+    # freeze (UUID/BDF/PCI/driver/ICD/Vulkan/runtime/selector). No
+    # model launch is permitted from a drifted identity.
+    device_pre = (device_observer or _v0n_observe_device)()
+    _v0n_identity_matches(freeze["subject_identity"],
+                          device_pre.get("subject_identity"))
+    _verify_v0n_selector_law(freeze)
     unit_dir = prepare_unit_dir(root, namespace, tag)
     env = dict(v0n_environment(unit_dir))
     env["LD_LIBRARY_PATH"] = str(Path(binary).parent)
@@ -1492,9 +1904,15 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
             argv=argv, env=env, request=request,
             prompt=fixture["prompt_text"], port=PORT, unit_dir=unit_dir,
             timeout_budget=budget)
+        # POST-EXECUTION identity law: reobserve the complete identity
+        # again and require exact equality with the SAME freeze before
+        # any row/receipt is accepted. A physical run from a drifted
+        # identity can never become numerical evidence.
         device = (device_observer or _v0n_observe_device)()
+        _v0n_identity_matches(freeze["subject_identity"],
+                              device.get("subject_identity"))
         _v0n_verify_placement(unit_dir, device, result,
-                              str(Path(binary).parent))
+                              str(Path(binary).parent), freeze)
     except Exception as exc:
         _write_json(unit_dir / "failure.json", {
             "schema": "inferswarm.issue250.v0n-failed-unit/1",
@@ -1520,13 +1938,23 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
             (root / namespace / prior_tag / "unit.json").read_bytes())
         if prior["server_pid"] == attribution["server_pid"]:
             raise PhysicalDiagnosticError("V0n fresh process PID reused")
-    device = (device_observer or _v0n_observe_device)()
     receipt = {"schema": D.V0N_SCHEMA, "tag": tag, "namespace": namespace,
                "arm": arm, "head_sha": expected_head,
                "evidence_generation": EVIDENCE_GENERATION,
                "decision0_row_sha256": D.sha256_bytes(row),
                "row_bytes": len(row),
                "authority_sha256": D.authority_digest(late),
+               "v0n_freeze_digest": freeze["canonical_digest_sha256"],
+               "v0n_subject_identity": copy.deepcopy(
+                   freeze["subject_identity"]),
+               "v0n_subject_identity_sha256": freeze[
+                   "subject_identity_sha256"],
+               "prelaunch_identity_sha256": device_pre.get(
+                   "subject_identity_sha256"),
+               "postexec_identity_sha256": device.get(
+                   "subject_identity_sha256"),
+               "gpu_uuid": freeze["gpu_uuid"], "bdf": freeze["bdf"],
+               "vulkan_selector": dict(freeze["vulkan_selector"]),
                "placement_verified": True,
                "nvidia_device": device,
                "case_id": D.CONTRAST_CASE, "ngl": 1, "backend": "Vulkan",
@@ -1563,17 +1991,23 @@ def _v0n_retained_rows(root: Path, count: int, head: str,
                        authority: dict[str, Any]) -> list[str]:
     """Recheck each V0n predecessor against retained full-row bytes/custody.
 
-    The whole retained V0n population must share ONE frozen NVIDIA
-    device identity (single RTX 3060: vendor/device/driver/name) and
-    the frozen NVIDIA Vulkan environment law. Mixed-identity or
-    CUDA-tainted populations are rejected even if every receipt is
-    individually valid.
+    The whole retained V0n population must share ONE authenticated V0n
+    screen freeze (the accepted #248 Arm-B physical subject: GPU UUID,
+    BDF, PCI/subsystem/revision/link identity, kernel/NVIDIA driver,
+    ICD, Vulkan device UUID/name/API/driver, selector law, runtime
+    identity) and the frozen NVIDIA Vulkan environment law. CORRECTION
+    (NO-GO 5874443020): mixed-identity populations (driver/runtime/
+    ICD/Vulkan/UUID/BDF drift between repeats), mixed freeze digests,
+    and CUDA-tainted populations are all rejected even if every
+    receipt is individually valid and vendor/device/driver-ID match.
     """
     import hashlib
     rows: list[str] = []
     base = Path(root) / V0N_NAMESPACE
     if base.is_symlink():
         raise PhysicalDiagnosticError("V0n namespace symlink refused")
+    freeze = _read_v0n_screen_freeze(Path(root), head)
+    _v0n_require_freeze_authority(freeze, authority)
     if base.exists():
         present = {p.name for p in base.iterdir()
                    if p.is_dir() or p.is_symlink()}
@@ -1643,7 +2077,29 @@ def _v0n_retained_rows(root: Path, count: int, head: str,
                     "source_pin": V0N_SOURCE_PIN, "ngl": 1,
                     "embedding": "CPU", "output_projection": "Vulkan"}
                 or receipt.get("embedding_placement") != "CPU"
-                or receipt.get("output_projection_placement") != "Vulkan"):
+                or receipt.get("output_projection_placement") != "Vulkan"
+                or receipt.get("v0n_freeze_digest")
+                   != freeze["canonical_digest_sha256"]
+                or receipt.get("v0n_subject_identity_sha256")
+                   != freeze["subject_identity_sha256"]
+                or receipt.get("v0n_subject_identity")
+                   != freeze["subject_identity"]
+                or receipt.get("gpu_uuid") != freeze["gpu_uuid"]
+                or receipt.get("bdf") != freeze["bdf"]
+                or receipt.get("vulkan_selector") != freeze["vulkan_selector"]
+                or not isinstance(
+                    receipt.get("prelaunch_identity_sha256"), str)
+                or not isinstance(
+                    receipt.get("postexec_identity_sha256"), str)
+                or receipt["prelaunch_identity_sha256"]
+                   != freeze["subject_identity_sha256"]
+                or receipt["postexec_identity_sha256"]
+                   != freeze["subject_identity_sha256"]
+                or not isinstance(
+                    receipt.get("nvidia_device", {}).get(
+                        "subject_identity"), dict)
+                or receipt["nvidia_device"]["subject_identity"]
+                   != freeze["subject_identity"]):
             raise PhysicalDiagnosticError(
                 "V0n predecessor retained byte/custody mismatch")
         if (receipt.get("process_attribution", {}).get("server_env")

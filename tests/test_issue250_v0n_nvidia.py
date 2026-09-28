@@ -64,6 +64,56 @@ P = _load("issue250_physical", "scripts/issue250_physical.py")
 T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 TB = _load("issue250_timeout", "scripts/issue250_timeout.py")
 
+# Accepted #248 Arm-B authority fixture (synthetic census raw, the
+# byte-shape of the real raw observation) — imported from the accepted
+# #248 suite so the V0n tests consume the SAME identity authority the
+# producer consumes (issue248_identity), never a V0n-local duplicate.
+sys.path.insert(0, str(REPO / "tests"))
+from test_issue248_diagnostic import CENSUS_RAW_B, census_observation  # noqa: E402
+
+# Frozen mid-screen runtime identity for synthetic fixtures.
+V0N_RUNTIME = {"kernel": "6.12.105-deb13", "vulkan_instance": "1.4.309"}
+
+
+def synthetic_subject_identity(runtime=V0N_RUNTIME):
+    """Complete V0n subject identity via the accepted #248 machinery."""
+    return P.v0n_identity_from_observation(
+        census_observation("B"), runtime=runtime)
+
+
+def make_freeze_record(head, authority, *, identity=None):
+    """Build an internally consistent V0n screen-freeze record.
+
+    Mirrors write_v0n_screen_freeze's record law (canonical digest
+    over every field); used to place a valid freeze in synthetic
+    evidence trees and to forge tampered variants for adversarial
+    tests (a forgery with all digests recomputed).
+    """
+    identity = identity if identity is not None \
+        else synthetic_subject_identity()
+    record = {
+        "schema": P.V0N_FREEZE_SCHEMA, "producer": P.V0N_FREEZE_PRODUCER,
+        "expected_pr_head": head,
+        "namespace": D.V0N_NAMESPACE, "arm": D.V0N_ARM,
+        "identity_arm": P.V0N_IDENTITY_ARM,
+        "identity_authority": "scripts/issue248_identity.py",
+        "subject_identity": identity,
+        "subject_identity_sha256": P._v0n_identity_digest(identity),
+        "gpu_uuid": identity["gpu_uuid"], "bdf": identity["bdf"],
+        "icd": P.V0N_NVIDIA_ICD,
+        "vulkan_selector": {"GGML_VK_VISIBLE_DEVICES": "0",
+                            "VK_ICD_FILENAMES": P.V0N_NVIDIA_ICD},
+        "cuda_law": {"CUDA_VISIBLE_DEVICES": "-1",
+                     "link_family_cuda_exclusion": True},
+        "source_pin": P.V0N_SOURCE_PIN, "llama_source_pin": P.V0N_SOURCE_PIN,
+        "binary_sha256": P.V0N_COMPARATOR_SHA,
+        "comparator_sha256": P.V0N_COMPARATOR_SHA,
+        "observer_libraries": dict(P.V0_OBSERVER_LIBS),
+        "dispatch_sha256": D.authority_digest(authority),
+    }
+    record["canonical_digest_sha256"] = P._v0n_freeze_digest(record)
+    return record
+
 HEAD = "c" * 40
 ROW = D.ROW_BYTES
 AMD_SHA = D.V0N_AMD_CURRENT_ROW0_SHA256
@@ -106,7 +156,15 @@ def synthetic_nvidia_device(**overrides):
                                    "vulkan_instance": "1.4.309",
                                    "devices": {}},
               "host": "inferswarm01"}
+    # The COMPLETE derived #248 Arm-B subject identity travels with the
+    # observation; vendor/device/driver-ID alone is not identity.
+    device["subject_identity"] = synthetic_subject_identity()
+    device["subject_identity_sha256"] = P._v0n_identity_digest(
+        device["subject_identity"])
     device.update(overrides)
+    if "subject_identity" in overrides:
+        device["subject_identity_sha256"] = P._v0n_identity_digest(
+            device["subject_identity"])
     return device
 
 
@@ -606,6 +664,16 @@ class V0nProducerAdmissionTests(unittest.TestCase):
         P.retain_cost_planning_record(self.evidence)
         self.calls = []
         self.authority = make_v0n_authority(head=self.head, comment_id=92001)
+        self.freeze_patch = None
+        self._ensure_freeze()
+
+    def _ensure_freeze(self):
+        import json as _json
+        if (self.evidence / P.V0N_FREEZE_NAME).is_file():
+            return
+        record = make_freeze_record(self.head, self.authority)
+        (self.evidence / P.V0N_FREEZE_NAME).write_text(
+            _json.dumps(record))
 
     def tearDown(self):
         D.SERVER_BINARIES.clear()
@@ -728,6 +796,11 @@ class V0nFullProducerPathTests(unittest.TestCase):
 
         self.authority = make_v0n_authority(head=self.head, comment_id=93001)
         self.device = synthetic_nvidia_device()
+        # Retain the V0n screen freeze BEFORE any unit (producer law:
+        # freeze precedes the first inference unit; identity authority
+        # is the accepted #248 Arm-B census fixture).
+        freeze = make_freeze_record(self.head, self.authority)
+        (self.evidence / P.V0N_FREEZE_NAME).write_text(json.dumps(freeze))
         self.row_seeds = [b"nvidia-row-1", b"nvidia-row-2", b"nvidia-row-3"]
         self.pid = [94001, 94002, 94003]
         self.verify_binary_patch = mock.patch.object(
@@ -756,6 +829,9 @@ class V0nFullProducerPathTests(unittest.TestCase):
                     "vulkan_device_index": 0,
                     "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024,
+                    "vram_evidence": {"selected_row": [
+                        synthetic_subject_identity()["gpu_uuid"],
+                        synthetic_subject_identity()["bdf"], "512"]},
                     "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": kw["timeout_budget"]}
         return P.run_v0n_unit(
@@ -790,6 +866,8 @@ class V0nFullProducerPathTests(unittest.TestCase):
         root2.mkdir()
         P.write_generation_marker(root2)
         P.retain_cost_planning_record(root2)
+        (root2 / P.V0N_FREEZE_NAME).write_text(json.dumps(
+            make_freeze_record(self.head, self.authority)))
 
         def hasher(path):
             return D.MODEL_MEMBER_SHA256[path.name]
@@ -814,6 +892,9 @@ class V0nFullProducerPathTests(unittest.TestCase):
                     "vulkan_device_index": 0, "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024, "backend": "Vulkan",
                     "cuda_participation": False,
+                    "vram_evidence": {"selected_row": [
+                        synthetic_subject_identity()["gpu_uuid"],
+                        synthetic_subject_identity()["bdf"], "512"]},
                     "timeout_budget": kw["timeout_budget"]}
 
         def run(tag, pid):
@@ -1013,6 +1094,8 @@ class V0nTerminalDerivationTests(unittest.TestCase):
         P.write_generation_marker(self.evidence)
         P.retain_cost_planning_record(self.evidence)
         device = synthetic_nvidia_device()
+        freeze = make_freeze_record(self.head, self.authority)
+        (self.evidence / P.V0N_FREEZE_NAME).write_text(json.dumps(freeze))
         count = tags_count if tags_count is not None else len(nvidia_rows)
         base = self.evidence / D.V0N_NAMESPACE
         base.mkdir(parents=True)
@@ -1036,6 +1119,16 @@ class V0nTerminalDerivationTests(unittest.TestCase):
                 "decision0_row_sha256": hashlib.sha256(row).hexdigest(),
                 "row_bytes": D.ROW_BYTES,
                 "authority_sha256": D.authority_digest(self.authority),
+                "v0n_freeze_digest": freeze["canonical_digest_sha256"],
+                "v0n_subject_identity": dict(freeze["subject_identity"]),
+                "v0n_subject_identity_sha256": freeze[
+                    "subject_identity_sha256"],
+                "prelaunch_identity_sha256": freeze[
+                    "subject_identity_sha256"],
+                "postexec_identity_sha256": freeze[
+                    "subject_identity_sha256"],
+                "gpu_uuid": freeze["gpu_uuid"], "bdf": freeze["bdf"],
+                "vulkan_selector": dict(freeze["vulkan_selector"]),
                 "placement_verified": True,
                 "nvidia_device": device,
                 "case_id": D.CONTRAST_CASE, "ngl": 1,
@@ -1257,6 +1350,606 @@ class V0nEvidenceRootConventionTests(unittest.TestCase):
             src = (REPO / rel).read_text()
             self.assertNotIn("import torch", src)
             self.assertNotIn("import requests", src)
+
+
+# ---------------------------------------------------------------------------
+# NO-GO correction 5874443020: accepted #248 Arm-B identity authority,
+# V0n screen-identity freeze, targeted residency, per-unit revalidation,
+# same-identity/same-freeze population law
+# ---------------------------------------------------------------------------
+
+class V0nSubjectIdentityAuthorityTests(unittest.TestCase):
+    """The V0n subject identity IS the accepted #248 Arm-B identity."""
+
+    def test_exact_accepted_248_arm_b_identity_passes(self):
+        identity = synthetic_subject_identity()
+        self.assertEqual(identity["gpu_uuid"],
+                         "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55")
+        self.assertEqual(identity["bdf"], "00000000:03:00.0")
+        self.assertEqual(identity["pci_id"], "10de:2504")
+        self.assertEqual(identity["nvidia_driver"], "610.57.04")
+        self.assertEqual(identity["icd"],
+                         "/usr/share/vulkan/icd.d/nvidia_icd.json")
+        self.assertEqual(identity["vulkan_device_uuid"],
+                         "d5c05739-96c1-7e49-89b6-bf54c2121c55")
+        self.assertEqual(identity["vulkan_api"], "1.4.341")
+        self.assertEqual(identity["vulkan_driver"],
+                         "NVIDIA proprietary 610.57.04")
+        self.assertEqual(identity["selector"], {
+            "GGML_VK_VISIBLE_DEVICES": "0", "CUDA_VISIBLE_DEVICES": "-1"})
+        # authority module constants are the binding reference:
+        import issue248_identity as I248
+        frozen = I248.frozen_identity("B")
+        for field in P.V0N_IDENTITY_FIELDS:
+            if field == "selector":
+                continue
+            self.assertEqual(identity[field], frozen[field], field)
+
+    def test_identity_reuses_248_machinery_not_a_duplicate(self):
+        import issue248_identity as I248
+        import inspect
+        src = inspect.getsource(P.v0n_identity_from_observation)
+        self.assertIn("identity_problems", src)
+        self.assertIn("derive_identity_from_raw", src)
+        # a drifted raw observation (wrong UUID) is caught by the #248
+        # predicate, not by any V0n-local comparison:
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_wrong_gpu_uuid_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "GPU-d5c05739", "GPU-1fc28f83")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_wrong_bdf_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        # move the card to a different slot consistently (sysfs + smi):
+        raw["bdf"] = "00000000:01:00.0"
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "00000000:03:00.0", "00000000:01:00.0")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_uuid_bdf_cross_binding_mismatch_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        # sysfs address says slot 03:00.0 but nvidia-smi bus id says
+        # 01:00.0 — two channels for the same fact disagreeing.
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "00000000:03:00.0", "00000000:01:00.0")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_different_same_model_rtx_3060_rejects(self):
+        # an otherwise matching RTX 3060 identity with a different
+        # physical UUID+BDF (the other card on inferswarm01):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10")
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "00000000:03:00.0", "00000000:01:00.0")
+        raw["bdf"] = "00000000:01:00.0"
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_wrong_pci_subsystem_revision_identity_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["sysfs.subsystem_device"] = "0x4075"
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["sysfs.revision"] = "0xa2"
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_changed_nvidia_driver_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["nvidia-smi"] = raw["nvidia-smi"].replace(
+            "610.57.04", "615.65.01")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_changed_kernel_driver_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["sysfs.driver"] = "nouveau"
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_changed_nvidia_icd_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["icd_inventory"] = {
+            "nvidia_icd_alt.json": raw["icd_inventory"]["nvidia_icd.json"]}
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_changed_vulkan_device_uuid_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "deviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "deviceUUID         = 1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+    def test_changed_vulkan_api_driver_name_rejects(self):
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "apiVersion         = 1.4.341", "apiVersion         = 1.4.400")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "driverID           = DRIVER_ID_NVIDIA_PROPRIETARY",
+            "driverID           = DRIVER_ID_MESA_NVK")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+        raw = json.loads(json.dumps(CENSUS_RAW_B))
+        raw["vulkaninfo"]["stdout"] = raw["vulkaninfo"]["stdout"].replace(
+            "deviceName         = NVIDIA GeForce RTX 3060",
+            "deviceName         = NVIDIA GeForce RTX 3060 Ti")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P.v0n_identity_from_observation({"raw": raw})
+
+
+class V0nScreenFreezeTests(unittest.TestCase):
+    """The V0n freeze binds the accepted identity to head+dispatch."""
+
+    def setUp(self):
+        self.head = "a" * 40
+        self.authority = make_v0n_authority(head=self.head, comment_id=97001)
+
+    def _write(self, root, record):
+        root.mkdir(parents=True, exist_ok=True)
+        (root / P.V0N_FREEZE_NAME).write_text(json.dumps(record))
+        return root
+
+    def test_freeze_round_trips_through_the_retained_reader(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._write(Path(tmp), make_freeze_record(
+                self.head, self.authority))
+            freeze = P._read_v0n_screen_freeze(root, self.head)
+            self.assertEqual(freeze["gpu_uuid"],
+                             "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55")
+            self.assertEqual(freeze["bdf"], "00000000:03:00.0")
+            self.assertTrue(P._v0n_identity_matches_authority(
+                freeze["subject_identity"]))
+
+    def test_resigned_tampered_identity_cannot_bypass_authority(self):
+        # COMPETENT forgery: swap the physical subject to the OTHER
+        # RTX 3060 (different UUID+BDF) and recompute EVERY digest.
+        import tempfile
+        identity = synthetic_subject_identity()
+        identity["gpu_uuid"] = "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10"
+        identity["bdf"] = "00000000:01:00.0"
+        record = make_freeze_record(self.head, self.authority,
+                                    identity=identity)
+        # digests are internally consistent by construction:
+        self.assertEqual(record["subject_identity_sha256"],
+                         P._v0n_identity_digest(identity))
+        with tempfile.TemporaryDirectory() as tmp:
+            self._write(Path(tmp), record)
+            with self.assertRaises(P.PhysicalDiagnosticError):
+                P._read_v0n_screen_freeze(Path(tmp), self.head)
+
+    def test_resigned_wrong_runtime_identity_cannot_bypass(self):
+        # Runtime fields (kernel/Vulkan instance) have no frozen #248
+        # constant (they are legitimately host-observed); their law is
+        # per-unit LIVE equality with the freeze. A forged freeze
+        # carrying a runtime the host does not have rejects at the
+        # pre-launch reobservation — no runner invocation:
+        import tempfile
+        import subprocess
+        identity = synthetic_subject_identity(
+            runtime={"kernel": "6.12.999-fake", "vulkan_instance": "9.9.9"})
+        record = make_freeze_record(self.head, self.authority,
+                                    identity=identity)
+        # the reader itself cannot reject it (no constant authority for
+        # runtime) — protection is the per-unit law; simulate a unit:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / "evidence"
+            evidence.mkdir()
+            (evidence / P.V0N_FREEZE_NAME).write_text(json.dumps(record))
+            device = synthetic_nvidia_device()  # true census identity
+            with self.assertRaises(P.PhysicalDiagnosticError):
+                P._v0n_identity_matches(
+                    record["subject_identity"],
+                    device["subject_identity"])
+
+    def test_freeze_rejects_wrong_head_selector_or_cuda_law(self):
+        import tempfile
+        base = make_freeze_record(self.head, self.authority)
+        mutations = {
+            "wrong head": lambda r: r.__setitem__(
+                "expected_pr_head", "b" * 40),
+            "wrong selector": lambda r: r.__setitem__(
+                "vulkan_selector", {"GGML_VK_VISIBLE_DEVICES": "1",
+                                    "VK_ICD_FILENAMES": P.V0N_NVIDIA_ICD}),
+            "cuda allowed": lambda r: r.__setitem__(
+                "cuda_law", {"CUDA_VISIBLE_DEVICES": "0",
+                             "link_family_cuda_exclusion": True}),
+            "stale digest": lambda r: r.__setitem__(
+                "canonical_digest_sha256", "0" * 64),
+            "wrong comparator": lambda r: r.__setitem__(
+                "binary_sha256", "1" * 64),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name):
+                record = json.loads(json.dumps(base))
+                mutate(record)
+                with tempfile.TemporaryDirectory() as tmp:
+                    self._write(Path(tmp), record)
+                    with self.assertRaises(P.PhysicalDiagnosticError):
+                        P._read_v0n_screen_freeze(Path(tmp), self.head)
+
+    def test_freeze_dispatch_authority_binding(self):
+        record = make_freeze_record(self.head, self.authority)
+        other = make_v0n_authority(head=self.head, comment_id=97002)
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_require_freeze_authority(record, other)
+        P._v0n_require_freeze_authority(record, self.authority)  # ok
+
+
+class V0nTargetedResidencyTests(unittest.TestCase):
+    """_v0n_gpu_vram_bytes selects the accepted UUID+BDF row only."""
+
+    UUID = "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    BDF = "00000000:03:00.0"
+    OTHER_UUID = "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10"
+    OTHER_BDF = "00000000:01:00.0"
+
+    def smi(self, *rows):
+        def run(argv, **kw):
+            class R:
+                pass
+            r = R()
+            r.returncode = 0
+            r.stdout = "".join(f"{u}, {b}, {m}\n" for u, b, m in rows)
+            r.stderr = ""
+            return r
+        return run
+
+    def test_selects_accepted_row_when_multiple_gpu_rows_exist(self):
+        value, evidence = P._v0n_gpu_vram_bytes(
+            smi_runner=self.smi(
+                (self.OTHER_UUID, self.OTHER_BDF, "128"),
+                (self.UUID, self.BDF, "512"),
+                ("GPU-ecda1aaa-0000-0000-0000-000000000000",
+                 "00000000:0c:00.0", "8192")),
+            gpu_uuid=self.UUID, bdf=self.BDF)
+        self.assertEqual(value, 512 * 1024 * 1024)
+        self.assertEqual(evidence["selected_row"],
+                         [self.UUID, self.BDF, "512"])
+        self.assertEqual(len(evidence["population"]), 3)
+
+    def test_missing_accepted_row_rejects(self):
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_gpu_vram_bytes(
+                smi_runner=self.smi((self.OTHER_UUID, self.OTHER_BDF,
+                                     "128")),
+                gpu_uuid=self.UUID, bdf=self.BDF)
+
+    def test_duplicate_accepted_rows_reject(self):
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_gpu_vram_bytes(
+                smi_runner=self.smi(
+                    (self.UUID, self.BDF, "512"),
+                    (self.UUID, self.BDF, "512")),
+                gpu_uuid=self.UUID, bdf=self.BDF)
+
+    def test_uuid_present_but_wrong_bdf_rejects(self):
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_gpu_vram_bytes(
+                smi_runner=self.smi((self.UUID, self.OTHER_BDF, "512")),
+                gpu_uuid=self.UUID, bdf=self.BDF)
+
+    def test_malformed_row_rejects(self):
+        for stdout in (
+                "not-a-uuid, %s, 512\n" % self.BDF,
+                "%s, 03:00.0, 512\n" % self.UUID,  # short BDF form
+                "%s, %s, N/A\n" % (self.UUID, self.BDF),
+                "garbage line\n"):
+            with self.subTest(stdout=stdout):
+                def run(argv, _s=stdout, **kw):
+                    class R:
+                        pass
+                    r = R()
+                    r.returncode = 0
+                    r.stdout = _s
+                    r.stderr = ""
+                    return r
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._v0n_gpu_vram_bytes(smi_runner=run,
+                                          gpu_uuid=self.UUID, bdf=self.BDF)
+
+    def test_defaults_target_the_accepted_248_constants(self):
+        import issue248_identity as I248
+        frozen = I248.frozen_identity("B")
+        # a call without explicit targets resolves the accepted subject:
+        value, evidence = P._v0n_gpu_vram_bytes(
+            smi_runner=self.smi((frozen["gpu_uuid"], frozen["bdf"], "64")),
+            gpu_uuid=None, bdf=None)
+        self.assertEqual(value, 64 * 1024 * 1024)
+        self.assertEqual(evidence["gpu_uuid"], frozen["gpu_uuid"])
+        self.assertEqual(evidence["bdf"], frozen["bdf"])
+
+
+class V0nPerUnitIdentityLawTests(unittest.TestCase):
+    """Pre-launch and post-execution revalidation against the freeze."""
+
+    def setUp(self):
+        import subprocess
+        import tempfile
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.evidence = self.root / "evidence"
+        self.repo = self.root / "repo"
+        self.evidence.mkdir()
+        self.repo.mkdir()
+
+        def git(*args):
+            subprocess.run(["git", *args], cwd=self.repo, check=True,
+                           capture_output=True)
+        git("init", "-q")
+        git("config", "user.email", "t@t")
+        git("config", "user.name", "t")
+        ladder = self.repo / D.FIXTURE_LADDER_REL
+        ladder.parent.mkdir(parents=True)
+        ladder.write_bytes((REPO / D.FIXTURE_LADDER_REL).read_bytes())
+        (self.repo / "m.txt").write_text("x")
+        git("add", "-A")
+        git("commit", "-qm", "init")
+        self.head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.repo,
+            capture_output=True, text=True, check=True).stdout.strip()
+
+        self.bin = self.root / "llama-server"
+        self.bin.write_bytes(b"fake-accepted-build")
+        self.saved_binaries = dict(D.SERVER_BINARIES)
+        D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
+        self.saved_v0n_sha = P.V0N_COMPARATOR_SHA
+        P.V0N_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
+        self.model_dir = self.root / "srvmodel"
+        self.model_dir.mkdir()
+        for member in D.MODEL_MEMBERS:
+            (self.model_dir / member).write_bytes(b"m:" + member.encode())
+        self.saved_model_dir = D.MODEL_DIR
+        D.MODEL_DIR = str(self.model_dir)
+
+        def hasher(path):
+            return D.MODEL_MEMBER_SHA256[path.name]
+        self.attestation = P.open_campaign_attestation(
+            self.evidence, self.model_dir, self.head, hasher=hasher)
+        P.close_campaign_attestation(
+            self.evidence, self.model_dir, self.head, hasher=hasher)
+        P.write_generation_marker(self.evidence)
+        P.retain_cost_planning_record(self.evidence)
+
+        self.authority = make_v0n_authority(head=self.head, comment_id=98001)
+        freeze = make_freeze_record(self.head, self.authority)
+        (self.evidence / P.V0N_FREEZE_NAME).write_text(json.dumps(freeze))
+        self.identity = freeze["subject_identity"]
+        self.verify_binary_patch = mock.patch.object(
+            P, "_verify_v0n_binary", return_value=P.V0N_COMPARATOR_SHA)
+        self.verify_binary_patch.start()
+        self.addCleanup(self.verify_binary_patch.stop)
+        self.launched = []
+        self.device = synthetic_nvidia_device()
+
+    def tearDown(self):
+        D.SERVER_BINARIES.clear()
+        D.SERVER_BINARIES.update(self.saved_binaries)
+        P.V0N_COMPARATOR_SHA = self.saved_v0n_sha
+        D.MODEL_DIR = self.saved_model_dir
+
+    def run_unit(self, tag, pid, device=None):
+        def execute(**kw):
+            self.launched.append(kw["unit_dir"].name)
+            row = row_with_sha(b"row-" + tag.encode())
+            (kw["unit_dir"] / "obs.row0.f32").write_bytes(row)
+            return {"response_raw": b"{}", "tokens": [1] * 8,
+                    "process_attribution": {
+                        "server_pid": pid,
+                        "server_exe_sha256": P.V0N_COMPARATOR_SHA,
+                        "server_argv": kw["argv"], "server_env": kw["env"]},
+                    "vulkan_device_index": 0, "vram_before": 0,
+                    "vram_after": 512 * 1024 * 1024,
+                    "vram_evidence": {"selected_row": [
+                        self.identity["gpu_uuid"], self.identity["bdf"],
+                        "512"]},
+                    "backend": "Vulkan", "cuda_participation": False,
+                    "timeout_budget": kw["timeout_budget"]}
+        return P.run_v0n_unit(
+            self.repo, self.evidence, P.V0N_NAMESPACE, P.V0N_ARM, tag,
+            binary=self.bin, binary_id="comparator",
+            model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+            model_attestation=self.attestation, execute=execute,
+            revalidate_authority=lambda *a, **k: self.authority,
+            device_observer=lambda: copy.deepcopy(
+                device if device is not None else self.device))
+
+    def test_prelaunch_identity_drift_rejects_before_runner(self):
+        drifted = synthetic_nvidia_device()
+        drifted["subject_identity"] = dict(self.identity)
+        drifted["subject_identity"]["nvidia_driver"] = "615.65.01"
+        drifted["subject_identity_sha256"] = P._v0n_identity_digest(
+            drifted["subject_identity"])
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self.run_unit(P.V0N_UNIT_TAGS[0], 98011, device=drifted)
+        self.assertIn("identity drift", str(ctx.exception))
+        self.assertEqual(self.launched, [],
+                         "runner must not be invoked from drifted identity")
+
+    def test_postexecution_drift_prevents_row_acceptance(self):
+        calls = {"n": 0}
+
+        def alternating_observer():
+            calls["n"] += 1
+            device = copy.deepcopy(self.device)
+            if calls["n"] == 2:  # the POST-execution observation
+                device["subject_identity"] = dict(self.identity)
+                device["subject_identity"]["runtime_kernel"] = \
+                    "6.12.999-drifted"
+                device["subject_identity_sha256"] = P._v0n_identity_digest(
+                    device["subject_identity"])
+            return device
+
+        def execute(**kw):
+            self.launched.append(kw["unit_dir"].name)
+            row = row_with_sha(b"row-drift-post")
+            (kw["unit_dir"] / "obs.row0.f32").write_bytes(row)
+            return {"response_raw": b"{}", "tokens": [1] * 8,
+                    "process_attribution": {
+                        "server_pid": 98012,
+                        "server_exe_sha256": P.V0N_COMPARATOR_SHA,
+                        "server_argv": kw["argv"], "server_env": kw["env"]},
+                    "vulkan_device_index": 0, "vram_before": 0,
+                    "vram_after": 512 * 1024 * 1024,
+                    "vram_evidence": {"selected_row": [
+                        self.identity["gpu_uuid"], self.identity["bdf"],
+                        "512"]},
+                    "backend": "Vulkan", "cuda_participation": False,
+                    "timeout_budget": kw["timeout_budget"]}
+
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            P.run_v0n_unit(
+                self.repo, self.evidence, P.V0N_NAMESPACE, P.V0N_ARM,
+                P.V0N_UNIT_TAGS[0], binary=self.bin, binary_id="comparator",
+                model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+                model_attestation=self.attestation, execute=execute,
+                revalidate_authority=lambda *a, **k: self.authority,
+                device_observer=alternating_observer)
+        self.assertIn("identity drift", str(ctx.exception))
+        # the runner DID run (post-execution drift is caught after),
+        # but no retained unit.json may exist for the drifted unit:
+        self.assertEqual(self.launched, [P.V0N_UNIT_TAGS[0]])
+        unit_json = (self.evidence / P.V0N_NAMESPACE /
+                     P.V0N_UNIT_TAGS[0] / "unit.json")
+        self.assertFalse(unit_json.is_file(),
+                         "drifted run must not become retained evidence")
+
+    def test_unit_without_freeze_never_reaches_runner(self):
+        (self.evidence / P.V0N_FREEZE_NAME).unlink()
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.run_unit(P.V0N_UNIT_TAGS[0], 98013)
+        self.assertEqual(self.launched, [])
+
+    def test_units_with_different_runtime_identities_cannot_form_screen(self):
+        # unit 1 on the accepted identity, then unit 2 observed on a
+        # DIFFERENT runtime (kernel upgraded between units): the second
+        # unit must reject, leaving no mixed-identity population.
+        self.run_unit(P.V0N_UNIT_TAGS[0], 98014)
+        drifted = synthetic_nvidia_device()
+        drifted["subject_identity"] = dict(self.identity)
+        drifted["subject_identity"]["runtime_kernel"] = "6.1.0-new-kernel"
+        drifted["subject_identity_sha256"] = P._v0n_identity_digest(
+            drifted["subject_identity"])
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.run_unit(P.V0N_UNIT_TAGS[1], 98015, device=drifted)
+        # and a hand-forged mixed population (unit 2 receipt carrying a
+        # different identity, digests recomputed) fails retained custody:
+        path = (self.evidence / P.V0N_NAMESPACE /
+                P.V0N_UNIT_TAGS[0] / "unit.json")
+        doc = json.loads(path.read_bytes())
+        forged_identity = dict(self.identity)
+        forged_identity["vulkan_api"] = "1.4.999"
+        doc["v0n_subject_identity"] = forged_identity
+        doc["v0n_subject_identity_sha256"] = P._v0n_identity_digest(
+            forged_identity)
+        path.write_text(json.dumps(doc))
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_retained_rows(self.evidence, 1, self.head, self.authority)
+
+    def test_wrong_freeze_digest_in_retained_unit_rejects(self):
+        self.run_unit(P.V0N_UNIT_TAGS[0], 98016)
+        path = (self.evidence / P.V0N_NAMESPACE /
+                P.V0N_UNIT_TAGS[0] / "unit.json")
+        doc = json.loads(path.read_bytes())
+        doc["v0n_freeze_digest"] = "0" * 64
+        path.write_text(json.dumps(doc))
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_retained_rows(self.evidence, 1, self.head, self.authority)
+
+    def test_mixed_freeze_digests_reject(self):
+        self.run_unit(P.V0N_UNIT_TAGS[0], 98017)
+        # a second unit bound to a DIFFERENT (self-consistent) freeze:
+        other_authority = make_v0n_authority(head=self.head,
+                                             comment_id=98002)
+        self.run_unit(P.V0N_UNIT_TAGS[1], 98018)
+        path = (self.evidence / P.V0N_NAMESPACE /
+                P.V0N_UNIT_TAGS[1] / "unit.json")
+        doc = json.loads(path.read_bytes())
+        other_freeze = make_freeze_record(self.head, other_authority)
+        doc["v0n_freeze_digest"] = other_freeze["canonical_digest_sha256"]
+        path.write_text(json.dumps(doc))
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_retained_rows(self.evidence, 2, self.head, self.authority)
+
+
+class V0nOldDefectRegressionTests(unittest.TestCase):
+    """The reviewed-head (bc637f0) authority gap stays closed.
+
+    Each test names the old-defect behavior (see the retained old-head
+    reproduction at /tmp-is250-oldhead in the correction record): the
+    corrected producer rejects exactly what the old implementation
+    accepted.
+    """
+
+    def test_placement_rejects_different_physical_gpu(self):
+        # OLD DEFECT: _v0n_verify_placement accepted a same-model
+        # different-physical-GPU device record (no UUID/BDF consumed).
+        freeze = make_freeze_record("c" * 40, make_v0n_authority())
+        other_gpu = synthetic_nvidia_device()
+        other_gpu["subject_identity"] = dict(
+            freeze["subject_identity"])
+        other_gpu["subject_identity"]["gpu_uuid"] = \
+            "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10"
+        other_gpu["subject_identity"]["bdf"] = "00000000:01:00.0"
+        result = {"vulkan_device_index": 0, "backend": "Vulkan",
+                  "cuda_participation": False, "vram_before": 0,
+                  "vram_after": 512 * 1024 * 1024,
+                  "vram_evidence": {"selected_row": [
+                      other_gpu["subject_identity"]["gpu_uuid"],
+                      other_gpu["subject_identity"]["bdf"], "512"]}}
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_verify_placement(Path("/tmp/x"), other_gpu, result,
+                                    "/libs", freeze)
+
+    def test_placement_rejects_residency_not_on_accepted_row(self):
+        freeze = make_freeze_record("c" * 40, make_v0n_authority())
+        device = synthetic_nvidia_device()
+        result = {"vulkan_device_index": 0, "backend": "Vulkan",
+                  "cuda_participation": False, "vram_before": 0,
+                  "vram_after": 512 * 1024 * 1024,
+                  "vram_evidence": {"selected_row": [
+                      "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10",
+                      "00000000:01:00.0", "512"]}}
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_verify_placement(Path("/tmp/x"), device, result,
+                                    "/libs", freeze)
+
+    def test_accepted_identity_and_targeted_row_pass(self):
+        freeze = make_freeze_record("c" * 40, make_v0n_authority())
+        device = synthetic_nvidia_device()
+        result = {"vulkan_device_index": 0, "backend": "Vulkan",
+                  "cuda_participation": False, "vram_before": 0,
+                  "vram_after": 512 * 1024 * 1024,
+                  "vram_evidence": {"selected_row": [
+                      freeze["subject_identity"]["gpu_uuid"],
+                      freeze["subject_identity"]["bdf"], "512"]}}
+        P._v0n_verify_placement(Path("/tmp/x"), device, result,
+                                "/libs", freeze)  # no raise
 
 
 if __name__ == "__main__":

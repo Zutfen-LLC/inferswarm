@@ -332,6 +332,13 @@ def derive_v0n_state(evidence_root: Path, contrast_root: Path,
          NVIDIA contract fields (single RTX 3060: vendor 0x10de,
          device 0x2504, NVIDIA-proprietary driver) and its env must
          carry the NVIDIA ICD with CUDA_VISIBLE_DEVICES=-1;
+         _v0n_retained_rows additionally enforces the V0n screen
+         freeze (NO-GO 5874443020): one authenticated freeze digest,
+         one accepted #248 Arm-B physical subject (UUID/BDF/PCI/
+         driver/ICD/Vulkan/runtime identity equal across every unit,
+         pre-launch and post-execution observations bound) — any
+         violation fails to CURRENT_NVIDIA_INVALID_BLOCKED before any
+         numerical comparison;
       5. only then does the pure reducer compare FULL 993280-byte rows
          against the AMD current-window row digest and BOTH retained
          #248 NVIDIA rows.
