@@ -119,7 +119,11 @@ Same accepted case-3072 semantic subject as V0:
   retained-receipt validator and requires, for each phase: exact
   accepted UUID+BDF identity, a valid 3-field selected row, selected
   memory (MiB→bytes) EXACTLY equal to the corresponding retained byte
-  count, and the selected row present exactly once in the population.
+  count, and — CORRECTION (population-uniqueness pass, reviewed head
+  3c6642c) — the population contains exactly one row matching the
+  accepted #248 UUID+BDF, and that row is `selected_row` (one shared
+  helper with `_v0n_gpu_vram_bytes`; a second accepted-UUID+BDF row
+  rejects even when its memory field differs).
   The interim test-only flat `{"selected_row": ...}` shape is
   rejected everywhere (no physical V0n evidence existed at the
   correction, so no compatibility path is required), and

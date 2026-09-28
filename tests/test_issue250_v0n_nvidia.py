@@ -2122,11 +2122,15 @@ class V0nCanonicalResidencyEvidenceTests(unittest.TestCase):
             self.verify(result)
 
     def test_selected_row_absent_from_population_rejects(self):
+        # CORRECTION (population-uniqueness pass): the near-miss BDF
+        # row below must be STRUCTURALLY VALID (a real other-BDF row),
+        # so this regression proves absence rather than failing
+        # earlier on malformed BDF syntax.
         result = self.good_result()
         record = result["vram_evidence"]["after"]
         record["population"] = [
             [self.OTHER_UUID, self.OTHER_BDF, "128"],
-            [self.uuid, self.bdf + "0", "512"]]  # near-miss rows only
+            [self.uuid, "00000000:0c:00.0", "8192"]]  # valid, nonmatching
         with self.assertRaises(P.PhysicalDiagnosticError):
             self.verify(result)
 
@@ -2172,6 +2176,161 @@ class V0nCanonicalResidencyEvidenceTests(unittest.TestCase):
         over["vram_evidence"] = production_vram_evidence(
             self.uuid, self.bdf, "32", "97")
         self.assertIsNone(self.verify(over))
+
+
+class V0nPopulationUniquenessLawTests(unittest.TestCase):
+    """CORRECTION (population-uniqueness pass, reviewed head 3c6642c):
+    the canonical residency contract enforces the live producer's
+    `_v0n_gpu_vram_bytes` targeting law VERBATIM — the population
+    contains exactly one row matching the accepted #248 UUID+BDF, and
+    that row is selected_row. The reviewed head counted exact
+    selected-row duplicates instead, so a second accepted-UUID+BDF row
+    with a DIFFERENT memory value was accepted (old-head RED: /tmp
+    probes r2/r3 — validator and retained validator both passed the
+    forged retained population).
+    """
+
+    OTHER_UUID = "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10"
+    OTHER_BDF = "00000000:01:00.0"
+
+    def setUp(self):
+        self.identity = synthetic_subject_identity()
+        self.uuid = self.identity["gpu_uuid"]
+        self.bdf = self.identity["bdf"]
+
+    def good_result(self):
+        return {"vulkan_device_index": 0, "backend": "Vulkan",
+                "cuda_participation": False, "vram_before": 0,
+                "vram_after": 512 * 1024 * 1024,
+                "vram_evidence": production_vram_evidence(
+                    self.uuid, self.bdf, "0", "512")}
+
+    def verify(self, result):
+        freeze = make_freeze_record(
+            "c" * 40, make_v0n_authority(), identity=self.identity)
+        return P._v0n_verify_placement(
+            Path("/tmp/x"), synthetic_nvidia_device(),
+            result, "/libs", freeze)
+
+    def validate(self, evidence, before=0, after=512 * 1024 * 1024):
+        return P._v0n_validate_residency_evidence(
+            evidence, {"gpu_uuid": self.uuid, "bdf": self.bdf},
+            before, after)
+
+    def test_one_accepted_uuid_bdf_row_passes(self):
+        self.assertIsNone(self.verify(self.good_result()))
+
+    def test_extra_other_uuid_bdf_rows_remain_permitted(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["population"] = [
+            [self.OTHER_UUID, self.OTHER_BDF, "128"],
+            [self.uuid, self.bdf, "512"],
+            ["GPU-ecda1aaa-0000-0000-0000-000000000000",
+             "00000000:0c:00.0", "8192"]]
+        self.assertIsNone(self.verify(result))
+
+    def test_duplicate_identical_selected_row_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["population"] = [
+            [self.uuid, self.bdf, "512"],
+            [self.uuid, self.bdf, "512"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_accepted_uuid_bdf_repeated_with_different_memory_rejects(self):
+        # The exact old-head defect: exact-duplicate counting accepted
+        # this forged population (count([uuid,bdf,"512"]) == 1).
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["population"] = [
+            [self.uuid, self.bdf, "512"],
+            [self.uuid, self.bdf, "511"]]
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self.verify(result)
+        self.assertIn("exactly one row matching accepted UUID+BDF",
+                      str(ctx.exception))
+
+    def test_duplicate_accepted_uuid_bdf_before_measurement_rejects(self):
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        evidence["before"]["population"] = [
+            [self.uuid, self.bdf, "0"],
+            [self.uuid, self.bdf, "7"]]
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self.validate(evidence)
+        self.assertIn("exactly one row matching accepted UUID+BDF",
+                      str(ctx.exception))
+
+    def test_duplicate_accepted_uuid_bdf_after_measurement_rejects(self):
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        evidence["after"]["population"] = [
+            [self.uuid, self.bdf, "512"],
+            [self.uuid, self.bdf, "511"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(evidence)
+
+    def test_selected_row_absent_from_population_rejects(self):
+        # Structurally valid nonmatching rows only: this proves
+        # ABSENCE of the accepted UUID+BDF row, not malformed syntax.
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        for phase in ("before", "after"):
+            evidence[phase]["population"] = [
+                [self.OTHER_UUID, self.OTHER_BDF, "128"],
+                ["GPU-ecda1aaa-0000-0000-0000-000000000000",
+                 "00000000:0c:00.0", "8192"]]
+            with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+                self.validate(evidence)
+            self.assertIn("exactly one row matching accepted UUID+BDF",
+                          str(ctx.exception))
+
+    def test_selected_row_not_equal_to_unique_matching_row_rejects(self):
+        # selected_row names a valid OTHER UUID+BDF while exactly one
+        # accepted row exists in the population: selected must BE that
+        # unique row (the earlier selected-row-identity check fires on
+        # the other-uuid spelling; also pin the same law with a
+        # matching-uuid non-unique-population spelling).
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        evidence["after"]["selected_row"] = [
+            self.OTHER_UUID, self.OTHER_BDF, "512"]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.validate(evidence)
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        evidence["after"]["selected_row"] = [self.uuid, self.bdf, "256"]
+        evidence["after"]["population"] = [
+            [self.uuid, self.bdf, "512"]]
+        with self.assertRaises(P.PhysicalDiagnosticError) as ctx:
+            self.validate(evidence)
+        self.assertIn("selected row is not the unique accepted UUID+BDF "
+                      "population row", str(ctx.exception))
+
+    def test_live_producer_enforces_the_same_law(self):
+        # _v0n_gpu_vram_bytes and the canonical validator consume the
+        # ONE shared helper: the same duplicate-UUID+BDF population
+        # must reject in both, with the identical failure vocabulary.
+        def run(argv, **kw):
+            class R:
+                pass
+            r = R()
+            r.returncode = 0
+            r.stdout = (f"{self.uuid}, {self.bdf}, 512\n"
+                        f"{self.uuid}, {self.bdf}, 511\n")
+            r.stderr = ""
+            return r
+        with self.assertRaises(P.PhysicalDiagnosticError) as live:
+            P._v0n_gpu_vram_bytes(smi_runner=run, gpu_uuid=self.uuid,
+                                  bdf=self.bdf)
+        evidence = production_vram_evidence(self.uuid, self.bdf, "0", "512")
+        evidence["after"]["population"] = [
+            [self.uuid, self.bdf, "512"],
+            [self.uuid, self.bdf, "511"]]
+        with self.assertRaises(P.PhysicalDiagnosticError) as retained:
+            self.validate(evidence)
+        self.assertEqual(
+            str(live.exception).replace(
+                "V0n targeted nvidia-smi read", "X"),
+            str(retained.exception).replace(
+                "V0n residency after population", "X"))
 
 
 class V0nResidencyCustodyRetentionTests(unittest.TestCase):
@@ -2316,6 +2475,11 @@ class V0nResidencyCustodyRetentionTests(unittest.TestCase):
             "duplicate selected row": lambda r: (
                 r["vram_evidence"]["after"]["population"].append(
                     list(r["vram_evidence"]["after"]["selected_row"]))),
+            "duplicate accepted UUID+BDF, different memory": lambda r: (
+                r["vram_evidence"]["after"]["population"].append(
+                    [r["vram_evidence"]["after"]["selected_row"][0],
+                     r["vram_evidence"]["after"]["selected_row"][1],
+                     "511"])),
             "selected row absent from population": lambda r: (
                 r["vram_evidence"]["after"].__setitem__(
                     "population", [["GPU-1fc28f83-9ae3-42f0-b67e-"

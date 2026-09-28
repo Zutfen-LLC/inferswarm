@@ -1683,6 +1683,25 @@ def _verify_v0n_binary(binary: Path, binary_id: str) -> str:
     return V0N_COMPARATOR_SHA
 
 
+def _v0n_require_unique_accepted_row(rows, uuid: str, bus: str,
+                                     where: str) -> Any:
+    """The ONE canonical GPU-row targeting law, shared by the live
+    producer (_v0n_gpu_vram_bytes) and the canonical residency-evidence
+    validator (_v0n_validate_residency_evidence): the population must
+    contain EXACTLY ONE row matching BOTH the accepted GPU UUID and the
+    accepted BDF. Zero matches reject; a SECOND row for the same
+    accepted UUID+BDF rejects even when its memory field differs —
+    memory never disambiguates physical identity. Returns the unique
+    matching row.
+    """
+    matches = [row for row in rows if row[0] == uuid and row[1] == bus]
+    if len(matches) != 1:
+        raise PhysicalDiagnosticError(
+            f"{where} requires exactly one row matching accepted "
+            f"UUID+BDF, found {len(matches)} of {len(rows)} GPU row(s)")
+    return matches[0]
+
+
 def _v0n_gpu_vram_bytes(smi_runner: Callable[..., Any] | None = None,
                         gpu_uuid: str | None = None,
                         bdf: str | None = None
@@ -1720,14 +1739,10 @@ def _v0n_gpu_vram_bytes(smi_runner: Callable[..., Any] | None = None,
             raise PhysicalDiagnosticError(
                 "V0n nvidia-smi GPU row malformed")
         rows.append((fields[0], fields[1], fields[2]))
-    matches = [r for r in rows if r[0] == uuid and r[1] == bus]
-    if len(matches) != 1:
-        raise PhysicalDiagnosticError(
-            f"V0n targeted nvidia-smi read requires exactly one row "
-            f"matching accepted UUID+BDF, found {len(matches)} of "
-            f"{len(rows)} GPU row(s)")
-    evidence["selected_row"] = list(matches[0])
-    return int(matches[0][2]) * 1024 * 1024, evidence
+    selected_row = _v0n_require_unique_accepted_row(
+        rows, uuid, bus, "V0n targeted nvidia-smi read")
+    evidence["selected_row"] = list(selected_row)
+    return int(selected_row[2]) * 1024 * 1024, evidence
 
 
 def _v0n_validate_residency_evidence(vram_evidence: Any,
@@ -1758,9 +1773,13 @@ def _v0n_validate_residency_evidence(vram_evidence: Any,
         memory field is a decimal nonnegative string;
       - the selected memory (MiB -> bytes) EXACTLY equals the
         corresponding vram_before / vram_after integer;
-      - the population is a list of valid 3-field rows in which the
-        selected row appears EXACTLY ONCE (missing or duplicate
-        selected rows reject).
+      - the population is a list of valid 3-field rows containing
+        EXACTLY ONE row matching BOTH the accepted UUID and the
+        accepted BDF (the SAME targeting law as the live
+        _v0n_gpu_vram_bytes producer), and that unique matching row
+        IS the selected row — a second row for the accepted UUID+BDF
+        rejects even when its memory field differs, and rows for
+        OTHER UUID/BDF combinations remain permitted.
     """
     if not isinstance(vram_evidence, dict):
         raise PhysicalDiagnosticError(
@@ -1798,10 +1817,18 @@ def _v0n_validate_residency_evidence(vram_evidence: Any,
             if not _v0n_valid_population_row(row):
                 raise PhysicalDiagnosticError(
                     f"V0n residency {phase} population row malformed")
-        if population.count(selected) != 1:
+        # Canonical targeting law (correction: the reviewed head
+        # counted exact selected-row duplicates, so a second row for
+        # the accepted UUID+BDF with a DIFFERENT memory value slipped
+        # through — the live producer's len(matches)==1 UUID+BDF law
+        # is now enforced identically here, via the ONE shared helper).
+        unique = _v0n_require_unique_accepted_row(
+            population, uuid, bus,
+            f"V0n residency {phase} population")
+        if list(unique) != list(selected):
             raise PhysicalDiagnosticError(
-                f"V0n residency {phase} selected row must appear "
-                f"exactly once in the population")
+                f"V0n residency {phase} selected row is not the unique "
+                f"accepted UUID+BDF population row")
         if int(sel_mem) * 1024 * 1024 != bound:
             raise PhysicalDiagnosticError(
                 f"V0n residency {phase} selected-row memory does not "

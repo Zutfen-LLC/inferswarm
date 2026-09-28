@@ -139,7 +139,12 @@ Contents:
   CANONICAL retained residency evidence is the production nested
   before+after record pair (accepted UUID+BDF identity, complete
   population, accepted selected row, memory cross-bound to the
-  retained vram_before/vram_after byte counts), retained in every
+  retained vram_before/vram_after byte counts) in which the
+  population contains exactly one row matching the accepted #248
+  UUID+BDF and that row is the selected row — one shared targeting
+  law with the live producer (`_v0n_gpu_vram_bytes`), so a second
+  accepted-UUID+BDF row rejects even when its memory field differs.
+  The nested pair is retained in every
   unit.json and independently revalidated by `_v0n_retained_rows`
   against the authenticated freeze — the test-only flat
   `selected_row` shape is rejected everywhere, and
