@@ -135,7 +135,15 @@ Contents:
   the retained population must share one freeze digest and one
   physical subject (mixed-identity/mixed-freeze populations are
   invalid). GPU residency is measured by a targeted nvidia-smi query
-  selecting exactly one row matching BOTH accepted UUID and BDF.
+  selecting exactly one row matching BOTH accepted UUID and BDF; the
+  CANONICAL retained residency evidence is the production nested
+  before+after record pair (accepted UUID+BDF identity, complete
+  population, accepted selected row, memory cross-bound to the
+  retained vram_before/vram_after byte counts), retained in every
+  unit.json and independently revalidated by `_v0n_retained_rows`
+  against the authenticated freeze — the test-only flat
+  `selected_row` shape is rejected everywhere, and
+  `placement_verified: true` alone is never placement proof.
   Vulkan-only (NVIDIA
   ICD + `GGML_VK_VISIBLE_DEVICES=0` + `CUDA_VISIBLE_DEVICES=-1` +
   link-family CUDA exclusion); same model/prompt/request/binary/seam/

@@ -168,6 +168,28 @@ def synthetic_nvidia_device(**overrides):
     return device
 
 
+# ---------------------------------------------------------------------------
+# Canonical production residency-evidence builder (the ONLY shape fake
+# executors may construct — identical to what _real_v0n_execute emits
+# via _v0n_gpu_vram_bytes; fixtures must not encode a second contract).
+# ---------------------------------------------------------------------------
+
+
+def production_vram_evidence(uuid: str, bdf: str, before_mib: str,
+                             after_mib: str) -> dict:
+    """Nested before+after targeted-residency evidence, the production
+    shape retained in every V0n receipt (see
+    _v0n_validate_residency_evidence for the enforced contract)."""
+    return {
+        "before": {"gpu_uuid": uuid, "bdf": bdf,
+                   "population": [[uuid, bdf, before_mib]],
+                   "selected_row": [uuid, bdf, before_mib]},
+        "after": {"gpu_uuid": uuid, "bdf": bdf,
+                  "population": [[uuid, bdf, after_mib]],
+                  "selected_row": [uuid, bdf, after_mib]},
+    }
+
+
 def row_with_sha(seed: bytes) -> bytes:
     return (hashlib.sha256(seed).digest() * (ROW // 32 + 1))[:ROW]
 
@@ -500,10 +522,18 @@ class V0nPlacementVerificationTests(unittest.TestCase):
                        "cuda_participation": False,
                        "vram_before": 0, "vram_after": 512 * 1024 * 1024}
 
+    def canonical_result(self):
+        """Result with the production nested residency evidence bound
+        to the accepted synthetic #248 Arm-B identity."""
+        identity = synthetic_subject_identity()
+        return {**self.result, "vram_evidence": production_vram_evidence(
+            identity["gpu_uuid"], identity["bdf"], "0", "512")}
+
     def verify(self, device=None, result=None):
         return P._v0n_verify_placement(
             Path("/unit"), self.device if device is None else device,
-            self.result if result is None else result, "/libs")
+            self.canonical_result() if result is None else result,
+            "/libs")
 
     def test_valid_placement_passes(self):
         self.assertIsNone(self.verify())
@@ -829,9 +859,9 @@ class V0nFullProducerPathTests(unittest.TestCase):
                     "vulkan_device_index": 0,
                     "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024,
-                    "vram_evidence": {"selected_row": [
+                    "vram_evidence": production_vram_evidence(
                         synthetic_subject_identity()["gpu_uuid"],
-                        synthetic_subject_identity()["bdf"], "512"]},
+                        synthetic_subject_identity()["bdf"], "0", "512"),
                     "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": kw["timeout_budget"]}
         return P.run_v0n_unit(
@@ -892,9 +922,9 @@ class V0nFullProducerPathTests(unittest.TestCase):
                     "vulkan_device_index": 0, "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024, "backend": "Vulkan",
                     "cuda_participation": False,
-                    "vram_evidence": {"selected_row": [
+                    "vram_evidence": production_vram_evidence(
                         synthetic_subject_identity()["gpu_uuid"],
-                        synthetic_subject_identity()["bdf"], "512"]},
+                        synthetic_subject_identity()["bdf"], "0", "512"),
                     "timeout_budget": kw["timeout_budget"]}
 
         def run(tag, pid):
@@ -1130,7 +1160,11 @@ class V0nTerminalDerivationTests(unittest.TestCase):
                 "gpu_uuid": freeze["gpu_uuid"], "bdf": freeze["bdf"],
                 "vulkan_selector": dict(freeze["vulkan_selector"]),
                 "placement_verified": True,
-                "nvidia_device": device,
+                "vram_before": 0,
+                "vram_after": 512 * 1024 * 1024,
+                "vram_evidence": production_vram_evidence(
+                    freeze["gpu_uuid"], freeze["bdf"], "0", "512"),
+                "nvidia_device": copy.deepcopy(device),
                 "case_id": D.CONTRAST_CASE, "ngl": 1,
                 "backend": "Vulkan", "cuda_participation": False,
                 "embedding_placement": "CPU",
@@ -1765,9 +1799,9 @@ class V0nPerUnitIdentityLawTests(unittest.TestCase):
                         "server_argv": kw["argv"], "server_env": kw["env"]},
                     "vulkan_device_index": 0, "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024,
-                    "vram_evidence": {"selected_row": [
+                    "vram_evidence": production_vram_evidence(
                         self.identity["gpu_uuid"], self.identity["bdf"],
-                        "512"]},
+                        "0", "512"),
                     "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": kw["timeout_budget"]}
         return P.run_v0n_unit(
@@ -1816,9 +1850,9 @@ class V0nPerUnitIdentityLawTests(unittest.TestCase):
                         "server_argv": kw["argv"], "server_env": kw["env"]},
                     "vulkan_device_index": 0, "vram_before": 0,
                     "vram_after": 512 * 1024 * 1024,
-                    "vram_evidence": {"selected_row": [
+                    "vram_evidence": production_vram_evidence(
                         self.identity["gpu_uuid"], self.identity["bdf"],
-                        "512"]},
+                        "0", "512"),
                     "backend": "Vulkan", "cuda_participation": False,
                     "timeout_budget": kw["timeout_budget"]}
 
@@ -1898,12 +1932,14 @@ class V0nPerUnitIdentityLawTests(unittest.TestCase):
 
 
 class V0nOldDefectRegressionTests(unittest.TestCase):
-    """The reviewed-head (bc637f0) authority gap stays closed.
+    """The reviewed-head authority gap AND the reviewed-head
+    (9cd2335) residency-shape gap stay closed.
 
     Each test names the old-defect behavior (see the retained old-head
-    reproduction at /tmp-is250-oldhead in the correction record): the
-    corrected producer rejects exactly what the old implementation
-    accepted.
+    reproductions in the correction record — /tmp-is250-oldhead for
+    the bc637f0 authority gap, the 5/5 RED run for the 9cd2335
+    residency gap): the corrected producer rejects exactly what the
+    old implementation accepted.
     """
 
     def test_placement_rejects_different_physical_gpu(self):
@@ -1919,9 +1955,9 @@ class V0nOldDefectRegressionTests(unittest.TestCase):
         result = {"vulkan_device_index": 0, "backend": "Vulkan",
                   "cuda_participation": False, "vram_before": 0,
                   "vram_after": 512 * 1024 * 1024,
-                  "vram_evidence": {"selected_row": [
+                  "vram_evidence": production_vram_evidence(
                       other_gpu["subject_identity"]["gpu_uuid"],
-                      other_gpu["subject_identity"]["bdf"], "512"]}}
+                      other_gpu["subject_identity"]["bdf"], "0", "512")}
         with self.assertRaises(P.PhysicalDiagnosticError):
             P._v0n_verify_placement(Path("/tmp/x"), other_gpu, result,
                                     "/libs", freeze)
@@ -1932,9 +1968,9 @@ class V0nOldDefectRegressionTests(unittest.TestCase):
         result = {"vulkan_device_index": 0, "backend": "Vulkan",
                   "cuda_participation": False, "vram_before": 0,
                   "vram_after": 512 * 1024 * 1024,
-                  "vram_evidence": {"selected_row": [
+                  "vram_evidence": production_vram_evidence(
                       "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10",
-                      "00000000:01:00.0", "512"]}}
+                      "00000000:01:00.0", "0", "512")}
         with self.assertRaises(P.PhysicalDiagnosticError):
             P._v0n_verify_placement(Path("/tmp/x"), device, result,
                                     "/libs", freeze)
@@ -1945,11 +1981,373 @@ class V0nOldDefectRegressionTests(unittest.TestCase):
         result = {"vulkan_device_index": 0, "backend": "Vulkan",
                   "cuda_participation": False, "vram_before": 0,
                   "vram_after": 512 * 1024 * 1024,
-                  "vram_evidence": {"selected_row": [
+                  "vram_evidence": production_vram_evidence(
                       freeze["subject_identity"]["gpu_uuid"],
-                      freeze["subject_identity"]["bdf"], "512"]}}
+                      freeze["subject_identity"]["bdf"], "0", "512")}
         P._v0n_verify_placement(Path("/tmp/x"), device, result,
                                 "/libs", freeze)  # no raise
+
+
+# ---------------------------------------------------------------------------
+# CORRECTION (reviewed head 9cd2335): canonical before+after targeted
+# residency-evidence contract — one law for the live executor, the
+# placement validator, and the retained-row custody validator
+# ---------------------------------------------------------------------------
+
+class V0nCanonicalResidencyEvidenceTests(unittest.TestCase):
+    """The production nested before+after residency shape is the ONE
+    contract; every malformed/missing/duplicate/cross-bound variant
+    fails closed through the shared helper."""
+
+    OTHER_UUID = "GPU-1fc28f83-9ae3-42f0-b67e-4a4cbf4b7e10"
+    OTHER_BDF = "00000000:01:00.0"
+
+    def setUp(self):
+        self.identity = synthetic_subject_identity()
+        self.uuid = self.identity["gpu_uuid"]
+        self.bdf = self.identity["bdf"]
+
+    def good_result(self):
+        return {"vulkan_device_index": 0, "backend": "Vulkan",
+                "cuda_participation": False, "vram_before": 0,
+                "vram_after": 512 * 1024 * 1024,
+                "vram_evidence": production_vram_evidence(
+                    self.uuid, self.bdf, "0", "512")}
+
+    def verify(self, result, device=None):
+        freeze = make_freeze_record(
+            "c" * 40, make_v0n_authority(), identity=self.identity)
+        return P._v0n_verify_placement(
+            Path("/tmp/x"),
+            device if device is not None else synthetic_nvidia_device(),
+            result, "/libs", freeze)
+
+    def test_production_shape_before_after_passes(self):
+        self.assertIsNone(self.verify(self.good_result()))
+
+    def test_flat_test_only_shape_rejects(self):
+        result = self.good_result()
+        result["vram_evidence"] = {"selected_row": [
+            self.uuid, self.bdf, "512"]}
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_wrong_before_uuid_rejects(self):
+        result = self.good_result()
+        result["vram_evidence"]["before"]["gpu_uuid"] = self.OTHER_UUID
+        result["vram_evidence"]["before"]["selected_row"] = [
+            self.OTHER_UUID, self.bdf, "0"]
+        result["vram_evidence"]["before"]["population"] = [
+            [self.OTHER_UUID, self.bdf, "0"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_wrong_before_bdf_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["before"]
+        record["bdf"] = self.OTHER_BDF
+        record["selected_row"] = [self.uuid, self.OTHER_BDF, "0"]
+        record["population"] = [[self.uuid, self.OTHER_BDF, "0"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_wrong_after_uuid_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["gpu_uuid"] = self.OTHER_UUID
+        record["selected_row"] = [self.OTHER_UUID, self.bdf, "512"]
+        record["population"] = [[self.OTHER_UUID, self.bdf, "512"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_wrong_after_bdf_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["bdf"] = self.OTHER_BDF
+        record["selected_row"] = [self.uuid, self.OTHER_BDF, "512"]
+        record["population"] = [[self.uuid, self.OTHER_BDF, "512"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_missing_before_or_after_record_rejects(self):
+        for phase in ("before", "after"):
+            with self.subTest(phase=phase):
+                result = self.good_result()
+                del result["vram_evidence"][phase]
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self.verify(result)
+
+    def test_missing_selected_row_rejects(self):
+        for phase in ("before", "after"):
+            with self.subTest(phase=phase):
+                result = self.good_result()
+                del result["vram_evidence"][phase]["selected_row"]
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self.verify(result)
+
+    def test_missing_vram_evidence_rejects(self):
+        result = self.good_result()
+        del result["vram_evidence"]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_malformed_selected_memory_rejects(self):
+        for phase, mem in (("before", "-1"), ("after", "51x"),
+                           ("after", "N/A"), ("after", " 512"),
+                           ("after", "512.0")):
+            with self.subTest(phase=phase, mem=mem):
+                result = self.good_result()
+                record = result["vram_evidence"][phase]
+                record["selected_row"] = [self.uuid, self.bdf, mem]
+                record["population"] = [[self.uuid, self.bdf, mem]]
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self.verify(result)
+
+    def test_selected_memory_inconsistent_with_vram_before_rejects(self):
+        result = self.good_result()
+        # before row says 128 MiB but vram_before stays 0 bytes
+        record = result["vram_evidence"]["before"]
+        record["selected_row"] = [self.uuid, self.bdf, "128"]
+        record["population"] = [[self.uuid, self.bdf, "128"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_selected_memory_inconsistent_with_vram_after_rejects(self):
+        result = self.good_result()
+        # after row says 64 MiB but vram_after stays 512 MiB
+        record = result["vram_evidence"]["after"]
+        record["selected_row"] = [self.uuid, self.bdf, "64"]
+        record["population"] = [[self.uuid, self.bdf, "64"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_selected_row_absent_from_population_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["population"] = [
+            [self.OTHER_UUID, self.OTHER_BDF, "128"],
+            [self.uuid, self.bdf + "0", "512"]]  # near-miss rows only
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_duplicate_selected_row_in_population_rejects(self):
+        result = self.good_result()
+        record = result["vram_evidence"]["after"]
+        record["population"] = [
+            [self.uuid, self.bdf, "512"],
+            [self.uuid, self.bdf, "512"]]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_malformed_population_row_rejects(self):
+        result = self.good_result()
+        result["vram_evidence"]["after"]["population"] = [
+            [self.uuid, self.bdf, "512"], "garbage line"]
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(result)
+
+    def test_retained_bytes_must_be_ints(self):
+        for bad in (("0", 512 * 1024 * 1024), (0, "536870912"),
+                    (None, 512 * 1024 * 1024), (-1, 512 * 1024 * 1024)):
+            with self.subTest(bad=bad):
+                result = self.good_result()
+                result["vram_before"], result["vram_after"] = bad
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    self.verify(result)
+
+    def test_residency_delta_threshold_law_unchanged(self):
+        # delta == bound fails (<=), delta just above bound passes:
+        # the reviewed-head V0N_MIN_RESIDENCY_BYTES=64MiB law is kept.
+        self.assertEqual(P.V0N_MIN_RESIDENCY_BYTES, 64 * 1024 * 1024)
+        boundary = self.good_result()
+        boundary["vram_before"] = 0
+        boundary["vram_after"] = 64 * 1024 * 1024
+        boundary["vram_evidence"] = production_vram_evidence(
+            self.uuid, self.bdf, "0", "64")
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            self.verify(boundary)
+        over = self.good_result()
+        over["vram_before"] = 32 * 1024 * 1024
+        over["vram_after"] = 97 * 1024 * 1024  # delta 65 MiB > bound
+        over["vram_evidence"] = production_vram_evidence(
+            self.uuid, self.bdf, "32", "97")
+        self.assertIsNone(self.verify(over))
+
+
+class V0nResidencyCustodyRetentionTests(unittest.TestCase):
+    """run_v0n_unit retains the complete production-shaped residency
+    evidence; _v0n_retained_rows independently re-authenticates it."""
+
+    def setUp(self):
+        import subprocess
+        import tempfile
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.evidence = self.root / "evidence"
+        self.repo = self.root / "repo"
+        self.evidence.mkdir()
+        self.repo.mkdir()
+
+        def git(*args):
+            subprocess.run(["git", *args], cwd=self.repo, check=True,
+                           capture_output=True)
+        git("init", "-q")
+        git("config", "user.email", "t@t")
+        git("config", "user.name", "t")
+        ladder = self.repo / D.FIXTURE_LADDER_REL
+        ladder.parent.mkdir(parents=True)
+        ladder.write_bytes((REPO / D.FIXTURE_LADDER_REL).read_bytes())
+        (self.repo / "m.txt").write_text("x")
+        git("add", "-A")
+        git("commit", "-qm", "init")
+        self.head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.repo,
+            capture_output=True, text=True, check=True).stdout.strip()
+
+        self.bin = self.root / "llama-server"
+        self.bin.write_bytes(b"fake-accepted-build")
+        self.saved_binaries = dict(D.SERVER_BINARIES)
+        D.SERVER_BINARIES["comparator"] = D.file_sha256(self.bin)
+        self.saved_v0n_sha = P.V0N_COMPARATOR_SHA
+        P.V0N_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
+        self.model_dir = self.root / "srvmodel"
+        self.model_dir.mkdir()
+        for member in D.MODEL_MEMBERS:
+            (self.model_dir / member).write_bytes(b"m:" + member.encode())
+        self.saved_model_dir = D.MODEL_DIR
+        D.MODEL_DIR = str(self.model_dir)
+
+        def hasher(path):
+            return D.MODEL_MEMBER_SHA256[path.name]
+        self.attestation = P.open_campaign_attestation(
+            self.evidence, self.model_dir, self.head, hasher=hasher)
+        P.close_campaign_attestation(
+            self.evidence, self.model_dir, self.head, hasher=hasher)
+        P.write_generation_marker(self.evidence)
+        P.retain_cost_planning_record(self.evidence)
+        self.authority = make_v0n_authority(head=self.head, comment_id=99101)
+        freeze = make_freeze_record(self.head, self.authority)
+        (self.evidence / P.V0N_FREEZE_NAME).write_text(json.dumps(freeze))
+        self.identity = freeze["subject_identity"]
+        self.device = synthetic_nvidia_device()
+        self.verify_binary_patch = mock.patch.object(
+            P, "_verify_v0n_binary", return_value=P.V0N_COMPARATOR_SHA)
+        self.verify_binary_patch.start()
+        self.addCleanup(self.verify_binary_patch.stop)
+
+    def tearDown(self):
+        D.SERVER_BINARIES.clear()
+        D.SERVER_BINARIES.update(self.saved_binaries)
+        P.V0N_COMPARATOR_SHA = self.saved_v0n_sha
+        D.MODEL_DIR = self.saved_model_dir
+
+    def run_unit(self, tag="unit", pid=99111):
+        def execute(**kw):
+            (kw["unit_dir"] / "obs.row0.f32").write_bytes(
+                row_with_sha(b"custody-" + tag.encode()))
+            return {"response_raw": b"{}", "tokens": [1] * 8,
+                    "process_attribution": {
+                        "server_pid": pid,
+                        "server_exe_sha256": P.V0N_COMPARATOR_SHA,
+                        "server_argv": kw["argv"],
+                        "server_env": kw["env"]},
+                    "vulkan_device_index": 0, "vram_before": 0,
+                    "vram_after": 512 * 1024 * 1024,
+                    "vram_evidence": production_vram_evidence(
+                        self.identity["gpu_uuid"],
+                        self.identity["bdf"], "0", "512"),
+                    "backend": "Vulkan", "cuda_participation": False,
+                    "timeout_budget": kw["timeout_budget"]}
+        return P.run_v0n_unit(
+            self.repo, self.evidence, P.V0N_NAMESPACE, P.V0N_ARM,
+            P.V0N_UNIT_TAGS[0], binary=self.bin, binary_id="comparator",
+            model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+            model_attestation=self.attestation, execute=execute,
+            revalidate_authority=lambda *a, **k: self.authority,
+            device_observer=lambda: copy.deepcopy(self.device))
+
+    def receipt_path(self):
+        return (self.evidence / P.V0N_NAMESPACE /
+                P.V0N_UNIT_TAGS[0] / "unit.json")
+
+    def test_receipt_retains_complete_production_evidence(self):
+        receipt = self.run_unit()
+        for key in ("vram_before", "vram_after", "vram_evidence"):
+            self.assertIn(key, receipt)
+        self.assertEqual(receipt["vram_before"], 0)
+        self.assertEqual(receipt["vram_after"], 512 * 1024 * 1024)
+        expected = production_vram_evidence(
+            self.identity["gpu_uuid"], self.identity["bdf"],
+            "0", "512")
+        self.assertEqual(receipt["vram_evidence"], expected)
+        # on-disk unit.json carries the same custody
+        on_disk = json.loads(self.receipt_path().read_bytes())
+        self.assertEqual(on_disk["vram_evidence"], expected)
+        # independent re-authentication passes on the retained bytes
+        P._v0n_retained_rows(self.evidence, 1, self.head, self.authority)
+
+    def test_mutating_retained_residency_evidence_rejects(self):
+        self.run_unit()
+        path = self.receipt_path()
+        mutations = {
+            "drop vram_evidence": lambda r: r.pop("vram_evidence"),
+            "drop vram_before": lambda r: r.pop("vram_before"),
+            "flat test-only shape": lambda r: r.__setitem__(
+                "vram_evidence", {"selected_row": [
+                    self.identity["gpu_uuid"],
+                    self.identity["bdf"], "512"]}),
+            "wrong before uuid": lambda r: r["vram_evidence"][
+                "before"].__setitem__("gpu_uuid", "GPU-1fc28f83-9ae3-"
+                                      "42f0-b67e-4a4cbf4b7e10"),
+            "wrong after bdf": lambda r: r["vram_evidence"][
+                "after"].__setitem__("bdf", "00000000:01:00.0"),
+            "memory inconsistent with vram_after": lambda r: (
+                r["vram_evidence"]["after"].__setitem__(
+                    "selected_row", [self.identity["gpu_uuid"],
+                                     self.identity["bdf"], "64"]),
+                r["vram_evidence"]["after"].__setitem__(
+                    "population", [[self.identity["gpu_uuid"],
+                                    self.identity["bdf"], "64"]])),
+            "below-threshold delta": lambda r: (
+                r.__setitem__("vram_before", 512 * 1024 * 1024),
+                r.__setitem__("vram_after", 512 * 1024 * 1024)),
+            "duplicate selected row": lambda r: (
+                r["vram_evidence"]["after"]["population"].append(
+                    list(r["vram_evidence"]["after"]["selected_row"]))),
+            "selected row absent from population": lambda r: (
+                r["vram_evidence"]["after"].__setitem__(
+                    "population", [["GPU-1fc28f83-9ae3-42f0-b67e-"
+                                    "4a4cbf4b7e10",
+                                    "00000000:01:00.0", "128"]])),
+        }
+        original = path.read_bytes()
+        self.addCleanup(path.write_bytes, original)
+        for name, mutate in mutations.items():
+            with self.subTest(name=name):
+                doc = json.loads(original)
+                mutate(doc)
+                path.write_text(json.dumps(doc))
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._v0n_retained_rows(self.evidence, 1, self.head,
+                                         self.authority)
+                path.write_bytes(original)
+
+    def test_retained_rows_does_not_trust_placement_flag_alone(self):
+        # a receipt stripped of residency custody but still carrying
+        # placement_verified=True must fail the independent
+        # re-authentication (proof that the flag alone is not proof)
+        self.run_unit()
+        path = self.receipt_path()
+        doc = json.loads(path.read_bytes())
+        for key in ("vram_before", "vram_after", "vram_evidence"):
+            doc.pop(key, None)
+        self.assertIs(doc.get("placement_verified"), True)
+        path.write_text(json.dumps(doc))
+        with self.assertRaises(P.PhysicalDiagnosticError):
+            P._v0n_retained_rows(self.evidence, 1, self.head,
+                                 self.authority)
 
 
 if __name__ == "__main__":

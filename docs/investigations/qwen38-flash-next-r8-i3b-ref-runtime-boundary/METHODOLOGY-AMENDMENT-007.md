@@ -107,8 +107,25 @@ Same accepted case-3072 semantic subject as V0:
   row and selects exactly one row matching BOTH the accepted GPU UUID
   and the accepted BDF — never an unqualified one-line population,
   never enumeration order; zero matches, duplicate matches, and
-  malformed rows all fail closed, and the selected row is retained in
-  the receipt as residency evidence.
+  malformed rows all fail closed. CORRECTION (reviewed-head
+  residency-shape pass): the retained residency evidence is the
+  CANONICAL production shape — a nested `before`+`after` pair of
+  targeted-read records (each naming the accepted `gpu_uuid`, `bdf`,
+  the complete parsed GPU `population`, and the accepted
+  `selected_row` as `[uuid, bdf, memory_mib]`), retained in every
+  `unit.json` together with `vram_before`/`vram_after` (bytes). One
+  fail-closed contract — `_v0n_validate_residency_evidence` — is
+  consumed by BOTH the live placement validator and the
+  retained-receipt validator and requires, for each phase: exact
+  accepted UUID+BDF identity, a valid 3-field selected row, selected
+  memory (MiB→bytes) EXACTLY equal to the corresponding retained byte
+  count, and the selected row present exactly once in the population.
+  The interim test-only flat `{"selected_row": ...}` shape is
+  rejected everywhere (no physical V0n evidence existed at the
+  correction, so no compatibility path is required), and
+  `_v0n_retained_rows` independently re-authenticates the retained
+  evidence against the authenticated freeze — `placement_verified:
+  true` alone is not placement proof.
 
 ## V0n screen-identity freeze (NO-GO correction, comment 5874443020)
 

@@ -1730,6 +1730,93 @@ def _v0n_gpu_vram_bytes(smi_runner: Callable[..., Any] | None = None,
     return int(matches[0][2]) * 1024 * 1024, evidence
 
 
+def _v0n_validate_residency_evidence(vram_evidence: Any,
+                                     identity: dict[str, Any],
+                                     vram_before: Any,
+                                     vram_after: Any) -> None:
+    """Canonical fail-closed targeted residency-evidence contract.
+
+    ONE contract shared by placement validation (live results) and
+    retained-receipt validation (unit.json custody): the production
+    shape emitted by _real_v0n_execute —
+
+        vram_evidence = {
+          "before": {"gpu_uuid", "bdf", "population",
+                     "selected_row": [uuid, bdf, memory_mib]},
+          "after":  {...same record shape...},
+        }
+
+    The retired test-only flat {"selected_row": ...} shape is NOT a
+    valid contract anywhere (no physical V0n evidence exists yet, so
+    no backward-compatibility path is required).
+
+    For BOTH "before" and "after", fail closed unless:
+      - the phase record is a dict naming EXACTLY the accepted freeze
+        subject gpu_uuid and bdf;
+      - selected_row is exactly a valid 3-field [uuid, bdf, memory]
+        row whose uuid/bdf EQUAL the accepted freeze values and whose
+        memory field is a decimal nonnegative string;
+      - the selected memory (MiB -> bytes) EXACTLY equals the
+        corresponding vram_before / vram_after integer;
+      - the population is a list of valid 3-field rows in which the
+        selected row appears EXACTLY ONCE (missing or duplicate
+        selected rows reject).
+    """
+    if not isinstance(vram_evidence, dict):
+        raise PhysicalDiagnosticError(
+            "V0n canonical residency evidence missing or not a dict")
+    uuid = identity["gpu_uuid"]
+    bus = identity["bdf"]
+    for phase, bound in (("before", vram_before), ("after", vram_after)):
+        if type(bound) is not int or bound < 0:
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} measurement is not a "
+                f"nonnegative integer")
+        record = vram_evidence.get(phase)
+        if (not isinstance(record, dict)
+                or record.get("gpu_uuid") != uuid
+                or record.get("bdf") != bus):
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} record does not name the "
+                f"accepted UUID+BDF subject")
+        selected = record.get("selected_row")
+        population = record.get("population")
+        if (not isinstance(selected, list) or len(selected) != 3
+                or not _v0n_valid_population_row(selected)):
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} selected_row is not a valid "
+                f"3-field [uuid, bdf, memory] row")
+        sel_uuid, sel_bus, sel_mem = selected
+        if sel_uuid != uuid or sel_bus != bus:
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} selected_row is not the "
+                f"accepted UUID+BDF row")
+        if not isinstance(population, list) or not population:
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} population missing or empty")
+        for row in population:
+            if not _v0n_valid_population_row(row):
+                raise PhysicalDiagnosticError(
+                    f"V0n residency {phase} population row malformed")
+        if population.count(selected) != 1:
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} selected row must appear "
+                f"exactly once in the population")
+        if int(sel_mem) * 1024 * 1024 != bound:
+            raise PhysicalDiagnosticError(
+                f"V0n residency {phase} selected-row memory does not "
+                f"cross-bind to the retained {phase} byte count")
+
+
+def _v0n_valid_population_row(row: Any) -> bool:
+    """A valid nvidia-smi population row: exactly [uuid, bdf, memory]."""
+    return (isinstance(row, list) and len(row) == 3
+            and all(isinstance(field, str) for field in row)
+            and row[0].startswith("GPU-")
+            and _V0N_BDF_RE.fullmatch(row[1]) is not None
+            and row[2].isdigit())
+
+
 def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
                           result: dict[str, Any],
                           binary_lib_dir: str,
@@ -1739,15 +1826,23 @@ def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
 
     Fail closed if: CUDA participation is not explicitly false; the
     backend is not Vulkan; the selected device index/identity drifts
-    from the live enumeration; or the selected-GPU residency delta
-    under the ngl=1 load does not exceed the frozen bound.
+    from the live enumeration; the canonical before+after residency
+    evidence does not cross-bind to the accepted freeze UUID+BDF with
+    memory consistent with vram_before/vram_after; or the
+    selected-GPU residency delta under the ngl=1 load does not exceed
+    the frozen bound.
 
     CORRECTION (NO-GO 5874443020): when the retained V0n freeze is
     supplied, the observation's COMPLETE derived subject identity
     (UUID/BDF/PCI/driver/ICD/Vulkan/runtime) must EQUAL the freeze —
     vendor/device/driver-ID alone is no longer sufficient physical
-    identity, and the residency evidence must name the accepted UUID+BDF
-    row it measured.
+    identity.
+
+    CORRECTION (residency-shape): the validator now consumes the
+    production residency shape (nested before+after records from
+    _v0n_gpu_vram_bytes) through the ONE shared fail-closed helper
+    _v0n_validate_residency_evidence; the retired test-only flat
+    {"selected_row": ...} shape is rejected everywhere.
     """
     if (device.get("vendor_id") != V0N_GPU_VENDOR_ID
             or device.get("device_id") != V0N_GPU_DEVICE_ID
@@ -1760,22 +1855,22 @@ def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
     if freeze is not None:
         _v0n_identity_matches(freeze["subject_identity"],
                               device.get("subject_identity"))
+    # Canonical residency-evidence custody (correction: the reviewed
+    # head read a test-only FLAT vram_evidence["selected_row"] that the
+    # production executor never emits). With a freeze the records must
+    # cross-bind BOTH before+after to the SAME accepted #248 UUID+BDF;
+    # without a freeze the executor's own targeted-selection law is
+    # still enforced end-to-end through the shared helper.
+    identity_source = (freeze["subject_identity"] if freeze is not None
+                       else I.frozen_identity(V0N_IDENTITY_ARM))
+    _v0n_validate_residency_evidence(
+        result.get("vram_evidence"), identity_source,
+        result.get("vram_before"), result.get("vram_after"))
     before, after = result.get("vram_before"), result.get("vram_after")
-    if (type(before) is not int or type(after) is not int
-            or before < 0 or after < 0
-            or after - before <= V0N_MIN_RESIDENCY_BYTES):
+    if not (isinstance(before, int) and isinstance(after, int)
+            and after - before > V0N_MIN_RESIDENCY_BYTES):
         raise PhysicalDiagnosticError(
             "V0n selected-GPU ngl=1 residency unverified")
-    if freeze is not None:
-        identity = freeze["subject_identity"]
-        selected = ((vram_evidence or {}).get("selected_row")
-                    if isinstance(vram_evidence := result.get(
-                        "vram_evidence"), dict) else None)
-        if (not isinstance(selected, list) or len(selected) != 3
-                or selected[0] != identity["gpu_uuid"]
-                or selected[1] != identity["bdf"]):
-            raise PhysicalDiagnosticError(
-                "V0n residency not measured on the accepted UUID+BDF row")
     del unit_dir, binary_lib_dir
 
 
@@ -1956,6 +2051,9 @@ def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
                "gpu_uuid": freeze["gpu_uuid"], "bdf": freeze["bdf"],
                "vulkan_selector": dict(freeze["vulkan_selector"]),
                "placement_verified": True,
+               "vram_before": result["vram_before"],
+               "vram_after": result["vram_after"],
+               "vram_evidence": copy.deepcopy(result["vram_evidence"]),
                "nvidia_device": device,
                "case_id": D.CONTRAST_CASE, "ngl": 1, "backend": "Vulkan",
                "cuda_participation": False,
@@ -2000,6 +2098,12 @@ def _v0n_retained_rows(root: Path, count: int, head: str,
     ICD/Vulkan/UUID/BDF drift between repeats), mixed freeze digests,
     and CUDA-tainted populations are all rejected even if every
     receipt is individually valid and vendor/device/driver-ID match.
+    CORRECTION (residency custody): every retained receipt must ALSO
+    carry the canonical before+after targeted residency evidence,
+    independently revalidated against the authenticated freeze
+    (accepted UUID+BDF identity, exact vram_before/vram_after
+    cross-binding, reapplied minimum residency delta) —
+    placement_verified alone is not placement proof.
     """
     import hashlib
     rows: list[str] = []
@@ -2112,6 +2216,24 @@ def _v0n_retained_rows(root: Path, count: int, head: str,
                 != receipt["server_pid"]):
             raise PhysicalDiagnosticError(
                 "V0n predecessor process attribution mismatch")
+        # Independent residency re-authentication: placement_verified
+        # alone is not placement proof. The retained canonical
+        # before+after residency evidence is revalidated against the
+        # SAME authenticated freeze (accepted #248 UUID+BDF), the
+        # selected memory values must cross-bind exactly to the
+        # retained vram_before/vram_after, and the minimum residency
+        # delta is reapplied — missing, malformed, flat/test-only,
+        # altered, mixed-GPU, UUID/BDF-drifted, or memory-inconsistent
+        # receipts reject before any numerical row is returned.
+        _v0n_validate_residency_evidence(
+            receipt.get("vram_evidence"), freeze["subject_identity"],
+            receipt.get("vram_before"), receipt.get("vram_after"))
+        if not (isinstance(receipt.get("vram_before"), int)
+                and isinstance(receipt.get("vram_after"), int)
+                and receipt["vram_after"] - receipt["vram_before"]
+                > V0N_MIN_RESIDENCY_BYTES):
+            raise PhysicalDiagnosticError(
+                "V0n predecessor retained residency delta unverified")
         rows.append(digest)
     return rows
 
