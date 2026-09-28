@@ -2657,6 +2657,38 @@ class V0ProducerAdmissionTests(unittest.TestCase):
             binding["preflight_probe_sha256"][str(idx)] = D.file_sha256(probe_path)
         binding["canonical_digest_sha256"] = P._v0_digest(binding)
         (self.evidence / "v0-selector-binding.json").write_text(json.dumps(binding))
+        self.binding = binding
+        self.write_freeze()
+
+    def write_freeze(self, *, index=None, selected=None, excluded=None,
+                     rule=None, producer=None, binding_digest=None,
+                     dispatch_sha256=None):
+        """Write a canonically-derived (or deliberately mutated) freeze."""
+        if index is None:
+            index = min((0, 1), key=lambda i: str(
+                self.binding["mapping"][str(i)]["selected_bdf"]))
+        entry = self.binding["mapping"][str(index)]
+        record = {
+            "schema": P.V0_FREEZE_SCHEMA,
+            "producer": producer or P.V0_FREEZE_PRODUCER,
+            "freeze_rule": rule or P.V0_FREEZE_RULE,
+            "expected_pr_head": self.head,
+            "v0_screen_vulkan_index": index,
+            "v0_screen_selected_bdf": selected or entry["selected_bdf"],
+            "v0_screen_excluded_bdf": excluded or entry["excluded_bdf"],
+            "selected_card": entry["selected_card"],
+            "excluded_card": entry["excluded_card"],
+            "source_pin": P.V0_SOURCE_PIN,
+            "binary_sha256": P.V0_COMPARATOR_SHA,
+            "icd": P.V0_RADV_ICD, "cuda_visible_devices": "-1",
+            "selector_binding_digest": binding_digest
+            or self.binding["canonical_digest_sha256"],
+            "dispatch_sha256": dispatch_sha256 or self.binding["dispatch_sha256"],
+            "namespace": P.V0_NAMESPACE, "arm": P.V0_ARM,
+        }
+        record["canonical_digest_sha256"] = P._v0_freeze_digest(record)
+        (self.evidence / P.V0_FREEZE_NAME).write_text(json.dumps(record))
+        return record
 
     def _run(self, tag, authority=None):
         return P.run_v0_unit(self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
@@ -2732,6 +2764,167 @@ class V0ProducerAdmissionTests(unittest.TestCase):
         failed = self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0]
         self.assertTrue((failed / "failure.json").is_file())
         self.assertFalse((failed / "unit.json").exists())
+
+    def test_repeats_same_frozen_index_and_bdf_are_accepted(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,
+                                         b"\1" * D.ROW_BYTES))
+        self._run(P.V0_UNIT_TAGS[0])
+        self._run(P.V0_UNIT_TAGS[1])
+        for tag in P.V0_UNIT_TAGS[:2]:
+            receipt = json.loads((self.evidence / P.V0_NAMESPACE / tag
+                                  / "unit.json").read_bytes())
+            self.assertEqual(receipt["amd_device"]["index"], 0)
+            self.assertEqual(receipt["selected_bdf"], "0000:07:00.0")
+            self.assertEqual(receipt["excluded_bdf"], "0000:0b:00.0")
+            self.assertEqual(receipt["server_env"]["GGML_VK_VISIBLE_DEVICES"],
+                             "0")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_three_identical_repeats_same_frozen_device_accepted(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
+        for tag in P.V0_UNIT_TAGS:
+            self._run(tag)
+        for tag in P.V0_UNIT_TAGS:
+            receipt = json.loads((self.evidence / P.V0_NAMESPACE / tag
+                                  / "unit.json").read_bytes())
+            self.assertEqual(receipt["amd_device"]["index"], 0)
+            self.assertEqual(receipt["selected_bdf"], "0000:07:00.0")
+        self.assertEqual(len(self.calls), 3)
+
+    def _unit_with_index(self, tag, index):
+        """Reissue a receipt shape as if produced with the sibling index."""
+        directory = self.evidence / P.V0_NAMESPACE / tag
+        receipt = json.loads((directory / "unit.json").read_bytes())
+        device = dict(receipt["amd_device"])
+        device["index"] = index
+        env = dict(receipt["server_env"])
+        env["GGML_VK_VISIBLE_DEVICES"] = str(index)
+        attribution = dict(receipt["process_attribution"])
+        attribution["server_env"] = env
+        receipt.update(amd_device=device, server_env=env,
+                       process_attribution=attribution,
+                       selected_bdf=self.binding["mapping"][str(index)][
+                           "selected_bdf"],
+                       excluded_bdf=self.binding["mapping"][str(index)][
+                           "excluded_bdf"])
+        return receipt
+
+    def test_repeat_on_sibling_index_rejected_before_interpretation(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
+        # repeat 1 on frozen index 0; a repeat 2 attempted on index 1 is
+        # refused before any runner launch (selector mismatch).
+        self._run(P.V0_UNIT_TAGS[0])
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "frozen screen device"):
+            P.run_v0_unit(self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
+                          P.V0_UNIT_TAGS[1], binary=self.root / "bin",
+                          binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+                          expected_head=self.head, model_attestation={},
+                          execute=self.runner,
+                          revalidate_authority=self.authority,
+                          vulkan_device_index=1, device_observer=self.device)
+        self.assertEqual(len(self.calls), 1)
+        # A synthetically re-signed repeat-1 receipt on index 1 (so the
+        # retained population itself is mixed-die) is rejected by the
+        # retained-evidence validator before V0 interpretation.
+        forged = self._unit_with_index(P.V0_UNIT_TAGS[0], 1)
+        (self.evidence / P.V0_NAMESPACE / P.V0_UNIT_TAGS[0] /
+         "unit.json").write_text(json.dumps(forged))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "one frozen AMD die"):
+            self._run(P.V0_UNIT_TAGS[1])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_mutated_freeze_index_or_bdf_rejected(self):
+        self._enable_cpu_fake_execution()
+        # same selected BDF but mutated frozen index
+        self.write_freeze(index=1, selected="0000:07:00.0",
+                          excluded="0000:0b:00.0")
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "diverges from preflight"):
+            self._run(P.V0_UNIT_TAGS[0])
+        # same index but mutated selected BDF
+        self.write_freeze(index=0, selected="0000:0b:00.0",
+                          excluded="0000:07:00.0")
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "diverges from preflight"):
+            self._run(P.V0_UNIT_TAGS[0])
+        # canonical pair again: accepted
+        self.write_freeze()
+        self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_third_repeat_switching_device_rejected(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
+        self._run(P.V0_UNIT_TAGS[0])
+        self._run(P.V0_UNIT_TAGS[1])
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "frozen screen device"):
+            P.run_v0_unit(self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
+                          P.V0_UNIT_TAGS[2], binary=self.root / "bin",
+                          binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+                          expected_head=self.head, model_attestation={},
+                          execute=self.runner,
+                          revalidate_authority=self.authority,
+                          vulkan_device_index=1, device_observer=self.device)
+        self.assertEqual(len(self.calls), 2)
+
+    def test_resigned_or_tampered_freeze_cannot_manufacture_continuity(self):
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
+        # (a) freeze pointing at the OTHER preflight entry, re-signed
+        # canonically: diverges from... itself is consistent with the
+        # binding, so units run on it; but a retained population on
+        # index 0 plus a swapped freeze must not validate.
+        self._run(P.V0_UNIT_TAGS[0])
+        other = self.write_freeze(index=1)  # canonical rule violated
+        self.assertEqual(other["v0_screen_vulkan_index"], 1)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "one frozen AMD die"):
+            self._run(P.V0_UNIT_TAGS[1])
+        self.write_freeze()
+        # (b) mutated binding digest (re-signed) cannot tie the freeze to
+        # a different preflight record.
+        self.write_freeze(binding_digest="c" * 64)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "retained preflight"):
+            self._run(P.V0_UNIT_TAGS[1])
+        # (c) mutated dispatch binding (re-signed)
+        self.write_freeze(dispatch_sha256="d" * 64)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "retained preflight"):
+            self._run(P.V0_UNIT_TAGS[1])
+        # (d) unknown producer / rule strings are refused
+        self.write_freeze(producer="issue250_physical.py:v0-load-only-binding/1")
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "digest/head/binding"):
+            self._run(P.V0_UNIT_TAGS[1])
+        # (e) digest tampering without re-signing
+        record = json.loads((self.evidence / P.V0_FREEZE_NAME).read_text())
+        record["v0_screen_vulkan_index"] = 1
+        (self.evidence / P.V0_FREEZE_NAME).write_text(json.dumps(record))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "digest/head/binding"):
+            self._run(P.V0_UNIT_TAGS[1])
+        self.assertEqual(len(self.calls), 1)
+
+    def test_missing_or_late_freeze_fails_closed(self):
+        self._enable_cpu_fake_execution()
+        (self.evidence / P.V0_FREEZE_NAME).unlink()
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "freeze record missing"):
+            self._run(P.V0_UNIT_TAGS[0])
+        self.assertEqual(self.calls, [])
+        self.write_freeze()
+        self._run(P.V0_UNIT_TAGS[0])
+        # A second freeze after units exist can never re-choose a device.
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "already retained"):
+            P.write_v0_screen_freeze(
+                self.repo, self.evidence, binary=self.root / "bin",
+                binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+                expected_head=self.head, model_attestation={},
+                revalidate_authority=self.authority,
+                device_observer=self.device)
 
 
 class NoPhysicalExecutionTests(unittest.TestCase):

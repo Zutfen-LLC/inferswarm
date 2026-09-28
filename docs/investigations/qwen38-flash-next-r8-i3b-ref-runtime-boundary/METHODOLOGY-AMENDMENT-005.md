@@ -72,6 +72,39 @@ nonparticipation. A full 993,280-byte decision-0 row is still the comparison
 unit; V0 remains non-terminal and never qualifies either vendor. No new
 per-tensor unstructured-log observer is demanded by the pinned source law.
 
+## One frozen screening device (correction, 2026-09-27)
+
+The two-index load-only preflight establishes the two CANDIDATE
+selector-to-BDF bindings (index 0 -> one physical V340L BDF, index 1 ->
+the other) and nothing more. Before the first V0 inference unit, exactly
+ONE of those validated entries is canonically FROZEN for the whole AMD
+screening population by an append-only retained record
+(`v0-screen-freeze.json`, schema `inferswarm.issue250.v0-screen-freeze/1`)
+carrying `v0_screen_vulkan_index`, `v0_screen_selected_bdf`,
+`v0_screen_excluded_bdf`, the exact PR head, the live dispatch-authority
+digest, and the canonical digest of the validated preflight record it was
+derived from. The frozen choice is derived mechanically from the validated
+preflight record content via the frozen rule
+`lexicographically-smallest-selected-bdf-of-validated-two-index-preflight` —
+never from historical enumeration order, host BDF constants, or a
+caller-supplied preference — and is re-validated against the live
+substrate (enumeration/DRM/runtime identity) when written. The record is
+append-only: it cannot be rewritten after the fact, and no device may be
+silently re-chosen after a failure.
+
+Every V0 unit — repeats 1, 2, and the conditional repeat 3 — must use the
+frozen `GGML_VK_VISIBLE_DEVICES` value, resolve to the same
+`selected_bdf`, keep the sibling as `excluded_bdf`, and pass the live
+enumeration/runtime/DRM and per-unit residency checks. Only process
+freshness varies between AMD screening repeats. The retained-evidence
+validator (`_v0_retained_rows`) and the terminal reducer
+(`derive_v0_state`) each enforce this invariant INDEPENDENTLY of producer
+behavior: a population whose receipts use different Vulkan indices or
+selected BDFs — even if every receipt is individually valid — is invalid
+V0 evidence, fails closed, and can never influence A reachability or be
+interpreted as AMD fresh-process variability, repeat stability,
+concordance, or disagreement.
+
 No V0 physical model request or load-only preflight has occurred or is
 authorized by this amendment. No CPU A execution is authorized. Existing
 exact-head review and dispatch requirements remain independently controlling.

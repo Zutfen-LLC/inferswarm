@@ -81,9 +81,15 @@ Contents:
   pinned-source law supplies ngl=1 output-vs-embedding placement while fresh
   selector/BDF + selected/excluded-die VRAM evidence supplies physical-device
   attribution. Binary `--help` succeeded unchanged on inferswarm05 but no
-  model load or V0 population occurred. Future load-only binding and V0 units
-  still require independent fresh exact-head dispatch and retained cost/model
-  authority. No `--device VulkanN` or per-tensor log observer is invented.
+  model load or V0 population occurred. The two-index load-only preflight
+  establishes the two candidate selector-to-BDF bindings; exactly ONE
+  validated selector/BDF is then frozen for the V0 AMD screening population
+  by an append-only retained record before the first unit, and only process
+  freshness changes between AMD screening repeats — a mixed-die population
+  is invalid V0 evidence and cannot influence A reachability. Future
+  load-only binding and V0 units still require independent fresh exact-head
+  dispatch and retained cost/model authority. No `--device VulkanN` or
+  per-tensor log observer is invented.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

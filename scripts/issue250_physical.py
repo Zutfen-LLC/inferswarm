@@ -298,6 +298,15 @@ V0_BINDING_SCHEMA = "inferswarm.issue250.v0-selector-binding/1"
 V0_EXCLUDED_NOISE_BYTES = 64 * 1024 * 1024  # accepted #243 bound
 V0_MIN_SELECTED_BYTES = V0_EXCLUDED_NOISE_BYTES
 V0_BINDING_PRODUCER = "issue250_physical.py:v0-load-only-binding/1"
+V0_FREEZE_SCHEMA = "inferswarm.issue250.v0-screen-freeze/1"
+V0_FREEZE_PRODUCER = "issue250_physical.py:v0-screen-freeze/1"
+V0_FREEZE_NAME = "v0-screen-freeze.json"
+# Deterministic, record-derived freeze rule: among the two validated
+# selector->BDF entries of the retained preflight mapping, freeze the
+# entry whose selected BDF sorts lowest. The choice is derived from the
+# validated record content only — never from historical enumeration
+# order, host constants, or a caller-supplied preference.
+V0_FREEZE_RULE = "lexicographically-smallest-selected-bdf-of-validated-two-index-preflight"
 V0_OBSERVER_LIBS = {
     "libllama-server-impl.so": "4c20f44656c19d30f5c10cd40ca3493e6850db2fd86d46f7944943527e67206c",
     "libllama-common.so.0": "218474f78c6749cf72b694451ee8df6a7a56d47e94468c92b1ee730b9aefa5eb",
@@ -526,14 +535,214 @@ def _v0_verify_probe_records(record: dict[str, Any], root: Path,
             raise PhysicalDiagnosticError("V0 preflight probe/selector identity mismatch")
 
 
+def _v0_freeze_digest(record: dict[str, Any]) -> str:
+    """Canonical digest over the freeze record (same law as _v0_digest)."""
+    return _v0_digest(record)
+
+
+def _read_v0_screen_freeze(root: Path, expected_head: str) -> dict[str, Any]:
+    """Load and fully authenticate the retained V0 screen freeze record.
+
+    The freeze is the ONLY canonical selector/device authority for the
+    V0 AMD screening population: it names exactly one Vulkan index and
+    the selected/excluded BDF pair, bound to the exact head, the live
+    dispatch authority, and the digest of the validated two-index
+    preflight selector-binding record it was derived from.
+    """
+    root = Path(root)
+    path = root / V0_FREEZE_NAME
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError("V0 screen freeze record missing")
+    try:
+        record = json.loads(path.read_bytes())
+    except (ValueError, OSError) as exc:
+        raise PhysicalDiagnosticError("V0 screen freeze unreadable") from exc
+    if not isinstance(record, dict):
+        raise PhysicalDiagnosticError("V0 screen freeze malformed")
+    index = record.get("v0_screen_vulkan_index")
+    selected = record.get("v0_screen_selected_bdf")
+    excluded = record.get("v0_screen_excluded_bdf")
+    if (record.get("schema") != V0_FREEZE_SCHEMA
+            or record.get("producer") != V0_FREEZE_PRODUCER
+            or record.get("freeze_rule") != V0_FREEZE_RULE
+            or record.get("expected_pr_head") != expected_head
+            or type(index) is not int or index not in (0, 1)
+            or record.get("canonical_digest_sha256") != _v0_freeze_digest(record)
+            or not isinstance(selected, str) or not isinstance(excluded, str)
+            or selected == excluded
+            or not re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]",
+                                selected)
+            or not re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]",
+                                excluded)):
+        raise PhysicalDiagnosticError("V0 screen freeze digest/head/binding mismatch")
+    return record
+
+
+def _v0_freeze_binding_digest(record: dict[str, Any]) -> str:
+    """Digest of the selector-binding record the freeze was derived from."""
+    value = record.get("selector_binding_digest")
+    if (not isinstance(value, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", value)):
+        raise PhysicalDiagnosticError("V0 screen freeze missing selector binding digest")
+    return value
+
+
+def _v0_load_freeze_with_preflight(root: Path, expected_head: str,
+                                   authority: dict[str, Any]
+                                   ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Authenticate the freeze AND its derivation from the validated preflight.
+
+    The frozen index/BDF must match the preflight entry exactly; the
+    retained selector-binding record must carry the freeze's recorded
+    digest; the freeze must bind the same dispatch authority digest.
+    """
+    root = Path(root)
+    freeze = _read_v0_screen_freeze(root, expected_head)
+    binding_path = root / "v0-selector-binding.json"
+    if binding_path.is_symlink() or not binding_path.is_file():
+        raise PhysicalDiagnosticError("fresh V0 selector binding record missing")
+    try:
+        binding = json.loads(binding_path.read_bytes())
+    except (ValueError, OSError) as exc:
+        raise PhysicalDiagnosticError("V0 selector binding unreadable") from exc
+    if not isinstance(binding, dict):
+        raise PhysicalDiagnosticError("V0 selector binding malformed")
+    if (_v0_freeze_binding_digest(freeze) != binding.get("canonical_digest_sha256")
+            or freeze.get("dispatch_sha256") != binding.get("dispatch_sha256")
+            or freeze.get("dispatch_sha256") != D.authority_digest(authority)):
+        raise PhysicalDiagnosticError("V0 screen freeze not derived from retained preflight")
+    index = freeze["v0_screen_vulkan_index"]
+    mapping = binding.get("mapping")
+    if (not isinstance(mapping, dict) or set(mapping) != {"0", "1"}
+            or str(index) not in mapping
+            or not isinstance(mapping[str(index)], dict)
+            or mapping[str(index)].get("selected_bdf")
+               != freeze["v0_screen_selected_bdf"]
+            or mapping[str(index)].get("excluded_bdf")
+               != freeze["v0_screen_excluded_bdf"]):
+        raise PhysicalDiagnosticError("V0 screen freeze diverges from preflight mapping")
+    return freeze, binding
+
+
+def write_v0_screen_freeze(repo_root: Path, evidence_root: Path, *,
+                           binary: Path, binary_id: str, model_dir: Path,
+                           expected_head: str, model_attestation: dict[str, Any],
+                           revalidate_authority: Callable[..., dict[str, Any]] | None = None,
+                           device_observer: Callable[[int], dict[str, Any]] | None = None,
+                           github_api: str = "https://api.github.com"
+                           ) -> dict[str, Any]:
+    """Freeze exactly one validated V0 AMD selector/device for the population.
+
+    PROSPECTIVE, repository-only: creates no model load, no load-only
+    probe and no inference unit. Must run AFTER the two-index preflight
+    binding is retained and BEFORE the first V0 unit. The choice is
+    derived mechanically from the validated preflight record via the
+    frozen V0_FREEZE_RULE (lexicographically smallest selected BDF of
+    the two validated entries) — never from enumeration order, host BDF
+    constants, or caller preference. The record is append-only: an
+    existing freeze is refused, so a later unit can never silently
+    re-choose a different device after a failure.
+    """
+    if binary_id != "comparator" or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError("V0 frozen comparator/model identity mismatch")
+    root = Path(evidence_root)
+    validate_evidence_generation(root)
+    _admit_retained_cost(root, TB.V0_CONDITION, V0_NAMESPACE, V0_ARM)
+    early = require_live_dispatch(repo_root, expected_head, V0_NAMESPACE,
+                                  revalidate_authority, github_api)
+    D._require_clean_head(Path(repo_root), expected_head)
+    target = root / V0_FREEZE_NAME
+    if target.exists() or target.is_symlink():
+        raise PhysicalDiagnosticError("V0 screen freeze already retained")
+    if (root / V0_NAMESPACE).exists():
+        raise PhysicalDiagnosticError(
+            "V0 screen freeze must precede the first inference unit")
+    binary_sha = _verify_v0_amd_binary(Path(binary), binary_id)
+    attestation = validate_model_attestation(model_attestation, expected_head)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if (opening.is_symlink() or not opening.is_file()
+            or json.loads(opening.read_bytes()) != attestation):
+        raise PhysicalDiagnosticError("V0 screen freeze model attestation absent")
+    problems, _ = attestation_witness(Path(model_dir), attestation)
+    if problems or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError("V0 screen freeze model witness drift")
+    binding_path = root / "v0-selector-binding.json"
+    if binding_path.is_symlink() or not binding_path.is_file():
+        raise PhysicalDiagnosticError("fresh V0 selector binding record missing")
+    try:
+        binding = json.loads(binding_path.read_bytes())
+    except (ValueError, OSError) as exc:
+        raise PhysicalDiagnosticError("V0 selector binding unreadable") from exc
+    late = require_live_dispatch(repo_root, expected_head, V0_NAMESPACE,
+                                 revalidate_authority, github_api)
+    if D.authority_digest(early) != D.authority_digest(late):
+        raise PhysicalDiagnosticError("V0 screen freeze dispatch drift")
+    D._require_clean_head(Path(repo_root), expected_head)
+    _admit_retained_cost(root, TB.V0_CONDITION, V0_NAMESPACE, V0_ARM)
+    # Validate the retained two-index preflight against the LIVE substrate
+    # (enumeration/DRM/runtime identity) for the index the rule will pick;
+    # validate_v0_selector_binding performs the full selector/BDF/
+    # residency/probe-custody checks without any model load.
+    mapping = binding.get("mapping") if isinstance(binding, dict) else None
+    if (not isinstance(mapping, dict) or set(mapping) != {"0", "1"}
+            or not all(isinstance(mapping[k], dict) for k in mapping)):
+        raise PhysicalDiagnosticError("V0 preflight binding malformed")
+    chosen_index = min((0, 1),
+                       key=lambda i: str(mapping[str(i)]["selected_bdf"]))
+    chosen = mapping[str(chosen_index)]
+    observer = device_observer or _v0_observe_device
+    live = observer(chosen_index)
+    live["binary_lib_dir"] = str(Path(binary).parent)
+    entry = validate_v0_selector_binding(
+        binding, expected_head, chosen_index, live, binary_sha)
+    _v0_verify_probe_records(binding, root, early)
+    record = {
+        "schema": V0_FREEZE_SCHEMA, "producer": V0_FREEZE_PRODUCER,
+        "freeze_rule": V0_FREEZE_RULE, "expected_pr_head": expected_head,
+        "v0_screen_vulkan_index": chosen_index,
+        "v0_screen_selected_bdf": entry["selected_bdf"],
+        "v0_screen_excluded_bdf": entry["excluded_bdf"],
+        "selected_card": entry["selected_card"],
+        "excluded_card": entry["excluded_card"],
+        "source_pin": V0_SOURCE_PIN, "binary_sha256": binary_sha,
+        "icd": V0_RADV_ICD, "cuda_visible_devices": "-1",
+        "selector_binding_digest": binding.get("canonical_digest_sha256"),
+        "dispatch_sha256": D.authority_digest(early),
+        "namespace": V0_NAMESPACE, "arm": V0_ARM,
+    }
+    record["canonical_digest_sha256"] = _v0_freeze_digest(record)
+    _write_json(target, record)
+    # Re-authenticate the retained bytes exactly as every later consumer will.
+    frozen, rebind = _v0_load_freeze_with_preflight(root, expected_head, early)
+    if (frozen["canonical_digest_sha256"] != record["canonical_digest_sha256"]
+            or rebind.get("canonical_digest_sha256")
+               != binding.get("canonical_digest_sha256")):
+        raise PhysicalDiagnosticError("V0 screen freeze retention mismatch")
+    return record
+
+
 def _v0_retained_rows(root: Path, count: int, head: str,
                       authority: dict[str, Any]) -> list[str]:
-    """Recheck each predecessor against retained full-row bytes and custody."""
+    """Recheck each predecessor against retained full-row bytes and custody.
+
+    CORRECTION (one-factor V0): the whole retained population must share
+    ONE frozen Vulkan selector index and selected/excluded BDF pair, bound
+    canonically by the retained v0-screen-freeze record. A population whose
+    receipts use different indices or selected BDFs is rejected even if
+    every receipt is individually valid — mixed-die rows are not AMD
+    fresh-process evidence.
+    """
     import hashlib
     rows = []
     base = Path(root) / V0_NAMESPACE
     if base.is_symlink():
         raise PhysicalDiagnosticError("V0 namespace symlink refused")
+    freeze, binding = _v0_load_freeze_with_preflight(
+        Path(root), head, authority)
+    frozen_index = freeze["v0_screen_vulkan_index"]
+    frozen_selected = freeze["v0_screen_selected_bdf"]
+    frozen_excluded = freeze["v0_screen_excluded_bdf"]
+    binding_digest = _v0_freeze_binding_digest(freeze)
     if base.exists():
         present = {p.name for p in base.iterdir()
                    if p.is_dir() or p.is_symlink()}
@@ -603,12 +812,22 @@ def _v0_retained_rows(root: Path, count: int, head: str,
                 or receipt["server_argv"] != v0_server_argv(
                     Path(receipt["server_argv"][0]),
                     Path(receipt.get("model_launch_member", "")), PORT)
-                or receipt.get("placement_source_law") !=
-                   {"source_pin": V0_SOURCE_PIN, "ngl": 1,
+                or receipt.get("placement_source_law") != {
+                    "source_pin": V0_SOURCE_PIN, "ngl": 1,
                     "embedding": "CPU", "output_projection": "Vulkan"}):
             raise PhysicalDiagnosticError("V0 predecessor retained byte/custody mismatch")
         binding = receipt["v0_selector_binding"]
         device = receipt["amd_device"]
+        # One-factor V0: every retained repeat must carry the FROZEN
+        # selector index and the selected/excluded BDF pair it implies.
+        if (device.get("index") != frozen_index
+                or receipt.get("selected_bdf") != frozen_selected
+                or receipt.get("excluded_bdf") != frozen_excluded):
+            raise PhysicalDiagnosticError(
+                "V0 retained population is not bound to one frozen AMD die")
+        if binding.get("canonical_digest_sha256") != binding_digest:
+            raise PhysicalDiagnosticError(
+                "V0 retained population selector binding digest mismatch")
         validate_v0_selector_binding(binding, head, device["index"],
                                      device, receipt["binary_sha256"],
                                      verify_lib_dir=False)
@@ -946,6 +1165,16 @@ def run_v0_unit(repo_root: Path, evidence_root: Path, namespace: str, arm: str,
         raise PhysicalDiagnosticError("V0 model identity drift")
     if type(vulkan_device_index) is not int or vulkan_device_index < 0:
         raise PhysicalDiagnosticError("V0 AMD Vulkan device index required")
+    # CORRECTION (one-factor V0): the selector/device is NOT a free
+    # per-unit choice. Exactly one index/BDF pair is canonically frozen
+    # for the whole screening population by the retained append-only
+    # v0-screen-freeze record, derived from the validated two-index
+    # preflight. Any other index fails closed BEFORE any launch; a
+    # failure can never silently move the population to the sibling die.
+    freeze, binding = _v0_load_freeze_with_preflight(root, expected_head, early)
+    if (vulkan_device_index != freeze["v0_screen_vulkan_index"]):
+        raise PhysicalDiagnosticError(
+            "V0 unit selector does not match the frozen screen device")
     device = (device_observer or _v0_observe_device)(vulkan_device_index)
     if (device.get("index") != vulkan_device_index
             or device.get("vendor_id") != "0x1002"

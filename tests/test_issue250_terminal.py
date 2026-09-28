@@ -362,6 +362,29 @@ class CampaignFixture:
             path.write_text(json.dumps(probe))
             binding["preflight_probe_sha256"][str(idx)] = D.file_sha256(path)
         binding["canonical_digest_sha256"] = P._v0_digest(binding)
+        (self.evidence / "v0-selector-binding.json").write_text(
+            json.dumps(binding))
+        freeze_rule_index = min(
+            (0, 1), key=lambda i: str(binding["mapping"][str(i)]["selected_bdf"]))
+        freeze_entry = binding["mapping"][str(freeze_rule_index)]
+        self.v0_freeze = {
+            "schema": P.V0_FREEZE_SCHEMA, "producer": P.V0_FREEZE_PRODUCER,
+            "freeze_rule": P.V0_FREEZE_RULE, "expected_pr_head": self.head,
+            "v0_screen_vulkan_index": freeze_rule_index,
+            "v0_screen_selected_bdf": freeze_entry["selected_bdf"],
+            "v0_screen_excluded_bdf": freeze_entry["excluded_bdf"],
+            "selected_card": freeze_entry["selected_card"],
+            "excluded_card": freeze_entry["excluded_card"],
+            "source_pin": P.V0_SOURCE_PIN,
+            "binary_sha256": P.V0_COMPARATOR_SHA,
+            "icd": P.V0_RADV_ICD, "cuda_visible_devices": "-1",
+            "selector_binding_digest": binding["canonical_digest_sha256"],
+            "dispatch_sha256": D.authority_digest(self.v0_authority),
+            "namespace": D.V0_NAMESPACE, "arm": D.V0_ARM,
+        }
+        self.v0_freeze["canonical_digest_sha256"] = P._v0_freeze_digest(
+            self.v0_freeze)
+        (self.evidence / P.V0_FREEZE_NAME).write_text(json.dumps(self.v0_freeze))
         for index, tag in enumerate(D.V0_UNIT_TAGS[:2], 1):
             unit = base / tag
             unit.mkdir(parents=True)
@@ -960,6 +983,66 @@ class V0EvidenceBridgeTests(unittest.TestCase):
         out = f.derive(authority_fetcher=no_a)
         self.assertEqual(out["blocked"], T.BLOCKED)
         self.assertEqual(out["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
+
+    def test_v0_mixed_die_population_rejected_independently_by_reducer(self):
+        """Mixed-die retained evidence cannot reach ANY V0 interpretation."""
+        f = self._fixture()
+        for mutate in (
+            # repeat 2 on sibling Vulkan index (whole-device change)
+            lambda rec: rec.update(
+                amd_device={**rec["amd_device"], "index": 1},
+                server_env={**rec["server_env"],
+                            "GGML_VK_VISIBLE_DEVICES": "1"},
+                process_attribution={**rec["process_attribution"],
+                                     "server_env": {
+                                         **rec["server_env"],
+                                         "GGML_VK_VISIBLE_DEVICES": "1"}},
+                selected_bdf="0000:0b:00.0",
+                excluded_bdf="0000:07:00.0"),
+            # same selected BDF, mutated index only
+            lambda rec: rec.update(
+                amd_device={**rec["amd_device"], "index": 1},
+                server_env={**rec["server_env"],
+                            "GGML_VK_VISIBLE_DEVICES": "1"},
+                process_attribution={**rec["process_attribution"],
+                                     "server_env": {
+                                         **rec["server_env"],
+                                         "GGML_VK_VISIBLE_DEVICES": "1"}}),
+            # same index, mutated selected BDF only
+            lambda rec: rec.update(selected_bdf="0000:0b:00.0",
+                                   excluded_bdf="0000:07:00.0"),
+            # tampered freeze binding digest (cannot tie population)
+            lambda rec: rec.update(selected_bdf="0000:0b:00.0"),
+        ):
+            with self.subTest(mutate=mutate):
+                unit = f.evidence / D.V0_NAMESPACE / D.V0_UNIT_TAGS[1]
+                original = json.loads((unit / "unit.json").read_text())
+                receipt = json.loads((unit / "unit.json").read_text())
+                mutate(receipt)
+                (unit / "unit.json").write_text(json.dumps(receipt))
+                out = f.derive()
+                self.assertEqual(out["blocked"], T.BLOCKED)
+                self.assertEqual(out["v0"]["state"], D.V0_STATE_INVALID)
+                self.assertEqual(out["v0"]["valid"], False)
+                self.assertEqual(out["v0"].get("a_eligible"), False)
+                (unit / "unit.json").write_text(json.dumps(original))
+        # tampered freeze record itself (re-signed to the sibling die):
+        # population no longer authenticates against it
+        freeze_path = f.evidence / P.V0_FREEZE_NAME
+        saved = freeze_path.read_bytes()
+        record = json.loads(saved)
+        record.update(v0_screen_vulkan_index=1,
+                      v0_screen_selected_bdf="0000:0b:00.0",
+                      v0_screen_excluded_bdf="0000:07:00.0",
+                      selected_card="card2", excluded_card="card1")
+        record["canonical_digest_sha256"] = P._v0_freeze_digest(record)
+        freeze_path.write_text(json.dumps(record))
+        out = f.derive()
+        self.assertEqual(out["blocked"], T.BLOCKED)
+        self.assertEqual(out["v0"]["state"], D.V0_STATE_INVALID)
+        freeze_path.write_bytes(saved)
+        # restored: the original population reduces normally
+        self.assertEqual(f.derive()["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
 
     def test_v0_mutation_and_selective_omission_block_terminal(self):
         f = self._fixture()

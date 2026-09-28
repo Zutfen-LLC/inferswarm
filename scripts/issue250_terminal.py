@@ -129,6 +129,14 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
         # environment and process-custody validator before reducing rows.
         P._v0_retained_rows(Path(evidence_root), len(tags), expected_head,
                             authority)
+        # INDEPENDENT one-factor enforcement (not producer behavior):
+        # authenticate the retained screen freeze directly and require
+        # every retained receipt to carry the same frozen Vulkan index
+        # and selected BDF. A synthetically mixed-die population fails
+        # closed here even if each receipt were individually valid, and
+        # can never reach reduce_v0_screen / AMD_VARIABLE / A-eligibility.
+        freeze, _ = P._v0_load_freeze_with_preflight(
+            Path(evidence_root), expected_head, authority)
         amd_rows = []
         pids = set()
         for tag in D.V0_UNIT_TAGS[:len(tags)]:
@@ -139,6 +147,15 @@ def derive_v0_state(evidence_root: Path, contrast_root: Path,
             if receipt_path.is_symlink() or row_path.is_symlink():
                 raise ValueError("V0 retained file symlink")
             rec = json.loads(receipt_path.read_bytes())
+            device = rec.get("amd_device", {})
+            if (device.get("index")
+                    != freeze["v0_screen_vulkan_index"]
+                    or rec.get("selected_bdf")
+                    != freeze["v0_screen_selected_bdf"]
+                    or rec.get("excluded_bdf")
+                    != freeze["v0_screen_excluded_bdf"]):
+                raise ValueError(
+                    "V0 mixed-die retained population cannot be reduced")
             row = row_path.read_bytes()
             if len(row) != D.ROW_BYTES:
                 raise ValueError("V0 full row width mismatch")
