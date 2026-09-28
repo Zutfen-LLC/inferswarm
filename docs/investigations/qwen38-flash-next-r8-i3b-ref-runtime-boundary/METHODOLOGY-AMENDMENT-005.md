@@ -88,9 +88,16 @@ preflight record content via the frozen rule
 `lexicographically-smallest-selected-bdf-of-validated-two-index-preflight` —
 never from historical enumeration order, host BDF constants, or a
 caller-supplied preference — and is re-validated against the live
-substrate (enumeration/DRM/runtime identity) when written. The record is
-append-only: it cannot be rewritten after the fact, and no device may be
-silently re-chosen after a failure.
+substrate (enumeration/DRM/runtime identity) when written. Every retained
+consumer independently authenticates both preflight mapping entries and their
+probe bytes, then re-derives the lexicographically smallest selected BDF and
+requires the frozen index, BDF pair, and cards to match that canonical entry.
+A correct freeze digest and a valid sibling mapping entry alone are insufficient;
+this is enforced even before the first V0 unit exists. The freeze also repeats
+the exact source pin, comparator binary, RADV ICD, disabled CUDA visibility,
+namespace, and arm; consumers compare each repeat to its independent authority.
+The record is append-only: it cannot be rewritten after the fact, and no device
+may be silently re-chosen after a failure.
 
 Every V0 unit — repeats 1, 2, and the conditional repeat 3 — must use the
 frozen `GGML_VK_VISIBLE_DEVICES` value, resolve to the same

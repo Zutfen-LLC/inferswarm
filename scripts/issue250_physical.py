@@ -592,9 +592,9 @@ def _v0_load_freeze_with_preflight(root: Path, expected_head: str,
                                    ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Authenticate the freeze AND its derivation from the validated preflight.
 
-    The frozen index/BDF must match the preflight entry exactly; the
-    retained selector-binding record must carry the freeze's recorded
-    digest; the freeze must bind the same dispatch authority digest.
+    Re-derive the canonical lexical-BDF choice from the authenticated
+    two-index preflight, rather than accepting either valid mapping entry.
+    This is shared by the launch, retained-row and terminal consumers.
     """
     root = Path(root)
     freeze = _read_v0_screen_freeze(root, expected_head)
@@ -607,20 +607,44 @@ def _v0_load_freeze_with_preflight(root: Path, expected_head: str,
         raise PhysicalDiagnosticError("V0 selector binding unreadable") from exc
     if not isinstance(binding, dict):
         raise PhysicalDiagnosticError("V0 selector binding malformed")
-    if (_v0_freeze_binding_digest(freeze) != binding.get("canonical_digest_sha256")
+    if (binding.get("canonical_digest_sha256") != _v0_digest(binding)
+            or _v0_freeze_binding_digest(freeze)
+               != binding.get("canonical_digest_sha256")
             or freeze.get("dispatch_sha256") != binding.get("dispatch_sha256")
             or freeze.get("dispatch_sha256") != D.authority_digest(authority)):
         raise PhysicalDiagnosticError("V0 screen freeze not derived from retained preflight")
-    index = freeze["v0_screen_vulkan_index"]
     mapping = binding.get("mapping")
     if (not isinstance(mapping, dict) or set(mapping) != {"0", "1"}
-            or str(index) not in mapping
-            or not isinstance(mapping[str(index)], dict)
-            or mapping[str(index)].get("selected_bdf")
-               != freeze["v0_screen_selected_bdf"]
-            or mapping[str(index)].get("excluded_bdf")
-               != freeze["v0_screen_excluded_bdf"]):
+            or any(not isinstance(mapping[key], dict) for key in ("0", "1"))):
         raise PhysicalDiagnosticError("V0 screen freeze diverges from preflight mapping")
+    # Authenticate BOTH retained candidates against the probe bytes before
+    # applying the selection law. No live host or inference is needed by a
+    # retained consumer, and no previously retained unit is trusted here.
+    for index in (0, 1):
+        live = {key: binding.get(key) for key in (
+            "binary_lib_dir", "enumeration_sha256", "icd_sha256",
+            "runtime_identity", "drm_cards")}
+        live.update(index=index, vulkan_indices=[0, 1],
+                    vendor_id="0x1002", device_id="0x6864")
+        validate_v0_selector_binding(binding, expected_head, index, live,
+                                     V0_COMPARATOR_SHA, verify_lib_dir=False)
+    _v0_verify_probe_records(binding, root, authority)
+    canonical_index = min((0, 1),
+                          key=lambda i: mapping[str(i)]["selected_bdf"])
+    canonical = mapping[str(canonical_index)]
+    if (freeze["v0_screen_vulkan_index"] != canonical_index
+            or freeze["v0_screen_selected_bdf"] != canonical["selected_bdf"]
+            or freeze["v0_screen_excluded_bdf"] != canonical["excluded_bdf"]
+            or freeze.get("selected_card") != canonical["selected_card"]
+            or freeze.get("excluded_card") != canonical["excluded_card"]):
+        raise PhysicalDiagnosticError("V0 screen freeze violates canonical preflight selection")
+    if (freeze.get("source_pin") != V0_SOURCE_PIN
+            or freeze.get("binary_sha256") != V0_COMPARATOR_SHA
+            or freeze.get("icd") != V0_RADV_ICD
+            or freeze.get("cuda_visible_devices") != "-1"
+            or freeze.get("namespace") != V0_NAMESPACE
+            or freeze.get("arm") != V0_ARM):
+        raise PhysicalDiagnosticError("V0 screen freeze authority fields mismatch")
     return freeze, binding
 
 

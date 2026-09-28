@@ -84,9 +84,13 @@ Contents:
   model load or V0 population occurred. The two-index load-only preflight
   establishes the two candidate selector-to-BDF bindings; exactly ONE
   validated selector/BDF is then frozen for the V0 AMD screening population
-  by an append-only retained record before the first unit, and only process
-  freshness changes between AMD screening repeats — a mixed-die population
-  is invalid V0 evidence and cannot influence A reachability. Future
+  by an append-only retained record before the first unit. Every consumer
+  independently re-derives the lexicographically-smallest selected BDF from
+  both authenticated preflight mappings and refuses a re-signed freeze on the
+  other valid sibling entry, even before unit 1; a named rule or a valid mapping
+  entry alone is not authority. Only process freshness changes between AMD
+  screening repeats — mixed-die or all-sibling populations are invalid V0
+  evidence and cannot influence A reachability. Future
   load-only binding and V0 units still require independent fresh exact-head
   dispatch and retained cost/model authority. No `--device VulkanN` or
   per-tensor log observer is invented.

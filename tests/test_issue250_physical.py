@@ -2835,19 +2835,163 @@ class V0ProducerAdmissionTests(unittest.TestCase):
             self._run(P.V0_UNIT_TAGS[1])
         self.assertEqual(len(self.calls), 1)
 
+    def test_canonical_freeze_authenticates_without_any_units(self):
+        self._enable_cpu_fake_execution()
+        self.assertFalse((self.evidence / P.V0_NAMESPACE).exists())
+        freeze, binding = P._v0_load_freeze_with_preflight(
+            self.evidence, self.head,
+            self.authority(self.repo, self.head, P.V0_NAMESPACE))
+        self.assertEqual(freeze["v0_screen_vulkan_index"], 0)
+        self.assertEqual(freeze["v0_screen_selected_bdf"],
+                         binding["mapping"]["0"]["selected_bdf"])
+        for tag in P.V0_UNIT_TAGS[:2]:
+            self._run(tag)
+        self.assertEqual(len(self.calls), 2)
+
+    def test_resigned_sibling_freeze_refused_before_first_unit(self):
+        self._enable_cpu_fake_execution()
+        forged = self.write_freeze(index=1)
+        self.assertEqual(forged["freeze_rule"], P.V0_FREEZE_RULE)
+        self.assertEqual(forged["canonical_digest_sha256"],
+                         P._v0_freeze_digest(forged))
+        self.assertEqual(forged["selector_binding_digest"],
+                         self.binding["canonical_digest_sha256"])
+        self.assertEqual(forged["dispatch_sha256"],
+                         self.binding["dispatch_sha256"])
+        self.assertFalse((self.evidence / P.V0_NAMESPACE).exists())
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "canonical preflight selection"):
+            P._v0_load_freeze_with_preflight(
+                self.evidence, self.head,
+                self.authority(self.repo, self.head, P.V0_NAMESPACE))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "canonical preflight selection"):
+            P._v0_retained_rows(
+                self.evidence, 0, self.head,
+                self.authority(self.repo, self.head, P.V0_NAMESPACE))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "canonical preflight selection"):
+            P.run_v0_unit(
+                self.repo, self.evidence, P.V0_NAMESPACE, P.V0_ARM,
+                P.V0_UNIT_TAGS[0], binary=self.root / "bin",
+                binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+                expected_head=self.head, model_attestation={},
+                execute=self.runner, revalidate_authority=self.authority,
+                vulkan_device_index=1, device_observer=self.device)
+        self.assertEqual(self.calls, [])
+
+    def test_resigned_freeze_cards_and_authority_fields_refused(self):
+        self._enable_cpu_fake_execution()
+        for key, value in (
+            ("selected_card", "card2"), ("excluded_card", "card1"),
+            ("source_pin", "0" * 40), ("binary_sha256", "0" * 64),
+            ("icd", "/wrong/radv.json"), ("cuda_visible_devices", "0"),
+            ("namespace", "d250-arm-a"), ("arm", "A-vulkan-necessity"),
+        ):
+            with self.subTest(key=key):
+                freeze = self.write_freeze()
+                freeze[key] = value
+                freeze["canonical_digest_sha256"] = P._v0_freeze_digest(freeze)
+                (self.evidence / P.V0_FREEZE_NAME).write_text(json.dumps(freeze))
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._v0_load_freeze_with_preflight(
+                        self.evidence, self.head,
+                        self.authority(self.repo, self.head, P.V0_NAMESPACE))
+                self.assertEqual(self.calls, [])
+
+    def test_binding_mutation_stale_or_resigned_digest_refused(self):
+        self._enable_cpu_fake_execution()
+        for resign in (False, True):
+            with self.subTest(resign=resign):
+                binding = copy.deepcopy(self.binding)
+                binding["mapping"]["1"]["vram_after"]["0000:0b:00.0"] += 1
+                if resign:
+                    binding["canonical_digest_sha256"] = P._v0_digest(binding)
+                    self.write_freeze(binding_digest=binding["canonical_digest_sha256"])
+                else:
+                    self.write_freeze()
+                (self.evidence / "v0-selector-binding.json").write_text(
+                    json.dumps(binding))
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._v0_load_freeze_with_preflight(
+                        self.evidence, self.head,
+                        self.authority(self.repo, self.head, P.V0_NAMESPACE))
+                self.assertEqual(self.calls, [])
+        (self.evidence / "v0-selector-binding.json").write_text(
+            json.dumps(self.binding))
+        self.write_freeze()
+        P._v0_load_freeze_with_preflight(
+            self.evidence, self.head,
+            self.authority(self.repo, self.head, P.V0_NAMESPACE))
+
+    def test_all_sibling_receipts_cannot_be_interpreted(self):
+        from shutil import copytree
+        self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,
+                                         b"\1" * D.ROW_BYTES))
+        # Create the attack's retained root while no V0 unit exists there.
+        # Canonical fake receipts are templates only, produced in a separate
+        # evidence root; the attack root never contained a canonical unit.
+        sibling_evidence = self.root / "all-sibling-evidence"
+        copytree(self.evidence, sibling_evidence)
+        self.assertFalse((sibling_evidence / P.V0_NAMESPACE).exists())
+        for tag in P.V0_UNIT_TAGS[:2]:
+            self._run(tag)
+        sibling_freeze = self.write_freeze(index=1)
+        (sibling_evidence / P.V0_FREEZE_NAME).write_text(
+            json.dumps(sibling_freeze))
+        self.assertFalse((sibling_evidence / P.V0_NAMESPACE).exists())
+        for tag in P.V0_UNIT_TAGS[:2]:
+            directory = sibling_evidence / P.V0_NAMESPACE / tag
+            copytree(self.evidence / P.V0_NAMESPACE / tag, directory)
+            path = directory / "unit.json"
+            receipt = self._unit_with_index(tag, 1)
+            receipt["vram_after"] = {"0000:07:00.0": 0,
+                                     "0000:0b:00.0": 512 * 1024 * 1024}
+            receipt["timeout_policy"]["vulkan_device_index"] = 1
+            path.write_text(json.dumps(receipt))
+            self.assertEqual(receipt["amd_device"]["index"], 1)
+            self.assertEqual(receipt["selected_bdf"], "0000:0b:00.0")
+            self.assertEqual(receipt["server_env"]["GGML_VK_VISIBLE_DEVICES"],
+                             "1")
+        # Control: with ONLY the canonical-freeze gate bypassed, these
+        # index-1 receipts satisfy the existing retained row/custody checks.
+        # The invalid verdict below therefore tests the rule itself, not a
+        # malformed receipt or an accidental mixed-die population.
+        with mock.patch.object(P, "_v0_load_freeze_with_preflight",
+                               return_value=(sibling_freeze, self.binding)):
+            self.assertEqual(len(P._v0_retained_rows(
+                sibling_evidence, 2, self.head,
+                self.authority(self.repo, self.head, P.V0_NAMESPACE))), 2)
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "canonical preflight selection"):
+            P._v0_retained_rows(
+                sibling_evidence, 2, self.head,
+                self.authority(self.repo, self.head, P.V0_NAMESPACE))
+        with mock.patch.object(T, "verify_v0_historical_rows", return_value={}):
+            state = T.derive_v0_state(
+                sibling_evidence, self.root / "contrast", self.repo, self.head,
+                authority_fetcher=self.authority)
+        self.assertEqual(state["state"], D.V0_STATE_INVALID)
+        self.assertFalse(state["valid"])
+        self.assertFalse(state["a_eligible"])
+        self.assertNotIn("repeat_stable", state)
+        self.assertNotIn("concordance", state)
+        self.assertNotIn("disagreement", state)
+        self.assertIn("canonical preflight selection", state["reason"])
+
     def test_mutated_freeze_index_or_bdf_rejected(self):
         self._enable_cpu_fake_execution()
         # same selected BDF but mutated frozen index
         self.write_freeze(index=1, selected="0000:07:00.0",
                           excluded="0000:0b:00.0")
         with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "diverges from preflight"):
+                                    "canonical preflight selection"):
             self._run(P.V0_UNIT_TAGS[0])
         # same index but mutated selected BDF
         self.write_freeze(index=0, selected="0000:0b:00.0",
                           excluded="0000:07:00.0")
         with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "diverges from preflight"):
+                                    "canonical preflight selection"):
             self._run(P.V0_UNIT_TAGS[0])
         # canonical pair again: accepted
         self.write_freeze()
@@ -2871,15 +3015,14 @@ class V0ProducerAdmissionTests(unittest.TestCase):
 
     def test_resigned_or_tampered_freeze_cannot_manufacture_continuity(self):
         self._enable_cpu_fake_execution((b"\0" * D.ROW_BYTES,) * 3)
-        # (a) freeze pointing at the OTHER preflight entry, re-signed
-        # canonically: diverges from... itself is consistent with the
-        # binding, so units run on it; but a retained population on
-        # index 0 plus a swapped freeze must not validate.
+        # (a) a re-signed freeze pointing at the OTHER preflight entry
+        # violates the canonical lexical-BDF rule, regardless of whether
+        # a canonical-index receipt was retained earlier.
         self._run(P.V0_UNIT_TAGS[0])
-        other = self.write_freeze(index=1)  # canonical rule violated
+        other = self.write_freeze(index=1)
         self.assertEqual(other["v0_screen_vulkan_index"], 1)
         with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "one frozen AMD die"):
+                                    "canonical preflight selection"):
             self._run(P.V0_UNIT_TAGS[1])
         self.write_freeze()
         # (b) mutated binding digest (re-signed) cannot tie the freeze to
