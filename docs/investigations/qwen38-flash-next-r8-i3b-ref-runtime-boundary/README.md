@@ -75,7 +75,25 @@ Contents:
   separate gate, not dispatch authority. Its original V0 adapter stop claim
   is historical and superseded only by AMENDMENT-005; C1/C2 and V0 reduction
   laws remain unchanged.
-- `METHODOLOGY-AMENDMENT-005.md` — current narrow repository-only V0 AMD
+- `METHODOLOGY-AMENDMENT-006.md` — current narrow correction after the
+  failed physical V0 attempt at head `028dce94` under dispatch `5862772797`:
+  the two-index physical preflight succeeded (zero AMD completion units
+  executed), but the canonical freeze failed closed on a JSON key-type
+  defect — `_v0_observe_device()` emitted integer device-map keys while
+  the retained binding carries JSON string keys, and the validator
+  compared raw dicts. No substrate drift occurred. The correction makes
+  the runtime identity JSON-canonical at a single seam (string keys
+  "0"/"1"; int 0/1 accepted only at the raw-input boundary; exactly the
+  two devices with all identity-bearing fields; booleans/floats/aliases/
+  collisions/extra indices rejected fail-closed), keeps the serialized
+  identity inside the canonical digest law, and covers every retained
+  consumer with no freeze-only exception. The old evidence root
+  `/home/hermes/is250-campaign/evidence/` is retained read-only as
+  historical failed-at-freeze evidence; dispatch `5862772797` is stale
+  at any later head. The next physical attempt requires a fresh sibling
+  evidence root (`evidence-v0-<NEW_HEAD_SHORT>` or equivalent), fresh
+  exact-head review, and a new dispatch.
+- `METHODOLOGY-AMENDMENT-005.md` — prior narrow repository-only V0 AMD
   adapter correction. Reuses #243 RADV + `GGML_VK_VISIBLE_DEVICES` binding
   on inferswarm05 and the exact #250 comparator observer binary; #250 Phase-0
   pinned-source law supplies ngl=1 output-vs-embedding placement while fresh

@@ -23,6 +23,7 @@ derives from one generator).
 """
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import sys
@@ -318,10 +319,25 @@ class CampaignFixture:
         }
         base = self.evidence / D.V0_NAMESPACE
         cards = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
+        # AMENDMENT-006: real-shape runtime identity. The live observation
+        # carries the physical int-keyed device map (as _v0_observe_device
+        # parses vulkaninfo); the retained binding below carries the
+        # JSON-round-tripped string-keyed canonical form.
+        device_identity = {
+            "vendor_id": "0x1002", "device_id": "0x6864",
+            "name": "AMD Radeon Pro V340 (RADV VEGA10)",
+            "driver_id": "DRIVER_ID_MESA_RADV",
+            "driver_info": "Mesa 25.0.7-2+deb13u1",
+            "driver_version": "25.0.7", "api_version": "1.4.305",
+        }
         live = {"index": 0, "vendor_id": "0x1002", "device_id": "0x6864",
                 "name": "AMD V340L synthetic", "vulkan_indices": [0, 1],
                 "enumeration_sha256": "a" * 64, "icd_sha256": "b" * 64,
-                "runtime_identity": {"kernel": "synthetic"},
+                "runtime_identity": {
+                    "kernel": "6.12.107+deb13u3-x",
+                    "vulkan_instance": "1.4.309",
+                    "devices": {0: copy.deepcopy(device_identity),
+                                1: copy.deepcopy(device_identity)}},
                 "drm_cards": cards, "binary_lib_dir": str(self.bin.parent)}
         binding = {"schema": P.V0_BINDING_SCHEMA,
                    "expected_pr_head": self.head, "host": "inferswarm05",
@@ -333,7 +349,8 @@ class CampaignFixture:
                    "binary_lib_dir": str(self.bin.parent),
                    "enumeration_sha256": live["enumeration_sha256"],
                    "icd_sha256": live["icd_sha256"],
-                   "runtime_identity": live["runtime_identity"],
+                   "runtime_identity": json.loads(json.dumps(
+                       live["runtime_identity"])),
                    "drm_cards": cards, "mapping": {}}
         for idx, selected in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
             excluded = next(b for b in cards if b != selected)

@@ -50,6 +50,29 @@ T = _load("issue250_terminal", "scripts/issue250_terminal.py")
 HEAD = "c" * 40
 TOKENS = [328, 760, 324, 55965, 51624, 29014, 34227, 18030]
 
+# AMENDMENT-006 fixtures: the real per-device identity structure emitted
+# by _v0_observe_device() on inferswarm05 (two RADV V340L dies), so the
+# runtime-identity JSON round trip is exercised with production shape,
+# not the historical {"kernel": "synthetic"} placeholder that let the
+# int/str device-map defect escape CI.
+V340L_DEVICE_IDENTITY = {
+    "vendor_id": "0x1002", "device_id": "0x6864",
+    "name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "driver_id": "DRIVER_ID_MESA_RADV",
+    "driver_info": "Mesa 25.0.7-2+deb13u1",
+    "driver_version": "25.0.7", "api_version": "1.4.305",
+}
+
+
+def make_runtime_identity(keys: type | tuple = int):
+    """Live-shaped runtime identity; keys=int mirrors the physical
+    vulkaninfo parse (0/1), keys=str mirrors a JSON-retained record."""
+    k0, k1 = ((0, 1) if keys is int else ("0", "1"))
+    return {"kernel": "6.12.107+deb13u3-x",
+            "vulkan_instance": "1.4.309",
+            "devices": {k0: copy.deepcopy(V340L_DEVICE_IDENTITY),
+                        k1: copy.deepcopy(V340L_DEVICE_IDENTITY)}}
+
 
 def make_authority(namespace="d250-arm-a", arm="A-vulkan-necessity",
                    head=HEAD, comment_id=1):
@@ -2609,7 +2632,7 @@ class V0ProducerAdmissionTests(unittest.TestCase):
                                      "vulkan_indices": [0, 1],
                                      "enumeration_sha256": "a" * 64,
                                      "icd_sha256": "b" * 64,
-                                     "runtime_identity": {"kernel": "synthetic"},
+                                     "runtime_identity": make_runtime_identity(int),
                                      "drm_cards": {"0000:07:00.0": "card1",
                                                    "0000:0b:00.0": "card2"}}
         binary_dir = self.root
@@ -2623,7 +2646,7 @@ class V0ProducerAdmissionTests(unittest.TestCase):
                    "binary_lib_dir": str(binary_dir),
                    "enumeration_sha256": "a" * 64,
                    "icd_sha256": "b" * 64,
-                   "runtime_identity": {"kernel": "synthetic"},
+                   "runtime_identity": make_runtime_identity(str),
                    "drm_cards": self.device(0)["drm_cards"],
                    "mapping": {}}
         for idx, selected in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
@@ -3069,6 +3092,349 @@ class V0ProducerAdmissionTests(unittest.TestCase):
                 revalidate_authority=self.authority,
                 device_observer=self.device)
 
+    def test_full_retained_freeze_path_over_int_keyed_observer(self):
+        """AMENDMENT-006 case F: the exact physical 028dce94 sequence.
+
+        Production-shaped preflight retention through
+        run_v0_binding_preflight (fake load-only probes) with a device
+        observer whose runtime_identity.devices uses INTEGER keys — the
+        raw _v0_observe_device shape that physically failed — then the
+        repository-only write_v0_screen_freeze() with a fresh equivalent
+        int-keyed observation, then run_v0_unit() under fake execution
+        (case G). At head 028dce94 the freeze step deterministically
+        raised 'digest/head/runtime identity mismatch'; the corrected
+        canonical comparison must authenticate the freeze, and the unit
+        consumer must reach the fake runner.
+        """
+        self._enable_cpu_fake_execution()
+        evidence = self.root / "phys-shape-evidence"
+        evidence.mkdir()
+        P.retain_cost_planning_record(evidence)
+        (evidence / P.MODEL_ATTESTATION_OPEN_NAME).write_text(
+            json.dumps({"model_dir": D.MODEL_DIR}))
+        authority = self.authority(self.repo, self.head, P.V0_NAMESPACE)
+
+        def int_key_observer(index):
+            return {"index": index, "vendor_id": "0x1002",
+                    "device_id": "0x6864", "name": "AMD test fixture",
+                    "vulkan_indices": [0, 1],
+                    "enumeration_sha256": "a" * 64,
+                    "icd_sha256": "b" * 64,
+                    "runtime_identity": make_runtime_identity(int),
+                    "drm_cards": {"0000:07:00.0": "card1",
+                                  "0000:0b:00.0": "card2"}}
+
+        def probe(binary, model, index, dies, directory):
+            selected = list(dies)[index]
+            return {"index": index,
+                    "vram_before": {b: 0 for b in dies},
+                    "vram_after": {b: (512 * 1024 * 1024 if b == selected
+                                       else 0) for b in dies},
+                    "process_attribution": {
+                        "server_exe_sha256": P.V0_COMPARATOR_SHA,
+                        "server_argv": P.v0_server_argv(binary, model),
+                        "server_env": {
+                            "VK_ICD_FILENAMES": P.V0_RADV_ICD,
+                            "GGML_VK_VISIBLE_DEVICES": str(index),
+                            "CUDA_VISIBLE_DEVICES": "-1",
+                            "LD_LIBRARY_PATH": str(self.root)}}}
+
+        with mock.patch.object(P, "require_live_dispatch",
+                               return_value=authority):
+            binding = P.run_v0_binding_preflight(
+                self.repo, evidence, binary=self.root / "bin",
+                model_dir=Path(D.MODEL_DIR), expected_head=self.head,
+                model_attestation={}, probe_load=probe,
+                device_observer=int_key_observer)
+        # the RETAINED bytes carry the canonical string-keyed identity
+        retained = json.loads(
+            (evidence / "v0-selector-binding.json").read_bytes())
+        self.assertEqual(sorted(retained["runtime_identity"]["devices"]),
+                         ["0", "1"])
+        self.assertEqual(retained["canonical_digest_sha256"],
+                         binding["canonical_digest_sha256"])
+
+        # THE physically failing step: freeze against a FRESH int-keyed
+        # live observation of the same substrate.
+        freeze = P.write_v0_screen_freeze(
+            self.repo, evidence, binary=self.root / "bin",
+            binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+            expected_head=self.head, model_attestation={},
+            revalidate_authority=self.authority,
+            device_observer=int_key_observer)
+        self.assertEqual(freeze["v0_screen_vulkan_index"], 0)
+        self.assertEqual(freeze["selector_binding_digest"],
+                         binding["canonical_digest_sha256"])
+
+        # Case G: the unit consumer's runtime-identity portion under fake
+        # execution — JSON-round-tripped binding vs fresh int-keyed live
+        # observation — reaches the runner and retains an authenticated
+        # receipt embedding both.
+        receipt = P.run_v0_unit(
+            self.repo, evidence, P.V0_NAMESPACE, P.V0_ARM,
+            P.V0_UNIT_TAGS[0], binary=self.root / "bin",
+            binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+            expected_head=self.head, model_attestation={},
+            execute=self.runner, revalidate_authority=self.authority,
+            vulkan_device_index=0, device_observer=int_key_observer)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(
+            sorted(receipt["v0_selector_binding"]["runtime_identity"][
+                "devices"]),
+            ["0", "1"])
+        self.assertEqual(
+            sorted(receipt["amd_device"]["runtime_identity"]["devices"],
+                   key=str),
+            [0, 1])
+        # and the retained rows/authenticate path re-validates the whole
+        # population through the same canonical comparison
+        rows = P._v0_retained_rows(evidence, 1, self.head, authority)
+        self.assertEqual(len(rows), 1)
+
+
+class V0RuntimeIdentityJSONStabilityTests(unittest.TestCase):
+    """AMENDMENT-006 regressions: the physical 028dce94 freeze failure.
+
+    The retained selector binding JSON-round-trips runtime_identity.devices
+    to string keys while _v0_observe_device() parsed integer keys; the old
+    raw-dict comparison then rejected every otherwise-identical identity
+    with 'digest/head/runtime identity mismatch'. These tests pin the
+    corrected canonical contract against that defect class.
+    """
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.head = "6" * 40
+        self.cards = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
+        self.live_identity = make_runtime_identity(int)
+        self.retained_identity = json.loads(json.dumps(self.live_identity))
+        self.live = {"index": 0, "vendor_id": "0x1002", "device_id": "0x6864",
+                     "name": V340L_DEVICE_IDENTITY["name"],
+                     "vulkan_indices": [0, 1],
+                     "enumeration_sha256": "a" * 64, "icd_sha256": "b" * 64,
+                     "runtime_identity": self.live_identity,
+                     "drm_cards": self.cards,
+                     "binary_lib_dir": str(self.root)}
+        self.record = {"schema": P.V0_BINDING_SCHEMA, "host": "inferswarm05",
+                       "producer": P.V0_BINDING_PRODUCER,
+                       "expected_pr_head": self.head,
+                       "source_pin": P.V0_SOURCE_PIN,
+                       "binary_sha256": P.V0_COMPARATOR_SHA,
+                       "binary_path": str(self.root / "llama-server"),
+                       "binary_lib_dir": str(self.root),
+                       "icd": P.V0_RADV_ICD, "cuda_visible_devices": "-1",
+                       "enumeration_sha256": self.live["enumeration_sha256"],
+                       "icd_sha256": self.live["icd_sha256"],
+                       "runtime_identity": self.retained_identity,
+                       "drm_cards": self.cards, "mapping": {}}
+        for idx, selected in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
+            excluded = next(b for b in self.cards if b != selected)
+            self.record["mapping"][str(idx)] = {
+                "selected_bdf": selected, "excluded_bdf": excluded,
+                "selected_card": self.cards[selected],
+                "excluded_card": self.cards[excluded],
+                "vram_before": {selected: 0, excluded: 0},
+                "vram_after": {selected: 512 * 1024 * 1024, excluded: 0}}
+        self.record["canonical_digest_sha256"] = P._v0_digest(self.record)
+
+    def validate(self, record=None, live=None, index=0):
+        return P.validate_v0_selector_binding(
+            self.record if record is None else record, self.head, index,
+            self.live if live is None else live, P.V0_COMPARATOR_SHA)
+
+    def test_retained_json_roundtrip_accepts_int_keyed_live(self):
+        """Primary old-defect regression (AMENDMENT-006 case A).
+
+        Production-shaped retention: the record (with the canonical
+        string-keyed identity) is written through P._write_json, re-read
+        through json.loads, and validated against a FRESH int-keyed
+        observation. Before the correction this failed with the exact
+        physical 'digest/head/runtime identity mismatch'.
+        """
+        target = self.root / "v0-selector-binding.json"
+        P._write_json(target, self.record)
+        retained = json.loads(target.read_bytes())
+        self.assertEqual(sorted(retained["runtime_identity"]["devices"]),
+                         ["0", "1"])
+        self.assertEqual(
+            sorted(self.live["runtime_identity"]["devices"], key=str),
+            [0, 1])
+        entry = self.validate(record=retained)
+        self.assertEqual(entry["selected_bdf"], "0000:07:00.0")
+        # index-1 live observation of the same substrate also validates
+        self.validate(record=retained,
+                      live={**self.live, "index": 1}, index=1)
+
+    def test_string_key_retained_equals_int_key_live(self):
+        """Case C: pure canonical-equality seam."""
+        self.assertEqual(
+            P._v0_normalize_runtime_identity(self.retained_identity),
+            P._v0_normalize_runtime_identity(self.live_identity))
+        self.validate()
+
+    def test_substantive_identity_drift_still_rejected(self):
+        """Case D: every identity-bearing field mutates independently."""
+        paths = [
+            ("kernel", lambda r: r["kernel"].__class__),
+            ("vulkan_instance", lambda r: r["vulkan_instance"].__class__),
+        ]
+        for field, _ in paths:
+            for target in ("record", "live"):
+                with self.subTest(field=field, target=target):
+                    if target == "record":
+                        bad = copy.deepcopy(self.record)
+                        bad["runtime_identity"][field] += "-drift"
+                        bad["canonical_digest_sha256"] = P._v0_digest(bad)
+                        subject, live = bad, self.live
+                    else:
+                        live = copy.deepcopy(self.live)
+                        live["runtime_identity"][field] += "-drift"
+                        subject, live = self.record, live
+                    with self.assertRaisesRegex(
+                            P.PhysicalDiagnosticError,
+                            "runtime identity mismatch"):
+                        self.validate(record=subject, live=live)
+        for field in ("vendor_id", "device_id", "name", "driver_id",
+                      "driver_info", "driver_version", "api_version"):
+            for device in ("0", "1"):
+                with self.subTest(field=field, device=device):
+                    bad = copy.deepcopy(self.record)
+                    bad["runtime_identity"]["devices"][device][field] += "X"
+                    bad["canonical_digest_sha256"] = P._v0_digest(bad)
+                    with self.assertRaisesRegex(
+                            P.PhysicalDiagnosticError,
+                            "runtime identity mismatch"):
+                        self.validate(record=bad)
+                    live = copy.deepcopy(self.live)
+                    live["runtime_identity"]["devices"][int(device)][
+                        field] += "X"
+                    with self.assertRaisesRegex(
+                            P.PhysicalDiagnosticError,
+                            "runtime identity mismatch"):
+                        self.validate(live=live)
+
+    def test_key_space_mutations_fail(self):
+        """Case E: only exactly {0,1}/{0,1}-spelled two-device maps pass."""
+        base = self.live_identity
+        variants = {
+            "only device 0": lambda i: i["devices"].pop(1),
+            "only device 1": lambda i: i["devices"].pop(0),
+            "extra device 2": lambda i: i["devices"].__setitem__(
+                2, copy.deepcopy(V340L_DEVICE_IDENTITY)),
+            "string key 00": lambda i: i["devices"].update({
+                "00": i["devices"].pop(0)}),
+            "float key 0.0": lambda i: i["devices"].update({
+                0.0: i["devices"].pop(0)}),
+            "boolean key": lambda i: i.__setitem__(
+                "devices", {True: copy.deepcopy(V340L_DEVICE_IDENTITY),
+                            "0": copy.deepcopy(V340L_DEVICE_IDENTITY)}),
+            "colliding 0 and 0-str": lambda i: i["devices"].update({
+                "0": copy.deepcopy(V340L_DEVICE_IDENTITY)}),
+            "malformed devices value": lambda i: i.__setitem__(
+                "devices", "not-a-map"),
+            "device entry not dict": lambda i: i["devices"].__setitem__(
+                0, "RADV"),
+            "device entry missing field": lambda i: i["devices"].__setitem__(
+                0, {k: v for k, v in V340L_DEVICE_IDENTITY.items()
+                    if k != "driver_info"}),
+            "device entry extra field": lambda i: i["devices"][0].update(
+                {"extra": "field"}),
+            "device field empty": lambda i: i["devices"][0].update(
+                {"name": ""}),
+            "kernel missing": lambda i: i.pop("kernel"),
+            "kernel not a string": lambda i: i.update(kernel=612),
+            "vulkan_instance missing": lambda i: i.pop("vulkan_instance"),
+            "extra top-level key": lambda i: i.update(host="inferswarm05"),
+            "not a dict": lambda i: i.clear(),
+        }
+        for name, mutate in variants.items():
+            with self.subTest(name=name):
+                identity = copy.deepcopy(base)
+                mutate(identity)
+                with self.assertRaises(P.PhysicalDiagnosticError):
+                    P._v0_normalize_runtime_identity(identity)
+        # canonical form is exactly the string-keyed two-device map
+        self.assertEqual(set(P._v0_normalize_runtime_identity(
+            self.live_identity)["devices"]), {"0", "1"})
+
+    def test_resubstantiated_binding_digest_intact(self):
+        """Case H: a re-digested mutated identity is internally valid but
+
+        still rejected — the canonical identity comparison, not digest
+        self-consistency, carries the authority here.
+        """
+        bad = copy.deepcopy(self.record)
+        bad["runtime_identity"]["devices"]["1"]["driver_version"] = "99.0"
+        bad["canonical_digest_sha256"] = P._v0_digest(bad)
+        self.assertEqual(bad["canonical_digest_sha256"], P._v0_digest(bad))
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                    "runtime identity mismatch"):
+            self.validate(record=bad)
+
+    def test_producer_observe_device_emits_canonical_string_keys(self):
+        """Case B: _v0_observe_device parsing with mocked vulkaninfo."""
+        vulkaninfo = "\n".join([
+            "Vulkan Instance Version: 1.4.309",
+            "",
+            "GPU0:",
+            "\tapiVersion         = 1.4.305",
+            "\tdriverVersion      = 25.0.7",
+            "\tvendorID           = 0x1002",
+            "\tdeviceID           = 0x6864",
+            "\tdeviceName         = AMD Radeon Pro V340 (RADV VEGA10)",
+            "\tdriverID           = DRIVER_ID_MESA_RADV",
+            "\tdriverInfo         = Mesa 25.0.7-2+deb13u1",
+            "",
+            "GPU1:",
+            "\tapiVersion         = 1.4.305",
+            "\tdriverVersion      = 25.0.7",
+            "\tvendorID           = 0x1002",
+            "\tdeviceID           = 0x6864",
+            "\tdeviceName         = AMD Radeon Pro V340 (RADV VEGA10)",
+            "\tdriverID           = DRIVER_ID_MESA_RADV",
+            "\tdriverInfo         = Mesa 25.0.7-2+deb13u1",
+            "",
+        ])
+        dies = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
+        fake_proc = mock.Mock(stdout=vulkaninfo, returncode=0)
+        with mock.patch.object(P.socket, "gethostname",
+                               return_value="inferswarm05"), \
+             mock.patch.object(P, "V0_RADV_ICD", "/tmp/fake-icd.json"), \
+             mock.patch.object(P.Path, "is_file", return_value=True), \
+             mock.patch.object(P.D, "file_sha256", return_value="e" * 64), \
+             mock.patch.object(P, "_v0_dies", return_value=dies), \
+             mock.patch.object(P.subprocess, "run", return_value=fake_proc), \
+             mock.patch("platform.release",
+                        return_value="6.12.107+deb13u3-x"):
+            observed = P._v0_observe_device(1)
+        # top-level live index and vulkan_indices stay integers
+        self.assertEqual(observed["index"], 1)
+        self.assertEqual(observed["vulkan_indices"], [0, 1])
+        # canonical device map: string keys exactly {"0", "1"}
+        devices = observed["runtime_identity"]["devices"]
+        self.assertEqual(set(devices), {"0", "1"})
+        self.assertTrue(all(isinstance(k, str) for k in devices))
+        self.assertEqual(devices["0"], V340L_DEVICE_IDENTITY)
+        self.assertEqual(devices["1"], V340L_DEVICE_IDENTITY)
+        self.assertEqual(observed["runtime_identity"]["vulkan_instance"],
+                         "1.4.309")
+        # JSON-stable from the outset: round-trip is a no-op
+        self.assertEqual(
+            json.loads(json.dumps(observed["runtime_identity"])),
+            observed["runtime_identity"])
+        # and the old-head defect shape is gone: a retained round-trip of
+        # this observation validates against the fresh observation
+        target = self.root / "observed.json"
+        P._write_json(target, {"runtime_identity":
+                               observed["runtime_identity"]})
+        reread = json.loads(target.read_bytes())
+        self.assertEqual(P._v0_normalize_runtime_identity(
+            reread["runtime_identity"]),
+            P._v0_normalize_runtime_identity(
+                observed["runtime_identity"]))
+
 
 class NoPhysicalExecutionTests(unittest.TestCase):
     """Zero-physical-execution proof (correction pass 2): the producer
@@ -3096,7 +3462,7 @@ class V0AMDAdapterTests(unittest.TestCase):
         self.live = {"index": 0, "vendor_id": "0x1002", "device_id": "0x6864",
                      "name": "synthetic V340L", "vulkan_indices": [0, 1],
                      "enumeration_sha256": "a" * 64, "icd_sha256": "b" * 64,
-                     "runtime_identity": {"kernel": "synthetic", "devices": {"0": "RADV"}},
+                     "runtime_identity": make_runtime_identity(int),
                      "drm_cards": self.cards, "binary_lib_dir": str(self.root)}
         self.record = {"schema": P.V0_BINDING_SCHEMA, "host": "inferswarm05",
                        "producer": P.V0_BINDING_PRODUCER,
@@ -3107,7 +3473,7 @@ class V0AMDAdapterTests(unittest.TestCase):
                        "cuda_visible_devices": "-1",
                        "enumeration_sha256": self.live["enumeration_sha256"],
                        "icd_sha256": self.live["icd_sha256"],
-                       "runtime_identity": self.live["runtime_identity"],
+                       "runtime_identity": make_runtime_identity(str),
                        "drm_cards": self.cards, "mapping": {}}
         for idx, a in ((0, "0000:07:00.0"), (1, "0000:0b:00.0")):
             b = next(b for b in self.cards if b != a)

@@ -295,6 +295,12 @@ V0_SOURCE_PIN = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
 V0_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
 V0_RADV_ICD = "/usr/share/vulkan/icd.d/radeon_icd.json"
 V0_BINDING_SCHEMA = "inferswarm.issue250.v0-selector-binding/1"
+# Identity-bearing device fields emitted by _v0_observe_device(). Every
+# canonical device entry must carry exactly these fields as non-empty
+# strings; a normalized identity never discards a field to pass equality.
+V0_DEVICE_IDENTITY_FIELDS = (
+    "vendor_id", "device_id", "name", "driver_id",
+    "driver_info", "driver_version", "api_version")
 V0_EXCLUDED_NOISE_BYTES = 64 * 1024 * 1024  # accepted #243 bound
 V0_MIN_SELECTED_BYTES = V0_EXCLUDED_NOISE_BYTES
 V0_BINDING_PRODUCER = "issue250_physical.py:v0-load-only-binding/1"
@@ -436,6 +442,73 @@ def _v0_vram(dies: dict[str, str]) -> dict[str, int]:
             for bdf, card in dies.items()}
 
 
+def _v0_normalize_runtime_identity(value: Any) -> dict[str, Any]:
+    """Canonical V0 runtime identity (METHODOLOGY-AMENDMENT-006 contract).
+
+    The raw-input boundary accepts exactly two Vulkan devices whose map
+    keys are integer 0/1 (as ``_v0_observe_device`` parses vulkaninfo) or
+    decimal strings "0"/"1" (as any JSON-retained record carries them
+    after ``json.loads``). The canonical representation always uses
+    string keys "0" and "1", so a retained record and a fresh live
+    observation compare equal exactly when their substantive identity
+    fields are equal — never on a Python int-vs-str serialization
+    accident. This is structural normalization at a single seam; the
+    serialized runtime identity remains inside the canonical binding
+    digest untouched (digest law unchanged).
+
+    Rejected: booleans/floats/other key types, alias or colliding
+    normalized keys ("00", 0.0, duplicate 0-and-"0"), missing or extra
+    device indices, malformed device objects, unknown structural
+    substitutions, and non-string/non-fields device values. Fail-closed
+    ``PhysicalDiagnosticError``; never coerces and never drops a field.
+    """
+    if not isinstance(value, dict):
+        raise PhysicalDiagnosticError("V0 runtime identity malformed")
+    kernel = value.get("kernel")
+    instance = value.get("vulkan_instance")
+    devices = value.get("devices")
+    if (set(value) != {"kernel", "vulkan_instance", "devices"}
+            or not isinstance(kernel, str) or not kernel
+            or not isinstance(instance, str) or not instance
+            or not isinstance(devices, dict)):
+        raise PhysicalDiagnosticError("V0 runtime identity malformed")
+    canonical: dict[str, Any] = {"kernel": kernel,
+                                 "vulkan_instance": instance, "devices": {}}
+    seen: set[str] = set()
+    for raw_key, entry in devices.items():
+        # Raw-input boundary: int 0/1 or decimal string "0"/"1" only.
+        # bool is an int subclass and is explicitly refused; floats,
+        # "00", " 0", "+0", "1.0" and any other alias fail the pattern.
+        if isinstance(raw_key, bool):
+            raise PhysicalDiagnosticError("V0 runtime identity device key "
+                                          "rejected (boolean)")
+        if isinstance(raw_key, int):
+            key = str(raw_key)
+        elif isinstance(raw_key, str) and re.fullmatch(r"[01]", raw_key):
+            key = raw_key
+        else:
+            raise PhysicalDiagnosticError("V0 runtime identity device key "
+                                          f"rejected: {raw_key!r}")
+        if key not in ("0", "1") or key in seen:
+            # A pre-normalized collision (e.g. 0 and "0", or two aliases
+            # of one index) means the map is not exactly two devices.
+            raise PhysicalDiagnosticError("V0 runtime identity duplicate or "
+                                          f"colliding device key: {key!r}")
+        if not isinstance(entry, dict) or set(entry) != set(
+                V0_DEVICE_IDENTITY_FIELDS) or any(
+                    not isinstance(entry[f], str) or not entry[f]
+                    for f in V0_DEVICE_IDENTITY_FIELDS):
+            raise PhysicalDiagnosticError("V0 runtime identity device entry "
+                                          f"malformed at index {key}")
+        seen.add(key)
+        canonical["devices"][key] = {f: entry[f]
+                                     for f in V0_DEVICE_IDENTITY_FIELDS}
+    if seen != {"0", "1"}:
+        raise PhysicalDiagnosticError("V0 runtime identity requires exactly "
+                                      "the two Vulkan device indices")
+    return canonical
+
+
 def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
                                  index: int, live: dict[str, Any],
                                  binary_sha: str, *,
@@ -445,9 +518,20 @@ def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
     Record is prospective load-only evidence, NOT fabricated by this
     repository-only pass. The selected index is never inferred from ordering.
     Live enumeration/DRM/driver identity must still match at launch.
+
+    Runtime identities are compared CANONICALLY (AMENDMENT-006): both the
+    retained record's and the live observation's runtime_identity are
+    normalized through _v0_normalize_runtime_identity, so a JSON-retained
+    ("0"/"1" string keys) record and a fresh _v0_observe_device (int keys)
+    observation compare on substantive identity only. Any kernel, Vulkan
+    instance, or per-device field drift still fails closed.
     """
     if not isinstance(record, dict) or record.get("schema") != V0_BINDING_SCHEMA:
         raise PhysicalDiagnosticError("V0 selector binding record missing")
+    canonical_record_identity = _v0_normalize_runtime_identity(
+        record.get("runtime_identity"))
+    canonical_live_identity = _v0_normalize_runtime_identity(
+        live.get("runtime_identity"))
     if (record.get("canonical_digest_sha256") != _v0_digest(record)
             or record.get("expected_pr_head") != expected_head
             or record.get("host") != "inferswarm05"
@@ -464,7 +548,7 @@ def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
             or record.get("binary_lib_dir") != live.get("binary_lib_dir")
             or record.get("enumeration_sha256") != live.get("enumeration_sha256")
             or record.get("icd_sha256") != live.get("icd_sha256")
-            or record.get("runtime_identity") != live.get("runtime_identity")
+            or canonical_record_identity != canonical_live_identity
             or record.get("drm_cards") != live.get("drm_cards")):
         raise PhysicalDiagnosticError("V0 selector binding digest/head/runtime identity mismatch")
     mapping = record.get("mapping")
@@ -909,7 +993,12 @@ def _v0_observe_device(index: int) -> dict[str, Any]:
     runtime = {"kernel": platform.release(),
                "vulkan_instance": (re.search(
                    r"Vulkan Instance Version:\s*(\S+)", result.stdout) or
-                   [None, ""])[1], "devices": devices}
+                   [None, ""])[1],
+               # AMENDMENT-006: canonical JSON-stable device map — string
+               # keys "0"/"1" from the outset, so the retained binding and
+               # any fresh observation are byte-equal after JSON retention.
+               # The live index and vulkan_indices above remain integers.
+               "devices": {str(i): entry for i, entry in devices.items()}}
     return {"index": index, **devices[index],
             "vulkan_indices": sorted(devices),
             "enumeration_sha256": D.sha256_bytes(result.stdout.encode()),
@@ -1143,7 +1232,11 @@ def run_v0_binding_preflight(repo_root: Path, evidence_root: Path, *,
               "icd": V0_RADV_ICD, "cuda_visible_devices": "-1",
               "enumeration_sha256": live["enumeration_sha256"],
               "icd_sha256": live["icd_sha256"],
-              "runtime_identity": live["runtime_identity"],
+              # AMENDMENT-006: retain the CANONICAL runtime identity, so
+              # the retained record equals its own JSON bytes regardless
+              # of the observer's device-map key spelling.
+              "runtime_identity": _v0_normalize_runtime_identity(
+                  live["runtime_identity"]),
               "drm_cards": live["drm_cards"], "mapping": mapping,
               "preflight_probe_sha256": {str(i): D.file_sha256(
                   probe_dir / f"index-{i}.json") for i in (0, 1)},
