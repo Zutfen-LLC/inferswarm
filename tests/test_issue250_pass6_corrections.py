@@ -287,7 +287,8 @@ class CostGateTests(unittest.TestCase):
             self.assertEqual(entry["min_units_to_establish_mismatch"],
                              TB.MIN_MISMATCH_UNITS)
             self.assertEqual(entry["units_for_deterministic_claim"],
-                             (TB.V0_SCREEN_MAX_UNITS if cond == TB.V0_CONDITION
+                             (TB.V0_SCREEN_MAX_UNITS
+                              if cond in (TB.V0_CONDITION, TB.V0N_CONDITION)
                               else TB.DETERMINISTIC_UNITS))
         # machine-checkable arithmetic (Arm A from the retained rate)
         a = conds["arm-a-cpu-only"]

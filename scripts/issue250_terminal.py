@@ -311,6 +311,95 @@ def verify_v0_historical_rows(contrast_root: Path, repo_root: Path
             "manifest_self_digest": D.ACCEPTED_248_MANIFEST_SELF_DIGEST,
             "result_head": D.ACCEPTED_248_RESULT_HEAD}
 
+
+def derive_v0n_state(evidence_root: Path, contrast_root: Path,
+                     repo_root: Path, expected_head: str, *,
+                     authority_fetcher: Any = None,
+                     github_api: str = "https://api.github.com"
+                     ) -> dict[str, Any]:
+    """Read-only V0n current-window NVIDIA reduction; no caller facts.
+
+    Custody chain before any comparison (mirrors derive_v0_state):
+      1. the retained #248 NVIDIA Vulkan ngl=1 rows are authenticated
+         (verify_v0_historical_rows: manifest, committed adjudication,
+         external bytes, per-receipt nvidia ICD env + -ngl 1 + CUDA off
+         + comparator SHA) — this is ALSO the proof that the retained
+         comparison rows are NVIDIA Vulkan ngl=1 evidence, not CUDA;
+      2. the V0n live dispatch authority is revalidated live;
+      3. the producer's exact retained-row custody validator
+         (_v0n_retained_rows) re-checks every retained NVIDIA unit;
+      4. every receipt's nvidia_device identity must equal the frozen
+         NVIDIA contract fields (single RTX 3060: vendor 0x10de,
+         device 0x2504, NVIDIA-proprietary driver) and its env must
+         carry the NVIDIA ICD with CUDA_VISIBLE_DEVICES=-1;
+      5. only then does the pure reducer compare FULL 993280-byte rows
+         against the AMD current-window row digest and BOTH retained
+         #248 NVIDIA rows.
+
+    No Issue #250 terminal and no A-eligibility can be emitted here:
+    the result always carries terminal=None and a_eligible=False.
+    """
+    invalid = {"state": D.V0N_STATE_INVALID, "valid": False,
+               "terminal": None, "a_eligible": False}
+    try:
+        history = verify_v0_historical_rows(Path(contrast_root),
+                                            Path(__file__).resolve().parents[1])
+        authority = P.require_live_dispatch(
+            Path(repo_root), expected_head, D.V0N_NAMESPACE,
+            revalidate_authority=authority_fetcher, github_api=github_api)
+        root = Path(evidence_root) / D.V0N_NAMESPACE
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError("V0n namespace missing or symlink")
+        tags = [p.name for p in root.iterdir() if p.is_dir() or p.is_symlink()]
+        if (len(tags) not in (2, 3)
+                or set(tags) != set(D.V0N_UNIT_TAGS[:len(tags)])):
+            raise ValueError("V0n requires a contiguous two/three-unit prefix")
+        P._v0n_retained_rows(Path(evidence_root), len(tags), expected_head,
+                             authority)
+        nvidia_rows = []
+        pids = set()
+        for tag in D.V0N_UNIT_TAGS[:len(tags)]:
+            unit = root / tag
+            if unit.is_symlink():
+                raise ValueError("V0n unit symlink")
+            receipt_path, row_path = unit / "unit.json", unit / "obs.row0.f32"
+            if receipt_path.is_symlink() or row_path.is_symlink():
+                raise ValueError("V0n retained file symlink")
+            rec = json.loads(receipt_path.read_bytes())
+            device = rec.get("nvidia_device", {})
+            env = rec.get("server_env", {})
+            if (device.get("vendor_id") != P.V0N_GPU_VENDOR_ID
+                    or device.get("device_id") != P.V0N_GPU_DEVICE_ID
+                    or device.get("driver_id") != P.V0N_DRIVER_ID
+                    or device.get("index") != 0
+                    or rec.get("selected_gpu") not in (None,)
+                    or env.get("VK_ICD_FILENAMES") != P.V0N_NVIDIA_ICD
+                    or env.get("CUDA_VISIBLE_DEVICES") != "-1"
+                    or env.get("GGML_VK_VISIBLE_DEVICES") != "0"):
+                raise ValueError(
+                    f"V0n device/backend identity mismatch: {tag}")
+            row = row_path.read_bytes()
+            if len(row) != D.ROW_BYTES:
+                raise ValueError("V0n full row width mismatch")
+            pid = rec.get("server_pid")
+            if (type(pid) is not int or pid <= 0 or pid in pids):
+                raise ValueError("V0n fresh-process PID custody mismatch")
+            pids.add(pid)
+            nvidia_rows.append(row)
+        result = D.reduce_v0n_screen(
+            nvidia_rows, D.V0N_AMD_CURRENT_ROW0_SHA256, history["row_sha256"])
+        result["historical_provenance"] = {
+            k: v for k, v in history.items() if k != "prompt_token_ids"}
+        result["amd_current_row0_sha256"] = D.V0N_AMD_CURRENT_ROW0_SHA256
+        result["v0n_authority_sha256"] = D.authority_digest(authority)
+        result["terminal"] = None
+        result["a_eligible"] = False
+        return result
+    except (OSError, ValueError, KeyError, TypeError, IndexError,
+            __import__("subprocess").CalledProcessError, json.JSONDecodeError,
+            D.DiagnosticError, P.PhysicalDiagnosticError) as exc:
+        return dict(invalid, reason=str(exc))
+
 # Sequential arm ladder (namespace, arm) in reachability order.
 # AMENDMENT-003: Arm C is split — d250-arm-c (default reproduction
 # pair) feeds d250-arm-c1 (the bounded reduced-parallelism probe).

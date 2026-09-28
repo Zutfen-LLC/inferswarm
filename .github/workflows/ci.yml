@@ -526,7 +526,7 @@ jobs:
         # Issue #248 R8-I3A diagnostic tooling joins this group.
         # Issue #250 R8-I3B: diagnostic spine + physical producer +
         # retained-byte terminal reducer (correction pass 2).
-        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue248_diagnostic tests.test_issue250_diagnostic tests.test_issue250_physical tests.test_issue250_terminal tests.test_issue250_pass6_corrections -v
+        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue248_diagnostic tests.test_issue250_diagnostic tests.test_issue250_physical tests.test_issue250_terminal tests.test_issue250_v0n_nvidia tests.test_issue250_pass6_corrections -v
 
   r8-qwen-lineage:
     name: Group r8-qwen-lineage

@@ -117,6 +117,7 @@
     "test_issue250_diagnostic",
     "test_issue250_physical",
     "test_issue250_terminal",
+    "test_issue250_v0n_nvidia",
     "test_issue250_pass6_corrections"
    ]
   },
@@ -1534,6 +1535,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue250_terminal.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_v0n_nvidia.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

@@ -94,6 +94,61 @@ V0_SCREEN_MIN_UNITS = 2
 V0_SCREEN_MAX_UNITS = 3
 V0_COST_CEILING_S = 43200.0
 
+# Prospective V0n NVIDIA RTX 3060 Vulkan current-window screen
+# (Issue #250 METHODOLOGY-AMENDMENT-007, 2026-09-28). Follows the
+# completed V0 AMD screen's cost law exactly (same prompt, same
+# bounded 2-then-3 screen, same conservative planning proxy and
+# ceiling). Independent condition: never inherits V0/A-D
+# authorization, cost facts, or the completed AMD dispatch.
+V0N_NAMESPACE = "d250-arm-v0n-nvidia"
+V0N_ARM = "V0n-nvidia-vulkan-current"
+V0N_CONDITION = "arm-v0n-nvidia-vulkan"
+V0N_PROMPT_TOKENS = V0_PROMPT_TOKENS
+V0N_PLANNING_RATE_TOKENS_PER_S = 2.25  # conservative retained v1 CPU proxy; NOT measured NVIDIA
+V0N_PLANNING_RATE_BASIS = (
+    "prospective_conservative_v1_cpu_2p25_proxy_not_measured_nvidia")
+V0N_STARTUP_MARGIN_S = V0_STARTUP_MARGIN_S
+V0N_SAFETY_FACTOR = V0_SAFETY_FACTOR
+V0N_MAX_TIMEOUT_S = V0_MAX_TIMEOUT_S
+V0N_MIN_TIMEOUT_S = V0_MIN_TIMEOUT_S
+V0N_SCREEN_MIN_UNITS = 2
+V0N_SCREEN_MAX_UNITS = 3
+V0N_COST_CEILING_S = V0_COST_CEILING_S
+
+
+def v0n_cost_record(prompt_tokens: int = V0N_PROMPT_TOKENS) -> dict[str, Any]:
+    """Frozen prospective V0n cost only; authorizes no execution."""
+    if type(prompt_tokens) is not int or prompt_tokens <= 0:
+        raise TimeoutBudgetError("malformed V0n planning inputs")
+    per_unit = math.ceil(prompt_tokens / V0N_PLANNING_RATE_TOKENS_PER_S
+                         * V0N_SAFETY_FACTOR + V0N_STARTUP_MARGIN_S)
+    return {"namespace": V0N_NAMESPACE, "arm": V0N_ARM,
+            "condition": V0N_CONDITION, "prompt_tokens": prompt_tokens,
+            "planning_rate_tokens_per_s": V0N_PLANNING_RATE_TOKENS_PER_S,
+            "planning_rate_basis": V0N_PLANNING_RATE_BASIS,
+            "min_screen_units": V0N_SCREEN_MIN_UNITS,
+            "max_screen_units": V0N_SCREEN_MAX_UNITS,
+            "estimated_seconds_per_unit": per_unit,
+            "two_unit_cost_s": per_unit * 2,
+            "three_unit_cost_s": per_unit * 3,
+            "cost_ceiling_s": V0N_COST_CEILING_S,
+            "auto_execution_authorized": False}
+
+
+def v0n_request_timeout(prompt_tokens: int = V0N_PROMPT_TOKENS) -> dict[str, Any]:
+    """Compute the V0n per-request budget without granting dispatch authority."""
+    record = v0n_cost_record(prompt_tokens)
+    raw = record["estimated_seconds_per_unit"]
+    if raw > V0N_MAX_TIMEOUT_S:
+        raise TimeoutBudgetError("V0n request exceeds frozen timeout ceiling")
+    budget = min(max(raw, V0N_MIN_TIMEOUT_S), V0N_MAX_TIMEOUT_S)
+    return {"schema": SCHEMA, "namespace": V0N_NAMESPACE, "arm": V0N_ARM,
+            "condition": V0N_CONDITION, "expected_prompt_tokens": prompt_tokens,
+            "planning_rate_tokens_per_s": V0N_PLANNING_RATE_TOKENS_PER_S,
+            "rate_basis_id": V0N_PLANNING_RATE_BASIS,
+            "budget_s": budget, "max_timeout_s": V0N_MAX_TIMEOUT_S,
+            "auto_execution_authorized": False}
+
 
 def v0_cost_record(prompt_tokens: int = V0_PROMPT_TOKENS) -> dict[str, Any]:
     """Frozen prospective cost only; this does not authorize execution."""
@@ -181,6 +236,11 @@ TIMEOUT_BASIS = {
         "basis": V0_PLANNING_RATE_BASIS,
         "measured": False,
     },
+    "v0n-nvidia-vulkan": {
+        "rate_tokens_per_s": V0N_PLANNING_RATE_TOKENS_PER_S,
+        "basis": V0N_PLANNING_RATE_BASIS,
+        "measured": False,
+    },
     "cpu-only-default-threads": {
         "rate_tokens_per_s": 2.25,
         "basis": "retained_v1_failed_unit_server_log",
@@ -255,9 +315,9 @@ DETERMINISTIC_UNITS = 5         # DETERM_MIN_REPEATS mirror
 # projects ~9.3 h; the serial regime projects ~29.3 h).
 CAMPAIGN_COST_CEILING_S = 43200.0
 
-COST_CONDITIONS = (V0_CONDITION, "arm-a-cpu-only", "arm-b-fresh", "arm-b-sameproc",
-                   "arm-c-default", "arm-c1-reduced", "arm-c2-serial",
-                   "arm-d-accepted-placement")
+COST_CONDITIONS = (V0_CONDITION, V0N_CONDITION, "arm-a-cpu-only", "arm-b-fresh",
+                   "arm-b-sameproc", "arm-c-default", "arm-c1-reduced",
+                   "arm-c2-serial", "arm-d-accepted-placement")
 
 # The predeclared C1 thread regime: ONE intermediate regime
 # substantially below the accepted default 14 threads, frozen BEFORE
@@ -271,6 +331,7 @@ ARM_C2_ARGV_DELTA = ("-t", "1", "-tb", "1")
 # conditions fail closed.
 CONDITION_RATE_BASIS = {
     V0_CONDITION: "v0-amd-vulkan",
+    V0N_CONDITION: "v0n-nvidia-vulkan",
     "arm-a-cpu-only": "cpu-only-default-threads",
     "arm-b-fresh": "cpu-only-default-threads",
     "arm-b-sameproc": "cpu-only-default-threads",
@@ -283,6 +344,7 @@ CONDITION_RATE_BASIS = {
 # FROZEN DISPOSITIONS (the cost gate's authority content).
 COST_DISPOSITIONS = {
     V0_CONDITION: "authorized_by_v0_dispatch",
+    V0N_CONDITION: "authorized_by_v0n_dispatch",
     "arm-a-cpu-only": "authorized_by_pass6_dispatch",
     "arm-b-fresh": "conditional_not_dispatched",
     "arm-b-sameproc": "conditional_not_dispatched",
@@ -301,6 +363,7 @@ COST_DISPOSITIONS = {
 # d250-arm-c2 namespace can ever authorize serial execution.
 CONDITION_NAMESPACE = {
     V0_CONDITION: (V0_NAMESPACE, V0_ARM),
+    V0N_CONDITION: (V0N_NAMESPACE, V0N_ARM),
     "arm-a-cpu-only": ("d250-arm-a", "A-vulkan-necessity"),
     "arm-b-fresh": ("d250-arm-b", "B-process-init"),
     "arm-b-sameproc": ("d250-arm-b", "B-process-init"),
@@ -364,6 +427,22 @@ def cost_planning_record(
                 "units_for_deterministic_claim": V0_SCREEN_MAX_UNITS,
                 "estimated_min_mismatch_cost_s": v0["two_unit_cost_s"],
                 "estimated_deterministic_proof_cost_s": v0["three_unit_cost_s"],
+                "disposition": COST_DISPOSITIONS[condition],
+            }
+            continue
+        if condition == V0N_CONDITION:
+            v0n = v0n_cost_record(prompt_tokens)
+            conditions[condition] = {
+                "prompt_tokens": prompt_tokens,
+                "planning_rate_tokens_per_s": V0N_PLANNING_RATE_TOKENS_PER_S,
+                "planning_rate_basis_key": "v0n-nvidia-vulkan",
+                "planning_rate_basis": V0N_PLANNING_RATE_BASIS,
+                "planning_rate_measured": False,
+                "estimated_seconds_per_unit": v0n["estimated_seconds_per_unit"],
+                "min_units_to_establish_mismatch": V0N_SCREEN_MIN_UNITS,
+                "units_for_deterministic_claim": V0N_SCREEN_MAX_UNITS,
+                "estimated_min_mismatch_cost_s": v0n["two_unit_cost_s"],
+                "estimated_deterministic_proof_cost_s": v0n["three_unit_cost_s"],
                 "disposition": COST_DISPOSITIONS[condition],
             }
             continue
@@ -483,7 +562,8 @@ def evaluate_cost_gate(condition: str,
             f"{condition}: {entry['disposition']!r}")
     namespace, arm = condition_namespace(condition)
     auto_reachable = entry["disposition"] in (
-        "authorized_by_pass6_dispatch", "authorized_by_v0_dispatch")
+        "authorized_by_pass6_dispatch", "authorized_by_v0_dispatch",
+        "authorized_by_v0n_dispatch")
     over_ceiling = (entry["estimated_deterministic_proof_cost_s"]
                     > CAMPAIGN_COST_CEILING_S)
     return {

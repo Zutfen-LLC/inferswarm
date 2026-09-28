@@ -220,6 +220,111 @@ V0_STATE_DISAGREEMENT_STOP = "CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED"
 V0_STATE_INVALID = "V0_INVALID_BLOCKED"
 V0_ROW_SLOT = 0
 
+# ---------------------------------------------------------------------------
+# Issue #250 V0n — prospective current-window NVIDIA RTX 3060 Vulkan
+# screen (METHODOLOGY-AMENDMENT-007). Follows the COMPLETED V0 AMD screen
+# (CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED under dispatch 5868617068 at
+# head c5cc132..., evidence root evidence-v0-c5cc132): three fresh-process
+# AMD/RADV repeats were byte-identical yet differed from BOTH retained
+# #248 NVIDIA Vulkan ngl=1 rows. V0n answers, before any CPU Arm A
+# spend, whether a CURRENT freshly dispatched NVIDIA Vulkan condition
+# is (a) still fresh-process variable, (b) repeat-stable and different
+# from the AMD current-window row, (c) repeat-stable and byte-equal to
+# the AMD current-window row, or (d) reproduces retained #248 rows.
+# It decides NO vendor's numerical authority, emits NO Issue #250
+# terminal, and grants NO Arm A eligibility.
+# ---------------------------------------------------------------------------
+V0N_SCHEMA = "inferswarm.issue250.v0n-screen/1"
+V0N_NAMESPACE = "d250-arm-v0n-nvidia"  # shared with physical producer
+V0N_ARM = "V0n-nvidia-vulkan-current"
+V0N_UNIT_TAGS = tuple(f"case-3072-V0n-nvidia-vulkan-{i:03d}"
+                      for i in range(1, 4))
+# The AMD current-window comparison row: the decision-0 row digest shared
+# by all three retained fresh-process repeats of the completed V0 screen
+# (read-only comparison input; the physical bytes remain retained under
+# the completed AMD evidence root, which no V0n execution may touch).
+V0N_AMD_CURRENT_ROW0_SHA256 = (
+    "2187ab8f444e726b9a34d9874499603446a23efdd7943e8330286e223938fb41")
+V0N_STATE_NVIDIA_VARIABLE_STOP = "CURRENT_NVIDIA_VARIABLE_STOP"
+V0N_STATE_IDENTICAL_PAIR_NEEDS_THIRD = "V0N_IDENTICAL_PAIR_THIRD_REQUIRED"
+V0N_STATE_CONCORDANCE_STOP = "CURRENT_CROSS_VENDOR_CONCORDANCE_STOP"
+V0N_STATE_STABLE_DISAGREEMENT_STOP = (
+    "CURRENT_CROSS_VENDOR_STABLE_DISAGREEMENT_STOP")
+V0N_STATE_INVALID = "CURRENT_NVIDIA_INVALID_BLOCKED"
+
+
+def _v0n_row_class(digest: str, amd_sha: str,
+                   retained: tuple[str, ...]) -> dict[str, Any]:
+    """Per-row novel/equality facts; never a validity or authority fact."""
+    return {"row_sha256": digest,
+            "equals_amd_current": digest == amd_sha,
+            "equals_retained_nvidia_index": (
+                retained.index(digest) if digest in retained else None),
+            "novel": digest != amd_sha and digest not in retained}
+
+
+def reduce_v0n_screen(nvidia_rows: list[bytes],
+                      amd_current_sha: str,
+                      retained_nvidia_shas: tuple[str, ...]
+                      ) -> dict[str, Any]:
+    """Pure full-byte current-window NVIDIA comparison (AMENDMENT-007).
+
+    Predeclared interpretation law (never a terminal, never A-eligibility):
+
+    * first two full rows differ -> CURRENT_NVIDIA_VARIABLE_STOP (the
+      screen STOPS; per-row equality with the AMD current row and the
+      retained #248 rows is REPORTED, never interpreted as cause);
+    * first two identical, only two retained -> third required;
+    * three identical and equal to the AMD current-window row ->
+      CURRENT_CROSS_VENDOR_CONCORDANCE_STOP (stronger current-window
+      concordance; #248 remains historical evidence of prior NVIDIA
+      variability; maintainer reconciliation of changed runtime state);
+    * three identical and different from the AMD row ->
+      CURRENT_CROSS_VENDOR_STABLE_DISAGREEMENT_STOP (no vendor judged);
+    * a third row executed after a mismatched first pair, or any
+      unverified/incomplete population -> V0N_INVALID_BLOCKED.
+
+    A variable population stays VARIABLE_STOP even when one of its rows
+    happens to equal the AMD row or a retained #248 row.
+    """
+    invalid = {"state": V0N_STATE_INVALID, "valid": False,
+               "terminal": None, "a_eligible": False}
+    if (type(nvidia_rows) is not list or len(nvidia_rows) not in (2, 3)
+            or any(type(row) is not bytes or len(row) != ROW_BYTES
+                   for row in nvidia_rows)
+            or amd_current_sha != V0N_AMD_CURRENT_ROW0_SHA256
+            or retained_nvidia_shas != V0_NVIDIA_ROW0_SHA256):
+        return dict(invalid, reason="unverified or incomplete full-row population")
+    rows = [row_digest(row) for row in nvidia_rows]
+    if rows[0] != rows[1]:
+        if len(rows) != 2:
+            return dict(invalid, reason="third row executed after first mismatch")
+        return {"state": V0N_STATE_NVIDIA_VARIABLE_STOP, "valid": True,
+                "terminal": None, "a_eligible": False,
+                "maintainer_stop": True, "nvidia_rows": rows,
+                "row_classes": [_v0n_row_class(r, amd_current_sha,
+                                               retained_nvidia_shas)
+                                for r in rows]}
+    if len(rows) == 2:
+        return {"state": V0N_STATE_IDENTICAL_PAIR_NEEDS_THIRD,
+                "valid": True, "terminal": None, "a_eligible": False,
+                "third_required": True, "nvidia_rows": rows}
+    if rows[2] != rows[0]:
+        return {"state": V0N_STATE_NVIDIA_VARIABLE_STOP, "valid": True,
+                "terminal": None, "a_eligible": False,
+                "maintainer_stop": True, "nvidia_rows": rows,
+                "row_classes": [_v0n_row_class(r, amd_current_sha,
+                                               retained_nvidia_shas)
+                                for r in rows]}
+    matched_amd = rows[0] == amd_current_sha
+    matched_retained = rows[0] in retained_nvidia_shas
+    return {"state": (V0N_STATE_CONCORDANCE_STOP if matched_amd else
+                      V0N_STATE_STABLE_DISAGREEMENT_STOP),
+            "valid": True, "terminal": None, "a_eligible": False,
+            "maintainer_stop": True, "nvidia_rows": rows,
+            "matched_amd_current": matched_amd,
+            "matched_retained_nvidia": matched_retained}
+
 
 def reduce_v0_screen(amd_rows: list[bytes],
                      nvidia_rows: tuple[str, str]) -> dict[str, Any]:

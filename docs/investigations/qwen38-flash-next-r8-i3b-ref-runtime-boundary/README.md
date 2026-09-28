@@ -5,9 +5,11 @@ Option-1 follow-up to the accepted Issue #248 terminal
 `bc71774`; result head `a2cf9f33d1a056f2eef062b4186c078262e66f63`,
 adjudication comment `5838156612`, retained external 534-row SHA256SUMS
 self-digest `af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc`).
-STATUS: **Phase 0 complete; V0-first issue amendment recorded by maintainer
-comment 5857136762; Arm-C authority corrected in AMENDMENT-004
-(2026-09-27); no physical work is authorized here.** The first v1
+STATUS: **Phase 0 complete; V0 AMD screen COMPLETE (dispatch 5868617068
+at head c5cc132: CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED, maintainer
+stop); V0n NVIDIA current-window leg prepared by AMENDMENT-007 and
+AWAITING fresh exact-head maintainer review + dispatch; no physical
+work is authorized here.** The first v1
 Arm-A attempt failed and is retained read-only; no physical execution
 under this correction is authorized by issue creation or these docs.
 
@@ -112,6 +114,27 @@ Contents:
   load-only binding and V0 units still require independent fresh exact-head
   dispatch and retained cost/model authority. No `--device VulkanN` or
   per-tensor log observer is invented.
+- `METHODOLOGY-AMENDMENT-007.md` — prospective current-window NVIDIA
+  RTX 3060 Vulkan `ngl=1` comparison leg (V0n, namespace
+  `d250-arm-v0n-nvidia` / arm `V0n-nvidia-vulkan-current`), frozen
+  BEFORE any NVIDIA execution following the completed AMD V0 screen
+  (three byte-identical fresh-process AMD rows ≠ both retained #248
+  NVIDIA Vulkan rows → CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED).
+  Distinguishes current NVIDIA variability from stable cross-vendor
+  Vulkan difference before any CPU Arm A spend. Vulkan-only (NVIDIA
+  ICD + `GGML_VK_VISIBLE_DEVICES=0` + `CUDA_VISIBLE_DEVICES=-1` +
+  link-family CUDA exclusion); same model/prompt/request/binary/seam/
+  placement as V0; same 2-then-conditional-third screen law; four
+  prospective states (CURRENT_NVIDIA_VARIABLE_STOP /
+  CURRENT_CROSS_VENDOR_CONCORDANCE_STOP /
+  CURRENT_CROSS_VENDOR_STABLE_DISAGREEMENT_STOP /
+  CURRENT_NVIDIA_INVALID_BLOCKED), none a terminal, none A-eligibility.
+  Retains the mechanical proof that the consumed #248 rows are NVIDIA
+  Vulkan `ngl=1` evidence (nvidia ICD env + CUDA removed + `-ngl 1` +
+  comparator SHA), never CUDA rows. Stale dispatches 5852485456,
+  5862772797, and the completed AMD 5868617068 are hard-refused.
+  Future evidence root: `evidence-v0n-nvidia-<HEAD_SHORT>/` sibling.
+  Authorizes nothing; repository-only.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

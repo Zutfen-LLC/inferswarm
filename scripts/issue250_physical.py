@@ -324,6 +324,36 @@ V0_OBSERVER_LIBS = {
     "libggml-vulkan.so.0": "df589e63511f8154e14ee19be14d5e20e573b81f3b518c7a8eb10d1b1a85e7fe",
 }
 
+# ---------------------------------------------------------------------------
+# Issue #250 V0n — prospective current-window NVIDIA RTX 3060 Vulkan screen
+# (METHODOLOGY-AMENDMENT-007). Same frozen model, prompt, request, llama.cpp
+# source/build family, observation seam, Vulkan backend and ngl=1 placement
+# intent as the completed V0 AMD screen — but on the NVIDIA RTX 3060 that
+# produced the retained #248 rows (inferswarm01), under a SEPARATE exact-head
+# dispatch for the V0n namespace/arm. CUDA is excluded mechanically (env +
+# ICD + link family); a CUDA-active or CUDA-fallback execution fails closed.
+# ---------------------------------------------------------------------------
+V0N_NAMESPACE = D.V0N_NAMESPACE
+V0N_ARM = D.V0N_ARM
+V0N_UNIT_TAGS = D.V0N_UNIT_TAGS
+V0N_PLACEMENT_BACKEND = "Vulkan"
+V0N_PLACEMENT_EMBEDDING = "CPU"
+V0N_PLACEMENT_OUTPUT_PROJECTION = "Vulkan"
+V0N_SOURCE_PIN = D.LLAMA_PIN
+V0N_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
+V0N_NVIDIA_ICD = "/usr/share/vulkan/icd.d/nvidia_icd.json"
+V0N_HOST = "inferswarm01"
+V0N_GPU_VENDOR_ID = "0x10de"
+V0N_GPU_DEVICE_ID = "0x2504"          # GA106 [GeForce RTX 3060 Lite Hash Rate]
+V0N_GPU_NAME = "NVIDIA GeForce RTX 3060"
+V0N_DRIVER_ID = "DRIVER_ID_NVIDIA_PROPRIETARY"
+V0N_MIN_RESIDENCY_BYTES = 64 * 1024 * 1024  # ngl=1 output-layer residency bound
+# Every stale #250 dispatch comment ID that must NEVER authorize a V0n unit:
+# 5852485456/5862772797 (superseded correction heads), 5868617068 (completed
+# AMD V0 dispatch — AMD-only authority, consumed at its own head).
+V0N_STALE_DISPATCH_COMMENT_IDS = frozenset({
+    5852485456, 5862772797, 5868617068})
+
 
 def v0_probe_plan() -> list[dict[str, Any]]:
     """Return the immutable AMD screen order: two, third only conditionally.
@@ -1134,6 +1164,502 @@ def _v0_probe_load(binary: Path, model_member: Path, index: int,
                     proc.wait(timeout=5)
 
 
+def v0n_probe_plan() -> list[dict[str, Any]]:
+    """Immutable V0n NVIDIA current-window screen order: two, third conditional.
+
+    Same bounded screen structure as the V0 AMD screen (AMENDMENT-007):
+    minimum first pair, third ONLY after a byte-identical first pair,
+    stop on first mismatch. Pure plan; carries no dispatch authority.
+    """
+    return [{"tag": tag, "arm": V0N_ARM, "namespace": V0N_NAMESPACE,
+             "fresh_process": True, "ngl": 1,
+             "backend": V0N_PLACEMENT_BACKEND,
+             "embedding_placement": V0N_PLACEMENT_EMBEDDING,
+             "output_projection_placement": V0N_PLACEMENT_OUTPUT_PROJECTION,
+             "screen_index": i, "minimum_first": 2,
+             "third_if_first_two_identical": True,
+             "stop_on_first_mismatch": True}
+            for i, tag in enumerate(V0N_UNIT_TAGS, 1)]
+
+
+def validate_v0n_dispatch(namespace: str, arm: str,
+                          authority: dict[str, Any],
+                          expected_head: str | None = None
+                          ) -> dict[str, Any]:
+    """Validate V0n dispatch as an isolated exact namespace/arm authority.
+
+    Mirrors validate_v0_dispatch with the NVIDIA-current binding, and
+    additionally refuses the known stale #250 dispatch comment IDs
+    (including the completed AMD V0 dispatch) — a completed or
+    superseded dispatch can never authorize a V0n unit.
+    """
+    if namespace != V0N_NAMESPACE or arm != V0N_ARM:
+        raise PhysicalDiagnosticError(
+            "V0n dispatch requires its exact NVIDIA namespace and arm")
+    if not isinstance(authority, dict):
+        raise PhysicalDiagnosticError("V0n dispatch authority is missing")
+    if (authority.get("namespace") != V0N_NAMESPACE
+            or authority.get("arm") != V0N_ARM):
+        raise PhysicalDiagnosticError("V0n dispatch authority mismatch")
+    body = authority.get("body")
+    if not isinstance(body, str):
+        raise PhysicalDiagnosticError("V0n dispatch body is missing")
+    lines = [line.strip() for line in body.splitlines()]
+    if (f"diagnostic-namespace={V0N_NAMESPACE}" not in lines
+            or f"arm={V0N_ARM}" not in lines
+            or sum(x.startswith("diagnostic-namespace=") for x in lines) != 1
+            or sum(x.startswith("arm=") for x in lines) != 1
+            or lines.count(D.DIAGNOSTIC_DISPATCH_PHRASE) != 1):
+        raise PhysicalDiagnosticError("V0n dispatch body binding mismatch")
+    head = authority.get("head_sha")
+    if expected_head is not None and head != expected_head:
+        raise PhysicalDiagnosticError("V0n dispatch stale exact head")
+    if (not isinstance(head, str) or len(head) != 40
+            or any(ch not in "0123456789abcdef" for ch in head)
+            or authority.get("author_association") not in {"OWNER", "MEMBER"}
+            or authority.get("open_pr") is not True
+            or authority.get("issue_open") is not True
+            or type(authority.get("comment_id")) is not int
+            or authority["comment_id"] <= 0
+            or authority["comment_id"] in V0N_STALE_DISPATCH_COMMENT_IDS
+            or authority["comment_id"] == D.STALE_DISPATCH_COMMENT_ID
+            or f"head={head}" not in lines
+            or sum(x.startswith("head=") for x in lines) != 1
+            or authority.get("issue_url") !=
+               f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}"
+            or not re.fullmatch(
+                r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z",
+                str(authority.get("created_at", "")))):
+        raise PhysicalDiagnosticError("V0n dispatch payload invalid")
+    return dict(authority)
+
+
+def v0n_server_argv(binary: Path, model_member: Path,
+                    port: int = PORT) -> list[str]:
+    """The frozen ordinary V0n argv — IDENTICAL law to the V0 AMD argv.
+
+    Device selection is ONLY in the environment (NVIDIA ICD + visible
+    devices); no CUDA flag, no --device flag, no per-vendor argv drift.
+    """
+    return [str(binary), "--model", str(model_member), "-ngl", "1",
+            "--ctx-size", str(SERVER_CTX_SIZE),
+            "--batch-size", str(SERVER_BATCH_SIZE),
+            "--host", "127.0.0.1", "--port", str(port)]
+
+
+def v0n_environment(unit_dir: Path) -> dict[str, str]:
+    """Frozen V0n NVIDIA Vulkan environment: NVIDIA ICD only, CUDA off.
+
+    GGML_VK_VISIBLE_DEVICES=0 selects the single enumerated NVIDIA
+    Vulkan device; CUDA_VISIBLE_DEVICES=-1 removes every CUDA device
+    so no CUDA backend can silently substitute for Vulkan.
+    """
+    return {"VK_ICD_FILENAMES": V0N_NVIDIA_ICD,
+            "GGML_VK_VISIBLE_DEVICES": "0",
+            "CUDA_VISIBLE_DEVICES": "-1", "LLAMA_OBSERVE_CAPTURE": "8",
+            "LLAMA_OBSERVE_OUT": str(unit_dir / "obs"),
+            "LLAMA_OBSERVE_FORCE": "",
+            "LD_LIBRARY_PATH": "{{BINARY_LIB_DIR}}"}
+
+
+def _v0n_observe_device() -> dict[str, Any]:
+    """Non-model NVIDIA Vulkan enumeration on inferswarm01 (read-only).
+
+    Requires EXACTLY ONE NVIDIA Vulkan device (the RTX 3060 that
+    produced the retained #248 rows); an enumeration exposing a second
+    device, a non-NVIDIA vendor, a wrong device ID, or a non-NVIDIA-
+    proprietary driver fails closed. CUDA visibility is explicitly off.
+    """
+    import platform
+    if socket.gethostname() != V0N_HOST:
+        raise PhysicalDiagnosticError("V0n host must be inferswarm01")
+    icd = Path(V0N_NVIDIA_ICD)
+    if not icd.is_file():
+        raise PhysicalDiagnosticError("NVIDIA ICD unavailable")
+    result = subprocess.run(
+        ["vulkaninfo", "--summary"], capture_output=True, text=True,
+        timeout=30, check=True,
+        env={**os.environ, "VK_ICD_FILENAMES": V0N_NVIDIA_ICD,
+             "CUDA_VISIBLE_DEVICES": "-1"})
+    blocks = re.split(r"(?=GPU[0-9]+:\s*)", result.stdout)
+    devices: dict[int, dict[str, str]] = {}
+    for block in blocks:
+        m = re.match(r"GPU(\d+):\s*", block)
+        if m:
+            devices[int(m.group(1))] = {
+                key: match.group(1).strip() for key, pattern in {
+                    "vendor_id": r"vendorID\s*=\s*(0x[0-9a-f]+)",
+                    "device_id": r"deviceID\s*=\s*(0x[0-9a-f]+)",
+                    "name": r"deviceName\s*=\s*(.+)",
+                    "driver_id": r"driverID\s*=\s*(.+)",
+                    "driver_info": r"driverInfo\s*=\s*(.+)",
+                    "driver_version": r"driverVersion\s*=\s*(.+)",
+                    "api_version": r"apiVersion\s*=\s*(.+)",
+                }.items() if (match := re.search(pattern, block, re.I))}
+    if (set(devices) != {0}
+            or devices[0].get("vendor_id") != V0N_GPU_VENDOR_ID
+            or devices[0].get("device_id") != V0N_GPU_DEVICE_ID
+            or devices[0].get("driver_id") != V0N_DRIVER_ID):
+        raise PhysicalDiagnosticError(
+            "exactly one NVIDIA RTX 3060 Vulkan device required")
+    runtime = {"kernel": platform.release(),
+               "vulkan_instance": (re.search(
+                   r"Vulkan Instance Version:\s*(\S+)", result.stdout) or
+                   [None, ""])[1],
+               "devices": {str(i): entry
+                           for i, entry in devices.items()}}
+    return {"index": 0, **devices[0],
+            "vulkan_indices": sorted(devices),
+            "enumeration_sha256": D.sha256_bytes(result.stdout.encode()),
+            "icd_sha256": D.file_sha256(icd),
+            "runtime_identity": runtime,
+            "host": V0N_HOST}
+
+
+def _verify_v0n_binary(binary: Path, binary_id: str) -> str:
+    """Exact comparator executable + observer library family + NO CUDA.
+
+    Same observer-library digest law as the AMD leg (the identical
+    build family), plus the explicit CUDA-exclusion link check: the
+    loaded ggml backend set must contain libggml-vulkan and must NOT
+    contain any CUDA backend library under the NVIDIA ICD environment.
+    """
+    if (V0N_SOURCE_PIN != D.LLAMA_PIN
+            or V0N_COMPARATOR_SHA != D.SERVER_BINARIES["comparator"]
+            or binary_id != "comparator"
+            or verify_binary(binary, binary_id) != V0N_COMPARATOR_SHA):
+        raise PhysicalDiagnosticError(
+            "V0n requires exact pinned comparator observer")
+    for name, digest in V0_OBSERVER_LIBS.items():
+        path = binary.parent / name
+        if not path.is_file() or D.file_sha256(path) != digest:
+            raise PhysicalDiagnosticError(f"V0n observer library mismatch: {name}")
+    env = {**os.environ, "LD_LIBRARY_PATH": str(binary.parent),
+           "VK_ICD_FILENAMES": V0N_NVIDIA_ICD, "CUDA_VISIBLE_DEVICES": "-1"}
+    dep = subprocess.run(["ldd", str(binary)], env=env, capture_output=True,
+                         text=True, timeout=20, check=True)
+    if ("not found" in dep.stdout or "libggml-vulkan.so.0" not in dep.stdout
+            or any(str(binary.parent / name) not in dep.stdout
+                   for name in V0_OBSERVER_LIBS)):
+        raise PhysicalDiagnosticError("V0n observer dynamic loader incompatibility")
+    if re.search(r"libggml-cuda|libcuda\b|libcudart", dep.stdout):
+        raise PhysicalDiagnosticError(
+            "V0n CUDA library in the comparator link family is forbidden")
+    help_run = subprocess.run([str(binary), "--help"], env=env,
+                              capture_output=True, timeout=30)
+    if help_run.returncode != 0 or b"--n-gpu-layers" not in (
+            help_run.stdout + help_run.stderr):
+        raise PhysicalDiagnosticError("V0n observer non-model execution failed")
+    return V0N_COMPARATOR_SHA
+
+
+def _v0n_gpu_vram_bytes() -> int:
+    """Live selected-GPU memory via nvidia-smi (read-only query)."""
+    proc = subprocess.run(
+        ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+        capture_output=True, text=True, timeout=30, check=True)
+    lines = [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+    if len(lines) != 1 or not lines[0].isdigit():
+        raise PhysicalDiagnosticError("V0n single-GPU nvidia-smi read failed")
+    return int(lines[0]) * 1024 * 1024
+
+
+def _v0n_verify_placement(unit_dir: Path, device: dict[str, Any],
+                          result: dict[str, Any],
+                          binary_lib_dir: str) -> None:
+    """Pinned source law + NVIDIA Vulkan backend + no-CUDA + residency.
+
+    Fail closed if: CUDA participation is not explicitly false; the
+    backend is not Vulkan; the selected device index/identity drifts
+    from the live enumeration; or the selected-GPU residency delta
+    under the ngl=1 load does not exceed the frozen bound.
+    """
+    if (device.get("vendor_id") != V0N_GPU_VENDOR_ID
+            or device.get("device_id") != V0N_GPU_DEVICE_ID
+            or device.get("driver_id") != V0N_DRIVER_ID
+            or result.get("vulkan_device_index") != device.get("index")
+            or result.get("backend") != "Vulkan"
+            or result.get("cuda_participation") is not False):
+        raise PhysicalDiagnosticError(
+            "V0n pinned source/NVIDIA Vulkan placement unverified")
+    before, after = result.get("vram_before"), result.get("vram_after")
+    if (type(before) is not int or type(after) is not int
+            or before < 0 or after < 0
+            or after - before <= V0N_MIN_RESIDENCY_BYTES):
+        raise PhysicalDiagnosticError(
+            "V0n selected-GPU ngl=1 residency unverified")
+    del binary_lib_dir
+
+
+def _real_v0n_execute(argv: list[str], env: dict[str, str],
+                      request: dict[str, Any], prompt: str, port: int,
+                      unit_dir: Path, timeout_budget: dict[str, Any]
+                      ) -> dict[str, Any]:
+    """NVIDIA fresh-process unit; GPU residency measured while loaded."""
+    before = _v0n_gpu_vram_bytes()
+    with (unit_dir / "server.log").open("wb") as log:
+        proc = subprocess.Popen(argv, env={**os.environ, **env}, stdout=log,
+                                stderr=subprocess.STDOUT, start_new_session=True)
+        try:
+            _wait_healthy(proc, port)
+            after = _v0n_gpu_vram_bytes()
+            attribution = _proc_attribution(proc, argv, env)
+            _v0_check_live_process(proc, argv, env)
+            raw, response = _http_completion(
+                port, request, prompt, timeout_s=timeout_budget["budget_s"])
+            return {"response_raw": raw, "tokens": response.get("tokens"),
+                    "process_attribution": attribution,
+                    "vulkan_device_index": int(env["GGML_VK_VISIBLE_DEVICES"]),
+                    "vram_before": before, "vram_after": after,
+                    "backend": "Vulkan", "cuda_participation": False,
+                    "timeout_budget": timeout_budget}
+        finally:
+            if proc.poll() is None:
+                os.killpg(proc.pid, signal.SIGTERM)
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait(timeout=5)
+
+
+def run_v0n_unit(repo_root: Path, evidence_root: Path, namespace: str,
+                 arm: str, tag: str, *, binary: Path, binary_id: str,
+                 model_dir: Path, expected_head: str,
+                 model_attestation: dict[str, Any],
+                 execute: Callable[..., dict[str, Any]] | None = None,
+                 revalidate_authority: Callable[..., dict[str, Any]] | None = None,
+                 device_observer: Callable[[], dict[str, Any]] | None = None,
+                 github_api: str = "https://api.github.com"
+                 ) -> dict[str, Any]:
+    """One canonical V0n unit; exact-head two-pass authority and row order.
+
+    Mirrors run_v0_unit with the NVIDIA-current law: no two-index AMD
+    selector preflight (exactly one NVIDIA Vulkan device exists), no
+    cross-die freeze; instead the single NVIDIA device identity is
+    re-observed live per unit and bound to the retained receipt.
+    Fails closed on any identity/backend/placement/custody mismatch and
+    on any attempt to execute the third unit without a verified
+    byte-identical first pair.
+    """
+    if ((namespace, arm) != (V0N_NAMESPACE, V0N_ARM)
+            or tag not in V0N_UNIT_TAGS):
+        raise PhysicalDiagnosticError("V0n namespace/arm/plan mismatch")
+    if binary_id != "comparator" or str(model_dir) != D.MODEL_DIR:
+        raise PhysicalDiagnosticError(
+            "V0n frozen comparator/model identity mismatch")
+    root = Path(evidence_root)
+    validate_evidence_generation(root)
+    _admit_retained_cost(root, TB.V0N_CONDITION, namespace, arm)
+    early = require_live_dispatch(repo_root, expected_head, namespace,
+                                  revalidate_authority, github_api)
+    D._require_clean_head(Path(repo_root), expected_head)
+    index = V0N_UNIT_TAGS.index(tag)
+    rows = _v0n_retained_rows(root, index, expected_head, early)
+    if index == 2 and rows[0] != rows[1]:
+        raise PhysicalDiagnosticError(
+            "V0n variable pair forbids third unit")
+    fixtures = verify_fixtures(Path(repo_root))
+    binary_sha = _verify_v0n_binary(Path(binary), binary_id)
+    attestation = validate_model_attestation(model_attestation, expected_head)
+    opening = root / MODEL_ATTESTATION_OPEN_NAME
+    if (opening.is_symlink() or not opening.is_file() or json.loads(
+            opening.read_bytes()) != attestation):
+        raise PhysicalDiagnosticError(
+            "V0n opening attestation missing or drifted")
+    problems, witness = attestation_witness(Path(model_dir), attestation)
+    if problems or attestation["model_dir"] != str(Path(model_dir)):
+        raise PhysicalDiagnosticError("V0n model identity drift")
+    fixture = fixtures[D.CASE]
+    if len(fixture["prompt_token_ids"]) != TB.V0N_PROMPT_TOKENS:
+        raise PhysicalDiagnosticError("V0n frozen prompt-token count drift")
+    request = D.validate_request_contract(D.REQUEST_CONTRACT)
+    budget = TB.v0n_request_timeout(len(fixture["prompt_token_ids"]))
+    argv = v0n_server_argv(Path(binary), Path(model_dir) / D.MODEL_MEMBER_1)
+    budget["vulkan_device_index"] = 0
+    late = require_live_dispatch(repo_root, expected_head, namespace,
+                                 revalidate_authority, github_api)
+    if D.authority_digest(early) != D.authority_digest(late):
+        raise PhysicalDiagnosticError("V0n live dispatch drift")
+    D._require_clean_head(Path(repo_root), expected_head)
+    _v0n_retained_rows(root, index, expected_head, late)
+    _admit_retained_cost(root, TB.V0N_CONDITION, namespace, arm)
+    unit_dir = prepare_unit_dir(root, namespace, tag)
+    env = dict(v0n_environment(unit_dir))
+    env["LD_LIBRARY_PATH"] = str(Path(binary).parent)
+    try:
+        result = (execute or _real_v0n_execute)(
+            argv=argv, env=env, request=request,
+            prompt=fixture["prompt_text"], port=PORT, unit_dir=unit_dir,
+            timeout_budget=budget)
+        device = (device_observer or _v0n_observe_device)()
+        _v0n_verify_placement(unit_dir, device, result,
+                              str(Path(binary).parent))
+    except Exception as exc:
+        _write_json(unit_dir / "failure.json", {
+            "schema": "inferswarm.issue250.v0n-failed-unit/1",
+            "tag": tag, "head_sha": expected_head,
+            "reason": str(exc), "failed_at": _utcnow()})
+        raise
+    row_path = unit_dir / "obs.row0.f32"
+    if row_path.is_symlink() or not row_path.is_file():
+        raise PhysicalDiagnosticError("V0n full decision-0 row missing")
+    row = row_path.read_bytes()
+    if len(row) != D.ROW_BYTES:
+        raise PhysicalDiagnosticError("V0n full decision-0 row malformed")
+    attribution = result.get("process_attribution")
+    if (not isinstance(attribution, dict)
+            or type(attribution.get("server_pid")) is not int
+            or attribution["server_pid"] <= 0
+            or attribution.get("server_exe_sha256") != binary_sha
+            or attribution.get("server_argv") != argv
+            or attribution.get("server_env") != env):
+        raise PhysicalDiagnosticError("V0n fresh process attribution unverified")
+    for prior_tag in V0N_UNIT_TAGS[:index]:
+        prior = json.loads(
+            (root / namespace / prior_tag / "unit.json").read_bytes())
+        if prior["server_pid"] == attribution["server_pid"]:
+            raise PhysicalDiagnosticError("V0n fresh process PID reused")
+    device = (device_observer or _v0n_observe_device)()
+    receipt = {"schema": D.V0N_SCHEMA, "tag": tag, "namespace": namespace,
+               "arm": arm, "head_sha": expected_head,
+               "evidence_generation": EVIDENCE_GENERATION,
+               "decision0_row_sha256": D.sha256_bytes(row),
+               "row_bytes": len(row),
+               "authority_sha256": D.authority_digest(late),
+               "placement_verified": True,
+               "nvidia_device": device,
+               "case_id": D.CONTRAST_CASE, "ngl": 1, "backend": "Vulkan",
+               "cuda_participation": False,
+               "embedding_placement": "CPU",
+               "output_projection_placement": "Vulkan",
+               "placement_source_law": {
+                   "source_pin": V0N_SOURCE_PIN, "ngl": 1,
+                   "embedding": "CPU", "output_projection": "Vulkan"},
+               "model_dir": D.MODEL_DIR,
+               "model_launch_member": str(Path(model_dir) / D.MODEL_MEMBER_1),
+               "model_member_sha256": D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1],
+               "prompt_sha256": D.sha256_bytes(json.dumps(
+                   fixture["prompt_token_ids"], separators=(",", ":")).encode()),
+               "prompt_token_ids": fixture["prompt_token_ids"],
+               "prompt_text_sha256": D.sha256_bytes(
+                   fixture["prompt_text"].encode()),
+               "prompt_len": len(fixture["prompt_token_ids"]),
+               "request_contract": request,
+               "request_contract_sha256": D.canonical_request_digest(request),
+               "fresh_process": True,
+               "server_pid": attribution["server_pid"],
+               "binary_sha256": binary_sha,
+               "model_stat_witness": witness,
+               "server_argv": argv, "server_env": env,
+               "process_attribution": attribution,
+               "timeout_policy": budget,
+               "response_raw_sha256": D.sha256_bytes(result["response_raw"])}
+    _write_json(unit_dir / "unit.json", receipt)
+    return receipt
+
+
+def _v0n_retained_rows(root: Path, count: int, head: str,
+                       authority: dict[str, Any]) -> list[str]:
+    """Recheck each V0n predecessor against retained full-row bytes/custody.
+
+    The whole retained V0n population must share ONE frozen NVIDIA
+    device identity (single RTX 3060: vendor/device/driver/name) and
+    the frozen NVIDIA Vulkan environment law. Mixed-identity or
+    CUDA-tainted populations are rejected even if every receipt is
+    individually valid.
+    """
+    import hashlib
+    rows: list[str] = []
+    base = Path(root) / V0N_NAMESPACE
+    if base.is_symlink():
+        raise PhysicalDiagnosticError("V0n namespace symlink refused")
+    if base.exists():
+        present = {p.name for p in base.iterdir()
+                   if p.is_dir() or p.is_symlink()}
+        if present != set(V0N_UNIT_TAGS[:count]):
+            raise PhysicalDiagnosticError(
+                "V0n unexpected/partial/future unit population")
+    elif count:
+        raise PhysicalDiagnosticError("V0n predecessor namespace missing")
+    for tag in V0N_UNIT_TAGS[:count]:
+        directory = base / tag
+        receipt_path = directory / "unit.json"
+        row_path = directory / "obs.row0.f32"
+        if (directory.is_symlink() or receipt_path.is_symlink()
+                or row_path.is_symlink() or not receipt_path.is_file()
+                or not row_path.is_file()):
+            raise PhysicalDiagnosticError("V0n predecessor retained row missing")
+        try:
+            receipt = json.loads(receipt_path.read_bytes())
+            raw = row_path.read_bytes()
+        except (OSError, ValueError) as exc:
+            raise PhysicalDiagnosticError("V0n predecessor unreadable") from exc
+        digest = hashlib.sha256(raw).hexdigest()
+        if (len(raw) != D.ROW_BYTES or not isinstance(receipt, dict)
+                or receipt.get("schema") != D.V0N_SCHEMA
+                or receipt.get("tag") != tag
+                or receipt.get("namespace") != V0N_NAMESPACE
+                or receipt.get("arm") != V0N_ARM
+                or receipt.get("head_sha") != head
+                or receipt.get("evidence_generation") != EVIDENCE_GENERATION
+                or receipt.get("decision0_row_sha256") != digest
+                or receipt.get("authority_sha256")
+                   != D.authority_digest(authority)
+                or receipt.get("placement_verified") is not True
+                or receipt.get("fresh_process") is not True
+                or receipt.get("case_id") != D.CONTRAST_CASE
+                or receipt.get("ngl") != 1
+                or receipt.get("backend") != "Vulkan"
+                or receipt.get("cuda_participation") is not False
+                or receipt.get("model_dir") != D.MODEL_DIR
+                or receipt.get("model_member_sha256") !=
+                   D.MODEL_MEMBER_SHA256[D.MODEL_MEMBER_1]
+                or receipt.get("request_contract") != D.REQUEST_CONTRACT
+                or receipt.get("prompt_token_ids") is None
+                or D.sha256_bytes(json.dumps(
+                    receipt["prompt_token_ids"], separators=(",", ":")).encode())
+                   != receipt.get("prompt_sha256")
+                or receipt.get("row_bytes") != D.ROW_BYTES
+                or type(receipt.get("server_pid")) is not int
+                or receipt["server_pid"] <= 0
+                or not isinstance(receipt.get("nvidia_device"), dict)
+                or receipt["nvidia_device"].get("vendor_id") != V0N_GPU_VENDOR_ID
+                or receipt["nvidia_device"].get("device_id") != V0N_GPU_DEVICE_ID
+                or receipt["nvidia_device"].get("driver_id") != V0N_DRIVER_ID
+                or receipt["binary_sha256"] != V0N_COMPARATOR_SHA
+                or not isinstance(receipt.get("server_env"), dict)
+                or receipt["server_env"].get("VK_ICD_FILENAMES") != V0N_NVIDIA_ICD
+                or receipt["server_env"].get("CUDA_VISIBLE_DEVICES") != "-1"
+                or receipt["server_env"].get("GGML_VK_VISIBLE_DEVICES") != "0"
+                or not isinstance(receipt.get("server_argv"), list)
+                or not receipt["server_argv"]
+                or receipt["server_argv"] != v0n_server_argv(
+                    Path(receipt["server_argv"][0]),
+                    Path(receipt.get("model_launch_member", "")), PORT)
+                or receipt.get("model_launch_member") !=
+                   str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
+                or receipt.get("placement_source_law") != {
+                    "source_pin": V0N_SOURCE_PIN, "ngl": 1,
+                    "embedding": "CPU", "output_projection": "Vulkan"}
+                or receipt.get("embedding_placement") != "CPU"
+                or receipt.get("output_projection_placement") != "Vulkan"):
+            raise PhysicalDiagnosticError(
+                "V0n predecessor retained byte/custody mismatch")
+        if (receipt.get("process_attribution", {}).get("server_env")
+                != receipt["server_env"]
+                or receipt.get("process_attribution", {}).get("server_argv")
+                != receipt["server_argv"]
+                or receipt.get("process_attribution", {}).get("server_exe_sha256")
+                != V0N_COMPARATOR_SHA
+                or receipt.get("process_attribution", {}).get("server_pid")
+                != receipt["server_pid"]):
+            raise PhysicalDiagnosticError(
+                "V0n predecessor process attribution mismatch")
+        rows.append(digest)
+    return rows
+
+
 def run_v0_binding_preflight(repo_root: Path, evidence_root: Path, *,
                              binary: Path, model_dir: Path, expected_head: str,
                              model_attestation: dict[str, Any],
@@ -1484,6 +2010,9 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
             if namespace == V0_NAMESPACE:
                 return validate_v0_dispatch(
                     namespace, V0_ARM, authority, expected_head)
+            if namespace == V0N_NAMESPACE:
+                return validate_v0n_dispatch(
+                    namespace, V0N_ARM, authority, expected_head)
             return D.validate_authority_payload(authority, expected_head)
         except (D.DiagnosticError, PhysicalDiagnosticError):
             continue
@@ -1504,6 +2033,9 @@ def require_live_dispatch(repo_root: Path, expected_head: str,
                                      github_api)
     if namespace == V0_NAMESPACE:
         return validate_v0_dispatch(namespace, V0_ARM, authority, expected_head)
+    if namespace == V0N_NAMESPACE:
+        return validate_v0n_dispatch(namespace, V0N_ARM, authority,
+                                     expected_head)
     return D.validate_authority_payload(authority, expected_head)
 
 

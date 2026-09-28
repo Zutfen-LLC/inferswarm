@@ -3416,6 +3416,40 @@
       ],
       "test_count_at_audit": 39
     },
+    "test_issue250_v0n_nvidia": {
+      "baseline_group": "r8i-qwen-qualification",
+      "baseline_serial_seconds": 4.0,
+      "baseline_test_count": 56,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "r8i-qwen-qualification",
+      "invariant": "The R8-I3B V0n current-window NVIDIA leg (AMENDMENT-007) is Vulkan-only and fail-closed: NVIDIA ICD + GGML_VK_VISIBLE_DEVICES=0 + CUDA_VISIBLE_DEVICES=-1 + dynamic-link CUDA exclusion + cuda_participation=False in every receipt; wrong backend/device/ngl/placement/binary/source/model/prompt/request and PID reuse reject; the 2-then-conditional-third screen stops on a first-pair mismatch; the four prospective states compare FULL 993280-byte rows (never winner/token only) against the AMD current-window row digest and BOTH retained #248 NVIDIA Vulkan ngl=1 rows, never emit an Issue #250 terminal, never grant A-eligibility, never auto-dispatch CPU Arms A-D, and stale dispatches (5852485456/5862772797/completed AMD 5868617068) can never authorize a unit.",
+      "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+          "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+        ],
+        "scripts_imported": [
+          "scripts/issue250_diagnostic.py",
+          "scripts/issue250_physical.py",
+          "scripts/issue250_terminal.py",
+          "scripts/issue250_timeout.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Regression authority for the prospective NVIDIA-current Vulkan screen prepared by METHODOLOGY-AMENDMENT-007; all fixtures fake/injected, zero physical execution.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "source_modules": [
+        "scripts/issue250_diagnostic.py",
+        "scripts/issue250_physical.py",
+        "scripts/issue250_terminal.py",
+        "scripts/issue250_timeout.py"
+      ],
+      "test_count_at_audit": 56
+    },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",
       "baseline_serial_seconds": 0.17,
