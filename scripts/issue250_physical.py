@@ -829,7 +829,8 @@ def write_v0_screen_freeze(repo_root: Path, evidence_root: Path, *,
     target = root / V0_FREEZE_NAME
     if target.exists() or target.is_symlink():
         raise PhysicalDiagnosticError("V0 screen freeze already retained")
-    if (root / V0_NAMESPACE).exists():
+    if ((root / V0_NAMESPACE).exists()
+            or (root / V0_NAMESPACE).is_symlink()):
         raise PhysicalDiagnosticError(
             "V0 screen freeze must precede the first inference unit")
     binary_sha = _verify_v0_amd_binary(Path(binary), binary_id)

@@ -243,8 +243,14 @@ class BridgeReducerNegativeTests(
         fixture, _ = self._fixture("vary")
         path = fixture.evidence / D.V0_NAMESPACE
         path.symlink_to(fixture.evidence / "missing-v0")
-        with self.assertRaises((P0.PhysicalDiagnosticError, ValueError)):
-            P0.validate_arm_a_bridge(fixture.evidence, fixture.head)
+        with mock.patch.object(P0, "require_live_dispatch", return_value={}):
+            with self.assertRaisesRegex(P0.PhysicalDiagnosticError,
+                                        "must precede the first inference unit"):
+                P0.write_v0_screen_freeze(
+                    repo_root=fixture.repo, evidence_root=fixture.evidence,
+                    expected_head=fixture.head, binary=Path("/nonexistent"),
+                    binary_id="comparator", model_dir=Path(D.MODEL_DIR),
+                    model_attestation={"schema": "invalid"})
 
     # 13. bridge population with missing reachability provenance
     def test_missing_provenance_arm_a_population_rejects(self):

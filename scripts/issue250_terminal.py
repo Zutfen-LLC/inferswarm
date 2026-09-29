@@ -1703,7 +1703,8 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     # any bridge-record presence with a failing authentication blocks
     # (never falls back to historical admission).  The historical
     # top-level-V0 path below is byte-for-byte unchanged.
-    bridge_record_present = (root / D.ARM_A_BRIDGE_NAME).exists()
+    bridge_record_present = ((root / D.ARM_A_BRIDGE_NAME).exists()
+                             or (root / D.ARM_A_BRIDGE_NAME).is_symlink())
     if bridge_record_present:
         try:
             P.validate_arm_a_bridge(root, expected_head)
@@ -1840,6 +1841,13 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     problems.extend(a_problems)
     reduction["arms"]["A-vulkan-necessity"] = arm_a
     reduction["contrast"] = arm_a.get("contrast")
+    expected_reachability_source = (
+        "arm-a-bridge" if bridge_record_present
+        else "historical-v0-amd-variable")
+    if arm_a.get("reachability_source") != expected_reachability_source:
+        problems.append(
+            "Arm-A reachability provenance does not match the selected "
+            f"admission path ({expected_reachability_source})")
     if problems:
         return _blocked(problems, reduction)
     cpu_units = arm_a.get("units", [])
