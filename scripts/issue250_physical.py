@@ -829,8 +829,7 @@ def write_v0_screen_freeze(repo_root: Path, evidence_root: Path, *,
     target = root / V0_FREEZE_NAME
     if target.exists() or target.is_symlink():
         raise PhysicalDiagnosticError("V0 screen freeze already retained")
-    if ((root / V0_NAMESPACE).exists()
-            or (root / V0_NAMESPACE).is_symlink()):
+    if (root / V0_NAMESPACE).exists():
         raise PhysicalDiagnosticError(
             "V0 screen freeze must precede the first inference unit")
     binary_sha = _verify_v0_amd_binary(Path(binary), binary_id)
@@ -4122,7 +4121,7 @@ def arm_a_reachability_source(
             and state.get("a_eligible") is True):
         return "historical-v0-amd-variable"
     v0_root = Path(evidence_root) / D.V0_NAMESPACE
-    namespace_absent = not v0_root.exists()
+    namespace_absent = not (v0_root.exists() or v0_root.is_symlink())
     if not namespace_absent:
         if state.get("state") not in (
                 D.V0_STATE_DISAGREEMENT_STOP,

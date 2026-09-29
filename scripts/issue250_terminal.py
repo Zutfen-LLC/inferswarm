@@ -1705,6 +1705,10 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     # top-level-V0 path below is byte-for-byte unchanged.
     bridge_record_present = ((root / D.ARM_A_BRIDGE_NAME).exists()
                              or (root / D.ARM_A_BRIDGE_NAME).is_symlink())
+    # Admission authority, never receipt content, selects the required source.
+    expected_reachability_source = (
+        "arm-a-bridge" if bridge_record_present
+        else "historical-v0-amd-variable")
     if bridge_record_present:
         try:
             P.validate_arm_a_bridge(root, expected_head)
@@ -1841,9 +1845,6 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     problems.extend(a_problems)
     reduction["arms"]["A-vulkan-necessity"] = arm_a
     reduction["contrast"] = arm_a.get("contrast")
-    expected_reachability_source = (
-        "arm-a-bridge" if bridge_record_present
-        else "historical-v0-amd-variable")
     if arm_a.get("reachability_source") != expected_reachability_source:
         problems.append(
             "Arm-A reachability provenance does not match the selected "
@@ -1862,7 +1863,7 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     # any LOCALIZED claim (no Vulkan root cause is inferred); variable
     # ⇒ review before any B execution. No terminal is emitted and no
     # later arm is auto-reachable from a bridge-path Arm A.
-    if arm_a.get("reachability_source") == "arm-a-bridge":
+    if expected_reachability_source == "arm-a-bridge":
         return _blocked([ARM_A_STOPS_LADDER], reduction)
 
     if cpu["deterministic"] and contrast_varies:
