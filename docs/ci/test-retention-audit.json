@@ -4669,7 +4669,69 @@
     "scripts/issue250_timeout.py"
    ],
    "test_count_at_audit": 50
-  }
+  },
+ "test_issue250_amendment008_reducer_admission": {
+  "baseline_group": "r8i-qwen-qualification",
+  "baseline_serial_seconds": 10.0,
+  "baseline_test_count": 24,
+  "category": "CURRENT_CONTRACT",
+  "disposition": "retain",
+  "group": "r8i-qwen-qualification",
+  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory, Arm-A populations reject missing/mixed provenance, and every valid bridge-path Arm-A result stops the ladder at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+  "named_by_evidence": [],
+  "owned_surfaces": {
+  "evidence_read": [
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+  ],
+  "scripts_imported": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ]
+  },
+  "pinned_by_evidence": [],
+  "rationale": "Regression authority for the AMENDMENT-008 reducer-admission correction (path-aware bridge vs historical V0 admission); all fixtures synthetic with real digests, zero physical execution.",
+  "referenced_by_scripts": [],
+  "replacement": null,
+  "source_modules": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ],
+  "test_count_at_audit": 24
+ },
+ "test_issue250_amendment008_reducer_admission_negative": {
+  "baseline_group": "r8i-qwen-qualification",
+  "baseline_serial_seconds": 10.0,
+  "baseline_test_count": 24,
+  "category": "CURRENT_CONTRACT",
+  "disposition": "retain",
+  "group": "r8i-qwen-qualification",
+  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory, Arm-A populations reject missing/mixed provenance, and every valid bridge-path Arm-A result stops the ladder at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+  "named_by_evidence": [],
+  "owned_surfaces": {
+  "evidence_read": [
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+  ],
+  "scripts_imported": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ]
+  },
+  "pinned_by_evidence": [],
+  "rationale": "Negative mutation matrix for the AMENDMENT-008 reducer-admission correction: every broken-bridge shape (record absent/tampered/malformed, predecessor mounts missing/symlinked, row/freeze/authority/state drift, mixed or missing Arm-A reachability provenance) fails closed without historical fallback, and a valid bridge stop fetches no later-arm authority.",
+  "referenced_by_scripts": [],
+  "replacement": null,
+  "source_modules": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ],
+  "test_count_at_audit": 24
+ }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
  "schema": "inferswarm.ci.test-retention-audit/1",

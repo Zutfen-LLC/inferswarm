@@ -84,7 +84,7 @@ def no_v0_dispatch_fetcher(fixture):
     return fetch
 
 
-class BridgeReducerAdmissionTests(unittest.TestCase):
+class BridgeReducerAdmissionMixin:
     """A compliant bridge-shaped campaign root — NO top-level V0/V0n
     trees, NO same-head V0 authority — must reach the Arm-A walk in
     ``derive_terminal`` and stop at ``ARM_A_STOPS_LADDER``."""
@@ -191,6 +191,11 @@ class BridgeReducerAdmissionTests(unittest.TestCase):
             out["problems"])
         self.assertNotIn(D.V0_NAMESPACE, calls,
                          "bridge admission fetched same-head V0 authority")
+
+
+class BridgeReducerAdmissionTests(
+        BridgeReducerAdmissionMixin, unittest.TestCase):
+    """The committed positive reducer-admission regressions."""
 
 
 if __name__ == "__main__":

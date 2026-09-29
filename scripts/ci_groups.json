@@ -120,6 +120,8 @@
     "test_issue250_v0n_nvidia",
     "test_issue250_amendment008",
     "test_issue250_amendment008_round2",
+    "test_issue250_amendment008_reducer_admission",
+    "test_issue250_amendment008_reducer_admission_negative",
     "test_issue250_pass6_corrections"
    ]
   },
@@ -1528,6 +1530,12 @@
    "issue-222-r7c"
   ],
   "tests/test_issue250_amendment008.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_amendment008_reducer_admission.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_amendment008_reducer_admission_negative.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_issue250_amendment008_round2.py": [

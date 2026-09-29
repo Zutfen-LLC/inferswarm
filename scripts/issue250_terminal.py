@@ -1688,10 +1688,60 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
                         {"v0": {"state": D.V0_STATE_INVALID, "valid": False,
                                 "a_eligible": False, "terminal": None,
                                 "reason": "accepted #248 root not supplied"}})
-    v0 = derive_v0_state(root, contrast_root, Path(repo_root),
-                         expected_head, authority_fetcher=authority_fetcher,
-                         github_api=github_api)
-    if v0.get("state") != D.V0_STATE_AMD_VARIABLE or not v0.get("a_eligible"):
+    # METHODOLOGY-AMENDMENT-008 (reducer-admission correction): admission
+    # is PATH-AWARE before the Arm-A walk.  A compliant AMENDMENT-008
+    # bridge campaign root carries NO top-level d250-arm-v0-amd/ tree and
+    # admits NO same-head V0 dispatch (the completed predecessor
+    # dispatch is historical/stale), so ``derive_v0_state`` can never
+    # run there; its predecessor chain is instead authenticated through
+    # the SAME frozen bridge authority the launch gate uses —
+    # ``validate_arm_a_bridge`` -> ``revalidating_arm_a_predecessors``
+    # over the read-only predecessor-v0/ + predecessor-v0n/ mounts.
+    # Bridge mode is never inferred from the absence of V0 evidence: a
+    # valid, canonical, maintainer-adjudicated bridge record with both
+    # predecessor populations fully re-authenticated is REQUIRED, and
+    # any bridge-record presence with a failing authentication blocks
+    # (never falls back to historical admission).  The historical
+    # top-level-V0 path below is byte-for-byte unchanged.
+    bridge_record_present = (root / D.ARM_A_BRIDGE_NAME).exists()
+    if bridge_record_present:
+        try:
+            P.validate_arm_a_bridge(root, expected_head)
+        except Exception as exc:
+            return _blocked(
+                ["Arm-A bridge admission rejected: "
+                 f"{type(exc).__name__}: {exc}"],
+                {"v0": {"state": D.V0_STATE_INVALID, "valid": False,
+                        "a_eligible": False, "terminal": None,
+                        "admission": "amendment-008-bridge",
+                        "reason": f"bridge authentication failed: {exc}"}})
+        try:
+            predecessors = P.revalidating_arm_a_predecessors(root)
+        except Exception as exc:
+            return _blocked(
+                ["Arm-A bridge predecessor revalidation rejected: "
+                 f"{type(exc).__name__}: {exc}"],
+                {"v0": {"state": D.V0_STATE_INVALID, "valid": False,
+                        "a_eligible": False, "terminal": None,
+                        "admission": "amendment-008-bridge",
+                        "reason": f"predecessor revalidation failed: {exc}"}})
+        v0 = {"state": predecessors["v0"].get("state"),
+              "valid": True, "terminal": None, "a_eligible": False,
+              "admission": "amendment-008-bridge",
+              "reachability_source": "arm-a-bridge",
+              "predecessors": {
+                  ns: (predecessors[ns].get("state"),
+                       predecessors[ns].get("amd_rows")
+                       or predecessors[ns].get("row_classes"))
+                  for ns in ("v0", "v0n")}}
+    else:
+        v0 = derive_v0_state(root, contrast_root, Path(repo_root),
+                             expected_head,
+                             authority_fetcher=authority_fetcher,
+                             github_api=github_api)
+    if (not bridge_record_present
+            and (v0.get("state") != D.V0_STATE_AMD_VARIABLE
+                 or not v0.get("a_eligible"))):
         # METHODOLOGY-AMENDMENT-008 (corrected round 2): when the V0
         # state is the ACCEPTED adjudicated stop AND the corrected
         # bridge record authenticates (exact predecessor decisions

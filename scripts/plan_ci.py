@@ -230,6 +230,13 @@ GROUP_TEST_MODULES = {
         # predecessor decision, frozen-verifier predecessor custody,
         # bridge-path provenance + terminal stop law, mutation matrix.
         "test_issue250_amendment008_round2",
+        # AMENDMENT-008 reducer-admission correction: path-aware
+        # derive_terminal V0 admission - bridge campaigns admit through
+        # the frozen bridge authority (no top-level V0 tree, no
+        # same-head V0 dispatch), historical path unchanged, invalid
+        # bridge artifacts never fall back to historical admission.
+        "test_issue250_amendment008_reducer_admission",
+        "test_issue250_amendment008_reducer_admission_negative",
         # Correction pass 6 (AMENDMENT-003): timeout-budget authority,
         # cost gate, C1/C2 authority separation, evidence generation,
         # stale-dispatch regressions.
@@ -665,6 +672,10 @@ PATH_GROUPS = {
     "tests/test_issue250_v0n_nvidia.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_amendment008.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_amendment008_round2.py":
+        ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_reducer_admission.py":
+        ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_reducer_admission_negative.py":
         ["r8i-qwen-qualification"],
     "tests/test_issue250_pass6_corrections.py":
         ["r8i-qwen-qualification"],
