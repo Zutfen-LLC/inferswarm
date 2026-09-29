@@ -1,13 +1,23 @@
 # METHODOLOGY AMENDMENT 008 — Issue #250 post-V0n Arm-A reachability
 
-Dated: 2026-09-28. Repository-only additive methodology amendment on
-PR #251 (branch `issue-250-r8i3b-ref-runtime-boundary`), maintained on
-top of the reviewed head `aa059713d83204a4dd8be2ea903aa31bddfdf3b8`
-(single commit over the reviewed head; base `origin/main`
-`bc71774dc68e7d7fddaf97bd794bbbc297e66ca5` unchanged). It authorizes no
-dispatch, no model request, no physical execution, no later arm, and no
-merge. Earlier methodology amendments remain unchanged and preserved
-verbatim.
+Dated: 2026-09-28; CORRECTION ROUND 2 documentation revision: 2026-09-29.
+Repository-only additive methodology amendment on PR #251 (branch
+`issue-250-r8i3b-ref-runtime-boundary`). Round 1 was maintained on top
+of the reviewed head `aa059713d83204a4dd8be2ea903aa31bddfdf3b8` (single
+commit `35f427b`; base `origin/main`
+`bc71774dc68e7d7fddaf97bd794bbbc297e66ca5` unchanged). CORRECTION ROUND
+2 — reviewed predecessor head
+`35f427bcc13e2ee56a2f566848018b6e3a08016d` — is additive on top of it:
+`6a4f395` (RED suite) → `50cc60d` (correction) → `0134f67`
+(retention-audit record), followed by one documentation-only correction
+commit; reviewed history is preserved with no rewrite, squash, amend,
+rebase, or force-push. The CURRENT mechanism of this amendment is the
+CORRECTION ROUND 2 mechanism at the end of this document; where an
+earlier section retains superseded round-1 wording, it is explicitly
+marked HISTORICAL / SUPERSEDED BY CORRECTION ROUND 2. The amendment
+authorizes no dispatch, no model request, no physical execution, no
+later arm, and no merge. Earlier methodology amendments remain
+unchanged and preserved verbatim.
 
 ## The accepted evidence combination (consumed, never altered)
 
@@ -109,12 +119,21 @@ any way.
 A single mechanical predicate,
 `validate_arm_a_bridge(evidence_root, expected_head)` in
 `scripts/issue250_physical.py`, gates Arm A beside (never instead of)
-the historical law. `_require_sequential_reachability` now runs the
-historical `_require_v0_fallback` gate verbatim FIRST for Arm A; only
-on its exact refusal class ("V0 precedes CPU fallback") may the
-bridge open the condition. Any other historical refusal (invalid
-custody, third-required, missing evidence, …) still blocks. Every
-later arm (B/C/C1/C2/D) keeps the historical law unchanged.
+the historical law. HOW Arm A opens is decided by
+`arm_a_reachability_source(...)` (CORRECTION ROUND 2): from the
+rederived V0 STATE it returns either `historical-v0-amd-variable` (the
+historical AMD_VARIABLE law opened Arm A; every other arm keeps the
+historical ladder verbatim) or `arm-a-bridge` (the top-level V0 state
+is an adjudicated maintainer stop — DISAGREEMENT_STOP /
+CONCORDANCE_STOP / IDENTICAL_PAIR_NEEDS_THIRD — or the top-level V0
+namespace is entirely absent, a bridge-only campaign root, AND
+`validate_arm_a_bridge` authenticates). An INVALID V0 state
+(absent/tampered/unreadable evidence, custody failure) can NEVER open
+the bridge: it re-raises the historical refusal unchanged. Only the
+bridge path is described in this section; the classification below is
+HISTORICAL round-1 wording retained for audit history — SUPERSEDED BY
+CORRECTION ROUND 2, which replaced the refusal-class trigger with the
+exact rederived-state decision above.
 
 The bridge record
 (`arm-a-reachability-bridge.json` at
@@ -139,15 +158,17 @@ B. **Accepted current NVIDIA V0n predecessor** — the record binds the
    `CURRENT_NVIDIA_VARIABLE_STOP`, the authenticated freeze
    `3fe9e74d…`, exactly two units with the two novel rows, `terminal`
    `null`, `a_eligible=false`, mismatched first pair. The retained V0n
-   population the record names is ALSO re-authenticated from bytes:
-   `_verify_arm_a_bridge_v0n_population` requires exactly the two
-   retained V0n units, the authenticated freeze
-   (`_read_v0n_screen_freeze` at the accepted evidence head), one
-   shared freeze digest + subject identity, per-row digest equality
-   with the record, receipt↔row digest binding, and a genuinely
-   mismatched first pair. Missing/drifted evidence rejects — a
-   prose-only GitHub record with no retained evidence can never
-   authorize anything.
+   population the record names is ALSO re-authenticated from bytes.
+   HISTORICAL round-1 wording — SUPERSEDED BY CORRECTION ROUND 2
+   (the bespoke `_verify_arm_a_bridge_v0n_population` checker this
+   subsection named is DELETED): authentication now runs the FROZEN
+   `_v0n_retained_rows` verifier (backend/identity/residency/
+   dispatch/argv/env/PID/generation custody) plus the frozen
+   `reduce_v0n_screen` re-derivation of `CURRENT_NVIDIA_VARIABLE_STOP`
+   with both rows novel, under the byte-exact reconstructed accepted
+   dispatch authority, with the fresh-process PID-custody law
+   enforced. Missing/drifted evidence rejects — a prose-only GitHub
+   record with no retained evidence can never authorize anything.
 C. **Maintainer-reviewed transition** — `maintainer_adjudicated=true`
    and `eligible_arms == ["A-vulkan-necessity"]` exactly. Eligibility
    is NOT execution authority.
@@ -187,13 +208,22 @@ reusing the repository's established digest-reconstruction precedent
   on ANY single-field mutation even with the digest recomputed,
   because every binding field is independently compared to a frozen
   module constant;
-* the future Arm-A producer re-authenticates the V0n half from the
-  retained evidence tree it actually reads (freeze + receipts + rows
-  through the frozen validators); where a CPU-only host cannot hold
-  the 993280-byte physical rows, the row-digest seam
-  (`_sha256_file`) is injectable for CPU-only regressions, and
-  production always resolves to the real file SHA-256 — content-keyed
-  translation means a mutated row still rejects;
+* the future Arm-A producer authenticates BOTH predecessors from the
+  read-only predecessor mounts inside its own campaign evidence root
+  (`predecessor-v0/`, `predecessor-v0n/`; see "Read-only cross-host
+  evidence path" under CORRECTION ROUND 2 below): the FROZEN
+  `_v0_retained_rows`/`_v0n_retained_rows` verifiers and
+  `reduce_v0_screen`/`reduce_v0n_screen` reducers run unmodified over
+  the mounted bytes and must re-derive exactly the accepted states
+  (`revalidating_arm_a_predecessors`). SUPERSEDED BY CORRECTION ROUND
+  2: the round-1 wording ("re-authenticates the V0n half ... through
+  the frozen validators ... row-digest seam (`_sha256_file`) is
+  injectable for CPU-only regressions") described an earlier inline
+  design that no longer exists — the `_sha256_file` seam has no
+  remaining consumers, and CPU-only regression hosts instead patch the
+  frozen bridge constants to the synthetic population's real digests
+  (the established fixture precedent); production row digests are
+  real file SHA-256 values;
 * no inference is performed by any of this: the bridge is read-only
   evidence authentication.
 
@@ -234,12 +264,20 @@ evidence generation/root per the accepted Issue #250 conventions.
 
 ## Tooling (additive only)
 
+HISTORICAL (round 1) — SUPERSEDED BY CORRECTION ROUND 2 in the naming
+of the V0n mechanism and the test suite; kept for audit history. The
+round-1 wording below names `_verify_arm_a_bridge_v0n_population` and
+34 focused regressions, both of which CORRECTION ROUND 2 replaced (the
+bespoke checker is deleted; the CURRENT suite is
+`tests/test_issue250_amendment008_round2.py`, 50 tests):
+
 * `scripts/issue250_diagnostic.py`: bridge constants (schema, record
   name, stale-dispatch set, accepted evidence digests, accepted V0
   executed head);
 * `scripts/issue250_physical.py`: `validate_arm_a_bridge`,
-  `_verify_arm_a_bridge_v0n_population`, the row-digest seam, and the
-  amended Arm-A branch of `_require_sequential_reachability`
+  `_verify_arm_a_bridge_v0n_population` (round 1 only; DELETED in
+  CORRECTION ROUND 2), the row-digest seam, and the amended Arm-A
+  branch of `_require_sequential_reachability`
   (historical gate first, bridge second, fail-closed);
 * `scripts/issue250_terminal.py`: `ARM_A_STOPS_LADDER` + the
   blocked-reason surfacing in `derive_terminal` (never granting);
@@ -253,12 +291,22 @@ physical execution of any kind. Arm A has NOT run. No vendor
 correctness or root-cause claim is authorized. Accepted #241/#248
 terminal claims are untouched.
 
-## CORRECTION ROUND 2 (reviewed head 35f427b, review of PR #251)
+## CORRECTION ROUND 2 (reviewed head 35f427b, review of PR #251) — CURRENT
 
 The reviewed implementation opened the bridge through a historical-gate
 message-prefix exception and a bespoke V0n population checker. The
 correction replaces both with exact authenticated predecessor
-decisions:
+decisions. THIS SECTION IS THE CURRENT MECHANISM OF THIS AMENDMENT;
+earlier sections that conflict with it are marked HISTORICAL /
+SUPERSEDED BY CORRECTION ROUND 2. In one sentence: Arm A opens ONLY via
+`arm_a_reachability_source` (exact rederived-V0-state decision), gated
+by `validate_arm_a_bridge` over `revalidating_arm_a_predecessors`
+(frozen `_v0_retained_rows + reduce_v0_screen` and frozen
+`_v0n_retained_rows + reduce_v0n_screen` on the read-only
+`predecessor-v0/` + `predecessor-v0n/` mounts), with the decision
+persisted as `reachability_source` in every Arm-A unit receipt and a
+completed bridge-path Arm-A population reduced to the terminal
+rejection `ARM_A_STOPS_LADDER` on EVERY outcome.
 
 * **Exact predecessor decision (D1).** `arm_a_reachability_source`
   decides HOW Arm A opens from the rederived V0 STATE (never a refusal
