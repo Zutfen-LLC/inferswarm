@@ -213,44 +213,143 @@ class BridgeReducerNegativeTests(
         self.assertTrue(any("reachability" in p.lower()
                             for p in out["problems"]), out["problems"])
 
-    def test_homogeneous_historical_provenance_cannot_use_bridge_admission(self):
-        def mutate(fixture, mounts):
-            for unit in (fixture.evidence / "d250-arm-a").iterdir():
-                path = unit / "unit.json"
-                doc = json.loads(path.read_bytes())
-                doc["reachability_source"] = "historical-v0-amd-variable"
-                path.write_text(json.dumps(doc))
-        out = self._derive_mutated("vary", mutate)
+    @staticmethod
+    def _rewrite_all_sources(fixture, source):
+        paths = sorted((fixture.evidence / "d250-arm-a").glob("*/unit.json"))
+        if not paths:
+            raise AssertionError("regression requires completed Arm-A receipts")
+        for path in paths:
+            doc = json.loads(path.read_bytes())
+            doc["reachability_source"] = source
+            path.write_text(json.dumps(doc))
+        return paths
+
+    def _recorded_derive(self, fixture, *, bridge):
+        calls = []
+        inner = (no_v0_dispatch_fetcher(fixture) if bridge
+                 else fixture.fetch_all())
+
+        def counting(repo_root, expected_head, ns, github_api=None):
+            calls.append(ns)
+            return inner(repo_root, expected_head, ns, github_api)
+
+        with mock.patch.object(T0, "_walk_condition",
+                               wraps=T0._walk_condition) as walk:
+            out = T0.derive_terminal(
+                fixture.evidence, fixture.head, repo_root=fixture.repo,
+                authority_fetcher=counting, contrast_root=fixture.contrast_root)
+        return out, calls, walk.call_count
+
+    def _assert_provenance_mismatch(self, out, calls, walks):
+        # BLOCKED alone is insufficient: old variable A reached B and could
+        # block there. Pin the FIRST rejection and the no-interpretation law.
         self.assertIsNone(out["terminal"])
         self.assertEqual(out["blocked"], T0.BLOCKED)
+        self.assertTrue(any("does not match the selected admission path" in p
+                            for p in out["problems"]), out["problems"])
         self.assertFalse(any(T0.ARM_A_STOPS_LADDER in p
                              for p in out["problems"]), out["problems"])
+        self.assertEqual(walks, 0, "mismatch interpreted Arm-A determinism")
+        self.assertIn("d250-arm-a", calls)
+        for ns in ("d250-arm-b", "d250-arm-c", "d250-arm-c1",
+                   D.C2_SERIAL_NAMESPACE, "d250-arm-d"):
+            self.assertNotIn(ns, calls)
+
+    def test_homogeneous_historical_provenance_cannot_use_bridge_admission(self):
+        # Production-shaped RED: five completed deterministic units; every
+        # receipt has the SAME valid vocabulary value, but the WRONG source.
+        fixture, _ = self._fixture("det")
+        self.assertFalse((fixture.evidence / D.V0_NAMESPACE).exists())
+        self.assertFalse((fixture.evidence / D.V0N_NAMESPACE).exists())
+        P0.validate_arm_a_bridge(fixture.evidence, fixture.head)
+        paths = self._rewrite_all_sources(fixture, "historical-v0-amd-variable")
+        self.assertEqual(len(paths), D.DETERM_MIN_REPEATS)
+        out, calls, walks = self._recorded_derive(fixture, bridge=True)
+        self.assertEqual(out["v0"]["admission"], "amendment-008-bridge")
+        self.assertEqual(out["v0"]["reachability_source"], "arm-a-bridge")
+        pop = out["arms"]["A-vulkan-necessity"]
+        self.assertEqual(pop["reachability_source"], "historical-v0-amd-variable")
+        self.assertEqual({u["reachability_source"] for u in pop["units"]},
+                         {"historical-v0-amd-variable"})
+        # Compact witness makes reviewed-head escape mechanically auditable.
+        print("ADMISSION_PROVENANCE_WITNESS " + json.dumps({
+            "admission": out["v0"]["admission"],
+            "admission_source": out["v0"]["reachability_source"],
+            "population_source": pop["reachability_source"],
+            "units": len(pop["units"]), "terminal": out["terminal"],
+            "authority_fetches": calls, "walk_calls": walks,
+            "problems": out["problems"]}, sort_keys=True))
+        self._assert_provenance_mismatch(out, calls, walks)
+
+    def test_variable_uniform_wrong_bridge_source_blocks_before_b(self):
+        fixture, _ = self._fixture("vary")
+        self._rewrite_all_sources(fixture, "historical-v0-amd-variable")
+        out, calls, walks = self._recorded_derive(fixture, bridge=True)
+        self._assert_provenance_mismatch(out, calls, walks)
+
+    def _historical_fixture(self, rows):
+        from test_issue250_terminal import CampaignFixture
+        fixture = CampaignFixture(self, arm_a_rows=rows)
+        self.addCleanup(fixture.restore_contrast_constant)
+        self.assertFalse((fixture.evidence / D.ARM_A_BRIDGE_NAME).exists())
+        return fixture
+
+    def test_historical_admission_historical_receipts_preserve_localized(self):
+        fixture = self._historical_fixture("det")
+        out, calls, walks = self._recorded_derive(fixture, bridge=False)
+        self.assertEqual(out["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
+        self.assertEqual(out["terminal"], T0.LOCALIZED)
+        self.assertEqual(out["problems"], [])
+        self.assertEqual(out["arms"]["A-vulkan-necessity"]["reachability_source"],
+                         "historical-v0-amd-variable")
+        self.assertEqual(calls, [D.V0_NAMESPACE, "d250-arm-a"])
+        self.assertEqual(walks, 1)
+
+    def test_historical_admission_uniform_bridge_receipts_blocks(self):
+        fixture = self._historical_fixture("det")
+        self._rewrite_all_sources(fixture, "arm-a-bridge")
+        out, calls, walks = self._recorded_derive(fixture, bridge=False)
+        self.assertEqual(out["v0"]["state"], D.V0_STATE_AMD_VARIABLE)
+        self._assert_provenance_mismatch(out, calls, walks)
+
+    def test_valid_bridge_both_outcomes_fetch_only_arm_a(self):
+        for rows in ("det", "vary"):
+            with self.subTest(rows=rows):
+                fixture, _ = self._fixture(rows)
+                out, calls, _ = self._recorded_derive(fixture, bridge=True)
+                self.assertIsNone(out["terminal"])
+                self.assertEqual(out["problems"], [T0.ARM_A_STOPS_LADDER])
+                self.assertEqual(calls, ["d250-arm-a"])
 
     def test_dangling_bridge_record_never_falls_back_to_historical(self):
-        def mutate(fixture, mounts):
-            path = fixture.evidence / D.ARM_A_BRIDGE_NAME
-            path.unlink()
-            path.symlink_to(fixture.evidence / "missing-bridge-record")
-        out = self._derive_mutated("vary", mutate)
-        self.assertIsNone(out["terminal"])
-        self.assertEqual(out["blocked"], T0.BLOCKED)
-        self.assertFalse(any(T0.ARM_A_STOPS_LADDER in p
-                             for p in out["problems"]), out["problems"])
-        self.assertTrue(any("bridge" in p.lower()
-                            for p in out["problems"]), out["problems"])
+        # Historical admission would LOCALIZE if absence were misclassified.
+        fixture = self._historical_fixture("det")
+        path = fixture.evidence / D.ARM_A_BRIDGE_NAME
+        path.symlink_to(fixture.evidence / "missing-bridge-record")
+        self.assertFalse(path.exists())
+        self.assertTrue(path.is_symlink())
+        with mock.patch.object(T0, "derive_v0_state",
+                               wraps=T0.derive_v0_state) as historical:
+            out, calls, walks = self._recorded_derive(fixture, bridge=False)
+        self._assert_admission_blocked(self, out)
+        historical.assert_not_called()
+        self.assertEqual(calls, [])
+        self.assertEqual(walks, 0)
 
     def test_dangling_top_level_v0_symlink_refused_at_bridge_launch_gate(self):
-        fixture, _ = self._fixture("vary")
+        fixture, _ = self._fixture("det")
         path = fixture.evidence / D.V0_NAMESPACE
         path.symlink_to(fixture.evidence / "missing-v0")
-        with mock.patch.object(P0, "require_live_dispatch", return_value={}):
+        self.assertFalse(path.exists())
+        self.assertTrue(path.is_symlink())
+        with mock.patch.object(P0, "validate_arm_a_bridge",
+                               wraps=P0.validate_arm_a_bridge) as bridge:
             with self.assertRaisesRegex(P0.PhysicalDiagnosticError,
-                                        "must precede the first inference unit"):
-                P0.write_v0_screen_freeze(
-                    repo_root=fixture.repo, evidence_root=fixture.evidence,
-                    expected_head=fixture.head, binary=Path("/nonexistent"),
-                    binary_id="comparator", model_dir=Path(D.MODEL_DIR),
-                    model_attestation={"schema": "invalid"})
+                                        "V0 precedes CPU fallback"):
+                P0.arm_a_reachability_source(
+                    fixture.repo, fixture.evidence, fixture.head, {},
+                    no_v0_dispatch_fetcher(fixture), "https://api.github.com")
+        bridge.assert_not_called()
 
     # 13. bridge population with missing reachability provenance
     def test_missing_provenance_arm_a_population_rejects(self):
