@@ -213,6 +213,39 @@ class BridgeReducerNegativeTests(
         self.assertTrue(any("reachability" in p.lower()
                             for p in out["problems"]), out["problems"])
 
+    def test_homogeneous_historical_provenance_cannot_use_bridge_admission(self):
+        def mutate(fixture, mounts):
+            for unit in (fixture.evidence / "d250-arm-a").iterdir():
+                path = unit / "unit.json"
+                doc = json.loads(path.read_bytes())
+                doc["reachability_source"] = "historical-v0-amd-variable"
+                path.write_text(json.dumps(doc))
+        out = self._derive_mutated("vary", mutate)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T0.BLOCKED)
+        self.assertFalse(any(T0.ARM_A_STOPS_LADDER in p
+                             for p in out["problems"]), out["problems"])
+
+    def test_dangling_bridge_record_never_falls_back_to_historical(self):
+        def mutate(fixture, mounts):
+            path = fixture.evidence / D.ARM_A_BRIDGE_NAME
+            path.unlink()
+            path.symlink_to(fixture.evidence / "missing-bridge-record")
+        out = self._derive_mutated("vary", mutate)
+        self.assertIsNone(out["terminal"])
+        self.assertEqual(out["blocked"], T0.BLOCKED)
+        self.assertFalse(any(T0.ARM_A_STOPS_LADDER in p
+                             for p in out["problems"]), out["problems"])
+        self.assertTrue(any("bridge" in p.lower()
+                            for p in out["problems"]), out["problems"])
+
+    def test_dangling_top_level_v0_symlink_refused_at_bridge_launch_gate(self):
+        fixture, _ = self._fixture("vary")
+        path = fixture.evidence / D.V0_NAMESPACE
+        path.symlink_to(fixture.evidence / "missing-v0")
+        with self.assertRaises((P0.PhysicalDiagnosticError, ValueError)):
+            P0.validate_arm_a_bridge(fixture.evidence, fixture.head)
+
     # 13. bridge population with missing reachability provenance
     def test_missing_provenance_arm_a_population_rejects(self):
         def mutate(fixture, mounts):
