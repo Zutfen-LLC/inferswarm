@@ -252,3 +252,77 @@ This amendment creates no model load, no inference request, and no
 physical execution of any kind. Arm A has NOT run. No vendor
 correctness or root-cause claim is authorized. Accepted #241/#248
 terminal claims are untouched.
+
+## CORRECTION ROUND 2 (reviewed head 35f427b, review of PR #251)
+
+The reviewed implementation opened the bridge through a historical-gate
+message-prefix exception and a bespoke V0n population checker. The
+correction replaces both with exact authenticated predecessor
+decisions:
+
+* **Exact predecessor decision (D1).** `arm_a_reachability_source`
+  decides HOW Arm A opens from the rederived V0 STATE (never a refusal
+  message prefix): `historical-v0-amd-variable` when the frozen reducer
+  derives the eligible variable state, or `arm-a-bridge` when the
+  top-level V0 state is an adjudicated maintainer stop
+  (DISAGREEMENT_STOP / CONCORDANCE_STOP / IDENTICAL_PAIR_NEEDS_THIRD)
+  — or the top-level V0 namespace is entirely absent (a bridge-only
+  campaign root) — AND `validate_arm_a_bridge` authenticates. An
+  INVALID V0 state (absent/tampered/unreadable evidence, custody
+  failure) can never open the bridge: it re-raises the historical
+  refusal unchanged.
+* **Retained-byte V0 revalidation (D2).** The bridge revalidates the
+  accepted V0 result through the frozen `_v0_retained_rows` verifier
+  and re-derives the decision through the frozen `reduce_v0_screen`:
+  exactly three units, all equal to the accepted stable row
+  (`ARM_A_BRIDGE_V0_STABLE_ROW_SHA256`), equal to NEITHER retained
+  #248 NVIDIA row (accepted contrast law), under the byte-exact
+  reconstructed accepted dispatch authority (`99cb573c…`).
+* **Frozen retained-population V0n custody (D3).** The bespoke checker
+  is deleted. The V0n half authenticates through the frozen
+  `_v0n_retained_rows` verifier (backend/identity/residency/dispatch/
+  argv/env/PID/generation custody) plus the frozen
+  `reduce_v0n_screen` re-derivation of `CURRENT_NVIDIA_VARIABLE_STOP`
+  with both rows NOVEL (differing from the AMD stable row and both
+  retained #248 rows), under the byte-exact reconstructed accepted
+  dispatch authority (`4aa0aa0b…`), with the fresh-process PID-custody
+  law enforced.
+* **Read-only cross-host evidence path.** The accepted roots
+  (`inferswarm05:/home/hermes/is250-campaign/evidence-v0-c5cc132/`,
+  `inferswarm01:/home/hermes/is250-campaign/
+  evidence-v0n-nvidia-aa05971/`) are IMMUTABLE and never read by the
+  future Arm-A producer. A bridge campaign mounts self-contained
+  read-only copies under its own evidence root:
+  `predecessor-v0/` and `predecessor-v0n/` (symlink mounts refused).
+  The frozen verifiers then run unmodified over the mounted bytes;
+  every bridge constant (stable row, V0n rows, freeze digest) is
+  compared against the real content digests. CPU-only regression
+  hosts patch the frozen constants to the synthetic population's real
+  digests (the established fixture precedent) — the verifiers
+  themselves never change.
+* **Provenance + terminal stop (D4).** Every Arm-A unit receipt
+  persists `reachability_source` (one of the two frozen vocabulary
+  values; later-arm receipts carry none). The terminal reducer
+  verifies per-unit provenance, rejects mixed/absent populations, and
+  consumes a completed bridge-path Arm-A population to exactly the
+  post-A review decision: `derive_terminal` returns
+  `ARM_A_STOPS_LADDER` for a bridge-path Arm A on EVERY outcome
+  (deterministic or variable) — no Vulkan root cause is inferred, no
+  B/C/C1/C2/D authority is granted.
+* **Preserved gates.** Fresh exact-head dispatch, clean-head, model,
+  cost, fixture, and two-pass launch gates are untouched; the bridge
+  grants eligibility only, never execution authority. A mutation
+  matrix (record fields, mounts, symlinks, digests, PIDs, provenance
+  mixing) covers every corrected boundary.
+* **Tooling delta.** `scripts/issue250_physical.py`
+  (`arm_a_reachability_source`, `revalidating_arm_a_predecessors`,
+  frozen-authority reconstruction, corrected
+  `_require_sequential_reachability`), `scripts/issue250_terminal.py`
+  (provenance verification + unconditional bridge-path stop),
+  `scripts/issue250_diagnostic.py` (retained dispatch-comment
+  constants), and `tests/test_issue250_amendment008_round2.py`
+  (24 [RED] + 11 [PIN] + 15 mutation regressions, registered in
+  `r8i-qwen-qualification`).
+
+No physical arm was dispatched or executed; accepted evidence is
+untouched; the bridge grants no execution authority.

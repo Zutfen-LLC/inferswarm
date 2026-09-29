@@ -195,159 +195,33 @@ def row_with_sha(seed: bytes) -> bytes:
 
 
 class BridgeFixture:
-    """Synthetic evidence root carrying the accepted V0n population
-    under the accepted digests, plus the bridge record.
+    """Synthetic evidence root carrying the accepted predecessor
+    population under real digests, plus the bridge record.
 
-    The accepted 993280-byte rows (and their freeze) live on remote
-    append-only roots and cannot be synthesized on a CPU host; the
-    fixture therefore synthesizes digest-consistent evidence the same
-    way tests/test_issue250_v0n_nvidia.py does: rows are arbitrary
-    993280-byte payloads whose SHA-256 the validator reads through the
-    module-level ``_sha256_file`` seam, patched to return the accepted
-    digests. Every OTHER custody field is enforced against real
-    content: a mutated row flips its synthetic hash entry and rejects,
-    and every receipt/freeze field comparison is live.
+    CORRECTION ROUND 2: delegates to the round-2 mount builder
+    (tests/test_issue250_amendment008_round2.PredecessorMounts), which
+    installs read-only predecessor-v0/ and predecessor-v0n/ mounts with
+    REAL content digests (bridge constants patched to the synthetic
+    population and restored on cleanup) plus a top-level V0n mirror for
+    legacy path expectations. Every frozen verifier runs unmodified
+    over real bytes; mutated rows/receipts change their real digest and
+    reject. A ``bridge_record()`` helper returns the resigned canonical
+    record naming the synthetic digests.
     """
 
     def __init__(self, test: unittest.TestCase):
+        from test_issue250_amendment008_round2 import PredecessorMounts
         self.tmp = tempfile.TemporaryDirectory()
         test.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.row_digests = list(D.ARM_A_BRIDGE_V0N_ROW_SHA256)
-        self._accepted: dict[str, str] = {}
-        self._sha_patch = mock.patch.object(
-            P, "_sha256_file",
-            side_effect=lambda p: self._translate(p))
-        self._sha_patch.start()
-        test.addCleanup(self._sha_patch.stop)
-        # The ACCEPTED freeze digest (3fe9e74d…) covers the accepted
-        # physical freeze bytes, which live on the remote append-only
-        # root; the fixture freezes its synthetic identity through the
-        # same module-level digest seam so the freeze is simultaneously
-        # self-consistent under the validator's law and bound to the
-        # accepted canonical digest. Identity CONTENT is still enforced
-        # live (`_v0n_identity_matches_authority` + receipt/freeze
-        # equality against the real derived identity digest).
-        self._freeze_patch = mock.patch.object(
-            P, "_v0n_freeze_digest",
-            return_value=D.ARM_A_BRIDGE_V0N_FREEZE_SHA256)
-        self._freeze_patch.start()
-        test.addCleanup(self._freeze_patch.stop)
-        self.authority = make_v0n_authority()
-        self._build_v0n_population()
+        self.mounts = PredecessorMounts(test, self.root)
+        self.row_digests = list(self.mounts.v0n_rows)
+        self.freeze = json.loads(
+            (self.root / "predecessor-v0n" / P.V0N_FREEZE_NAME
+             ).read_bytes())
 
-    def _translate(self, path: Path) -> str:
-        # Content-keyed translation: the ORIGINAL real digest of each
-        # synthesized row maps to its accepted digest. Any byte drift
-        # yields an unknown real digest, which falls through unchanged
-        # and mismatches the accepted constant — a mutated row rejects.
-        real = D.file_sha256(path)
-        return self._accepted.get(real, real)
-
-    def _build_v0n_population(self):
-        P.write_generation_marker(self.root)
-        P.retain_cost_planning_record(self.root)
-        device = synthetic_nvidia_device()
-        identity = synthetic_subject_identity()
-        self.identity_digest = P._v0n_identity_digest(identity)
-        # The canonical freeze record the validator authenticates binds
-        # the ACCEPTED digest (3fe9e74d…) via its own canonical-digest
-        # field; the identity digest fields travel from the synthetic
-        # identity and are compared live between freeze and receipts.
-        freeze = {
-            "schema": P.V0N_FREEZE_SCHEMA, "producer": P.V0N_FREEZE_PRODUCER,
-            "expected_pr_head": V0N_HEAD,
-            "namespace": D.V0N_NAMESPACE, "arm": D.V0N_ARM,
-            "identity_arm": P.V0N_IDENTITY_ARM,
-            "identity_authority": "scripts/issue248_identity.py",
-            "subject_identity": identity,
-            "subject_identity_sha256": self.identity_digest,
-            "gpu_uuid": identity["gpu_uuid"], "bdf": identity["bdf"],
-            "icd": P.V0N_NVIDIA_ICD,
-            "vulkan_selector": {"GGML_VK_VISIBLE_DEVICES": "0",
-                                "VK_ICD_FILENAMES": P.V0N_NVIDIA_ICD},
-            "cuda_law": {"CUDA_VISIBLE_DEVICES": "-1",
-                         "link_family_cuda_exclusion": True},
-            "source_pin": P.V0N_SOURCE_PIN,
-            "llama_source_pin": P.V0N_SOURCE_PIN,
-            "binary_sha256": P.V0N_COMPARATOR_SHA,
-            "comparator_sha256": P.V0N_COMPARATOR_SHA,
-            "observer_libraries": dict(P.V0_OBSERVER_LIBS),
-            "dispatch_sha256": D.ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256,
-            # Accepted freeze digest, bound through the seam-patched
-            # canonical law (P._v0n_freeze_digest is NOT patched; the
-            # validator reads the retained canonical field verbatim).
-            "canonical_digest_sha256":
-                D.ARM_A_BRIDGE_V0N_FREEZE_SHA256,
-        }
-        self.freeze = freeze
-        (self.root / P.V0N_FREEZE_NAME).write_text(json.dumps(freeze))
-        base = self.root / D.V0N_NAMESPACE
-        base.mkdir(parents=True)
-        for i, tag in enumerate(D.V0N_UNIT_TAGS[:2]):
-            unit = base / tag
-            unit.mkdir()
-            row = row_with_sha(f"synthetic-v0n-{i}".encode())
-            (unit / "obs.row0.f32").write_bytes(row)
-            self._accepted[D.file_sha256(unit / "obs.row0.f32")] = \
-                self.row_digests[i]
-            argv = P.v0n_server_argv(
-                Path("/opt/llama-server"),
-                Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
-            env = {"VK_ICD_FILENAMES": P.V0N_NVIDIA_ICD,
-                   "GGML_VK_VISIBLE_DEVICES": "0",
-                   "CUDA_VISIBLE_DEVICES": "-1",
-                   "LD_LIBRARY_PATH": "/opt/libs"}
-            receipt = {
-                "schema": D.V0N_SCHEMA, "tag": tag,
-                "namespace": D.V0N_NAMESPACE, "arm": D.V0N_ARM,
-                "head_sha": V0N_HEAD,
-                "evidence_generation": P.EVIDENCE_GENERATION,
-                "decision0_row_sha256": self.row_digests[i],
-                "row_bytes": D.ROW_BYTES,
-                "authority_sha256": D.ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256,
-                "v0n_freeze_digest":
-                    D.ARM_A_BRIDGE_V0N_FREEZE_SHA256,
-                "v0n_subject_identity": dict(identity),
-                "v0n_subject_identity_sha256": self.identity_digest,
-                "prelaunch_identity_sha256": self.identity_digest,
-                "postexec_identity_sha256": self.identity_digest,
-                "gpu_uuid": identity["gpu_uuid"], "bdf": identity["bdf"],
-                "vulkan_selector": dict(freeze["vulkan_selector"]),
-                "placement_verified": True,
-                "vram_before": 0,
-                "vram_after": 512 * 1024 * 1024,
-                "vram_evidence": production_vram_evidence(
-                    identity["gpu_uuid"], identity["bdf"], "0", "512"),
-                "nvidia_device": copy.deepcopy(device),
-                "case_id": D.CONTRAST_CASE, "ngl": 1,
-                "backend": "Vulkan", "cuda_participation": False,
-                "embedding_placement": "CPU",
-                "output_projection_placement": "Vulkan",
-                "placement_source_law": {
-                    "source_pin": P.V0N_SOURCE_PIN, "ngl": 1,
-                    "embedding": "CPU", "output_projection": "Vulkan"},
-                "model_dir": D.MODEL_DIR,
-                "model_launch_member": str(
-                    Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
-                "model_member_sha256": D.MODEL_MEMBER_SHA256[
-                    D.MODEL_MEMBER_1],
-                "prompt_sha256": D.sha256_bytes(json.dumps(
-                    [1] * 3077, separators=(",", ":")).encode()),
-                "prompt_token_ids": [1] * 3077,
-                "prompt_text_sha256": "t" * 64, "prompt_len": 3077,
-                "request_contract": D.REQUEST_CONTRACT,
-                "request_contract_sha256": D.canonical_request_digest(
-                    D.REQUEST_CONTRACT),
-                "fresh_process": True, "server_pid": 1275670 + i,
-                "binary_sha256": P.V0N_COMPARATOR_SHA,
-                "server_argv": argv, "server_env": env,
-                "process_attribution": {
-                    "server_exe_sha256": P.V0N_COMPARATOR_SHA,
-                    "server_pid": 1275670 + i, "server_argv": argv,
-                    "server_env": env},
-            }
-            (unit / "unit.json").write_text(json.dumps(receipt))
+    def bridge_record(self) -> dict:
+        return self.mounts.bridge_record()
 
 
 class BridgeValidatorTests(unittest.TestCase):
@@ -358,11 +232,11 @@ class BridgeValidatorTests(unittest.TestCase):
         self.root = self.fixture.root
 
     def _valid_bridge(self) -> dict:
-        """The committed canonical bridge record, verbatim — the
-        synthetic tree carries the accepted digests, so no record
-        mutation is needed (the production law: bridge + evidence
-        agree byte-identity-wise through the digest seam)."""
-        return make_bridge_record()
+        """The canonical bridge record rebound to the fixture's
+        synthetic population digests and resigned (correction round 2:
+        mounts carry real synthetic digests; the committed record names
+        the remote accepted bytes)."""
+        return self.fixture.bridge_record()
 
     def test_accepted_combination_satisfies_predicate(self):
         record = self._valid_bridge()
@@ -471,44 +345,55 @@ class BridgeValidatorTests(unittest.TestCase):
         record = self._valid_bridge()
         write_bridge_record(self.root, record)
         for victim in D.V0N_UNIT_TAGS[:2]:
-            unit = self.root / D.V0N_NAMESPACE / victim
-            saved = (unit / "unit.json").read_bytes()
-            (unit / "unit.json").unlink()
+            saved = {}
+            for base in (self.root / "predecessor-v0n" / D.V0N_NAMESPACE,
+                         self.root / D.V0N_NAMESPACE):
+                saved[base] = (base / victim / "unit.json").read_bytes()
+                (base / victim / "unit.json").unlink()
             with self.subTest(victim=victim):
                 with self.assertRaises(P.PhysicalDiagnosticError):
                     P.validate_arm_a_bridge(self.root, V0N_HEAD)
-            (unit / "unit.json").write_bytes(saved)
+            for base, raw in saved.items():
+                (base / victim / "unit.json").write_bytes(raw)
 
     def test_extra_third_unit_rejects(self):
         record = self._valid_bridge()
         write_bridge_record(self.root, record)
-        extra = self.root / D.V0N_NAMESPACE / D.V0N_UNIT_TAGS[2]
-        extra.mkdir()
-        (extra / "unit.json").write_text("{}")
-        with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                    "exactly the two retained V0n units"):
+        for base in (self.root / "predecessor-v0n" / D.V0N_NAMESPACE,
+                     self.root / D.V0N_NAMESPACE):
+            extra = base / D.V0N_UNIT_TAGS[2]
+            extra.mkdir()
+            (extra / "unit.json").write_text("{}")
+        # CORRECTION ROUND 2: rejected through the frozen
+        # retained-population verifier (unexpected/partial/future unit
+        # population) before the two-unit reduction.
+        with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_arm_a_bridge(self.root, V0N_HEAD)
-        shutil.rmtree(extra)
+        shutil.rmtree(self.root / "predecessor-v0n" / D.V0N_NAMESPACE
+                      / D.V0N_UNIT_TAGS[2])
+        shutil.rmtree(self.root / D.V0N_NAMESPACE / D.V0N_UNIT_TAGS[2])
 
     def test_row_drift_rejects(self):
         record = self._valid_bridge()
         write_bridge_record(self.root, record)
-        row_path = (self.root / D.V0N_NAMESPACE / D.V0N_UNIT_TAGS[0] /
-                    "obs.row0.f32")
-        raw = row_path.read_bytes()
-        row_path.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+        for base in (self.root / "predecessor-v0n" / D.V0N_NAMESPACE,
+                     self.root / D.V0N_NAMESPACE):
+            row_path = base / D.V0N_UNIT_TAGS[0] / "obs.row0.f32"
+            raw = row_path.read_bytes()
+            row_path.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_arm_a_bridge(self.root, V0N_HEAD)
 
     def test_identity_custody_drift_rejects(self):
         record = self._valid_bridge()
         write_bridge_record(self.root, record)
-        path = (self.root / D.V0N_NAMESPACE / D.V0N_UNIT_TAGS[1] /
-                "unit.json")
-        doc = json.loads(path.read_bytes())
-        doc["v0n_subject_identity"]["gpu_uuid"] = \
-            "GPU-00000000-0000-0000-0000-000000000000"
-        path.write_text(json.dumps(doc))
+        for base in (self.root / "predecessor-v0n" / D.V0N_NAMESPACE,
+                     self.root / D.V0N_NAMESPACE):
+            path = base / D.V0N_UNIT_TAGS[1] / "unit.json"
+            doc = json.loads(path.read_bytes())
+            doc["v0n_subject_identity"]["gpu_uuid"] = \
+                "GPU-00000000-0000-0000-0000-000000000000"
+            path.write_text(json.dumps(doc))
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_arm_a_bridge(self.root, V0N_HEAD)
 
@@ -523,35 +408,33 @@ class BridgeValidatorTests(unittest.TestCase):
         # The canonical record pins the ACCEPTED MISMATCHED digest pair
         # and the validator compares record rows to the frozen constant
         # — an "identical pair" record can never pass the binding law
-        # at all (asserted first). The tail law itself (a uniform,
-        # never-varied presented population rejects even when every
-        # custody clause passes) is exercised directly on the
-        # population verifier with both rows presenting the same
-        # accepted digest.
+        # at all (asserted first). CORRECTION ROUND 2: the tail law (a
+        # uniform, never-varied presented population rejects even when
+        # every custody clause passes) runs through the frozen reducer
+        # path on real bytes: unit-2 row rewritten to unit-1's bytes,
+        # digest + record rebound, and reduce_v0n_screen derives
+        # IDENTICAL_PAIR_THIRD_REQUIRED ≠ the accepted VARIABLE_STOP.
         record = self._valid_bridge()
-        record["v0n"]["row_sha256"] = [
-            record["v0n"]["row_sha256"][0]] * 2
+        record["v0n"]["row_sha256"] = [record["v0n"]["row_sha256"][0]] * 2
         write_bridge_record(self.root, resign(record))
         with self.assertRaisesRegex(
                 P.PhysicalDiagnosticError,
                 "binding/authority mismatch"):
             P.validate_arm_a_bridge(self.root, V0N_HEAD)
-        # Tail law on the presented evidence: both rows + receipts
-        # carry ONE accepted digest while the record binds the
-        # mismatched constant pair — the per-row expected-sha equality
-        # rejects unit 2 before the pair comparison (fail-closed either
-        # way; a uniform population never opens Arm A).
-        same = canonical_bridge_record()["v0n"]["row_sha256"][0]
-        self.fixture._accepted = {
-            real: same for real in self.fixture._accepted}
-        for tag in D.V0N_UNIT_TAGS[:2]:
-            path = (self.root / D.V0N_NAMESPACE / tag / "unit.json")
+        mount_base = self.root / "predecessor-v0n" / D.V0N_NAMESPACE
+        first = (mount_base / D.V0N_UNIT_TAGS[0] /
+                 "obs.row0.f32").read_bytes()
+        uniform = hashlib.sha256(first).hexdigest()
+        for base in (mount_base, self.root / D.V0N_NAMESPACE):
+            (base / D.V0N_UNIT_TAGS[1] / "obs.row0.f32").write_bytes(first)
+            path = base / D.V0N_UNIT_TAGS[1] / "unit.json"
             doc = json.loads(path.read_bytes())
-            doc["decision0_row_sha256"] = same
+            doc["decision0_row_sha256"] = uniform
             path.write_text(json.dumps(doc))
-        with self.assertRaises(P.PhysicalDiagnosticError):
-            P._verify_arm_a_bridge_v0n_population(
-                canonical_bridge_record(), self.root)
+        D.ARM_A_BRIDGE_V0N_ROW_SHA256 = (uniform, uniform)
+        record = self._valid_bridge()
+        record["v0n"]["row_sha256"] = [uniform, uniform]
+        write_bridge_record(self.root, resign(record))
         with self.assertRaises(P.PhysicalDiagnosticError):
             P.validate_arm_a_bridge(self.root, V0N_HEAD)
 
@@ -559,6 +442,16 @@ class BridgeValidatorTests(unittest.TestCase):
         record = canonical_bridge_record()
         self.assertEqual(record["canonical_digest_sha256"],
                          P._v0_digest(record))
+        # The fixture patches the digest constants to its synthetic
+        # population; the committed record binds the REAL accepted
+        # digests (asserted against the saved originals).
+        saved = self.fixture.mounts.saved
+        self.assertEqual(record["v0n"]["freeze_sha256"],
+                         saved["freeze"])
+        self.assertEqual(tuple(record["v0n"]["row_sha256"]),
+                         tuple(saved["rows"]))
+        self.assertEqual(record["v0"]["stable_row_sha256"],
+                         saved["stable"])
         self.assertEqual(record["v0"]["state"],
                          D.V0_STATE_DISAGREEMENT_STOP)
         self.assertEqual(record["v0n"]["state"],
@@ -569,12 +462,8 @@ class BridgeValidatorTests(unittest.TestCase):
                          D.ARM_A_BRIDGE_V0_DISPATCH_DIGEST_SHA256)
         self.assertEqual(record["v0n"]["dispatch_sha256"],
                          D.ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256)
-        self.assertEqual(record["v0n"]["freeze_sha256"],
-                         D.ARM_A_BRIDGE_V0N_FREEZE_SHA256)
-        self.assertEqual(record["v0n"]["row_sha256"],
-                         list(D.ARM_A_BRIDGE_V0N_ROW_SHA256))
-        self.assertEqual(record["v0"]["stable_row_sha256"],
-                         D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256)
+
+
         self.assertEqual(record["v0"]["executed_head"],
                          D.ACCEPTED_V0_EXECUTED_HEAD)
         self.assertEqual(record["v0n"]["executed_head"],
@@ -603,7 +492,10 @@ class ReviewedHeadReachabilityTests(unittest.TestCase):
                 {}, None, "https://api.github.com")
 
     def test_accepted_combination_opens_only_via_bridge(self):
-        write_bridge_record(self.root, canonical_bridge_record())
+        # CORRECTION ROUND 2: the fixture mounts carry synthetic
+        # digests; the gate must receive the matching resigned record
+        # (the committed canonical record names the remote bytes).
+        write_bridge_record(self.root, self.fixture.bridge_record())
         opened = False
         try:
             P._require_sequential_reachability(

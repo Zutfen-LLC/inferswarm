@@ -214,12 +214,14 @@ class PredecessorMounts:
             "stable": D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256,
             "rows": D.ARM_A_BRIDGE_V0N_ROW_SHA256,
             "freeze": D.ARM_A_BRIDGE_V0N_FREEZE_SHA256,
+            "amd_current": D.V0N_AMD_CURRENT_ROW0_SHA256,
         }
 
         def restore():
             D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256 = self.saved["stable"]
             D.ARM_A_BRIDGE_V0N_ROW_SHA256 = self.saved["rows"]
             D.ARM_A_BRIDGE_V0N_FREEZE_SHA256 = self.saved["freeze"]
+            D.V0N_AMD_CURRENT_ROW0_SHA256 = self.saved["amd_current"]
         test.addCleanup(restore)
         self._build_v0(v0_units)
         self._build_v0n(v0n_units)
@@ -230,6 +232,12 @@ class PredecessorMounts:
         head = V0_HEAD
         authority = accepted_v0_authority()
         mount = self.root / "predecessor-v0"
+        # Real binary/lib directory (the frozen binding validator checks
+        # binary_lib_dir exists and is binary_path's parent).
+        bin_dir = self.root / "v0-bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        binary_path = bin_dir / "llama-server"
+        binary_path.write_bytes(b"fake-accepted-comparator")
         cards = {"0000:07:00.0": "card1", "0000:0b:00.0": "card2"}
         device_identity = {
             "vendor_id": "0x1002", "device_id": "0x6864",
@@ -246,15 +254,17 @@ class PredecessorMounts:
                     "vulkan_instance": "1.4.309",
                     "devices": {0: copy.deepcopy(device_identity),
                                 1: copy.deepcopy(device_identity)}},
-                "drm_cards": cards, "binary_lib_dir": "/opt/libs"}
+                "drm_cards": cards, "binary_lib_dir": str(bin_dir)}
+        self.v0_binary = binary_path
+        self.v0_lib_dir = str(bin_dir)
         binding = {"schema": P0.V0_BINDING_SCHEMA,
                    "expected_pr_head": head, "host": "inferswarm05",
                    "producer": P0.V0_BINDING_PRODUCER,
                    "source_pin": P0.V0_SOURCE_PIN,
                    "binary_sha256": P0.V0_COMPARATOR_SHA,
-                   "binary_path": "/opt/llama-server",
+                   "binary_path": str(binary_path),
                    "icd": P0.V0_RADV_ICD, "cuda_visible_devices": "-1",
-                   "binary_lib_dir": "/opt/libs",
+                   "binary_lib_dir": str(bin_dir),
                    "enumeration_sha256": live["enumeration_sha256"],
                    "icd_sha256": live["icd_sha256"],
                    "runtime_identity": json.loads(json.dumps(
@@ -279,13 +289,13 @@ class PredecessorMounts:
                      "process_attribution": {
                          "server_exe_sha256": P0.V0_COMPARATOR_SHA,
                          "server_argv": P0.v0_server_argv(
-                             Path("/opt/llama-server"),
+                             self.v0_binary,
                              Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
                          "server_env": {
                              "VK_ICD_FILENAMES": P0.V0_RADV_ICD,
                              "GGML_VK_VISIBLE_DEVICES": str(idx),
                              "CUDA_VISIBLE_DEVICES": "-1",
-                             "LD_LIBRARY_PATH": "/opt/libs"}}}
+                             "LD_LIBRARY_PATH": self.v0_lib_dir}}}
             path = probe_dir / f"index-{idx}.json"
             path.write_text(json.dumps(probe))
             binding["preflight_probe_sha256"][str(idx)] = \
@@ -359,12 +369,12 @@ class PredecessorMounts:
                 "fresh_process": True, "server_pid": 51000 + index,
                 "binary_sha256": P0.V0_COMPARATOR_SHA,
                 "server_argv": P0.v0_server_argv(
-                    Path("/opt/llama-server"),
+                    self.v0_binary,
                     Path(D.MODEL_DIR) / D.MODEL_MEMBER_1),
                 "server_env": {"VK_ICD_FILENAMES": P0.V0_RADV_ICD,
                                "GGML_VK_VISIBLE_DEVICES": "0",
                                "CUDA_VISIBLE_DEVICES": "-1",
-                               "LD_LIBRARY_PATH": "/opt/libs"},
+                               "LD_LIBRARY_PATH": self.v0_lib_dir},
             }
             receipt["process_attribution"] = {
                 "server_exe_sha256": P0.V0_COMPARATOR_SHA,
@@ -374,6 +384,9 @@ class PredecessorMounts:
             (unit / "unit.json").write_text(json.dumps(receipt))
         self.v0_stable = self.v0_rows[0]
         D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256 = self.v0_stable
+        # The V0n frozen reducer compares against the AMD current-
+        # window stable row (same accepted population).
+        D.V0N_AMD_CURRENT_ROW0_SHA256 = self.v0_stable
 
     # ----- V0n (NVIDIA) mount (+ reviewed-head top-level mirror) ------
 
@@ -433,12 +446,12 @@ class PredecessorMounts:
 
     def _v0n_receipt(self, tag, i, digest, identity, freeze, device):
         argv = P0.v0n_server_argv(
-            Path("/opt/llama-server"),
+            self.v0_binary,
             Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
         env = {"VK_ICD_FILENAMES": P0.V0N_NVIDIA_ICD,
                "GGML_VK_VISIBLE_DEVICES": "0",
                "CUDA_VISIBLE_DEVICES": "-1",
-               "LD_LIBRARY_PATH": "/opt/libs"}
+               "LD_LIBRARY_PATH": self.v0_lib_dir}
         return {
             "schema": D.V0N_SCHEMA, "tag": tag,
             "namespace": D.V0N_NAMESPACE, "arm": D.V0N_ARM,
@@ -859,12 +872,12 @@ class ProducerProvenanceTests(unittest.TestCase):
         from test_issue250_physical import (Env, fake_execute,
                                             fake_identity,
                                             fake_health_runner)
-        real_fallback = P0._require_v0_fallback
+        real_source = P0.arm_a_reachability_source
         env = Env(self, "d250-arm-a", "A-vulkan-necessity")
         env.open_attestation()
-        # Restore the REAL historical gate for the launch (Env mocks it
-        # out; it must refuse here so the bridge decides the path).
-        with mock.patch.object(P0, "_require_v0_fallback", real_fallback):
+        # Restore the REAL corrected Arm-A gate for the launch (Env
+        # mocks it out; the bridge decides the path from the mounts).
+        with mock.patch.object(P0, "arm_a_reachability_source", real_source):
             mounts = PredecessorMounts(self, env.evidence)
             write_bridge(env.evidence, mounts.bridge_record())
             tag = D.probe_list_for("A-vulkan-necessity")[0]["tag"]
@@ -909,17 +922,38 @@ class TerminalBridgeStopTests(unittest.TestCase):
     def _fixture(self, arm_a_rows):
         from test_issue250_terminal import CampaignFixture
         fixture = CampaignFixture(self, arm_a_rows=arm_a_rows)
+        self.addCleanup(fixture.restore_contrast_constant)
         # Re-present the campaign's own V0 population as the accepted
-        # DISAGREEMENT_STOP: three identical rows under the campaign's
-        # V0 authority (the frozen reducer derives the state from the
-        # bytes through the real validators).
+        # DISAGREEMENT_STOP: three identical NOVEL rows under the
+        # campaign's V0 authority — the frozen reducer derives the
+        # state from the bytes through the real validators.
         base = fixture.evidence / D.V0_NAMESPACE
-        shutil.rmtree(base)
-        base.mkdir(parents=True)
-        src = fixture.evidence  # placeholder to keep flake quiet
-        # Rebuild the three V0 units from the ORIGINAL fixture receipts
-        # with identical rows: reuse the first unit's receipt, rewrite
-        # every row to the same bytes and every receipt's row digest.
+        stable = (base / D.V0_UNIT_TAGS[0] / "obs.row0.f32").read_bytes()
+        digest = hashlib.sha256(stable).hexdigest()
+        for tag in D.V0_UNIT_TAGS[:2]:
+            (base / tag / "obs.row0.f32").write_bytes(stable)
+            path = base / tag / "unit.json"
+            doc = json.loads(path.read_bytes())
+            doc["decision0_row_sha256"] = digest
+            path.write_text(json.dumps(doc))
+        # Third unit: full copy of the second under the third tag with
+        # a distinct PID (fresh-process attribution law).
+        third = base / D.V0_UNIT_TAGS[2]
+        shutil.copytree(base / D.V0_UNIT_TAGS[1], third)
+        path = third / "unit.json"
+        doc = json.loads(path.read_bytes())
+        doc["tag"] = D.V0_UNIT_TAGS[2]
+        doc["server_pid"] = 40003
+        doc["process_attribution"]["server_pid"] = 40003
+        path.write_text(json.dumps(doc))
+        # Bridge-path predecessors + record at the campaign root (no
+        # reviewed-head mirror: the terminal consumes the mounts).
+        mounts = PredecessorMounts(self, fixture.evidence, mirror_v0n=False)
+        write_bridge(fixture.evidence, mounts.bridge_record())
+        # Rebuild the Arm-A population through the REAL producer under
+        # the bridge path, so receipts persist arm-a-bridge provenance.
+        shutil.rmtree(fixture.evidence / "d250-arm-a")
+        fixture._build_arm_a(arm_a_rows)
         return fixture
 
     def test_bridge_path_arm_a_variable_stops_before_b(self):
@@ -943,6 +977,111 @@ class TerminalBridgeStopTests(unittest.TestCase):
         self.assertTrue(out["blocked"])
         self.assertTrue(any("METHODOLOGY-AMENDMENT-008" in p
                             for p in out["problems"]), out["problems"])
+
+
+# ---------------------------------------------------------------------------
+# D5 — mutation matrix: every corrected boundary rejects a forged record
+# ---------------------------------------------------------------------------
+
+
+class BridgeMutationTests(BridgeGateTestCase):
+    """Each mutation of the ACCEPTED bridge record binding must reject
+    (record claims are never authority — the mounts decide)."""
+
+    def _mutated_gate(self, *path):
+        # path = zero or more "v0"/"v0n" node names, final element a
+        # (key, value) tuple
+        record = self.mounts.bridge_record()
+        node = record
+        for name in path[:-1]:
+            node = node[name]
+        node[path[-1][0]] = path[-1][1]
+        write_bridge(self.root, resign(record))
+        with self.assertRaises(P0.PhysicalDiagnosticError):
+            self.gate()
+
+    def test_v0_state_claim_drift_rejects(self):
+        # [MUT] record claims CONCORDANCE_STOP for V0
+        self._mutated_gate("v0", ("state", D.V0_STATE_CONCORDANCE_STOP))
+
+    def test_v0_units_claim_drift_rejects(self):
+        self._mutated_gate("v0", ("units", 2))
+
+    def test_v0_dispatch_claim_drift_rejects(self):
+        self._mutated_gate("v0", ("dispatch_sha256", "f" * 64))
+
+    def test_v0n_state_claim_drift_rejects(self):
+        self._mutated_gate("v0n", ("state", D.V0N_STATE_CONCORDANCE_STOP))
+
+    def test_v0n_units_claim_drift_rejects(self):
+        self._mutated_gate("v0n", ("units", 3))
+
+    def test_v0n_freeze_claim_drift_rejects(self):
+        self._mutated_gate("v0n", ("freeze_sha256", "f" * 64))
+
+    def test_eligible_arms_widening_rejects(self):
+        # [MUT] granting later arms through the record is forbidden
+        self._mutated_gate(
+            ("eligible_arms",
+             ["A-vulkan-necessity", "B-process-init"]))
+
+    def test_executes_arm_a_claim_drift_rejects(self):
+        self._mutated_gate(("executes_arm_a", True))
+
+    def test_schema_drift_rejects(self):
+        self._mutated_gate(("schema", "forged/1"))
+
+    def test_producer_drift_rejects(self):
+        self._mutated_gate(("recorded_by", "attacker"))
+
+    def test_evidence_head_drift_rejects(self):
+        self._mutated_gate(("evidence_head", "a" * 40))
+
+    def test_maintainer_adjudication_unset_rejects(self):
+        self._mutated_gate(("maintainer_adjudicated", False))
+
+    def test_undigested_record_rejects(self):
+        record = self.mounts.bridge_record()
+        record["v0"]["units"] = 2
+        write_bridge(self.root, record)  # canonical digest NOT recomputed
+        with self.assertRaises(P0.PhysicalDiagnosticError):
+            self.gate()
+
+    def test_symlinked_bridge_record_rejects(self):
+        record = self.mounts.bridge_record()
+        (self.root / D.ARM_A_BRIDGE_NAME).unlink()
+        (self.root / "real.json").write_text(json.dumps(record))
+        (self.root / D.ARM_A_BRIDGE_NAME).symlink_to(
+            self.root / "real.json")
+        with self.assertRaises(P0.PhysicalDiagnosticError):
+            self.gate()
+
+    def test_missing_bridge_record_rejects(self):
+        (self.root / D.ARM_A_BRIDGE_NAME).unlink()
+        with self.assertRaises(P0.PhysicalDiagnosticError):
+            self.gate()
+
+    def test_symlinked_v0_mount_rejects(self):
+        real = self.root / "real-v0"
+        (self.root / "predecessor-v0").rename(real)
+        (self.root / "predecessor-v0").symlink_to(real)
+        with self.assertRaises(P0.PhysicalDiagnosticError):
+            self.gate()
+
+    def test_mixed_path_arm_a_population_rejects_at_terminal(self):
+        # [MUT] a population mixing historical and bridge provenance
+        # fails the terminal population check.
+        from test_issue250_terminal import CampaignFixture
+        fixture = CampaignFixture(self, arm_a_rows="det")
+        self.addCleanup(fixture.restore_contrast_constant)
+        receipt_path = (fixture.evidence / "d250-arm-a" /
+                        D.probe_list_for("A-vulkan-necessity")[0]["tag"] /
+                        "unit.json")
+        doc = json.loads(receipt_path.read_bytes())
+        doc["reachability_source"] = "arm-a-bridge"
+        receipt_path.write_text(json.dumps(doc))
+        out = fixture.derive()
+        self.assertTrue(out["blocked"])
 
 
 if __name__ == "__main__":

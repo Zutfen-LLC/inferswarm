@@ -430,7 +430,12 @@ class CostProducerAdmissionTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         # This pass-6 harness tests cost admission, not V0 provenance.
+        # (AMENDMENT-008 r2: the corrected Arm-A gate is patched for the
+        # same reason — no predecessor evidence in this harness.)
         self.enterContext(mock.patch.object(P, "_require_v0_fallback"))
+        self.enterContext(mock.patch.object(
+            P, "arm_a_reachability_source",
+            return_value="historical-v0-amd-variable"))
         self.root = Path(self.tmp.name)
         self.repo = self.root / "repo"
         self.repo.mkdir()

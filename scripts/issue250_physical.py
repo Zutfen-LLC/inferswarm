@@ -3763,16 +3763,19 @@ def validate_arm_a_bridge(evidence_root: Path, expected_head: str,
                           ) -> dict[str, Any]:
     """Authenticate the post-V0n Arm-A reachability bridge (AMENDMENT-008).
 
-    Fail-closed in every direction: absent, unreadable, syntactically
-    malformed, wrongly bound, or tampered records reject; the record
-    additionally carries no semantics by itself — the retained physical
-    evidence it names must authenticate through the frozen producer
-    verifiers. Eligibility is NOT execution authority.
+    CORRECTION ROUND 2 (reviewed head 35f427b): eligibility is decided
+    by an EXACT authenticated predecessor DECISION revalidated from
+    retained bytes — never by a bridge-record claim and never by a
+    historical-gate refusal message prefix. Fail-closed in every
+    direction: absent, unreadable, malformed, wrongly bound, or tampered
+    records reject; both predecessor populations must authenticate
+    through their FROZEN retained-population verifiers
+    (revalidating_arm_a_predecessors), and both frozen reducers must
+    re-derive exactly the accepted states. Eligibility is NOT execution
+    authority.
     """
     root = Path(evidence_root)
     path = root / D.ARM_A_BRIDGE_NAME
-    invalid = {"schema": D.ARM_A_BRIDGE_SCHEMA, "valid": False,
-               "terminal": None, "a_eligible": False}
     if path.is_symlink() or not path.is_file():
         raise PhysicalDiagnosticError(
             "post-V0n Arm-A reachability bridge record missing "
@@ -3819,10 +3822,190 @@ def validate_arm_a_bridge(evidence_root: Path, expected_head: str,
     if record.get("canonical_digest_sha256") != _v0_digest(record):
         raise PhysicalDiagnosticError(
             "Arm-A reachability bridge canonical digest mismatch")
-    # The bridge cannot authorize from bytes alone: the V0n population it
-    # names must authenticate through the frozen retained-row validator.
-    _verify_arm_a_bridge_v0n_population(record, root)
+    # The bridge cannot authorize from bytes alone: BOTH predecessor
+    # populations must re-authenticate through the frozen verifiers and
+    # both frozen reducers must re-derive the accepted decisions.
+    revalidating_arm_a_predecessors(root)
     return record
+
+
+# --- Cross-host read-only predecessor evidence path (AMENDMENT-008 r2) ---
+#
+# The accepted predecessor roots live on two distinct hosts (AMD V0 on
+# inferswarm05 at /home/hermes/is250-campaign/evidence-v0-c5cc132/,
+# V0n on inferswarm01 at /home/hermes/is250-campaign/
+# evidence-v0n-nvidia-aa05971/). The original append-only roots are
+# IMMUTABLE and never rewritten; a future Arm-A campaign mounts them
+# read-only under its own evidence root as self-contained copies:
+#
+#   <evidence-root>/predecessor-v0/   (AMD V0 root copy)
+#   <evidence-root>/predecessor-v0n/  (V0n root copy)
+#
+# The copies are verified against the accepted identities the bridge
+# record names (dispatch digests, freeze digests, row digests) by the
+# SAME frozen verifiers that ran at acceptance time; nothing on the
+# original roots is read by the Arm-A producer, so the mount can never
+# perturb accepted evidence. CPU-only regression hosts cannot hold the
+# physical rows; tests patch the frozen bridge constants to the
+# synthetic population's real digests (the ACCEPTED_248_MANIFEST_SELF_
+# DIGEST fixture precedent) and every frozen verifier then runs
+# unmodified over real bytes.
+
+ARM_A_PREDECESSOR_V0_MOUNT = "predecessor-v0"
+ARM_A_PREDECESSOR_V0N_MOUNT = "predecessor-v0n"
+
+
+def _arm_a_frozen_v0_authority() -> dict[str, Any]:
+    """The completed AMD V0 dispatch payload, reconstructed byte-exact
+    from the retained dispatch-comment fields (AMENDMENT-006 precedent:
+    dispatch authority digests are derivable offline). Digest equals
+    the frozen accepted constant ARM_A_BRIDGE_V0_DISPATCH_DIGEST_SHA256
+    (asserted by validate_arm_a_bridge via the record binding and again
+    here through authority_digest)."""
+    authority = {
+        "comment_id": D.ARM_A_BRIDGE_V0_DISPATCH_COMMENT_ID,
+        "issue_url": (f"https://api.github.com/repos/Zutfen-LLC/"
+                      f"inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}"),
+        "author_association": "MEMBER",
+        "created_at": D.ARM_A_BRIDGE_V0_DISPATCH_CREATED_AT,
+        "head_sha": D.ACCEPTED_V0_EXECUTED_HEAD,
+        "namespace": D.V0_NAMESPACE,
+        "arm": D.V0_ARM,
+        "body": "\n".join([
+            D.DIAGNOSTIC_DISPATCH_PHRASE,
+            f"head={D.ACCEPTED_V0_EXECUTED_HEAD}",
+            f"diagnostic-namespace={D.V0_NAMESPACE}",
+            f"arm={D.V0_ARM}",
+        ]),
+        "open_pr": True,
+        "issue_open": True,
+    }
+    if (D.authority_digest(authority)
+            != D.ARM_A_BRIDGE_V0_DISPATCH_DIGEST_SHA256):
+        raise PhysicalDiagnosticError(
+            "frozen V0 dispatch authority reconstruction drifted")
+    return authority
+
+
+def _arm_a_frozen_v0n_authority() -> dict[str, Any]:
+    """The completed V0n dispatch payload, reconstructed byte-exact
+    from the retained dispatch-comment fields; digest equals the frozen
+    accepted constant ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256."""
+    authority = {
+        "comment_id": D.ARM_A_BRIDGE_V0N_DISPATCH_COMMENT_ID,
+        "issue_url": (f"https://api.github.com/repos/Zutfen-LLC/"
+                      f"inferswarm/issues/{D.DIAGNOSTIC_PR_NUMBER}"),
+        "author_association": "MEMBER",
+        "created_at": D.ARM_A_BRIDGE_V0N_DISPATCH_CREATED_AT,
+        "head_sha": ARM_A_BRIDGE_EVIDENCE_HEAD,
+        "namespace": D.V0N_NAMESPACE,
+        "arm": D.V0N_ARM,
+        "body": "\n".join([
+            D.DIAGNOSTIC_DISPATCH_PHRASE,
+            f"head={ARM_A_BRIDGE_EVIDENCE_HEAD}",
+            f"diagnostic-namespace={D.V0N_NAMESPACE}",
+            f"arm={D.V0N_ARM}",
+        ]) + "\n",
+        "open_pr": True,
+        "issue_open": True,
+    }
+    if (D.authority_digest(authority)
+            != D.ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256):
+        raise PhysicalDiagnosticError(
+            "frozen V0n dispatch authority reconstruction drifted")
+    return authority
+
+
+def revalidating_arm_a_predecessors(root: Path) -> dict[str, Any]:
+    """Revalidate BOTH accepted predecessor populations from retained
+    bytes under the read-only mounts, through the FROZEN verifiers, and
+    re-derive both decisions through the FROZEN reducers.
+
+    V0 (predecessor-v0/): exactly the accepted three-unit
+    repeat-stable population; ``_v0_retained_rows`` re-checks every
+    receipt/row/custody clause (one-factor freeze, selector binding,
+    probe records, process attribution, placement) under the frozen
+    accepted dispatch authority; ``reduce_v0_screen`` must derive
+    exactly CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED with all three rows
+    equal to the accepted stable row and equal to NEITHER retained
+    #248 NVIDIA row (accepted contrast law).
+
+    V0n (predecessor-v0n/): exactly the accepted two-unit mismatched
+    population; ``_v0n_retained_rows`` re-checks the complete frozen
+    custody (identity/freeze/residency/argv/env/authority/PID/
+    generation) under the frozen accepted dispatch authority;
+    ``reduce_v0n_screen`` must derive exactly
+    CURRENT_NVIDIA_VARIABLE_STOP with both rows novel (differing from
+    the AMD stable row and BOTH retained #248 rows).
+    """
+    root = Path(root)
+    # --- V0 half -------------------------------------------------------
+    v0_mount = root / ARM_A_PREDECESSOR_V0_MOUNT
+    if v0_mount.is_symlink() or not v0_mount.is_dir():
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0 predecessor mount missing or symlink "
+            f"({ARM_A_PREDECESSOR_V0_MOUNT}); the accepted AMD V0 "
+            "evidence is not consumable without it")
+    v0_authority = _arm_a_frozen_v0_authority()
+    v0_rows = _v0_retained_rows(v0_mount, 3, D.ACCEPTED_V0_EXECUTED_HEAD,
+                                v0_authority)
+    if len(v0_rows) != 3:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0 population is not the accepted three units")
+    v0_base = v0_mount / V0_NAMESPACE
+    v0_bytes = [(v0_base / tag / "obs.row0.f32").read_bytes()
+                for tag in V0_UNIT_TAGS[:3]]
+    v0_decision = D.reduce_v0_screen(v0_bytes, D.V0_NVIDIA_ROW0_SHA256)
+    if v0_decision.get("state") != D.V0_STATE_DISAGREEMENT_STOP:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0 decision is not the accepted stable "
+            f"cross-vendor disagreement stop: {v0_decision.get('state')}")
+    if (v0_decision.get("amd_rows") != [D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256]
+            * 3 or v0_decision.get("matched_retained_nvidia") is not False):
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0 rows are not the accepted repeat-stable "
+            "novel population")
+    # --- V0n half ------------------------------------------------------
+    v0n_mount = root / ARM_A_PREDECESSOR_V0N_MOUNT
+    if v0n_mount.is_symlink() or not v0n_mount.is_dir():
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0n predecessor mount missing or symlink "
+            f"({ARM_A_PREDECESSOR_V0N_MOUNT}); the accepted V0n "
+            "evidence is not consumable without it")
+    v0n_authority = _arm_a_frozen_v0n_authority()
+    v0n_rows = _v0n_retained_rows(v0n_mount, 2, ARM_A_BRIDGE_EVIDENCE_HEAD,
+                                  v0n_authority)
+    if len(v0n_rows) != 2:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0n population is not the accepted two units")
+    # Fresh-process custody (the terminal's derive_v0n_state law): the
+    # two retained units must carry DISTINCT PIDs — a duplicated PID is
+    # not two fresh processes.
+    v0n_base = v0n_mount / V0N_NAMESPACE
+    v0n_pids = []
+    for tag in V0N_UNIT_TAGS[:2]:
+        rec = json.loads((v0n_base / tag / "unit.json").read_bytes())
+        v0n_pids.append(rec.get("server_pid"))
+    if len(set(v0n_pids)) != 2:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0n population violates the fresh-process "
+            "PID-custody law")
+    v0n_bytes = [(v0n_base / tag / "obs.row0.f32").read_bytes()
+                 for tag in V0N_UNIT_TAGS[:2]]
+    v0n_decision = D.reduce_v0n_screen(
+        v0n_bytes, D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256,
+        D.V0_NVIDIA_ROW0_SHA256)
+    if v0n_decision.get("state") != D.V0N_STATE_NVIDIA_VARIABLE_STOP:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0n decision is not the accepted current "
+            f"NVIDIA variable stop: {v0n_decision.get('state')}")
+    for row_class in v0n_decision.get("row_classes", []):
+        if row_class.get("novel") is not True:
+            raise PhysicalDiagnosticError(
+                "Arm-A bridge V0n rows are not the accepted novel "
+                "population (equals AMD current or a retained #248 row)")
+    return {"v0": v0_decision, "v0n": v0n_decision}
+
 
 
 def _sha256_file(path: Path) -> str:
@@ -3837,65 +4020,31 @@ def _sha256_file(path: Path) -> str:
     return D.file_sha256(path)
 
 
-def _verify_arm_a_bridge_v0n_population(record: dict[str, Any],
-                                        root: Path) -> None:
-    """Authenticate the bridge's V0n evidence from retained bytes.
+def _v0_refusal_is_adjudicated_stop(historical: PhysicalDiagnosticError
+                                    ) -> bool:
+    """CORRECTION ROUND 2: classify a historical-gate refusal EXACTLY.
 
-    The bridge names the accepted V0n dispatch, freeze and row digests;
-    this check re-derives those identities from the retained V0n
-    evidence tree (receipts bound to the authenticated freeze) so a
-    forged or drift-synthesized bridge cannot manufacture eligibility
-    without the physical evidence it claims.
-    """
-    base = root / V0N_NAMESPACE
-    if base.is_symlink() or not base.is_dir():
-        raise PhysicalDiagnosticError(
-            "Arm-A bridge V0n namespace missing or symlink")
-    present = {p.name for p in base.iterdir() if p.is_dir() or p.is_symlink()}
-    if present != set(V0N_UNIT_TAGS[:2]):
-        raise PhysicalDiagnosticError(
-            "Arm-A bridge requires exactly the two retained V0n units")
-    freeze = _read_v0n_screen_freeze(root, ARM_A_BRIDGE_EVIDENCE_HEAD)
-    if (freeze["canonical_digest_sha256"]
-            != record["v0n"]["freeze_sha256"]):
-        raise PhysicalDiagnosticError(
-            "Arm-A bridge freeze digest mismatch")
-    rows = []
-    for tag, expected_sha in zip(
-            V0N_UNIT_TAGS[:2], record["v0n"]["row_sha256"]):
-        receipt_path = base / tag / "unit.json"
-        row_path = base / tag / "obs.row0.f32"
-        if (receipt_path.is_symlink() or row_path.is_symlink()
-                or not receipt_path.is_file() or not row_path.is_file()):
-            raise PhysicalDiagnosticError(
-                f"Arm-A bridge V0n unit missing: {tag}")
-        receipt = json.loads(receipt_path.read_bytes())
-        raw = row_path.read_bytes()
-        digest = _sha256_file(row_path)
-        if (len(raw) != D.ROW_BYTES
-                or digest != expected_sha
-                or receipt.get("head_sha") != ARM_A_BRIDGE_EVIDENCE_HEAD
-                or receipt.get("namespace") != V0N_NAMESPACE
-                or receipt.get("arm") != V0N_ARM
-                or receipt.get("v0n_freeze_digest")
-                != freeze["canonical_digest_sha256"]
-                or receipt.get("v0n_subject_identity")
-                != freeze["subject_identity"]
-                or receipt.get("fresh_process") is not True):
-            raise PhysicalDiagnosticError(
-                "Arm-A bridge V0n retained custody mismatch")
-        # Row-to-receipt binding is checked against the PRESENTED row
-        # digest (never the record's constant): the accepted VARIABLE
-        # population must present a genuinely differing first pair,
-        # while a uniform (never-varied) population is rejected by the
-        # tail law below regardless of what any record claims.
-        if receipt.get("decision0_row_sha256") != digest:
-            raise PhysicalDiagnosticError(
-                "Arm-A bridge V0n receipt row-digest binding mismatch")
-        rows.append(digest)
-    if rows[0] == rows[1]:
-        raise PhysicalDiagnosticError(
-            "Arm-A bridge requires the mismatched V0n first pair")
+    The historical gate's terminal refusal message carries the
+    rederived V0 state ('V0 precedes CPU fallback; verified AMD
+    variability required: <STATE>: <reason>'). Only an ADJUDICATED
+    maintainer-stop state — the class the accepted bridge record was
+    adjudicated against (DISAGREEMENT_STOP, CONCORDANCE_STOP, or the
+    explicit third-required screen state) — may hand control to the
+    bridge. V0_INVALID_BLOCKED (absent/unreadable/tampered/invalid V0
+    evidence, network loss, custody failure) and every non-terminal
+    failure re-raise unchanged: the bridge must never be reachable
+    from an un-adjudicated failure. State names are matched EXACTLY
+    (substring law, so a forged 'reason' string cannot smuggle a state
+    name past the classifier)."""
+    message = str(historical)
+    prefix = "V0 precedes CPU fallback; verified AMD variability required: "
+    reason = message[len(prefix):] if message.startswith(prefix) else ""
+    if not reason:
+        return False
+    return any(state in reason for state in (
+        D.V0_STATE_DISAGREEMENT_STOP,
+        D.V0_STATE_CONCORDANCE_STOP,
+        D.V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD))
 
 
 def _require_sequential_reachability(
@@ -3909,32 +4058,89 @@ def _require_sequential_reachability(
     This check runs before any physical runner/process and uses the same
     exact-head live authority and retained-byte verifiers as the reducer.
 
-    METHODOLOGY-AMENDMENT-008: Arm A alone may additionally open through
-    the post-V0n maintainer-adjudicated bridge record
-    (validate_arm_a_bridge) when the accepted V0+V0n evidence
-    combination — stable AMD cross-vendor disagreement plus a
-    current-window NVIDIA VARIABLE_STOP — is authenticated from
-    retained bytes. Every later arm still requires the historical
-    `_require_v0_fallback`-preceded variable ladder verbatim.
+    Returns nothing; callers needing the Arm-A reachability SOURCE
+    (historical AMD_VARIABLE vs post-V0n bridge) use
+    ``arm_a_reachability_source``. METHODOLOGY-AMENDMENT-008: Arm A
+    alone may additionally open through the post-V0n
+    maintainer-adjudicated bridge record (validate_arm_a_bridge) when
+    the accepted V0+V0n evidence combination — stable AMD cross-vendor
+    disagreement plus a current-window NVIDIA VARIABLE_STOP — is
+    authenticated from retained bytes. Every later arm still requires
+    the historical `_require_v0_fallback`-preceded variable ladder
+    verbatim.
     """
     if arm == "A-vulkan-necessity":
-        # METHODOLOGY-AMENDMENT-008: Arm A opens through the historical
-        # AMD_VARIABLE law OR the new post-V0n bridge — never by a
-        # weaker union. The historical gate runs verbatim; only on its
-        # exact refusal may the separately adjudicated bridge record
-        # open the condition (validate_arm_a_bridge fail-closes on
-        # absence/tamper). Any other historical refusal (invalid
-        # custody, third-required, …) still blocks.
-        try:
-            _require_v0_fallback(repo_root, evidence_root, expected_head,
-                                 revalidate_authority, github_api)
-        except PhysicalDiagnosticError as historical:
-            if str(historical).startswith(
-                    "V0 precedes CPU fallback"):
-                validate_arm_a_bridge(Path(evidence_root), expected_head)
-            else:
-                raise
+        arm_a_reachability_source(
+            repo_root, evidence_root, expected_head, model_attestation,
+            revalidate_authority, github_api)
         return
+    _require_sequential_reachability_ladder(
+        repo_root, evidence_root, arm, expected_head, model_attestation,
+        revalidate_authority, github_api)
+
+
+def arm_a_reachability_source(
+        repo_root: Path, evidence_root: Path, expected_head: str,
+        model_attestation: dict[str, Any],
+        revalidate_authority: Callable[..., dict[str, Any]] | None,
+        github_api: str) -> str:
+    """Decide (and authenticate) HOW Arm A is reachable; fail closed.
+
+    Returns the reachability provenance, exactly one of:
+      * ``historical-v0-amd-variable`` — the historical AMD_VARIABLE
+        law opened Arm A (retained V0 population re-verified variable
+        through the frozen reducers and live dispatch authority);
+      * ``arm-a-bridge`` — the top-level V0 state is an ADJUDICATED
+        maintainer stop (or the V0 namespace is absent because the
+        campaign root is bridge-only) AND the corrected AMENDMENT-008
+        bridge authenticated the exact accepted predecessor decisions
+        from retained bytes (validate_arm_a_bridge).
+
+    Any other failure raises. Later arms are NOT decided here.
+
+    CORRECTION ROUND 2: eligibility is decided from the rederived V0
+    STATE, never from a refusal-message prefix. An invalid V0 state
+    (absent/tampered/unreadable evidence, custody failure) can NEVER
+    open the bridge — the state must be an adjudicated stop state, or
+    the V0 namespace must be entirely absent (a bridge-only campaign
+    root carries no top-level V0 evidence at all, and the bridge is
+    then the only adjudicated path; the bridge itself revalidates the
+    accepted V0 decision from the read-only mount).
+    """
+    import issue250_terminal as T
+    state: dict[str, Any]
+    try:
+        state = T.derive_v0_state(
+            Path(evidence_root),
+            Path(evidence_root) / "accepted-248-contrast",
+            Path(repo_root), expected_head,
+            authority_fetcher=revalidate_authority, github_api=github_api)
+    except Exception:
+        state = {"state": D.V0_STATE_INVALID, "valid": False}
+    if (state.get("state") == D.V0_STATE_AMD_VARIABLE
+            and state.get("a_eligible") is True):
+        return "historical-v0-amd-variable"
+    v0_root = Path(evidence_root) / D.V0_NAMESPACE
+    namespace_absent = not v0_root.exists()
+    if not namespace_absent:
+        if state.get("state") not in (
+                D.V0_STATE_DISAGREEMENT_STOP,
+                D.V0_STATE_CONCORDANCE_STOP,
+                D.V0_STATE_IDENTICAL_PAIR_NEEDS_THIRD):
+            raise PhysicalDiagnosticError(
+                "V0 precedes CPU fallback; verified AMD variability "
+                f"required: {state.get('state')}: "
+                f"{state.get('reason', 'V0 evidence invalid')}")
+    validate_arm_a_bridge(Path(evidence_root), expected_head)
+    return "arm-a-bridge"
+
+
+def _require_sequential_reachability_ladder(
+        repo_root: Path, evidence_root: Path, arm: str,
+        expected_head: str, model_attestation: dict[str, Any],
+        revalidate_authority: Callable[..., dict[str, Any]] | None,
+        github_api: str) -> None:
+    """Historical variable-ladder proof for every arm AFTER A."""
     import issue250_terminal as T
 
     root = Path(evidence_root)
@@ -4351,9 +4557,18 @@ def run_diagnostic_unit(
         raise PhysicalDiagnosticError(
             "live dispatch arm does not match the executing arm")
     D._require_clean_head(repo_root, expected_head)
-    _require_sequential_reachability(
-        repo_root, Path(evidence_root), arm, expected_head,
-        model_attestation, revalidate_authority, github_api)
+    # AMENDMENT-008 r2: persist the authenticated Arm-A reachability
+    # provenance (historical AMD_VARIABLE vs post-V0n bridge) in every
+    # Arm-A unit receipt; later arms carry none.
+    reachability_source: str | None = None
+    if arm == "A-vulkan-necessity":
+        reachability_source = arm_a_reachability_source(
+            repo_root, Path(evidence_root), expected_head,
+            model_attestation, revalidate_authority, github_api)
+    else:
+        _require_sequential_reachability(
+            repo_root, Path(evidence_root), arm, expected_head,
+            model_attestation, revalidate_authority, github_api)
     c2_gate = None
     if condition == "arm-c2-serial":
         c2_gate = c2_launch_allowed(
@@ -4513,6 +4728,7 @@ def run_diagnostic_unit(
         unit_started_at=unit_started_at, unit_ended_at=unit_ended_at,
         wall=wall, health_runner=health_runner,
         token_authority=token_authority,
+        reachability_source=reachability_source,
         canonical_generation=canonical_generation)
 
 
@@ -4525,6 +4741,7 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
                            wall, health_runner,
                            same_process_block=None,
                            token_authority=None,
+                           reachability_source=None,
                            canonical_generation=EVIDENCE_GENERATION,
                            ) -> dict[str, Any]:
     """Post-execution custody: identity postcheck, rows, health, receipt."""
@@ -4602,6 +4819,11 @@ def _finalize_unit_receipt(*, unit_dir, tag, namespace, arm, unit, result,
         "identity_problems_post": problems_post,
         "subject_identity_schema": I.IDENTITY_SCHEMA,
         "authority": unit_authority_block(final_authority),
+        # AMENDMENT-008 r2: bridge-path provenance. Present (and one of
+        # the two frozen vocabulary values) on EVERY Arm-A receipt;
+        # absent on every later arm. Persisted from the authenticated
+        # launch-gate decision, never caller-supplied.
+        "reachability_source": reachability_source,
         # CORRECTION PASS 6 (AMENDMENT-003): receipts identify the
         # evidence generation and retain the exact timeout policy that
         # governed the request (budget + derivation inputs + digest).

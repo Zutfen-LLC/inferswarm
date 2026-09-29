@@ -751,6 +751,19 @@ def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
     except Exception as exc:
         raise ValueError(
             f"timeout policy binding invalid: {exc}") from None
+    # AMENDMENT-008 r2: Arm-A receipts MUST carry reachability
+    # provenance from the frozen vocabulary (persisted by the
+    # authenticated launch gate); later-arm receipts must NOT.
+    if arm == "A-vulkan-necessity":
+        if receipt.get("reachability_source") not in (
+                "historical-v0-amd-variable", "arm-a-bridge"):
+            raise ValueError(
+                "Arm-A unit receipt carries no authenticated "
+                "reachability provenance")
+    elif receipt.get("reachability_source") is not None:
+        raise ValueError(
+            f"{arm} receipt must not carry Arm-A reachability "
+            "provenance")
     # binary authority
     if (receipt.get("binary_sha256")
             != D.SERVER_BINARIES.get(receipt.get("binary_id"))):
@@ -930,6 +943,7 @@ def _verify_unit_receipt(unit_dir: Path, namespace: str, arm: str,
         raise ValueError("platform-health custody invalid")
     return {"tag": tag, "token_sha256": token_sha, "row_sha256": row_sha,
             "receipt": receipt, "rows_meta_lines": lines,
+            "reachability_source": receipt.get("reachability_source"),
             "fatal_findings": checked["fatal_findings"]}
 
 
@@ -1376,6 +1390,18 @@ def _arm_a_facts(root: Path, expected_head: str, authority: dict[str, Any],
         [u["tag"] for u in D.probe_list_for("A-vulkan-necessity")],
         lambda tag: "accepted")
     problems.extend(pop_problems)
+    # AMENDMENT-008 r2: the population's reachability provenance is the
+    # per-unit receipt provenance; a population mixing paths (or with
+    # none, already rejected per-unit) fails closed here.
+    sources = {u.get("reachability_source")
+               for u in pop.get("units", [])}
+    if len(sources) == 1 and sources <= {
+            "historical-v0-amd-variable", "arm-a-bridge"}:
+        pop["reachability_source"] = sources.pop()
+    elif pop.get("units"):
+        problems.append(
+            "Arm-A population mixes or lacks reachability provenance: "
+            f"{sorted(map(str, sources))}")
     try:
         contrast = verify_historical_contrast(contrast_root)
     except (OSError, ValueError, TypeError, KeyError,
@@ -1666,26 +1692,25 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
                          expected_head, authority_fetcher=authority_fetcher,
                          github_api=github_api)
     if v0.get("state") != D.V0_STATE_AMD_VARIABLE or not v0.get("a_eligible"):
-        # METHODOLOGY-AMENDMENT-008: the accepted post-V0n state (stable
-        # AMD cross-vendor disagreement stop) additionally admits the
-        # separately adjudicated Arm-A bridge record. That surface is
-        # consumed by the PHYSICAL launch gate (_require_sequential_
-        # reachability via validate_arm_a_bridge) — never by terminal
-        # derivation, which stays blocked with the reason recorded.
-        arm_a_bridge: str | None = None
+        # METHODOLOGY-AMENDMENT-008 (corrected round 2): when the V0
+        # state is the ACCEPTED adjudicated stop AND the corrected
+        # bridge record authenticates (exact predecessor decisions
+        # revalidated from the read-only mounts), the Arm-A population
+        # IS consumable — the walk proceeds to Arm A and STOPS there
+        # (see the reachability_source law below). Every other
+        # non-AMD_VARIABLE state blocks exactly as before.
         if v0.get("state") == D.V0_STATE_DISAGREEMENT_STOP:
-            bridge_path = root / D.ARM_A_BRIDGE_NAME
-            arm_a_bridge = (
-                "arm-a bridge record present (post-V0n adjudication, "
-                "AMENDMENT-008); physical Arm-A reachability is decided "
-                "by the launch gate, not by terminal derivation"
-                if bridge_path.is_file() and not bridge_path.is_symlink()
-                else None)
-        reason = (f"V0 gate blocks A: {v0.get('state')}: "
-                  f"{v0.get('reason', 'maintainer stop or third required')}")
-        if arm_a_bridge:
-            reason += f"; {arm_a_bridge}"
-        return _blocked([reason], {"v0": v0})
+            try:
+                P.validate_arm_a_bridge(root, expected_head)
+            except Exception as exc:
+                return _blocked(
+                    [f"V0 gate blocks A: {v0.get('state')}: "
+                     f"{v0.get('reason', 'maintainer stop')}; "
+                     f"Arm-A bridge rejected: {exc}"], {"v0": v0})
+        else:
+            reason = (f"V0 gate blocks A: {v0.get('state')}: "
+                      f"{v0.get('reason', 'maintainer stop or third required')}")
+            return _blocked([reason], {"v0": v0})
 
     reduction: dict[str, Any] = {"arms": {}, "contrast": None, "v0": v0}
 
@@ -1773,6 +1798,15 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
     contrast = arm_a.get("contrast") or {}
     contrast_varies = (contrast.get("row_deterministic") is False)
 
+    # METHODOLOGY-AMENDMENT-008 (corrected round 2): a COMPLETED
+    # bridge-path Arm-A population STOPS the ladder for maintainer
+    # review — REGARDLESS of the result. Deterministic ⇒ review before
+    # any LOCALIZED claim (no Vulkan root cause is inferred); variable
+    # ⇒ review before any B execution. No terminal is emitted and no
+    # later arm is auto-reachable from a bridge-path Arm A.
+    if arm_a.get("reachability_source") == "arm-a-bridge":
+        return _blocked([ARM_A_STOPS_LADDER], reduction)
+
     if cpu["deterministic"] and contrast_varies:
         # A localizes: backend-participation boundary.
         return _ok(LOCALIZED, reduction, {
@@ -1807,11 +1841,7 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
             reduction)
 
     # ---------------- Arm B (required: A CPU-only varies) ----------
-    # METHODOLOGY-AMENDMENT-008: an Arm-A population produced under the
-    # post-V0n bridge path STOPS the ladder — B requires a new
-    # maintainer decision (a future amendment), never auto-progresses.
-    if arm_a.get("reachability_source") == "arm-a-bridge":
-        return _blocked([ARM_A_STOPS_LADDER], reduction)
+    # (A bridge-path Arm A already returned ARM_A_STOPS_LADDER above.)
     authority_b = _fetch("d250-arm-b", "B-process-init")
     if authority_b is None:
         return _blocked(problems, reduction)

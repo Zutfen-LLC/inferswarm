@@ -291,6 +291,15 @@ ARM_A_BRIDGE_V0N_ROW_SHA256 = (
     "3d6b599d15004d7ad0b4402784b64eec369434724c9dc13e16f23531de975d6b")
 # The exact accepted physical execution heads the bridge consumes.
 ACCEPTED_V0_EXECUTED_HEAD = "c5cc132762c51a3352014f36553eff6d0d26b112"
+# The retained dispatch-comment fields the accepted authority digests
+# are byte-exactly reconstructible from (AMENDMENT-008 r2 offline
+# predecessor revalidation; verified against the live comment bytes):
+# V0 — comment 5868617068 (2026-09-28T11:05:20Z), V0n — comment
+# 5880409202 (2026-09-28T23:13:06Z); both MEMBER-associated on PR #251.
+ARM_A_BRIDGE_V0_DISPATCH_COMMENT_ID = 5868617068
+ARM_A_BRIDGE_V0_DISPATCH_CREATED_AT = "2026-09-28T11:05:20Z"
+ARM_A_BRIDGE_V0N_DISPATCH_COMMENT_ID = 5880409202
+ARM_A_BRIDGE_V0N_DISPATCH_CREATED_AT = "2026-09-28T23:13:06Z"
 
 
 def _v0n_row_class(digest: str, amd_sha: str,

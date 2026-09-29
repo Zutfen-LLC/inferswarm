@@ -226,6 +226,10 @@ GROUP_TEST_MODULES = {
         # accepted-evidence binding, namespace isolation, no B-D
         # progression, historical-evidence immutability.
         "test_issue250_amendment008",
+        # AMENDMENT-008 correction round 2: exact authenticated
+        # predecessor decision, frozen-verifier predecessor custody,
+        # bridge-path provenance + terminal stop law, mutation matrix.
+        "test_issue250_amendment008_round2",
         # Correction pass 6 (AMENDMENT-003): timeout-budget authority,
         # cost gate, C1/C2 authority separation, evidence generation,
         # stale-dispatch regressions.
@@ -660,6 +664,8 @@ PATH_GROUPS = {
     "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_v0n_nvidia.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_amendment008.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_round2.py":
+        ["r8i-qwen-qualification"],
     "tests/test_issue250_pass6_corrections.py":
         ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [

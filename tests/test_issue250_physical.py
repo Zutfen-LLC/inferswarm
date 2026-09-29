@@ -332,7 +332,14 @@ class Env:
         self.test = test
         # Legacy A-D producer fixtures predate V0. Exercise their original
         # invariants independently; V0 admission has dedicated tests below.
+        # AMENDMENT-008 r2: arm_a_reachability_source (the corrected
+        # Arm-A gate) is patched for the same reason — these fixtures
+        # have no predecessor evidence, and their provenance law is
+        # covered by the dedicated amendment008_round2 producer tests.
         test.enterContext(mock.patch.object(P, "_require_v0_fallback"))
+        test.enterContext(mock.patch.object(
+            P, "arm_a_reachability_source",
+            return_value="historical-v0-amd-variable"))
         self.tmp = tempfile.TemporaryDirectory()
         test.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
