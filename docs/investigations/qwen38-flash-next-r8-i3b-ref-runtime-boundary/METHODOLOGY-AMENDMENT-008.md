@@ -374,3 +374,78 @@ rejection `ARM_A_STOPS_LADDER` on EVERY outcome.
 
 No physical arm was dispatched or executed; accepted evidence is
 untouched; the bridge grants no execution authority.
+
+## CORRECTION ROUND 3 — reducer admission made path-aware (2026-09-29)
+
+**Discovered production/fixture divergence (defect report PR #251
+comment `5897507995`, maintainer adjudication `5897538288`).** The
+round-2 launch-side bridge authentication was verified correct against
+the real predecessor evidence (the probes over the REAL accepted bytes
+authenticated perfectly and `arm_a_reachability_source` returned
+`arm-a-bridge`), but `derive_terminal()` was production-unreachable for
+exactly the campaign shape this amendment authorizes: it called
+`derive_v0_state(...)` UNCONDITIONALLY before the Arm-A walk, and that
+function (a) requires a top-level `d250-arm-v0-amd/` tree in the
+campaign root and (b) live-fetches `d250-arm-v0-amd` dispatch authority
+at the CURRENT PR head. A compliant AMENDMENT-008 round-2 bridge
+campaign intentionally has neither — predecessor evidence exists only
+under the read-only `predecessor-v0/` + `predecessor-v0n/` mounts, and
+the accepted V0 dispatch `5868617068` is completed/historical (pinned
+stale in `ARM_A_BRIDGE_STALE_DISPATCH_COMMENT_IDS`). Reduction of a
+fully executed bridge campaign therefore derived `V0_INVALID_BLOCKED`
+BEFORE the `reachability_source == "arm-a-bridge"` →
+`ARM_A_STOPS_LADDER` branch — after ~10–19 GPU-hours of Arm-A units.
+The existing terminal fixtures masked the divergence by supplying a
+synthetic top-level V0 population and a same-head injected V0 authority
+in the fixture fetcher — assumptions forbidden in production, so green
+suites proved neither surface.
+
+**The correction (this round).** Reducer V0 admission is now
+PATH-AWARE, decided in `derive_terminal` BEFORE the Arm-A walk:
+
+* **Bridge admission.** When the campaign root presents the bridge
+  record, admission authenticates the accepted predecessor chain
+  through the SAME frozen bridge authority the launch gate uses —
+  `validate_arm_a_bridge(root, expected_head)` (which transitively runs
+  `revalidating_arm_a_predecessors` over `predecessor-v0/` +
+  `predecessor-v0n/`). Bridge mode is NEVER inferred from the absence
+  of V0 evidence: a valid, canonical, maintainer-adjudicated record
+  with both predecessor populations fully re-authenticated is REQUIRED,
+  and any bridge-record presence with failing authentication blocks
+  closed (missing, malformed, tampered, symlinked, wrong-digest,
+  wrong-state, wrong-authority, wrong-PID, wrong-generation evidence
+  all reject) — it NEVER falls back to historical admission.
+* **Historical admission unchanged.** Without a bridge record the
+  path is byte-for-byte the prior law: `derive_v0_state` + current-head
+  historical V0 dispatch authority + top-level retained V0 evidence,
+  A permitted only on `AMD_VARIABLE_A_ELIGIBLE_DISPATCH_REQUIRED` with
+  `a_eligible=true`, fail-closed otherwise.
+* **Admission is evidence authority only.** Bridge authentication is
+  NOT execution authority and substitutes for nothing: the Arm-A walk
+  still live-fetches and validates the current-head
+  `d250-arm-a` / `A-vulkan-necessity` dispatch at the same exact head
+  as the retained Arm-A receipts, every consumed unit still carries
+  `reachability_source = "arm-a-bridge"` (missing/mixed/unknown/
+  historical-injected provenance rejected), and a completed bridge-path
+  Arm-A population still stops the ladder at `ARM_A_STOPS_LADDER` for
+  EVERY outcome — no LOCALIZED, no UNRESOLVED, no Arm-B fetch, no
+  B/C/C1/C2/D reachability.
+* **Auditable output.** Bridge-path admission is reported in the
+  reduction record (`v0.admission = "amendment-008-bridge"`,
+  `v0.reachability_source = "arm-a-bridge"`, plus the mechanically
+  rederived predecessor states) rather than fabricating a historical
+  V0 state. The terminal vocabulary is unchanged.
+* **Regression.** `tests/test_issue250_amendment008_reducer_admission.py`
+  proves RED at the reviewed head `0b6da00343f353932e80cf43f9e88d301d9a5ccd` (a production-shaped bridge fixture — NO top-level V0/V0n
+  trees, NO same-head V0 authority — blocked at `V0_INVALID_BLOCKED`
+  before Arm A) and GREEN after the correction (same fixture reaches
+  Arm A and returns `ARM_A_STOPS_LADDER`, without ever requesting a
+  same-head `d250-arm-v0-amd` dispatch).
+  `tests/test_issue250_amendment008_reducer_admission_negative.py`
+  covers the fail-closed mutation matrix. Both are registered in
+  `r8i-qwen-qualification`.
+
+No physical arm was dispatched or executed in this round; accepted
+V0/V0n/#248 evidence is untouched; the bridge still grants no execution
+authority; a fresh exact-head `d250-arm-a` maintainer dispatch at the
+corrected head remains mandatory before any Arm-A execution.
