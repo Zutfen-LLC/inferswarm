@@ -11,8 +11,9 @@ commit `35f427b`; base `origin/main`
 `6a4f395` (RED suite) → `50cc60d` (correction) → `0134f67`
 (retention-audit record), followed by one documentation-only correction
 commit; reviewed history is preserved with no rewrite, squash, amend,
-rebase, or force-push. The CURRENT mechanism of this amendment is the
-CORRECTION ROUND 2 mechanism at the end of this document; where an
+rebase, or force-push. The CURRENT mechanism includes CORRECTION ROUNDS
+2–4 below: predecessor authentication, path-aware reducer admission,
+and explicit admission-to-receipt provenance cross-binding. Where an
 earlier section retains superseded round-1 wording, it is explicitly
 marked HISTORICAL / SUPERSEDED BY CORRECTION ROUND 2. The amendment
 authorizes no dispatch, no model request, no physical execution, no
@@ -291,14 +292,15 @@ physical execution of any kind. Arm A has NOT run. No vendor
 correctness or root-cause claim is authorized. Accepted #241/#248
 terminal claims are untouched.
 
-## CORRECTION ROUND 2 (reviewed head 35f427b, review of PR #251) — CURRENT
+## CORRECTION ROUND 2 (reviewed head 35f427b, review of PR #251) — predecessor authentication retained; refined by rounds 3–4
 
 The reviewed implementation opened the bridge through a historical-gate
 message-prefix exception and a bespoke V0n population checker. The
 correction replaces both with exact authenticated predecessor
-decisions. THIS SECTION IS THE CURRENT MECHANISM OF THIS AMENDMENT;
-earlier sections that conflict with it are marked HISTORICAL /
-SUPERSEDED BY CORRECTION ROUND 2. In one sentence: Arm A opens ONLY via
+decisions. This section retains the predecessor-authentication mechanism;
+rounds 3–4 below supply the current reducer admission and provenance laws.
+Earlier sections that conflict with predecessor authentication are marked
+HISTORICAL / SUPERSEDED BY CORRECTION ROUND 2. Arm A opens ONLY via
 `arm_a_reachability_source` (exact rederived-V0-state decision), gated
 by `validate_arm_a_bridge` over `revalidating_arm_a_predecessors`
 (frozen `_v0_retained_rows + reduce_v0_screen` and frozen
@@ -449,3 +451,61 @@ No physical arm was dispatched or executed in this round; accepted
 V0/V0n/#248 evidence is untouched; the bridge still grants no execution
 authority; a fresh exact-head `d250-arm-a` maintainer dispatch at the
 corrected head remains mandatory before any Arm-A execution.
+
+## CORRECTION ROUND 4 — admission/provenance cross-binding (2026-09-29)
+
+The round-3 statement that historical-injected provenance was rejected
+was incomplete: `_arm_a_facts()` enforced a homogeneous two-value vocabulary,
+but did not bind that value to the independently selected admission. A
+bridge-only campaign with EVERY Arm-A receipt uniformly rewritten from
+`arm-a-bridge` to `historical-v0-amd-variable` remained homogeneous and
+escaped the bridge stop. At reviewed head
+`74df586ced369880f923a8255da303b177a8c004`, five such deterministic units
+emit `R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED` with no problems;
+variable Arm A can proceed into Arm-B authority consumption. This correction
+supersedes that round-3 provenance claim without changing predecessor evidence.
+
+One explicit admission-source invariant is mandatory. The admission
+decision carries `expected_reachability_source`, independently of receipts:
+
+* bridge admission requires population provenance exactly `arm-a-bridge`;
+* historical AMD_VARIABLE admission requires population provenance exactly
+  `historical-v0-amd-variable`.
+
+After retained Arm-A bytes have been authenticated and `_arm_a_facts()` has
+derived population provenance, `derive_terminal()` cross-binds it to that
+expected source. A mismatch fails closed BEFORE determinism interpretation,
+terminal emission, or any later-arm authority fetch. Receipts never select
+admission or repair a mismatch. Missing, mixed, and unknown provenance remain
+invalid. The stop guard uses the admission-selected source, not receipt claims.
+Every valid bridge Arm-A outcome stops at `ARM_A_STOPS_LADDER`, deterministic
+AND variable, with no LOCALIZED or UNRESOLVED terminal and no B/C/C1/C2/D
+authority fetch. Historical AMD_VARIABLE behavior is unchanged when receipts
+agree with its source.
+
+Path presence also fails closed. At the reducer's bridge-record classifier
+and `arm_a_reachability_source()`'s top-level V0 namespace classifier,
+presence means `path.exists() or path.is_symlink()`. A dangling bridge-record
+symlink is present-invalid and reaches strict bridge validation, never
+historical fallback. A dangling top-level V0 symlink is present-invalid,
+never an entirely absent namespace enabling bridge-only admission. Existing
+strict file/directory/symlink validation remains authoritative; unrelated
+filesystem semantics are unchanged.
+
+Regressions extend the round-3 production-shaped fixture: canonical bridge
+record, authenticated read-only predecessor mounts, no top-level V0/V0n
+copies, and current-head Arm-A authority. The all-receipt uniform-wrong-source
+regression reproduces the reviewed-head escape with a compact mechanical
+witness. Tests pin both admission sources, uniform wrong provenance,
+mixed/missing provenance, dangling path presence, both bridge outcomes,
+and zero later-arm authority requests. BLOCKED alone is insufficient:
+the negative controls also require the provenance mismatch reason and
+zero `_walk_condition()` calls, so an old post-A rejection cannot pass.
+
+Bridge authentication is EVIDENCE AUTHORITY ONLY. Current-head `d250-arm-a`
+dispatch remains mandatory; predecessor dispatches never authorize Arm A.
+Dispatch `5896620975` remains stale and unusable. This repository-only
+correction creates no new dispatch or campaign evidence root and performs
+zero physical execution, inference, model loading, or GPU work. Accepted
+V0, V0n, #248, and physical evidence remain untouched. STOP for maintainer
+exact-head re-review; do not merge.
