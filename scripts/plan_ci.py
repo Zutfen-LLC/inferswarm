@@ -221,6 +221,11 @@ GROUP_TEST_MODULES = {
         # Vulkan ngl=1 comparison leg (V0n) — Vulkan-not-CUDA identity,
         # CUDA exclusion, repeat/stop law, stale-dispatch refusal.
         "test_issue250_v0n_nvidia",
+        # AMENDMENT-008: post-V0n maintainer-adjudicated Arm-A
+        # reachability bridge — fail-closed record authentication,
+        # accepted-evidence binding, namespace isolation, no B-D
+        # progression, historical-evidence immutability.
+        "test_issue250_amendment008",
         # Correction pass 6 (AMENDMENT-003): timeout-budget authority,
         # cost gate, C1/C2 authority separation, evidence generation,
         # stale-dispatch regressions.
@@ -654,6 +659,7 @@ PATH_GROUPS = {
     "tests/test_issue250_physical.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_v0n_nvidia.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_pass6_corrections.py":
         ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [

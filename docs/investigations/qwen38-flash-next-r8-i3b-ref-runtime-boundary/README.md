@@ -5,11 +5,17 @@ Option-1 follow-up to the accepted Issue #248 terminal
 `bc71774`; result head `a2cf9f33d1a056f2eef062b4186c078262e66f63`,
 adjudication comment `5838156612`, retained external 534-row SHA256SUMS
 self-digest `af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc`).
-STATUS: **Phase 0 complete; V0 AMD screen COMPLETE (dispatch 5868617068
-at head c5cc132: CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED, maintainer
-stop); V0n NVIDIA current-window leg prepared by AMENDMENT-007 and
-AWAITING fresh exact-head maintainer review + dispatch; no physical
-work is authorized here.** The first v1
+STATUS: **V0n COMPLETE at the reviewed head aa059713 (dispatch
+5880409202, freeze 3fe9e74d…: CURRENT_NVIDIA_VARIABLE_STOP, valid,
+maintainer stop, terminal=None, a_eligible=False; result report PR
+comment 5881249538, Issue record 5881256387). Maintainer accepted the
+stop; AMENDMENT-008 (repository-only) now makes CPU Arm A the next
+prospective discriminator via a fail-closed post-V0n reachability
+bridge — but Arm-A physical execution remains UNAUTHORIZED until a
+fresh exact-head maintainer dispatch after review of this amendment.
+Chain: V0 AMD stable disagreement -> V0n current NVIDIA variable ->
+maintainer accepted stop -> Arm A prospective, not yet authorized.**
+The first v1
 Arm-A attempt failed and is retained read-only; no physical execution
 under this correction is authorized by issue creation or these docs.
 
@@ -163,6 +169,26 @@ Contents:
   5862772797, and the completed AMD 5868617068 are hard-refused.
   Future evidence root: `evidence-v0n-nvidia-<HEAD_SHORT>/` sibling.
   Authorizes nothing; repository-only.
+- `METHODOLOGY-AMENDMENT-008.md` — post-V0n maintainer-adjudicated
+  Arm-A reachability bridge (repository-only additive amendment,
+  2026-09-28). Consumes the accepted combination — V0 AMD stable
+  cross-vendor disagreement stop (row `2187ab8f…`, dispatch authority
+  `99cb573c…`) + V0n current NVIDIA variable stop (freeze `3fe9e74d…`,
+  dispatch `5880409202`/`4aa0aa0b…`, rows `6c295c67…`/`3d6b599d…`,
+  terminal=None, a_eligible=False) — and defines ONE fail-closed
+  mechanical predicate (`validate_arm_a_bridge` +
+  `arm-a-reachability-bridge.json`, digest-sealed) that makes CPU Arm
+  A (`d250-arm-a` / `A-vulkan-necessity`) ELIGIBLE FOR A SEPARATE
+  DISPATCH. Eligibility is NOT execution authority: a NEW exact-head
+  maintainer dispatch, clean head, and the normal model/cost/fixture/
+  binary/live-dispatch authorities are still mandatory; the
+  historical AMD_VARIABLE gate stays verbatim for every other path;
+  V0/V0n semantics and `a_eligible` fields are unchanged; the bridge
+  stops the arm ladder after any future Arm-A result (B–D require a
+  new maintainer decision); the historical failed Arm-A v1 attempt
+  stays failed non-numerical evidence and stale dispatches (incl.
+  completed AMD 5868617068) are hard-refused. No comparator-acceptance
+  change; no physical execution authorized or performed.
 - `evidence/phase0/phase0-analysis.json` — machine-derived (stdlib,
   deterministic; re-run byte-identical, sha256 `02304214…`): authority
   verification, pinned-source reconstruction R1–R6 (prompt ingestion,

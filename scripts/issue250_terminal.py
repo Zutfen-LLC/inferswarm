@@ -446,6 +446,18 @@ ARM_C1_VARIED_C2_UNGATED = (
     "maintainer gate required; cost-gated separately) — review required "
     "arm executes")
 
+# METHODOLOGY-AMENDMENT-008: after an Arm-A result (whatever the
+# verdict), the ladder STOPS — no later arm is auto-reachable. B and
+# everything after it require a NEW maintainer decision; a fresh
+# Arm-A variable population satisfies the historical ladder law
+# (_require_sequential_reachability), but a post-A continuation needs
+# an explicit future amendment before any B dispatch. Recorded here as
+# the frozen reason surfaced by derive_terminal when B is refused.
+ARM_A_STOPS_LADDER = (
+    "Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops "
+    "for maintainer review — no B/C/C1/C2/D arm is auto-reachable from "
+    "an Arm-A result without a new maintainer decision")
+
 # Frozen Arm-D transition predicates (correction pass 4, NO-GO
 # 5851078451, blocker 3; supersedes the pass-3 set). A length
 # transition alone never establishes causality: LOCALIZED at D
@@ -1654,9 +1666,26 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
                          expected_head, authority_fetcher=authority_fetcher,
                          github_api=github_api)
     if v0.get("state") != D.V0_STATE_AMD_VARIABLE or not v0.get("a_eligible"):
-        return _blocked([f"V0 gate blocks A: {v0.get('state')}: "
-                         f"{v0.get('reason', 'maintainer stop or third required')}"],
-                        {"v0": v0})
+        # METHODOLOGY-AMENDMENT-008: the accepted post-V0n state (stable
+        # AMD cross-vendor disagreement stop) additionally admits the
+        # separately adjudicated Arm-A bridge record. That surface is
+        # consumed by the PHYSICAL launch gate (_require_sequential_
+        # reachability via validate_arm_a_bridge) — never by terminal
+        # derivation, which stays blocked with the reason recorded.
+        arm_a_bridge: str | None = None
+        if v0.get("state") == D.V0_STATE_DISAGREEMENT_STOP:
+            bridge_path = root / D.ARM_A_BRIDGE_NAME
+            arm_a_bridge = (
+                "arm-a bridge record present (post-V0n adjudication, "
+                "AMENDMENT-008); physical Arm-A reachability is decided "
+                "by the launch gate, not by terminal derivation"
+                if bridge_path.is_file() and not bridge_path.is_symlink()
+                else None)
+        reason = (f"V0 gate blocks A: {v0.get('state')}: "
+                  f"{v0.get('reason', 'maintainer stop or third required')}")
+        if arm_a_bridge:
+            reason += f"; {arm_a_bridge}"
+        return _blocked([reason], {"v0": v0})
 
     reduction: dict[str, Any] = {"arms": {}, "contrast": None, "v0": v0}
 
@@ -1778,6 +1807,11 @@ def derive_terminal(evidence_root: Path, expected_head: str, *,
             reduction)
 
     # ---------------- Arm B (required: A CPU-only varies) ----------
+    # METHODOLOGY-AMENDMENT-008: an Arm-A population produced under the
+    # post-V0n bridge path STOPS the ladder — B requires a new
+    # maintainer decision (a future amendment), never auto-progresses.
+    if arm_a.get("reachability_source") == "arm-a-bridge":
+        return _blocked([ARM_A_STOPS_LADDER], reduction)
     authority_b = _fetch("d250-arm-b", "B-process-init")
     if authority_b is None:
         return _blocked(problems, reduction)

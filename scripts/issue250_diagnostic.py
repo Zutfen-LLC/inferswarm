@@ -252,6 +252,46 @@ V0N_STATE_STABLE_DISAGREEMENT_STOP = (
     "CURRENT_CROSS_VENDOR_STABLE_DISAGREEMENT_STOP")
 V0N_STATE_INVALID = "CURRENT_NVIDIA_INVALID_BLOCKED"
 
+# ---------------------------------------------------------------------------
+# METHODOLOGY-AMENDMENT-008: post-V0n maintainer-adjudicated Arm-A
+# reachability bridge. V0/V0n semantics are FROZEN (no state, digest,
+# `terminal` or `a_eligible` field changes): the accepted V0 result is
+# the stable cross-vendor disagreement stop, V0n returned
+# CURRENT_NVIDIA_VARIABLE_STOP with a_eligible=False, so the historical
+# `_require_v0_fallback` gate (`a_eligible=True` required) can never
+# open Arm A again and the combination leaves no mechanically defined
+# path to the already-frozen CPU discriminator. This record is the ONE
+# prospective exception: a maintainer-adjudicated, cryptographically
+# self-authenticating bridge between the append-only physical evidence
+# roots that a future Arm-A producer must authenticate from bytes —
+# never from caller assertions or GitHub prose. Eligibility is NOT
+# execution authority: the exact `d250-arm-a` / `A-vulkan-necessity`
+# namespace/arm plus a NEW exact-head dispatch remain mandatory, and
+# B/C/C1/C2/D stay unreachable from this record.
+# ---------------------------------------------------------------------------
+ARM_A_BRIDGE_SCHEMA = "inferswarm.issue250.arm-a-bridge/1"
+ARM_A_BRIDGE_NAME = "arm-a-reachability-bridge.json"
+# The accepted V0 AMD V0 dispatch (comment 5868617068, head c5cc132…)
+# is COMPLETED and its comment ID is hard-refused by the V0n and Arm-A
+# dispatch validators — the bridge binds its digests as evidence
+# identity, never as authority.
+ARM_A_BRIDGE_STALE_DISPATCH_COMMENT_IDS = frozenset({5868617068})
+# The exact accepted result identities this bridge consumes. The
+# bridge is mechanically invalid for any other combination.
+ARM_A_BRIDGE_V0_DISPATCH_DIGEST_SHA256 = (
+    "99cb573c473d677ffa76adbc8486f494f10a51091e0257e33c84f2eadd2da2fa")
+ARM_A_BRIDGE_V0_STABLE_ROW_SHA256 = (
+    "2187ab8f444e726b9a34d9874499603446a23efdd7943e8330286e223938fb41")
+ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256 = (
+    "4aa0aa0b216105d0c611652b100d53f4a5aed46be8f4013a6c15d1acd43dd776")
+ARM_A_BRIDGE_V0N_FREEZE_SHA256 = (
+    "3fe9e74dece02e4e892daec2f6510df6a670905d6ee5a83fea61bc1f2a7e9207")
+ARM_A_BRIDGE_V0N_ROW_SHA256 = (
+    "6c295c671a794ebd2d6b5d644900fd87eb3430c69226954db0870146822aae53",
+    "3d6b599d15004d7ad0b4402784b64eec369434724c9dc13e16f23531de975d6b")
+# The exact accepted physical execution heads the bridge consumes.
+ACCEPTED_V0_EXECUTED_HEAD = "c5cc132762c51a3352014f36553eff6d0d26b112"
+
 
 def _v0n_row_class(digest: str, amd_sha: str,
                    retained: tuple[str, ...]) -> dict[str, Any]:

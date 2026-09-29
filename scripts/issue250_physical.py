@@ -368,6 +368,15 @@ V0N_FREEZE_NAME = "v0n-screen-freeze.json"
 V0N_FREEZE_SCHEMA = "inferswarm.issue250.v0n-screen-freeze/1"
 V0N_FREEZE_PRODUCER = "issue250_physical.write_v0n_screen_freeze"
 V0N_IDENTITY_ARM = "B"  # accepted #248 reference arm authority
+
+# --- Arm-A reachability bridge law (METHODOLOGY-AMENDMENT-008) ----------
+# The bridge is recorded once at amendment freeze time against the
+# accepted V0+V0n evidence (executed head aa059713…). A future Arm-A
+# execution at a NEW head validates the record against these frozen
+# accepted-evidence digests — never against its own head.
+ARM_A_BRIDGE_PRODUCER = "issue250_physical.validate_arm_a_bridge"
+ARM_A_BRIDGE_EVIDENCE_HEAD = "aa059713d83204a4dd8be2ea903aa31bddfdf3b8"
+
 # Every accepted #248 identity field the V0n freeze binds (derived
 # fresh from raw bytes; never copied from constants at observe time).
 V0N_IDENTITY_FIELDS = (
@@ -3750,6 +3759,145 @@ def c2_launch_allowed(namespace: str, arm: str, authority: dict[str, Any],
     return {"authority": c1_authority, "verdict": completed}
 
 
+def validate_arm_a_bridge(evidence_root: Path, expected_head: str,
+                          ) -> dict[str, Any]:
+    """Authenticate the post-V0n Arm-A reachability bridge (AMENDMENT-008).
+
+    Fail-closed in every direction: absent, unreadable, syntactically
+    malformed, wrongly bound, or tampered records reject; the record
+    additionally carries no semantics by itself — the retained physical
+    evidence it names must authenticate through the frozen producer
+    verifiers. Eligibility is NOT execution authority.
+    """
+    root = Path(evidence_root)
+    path = root / D.ARM_A_BRIDGE_NAME
+    invalid = {"schema": D.ARM_A_BRIDGE_SCHEMA, "valid": False,
+               "terminal": None, "a_eligible": False}
+    if path.is_symlink() or not path.is_file():
+        raise PhysicalDiagnosticError(
+            "post-V0n Arm-A reachability bridge record missing "
+            f"({D.ARM_A_BRIDGE_NAME}); the accepted stable-disagreement + "
+            "V0n variable combination is not mechanically consumable "
+            "without it")
+    try:
+        record = json.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise PhysicalDiagnosticError(
+            "Arm-A reachability bridge record unreadable") from exc
+    if not isinstance(record, dict):
+        raise PhysicalDiagnosticError("Arm-A reachability bridge malformed")
+    v0 = record.get("v0") if isinstance(record.get("v0"), dict) else {}
+    v0n = record.get("v0n") if isinstance(record.get("v0n"), dict) else {}
+    if (record.get("schema") != D.ARM_A_BRIDGE_SCHEMA
+            or record.get("recorded_by") != ARM_A_BRIDGE_PRODUCER
+            or record.get("evidence_generation") != EVIDENCE_GENERATION
+            or record.get("namespace") != "d250-arm-a"
+            or record.get("arm") != "A-vulkan-necessity"
+            or record.get("evidence_head") != ARM_A_BRIDGE_EVIDENCE_HEAD
+            or v0.get("dispatch_sha256")
+            != D.ARM_A_BRIDGE_V0_DISPATCH_DIGEST_SHA256
+            or v0.get("state") != D.V0_STATE_DISAGREEMENT_STOP
+            or v0.get("stable_row_sha256")
+            != D.ARM_A_BRIDGE_V0_STABLE_ROW_SHA256
+            or v0.get("units") != 3
+            or v0.get("executed_head") != D.ACCEPTED_V0_EXECUTED_HEAD
+            or v0n.get("dispatch_sha256")
+            != D.ARM_A_BRIDGE_V0N_DISPATCH_DIGEST_SHA256
+            or v0n.get("state") != D.V0N_STATE_NVIDIA_VARIABLE_STOP
+            or v0n.get("freeze_sha256") != D.ARM_A_BRIDGE_V0N_FREEZE_SHA256
+            or v0n.get("row_sha256") != list(D.ARM_A_BRIDGE_V0N_ROW_SHA256)
+            or v0n.get("units") != 2
+            or v0n.get("executed_head") != ARM_A_BRIDGE_EVIDENCE_HEAD
+            or record.get("maintainer_adjudicated") is not True
+            or v0n.get("a_eligible") is not False
+            or v0n.get("terminal") is not None
+            or record.get("eligible_arms") != ["A-vulkan-necessity"]
+            or record.get("requires_fresh_dispatch") is not True
+            or record.get("executes_arm_a") is not False):
+        raise PhysicalDiagnosticError(
+            "Arm-A reachability bridge binding/authority mismatch")
+    if record.get("canonical_digest_sha256") != _v0_digest(record):
+        raise PhysicalDiagnosticError(
+            "Arm-A reachability bridge canonical digest mismatch")
+    # The bridge cannot authorize from bytes alone: the V0n population it
+    # names must authenticate through the frozen retained-row validator.
+    _verify_arm_a_bridge_v0n_population(record, root)
+    return record
+
+
+def _sha256_file(path: Path) -> str:
+    """Row-digest seam (module-level for test injection).
+
+    Production resolves to the canonical file SHA-256. Tests inject a
+    translating digester when the accepted physical bytes are not on
+    the CPU-only host (the accepted 993280-byte rows cannot be
+    synthesized); the real content hash is always the fallback, so a
+    mutated row rejects even under an injected digest map.
+    """
+    return D.file_sha256(path)
+
+
+def _verify_arm_a_bridge_v0n_population(record: dict[str, Any],
+                                        root: Path) -> None:
+    """Authenticate the bridge's V0n evidence from retained bytes.
+
+    The bridge names the accepted V0n dispatch, freeze and row digests;
+    this check re-derives those identities from the retained V0n
+    evidence tree (receipts bound to the authenticated freeze) so a
+    forged or drift-synthesized bridge cannot manufacture eligibility
+    without the physical evidence it claims.
+    """
+    base = root / V0N_NAMESPACE
+    if base.is_symlink() or not base.is_dir():
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge V0n namespace missing or symlink")
+    present = {p.name for p in base.iterdir() if p.is_dir() or p.is_symlink()}
+    if present != set(V0N_UNIT_TAGS[:2]):
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge requires exactly the two retained V0n units")
+    freeze = _read_v0n_screen_freeze(root, ARM_A_BRIDGE_EVIDENCE_HEAD)
+    if (freeze["canonical_digest_sha256"]
+            != record["v0n"]["freeze_sha256"]):
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge freeze digest mismatch")
+    rows = []
+    for tag, expected_sha in zip(
+            V0N_UNIT_TAGS[:2], record["v0n"]["row_sha256"]):
+        receipt_path = base / tag / "unit.json"
+        row_path = base / tag / "obs.row0.f32"
+        if (receipt_path.is_symlink() or row_path.is_symlink()
+                or not receipt_path.is_file() or not row_path.is_file()):
+            raise PhysicalDiagnosticError(
+                f"Arm-A bridge V0n unit missing: {tag}")
+        receipt = json.loads(receipt_path.read_bytes())
+        raw = row_path.read_bytes()
+        digest = _sha256_file(row_path)
+        if (len(raw) != D.ROW_BYTES
+                or digest != expected_sha
+                or receipt.get("head_sha") != ARM_A_BRIDGE_EVIDENCE_HEAD
+                or receipt.get("namespace") != V0N_NAMESPACE
+                or receipt.get("arm") != V0N_ARM
+                or receipt.get("v0n_freeze_digest")
+                != freeze["canonical_digest_sha256"]
+                or receipt.get("v0n_subject_identity")
+                != freeze["subject_identity"]
+                or receipt.get("fresh_process") is not True):
+            raise PhysicalDiagnosticError(
+                "Arm-A bridge V0n retained custody mismatch")
+        # Row-to-receipt binding is checked against the PRESENTED row
+        # digest (never the record's constant): the accepted VARIABLE
+        # population must present a genuinely differing first pair,
+        # while a uniform (never-varied) population is rejected by the
+        # tail law below regardless of what any record claims.
+        if receipt.get("decision0_row_sha256") != digest:
+            raise PhysicalDiagnosticError(
+                "Arm-A bridge V0n receipt row-digest binding mismatch")
+        rows.append(digest)
+    if rows[0] == rows[1]:
+        raise PhysicalDiagnosticError(
+            "Arm-A bridge requires the mismatched V0n first pair")
+
+
 def _require_sequential_reachability(
         repo_root: Path, evidence_root: Path, arm: str,
         expected_head: str, model_attestation: dict[str, Any],
@@ -3760,10 +3908,32 @@ def _require_sequential_reachability(
     A condition may be cost-admissible and dispatched yet unreachable.
     This check runs before any physical runner/process and uses the same
     exact-head live authority and retained-byte verifiers as the reducer.
+
+    METHODOLOGY-AMENDMENT-008: Arm A alone may additionally open through
+    the post-V0n maintainer-adjudicated bridge record
+    (validate_arm_a_bridge) when the accepted V0+V0n evidence
+    combination — stable AMD cross-vendor disagreement plus a
+    current-window NVIDIA VARIABLE_STOP — is authenticated from
+    retained bytes. Every later arm still requires the historical
+    `_require_v0_fallback`-preceded variable ladder verbatim.
     """
-    _require_v0_fallback(repo_root, evidence_root, expected_head,
-                         revalidate_authority, github_api)
     if arm == "A-vulkan-necessity":
+        # METHODOLOGY-AMENDMENT-008: Arm A opens through the historical
+        # AMD_VARIABLE law OR the new post-V0n bridge — never by a
+        # weaker union. The historical gate runs verbatim; only on its
+        # exact refusal may the separately adjudicated bridge record
+        # open the condition (validate_arm_a_bridge fail-closes on
+        # absence/tamper). Any other historical refusal (invalid
+        # custody, third-required, …) still blocks.
+        try:
+            _require_v0_fallback(repo_root, evidence_root, expected_head,
+                                 revalidate_authority, github_api)
+        except PhysicalDiagnosticError as historical:
+            if str(historical).startswith(
+                    "V0 precedes CPU fallback"):
+                validate_arm_a_bridge(Path(evidence_root), expected_head)
+            else:
+                raise
         return
     import issue250_terminal as T
 

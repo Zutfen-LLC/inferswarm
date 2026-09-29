@@ -21,6 +21,17 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 def _load(name: str, rel: str):
+    # One #250 singleton set per process: if another test module already
+    # established this module (e.g. tests/test_issue250_amendment008.py
+    # imports issue250_physical, whose `import issue250_diagnostic as D`
+    # binds the ORIGINAL), re-executing here would replace sys.modules
+    # with a SECOND copy — later loaders (v0n) would patch the copy
+    # while the producers read the original, splitting D/P constants
+    # (attestation model-dir equality then fails in valid fixtures).
+    # Same contract as tests/test_issue250_terminal.py.
+    existing = sys.modules.get(name)
+    if existing is not None and type(existing).__name__ == "module":
+        return existing
     spec = importlib.util.spec_from_file_location(
         name, REPO / rel)
     mod = importlib.util.module_from_spec(spec)

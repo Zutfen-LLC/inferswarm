@@ -30,6 +30,14 @@ SCRIPTS = REPO / "scripts"
 
 
 def _load(name: str, rel: str):
+    # One #250 singleton set per process (same contract as
+    # tests/test_issue250_terminal.py): if another test module already
+    # established this module, reuse it — re-executing under the same
+    # sys.modules name orphans the previous instance that earlier
+    # importers (and the producers' own cross-imports) still hold.
+    existing = sys.modules.get(name)
+    if existing is not None and type(existing).__name__ == "module":
+        return existing
     spec = importlib.util.spec_from_file_location(
         name, REPO / rel)
     mod = importlib.util.module_from_spec(spec)
@@ -2552,6 +2560,11 @@ class V0ProducerAdmissionTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
 
     def test_cpu_arm_a_cannot_launch_before_verified_v0(self):
+        """AMENDMENT-008 (updated historical RED): without verified V0
+        AND without the post-V0n bridge record, Arm A cannot launch. The
+        historical refusal text is still raised when the bridge is also
+        absent at the older head binding; here the accepted-evidence
+        law yields the bridge refusal, which subsumes it."""
         def cpu_authority(repo, head, namespace, github_api=None):
             value = self.authority(repo, head, namespace, github_api)
             value["arm"] = "A-vulkan-necessity"
@@ -2559,8 +2572,9 @@ class V0ProducerAdmissionTests(unittest.TestCase):
                 f"arm={P.V0_ARM}", "arm=A-vulkan-necessity")
             return value
         with mock.patch.object(D, "_require_clean_head"):
-            with self.assertRaisesRegex(P.PhysicalDiagnosticError,
-                                        "V0 precedes CPU fallback"):
+            with self.assertRaisesRegex(
+                    P.PhysicalDiagnosticError,
+                    "Arm-A reachability bridge record missing"):
                 P.run_diagnostic_unit(
                     self.repo, self.evidence, "d250-arm-a",
                     "A-vulkan-necessity", "case-3072-B-devnone-001",
