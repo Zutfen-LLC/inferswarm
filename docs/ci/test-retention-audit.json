@@ -3416,6 +3416,35 @@
    ],
    "test_count_at_audit": 39
   },
+  "test_issue250_terminalization": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 8,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Additive repository-only Issue #250 terminalization authenticates retained dispatch/adjudications/source-build bytes, reuses the frozen retained-byte reducer, and emits the accepted zero-to-nonzero Vulkan-participation boundary only for complete deterministic five-repeat CPU Arm A against the accepted variable #248 contrast; caller-selected terminals and later-arm execution are impossible.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_terminalization.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Strict offline terminalization wrapper; no physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_terminalization.py"
+   ],
+   "test_count_at_audit": 8
+  },
   "test_issue250_v0n_nvidia": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 4.0,

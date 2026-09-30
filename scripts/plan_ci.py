@@ -217,6 +217,7 @@ GROUP_TEST_MODULES = {
         "test_issue250_diagnostic",
         "test_issue250_physical",
         "test_issue250_terminal",
+        "test_issue250_terminalization",
         # AMENDMENT-007: prospective current-window NVIDIA RTX 3060
         # Vulkan ngl=1 comparison leg (V0n) — Vulkan-not-CUDA identity,
         # CUDA exclusion, repeat/stop law, stale-dispatch refusal.
@@ -669,6 +670,7 @@ PATH_GROUPS = {
     "tests/test_issue250_diagnostic.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_physical.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_terminalization.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_v0n_nvidia.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_amendment008.py": ["r8i-qwen-qualification"],
     "tests/test_issue250_amendment008_round2.py":

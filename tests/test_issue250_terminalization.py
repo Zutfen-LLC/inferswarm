@@ -29,12 +29,23 @@ class TerminalizationTests(unittest.TestCase):
         self.addCleanup(fixture.tmp.cleanup)
         return fixture, mounts
 
+    def _derive_fixture(self, fixture, *, authority_fetcher=None):
+        body = "R8I3B PHYSICAL DISPATCH #250" + chr(10) + "head=" + fixture.head + chr(10) + "diagnostic-namespace=d250-arm-a" + chr(10) + "arm=A-vulkan-necessity"
+        auth = {"comment_id": S.DISPATCH_ID,
+                "issue_url": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/251",
+                "author_association": "MEMBER", "created_at": "2026-09-30T02:03:22Z",
+                "head_sha": fixture.head, "namespace": "d250-arm-a", "arm": "A-vulkan-necessity",
+                "body": body, "issue_open": True, "open_pr": True}
+        auth = S.frozen.D.validate_authority_payload(auth, fixture.head)
+        with mock.patch.object(S, "EXPECTED_HEAD", fixture.head), \
+                mock.patch.object(S, "captured_dispatch", return_value=auth):
+            return S.derive(fixture.evidence, contrast_root=fixture.contrast_root,
+                            repo_root=fixture.repo, authority_fetcher=authority_fetcher)
+
     def test_positive_production_shaped_arm_a_derives_only_authorized_terminal(self):
         fixture, _ = self._fixture("det")
-        # The physical fixture is rebuilt as bridge-admitted; it exercises
-        # frozen receipt verifiers and must remain a predecessor stop absent adjudication.
-        out = S.derive(fixture.evidence, contrast_root=fixture.contrast_root,
-                       repo_root=fixture.repo)
+        # The synthetic fixture retains production-shaped receipts; frozen verifiers run unmodified.
+        out = self._derive_fixture(fixture)
         self.assertEqual(out.get("terminal"), S.TERMINAL, out.get("problems"))
         self.assertEqual(out["localized_factor"], "zero↔nonzero Vulkan participation")
         self.assertFalse(out["later_arms_authorized"])
