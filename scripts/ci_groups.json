@@ -406,6 +406,9 @@
   "docs/qualification/qwen38-vulkan-v1/": [
    "r8i-qwen-qualification"
   ],
+  "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/": [
+   "r8i-qwen-qualification"
+  ],
   "docs/status-maintenance.md": [
    "repo-integrity"
   ],

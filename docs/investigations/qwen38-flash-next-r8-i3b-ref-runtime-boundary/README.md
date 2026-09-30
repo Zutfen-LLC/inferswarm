@@ -5,19 +5,30 @@ Option-1 follow-up to the accepted Issue #248 terminal
 `bc71774`; result head `a2cf9f33d1a056f2eef062b4186c078262e66f63`,
 adjudication comment `5838156612`, retained external 534-row SHA256SUMS
 self-digest `af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc`).
-STATUS: **V0n COMPLETE at the reviewed head aa059713 (dispatch
-5880409202, freeze 3fe9e74d…: CURRENT_NVIDIA_VARIABLE_STOP, valid,
-maintainer stop, terminal=None, a_eligible=False; result report PR
-comment 5881249538, Issue record 5881256387). Maintainer accepted the
-stop; AMENDMENT-008 (repository-only) now makes CPU Arm A the next
-prospective discriminator via a fail-closed post-V0n reachability
-bridge — but Arm-A physical execution remains UNAUTHORIZED until a
-fresh exact-head maintainer dispatch after review of this amendment.
-Chain: V0 AMD stable disagreement -> V0n current NVIDIA variable ->
-maintainer accepted stop -> Arm A prospective, not yet authorized.**
-The first v1
-Arm-A attempt failed and is retained read-only; no physical execution
-under this correction is authorized by issue creation or these docs.
+STATUS: **Arm A COMPLETE and accepted at execution head
+`5d015b5bc437bb82d5e966d0da8b90ff44b079a1` (dispatch `5902614446`).
+The true CPU-only control (`-ngl 0 -dev none`) is byte-deterministic 5/5,
+including all eight full rows. Accepted #248 nonzero-Vulkan (`ngl=1`)
+case-3072 fresh-process evidence remains variable. Maintainer adjudications
+PR #251 comment `5904093750` and Issue #250 comment `5904094070` authorize
+repository-only terminalization at the zero↔nonzero Vulkan-participation
+boundary: `R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED`. The implementation
+mechanism below that boundary is unresolved; this is not a Vulkan root-cause
+finding or vendor-correctness claim. No B/C/C1/C2/D evidence or execution is
+needed for #250 and no further physical work is authorized. PR #251 remains
+unmerged pending maintainer exact-head review. The additive terminalization
+slice is [here](../../research/r8i3b-reference-runtime-boundary-localized-250-terminalization/README.md).**
+
+Historical pre-Arm-A status (preserved, superseded by the accepted population):
+V0n COMPLETE at reviewed head aa059713 (dispatch 5880409202, freeze
+3fe9e74d…: CURRENT_NVIDIA_VARIABLE_STOP, valid, maintainer stop,
+terminal=None, a_eligible=False; result report PR comment 5881249538,
+Issue record 5881256387). AMENDMENT-008 then made CPU Arm A prospective
+through the fail-closed post-V0n bridge, pending a fresh exact-head dispatch.
+Chain at that time: V0 AMD stable disagreement -> V0n current NVIDIA variable
+-> maintainer accepted stop -> Arm A prospective. The first v1 Arm-A attempt
+failed and is retained read-only. That prospective state is historical, not
+current authorization.
 
 Contents:
 

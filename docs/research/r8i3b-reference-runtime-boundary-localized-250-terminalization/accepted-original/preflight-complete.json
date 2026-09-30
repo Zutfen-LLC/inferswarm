@@ -1,0 +1,242 @@
+{
+  "contrast": {
+    "manifest_self_digest": "af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc",
+    "namespace": "d248-placement-rungs",
+    "note": "accepted #248 retained evidence consumed read-only; never represented as fresh #250 execution",
+    "provenance": "accepted_248_retained_ngl1_readonly",
+    "row_deterministic": false,
+    "units": [
+      {
+        "row_sha256": [
+          "dff2499b64045f68d1349a363ee5bc888f3f9640c658252778d106fe80715499",
+          "bd923b1ad8bbc2e1c2c54c0b20df43069789d3720eada9cf62e6fb4dc1c565f6",
+          "6856b482d755a674e2d1ae294b0ff7d07d3bf05b6360993df38708b18879422c",
+          "7a400a86e8a6b11df6a0f7af62fedbfbcc045f1ed6dd2719f5bb450b71e5e7b3",
+          "b3a4f9de5aa3f12c78dc6365bfc6b10ddfe8a89396e7bc08c18394d75d873a8e",
+          "e1bbd6a48de98eae7e476d66e3202476eababae495949905b185b6968eabbb05",
+          "d7f79196cbf7bdfb504f47f701f9a3ddad0b2b7f4626105d89346c898f3d45d2",
+          "f834957538368429a99ee4bee4b17a83514f4b6fcdf01004075b4baff604f198"
+        ],
+        "tag": "case-3072-B-ngl1-001",
+        "token_sha256": "275ae77d0fb6f065c2ac22709e694b2a31ca21b8e1de346faac362c87e1ca3fc"
+      },
+      {
+        "row_sha256": [
+          "e369c8cb4ec5145f5ff855c0e29a1566795549126a4e135aaff5e94e8ce78ee6",
+          "c794c8072ad83cb4ccd9b64a906f0461a2d0204891761572c66c9d574703a84c",
+          "5dcecac9b1e78b5fc7d95f204cb09d7963d3111cf68876ba4180877c6047b61d",
+          "6f405c9efbc16cd5e6d4feb5082055be31646dc08cde4e91ac52d25208e75e4b",
+          "8fbd4d0bb57a981d77c3fb04e24c911aa2979b6430fcb849657dc88e24038544",
+          "5a7e12150999fa5fbebd5d47708bcf5cbfdfaed0df62be90e579513ae522f692",
+          "922ec6b75ae25b17b24a7991d5386b22378abeaa48f377ff290e7391eb8dd4c7",
+          "3c303e7f4f595ffe51a20114a1890154a61d022c914803183444af21cac18a32"
+        ],
+        "tag": "case-3072-B-ngl1-002",
+        "token_sha256": "275ae77d0fb6f065c2ac22709e694b2a31ca21b8e1de346faac362c87e1ca3fc"
+      }
+    ]
+  },
+  "device_identity": {
+    "arm": "B",
+    "raw": {
+      "bdf": "00000000:03:00.0",
+      "host": "inferswarm01",
+      "icd_inventory": {
+        "gfxstream_vk_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.1.305\",\n        \"library_path\": \"libvulkan_gfxstream.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "intel_hasvk_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.3.305\",\n        \"library_path\": \"libvulkan_intel_hasvk.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "intel_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.4.305\",\n        \"library_path\": \"libvulkan_intel.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "lvp_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.4.305\",\n        \"library_path\": \"libvulkan_lvp.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "nouveau_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.4.305\",\n        \"library_path\": \"libvulkan_nouveau.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "nvidia_icd.json": "{\n    \"file_format_version\" : \"1.0.1\",\n    \"ICD\": {\n        \"library_path\": \"libGLX_nvidia.so.0\",\n        \"api_version\" : \"1.4.341\"\n    }\n}\n",
+        "radeon_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.4.305\",\n        \"library_path\": \"libvulkan_radeon.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}",
+        "virtio_icd.json": "{\n    \"ICD\": {\n        \"api_version\": \"1.3.305\",\n        \"library_path\": \"libvulkan_virtio.so\"\n    },\n    \"file_format_version\": \"1.0.0\"\n}"
+      },
+      "nvidia-smi": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, NVIDIA GeForce RTX 3060, 00000000:03:00.0, 610.57.04\n",
+      "sysfs.current_link_width": "16",
+      "sysfs.device": "0x2504",
+      "sysfs.driver": "nvidia",
+      "sysfs.max_link_speed": "16.0 GT/s PCIe",
+      "sysfs.max_link_width": "16",
+      "sysfs.revision": "0xa1",
+      "sysfs.subsystem_device": "0x4074",
+      "sysfs.subsystem_vendor": "0x1458",
+      "sysfs.vendor": "0x10de",
+      "vulkaninfo": {
+        "icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "rc": 0,
+        "stderr": "'DISPLAY' environment variable not set... skipping surface info\n",
+        "stdout": "==========\nVULKANINFO\n==========\n\nVulkan Instance Version: 1.4.309\n\n\nInstance Extensions: count = 24\n-------------------------------\nVK_EXT_acquire_drm_display             : extension revision 1\nVK_EXT_acquire_xlib_display            : extension revision 1\nVK_EXT_debug_report                    : extension revision 10\nVK_EXT_debug_utils                     : extension revision 2\nVK_EXT_direct_mode_display             : extension revision 1\nVK_EXT_display_surface_counter         : extension revision 1\nVK_EXT_surface_maintenance1            : extension revision 1\nVK_EXT_swapchain_colorspace            : extension revision 5\nVK_KHR_device_group_creation           : extension revision 1\nVK_KHR_display                         : extension revision 23\nVK_KHR_external_fence_capabilities     : extension revision 1\nVK_KHR_external_memory_capabilities    : extension revision 1\nVK_KHR_external_semaphore_capabilities : extension revision 1\nVK_KHR_get_display_properties2         : extension revision 1\nVK_KHR_get_physical_device_properties2 : extension revision 2\nVK_KHR_get_surface_capabilities2       : extension revision 1\nVK_KHR_portability_enumeration         : extension revision 1\nVK_KHR_surface                         : extension revision 25\nVK_KHR_surface_protected_capabilities  : extension revision 1\nVK_KHR_wayland_surface                 : extension revision 6\nVK_KHR_xcb_surface                     : extension revision 6\nVK_KHR_xlib_surface                    : extension revision 6\nVK_LUNARG_direct_driver_loading        : extension revision 1\nVK_NV_display_stereo                   : extension revision 1\n\nInstance Layers: count = 5\n--------------------------\nVK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1\nVK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1\nVK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1\nVK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.341  version 1\nVK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.341  version 1\n\nDevices:\n========\nGPU0:\n\tapiVersion         = 1.4.341\n\tdriverVersion      = 610.57.4.0\n\tvendorID           = 0x10de\n\tdeviceID           = 0x2504\n\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU\n\tdeviceName         = NVIDIA GeForce RTX 3060\n\tdriverID           = DRIVER_ID_NVIDIA_PROPRIETARY\n\tdriverName         = NVIDIA\n\tdriverInfo         = 610.57.04\n\tconformanceVersion = 1.4.3.3\n\tdeviceUUID         = d5c05739-96c1-7e49-89b6-bf54c2121c55\n\tdriverUUID         = 9992f558-9329-580d-a9f3-a38ee24bc64d\n"
+      }
+    },
+    "schema": "inferswarm.issue248.subject-identity/1"
+  },
+  "head": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+  "identity_problems": [],
+  "model_stats": {
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf": {
+      "bytes": 10946624,
+      "ctime_ns": 1789936498850859700,
+      "device": 2049,
+      "inode": 52166659,
+      "mtime_ns": 1789442061137221897,
+      "regular_file": true,
+      "symlink": false
+    },
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf": {
+      "bytes": 49990818368,
+      "ctime_ns": 1789936498850859700,
+      "device": 2049,
+      "inode": 52166661,
+      "mtime_ns": 1789442815175193031,
+      "regular_file": true,
+      "symlink": false
+    },
+    "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf": {
+      "bytes": 22544696352,
+      "ctime_ns": 1789936498850859700,
+      "device": 2049,
+      "inode": 52166663,
+      "mtime_ns": 1789443246846100423,
+      "regular_file": true,
+      "symlink": false
+    }
+  },
+  "original_v0_preserved": true,
+  "plan": [
+    {
+      "argv_delta": [
+        "-dev",
+        "none"
+      ],
+      "ngl": 0,
+      "request": "accepted",
+      "tag": "case-3072-B-devnone-001"
+    },
+    {
+      "argv_delta": [
+        "-dev",
+        "none"
+      ],
+      "ngl": 0,
+      "request": "accepted",
+      "tag": "case-3072-B-devnone-002"
+    },
+    {
+      "argv_delta": [
+        "-dev",
+        "none"
+      ],
+      "ngl": 0,
+      "request": "accepted",
+      "tag": "case-3072-B-devnone-003"
+    },
+    {
+      "argv_delta": [
+        "-dev",
+        "none"
+      ],
+      "ngl": 0,
+      "request": "accepted",
+      "tag": "case-3072-B-devnone-004"
+    },
+    {
+      "argv_delta": [
+        "-dev",
+        "none"
+      ],
+      "ngl": 0,
+      "request": "accepted",
+      "tag": "case-3072-B-devnone-005"
+    }
+  ],
+  "port_free": true,
+  "server_processes": [],
+  "source_build": {
+    "binary": "/home/hermes/is248-campaign/bin/llama-server-comparator",
+    "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+    "ldd_raw": "\tlinux-vdso.so.1 (0x00007eff2eac0000)\n\tlibllama-server-impl.so => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so (0x00007eff2e600000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007eff2e200000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007eff2ea80000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007eff2e00c000)\n\tlibllama-common.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0 (0x00007eff2da00000)\n\tlibmtmd.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0 (0x00007eff2d853000)\n\tlibllama.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0 (0x00007eff2d400000)\n\tlibggml.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0 (0x00007eff2ea71000)\n\tlibggml-base.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0 (0x00007eff2e9a7000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007eff2e510000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007eff2eac2000)\n\tlibggml-cpu.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0 (0x00007eff2dea7000)\n\tlibggml-vulkan.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0 (0x00007eff2aa00000)\n\tlibgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007eff2e950000)\n\tlibvulkan.so.1 => /lib/x86_64-linux-gnu/libvulkan.so.1 (0x00007eff2e48d000)\n",
+    "mode": "NONPHYSICAL",
+    "observer_libraries": {
+      "libggml-base.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0",
+        "sha256": "179340356d779c4a7d442c283a0a52d74f6770752fbfaad2cfedf3e383086b2b"
+      },
+      "libggml-cpu.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0",
+        "sha256": "dd1d2904df703f8cf6e9048a17fc0757e3679a8edc351b803889137bbeef365f"
+      },
+      "libggml-vulkan.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0",
+        "sha256": "df589e63511f8154e14ee19be14d5e20e573b81f3b518c7a8eb10d1b1a85e7fe"
+      },
+      "libggml.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0",
+        "sha256": "f02894a957a21603c59a44a38b0e27adb9b88d904175e3c26a8cfff2d99a82b6"
+      },
+      "libllama-common.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0",
+        "sha256": "218474f78c6749cf72b694451ee8df6a7a56d47e94468c92b1ee730b9aefa5eb"
+      },
+      "libllama-server-impl.so": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so",
+        "sha256": "4c20f44656c19d30f5c10cd40ca3493e6850db2fd86d46f7944943527e67206c"
+      },
+      "libllama.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0",
+        "sha256": "2f86df90a3187c006be6be097714e4c6fb612566f8c604c8551acf8fc9938775"
+      },
+      "libmtmd.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0",
+        "sha256": "1341b0fa4d4e9e3cd9e1ec930b5b990b171058086711f7eaa406a14b41ad16d1"
+      }
+    },
+    "physical_units_attempted": 0,
+    "source_head": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+    "source_repo": "/home/hermes/llama.cpp",
+    "source_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+    "source_worktree_status": " M tools/server/server-context.cpp\n?? r8e-obs/\n?? r8g-obs/\n?? r8h-matched/\n?? r8h-obs/",
+    "status": "PASS"
+  },
+  "stale_dispatch_rejections": [
+    {
+      "body": "Correction pass 3 pushed in place (reply to NO-GO 5847890177). Head `4becbaaf` (base unchanged at `bc71774`). Repository-only; zero physical execution, no dispatch, no merge.\n\n**Blocker 1 \u2014 per-request live authority in the Arm-B same-process lifecycle.** `run_same_process_lifecycle()` now performs a live dispatch revalidation through the canonical #250 fetch path immediately BEFORE EACH completion request (the existing early/final prelaunch checks are kept). Every per-request observation proves the exact required strings (`R8I3B PHYSICAL DISPATCH #250`, `head=<expected head>`, exactly one `diagnostic-namespace=d250-arm-b`, exactly one `arm=B-process-init`) and cross-binds to the original dispatch generation (same comment ID, head, namespace, arm, author association, created-at, comment-body digest). Drift before request N stops before N issues: no later request executes, completed request evidence is retained append-only, the lifecycle is marked incomplete/fail-closed, and the reducer never treats the partial lifecycle as a complete deterministic population. The current authority block/digest is recorded in each per-request receipt. Tests (11): all authorized => all five execute; drift before request 0/1/2 => zero/one/two completions; PR head moves, PR closes, Issue closes, comment ID changes, comment body changes mid-lifecycle => stop. Old-defect proof at `c751766`: the request loop performs zero authority revalidation after launch (authority fetched only prelaunch).\n\n**Blocker 2 \u2014 frozen prefix-population law.** `prefix_population_facts` (diagnostic module) + the retained-byte reducer: a contiguous retained prefix from unit 001, at least two valid units, first row-digest mismatch inside the prefix, execution stopped at that mismatch => complete NONDETERMINISTIC population; the unexecuted tail is not missing evidence. A deterministic claim still requires ALL frozen units (5 identical). Fail-closed: gaps (001+003), execution past the declared stop, cherry-picks, quarantined substitution, omitted retained later units, duplicates, malformed tag/index ordering. Applied to Arm A, Arm B fresh, Arm B same-process, Arm C serial. For same-process, authority-loss truncation is mechanically distinguished from a valid mismatch stop by re-deriving the stop cause from retained rows/custody (never trusting a producer stop claim). Tests: mismatch at 2 with only 1-2 => valid, B required; mismatch at 4 contiguous 1-4 => valid; five identical => deterministic; three identical => BLOCKED; 001+003 => BLOCKED; mismatch at 002 with retained 003 => BLOCKED; B fresh early mismatch progresses to same-process comparison; B same-process early mismatch progresses to C; C serial early mismatch progresses to D; authority-loss prefix without a proven mismatch => BLOCKED.\n\n**Blocker 3 \u2014 task-bound reset proofs.** `_parse_slot_log` now proves, from the pinned SLT_INF grammar (`slot <fn>: id N | task M |`), that each request's slice contains: slot 3 selected BY ID (selection line structurally `task -1`), exactly ONE fresh task launched on slot 3 after that selection (the task id is not consumed by any earlier request of this lifecycle), and a `prompt eval` timing line for THAT task covering the full 3077 tokens (no cache reuse). Delayed prior-task evidence can never certify the current request; the parsed task id and evidence are retained per request and independently re-derived by the reducer from retained log bytes. Task id is NOT assumed equal to request index (health/NEXT_RESPONSE tasks share the monotonic counter), so the producer discovers the task id from observed lines. Mutations (12): prior-task selection only; prior-task eval only; selection current + eval prior; eval current + selection prior; mixed prior/current with no coherent current proof; duplicate conflicting boundaries; wrong id_slot; LRU selection instead of by-id; cache reuse / short prompt eval; request-count drift; restart/PID change; contract drift \u2014 all fail closed. Old-defect proof at `c751766`: a task-0-only slice certified `request_index=1` with `full_recompute_proven: True`.\n\n**Blocker 4 \u2014 honest, mechanical Arm-D.** (4A) Ladder labels are TEXT GENERATION PARAMETERS, not token lengths: before any physical Arm-D execution, every predeclared prompt is tokenized through the pinned-server `/tokenize` authority (a tokenization call only \u2014 not diagnostic execution), and the receipt (nominal label, sentence-repeat count, prompt digest, token ids, ACTUAL token count) is retained append-only per length; the producer binds the runtime prompt-eval count to it; the reducer uses ACTUAL counts for any token-count mechanism (`indexer top_k = 2048`) and BLOCKS a length whose runtime prompt-eval count disagrees with the retained tokenizer authority; no retrospective length retrofit. Tests: nominal 2048 with actual 2053 => predicate uses 2053; actual 2041 => does not pretend the threshold crossed; runtime/tokenizer disagreement => BLOCKED; prompt mutation => BLOCKED. (4B) `_non_uniform_progress`, `ubatch_geometry_split`, and `checkpoint_resegmentation` are RETIRED as unsound from pinned source (progress lines are 3s wall-clock samples, not ubatch boundaries; checkpoints log at DBG only, absent under the frozen launch shape). Frozen predicates: `indexer_top_k_boundary` (actual token counts) and `midstream_ubatch_split` (a strictly sub-batch step STRICTLY BETWEEN two continuing rungs \u2014 an ordinary final remainder terminates the sequence and cannot satisfy it; present at every variable length, absent at every deterministic length). (4C) The 2 screening repeats per length are `pair_identical` ONLY \u2014 two equal rows cannot alone support a deterministic causal boundary. A D LOCALIZED claim whose deterministic side is the boundary-adjacent length requires the frozen deterministic-confirmation count (5 total identical) via the PREDECLARED confirm-extension units (`-003-confirm`..`-005-confirm`, frozen in the plan before any execution); unrelated ladder points are never extended; a first mismatch at any point immediately establishes variability. D terminal law: LOCALIZED only when prior arms failed, the monotone deterministic->variable boundary is confirmed at the frozen count, the variable side is mechanically mismatched, actual runtime/token units align with the claimed mechanism, and a source-proven transition predicate fires; otherwise `R8I3B_REFERENCE_RUNTIME_UNRESOLVED`. Tests: pair-identical-without-confirmation => UNRESOLVED; confirm-extension mismatch; D-law mutation controls; transition-predicate mutation controls.\n\n**Cross-cutting preserved (no regressions):** accepted #248 ngl=1 contrast digest/provenance read-only; three-member campaign model attestation; exact binary authority; exact request contracts; true CPU-only `-dev none`; B/C CPU-only inheritance; namespace<->arm exact binding; two-pass prelaunch authority; identity/health raw custody; append-only/quarantine semantics; reducer live authority fetch; no caller-supplied terminal/factor/determinism booleans; no bypass flags. Phase-0 evidence tree byte-for-byte unchanged. No new helper modules were added, so CI registration is unchanged: `plan_ci.py --self-check` OK and regeneration is byte-identical; the retention-audit invariant text for the three #250 modules was updated to name the pass-3 protections.\n\n**Validation:** `test_issue250_diagnostic` 67, `test_issue250_physical` 61, `test_issue250_terminal` 38 (focused bundle incl. plan_ci + retention: 330/330); full `r8i-qwen-qualification` 645/645; project-status 8/8; repository finalizer PASS (19 stages \u2014 graph acyclic, manifests terminal, generated artifacts current); canonical full CPU suite 1900 tests OK (4 workers; executed set == serial set; zero failures/errors). Hosted CI at `4becbaaf`: run 36277189288 SUCCESS \u2014 CI Gate + all groups including `r8i-qwen-qualification` and repo-integrity.\n\nSTOP for maintainer exact-head review at `4becbaaf`. Not dispatching, not merging.",
+      "id": 5850640476,
+      "reason": "dispatch phrase line absent"
+    },
+    {
+      "body": "## Maintainer exact-head re-review \u2014 GO for physical diagnostic dispatch\n\nReviewed PR #251 at exact head `1c86e97da42401ff7cfa98e3dc48a33517c65def` against Issue #250 and prior NO-GO comment `5852014883`.\n\nDisposition: **GO for physical diagnostic dispatch / NOT merge-ready yet.**\n\nThe final source-arithmetic blocker is closed:\n\n- pinned source law remains `width = min(n_kv, indexer_top_k + r - 1) = min(n_kv, 2051)`;\n- `INDEXER_ALL_CELLS_MAX = 2051`;\n- `INDEXER_SELECTIVE_MIN = 2052`;\n- the reducer treats `n_kv <= 2051` as the all-cells/dense-equivalent side and `n_kv >= 2052` as the first genuinely selective side;\n- variable-side equality at exactly 2051 no longer fires `indexer_top_k_boundary`;\n- a deterministic boundary side at exactly 2051 with a variable side at 2052 may fire when all other frozen Arm-D gates are satisfied;\n- the prospective real ladder case `1534 -> 2053` remains correctly classified;\n- localization wording remains narrow: QSA all-cells -> selective-mask execution boundary, not an ultimate numerical-root-cause claim.\n\nPreviously accepted dispatch machinery remains intact:\n- durable Arm-B truncated-prefix custody;\n- per-request Arm-B live authority;\n- prefix-population early-stop law;\n- task-bound reset proofs;\n- attributed tokenizer-server authority;\n- unknown-listener refusal;\n- raw tokenizer response custody;\n- actual-token/runtime prompt-eval binding;\n- retired wall-clock progress/ubatch causality;\n- D screening-pair + five-repeat deterministic confirmation;\n- accepted #248 ngl=1 read-only contrast;\n- CPU-only A/B/C geometry;\n- campaign model attestation;\n- live reducer authority;\n- exact namespace<->arm binding;\n- append-only/quarantine custody.\n\nRepository state:\n- PR #251 OPEN, non-draft, unmerged, mergeable;\n- exact head `1c86e97da42401ff7cfa98e3dc48a33517c65def`;\n- base/main unchanged at `bc71774dc68e7d7fddaf97bd794bbbc297e66ca5`;\n- Issue #250 OPEN;\n- hosted CI run `36291357058` SUCCESS, all jobs including `r8i-qwen-qualification`, `repo-integrity`, and CI Gate green.\n\nI found no remaining acceptance blocker in the frozen Issue #250 physical diagnostic tooling.\n\nThis review does **not** itself authorize execution: no `R8I3B PHYSICAL DISPATCH #250` line is included here. Physical work may begin only after separate exact-head OWNER/MEMBER dispatch comments are posted for the reachable frozen arms. Keep PR #251 OPEN/unmerged and stop again at the Issue #250 terminal / maintainer decision gate.",
+      "id": 5852360395,
+      "reason": "dispatch phrase line absent"
+    },
+    {
+      "body": "R8I3B PHYSICAL DISPATCH #250\nhead=1c86e97da42401ff7cfa98e3dc48a33517c65def\ndiagnostic-namespace=d250-arm-a\narm=A-vulkan-necessity",
+      "id": 5852485456,
+      "reason": "exact head line absent: head=5d015b5bc437bb82d5e966d0da8b90ff44b079a1"
+    },
+    {
+      "body": "R8I3B PHYSICAL DISPATCH #250\nhead=028dce94e7a5eb848b3f13d54d7c4717d7de8a4d\ndiagnostic-namespace=d250-arm-v0-amd\narm=V0-amd-vulkan-concordance",
+      "id": 5862772797,
+      "reason": "exact head line absent: head=5d015b5bc437bb82d5e966d0da8b90ff44b079a1"
+    },
+    {
+      "body": "R8I3B PHYSICAL DISPATCH #250\nhead=c5cc132762c51a3352014f36553eff6d0d26b112\ndiagnostic-namespace=d250-arm-v0-amd\narm=V0-amd-vulkan-concordance",
+      "id": 5868617068,
+      "reason": "exact head line absent: head=5d015b5bc437bb82d5e966d0da8b90ff44b079a1"
+    },
+    {
+      "body": "R8I3B PHYSICAL DISPATCH #250\nhead=aa059713d83204a4dd8be2ea903aa31bddfdf3b8\ndiagnostic-namespace=d250-arm-v0n-nvidia\narm=V0n-nvidia-vulkan-current\n",
+      "id": 5880409202,
+      "reason": "exact head line absent: head=5d015b5bc437bb82d5e966d0da8b90ff44b079a1"
+    },
+    {
+      "body": "R8I3B PHYSICAL DISPATCH #250\nhead=0b6da00343f353932e80cf43f9e88d301d9a5ccd\ndiagnostic-namespace=d250-arm-a\narm=A-vulkan-necessity",
+      "id": 5896620975,
+      "reason": "exact head line absent: head=5d015b5bc437bb82d5e966d0da8b90ff44b079a1"
+    },
+    {
+      "body": "## R8I3B PHYSICAL DISPATCH #250 \u2014 execution STOPPED before any physical work; producer defect reported under the \u00a710 protocol\n\nDispatch `5896620975` (namespace `d250-arm-a`, arm `A-vulkan-necessity`, head `0b6da00343f353932e80cf43f9e88d301d9a5ccd`) was fully validated \u2014 PR #251 OPEN / non-draft / unmerged, local HEAD == remote branch == GitHub PR head, `origin/main == bc71774dc68e7d7fddaf97bd794bbbc297e66ca5`, worktree clean, GO `5895942792` verified at the same head \u2014 **but zero Arm-A units were launched.** Per the authorized \u00a710 defect protocol, physical execution is stopped, all evidence is preserved, and the defect is reported here. No repository file was modified; nothing was committed or pushed; the dispatch remains valid for execution at this unchanged head once the maintainer adjudicates.\n\n**The defect (production-unreachable terminal path):** `derive_terminal`'s bridge branch \u2014 the one that consumes a completed bridge-path Arm-A population into `ARM_A_STOPS_LADDER` \u2014 is gated behind `derive_v0_state(...)`, which (a) live-fetches a **`d250-arm-v0-amd` dispatch at the CURRENT execution head** (`0b6da00`) through `require_live_dispatch`, and (b) requires a **top-level `d250-arm-v0-amd/` tree in the campaign evidence root**. Neither can exist under the accepted design: the V0 dispatch is completed and stale (`5868617068`, head `c5cc132\u2026`, pinned stale in `ARM_A_BRIDGE_STALE_DISPATCH_COMMENT_IDS`), and AMENDMENT-008 round 2 explicitly forbids top-level predecessor copies \u2014 accepted bytes mount read-only **only** under `predecessor-v0/` + `predecessor-v0n/`. So a fully compliant bridge campaign derives `v0.state == V0_INVALID_BLOCKED` and the reducer returns `V0 gate blocks A: V0_INVALID_BLOCKED` **before the Arm-A walk**, and would do so AFTER the units had executed (~10\u201319 GPU-hours). The `ARM_A_STOPS_LADDER` branch at `issue250_terminal.py:1807` is dead code in production.\n\n**How this was established (all read-only; no physical execution, no unit, no row, no model hashing):** launch-gate probe on inferswarm01 \u2014 `validate_arm_a_bridge` + `revalidating_arm_a_predecessors` over the REAL accepted bytes (read-only copies of the two accepted roots) **authenticate perfectly** and `arm_a_reachability_source` returns `arm-a-bridge`; the unit-launching half of the machinery is sound. Reduction probe \u2014 pure-production `derive_terminal` (real live fetcher, real #248 contrast root `/home/hermes/is248-campaign/evidence`, real mounts, committed bridge record, attestation stub with injected hasher only): `TERMINAL: None`, `V0 STATE: V0_INVALID_BLOCKED`, `V0 gate blocks A: V0_INVALID_BLOCKED: no valid dispatch authority for head 0b6da00\u2026 namespace d250-arm-v0-amd`, arms reduced `[]`. Both probes used throwaway tempdir campaign roots, deleted after; accepted roots were only read.\n\n**Why the 50-test round-2 suite did not catch it:** in `TerminalBridgeStopTests._fixture` the campaign's own synthetic V0 population sits at the evidence-root top level and the fixture's authority map serves a V0 payload for the fixture's own head, so `derive_v0_state` rederives `CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED` in tests. In production the V0 tree is absent by law and the only live V0 dispatch is stale. The launch-gate path under test uses the same injection, so both surfaces are green in CI while diverging in production. This is the \u00a710 \"producer/validator evidence-shape divergence\" class: fixtures encode the validator's assumptions, not the compliant campaign root.\n\n**Evidence/state findings:** accepted roots untouched \u2014 V0n root dir mtimes still `2026-09-28 19:29` (execution time; my probes postdate and wrote only to /tmp), V0 root on inferswarm05 untouched (`2026-09-28 07:25`), #248 root untouched. inferswarm01 GPU idle (1 MiB, 0%), zero llama/probe processes, probe scripts and temp roots removed. Local worktree still clean at `0b6da00`; no commit, no push; PR #251 OPEN/unmerged at the exact head; hosted CI run `36608770657` success at this head. Focused `test_issue250_amendment008_round2` re-run at the unchanged head on inferswarm01: **50/50 OK** \u2014 the defect is a production-reachability gap, not a regression introduced by any execution (none occurred).\n\n**No Arm-A unit count exists to report** (attempted 0 / valid 0 / failed 0): the \u00a75 repeat law was never entered; \u00a76's pre-launch gate sequence surfaced the defect during pre-execution verification, before the first launch. Items 6\u201313 of the \u00a712 report (attestations, unit rows, reducer output, `ARM_A_STOPS_LADDER`) are consequently not applicable to this report; the launch-gate reachability provenance that would have been persisted is `arm-a-bridge` (verified), and no vendor/causal inference of any kind is made.\n\n**Recommended single fix (maintainer decision):** make `derive_terminal`'s bridge branch reachable for a compliant campaign root \u2014 e.g. treat \"bridge record authenticates over `predecessor-v0/`+`predecessor-v0n/`\" as the V0-gate satisfaction condition on the bridge path (the branch already calls `validate_arm_a_bridge` today; it just never gets there), with the regression being a production-shaped fixture: bridge campaign root WITHOUT top-level V0/V0n trees, V0n-contract fixture serving the accepted predecessor payloads, asserting the walk reaches Arm A. That is a tooling correction requiring a new commit (which makes dispatch `5896620975` stale for execution, per \u00a711) and fresh maintainer exact-head review.\n\nSTOP. No merge. No B/C/C1/C2/D dispatch or execution occurred; no later discriminator was prepared. The next action requires maintainer review and a separate fresh dispatch before any physical discriminator.\n",
+      "id": 5897507995,
+      "reason": "dispatch phrase line absent"
+    }
+  ]
+}

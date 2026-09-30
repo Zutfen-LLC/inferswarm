@@ -1,0 +1,252 @@
+{
+  "B_C_C1_C2_D_authority_or_execution": false,
+  "attempted": [
+    "case-3072-B-devnone-001",
+    "case-3072-B-devnone-002",
+    "case-3072-B-devnone-003",
+    "case-3072-B-devnone-004",
+    "case-3072-B-devnone-005"
+  ],
+  "closing_sha256": "51245503a41dca04d26d067503148b139d619f335d0cb32265ec407fc0447564",
+  "current_head_V0_dispatch_requested": false,
+  "failure": {
+    "classification": "REDUCTION_FAILURE",
+    "error": "['Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops for maintainer review \u2014 no B/C/C1/C2/D arm is auto-reachable from an Arm-A result without a new maintainer decision']"
+  },
+  "generation": "gen-2-pass6",
+  "head": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+  "manual_terminal_emitted": false,
+  "opening_attestation_sha256": "2e378b58614f21c4070e2200dba0e54f5691d29dd18a762a0158c1968cd22419",
+  "preservation": {
+    "248": {
+      "equal": true,
+      "files": 535
+    },
+    "contrast-mount": {
+      "equal": true
+    },
+    "old-preparation": {
+      "equal": true,
+      "files": 78
+    },
+    "v0": {
+      "equal": true,
+      "files": 43
+    },
+    "v0-mount": {
+      "equal": true
+    },
+    "v0n": {
+      "equal": true,
+      "files": 27
+    },
+    "v0n-mount": {
+      "equal": true
+    }
+  },
+  "reducer_result": {
+    "blocked": "R8I3B_REDUCER_BLOCKED_INCOMPLETE",
+    "complete": false,
+    "problems": [
+      "Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops for maintainer review \u2014 no B/C/C1/C2/D arm is auto-reachable from an Arm-A result without a new maintainer decision"
+    ],
+    "terminal": null
+  },
+  "repeat_decisions": [
+    {
+      "after_unit": "case-3072-B-devnone-001",
+      "all_row_sha256": [
+        "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+        "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+        "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+        "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+        "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+        "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+        "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+        "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+      ],
+      "decision0_sha256": "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "next_action": "CONTINUE_FROZEN_PREFIX",
+      "pid": 1831875,
+      "population": {
+        "deterministic": false,
+        "first_mismatch_index": null,
+        "invalid": null,
+        "n": 1,
+        "nondeterministic": false,
+        "planned": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "population": "incomplete",
+        "retained": [
+          "case-3072-B-devnone-001"
+        ],
+        "stop_reason": "identical rows below the deterministic claim count"
+      }
+    },
+    {
+      "after_unit": "case-3072-B-devnone-002",
+      "all_row_sha256": [
+        "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+        "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+        "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+        "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+        "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+        "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+        "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+        "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+      ],
+      "decision0_sha256": "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "next_action": "CONTINUE_FROZEN_PREFIX",
+      "pid": 1842511,
+      "population": {
+        "deterministic": false,
+        "first_mismatch_index": null,
+        "invalid": null,
+        "n": 2,
+        "nondeterministic": false,
+        "planned": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "population": "incomplete",
+        "retained": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002"
+        ],
+        "stop_reason": "identical rows below the deterministic claim count"
+      }
+    },
+    {
+      "after_unit": "case-3072-B-devnone-003",
+      "all_row_sha256": [
+        "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+        "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+        "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+        "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+        "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+        "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+        "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+        "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+      ],
+      "decision0_sha256": "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "next_action": "EXTEND_FROM_THREE_TO_FIVE",
+      "pid": 1853371,
+      "population": {
+        "deterministic": false,
+        "first_mismatch_index": null,
+        "invalid": null,
+        "n": 3,
+        "nondeterministic": false,
+        "planned": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "population": "incomplete",
+        "retained": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003"
+        ],
+        "stop_reason": "identical rows below the deterministic claim count"
+      }
+    },
+    {
+      "after_unit": "case-3072-B-devnone-004",
+      "all_row_sha256": [
+        "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+        "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+        "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+        "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+        "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+        "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+        "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+        "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+      ],
+      "decision0_sha256": "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "next_action": "CONTINUE_FROZEN_PREFIX",
+      "pid": 1864277,
+      "population": {
+        "deterministic": false,
+        "first_mismatch_index": null,
+        "invalid": null,
+        "n": 4,
+        "nondeterministic": false,
+        "planned": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "population": "incomplete",
+        "retained": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004"
+        ],
+        "stop_reason": "identical rows below the deterministic claim count"
+      }
+    },
+    {
+      "after_unit": "case-3072-B-devnone-005",
+      "all_row_sha256": [
+        "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+        "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+        "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+        "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+        "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+        "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+        "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+        "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+      ],
+      "decision0_sha256": "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "next_action": "STOP_COMPLETE_DETERMINISTIC_POPULATION",
+      "pid": 1875311,
+      "population": {
+        "deterministic": true,
+        "first_mismatch_index": null,
+        "invalid": null,
+        "n": 5,
+        "nondeterministic": false,
+        "planned": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "population": "complete_deterministic",
+        "retained": [
+          "case-3072-B-devnone-001",
+          "case-3072-B-devnone-002",
+          "case-3072-B-devnone-003",
+          "case-3072-B-devnone-004",
+          "case-3072-B-devnone-005"
+        ],
+        "stop_reason": null
+      }
+    }
+  ],
+  "repository_clean": true,
+  "root": "/home/hermes/is250-campaign/evidence-arm-a-5d015b5",
+  "server_processes_remaining": [],
+  "verified_tags": [
+    "case-3072-B-devnone-001",
+    "case-3072-B-devnone-002",
+    "case-3072-B-devnone-003",
+    "case-3072-B-devnone-004",
+    "case-3072-B-devnone-005"
+  ]
+}

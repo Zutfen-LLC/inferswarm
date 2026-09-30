@@ -681,6 +681,8 @@ PATH_GROUPS = {
         ["r8i-qwen-qualification"],
     "tests/test_issue250_pass6_corrections.py":
         ["r8i-qwen-qualification"],
+    "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/": [
+        "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
         "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":

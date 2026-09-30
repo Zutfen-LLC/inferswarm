@@ -137,6 +137,9 @@ def derive(evidence_root: Path, *, contrast_root: Path, repo_root: Path,
         vectors = [u.get("row_sha256") for u in units]
         if (problems != [frozen.ARM_A_STOPS_LADDER] or arm.get("reachability_source") != "arm-a-bridge"
                 or cpu.get("population") != "complete_deterministic"
+                or cpu.get("deterministic") is not True
+                or cpu.get("nondeterministic") is not False
+                or cpu.get("invalid") is not None
                 or cpu.get("n") != 5 or len(units) != 5
                 or any(not isinstance(v, list) or len(v) != 8 for v in vectors)
                 or any(v != vectors[0] for v in vectors[1:])
@@ -146,7 +149,19 @@ def derive(evidence_root: Path, *, contrast_root: Path, repo_root: Path,
                     "frozen_result": result}
         return {"status": "TERMINAL", "terminal": TERMINAL,
                 "localized_factor": FACTOR, "source_build": source_build,
-                "interpretation": "Necessary runtime/execution boundary only; not a Vulkan, driver, device, kernel, vendor, or mechanism root-cause claim. Implementation fix below this boundary remains unlocalized.",
+                "interpretation": (
+                    "Vulkan participation is a necessary boundary for the observed "
+                    "fresh-process case-3072 nondeterminism under the frozen accepted "
+                    "runtime/model/request conditions because the zero-Vulkan control "
+                    "is deterministic while the accepted nonzero-Vulkan condition is "
+                    "variable. Necessary runtime/execution boundary only; "
+                    "not a Vulkan, driver, device, kernel, vendor, or mechanism "
+                    "root-cause claim. Implementation fix below this boundary "
+                    "remains unlocalized."),
+                "predecessor_disposition": STOP,
+                "implementation_fix_localized": False,
+                "later_arms_required": False,
+                "further_physical_work_authorized": False,
                 "later_arms_authorized": False, "frozen_result": result,
                 "authority": {"dispatch_comment_id": DISPATCH_ID,
                               "pr_adjudication_id": PR_ADJUDICATION_ID,
