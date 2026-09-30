@@ -122,8 +122,12 @@ TERMINALS = (
 )
 REDUCER_BLOCKED = "R8I3B_REDUCER_BLOCKED_INCOMPLETE"
 
-# llama.cpp pin + accepted binaries (phase-0 verified).
-LLAMA_PIN = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
+# Exact source authority: accepted R8-B runtime-authority.json and R8-H
+# PHYSICAL-AUTHORITY.json / runtime/armB-runtime.json (AMENDMENT-009).
+# The historical Phase-0/V0/V0n 39-character label is NOT a Git source pin.
+ACCEPTED_LLAMA_SOURCE_PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
+ACCEPTED_LLAMA_SOURCE_TREE = "950999fe62b7fe55f44ab5b7394e3c8542f37f12"
+LLAMA_PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 SERVER_BINARIES = {
     "canonical": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
     "r8e-obs": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0",
@@ -558,6 +562,22 @@ def bind_stale_dispatch_record(current_head: str) -> dict[str, Any]:
 
 class DiagnosticError(RuntimeError):
     """Raised when a diagnostic boundary is violated."""
+
+
+def validate_git_source_pin(pin: Any) -> str:
+    """A full Git source pin is exactly 40 lowercase hex bytes; no repair."""
+    if not isinstance(pin, str) or re.fullmatch(r"[0-9a-f]{40}", pin) is None:
+        raise DiagnosticError(f"source pin must be exactly 40 lowercase hex: {pin!r}")
+    return pin
+
+
+def require_llama_source_pin() -> str:
+    """Authenticate the frozen token against independent accepted authority."""
+    pin = validate_git_source_pin(LLAMA_PIN)
+    accepted = validate_git_source_pin(ACCEPTED_LLAMA_SOURCE_PIN)
+    if pin != accepted:
+        raise DiagnosticError(f"source pin differs from accepted authority: {pin}")
+    return pin
 
 
 def sha256_bytes(data: bytes) -> str:

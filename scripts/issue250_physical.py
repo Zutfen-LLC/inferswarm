@@ -292,7 +292,11 @@ V0_PLACEMENT_EMBEDDING = "CPU"
 V0_PLACEMENT_OUTPUT_PROJECTION = "Vulkan"
 # Phase-0 pinned-source law: i_gpu_start = n_layer + 1 - ngl;
 # ngl=1 offloads the output head, not the input embedding.
-V0_SOURCE_PIN = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
+# Historical schema /1 LABEL, not an executable Git source pin. It is
+# admitted ONLY by retained consumers at the exact accepted predecessor
+# heads below. Never resolve or normalize it (AMENDMENT-009).
+HISTORICAL_SOURCE_LABEL = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
+V0_SOURCE_PIN = D.LLAMA_PIN
 V0_COMPARATOR_SHA = D.SERVER_BINARIES["comparator"]
 V0_RADV_ICD = "/usr/share/vulkan/icd.d/radeon_icd.json"
 V0_BINDING_SCHEMA = "inferswarm.issue250.v0-selector-binding/1"
@@ -576,6 +580,19 @@ def _v0_normalize_runtime_identity(value: Any) -> dict[str, Any]:
     return canonical
 
 
+def _v0_receipt_source_label(expected_head: str) -> str:
+    """Exact historical custody label; no malformed live source authority."""
+    if expected_head == D.ACCEPTED_V0_EXECUTED_HEAD:
+        return HISTORICAL_SOURCE_LABEL
+    return D.require_llama_source_pin()
+
+
+def _v0n_receipt_source_label(expected_head: str) -> str:
+    if expected_head == ARM_A_BRIDGE_EVIDENCE_HEAD:
+        return HISTORICAL_SOURCE_LABEL
+    return D.require_llama_source_pin()
+
+
 def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
                                  index: int, live: dict[str, Any],
                                  binary_sha: str, *,
@@ -603,7 +620,7 @@ def validate_v0_selector_binding(record: dict[str, Any], expected_head: str,
             or record.get("expected_pr_head") != expected_head
             or record.get("host") != "inferswarm05"
             or record.get("producer") != V0_BINDING_PRODUCER
-            or record.get("source_pin") != V0_SOURCE_PIN
+            or record.get("source_pin") != _v0_receipt_source_label(expected_head)
             or record.get("binary_sha256") != V0_COMPARATOR_SHA
             or binary_sha != V0_COMPARATOR_SHA
             or record.get("icd") != V0_RADV_ICD
@@ -789,7 +806,7 @@ def _v0_load_freeze_with_preflight(root: Path, expected_head: str,
             or freeze.get("selected_card") != canonical["selected_card"]
             or freeze.get("excluded_card") != canonical["excluded_card"]):
         raise PhysicalDiagnosticError("V0 screen freeze violates canonical preflight selection")
-    if (freeze.get("source_pin") != V0_SOURCE_PIN
+    if (freeze.get("source_pin") != _v0_receipt_source_label(expected_head)
             or freeze.get("binary_sha256") != V0_COMPARATOR_SHA
             or freeze.get("icd") != V0_RADV_ICD
             or freeze.get("cuda_visible_devices") != "-1"
@@ -969,7 +986,7 @@ def _v0_retained_rows(root: Path, count: int, head: str,
                 or receipt.get("binary_sha256") != V0_COMPARATOR_SHA
                 or not isinstance(receipt.get("v0_selector_binding"), dict)
                 or receipt["v0_selector_binding"].get("expected_pr_head") != head
-                or receipt["v0_selector_binding"].get("source_pin") != V0_SOURCE_PIN
+                or receipt["v0_selector_binding"].get("source_pin") != _v0_receipt_source_label(head)
                 or receipt["v0_selector_binding"].get("binary_sha256") != V0_COMPARATOR_SHA
                 or receipt["v0_selector_binding"].get("canonical_digest_sha256")
                    != _v0_digest(receipt["v0_selector_binding"])
@@ -988,7 +1005,7 @@ def _v0_retained_rows(root: Path, count: int, head: str,
                     Path(receipt["server_argv"][0]),
                     Path(receipt.get("model_launch_member", "")), PORT)
                 or receipt.get("placement_source_law") != {
-                    "source_pin": V0_SOURCE_PIN, "ngl": 1,
+                    "source_pin": _v0_receipt_source_label(head), "ngl": 1,
                     "embedding": "CPU", "output_projection": "Vulkan"}):
             raise PhysicalDiagnosticError("V0 predecessor retained byte/custody mismatch")
         binding = receipt["v0_selector_binding"]
@@ -1019,7 +1036,7 @@ def _v0_retained_rows(root: Path, count: int, head: str,
             "cuda_participation": False if receipt["server_env"].get(
                 "CUDA_VISIBLE_DEVICES") == "-1" else None,
             "vram_before": receipt.get("vram_before"),
-            "vram_after": receipt.get("vram_after")}, binding)
+            "vram_after": receipt.get("vram_after")}, binding, retained_head=head)
         rows.append(digest)
     return rows
 
@@ -1076,9 +1093,12 @@ def _v0_observe_device(index: int) -> dict[str, Any]:
 
 def _v0_verify_placement(unit_dir: Path, device: dict[str, Any],
                          result: dict[str, Any],
-                         binding: dict[str, Any] | None = None) -> None:
-    """Pinned source law + selected/excluded-die runtime residency."""
-    if (not isinstance(binding, dict) or binding.get("source_pin") != V0_SOURCE_PIN
+                         binding: dict[str, Any] | None = None, *,
+                         retained_head: str | None = None) -> None:
+    """Source law + residency; historical labels only in retained consumers."""
+    source_label = (_v0_receipt_source_label(retained_head)
+                    if retained_head is not None else D.require_llama_source_pin())
+    if (not isinstance(binding, dict) or binding.get("source_pin") != source_label
             or binding.get("binary_sha256") != V0_COMPARATOR_SHA
             or device.get("vendor_id") != "0x1002"
             or result.get("vulkan_device_index") != device.get("index")
@@ -1100,7 +1120,8 @@ def _v0_verify_placement(unit_dir: Path, device: dict[str, Any],
 
 def _verify_v0_amd_binary(binary: Path, binary_id: str) -> str:
     """Exact observer executable AND its dynamic Vulkan library family."""
-    if (V0_SOURCE_PIN != D.LLAMA_PIN
+    D.require_llama_source_pin()
+    if (V0_SOURCE_PIN != D.require_llama_source_pin()
             or V0_COMPARATOR_SHA != D.SERVER_BINARIES["comparator"]
             or binary_id != "comparator"
             or verify_binary(binary, binary_id) != V0_COMPARATOR_SHA):
@@ -1485,9 +1506,9 @@ def _read_v0n_screen_freeze(root: Path, expected_head: str) -> dict[str, Any]:
             or identity.get("bdf") != record.get("bdf")
             or record.get("subject_identity_sha256")
                != _v0n_identity_digest(identity)
-            or record.get("source_pin") != V0N_SOURCE_PIN
+            or record.get("source_pin") != _v0n_receipt_source_label(expected_head)
             or record.get("binary_sha256") != V0N_COMPARATOR_SHA
-            or record.get("llama_source_pin") != V0N_SOURCE_PIN
+            or record.get("llama_source_pin") != _v0n_receipt_source_label(expected_head)
             or record.get("icd") != V0N_NVIDIA_ICD
             or record.get("vulkan_selector") != {
                 "GGML_VK_VISIBLE_DEVICES": "0",
@@ -1663,7 +1684,8 @@ def _verify_v0n_binary(binary: Path, binary_id: str) -> str:
     loaded ggml backend set must contain libggml-vulkan and must NOT
     contain any CUDA backend library under the NVIDIA ICD environment.
     """
-    if (V0N_SOURCE_PIN != D.LLAMA_PIN
+    D.require_llama_source_pin()
+    if (V0N_SOURCE_PIN != D.require_llama_source_pin()
             or V0N_COMPARATOR_SHA != D.SERVER_BINARIES["comparator"]
             or binary_id != "comparator"
             or verify_binary(binary, binary_id) != V0N_COMPARATOR_SHA):
@@ -2214,7 +2236,7 @@ def _v0n_retained_rows(root: Path, count: int, head: str,
                 or receipt.get("model_launch_member") !=
                    str(Path(D.MODEL_DIR) / D.MODEL_MEMBER_1)
                 or receipt.get("placement_source_law") != {
-                    "source_pin": V0N_SOURCE_PIN, "ngl": 1,
+                    "source_pin": _v0n_receipt_source_label(head), "ngl": 1,
                     "embedding": "CPU", "output_projection": "Vulkan"}
                 or receipt.get("embedding_placement") != "CPU"
                 or receipt.get("output_projection_placement") != "Vulkan"
@@ -2552,6 +2574,9 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
     ``arm=`` stripped lines with the namespace<->arm pair exactly
     bound (issue250_diagnostic.NAMESPACE_ARM_BINDING).
     """
+    # Authenticate source/build before any GitHub authority fetch. This
+    # seam reads Git objects, ELF dependencies and hashes only; no server.
+    verify_source_build()
     if namespace != V0_NAMESPACE:
         D.validate_namespace(namespace)
     D._require_clean_head(Path(repo_root), expected_head)
@@ -2635,12 +2660,23 @@ def fetch_dispatch_authority(repo_root: Path, expected_head: str,
         f"namespace {namespace}")
 
 
+def require_source_pins() -> str:
+    """Prospective aliases cannot diverge or admit historical custody labels."""
+    pin = D.require_llama_source_pin()
+    for value in (V0_SOURCE_PIN, V0N_SOURCE_PIN):
+        D.validate_git_source_pin(value)
+        if value != pin:
+            raise PhysicalDiagnosticError("prospective source pin mismatch")
+    return pin
+
+
 def require_live_dispatch(repo_root: Path, expected_head: str,
                           namespace: str,
                           revalidate_authority: Any = None,
                           github_api: str = "https://api.github.com",
                           ) -> dict[str, Any]:
     """MANDATORY live revalidation; omission never disables it."""
+    require_source_pins()
     if revalidate_authority is None:
         revalidate_authority = fetch_dispatch_authority
     authority = revalidate_authority(repo_root, expected_head, namespace,
@@ -2695,6 +2731,64 @@ def verify_binary(path: Path, binary_id: str) -> str:
         raise PhysicalDiagnosticError(
             f"binary sha mismatch for {binary_id}: {digest}")
     return digest
+
+
+def verify_source_build(
+        source_repo: Path = Path("/home/hermes/llama.cpp"),
+        binary: Path = Path("/home/hermes/is248-campaign/bin/llama-server-comparator"),
+        ) -> dict[str, Any]:
+    """NONPHYSICAL source/build/library preflight; never execute the server.
+
+    Authenticate the committed source revision/tree, then the accepted
+    comparator executable and every resolved observer library. Existing
+    worktree instrumentation is reported, not blessed as pristine source.
+    The accepted binary hashes bind the build, not a fresh compilation.
+    Only Git read operations, SHA-256 and the ELF loader's ldd trace run.
+    No help/list-devices/model/dispatch/attestation/inference path is called.
+    """
+    pin = require_source_pins()  # reject malformed freeze BEFORE lookup
+
+    def git_value(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(source_repo), *args], check=True,
+            capture_output=True, text=True, timeout=30).stdout.removesuffix("\n")
+
+    observed = git_value("rev-parse", "HEAD")
+    D.validate_git_source_pin(observed)
+    if observed != pin:
+        raise PhysicalDiagnosticError(
+            f"source checkout mismatch: {observed} != {pin}")
+    tree = git_value("rev-parse", "HEAD^{tree}")
+    D.validate_git_source_pin(tree)
+    if tree != D.ACCEPTED_LLAMA_SOURCE_TREE:
+        raise PhysicalDiagnosticError(f"source tree mismatch: {tree}")
+    status = git_value("status", "--porcelain")
+    binary_sha = verify_binary(Path(binary), "comparator")
+    # Resolve the SAME library family the actual comparator will use. Do
+    # not replace absent libraries with a caller-selected alternate build.
+    dep = subprocess.run(["ldd", str(binary)], capture_output=True,
+                         text=True, timeout=30, check=True)
+    if "not found" in dep.stdout or re.search(
+            r"libggml-cuda|libcuda\b|libcudart", dep.stdout):
+        raise PhysicalDiagnosticError("source/build library family unresolved or CUDA")
+    libraries = {}
+    for name, expected in V0_OBSERVER_LIBS.items():
+        matches = re.findall(
+            rf"^\s*{re.escape(name)}\s+=>\s+(\S+)\s+\(",
+            dep.stdout, re.MULTILINE)
+        if len(matches) != 1:
+            raise PhysicalDiagnosticError(f"source/build library missing or duplicate: {name}")
+        path = Path(matches[0])
+        digest = D.file_sha256(path)
+        if digest != expected:
+            raise PhysicalDiagnosticError(f"source/build library mismatch: {name}")
+        libraries[name] = {"path": str(path), "sha256": digest}
+    return {"status": "PASS", "mode": "NONPHYSICAL",
+            "source_repo": str(source_repo), "source_head": observed,
+            "source_tree": tree, "source_worktree_status": status,
+            "binary": str(binary), "binary_sha256": binary_sha,
+            "observer_libraries": libraries, "ldd_raw": dep.stdout,
+            "physical_units_attempted": 0}
 
 
 def attestation_canonical_digest(doc: dict[str, Any]) -> str:

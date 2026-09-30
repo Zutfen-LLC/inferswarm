@@ -3517,7 +3517,7 @@ class V0AMDAdapterTests(unittest.TestCase):
 
     def test_exact_source_and_comparator_identity(self):
         self.assertEqual(P.V0_SOURCE_PIN,
-                         "b29c606e28a01b1bc8c1351026a0fae616bf6c4")
+                         "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4")
         self.assertEqual(P.V0_COMPARATOR_SHA,
                          "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad")
         self.assertNotEqual(P.V0_COMPARATOR_SHA, D.SERVER_BINARIES["canonical"])
@@ -3724,6 +3724,173 @@ class V0AMDAdapterTests(unittest.TestCase):
                     binary=self.root / "llama-server", model_dir=Path(D.MODEL_DIR),
                     expected_head=self.head, model_attestation={}, probe_load=probe)
         self.assertEqual(calls, [0, 1])
+
+
+class SourcePinCorrectionTests(unittest.TestCase):
+    """AMENDMENT-009: strict tokens and nonphysical production preflight."""
+
+    ACCEPTED = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
+    MALFORMED = "b29c606e28a01b1bc8c1351026a0fae616bf6c4"
+
+    def test_frozen_pin_equals_independent_accepted_authorities(self):
+        base = REPO / "docs/investigations"
+        r8b = json.loads((base / "qwen38-flash-next-r8-b/evidence/"
+                         "runtime-authority/runtime-authority.json").read_bytes())
+        r8h = json.loads((base / "qwen38-flash-next-r8-h-vulkan/evidence/"
+                         "PHYSICAL-AUTHORITY.json").read_bytes())
+        runtime = json.loads((base / "qwen38-flash-next-r8-h-vulkan/evidence/"
+                              "runtime/armB-runtime.json").read_bytes())
+        for pin in (D.LLAMA_PIN, D.ACCEPTED_LLAMA_SOURCE_PIN,
+                    r8b["llama_cpp_commit"],
+                    r8h["runtime_authority"]["llama_cpp_pin"],
+                    runtime["source"]["revision"]):
+            self.assertEqual(pin, self.ACCEPTED)
+            self.assertEqual(D.validate_git_source_pin(pin), pin)
+        self.assertEqual(D.require_llama_source_pin(), self.ACCEPTED)
+        self.assertEqual(D.SERVER_BINARIES["comparator"],
+                         "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad")
+
+    def test_source_token_shape_no_normalization_or_repair(self):
+        for pin in (self.MALFORMED, self.ACCEPTED[:8], self.ACCEPTED.upper(),
+                    self.ACCEPTED + "0", " " + self.ACCEPTED,
+                    self.ACCEPTED + "\n", "g" * 40, None, 123, b"a" * 40):
+            with self.subTest(pin=pin), self.assertRaisesRegex(
+                    D.DiagnosticError, "exactly 40 lowercase hex"):
+                D.validate_git_source_pin(pin)
+        self.assertEqual(D.validate_git_source_pin(self.ACCEPTED), self.ACCEPTED)
+
+    def test_malformed_freeze_blocks_before_lookup_and_dispatch(self):
+        for pin in (self.MALFORMED, self.ACCEPTED.upper()):
+            with mock.patch.object(D, "LLAMA_PIN", pin), \
+                    mock.patch.object(P.subprocess, "run") as run, \
+                    mock.patch.object(P.urllib.request, "urlopen") as network:
+                with self.assertRaisesRegex(D.DiagnosticError, "exactly 40"):
+                    P.fetch_dispatch_authority(REPO, HEAD, "d250-arm-a")
+                run.assert_not_called()
+                network.assert_not_called()
+
+    def test_valid_but_wrong_frozen_source_blocks_dispatch(self):
+        dispatch = mock.Mock()
+        with mock.patch.object(D, "LLAMA_PIN", "a" * 40):
+            with self.assertRaisesRegex(D.DiagnosticError, "accepted authority"):
+                P.require_live_dispatch(REPO, HEAD, "d250-arm-a", dispatch)
+        dispatch.assert_not_called()
+
+    def test_malformed_pin_blocks_unit_before_authority_or_execution(self):
+        dispatch, execute = mock.Mock(), mock.Mock()
+        with mock.patch.object(D, "LLAMA_PIN", self.MALFORMED), \
+                mock.patch.object(P, "validate_evidence_generation", return_value=P.EVIDENCE_GENERATION), \
+                mock.patch.object(P, "_admit_retained_cost"):
+            with self.assertRaisesRegex(D.DiagnosticError, "exactly 40"):
+                P.run_diagnostic_unit(
+                    REPO, REPO, "d250-arm-a", "A-vulkan-necessity",
+                    D.probe_list_for("A-vulkan-necessity")[0]["tag"],
+                    binary=Path("not-opened"), binary_id="comparator",
+                    model_dir=Path("not-opened"), expected_head=HEAD,
+                    model_attestation={}, execute=execute,
+                    revalidate_authority=dispatch)
+        dispatch.assert_not_called()
+        execute.assert_not_called()
+
+    def test_observed_source_mismatch_blocks_before_binary_or_dispatch(self):
+        wrong = P.subprocess.CompletedProcess([], 0, "a" * 40 + "\n", "")
+        with mock.patch.object(P.subprocess, "run", return_value=wrong) as run, \
+                mock.patch.object(P, "verify_binary") as binary, \
+                mock.patch.object(P.urllib.request, "urlopen") as network:
+            with self.assertRaisesRegex(P.PhysicalDiagnosticError, "source checkout mismatch"):
+                P.fetch_dispatch_authority(REPO, HEAD, "d250-arm-a")
+            self.assertEqual(run.call_count, 1)
+            binary.assert_not_called()
+            network.assert_not_called()
+
+    def preflight(self, *, tree=None, bad_library=False, ldd_extra=""):
+        outputs = [self.ACCEPTED + "\n", (tree or D.ACCEPTED_LLAMA_SOURCE_TREE) + "\n",
+                   " M tools/server/server-context.cpp\n",
+                   "\n".join(f"  {name} => /accepted/{name} (0x1)"
+                             for name in P.V0_OBSERVER_LIBS) + ldd_extra]
+        def run(argv, **kwargs):
+            self.assertIn(argv[0], ("git", "ldd"))  # NO server or model process
+            return P.subprocess.CompletedProcess(argv, 0, outputs.pop(0), "")
+        def digest(path):
+            return "0" * 64 if bad_library else P.V0_OBSERVER_LIBS[path.name]
+        with mock.patch.object(P.subprocess, "run", side_effect=run), \
+                mock.patch.object(P, "verify_binary", return_value=D.SERVER_BINARIES["comparator"]), \
+                mock.patch.object(D, "file_sha256", side_effect=digest):
+            return P.verify_source_build()
+
+    def test_full_nonphysical_preflight_positive(self):
+        out = self.preflight()
+        self.assertEqual(out["status"], "PASS")
+        self.assertEqual(out["source_head"], self.ACCEPTED)
+        self.assertEqual(out["physical_units_attempted"], 0)
+        self.assertIn("server-context.cpp", out["source_worktree_status"])
+        self.assertEqual(set(out["observer_libraries"]), set(P.V0_OBSERVER_LIBS))
+
+    def test_source_tree_mismatch_fails_closed(self):
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "source tree mismatch"):
+            self.preflight(tree="a" * 40)
+
+    def test_library_bytes_mismatch_fails_closed(self):
+        with self.assertRaisesRegex(P.PhysicalDiagnosticError, "library mismatch"):
+            self.preflight(bad_library=True)
+
+    def test_unresolved_or_cuda_library_family_fails_closed(self):
+        for extra in ("\nlibcuda.so.1 => /bad/libcuda.so.1 (0x1)",
+                      "\nlibother.so => not found"):
+            with self.subTest(extra=extra), self.assertRaisesRegex(
+                    P.PhysicalDiagnosticError, "unresolved or CUDA"):
+                self.preflight(ldd_extra=extra)
+
+    def test_prospective_aliases_fail_before_dispatch(self):
+        for name in ("V0_SOURCE_PIN", "V0N_SOURCE_PIN"):
+            for value in (self.MALFORMED, "0" * 40):
+                authority = mock.Mock()
+                with mock.patch.object(P, name, value):
+                    with self.assertRaises((D.DiagnosticError,
+                                            P.PhysicalDiagnosticError)):
+                        P.require_live_dispatch(REPO, "a" * 40, "d250-arm-a",
+                                                revalidate_authority=authority)
+                authority.assert_not_called()
+
+    def test_prospective_source_constants_are_full_git_ids(self):
+        for pin in (D.LLAMA_PIN, D.ACCEPTED_LLAMA_SOURCE_PIN,
+                    D.ACCEPTED_LLAMA_SOURCE_TREE, P.V0_SOURCE_PIN,
+                    P.V0N_SOURCE_PIN):
+            self.assertEqual(D.validate_git_source_pin(pin), pin)
+
+    def test_resigned_prospective_freeze_cannot_admit_historical_label(self):
+        from tests.test_issue250_v0n_nvidia import (
+            make_freeze_record, make_v0n_authority)
+        head = "f" * 40
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            record = make_freeze_record(head, make_v0n_authority(head))
+            path = root / P.V0N_FREEZE_NAME
+            path.write_text(json.dumps(record))
+            self.assertEqual(P._read_v0n_screen_freeze(root, head), record)
+            for value in (self.MALFORMED, "0" * 40):
+                for field in ("source_pin", "llama_source_pin"):
+                    altered = dict(record, **{field: value})
+                    altered["canonical_digest_sha256"] = P._v0n_freeze_digest(altered)
+                    path.write_text(json.dumps(altered))
+                    with self.assertRaisesRegex(P.PhysicalDiagnosticError,
+                                                "digest/head/identity-authority"):
+                        P._read_v0n_screen_freeze(root, head)
+
+    def test_accepted_historical_labels_are_not_source_authority(self):
+        self.assertEqual(P.V0_SOURCE_PIN, self.ACCEPTED)
+        self.assertEqual(P.V0N_SOURCE_PIN, self.ACCEPTED)
+        self.assertEqual(P.HISTORICAL_SOURCE_LABEL, self.MALFORMED)
+        self.assertEqual(P._v0_receipt_source_label(D.ACCEPTED_V0_EXECUTED_HEAD),
+                         self.MALFORMED)
+        self.assertEqual(P._v0n_receipt_source_label(P.ARM_A_BRIDGE_EVIDENCE_HEAD),
+                         self.MALFORMED)
+        for head in ("a" * 40, D.ACCEPTED_V0_EXECUTED_HEAD + "0",
+                     P.ARM_A_BRIDGE_EVIDENCE_HEAD + "0"):
+            self.assertEqual(P._v0_receipt_source_label(head), self.ACCEPTED)
+            self.assertEqual(P._v0n_receipt_source_label(head), self.ACCEPTED)
+        with self.assertRaises(D.DiagnosticError):
+            D.validate_git_source_pin(P.HISTORICAL_SOURCE_LABEL)
 
 
 if __name__ == "__main__":

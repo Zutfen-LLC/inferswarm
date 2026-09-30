@@ -105,7 +105,8 @@ def make_freeze_record(head, authority, *, identity=None):
                             "VK_ICD_FILENAMES": P.V0N_NVIDIA_ICD},
         "cuda_law": {"CUDA_VISIBLE_DEVICES": "-1",
                      "link_family_cuda_exclusion": True},
-        "source_pin": P.V0N_SOURCE_PIN, "llama_source_pin": P.V0N_SOURCE_PIN,
+        "source_pin": P._v0n_receipt_source_label(head),
+        "llama_source_pin": P._v0n_receipt_source_label(head),
         "binary_sha256": P.V0N_COMPARATOR_SHA,
         "comparator_sha256": P.V0N_COMPARATOR_SHA,
         "observer_libraries": dict(P.V0_OBSERVER_LIBS),
@@ -1170,7 +1171,7 @@ class V0nTerminalDerivationTests(unittest.TestCase):
                 "embedding_placement": "CPU",
                 "output_projection_placement": "Vulkan",
                 "placement_source_law": {
-                    "source_pin": P.V0N_SOURCE_PIN, "ngl": 1,
+                    "source_pin": P._v0n_receipt_source_label(self.head), "ngl": 1,
                     "embedding": "CPU", "output_projection": "Vulkan"},
                 "model_dir": D.MODEL_DIR,
                 "model_launch_member": str(

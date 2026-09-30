@@ -1,0 +1,59 @@
+{
+  "accepted_241_source_identity": {
+    "full_pin_occurs": true,
+    "identity": "4e8b4fc369defe409f68da46e26d152eade4df47:scripts/issue241_constants.py",
+    "sha256": "8f69b236570256d7a9ac685823dc1489b24742d7c70a985e8ba955004cb77a3b"
+  },
+  "accepted_main": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5",
+  "accepted_source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "accepted_source_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "authority_basis": "Accepted R8-B/R8-E/R8-H full source pins, R8-H canonical Vulkan binary, accepted #241 comparator/2 source authority, and merged #248 three-build comparator digest. No fuzzy repair or host-only authority.",
+  "authority_rows": [
+    {
+      "comparator_sha256_occurs": false,
+      "full_pin_occurs": true,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-b/evidence/runtime-authority/runtime-authority.json",
+      "sha256": "d21ebcae8dc1dd7b3fe907e296a994b872de04c689be1ef0e4e7bb818880b34a"
+    },
+    {
+      "comparator_sha256_occurs": false,
+      "full_pin_occurs": true,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/instrumentation.json",
+      "sha256": "0a77026cae1380fe702a304f0dfdb3fb5c5c70c0a9c756f19feb8dc10704df98"
+    },
+    {
+      "comparator_sha256_occurs": false,
+      "full_pin_occurs": true,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/PHYSICAL-AUTHORITY.json",
+      "sha256": "b460bb01dfa8569b8dcfb4f53f40300f6b090888a29d4ffc05a5b5591a0307d7"
+    },
+    {
+      "comparator_sha256_occurs": false,
+      "full_pin_occurs": true,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/runtime/armB-runtime.json",
+      "sha256": "29052948f9f3617c63daa57441123c9a559b00f30e5c938d71657b1f590137b4"
+    },
+    {
+      "comparator_sha256_occurs": false,
+      "full_pin_occurs": true,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/freeze/campaign-freeze.json",
+      "sha256": "2812c3edf7a3ac5fcbec522b0d844b913420a19b3949fce5f39b8fc4be28659a"
+    },
+    {
+      "comparator_sha256_occurs": true,
+      "full_pin_occurs": false,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:scripts/issue248_diagnostic.py",
+      "sha256": "2f4b7ecc730b1375c7e60ce7d0216a3b8e21b22951c77d1be492e68ed4f41ec4"
+    },
+    {
+      "comparator_sha256_occurs": true,
+      "full_pin_occurs": false,
+      "identity": "bc71774dc68e7d7fddaf97bd794bbbc297e66ca5:docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/terminal-reduction.json",
+      "sha256": "0b12c5f8da0b24eaba4ec4a9d2d3043245eb1841938ea520c83031307d515894"
+    }
+  ],
+  "malformed_historical_label": "b29c606e28a01b1bc8c1351026a0fae616bf6c4",
+  "reviewed_head": "6bb83a4bdfd4a9cb5f87f5e58635e3bc4bceca1a",
+  "schema": "inferswarm.issue250.source-pin-correction/1",
+  "transcription_defect_introduced_by": "4b296f01cc58d784e6544d1562def8e0ed15c880"
+}
