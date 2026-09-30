@@ -15,11 +15,13 @@ SOURCE = Path(os.environ.get("LLAMA_SRC", "/home/zutfen/llama.cpp-252"))
 
 
 def pinned_source_available():
-    if not SOURCE.is_dir():
-        return False
     try:
+        if not SOURCE.is_dir():
+            return False
         path.verify_source(SOURCE)
-    except ValueError:
+    except (ValueError, OSError):
+        # Unavailable includes unreadable (e.g. permission-denied paths that
+        # exist on a shared host): skip cleanly, exactly like absence.
         return False
     return True
 
