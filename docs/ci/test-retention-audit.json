@@ -3418,8 +3418,8 @@
   },
   "test_issue250_terminalization": {
    "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 8,
+   "baseline_serial_seconds": 54.16,
+   "baseline_test_count": 30,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
@@ -3435,7 +3435,9 @@
      "scripts/issue250_terminalization.py"
     ]
    },
-   "pinned_by_evidence": [],
+   "pinned_by_evidence": [
+    "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/MANIFEST.sha256"
+   ],
    "rationale": "Strict offline terminalization wrapper; no physical execution.",
    "referenced_by_scripts": [],
    "replacement": null,
@@ -3443,7 +3445,7 @@
     "scripts/issue250_terminal.py",
     "scripts/issue250_terminalization.py"
    ],
-   "test_count_at_audit": 8
+   "test_count_at_audit": 30
   },
   "test_issue250_v0n_nvidia": {
    "baseline_group": "r8i-qwen-qualification",

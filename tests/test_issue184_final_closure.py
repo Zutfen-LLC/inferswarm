@@ -212,18 +212,19 @@ class Issue184LivingStatusTests(unittest.TestCase):
         self.record = json.loads(
             (sync.ROOT / sync.SOURCE).read_text(encoding="utf-8"))
 
-    def test_frontier_prerequisite_is_accepted_r8_static_authority(self):
+    def test_frontier_prerequisite_is_accepted_arm_a_and_variable_contrast(self):
+        # Living status only: closed #117 evidence law stays unchanged.
         p = self.record["frontier"]["prerequisite"]
-        self.assertEqual(p["observation"]["result"],
-                         "R8A_STATIC_RESEARCH_AUTHORIZED")
+        self.assertEqual(p["observation"]["result"], "ARM_A_STOPS_LADDER")
         self.assertEqual(p["acceptance"]["state"], "accepted")
-        self.assertIn("issues/188", p["acceptance"]["reference"])
+        self.assertIn("issues/250#issuecomment-5904094070", p["acceptance"]["reference"])
 
-    def test_execution_records_static_authority_without_r8b_authorization(self):
+    def test_execution_records_localized_boundary_without_new_authorization(self):
         e = self.record["frontier"]["execution"]
-        self.assertEqual(e["state"], "authorized")
-        self.assertIn("CPU/static/read-only R8-A", e["step"])
-        self.assertIn("R8-B physical run", "".join(e["constraints"]))
+        self.assertEqual(e["state"], "blocked")
+        self.assertIn("No further physical work is authorized under #250", e["step"])
+        self.assertIn("no B/C/C1/C2/D work is required or authorized", e["step"])
+        self.assertIn("not established as root cause", "".join(e["constraints"]))
 
     def test_no_stale_blocked_or_pending_claims(self):
         rendered = sync.render(self.record)["frontier"]
