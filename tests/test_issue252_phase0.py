@@ -40,7 +40,12 @@ class Phase0Tests(unittest.TestCase):
     LLAMA = Path(os.environ.get("LLAMA_SRC", "/home/zutfen/llama.cpp-252"))
 
     def _llama_available(self) -> bool:
-        return self.LLAMA.is_dir()
+        try:
+            return self.LLAMA.is_dir()
+        except OSError:
+            # Existing-but-unreadable (permission-denied) pinned-source paths
+            # on shared hosts are unavailable, exactly like absence.
+            return False
 
     def _assert_real_reconcile(self):
         if not self._llama_available():
