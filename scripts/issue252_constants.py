@@ -29,7 +29,7 @@ LLAMA_PIN_TREE = "950999fe62b7fe55f44ab5b7394e3c8542f37f12"
 HOST_FACTS = {
     "host": "inferswarm01",
     "reference_arm": "B",
-    "gpu": "NVIDIA RTX 3060",
+    "gpu": "NVIDIA GeForce RTX 3060",
     "bdf": "00000000:03:00.0",
     "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
     "driver": "610.57.04",
