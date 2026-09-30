@@ -1,4 +1,9 @@
-"""Prospective per-arm mechanism-evidence contracts (CPU-only fixtures)."""
+"""Prospective per-arm mechanism-evidence contracts (CPU-only fixtures).
+
+Includes the adversarial-review spoof cases: copied marker text, fabricated
+allocation lines, mixed-unit tallies, and near-miss markers must all be
+rejected by the exact-format + ledger laws.
+"""
 from __future__ import annotations
 import unittest
 from pathlib import Path
@@ -6,15 +11,57 @@ from pathlib import Path
 from tests.test_issue252_physical import FixtureMixin, A, C
 import issue252_mechanism as M
 
-ENUM_NV = "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
-ENUM_NONE = "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: none\n"
-ENUM_KHR = "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: KHR_coopmat\n"
-DEV_ALLOC = ("ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1."
-             " Total device: 4.00 MiB, total host: 0 B\n")
-HOST_ALLOC = ("ggml_vulkan memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2."
-              " Total device: 4.00 MiB, total host: 16.00 MiB\n")
-STAGING = "ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer(4096)\n"
-ASYNC_OFF = "ggml_vulkan: WARNING: Async execution disabled on certain Intel devices.\n"
+NL = chr(10)
+ENUM_BASE = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | uma: 0 | fp16: 1"
+             " | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: 49152"
+             " | int dot: 1 | matrix cores: ")
+MEM = "ggml_vulkan memory: NVIDIA GeForce RTX 3060: "
+ENUM_ONLY = ENUM_BASE + "NV_coopmat2" + NL
+ENUM_NONE_ONLY = ENUM_BASE + "none" + NL
+ENUM_NV = (ENUM_ONLY +
+           MEM + "+4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B" + NL)
+ENUM_NONE = (ENUM_BASE + "none" + NL +
+             MEM + "+4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B" + NL)
+ENUM_KHR = (ENUM_BASE + "KHR_coopmat" + NL +
+            MEM + "+4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B" + NL)
+DEV_ALLOC = (MEM + "+4.00 MiB device at 0x1."
+             " Total device: 4.00 MiB, total host: 0 B" + NL)
+HOST_ALLOC = (MEM + "+16.00 MiB host at 0x2."
+              " Total device: 4.00 MiB, total host: 16.00 MiB" + NL)
+STAGING = "ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer(4194304)" + NL
+ASYNC_OFF = ("ggml_vulkan: WARNING: Async execution disabled on certain Intel devices."
+             + NL)
+HOST_STAGING_ALLOC = (MEM + "+4.00 MiB host at 0x3."
+                      " Total device: 4.00 MiB, total host: 4.00 MiB" + NL)
+
+
+def _fmt(b):
+    if b >= 1024 ** 2: return f"{b / 1024 ** 2:.2f} MiB"
+    if b >= 1024: return f"{b / 1024:.2f} KiB"
+    return f"{b} B"
+
+
+def make_log(family, events):
+    """Build a ledger-consistent unit log; events are ("device"|"host", bytes)
+    or ("staging", bytes) which logs the staging line plus its host alloc."""
+    lines = [ENUM_BASE + family]
+    td = th = 0
+    for kind, size in events:
+        if kind == "staging":
+            lines.append("ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer("
+                         + str(size) + ")")
+            kind = "host"
+        else:
+            size = int(size)
+        if kind == "device":
+            td += size
+        else:
+            th += size
+        lines.append(MEM + "+" + _fmt(size) + " " + kind + " at 0x"
+                     + format(len(lines), "x") + ". Total device: " + _fmt(td)
+                     + ", total host: " + _fmt(th))
+    return NL.join(lines) + NL
+
 
 
 def write(root: Path, namespace: str, name: str, log: str) -> None:
@@ -38,8 +85,8 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
     # --- A2 ----------------------------------------------------------------
 
     def test_a2_positive_khr_disabled(self):
-        # Only a NON-KHR, NON-NV family (e.g. "none") proves the KHR gate was
-        # both live and path-changing on this subject.
+        # Only family "none" proves the KHR gate was both live and
+        # path-changing on this subject.
         write(self.evidence, A.ARMS["A2"]["namespace"], "u1", ENUM_NONE)
         status = M.mechanism_status(self.evidence, "A2", A.ARMS["A2"]["namespace"])
         self.assertTrue(status["capable"])
@@ -57,8 +104,22 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
             M.mechanism_status(self.evidence, "A2", A.ARMS["A2"]["namespace"])
 
     def test_a2_missing_enumeration_rejected(self):
-        write(self.evidence, A.ARMS["A2"]["namespace"], "u1", "no markers\n")
+        write(self.evidence, A.ARMS["A2"]["namespace"], "u1", "no markers" + NL)
         with self.assertRaisesRegex(M.MechanismInvalid, "enumeration"):
+            M.mechanism_status(self.evidence, "A2", A.ARMS["A2"]["namespace"])
+
+    def test_a2_spoofed_enumeration_text_rejected(self):
+        # Adversarial-review case: "matrix cores:" text outside the pin's
+        # exact enumeration line is not evidence.
+        spoof = "operator note | matrix cores: none" + NL
+        write(self.evidence, A.ARMS["A2"]["namespace"], "u1", spoof)
+        with self.assertRaisesRegex(M.MechanismInvalid, "outside the exact"):
+            M.mechanism_status(self.evidence, "A2", A.ARMS["A2"]["namespace"])
+
+    def test_a2_family_differs_across_units_rejected(self):
+        write(self.evidence, A.ARMS["A2"]["namespace"], "u1", ENUM_NONE)
+        write(self.evidence, A.ARMS["A2"]["namespace"], "u2", ENUM_KHR)
+        with self.assertRaisesRegex(M.MechanismInvalid, "across retained units"):
             M.mechanism_status(self.evidence, "A2", A.ARMS["A2"]["namespace"])
 
     # --- A3 ----------------------------------------------------------------
@@ -70,52 +131,107 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
 
     def test_a3_marker_missing_rejected(self):
         write(self.evidence, A.ARMS["A3"]["namespace"], "u1", ENUM_NV)
-        with self.assertRaisesRegex(M.MechanismInvalid, "marker"):
+        with self.assertRaisesRegex(M.MechanismInvalid, "async-disabled"):
+            M.mechanism_status(self.evidence, "A3", A.ARMS["A3"]["namespace"])
+
+    def test_a3_copied_marker_text_rejected(self):
+        # Adversarial-review case: marker text embedded in an unrelated line
+        # (not the pin's exact stderr line) must not count.
+        spoof = ("NOT A VULKAN LOG: Async execution disabled on certain Intel "
+                 "devices. copied here" + NL + ENUM_NV)
+        write(self.evidence, A.ARMS["A3"]["namespace"], "u1", spoof)
+        with self.assertRaisesRegex(M.MechanismInvalid, "non-exact"):
             M.mechanism_status(self.evidence, "A3", A.ARMS["A3"]["namespace"])
 
     # --- A4 ----------------------------------------------------------------
 
     def test_a4_positive(self):
-        write(self.evidence, self.ns, "u1", ENUM_NV + DEV_ALLOC + HOST_ALLOC)
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2), ("host", 16 * 1024 ** 2)]))
         status = M.mechanism_status(self.evidence, "A4", self.ns)
         self.assertTrue(status["capable"])
         self.assertGreaterEqual(status["facts"]["allocations"]["host"], 1)
         self.assertGreaterEqual(status["facts"]["allocations"]["device"], 1)
 
     def test_a4_no_host_allocation_rejected(self):
-        write(self.evidence, self.ns, "u1", ENUM_NV + DEV_ALLOC)
-        with self.assertRaisesRegex(M.MechanismInvalid, "host-typed allocation"):
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
+        with self.assertRaisesRegex(M.MechanismInvalid, "host-typed"):
             M.mechanism_status(self.evidence, "A4", self.ns)
 
     def test_a4_no_device_allocation_rejected(self):
-        write(self.evidence, self.ns, "u1", ENUM_NV + HOST_ALLOC)
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("host", 16 * 1024 ** 2)]))
         with self.assertRaisesRegex(M.MechanismInvalid, "device-typed"):
             M.mechanism_status(self.evidence, "A4", self.ns)
 
-    def test_a4_malformed_allocation_line_ignored_not_crash(self):
-        # A near-miss line (missing unit) must not count as an allocation.
-        bad = "ggml_vulkan memory: gpu: +4 device at 0x1\n"
-        write(self.evidence, self.ns, "u1", ENUM_NV + bad + DEV_ALLOC + HOST_ALLOC)
-        status = M.mechanism_status(self.evidence, "A4", self.ns)
-        self.assertTrue(status["capable"])
+    def test_a4_fabricated_allocation_lines_rejected(self):
+        # Adversarial-review case: attacker-crafted allocation lines with
+        # UNRELATED text (ledger-breaking totals) must be refused.
+        spoof = (ENUM_ONLY + MEM + "fake: +1 MiB host at 0xbeef UNRELATED" + NL)
+        write(self.evidence, self.ns, "u1", spoof)
+        with self.assertRaisesRegex(M.MechanismInvalid, "ledger"):
+            M.mechanism_status(self.evidence, "A4", self.ns)
+
+    def test_a4_ledger_arithmetic_must_balance(self):
+        # A well-formed line whose printed totals contradict the running
+        # sums is fabricated/copied evidence.
+        bad = (ENUM_ONLY + MEM + "+16.00 MiB host at 0x2."
+               " Total device: 9.00 MiB, total host: 16.00 MiB" + NL)
+        write(self.evidence, self.ns, "u1", bad)
+        with self.assertRaisesRegex(M.MechanismInvalid, "arithmetic"):
+            M.mechanism_status(self.evidence, "A4", self.ns)
+
+    def test_a4_mixed_unit_tally_cannot_localize(self):
+        # Adversarial-review case: host line in one unit, device line only
+        # in a DIFFERENT unit — a namespace-wide tally would pass, the
+        # per-unit law must refuse.
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("host", 16 * 1024 ** 2)]))
+        write(self.evidence, self.ns, "u2", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
+        with self.assertRaisesRegex(M.MechanismInvalid, "device-typed"):
+            M.mechanism_status(self.evidence, "A4", self.ns)
 
     # --- A5 ----------------------------------------------------------------
 
     def test_a5_positive(self):
-        write(self.evidence, A.ARMS["A5"]["namespace"], "u1",
-              ENUM_NV + STAGING + DEV_ALLOC)
+        # Genuine A5 log at the pin: staging line + its own host-typed
+        # staging allocation + device compute allocations, nothing else
+        # host-typed.
+        log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
         status = M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
         self.assertTrue(status["capable"])
-        self.assertEqual(status["facts"]["allocations"]["host"], 0)
 
-    def test_a5_host_allocation_rejected(self):
-        write(self.evidence, A.ARMS["A5"]["namespace"], "u1",
-              ENUM_NV + STAGING + DEV_ALLOC + HOST_ALLOC)
-        with self.assertRaisesRegex(M.MechanismInvalid, "host-typed allocation"):
+    def test_a5_host_allocation_beyond_staging_rejected(self):
+        # A host-typed allocation that is NOT the staging buffer proves
+        # host-visible memory was NOT disabled.
+        log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2), ("host", 16 * 1024 ** 2)])
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
+        with self.assertRaisesRegex(M.MechanismInvalid, "other than the staging"):
+            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+
+    def test_a5_staging_line_without_staging_allocation_rejected(self):
+        # Staging line present but its matching host-typed allocation line
+        # stripped — a doctored log that must fail the pairing law.
+        log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
+        stripped = NL.join(l for l in log.splitlines()
+                           if " host at 0x" not in l) + NL
+        assert "sync_staging_buffer" in stripped and " host at" not in stripped
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", stripped)
+        # Either law may fire first: the ledger (removing a line breaks the
+        # printed running totals) or the staging/allocation pairing.
+        with self.assertRaisesRegex(M.MechanismInvalid,
+                                    "ledger|matching host-typed"):
             M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_missing_rejected(self):
-        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", ENUM_NV + DEV_ALLOC)
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
+        with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
+            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+
+    def test_a5_spoofed_staging_call_text_rejected(self):
+        # Adversarial-review case: staging function name inside a random
+        # line is not the pin's staging log line.
+        spoof = ("operator note ggml_vk_ensure_sync_staging_buffer(not a call" + NL
+                 + ENUM_ONLY + DEV_ALLOC)
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1", spoof)
         with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
             M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
@@ -132,7 +248,7 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
     def test_mechanism_separate_from_determinism(self):
         # Mechanism facts carry no determinism claim; a capable status is
         # independent of retained rows/counts.
-        write(self.evidence, self.ns, "only-one-unit", ENUM_NV + DEV_ALLOC + HOST_ALLOC)
+        write(self.evidence, self.ns, "only-one-unit", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2), ("host", 16 * 1024 ** 2)]))
         status = M.mechanism_status(self.evidence, "A4", self.ns)
         self.assertTrue(status["capable"])
         self.assertNotIn("deterministic", str(status["facts"]).lower())

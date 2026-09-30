@@ -17,27 +17,41 @@ import issue252_terminal as T
 import issue252_mechanism as M
 
 
-MECH_A2_LOG = (
-    "ggml_vulkan: Found 1 Vulkan devices:\n"
-    "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | uma: 0 | fp16: 1 | bf16: 0"
-    " | fp4: 0 | warp size: 32 | shared memory: 49152 | int dot: 1 | matrix cores: none\n"
-    "ggml_vulkan: memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B\n"
-    "ggml_vulkan: memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2. Total device: 4.00 MiB, total host: 16.00 MiB\n"
-)
-MECH_A3_LOG = (
-    "ggml_vulkan: WARNING: Async execution disabled on certain Intel devices.\n"
-    "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
-)
-MECH_A4_LOG = (
-    "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
-    "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B\n"
-    "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2. Total device: 4.00 MiB, total host: 16.00 MiB\n"
-)
-MECH_A5_LOG = (
-    "ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
-    "ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer(4096)\n"
-    "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1. Total device: 4.00 MiB, total host: 0 B\n"
-)
+NL = chr(10)
+ENUM_BASE = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | uma: 0 | fp16: 1"
+             " | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: 49152"
+             " | int dot: 1 | matrix cores: ")
+MEM = "ggml_vulkan memory: NVIDIA GeForce RTX 3060: "
+
+def _fmt(b):
+    if b >= 1024 ** 2: return f"{b / 1024 ** 2:.2f} MiB"
+    if b >= 1024: return f"{b / 1024:.2f} KiB"
+    return f"{b} B"
+
+def _mklog(family, events):
+    lines = [ENUM_BASE + family]
+    td = th = 0
+    for kind, size in events:
+        if kind == "staging":
+            lines.append("ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer(" + str(size) + ")")
+            kind = "host"
+        else:
+            size = int(size)
+        if kind == "device":
+            td += size
+        else:
+            th += size
+        lines.append(MEM + "+" + _fmt(size) + " " + kind + " at 0x"
+                     + format(len(lines), "x") + ". Total device: " + _fmt(td)
+                     + ", total host: " + _fmt(th))
+    return NL.join(lines) + NL
+
+MIB = 1024 ** 2
+MECH_A2_LOG = _mklog("none", [("device", 4 * MIB)])
+MECH_A3_LOG = (("ggml_vulkan: WARNING: Async execution disabled on certain Intel devices." + NL)
+               + _mklog("NV_coopmat2", [("device", 4 * MIB)]))
+MECH_A4_LOG = _mklog("NV_coopmat2", [("device", 4 * MIB), ("host", 16 * MIB)])
+MECH_A5_LOG = _mklog("NV_coopmat2", [("staging", 4 * MIB), ("device", 8 * MIB)])
 ARM_LOGS = {"A2": MECH_A2_LOG, "A3": MECH_A3_LOG, "A4": MECH_A4_LOG, "A5": MECH_A5_LOG}
 
 
@@ -51,7 +65,8 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
 
     def verdict(self, arm=None):
         arm = arm or self.arm
-        return T.derive_terminal(self.evidence, {}, fetch=self.fetcher(arm))
+        return T.derive_terminal(self.evidence, {}, fetch=self.fetcher(arm),
+                             _test_only_fetch=True)
 
     def deterministic(self, arm="A4", n=5):
         for i in range(1, n + 1):
@@ -87,7 +102,8 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
                         fix_commit=commit, binary_sha256="a" * 64,
                         server_log=ARM_LOGS["A4"])
         self.assertEqual(
-            T.derive_terminal(self.evidence, {}, fetch=self.fetcher("A4", head=commit)),
+            T.derive_terminal(self.evidence, {}, fetch=self.fetcher("A4", head=commit),
+                             _test_only_fetch=True),
             C.ACCEPTED_TERMINAL)
 
     def test_mismatch_at_unit_two_variable_all_arms_complete_unresolved(self):
@@ -145,7 +161,8 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
     def test_caller_boolean_cannot_decide_terminal(self):
         self.deterministic()
         self.assertEqual(T.derive_terminal(self.evidence, {"fix_implemented": True,
-                         "vulkan_participation_proven": True}, fetch=self.fetcher()),
+                         "vulkan_participation_proven": True},
+                         fetch=self.fetcher(), _test_only_fetch=True),
                          T.BLOCKED)
 
     def test_five_identical_without_mechanism_observations_cannot_localize(self):
@@ -371,8 +388,71 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
             served = dict(real)
             served["author_association"] = "CONTRIBUTOR"
             return served
-        self.assertEqual(T.derive_terminal(self.evidence, {}, fetch=forged_fetch),
+        self.assertEqual(T.derive_terminal(self.evidence, {}, fetch=forged_fetch,
+                                     _test_only_fetch=True),
                          T.BLOCKED)
+
+
+    def test_forged_lambda_fetcher_cannot_authorize_any_terminal(self):
+        # Adversarial-review BLOCKER regression: a caller-controlled fetcher
+        # serving locally fabricated OWNER comments (recomputed digests, full
+        # internally-consistent evidence tree, even a synthetic fix commit)
+        # must NOT reach any terminal. The reducer refuses caller-supplied
+        # fetchers outright in production mode.
+        from tests.test_issue252_physical import A as _A, git as _git, sha as _sha
+        import json as _json
+        self.deterministic()
+        path = self.repo / "ggml/src/ggml-vulkan/ggml-vulkan.cpp"
+        path.parent.mkdir(parents=True)
+        path.write_text("int fake_fix() {return 1;}\n")
+        _git(self.repo, "add", "ggml/src/ggml-vulkan/ggml-vulkan.cpp")
+        _git(self.repo, "commit", "-qm", "fake fix")
+        commit = _git(self.repo, "rev-parse", "HEAD")
+        original = self.comment(self.arm)
+        original.update(id=424242, author_association="OWNER",
+                        user={"login": "imaginary"},
+                        html_url=("https://github.com/Zutfen-LLC/inferswarm/"
+                                  "pull/253#issuecomment-424242"))
+        cap = self.capture(self.arm, comment=original)
+        self.write_json(self.evidence / "authority.json",
+                        {"repo_root": str(self.repo), "dispatch_capture": cap})
+        fixed = self.comment(self.arm, head=commit)
+        fixed.update(id=424243, author_association="OWNER",
+                     user={"login": "imaginary"},
+                     html_url=("https://github.com/Zutfen-LLC/inferswarm/"
+                               "pull/253#issuecomment-424243"))
+        fixcap = self.capture(self.arm, head=commit, comment=fixed)
+        raw = _json.dumps(fixcap, sort_keys=True).encode()
+        (self.evidence / "fix-dispatch.json").write_bytes(raw)
+        self.write_json(self.evidence / "fix.json", {
+            "repo_root": str(self.repo), "commit": commit,
+            "dispatch_capture": fixcap, "authority_sha256": _sha(raw)})
+        fixed_ns = "fixed/" + _A.ARMS[self.arm]["namespace"]
+        for i in range(1, 6):
+            self.retain(self.arm, i, authority=fixcap, namespace=fixed_ns,
+                        fix_commit=commit, binary_sha256="a" * 64,
+                        server_log=ARM_LOGS[self.arm])
+        invented = {"424242": original, "424243": fixed}
+
+        def forged(url):
+            return invented[url.rsplit("/", 1)[-1]]
+        # Production mode: the forged lambda is refused outright.
+        self.assertEqual(T.derive_terminal(self.evidence, {}, fetch=forged),
+                         T.BLOCKED)
+        # Even opted-in offline mode, a fabricated login is not the
+        # registered commenter: re-fetch byte-equality fails.
+        # (The fixture registry serves only registered synthetic comments.)
+
+    def test_production_fetcher_is_the_github_seam(self):
+        # The default fetch path must be the production HTTPS seam.
+        self.assertEqual(T.P.fetch_dispatch_comment.__name__,
+                         "fetch_dispatch_comment")
+        import issue252_capture as _CAP
+        self.deterministic()
+        with self.assertRaises(_CAP.CaptureInvalid):
+            _CAP.verify_capture(self.authority(self.arm),
+                                self.fetcher(self.arm),
+                                repo_pr_number=C.CAMPAIGN_PR)
 
     def test_authentic_synthetic_authority_fixture_succeeds(self):
         # Positive control for the whole matrix: the unmutated capture built

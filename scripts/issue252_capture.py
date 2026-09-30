@@ -126,6 +126,11 @@ def build_capture(comment: dict[str, Any], *, pr: dict[str, Any],
         raise CaptureInvalid("live PR/issue state missing")
     if issue.get("state") != "open" or issue.get("number") != C.ISSUE:
         raise CaptureInvalid("issue #252 is not open")
+    # The snapshot's own PR number must equal the campaign PR: the capture
+    # must not be emittable claiming PR 253 from a comment/PR pair whose
+    # live snapshot says otherwise (adversarial probe: pr.number = -1).
+    if type(pr.get("number")) is not int or pr["number"] != repo_pr_number:
+        raise CaptureInvalid("live PR snapshot is not the campaign PR")
     if pr.get("state") != "open" or pr.get("merged") is not False or pr.get("draft") is not False:
         raise CaptureInvalid("PR is not open, unmerged and non-draft")
     if not isinstance(pr.get("head"), dict) or pr["head"].get("sha") != head:
@@ -198,7 +203,8 @@ def validate_capture_structure(retained: dict[str, Any]) -> dict[str, Any]:
 
 
 def verify_capture(retained: dict[str, Any], fetch: Fetch,
-                   *, repo_pr_number: int) -> dict[str, Any]:
+                   *, repo_pr_number: int,
+                   _test_only: bool = False) -> dict[str, Any]:
     """Reducer-side admission of a RETAINED capture. Fail closed.
 
     Requires, in order:
@@ -211,10 +217,26 @@ def verify_capture(retained: dict[str, Any], fetch: Fetch,
 
     Returns the authenticated capture. Never trusts caller-supplied
     author_association, comment ID, PR state, or body.
+
+    TRUST BOUNDARY: the fetcher must be the production HTTPS seam
+    (issue252_physical.fetch_dispatch_comment), which enforces the
+    canonical-repository URL prefix and real network transport. A
+    caller-supplied callable is NOT independent GitHub authority — a lambda
+    serving a local dictionary can satisfy any digest check — so it is
+    refused unless explicitly marked _test_only (offline synthetic
+    fixtures). Adversarial probe: a local-dict fetcher with fabricated
+    OWNER comments cannot reach any terminal through the reducer.
     """
     validate_capture_structure(retained)
     if type(repo_pr_number) is not int or retained.get("pr_number") != repo_pr_number:
         raise CaptureInvalid("retained capture PR number mismatch")
+    if not _test_only:
+        # Deferred import: issue252_physical imports this module.
+        import issue252_physical as _P
+        if fetch is not _P.fetch_dispatch_comment:
+            raise CaptureInvalid(
+                "authority re-fetch must use the production GitHub seam; "
+                "caller-supplied fetchers are not GitHub authority")
     arm = retained["arm"]
     head = retained["head_sha"]
 
