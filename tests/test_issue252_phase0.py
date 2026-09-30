@@ -1,6 +1,7 @@
 """Fail-closed offline controls for Issue #252 Phase 0."""
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import tempfile
@@ -36,8 +37,15 @@ class Phase0Tests(unittest.TestCase):
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(REPO / rel, dst)
 
+    LLAMA = Path(os.environ.get("LLAMA_SRC", "/home/zutfen/llama.cpp-252"))
+
+    def _llama_available(self) -> bool:
+        return self.LLAMA.is_dir()
+
     def _assert_real_reconcile(self):
-        result = P.derive_reconciliation(REPO, Path("/home/zutfen/llama.cpp-252"),
+        if not self._llama_available():
+            self.skipTest("pinned llama.cpp source unavailable (LLAMA_SRC)")
+        result = P.derive_reconciliation(REPO, self.LLAMA,
                                          expected_base=C.EXPECTED_BASE_HEAD)
         self.assertEqual(result["status"], "RECONCILED")
         self.assertFalse(result["physical_execution"])
@@ -132,7 +140,7 @@ class Phase0Tests(unittest.TestCase):
         # exact message shape depends on git object validity; both paths raise
         # ReconciliationError before any authentication proceeds).
         with self.assertRaises(P.ReconciliationError):
-            P.derive_reconciliation(REPO, Path("/home/zutfen/llama.cpp-252"), expected_base="0" * 40)
+            P.derive_reconciliation(REPO, self.LLAMA, expected_base="0" * 40)
 
 
 if __name__ == "__main__":
