@@ -248,6 +248,8 @@ GROUP_TEST_MODULES = {
         "test_issue252_phase0",
         "test_issue252_physical",
         "test_issue252_terminal",
+        "test_issue252_capture",
+        "test_issue252_mechanism",
         "test_issue252_vulkanpath",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
@@ -358,6 +360,8 @@ PATH_GROUPS = {
     "tests/test_issue252_phase0.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_physical.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_terminal.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_capture.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_mechanism.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_vulkanpath.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full

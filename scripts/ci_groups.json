@@ -128,6 +128,8 @@
     "test_issue252_phase0",
     "test_issue252_physical",
     "test_issue252_terminal",
+    "test_issue252_capture",
+    "test_issue252_mechanism",
     "test_issue252_vulkanpath"
    ]
   },
@@ -1572,6 +1574,12 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue252_arms.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_capture.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_mechanism.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_issue252_phase0.py": [

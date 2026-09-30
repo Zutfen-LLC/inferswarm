@@ -20,6 +20,7 @@ from typing import Any
 import issue252_constants as C
 import issue252_phase0 as P0
 import issue252_arms as A
+import issue252_capture as CAP
 import issue250_diagnostic as D  # accepted byte-exact request and full-row geometry
 
 UNIT_SCHEMA = "inferswarm.issue252.prospective-unit/1"
@@ -68,31 +69,27 @@ def verify_dispatch(comment: dict[str, Any], repo_root: Path,
                     pr_head: str) -> dict[str, Any]:
     """Validate a *fresh* PR/issue/comment snapshot and immutable parents.
 
-    Snapshot keys: body, author_association, id, issue_url, pr (GitHub pulls
-    object), issue (GitHub issues object). The comment must be from the PR's
-    conversation endpoint, not a review, issue #252, or arbitrary comment.
-    No cached snapshot may be passed to a physical runner as live authority.
+    Snapshot keys: body, author_association, id, html_url, user, issue_url,
+    created_at, pr (GitHub pulls object), issue (GitHub issues object). The
+    comment must be from THIS campaign PR's (C.CAMPAIGN_PR) conversation
+    endpoint, not a review, issue #252, or arbitrary comment. No cached
+    snapshot may be passed to a physical runner as live authority.
+
+    LIVE authorization only: this freshly revalidates mutable state. The
+    retained authority the reducer later admits is the DIGEST-BOUND CAPTURE
+    emitted by emit_capture() — the reducer independently re-fetches the
+    immutable comment by exact ID; it never trusts this dict.
     """
-    if not isinstance(comment, dict):
-        raise DispatchRefused("dispatch snapshot missing")
-    body = comment.get("body")
-    if not isinstance(body, str) or len(body.splitlines()) != 3:
-        raise DispatchRefused("dispatch body must have exactly three lines")
-    phrase, head_line, arm_line = body.splitlines()
-    if phrase != C.DISPATCH_PHRASE_FORMAT:
-        raise DispatchRefused("dispatch phrase mismatch")
-    if not head_line.startswith("head=") or not SHA.fullmatch(head_line[5:]):
-        raise DispatchRefused("dispatch head malformed")
-    if not arm_line.startswith("arm=") or arm_line[4:] not in A.ARMS:
-        raise DispatchRefused("dispatch arm unknown")
-    arm = arm_line[4:]
+    try:
+        arm = CAP.validate_capture_body(comment, repo_pr_number=C.CAMPAIGN_PR)
+    except CAP.CaptureInvalid as exc:
+        raise DispatchRefused(str(exc)) from exc
     spec = A.ARMS[arm]
+    head = comment["body"].splitlines()[1][5:]
     if not isinstance(pr_head, str) or not SHA.fullmatch(pr_head):
         raise DispatchRefused("PR head malformed")
-    if head_line[5:] != pr_head:
+    if head != pr_head:
         raise DispatchRefused("dispatch head moved")
-    if comment.get("author_association") not in ("OWNER", "MEMBER"):
-        raise DispatchRefused("dispatch author is not OWNER/MEMBER")
     pr, issue = comment.get("pr"), comment.get("issue")
     if not isinstance(pr, dict) or not isinstance(issue, dict):
         raise DispatchRefused("live PR/issue state missing")
@@ -105,16 +102,9 @@ def verify_dispatch(comment: dict[str, Any], repo_root: Path,
     if not isinstance(pr.get("base"), dict) or pr["base"].get("ref") != "main":
         raise DispatchRefused("PR base is not main")
     number = pr.get("number")
-    if type(number) is not int or number <= 0 or comment.get("issue_url") != (
-            f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{number}"):
-        raise DispatchRefused("comment is not a top-level PR conversation comment")
-    if type(comment.get("id")) is not int or comment["id"] <= 0:
-        raise DispatchRefused("dispatch comment ID missing")
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z",
-                        str(comment.get("created_at", ""))):
-        raise DispatchRefused("dispatch comment creation timestamp missing")
-    if comment.get("namespace") != spec["namespace"]:
-        raise DispatchRefused("dispatch namespace/arm mismatch")
+    if type(number) is not int or number != C.CAMPAIGN_PR:
+        raise DispatchRefused(
+            f"dispatch comment is not on campaign PR {C.CAMPAIGN_PR}")
     if A.validate_arms():
         raise DispatchRefused("frozen arms invalid")
     if _git(Path(repo_root), "rev-parse", "HEAD") != pr_head:
@@ -137,11 +127,30 @@ def verify_dispatch(comment: dict[str, Any], repo_root: Path,
             or pin.get("tree") != C.LLAMA_PIN_TREE):
         raise DispatchRefused("retained parent authority unauthenticated")
     return {"head_sha": pr_head, "arm": arm, "namespace": spec["namespace"],
-            "comment_id": comment["id"], "body": body,
-            "body_sha256": _digest(body.encode("utf-8")),
+            "comment_id": comment["id"], "body": comment["body"],
+            "body_sha256": _digest(comment["body"].encode("utf-8")),
             "author_association": comment["author_association"],
             "issue_number": C.ISSUE, "pr_number": number,
             "parent_terminalization_head": C.ACCEPTED_TERMINALIZATION_HEAD}
+
+
+def emit_capture(comment: dict[str, Any]) -> dict[str, Any]:
+    """Build the retained, digest-bound authority capture for one dispatch.
+
+    The LIVE caller must call this with the same freshly fetched comment that
+    passed verify_dispatch, and retain the result (canonical JSON bytes) under
+    the arm namespace before any unit launches. The reducer admits authority
+    ONLY through CAP.verify_capture over these retained bytes plus an
+    independent comment re-fetch — never through verify_dispatch's return.
+    """
+    pr, issue = comment.get("pr"), comment.get("issue")
+    if not isinstance(pr, dict) or not isinstance(issue, dict):
+        raise DispatchRefused("live PR/issue state missing")
+    try:
+        return CAP.build_capture(comment, pr=pr, issue=issue,
+                                 repo_pr_number=C.CAMPAIGN_PR)
+    except CAP.CaptureInvalid as exc:
+        raise DispatchRefused(str(exc)) from exc
 
 
 def launch_geometry(arm: str, binary: Path, model_member: Path,
@@ -162,11 +171,16 @@ def launch_geometry(arm: str, binary: Path, model_member: Path,
         raise ValueError("model launch member is not frozen member 1/path")
     if not str(binary) or not str(observer_dir):
         raise ValueError("binary/observer path missing")
+    # -v and GGML_VK_MEMORY_LOGGER are observation-only (log verbosity and
+    # allocation logging); they do not alter the compute path. They are part
+    # of the frozen geometry so retained server logs carry the per-arm
+    # mechanism-contract lines (METHODOLOGY-AMENDMENT-001 section C).
     argv = [str(binary), "--model", str(model_member), "-ngl", "1",
             "--ctx-size", "8192", "--batch-size", "512", "--host",
-            "127.0.0.1", "--port", str(PORT)]
+            "127.0.0.1", "--port", str(PORT), "-v"]
     env = {"CUDA_VISIBLE_DEVICES": "-1", "VK_ICD_FILENAMES": ICD,
-           "GGML_VK_VISIBLE_DEVICES": "0", "LLAMA_OBSERVE_CAPTURE": "8",
+           "GGML_VK_VISIBLE_DEVICES": "0", "GGML_VK_MEMORY_LOGGER": "1",
+           "LLAMA_OBSERVE_CAPTURE": "8",
            "LLAMA_OBSERVE_OUT": str(observer_dir), "LLAMA_OBSERVE_FORCE": ""}
     if spec["control"]["kind"] != "env":
         raise ValueError("unimplemented control kind (no implicit argv delta)")
@@ -228,16 +242,16 @@ def validate_unit_receipt(receipt: dict[str, Any]) -> None:
         raise ValueError("receipt arm unknown")
     spec = A.ARMS[arm]
     auth = r.get("authority")
-    if (not isinstance(auth, dict) or auth.get("arm") != arm
-            or auth.get("namespace") != spec["namespace"]
-            or auth.get("head_sha") != r.get("head_sha")
-            or auth.get("issue_number") != C.ISSUE
-            or auth.get("parent_terminalization_head") != C.ACCEPTED_TERMINALIZATION_HEAD
-            or auth.get("author_association") not in ("OWNER", "MEMBER")
-            or type(auth.get("comment_id")) is not int or auth["comment_id"] <= 0
-            or not isinstance(auth.get("body"), str)
-            or auth["body"] != f"{C.DISPATCH_PHRASE_FORMAT}\nhead={r.get('head_sha')}\narm={arm}"
-            or auth.get("body_sha256") != _digest(auth["body"].encode())
+    # Retained authority in a receipt is the structural dispatch capture
+    # (issue252_capture); receipt validation checks STRUCTURE only. Actual
+    # authority admission happens exclusively in the reducer via
+    # CAP.verify_capture's independent comment re-fetch -- a self-consistent
+    # receipt-embedded capture alone never grants authority.
+    try:
+        CAP.validate_capture_structure(auth)
+    except CAP.CaptureInvalid as exc:
+        raise ValueError(f"receipt dispatch authority invalid: {exc}") from exc
+    if (auth.get("arm") != arm or auth.get("head_sha") != r.get("head_sha")
             or not isinstance(r.get("head_sha"), str) or not SHA.fullmatch(r["head_sha"])):
         raise ValueError("receipt dispatch authority/head mismatch")
     index = r.get("unit_index")
@@ -248,7 +262,7 @@ def validate_unit_receipt(receipt: dict[str, Any]) -> None:
             or r.get("geometry") != spec["geometry"]):
         raise ValueError("receipt arm/control/namespace geometry mismatch")
     argv, env = r.get("server_argv"), r.get("server_env")
-    if (not isinstance(argv, list) or len(argv) != 13
+    if (not isinstance(argv, list) or len(argv) != 14
             or not isinstance(env, dict) or not isinstance(env.get("LLAMA_OBSERVE_OUT"), str)
             or not env["LLAMA_OBSERVE_OUT"] or not isinstance(r.get("model_launch_member"), str)):
         raise ValueError("receipt argv/env/observer path missing")

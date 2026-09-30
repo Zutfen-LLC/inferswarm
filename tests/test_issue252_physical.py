@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import issue252_arms as A
 import issue252_constants as C
+import issue252_capture as CAP
 import issue252_physical as P
 import issue250_diagnostic as D
 
@@ -52,36 +53,68 @@ class FixtureMixin:
         self.addCleanup(self.pin_patch.stop); self.addCleanup(self.parent_patch.stop)
         self.evidence = self.root / "synthetic-evidence-NOT-PHYSICAL"
         self.evidence.mkdir()
+        # Each distinct (arm, head) dispatch is a DISTINCT synthetic comment
+        # with its own GitHub comment id, so re-fetch-by-id can distinguish
+        # arms and fix dispatches exactly like the live API would.
+        self._comment_ids = {}
+
+    def _comment_id(self, arm, head):
+        key = (arm, head)
+        if key not in self._comment_ids:
+            self._comment_ids[key] = 1000 + len(self._comment_ids)
+        return self._comment_ids[key]
 
     def comment(self, arm=None, head=None):
         arm = arm or self.arm
         head = head or self.head
+        cid = self._comment_id(arm, head)
         return {"body": f"{C.DISPATCH_PHRASE_FORMAT}\nhead={head}\narm={arm}",
-                "author_association": "OWNER", "id": 12,
+                "author_association": "OWNER", "id": cid,
                 "created_at": "2026-09-30T12:00:00Z",
-                "issue_url": f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{self.pr_number}",
-                "namespace": A.ARMS[arm]["namespace"],
+                "html_url": f"https://github.com/Zutfen-LLC/inferswarm/pull/{C.CAMPAIGN_PR}#issuecomment-{cid}",
+                "user": {"login": "ezutfen"},
+                "issue_url": f"https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/{C.CAMPAIGN_PR}",
                 "pr": {"state": "open", "merged": False, "draft": False,
-                       "number": self.pr_number, "base": {"ref": "main"},
-                       "head": {"sha": self.head, "ref": git(self.repo, "branch", "--show-current")}},
+                       "number": C.CAMPAIGN_PR, "base": {"ref": "main"},
+                       "head": {"sha": head, "ref": git(self.repo, "branch", "--show-current")}},
                 "issue": {"state": "open", "number": C.ISSUE}}
 
-    def authority(self, arm=None, head=None):
+    def capture(self, arm=None, head=None, comment=None):
+        """Retained capture built from the same factory the receipts use."""
         arm = arm or self.arm
         head = head or self.head
-        return {"head_sha": head, "arm": arm, "namespace": A.ARMS[arm]["namespace"],
-                "comment_id": 12, "body": f"{C.DISPATCH_PHRASE_FORMAT}\nhead={head}\narm={arm}",
-                "body_sha256": sha(f"{C.DISPATCH_PHRASE_FORMAT}\nhead={head}\narm={arm}".encode()),
-                "author_association": "OWNER", "issue_number": C.ISSUE,
-                "pr_number": self.pr_number,
-                "parent_terminalization_head": C.ACCEPTED_TERMINALIZATION_HEAD}
+        c = comment or self.comment(arm, head)
+        return CAP.build_capture(c, pr=c["pr"], issue=c["issue"],
+                                 repo_pr_number=C.CAMPAIGN_PR)
+
+    def fetcher(self, arm=None, head=None):
+        """Offline re-fetch seam serving every registered synthetic comment."""
+        if arm is not None:
+            self.comment(arm, head)  # ensure the requested one is registered
+        registry = {self._comment_ids[k]: self.comment(*k)
+                    for k in list(self._comment_ids)}
+
+        def fetch(url):
+            prefix = ("https://api.github.com/repos/Zutfen-LLC/inferswarm/"
+                      "issues/comments/")
+            if not url.startswith(prefix):
+                raise CAP.CaptureInvalid("comment not found: " + url)
+            cid = int(url[len(prefix):])
+            if cid not in registry:
+                raise CAP.CaptureInvalid("comment not found: " + url)
+            return registry[cid]
+        return fetch
+
+    def authority(self, arm=None, head=None):
+        return self.capture(arm, head)
 
     def write_json(self, path, value):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(value, sort_keys=True))
 
     def receipt(self, arm="A1", index=1, row=None, authority=None,
-                fix_commit=None, binary_sha256=C.COMPARATOR_SHA256):
+                fix_commit=None, binary_sha256=C.COMPARATOR_SHA256,
+                server_log=None):
         auth = authority or self.authority(arm)
         row = row if row is not None else bytes(D.ROW_BYTES)
         identity = dict(C.HOST_FACTS)
@@ -91,7 +124,7 @@ class FixtureMixin:
                    for m in C.MODEL_MEMBERS}
         raw = json.dumps({"tokens": list(range(D.DECISIONS))}).encode()
         meta = b"".join(json.dumps({"pos": i}).encode() + b"\n" for i in range(D.DECISIONS))
-        log = b"synthetic fixture only\n"
+        log = server_log.encode("utf-8") if server_log is not None else b"synthetic fixture only\n"
         receipt = P.build_unit_receipt(
             authority=auth, unit_index=index, binary=Path("/fixture/llama-server"),
             model_member=Path("/srv/models/qwen38-ud-iq1-s") / next(iter(C.MODEL_MEMBERS)),
@@ -104,9 +137,11 @@ class FixtureMixin:
         return receipt, raw, meta, log, row
 
     def retain(self, arm, index, row=None, authority=None, namespace=None,
-               fix_commit=None, binary_sha256=C.COMPARATOR_SHA256):
+               fix_commit=None, binary_sha256=C.COMPARATOR_SHA256,
+               server_log=None):
         rec, raw, meta, log, row = self.receipt(arm, index, row, authority,
-                                               fix_commit, binary_sha256)
+                                               fix_commit, binary_sha256,
+                                               server_log)
         ns = namespace or A.ARMS[arm]["namespace"]
         unit = self.evidence / ns / rec["tag"]
         unit.mkdir(parents=True)
@@ -153,10 +188,21 @@ class PhysicalTests(FixtureMixin, unittest.TestCase):
         with self.assertRaisesRegex(P.DispatchRefused, "phrase"):
             P.verify_dispatch(c, self.repo, self.head)
 
-    def test_wrong_arm_namespace(self):
-        c = self.comment("A2"); c["namespace"] = A.ARMS["A1"]["namespace"]
-        with self.assertRaisesRegex(P.DispatchRefused, "namespace/arm"):
-            P.verify_dispatch(c, self.repo, self.head)
+    def test_capture_namespace_arm_mismatch_rejected(self):
+        # The namespace key no longer travels in the comment; namespace/arm
+        # consistency is enforced at the capture layer.
+        cap = self.capture("A2")
+        cap["namespace"] = A.ARMS["A1"]["namespace"]
+        with self.assertRaisesRegex(CAP.CaptureInvalid, "namespace/arm"):
+            CAP.validate_capture_structure(cap)
+
+    def test_emit_capture_positive(self):
+        c = self.comment()
+        cap = P.emit_capture(c)
+        self.assertEqual(cap["arm"], "A1")
+        self.assertEqual(cap["namespace"], A.ARMS["A1"]["namespace"])
+        self.assertGreater(cap["comment_id"], 0)
+        self.assertEqual(cap["execution_time_state"]["pr_head"], self.head)
 
     def test_non_owner(self):
         c = self.comment(); c["author_association"] = "CONTRIBUTOR"
