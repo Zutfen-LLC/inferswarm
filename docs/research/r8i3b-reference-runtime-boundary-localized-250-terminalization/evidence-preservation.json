@@ -1,0 +1,14 @@
+{
+  "accepted_execution_head": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+  "file_count": 736,
+  "generation": "gen-2-pass6",
+  "later_arms_executed": [],
+  "local_retained_copy_vs_original": "byte-identical",
+  "new_dispatches": 0,
+  "new_physical_units": 0,
+  "original_wrapper_failure_sha256": "cb2d1bcc089a7b3560d9da61f7b807c0bbf808b9bdf9b2e0db24594c32ce5870",
+  "physical_evidence_root": "inferswarm01:/home/hermes/is250-campaign/evidence-arm-a-5d015b5",
+  "remote_original_vs_closing": "byte-identical",
+  "schema": "inferswarm.issue250.terminalization-preservation/1",
+  "wrapper_failure_preserved": true
+}

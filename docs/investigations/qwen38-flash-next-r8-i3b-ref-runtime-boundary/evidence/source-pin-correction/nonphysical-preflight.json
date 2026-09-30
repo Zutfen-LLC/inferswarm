@@ -1,0 +1,90 @@
+{
+  "binary": "/home/hermes/is248-campaign/bin/llama-server-comparator",
+  "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+  "ldd_raw": "\tlinux-vdso.so.1 (0x00007f31ebc6c000)\n\tlibllama-server-impl.so => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so (0x00007f31eb800000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f31eb400000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f31ebc2c000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f31eb20c000)\n\tlibllama-common.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0 (0x00007f31eac00000)\n\tlibmtmd.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0 (0x00007f31eaa53000)\n\tlibllama.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0 (0x00007f31ea600000)\n\tlibggml.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0 (0x00007f31ebc1d000)\n\tlibggml-base.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0 (0x00007f31ebb53000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f31eb710000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f31ebc6e000)\n\tlibggml-cpu.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0 (0x00007f31eb0a7000)\n\tlibggml-vulkan.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0 (0x00007f31e7c00000)\n\tlibgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007f31ebafc000)\n\tlibvulkan.so.1 => /lib/x86_64-linux-gnu/libvulkan.so.1 (0x00007f31eb68d000)\n",
+  "mode": "NONPHYSICAL",
+  "observer_libraries": {
+    "libggml-base.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0",
+      "sha256": "179340356d779c4a7d442c283a0a52d74f6770752fbfaad2cfedf3e383086b2b"
+    },
+    "libggml-cpu.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0",
+      "sha256": "dd1d2904df703f8cf6e9048a17fc0757e3679a8edc351b803889137bbeef365f"
+    },
+    "libggml-vulkan.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0",
+      "sha256": "df589e63511f8154e14ee19be14d5e20e573b81f3b518c7a8eb10d1b1a85e7fe"
+    },
+    "libggml.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0",
+      "sha256": "f02894a957a21603c59a44a38b0e27adb9b88d904175e3c26a8cfff2d99a82b6"
+    },
+    "libllama-common.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0",
+      "sha256": "218474f78c6749cf72b694451ee8df6a7a56d47e94468c92b1ee730b9aefa5eb"
+    },
+    "libllama-server-impl.so": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so",
+      "sha256": "4c20f44656c19d30f5c10cd40ca3493e6850db2fd86d46f7944943527e67206c"
+    },
+    "libllama.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0",
+      "sha256": "2f86df90a3187c006be6be097714e4c6fb612566f8c604c8551acf8fc9938775"
+    },
+    "libmtmd.so.0": {
+      "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0",
+      "sha256": "1341b0fa4d4e9e3cd9e1ec930b5b990b171058086711f7eaa406a14b41ad16d1"
+    }
+  },
+  "physical_units_attempted": 0,
+  "predecessors": {
+    "v0": {
+      "a_eligible": false,
+      "amd_rows": [
+        "2187ab8f444e726b9a34d9874499603446a23efdd7943e8330286e223938fb41",
+        "2187ab8f444e726b9a34d9874499603446a23efdd7943e8330286e223938fb41",
+        "2187ab8f444e726b9a34d9874499603446a23efdd7943e8330286e223938fb41"
+      ],
+      "maintainer_stop": true,
+      "matched_retained_nvidia": false,
+      "state": "CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED",
+      "terminal": null,
+      "valid": true
+    },
+    "v0n": {
+      "a_eligible": false,
+      "maintainer_stop": true,
+      "nvidia_rows": [
+        "6c295c671a794ebd2d6b5d644900fd87eb3430c69226954db0870146822aae53",
+        "3d6b599d15004d7ad0b4402784b64eec369434724c9dc13e16f23531de975d6b"
+      ],
+      "row_classes": [
+        {
+          "equals_amd_current": false,
+          "equals_retained_nvidia_index": null,
+          "novel": true,
+          "row_sha256": "6c295c671a794ebd2d6b5d644900fd87eb3430c69226954db0870146822aae53"
+        },
+        {
+          "equals_amd_current": false,
+          "equals_retained_nvidia_index": null,
+          "novel": true,
+          "row_sha256": "3d6b599d15004d7ad0b4402784b64eec369434724c9dc13e16f23531de975d6b"
+        }
+      ],
+      "state": "CURRENT_NVIDIA_VARIABLE_STOP",
+      "terminal": null,
+      "valid": true
+    }
+  },
+  "producer_bytes": {
+    "issue250_diagnostic": "fc116b7a80c027aa7942e5766330a4b869c135d95f162522c61d5d7760616b52",
+    "issue250_physical": "10f27e82e9c50f9c7c8efb7f7c5d4820f63711bf7f6dbd3de57bc2aeb44324f6"
+  },
+  "source_head": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "source_repo": "/home/hermes/llama.cpp",
+  "source_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "source_worktree_status": " M tools/server/server-context.cpp\n?? r8e-obs/\n?? r8g-obs/\n?? r8h-matched/\n?? r8h-obs/",
+  "status": "PASS"
+}

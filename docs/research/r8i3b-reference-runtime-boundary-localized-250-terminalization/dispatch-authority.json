@@ -1,0 +1,12 @@
+{
+  "arm": "A-vulkan-necessity",
+  "author_association": "MEMBER",
+  "body": "R8I3B PHYSICAL DISPATCH #250\nhead=5d015b5bc437bb82d5e966d0da8b90ff44b079a1\ndiagnostic-namespace=d250-arm-a\narm=A-vulkan-necessity",
+  "comment_id": 5902614446,
+  "created_at": "2026-09-30T02:03:22Z",
+  "head_sha": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+  "issue_open": true,
+  "issue_url": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/251",
+  "namespace": "d250-arm-a",
+  "open_pr": true
+}

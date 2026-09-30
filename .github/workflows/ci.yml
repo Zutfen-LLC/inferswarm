@@ -524,7 +524,12 @@ jobs:
         # Issue #246: current R8-I qualification authority (split from
         # the retired vulkan-v0-b catch-all by dependency boundary).
         # Issue #248 R8-I3A diagnostic tooling joins this group.
-        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue248_diagnostic -v
+        # Issue #250 R8-I3B: diagnostic spine + physical producer +
+        # retained-byte terminal reducer (correction pass 2).
+        # AMENDMENT-008 correction round 2: adversarial bridge law.
+        # AMENDMENT-008 reducer-admission correction: path-aware
+        # derive_terminal V0 admission (bridge + historical paths).
+        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue248_diagnostic tests.test_issue250_diagnostic tests.test_issue250_physical tests.test_issue250_terminal tests.test_issue250_terminalization tests.test_issue250_v0n_nvidia tests.test_issue250_amendment008 tests.test_issue250_amendment008_round2 tests.test_issue250_amendment008_reducer_admission tests.test_issue250_amendment008_reducer_admission_negative tests.test_issue250_pass6_corrections -v
 
   r8-qwen-lineage:
     name: Group r8-qwen-lineage

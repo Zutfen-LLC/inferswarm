@@ -210,6 +210,38 @@ GROUP_TEST_MODULES = {
         # diagnosis (diagnostic-only follow-up to the accepted #241
         # blocked terminal; same R8-I qualification lineage).
         "test_issue248_diagnostic",
+        # Issue #250 R8-I3B: option-1 runtime-boundary localization
+        # (follow-up to the accepted #248 terminal; phase-0 source
+        # reconstruction + frozen discriminator tooling + physical
+        # producer/retained-byte reducer, correction pass 2).
+        "test_issue250_diagnostic",
+        "test_issue250_physical",
+        "test_issue250_terminal",
+        "test_issue250_terminalization",
+        # AMENDMENT-007: prospective current-window NVIDIA RTX 3060
+        # Vulkan ngl=1 comparison leg (V0n) — Vulkan-not-CUDA identity,
+        # CUDA exclusion, repeat/stop law, stale-dispatch refusal.
+        "test_issue250_v0n_nvidia",
+        # AMENDMENT-008: post-V0n maintainer-adjudicated Arm-A
+        # reachability bridge — fail-closed record authentication,
+        # accepted-evidence binding, namespace isolation, no B-D
+        # progression, historical-evidence immutability.
+        "test_issue250_amendment008",
+        # AMENDMENT-008 correction round 2: exact authenticated
+        # predecessor decision, frozen-verifier predecessor custody,
+        # bridge-path provenance + terminal stop law, mutation matrix.
+        "test_issue250_amendment008_round2",
+        # AMENDMENT-008 reducer-admission correction: path-aware
+        # derive_terminal V0 admission - bridge campaigns admit through
+        # the frozen bridge authority (no top-level V0 tree, no
+        # same-head V0 dispatch), historical path unchanged, invalid
+        # bridge artifacts never fall back to historical admission.
+        "test_issue250_amendment008_reducer_admission",
+        "test_issue250_amendment008_reducer_admission_negative",
+        # Correction pass 6 (AMENDMENT-003): timeout-budget authority,
+        # cost gate, C1/C2 authority separation, evidence generation,
+        # stale-dispatch regressions.
+        "test_issue250_pass6_corrections",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -630,6 +662,29 @@ PATH_GROUPS = {
     "scripts/issue248_identity.py": ["r8i-qwen-qualification"],
     "scripts/issue248_physical.py": ["r8i-qwen-qualification"],
     "scripts/issue248_terminal.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_phase0.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_diagnostic.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_physical.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_terminal.py": ["r8i-qwen-qualification"],
+    "scripts/issue250_timeout.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_diagnostic.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_physical.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_terminal.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_terminalization.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_v0n_nvidia.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008.py": ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_round2.py":
+        ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_reducer_admission.py":
+        ["r8i-qwen-qualification"],
+    "tests/test_issue250_amendment008_reducer_admission_negative.py":
+        ["r8i-qwen-qualification"],
+    "tests/test_issue250_pass6_corrections.py":
+        ["r8i-qwen-qualification"],
+    "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/": [
+        "r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
+        "r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/":
         ["r8i-qwen-qualification"],
     "docs/hardware/pcie-slot-ledger.md": ["r8i-qwen-qualification"],

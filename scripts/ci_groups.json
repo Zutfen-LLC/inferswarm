@@ -113,7 +113,17 @@
    "test_modules": [
     "test_issue237_r8i_methodology",
     "test_issue244_r8i5_v340l_import",
-    "test_issue248_diagnostic"
+    "test_issue248_diagnostic",
+    "test_issue250_diagnostic",
+    "test_issue250_physical",
+    "test_issue250_terminal",
+    "test_issue250_terminalization",
+    "test_issue250_v0n_nvidia",
+    "test_issue250_amendment008",
+    "test_issue250_amendment008_round2",
+    "test_issue250_amendment008_reducer_admission",
+    "test_issue250_amendment008_reducer_admission_negative",
+    "test_issue250_pass6_corrections"
    ]
   },
   "repo-integrity": {
@@ -289,6 +299,9 @@
   "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/": [
    "r8i-qwen-qualification"
   ],
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
+   "r8i-qwen-qualification"
+  ],
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
    "r8i-qwen-qualification"
   ],
@@ -391,6 +404,9 @@
    "issue-109-110"
   ],
   "docs/qualification/qwen38-vulkan-v1/": [
+   "r8i-qwen-qualification"
+  ],
+  "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/": [
    "r8i-qwen-qualification"
   ],
   "docs/status-maintenance.md": [
@@ -1271,6 +1287,21 @@
   "scripts/issue248_terminal.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_phase0.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_terminal.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue250_timeout.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1501,6 +1532,36 @@
   ],
   "tests/test_issue222_r7c.py": [
    "issue-222-r7c"
+  ],
+  "tests/test_issue250_amendment008.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_amendment008_reducer_admission.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_amendment008_reducer_admission_negative.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_amendment008_round2.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_diagnostic.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_pass6_corrections.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_terminal.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_terminalization.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue250_v0n_nvidia.py": [
+   "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
    "repo-integrity"

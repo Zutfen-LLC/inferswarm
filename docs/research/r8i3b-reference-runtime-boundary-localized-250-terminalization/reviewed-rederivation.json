@@ -1,0 +1,315 @@
+{
+  "authority": {
+    "arm": "A-vulkan-necessity",
+    "author_association": "MEMBER",
+    "body": "R8I3B PHYSICAL DISPATCH #250\nhead=5d015b5bc437bb82d5e966d0da8b90ff44b079a1\ndiagnostic-namespace=d250-arm-a\narm=A-vulkan-necessity",
+    "comment_id": 5902614446,
+    "created_at": "2026-09-30T02:03:22Z",
+    "head_sha": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+    "issue_open": true,
+    "issue_url": "https://api.github.com/repos/Zutfen-LLC/inferswarm/issues/251",
+    "namespace": "d250-arm-a",
+    "open_pr": true
+  },
+  "authority_namespaces_consumed": [
+    "d250-arm-a"
+  ],
+  "bridge_digest": "2c8ea9f40809ac6c79267333bb1678442c1a7ee3e9b7188429d001a9db0e754f",
+  "contrast": {
+    "manifest_self_digest": "af9dfd0f08e9d3c4cbeb8fe164f781bc64b488ad4aba23954f5893ac980ab3bc",
+    "namespace": "d248-placement-rungs",
+    "note": "accepted #248 retained evidence consumed read-only; never represented as fresh #250 execution",
+    "provenance": "accepted_248_retained_ngl1_readonly",
+    "row_deterministic": false,
+    "units": [
+      {
+        "row_sha256": [
+          "dff2499b64045f68d1349a363ee5bc888f3f9640c658252778d106fe80715499",
+          "bd923b1ad8bbc2e1c2c54c0b20df43069789d3720eada9cf62e6fb4dc1c565f6",
+          "6856b482d755a674e2d1ae294b0ff7d07d3bf05b6360993df38708b18879422c",
+          "7a400a86e8a6b11df6a0f7af62fedbfbcc045f1ed6dd2719f5bb450b71e5e7b3",
+          "b3a4f9de5aa3f12c78dc6365bfc6b10ddfe8a89396e7bc08c18394d75d873a8e",
+          "e1bbd6a48de98eae7e476d66e3202476eababae495949905b185b6968eabbb05",
+          "d7f79196cbf7bdfb504f47f701f9a3ddad0b2b7f4626105d89346c898f3d45d2",
+          "f834957538368429a99ee4bee4b17a83514f4b6fcdf01004075b4baff604f198"
+        ],
+        "tag": "case-3072-B-ngl1-001",
+        "token_sha256": "275ae77d0fb6f065c2ac22709e694b2a31ca21b8e1de346faac362c87e1ca3fc"
+      },
+      {
+        "row_sha256": [
+          "e369c8cb4ec5145f5ff855c0e29a1566795549126a4e135aaff5e94e8ce78ee6",
+          "c794c8072ad83cb4ccd9b64a906f0461a2d0204891761572c66c9d574703a84c",
+          "5dcecac9b1e78b5fc7d95f204cb09d7963d3111cf68876ba4180877c6047b61d",
+          "6f405c9efbc16cd5e6d4feb5082055be31646dc08cde4e91ac52d25208e75e4b",
+          "8fbd4d0bb57a981d77c3fb04e24c911aa2979b6430fcb849657dc88e24038544",
+          "5a7e12150999fa5fbebd5d47708bcf5cbfdfaed0df62be90e579513ae522f692",
+          "922ec6b75ae25b17b24a7991d5386b22378abeaa48f377ff290e7391eb8dd4c7",
+          "3c303e7f4f595ffe51a20114a1890154a61d022c914803183444af21cac18a32"
+        ],
+        "tag": "case-3072-B-ngl1-002",
+        "token_sha256": "275ae77d0fb6f065c2ac22709e694b2a31ca21b8e1de346faac362c87e1ca3fc"
+      }
+    ]
+  },
+  "cpu_only_population": {
+    "deterministic": true,
+    "invalid": null,
+    "n": 5,
+    "nondeterministic": false,
+    "population": "complete_deterministic",
+    "stop_reason": null
+  },
+  "dispatch_digest": "70843356c497c3537eade2cec7767e56601954cc5fa083a3dce73d37aca5697b",
+  "execution_head": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+  "external_evidence_root": "inferswarm01:/home/hermes/is250-campaign/evidence-arm-a-5d015b5",
+  "generation": "gen-2-pass6",
+  "model_attestation_close": {
+    "closing_sha256": "51245503a41dca04d26d067503148b139d619f335d0cb32265ec407fc0447564",
+    "head_sha": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+    "members": [
+      {
+        "bytes": 10946624,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166659,
+        "mtime_ns": 1789442061137221897,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+        "symlink": false
+      },
+      {
+        "bytes": 49990818368,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166661,
+        "mtime_ns": 1789442815175193031,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+        "symlink": false
+      },
+      {
+        "bytes": 22544696352,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166663,
+        "mtime_ns": 1789443246846100423,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+        "symlink": false
+      }
+    ],
+    "model_dir": "/srv/models/qwen38-ud-iq1-s",
+    "opening_attestation_sha256": "2e378b58614f21c4070e2200dba0e54f5691d29dd18a762a0158c1968cd22419",
+    "schema": "inferswarm.issue250.model-attestation-close/1"
+  },
+  "model_attestation_open": {
+    "attestation_sha256": "2e378b58614f21c4070e2200dba0e54f5691d29dd18a762a0158c1968cd22419",
+    "head_sha": "5d015b5bc437bb82d5e966d0da8b90ff44b079a1",
+    "members": [
+      {
+        "bytes": 10946624,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166659,
+        "mtime_ns": 1789442061137221897,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+        "symlink": false
+      },
+      {
+        "bytes": 49990818368,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166661,
+        "mtime_ns": 1789442815175193031,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+        "symlink": false
+      },
+      {
+        "bytes": 22544696352,
+        "ctime_ns": 1789936498850859700,
+        "device": 2049,
+        "inode": 52166663,
+        "mtime_ns": 1789443246846100423,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "regular_file": true,
+        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+        "symlink": false
+      }
+    ],
+    "model_dir": "/srv/models/qwen38-ud-iq1-s",
+    "schema": "inferswarm.issue250.model-attestation-open/1"
+  },
+  "original_reduction": {
+    "blocked": "R8I3B_REDUCER_BLOCKED_INCOMPLETE",
+    "problems": [
+      "Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops for maintainer review \u2014 no B/C/C1/C2/D arm is auto-reachable from an Arm-A result without a new maintainer decision"
+    ],
+    "terminal": null
+  },
+  "predecessors": {
+    "v0": "CROSS_VENDOR_DISAGREEMENT_STOP_BLOCKED",
+    "v0n": "CURRENT_NVIDIA_VARIABLE_STOP"
+  },
+  "reachability_source": "arm-a-bridge",
+  "source_build": {
+    "binary": "/home/hermes/is248-campaign/bin/llama-server-comparator",
+    "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+    "ldd_raw": "\tlinux-vdso.so.1 (0x00007eff2eac0000)\n\tlibllama-server-impl.so => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so (0x00007eff2e600000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007eff2e200000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007eff2ea80000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007eff2e00c000)\n\tlibllama-common.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0 (0x00007eff2da00000)\n\tlibmtmd.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0 (0x00007eff2d853000)\n\tlibllama.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0 (0x00007eff2d400000)\n\tlibggml.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0 (0x00007eff2ea71000)\n\tlibggml-base.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0 (0x00007eff2e9a7000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007eff2e510000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007eff2eac2000)\n\tlibggml-cpu.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0 (0x00007eff2dea7000)\n\tlibggml-vulkan.so.0 => /tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0 (0x00007eff2aa00000)\n\tlibgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007eff2e950000)\n\tlibvulkan.so.1 => /lib/x86_64-linux-gnu/libvulkan.so.1 (0x00007eff2e48d000)\n",
+    "mode": "NONPHYSICAL",
+    "observer_libraries": {
+      "libggml-base.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-base.so.0",
+        "sha256": "179340356d779c4a7d442c283a0a52d74f6770752fbfaad2cfedf3e383086b2b"
+      },
+      "libggml-cpu.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-cpu.so.0",
+        "sha256": "dd1d2904df703f8cf6e9048a17fc0757e3679a8edc351b803889137bbeef365f"
+      },
+      "libggml-vulkan.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml-vulkan.so.0",
+        "sha256": "df589e63511f8154e14ee19be14d5e20e573b81f3b518c7a8eb10d1b1a85e7fe"
+      },
+      "libggml.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libggml.so.0",
+        "sha256": "f02894a957a21603c59a44a38b0e27adb9b88d904175e3c26a8cfff2d99a82b6"
+      },
+      "libllama-common.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-common.so.0",
+        "sha256": "218474f78c6749cf72b694451ee8df6a7a56d47e94468c92b1ee730b9aefa5eb"
+      },
+      "libllama-server-impl.so": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama-server-impl.so",
+        "sha256": "4c20f44656c19d30f5c10cd40ca3493e6850db2fd86d46f7944943527e67206c"
+      },
+      "libllama.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libllama.so.0",
+        "sha256": "2f86df90a3187c006be6be097714e4c6fb612566f8c604c8551acf8fc9938775"
+      },
+      "libmtmd.so.0": {
+        "path": "/tmp/issue241-build-8mwfa6wj/checkout/build-issue241/bin/libmtmd.so.0",
+        "sha256": "1341b0fa4d4e9e3cd9e1ec930b5b990b171058086711f7eaa406a14b41ad16d1"
+      }
+    },
+    "physical_units_attempted": 0,
+    "source_head": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+    "source_repo": "/home/hermes/llama.cpp",
+    "source_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+    "source_worktree_status": " M tools/server/server-context.cpp\n?? r8e-obs/\n?? r8g-obs/\n?? r8h-matched/\n?? r8h-obs/",
+    "status": "PASS"
+  },
+  "unit_rows": [
+    [
+      "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+      "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+      "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+      "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+      "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+      "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+      "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+    ],
+    [
+      "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+      "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+      "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+      "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+      "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+      "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+      "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+    ],
+    [
+      "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+      "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+      "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+      "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+      "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+      "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+      "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+    ],
+    [
+      "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+      "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+      "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+      "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+      "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+      "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+      "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+    ],
+    [
+      "674cc9d8f62e86ad3391d984528ca0f3a1754449bd9582f890ad3ca1967174e7",
+      "001dd6d04749de27700b530b80c2a888307caa6229f852eb3db366bc9dbd0659",
+      "0b3aca6a1563a6af4323ff0dd0929ea6f3d095d7ac6a48758e9ccf9ba4b3888b",
+      "4c3b81366a27722ac3f0f1711b4695d92e8c54c82bcb33e6f008e584ebef8e3f",
+      "231ea1ebe62211249977b466e8823347da787aea17942357d7e47b6f93ea0b96",
+      "a9c0f4f1513bb575c9720866dec5149fd0ebf8d44b6eb4e4838d23b31d43ff31",
+      "e40b71d5b29a479983d1994c48afdd38a6cd45dffbc51c2cec2f2fc3e3ccd1f7",
+      "92140950f0ba8a418cd0c976012d552b207643f6faab6420698b6b0fd173c6bf"
+    ]
+  ],
+  "unit_tags": [
+    "case-3072-B-devnone-001",
+    "case-3072-B-devnone-002",
+    "case-3072-B-devnone-003",
+    "case-3072-B-devnone-004",
+    "case-3072-B-devnone-005"
+  ],
+  "units": [
+    {
+      "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+      "fatal_findings": [],
+      "identity_post": [],
+      "identity_pre": [],
+      "process_pid": 1831875,
+      "tag": "case-3072-B-devnone-001"
+    },
+    {
+      "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+      "fatal_findings": [],
+      "identity_post": [],
+      "identity_pre": [],
+      "process_pid": 1842511,
+      "tag": "case-3072-B-devnone-002"
+    },
+    {
+      "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+      "fatal_findings": [],
+      "identity_post": [],
+      "identity_pre": [],
+      "process_pid": 1853371,
+      "tag": "case-3072-B-devnone-003"
+    },
+    {
+      "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+      "fatal_findings": [],
+      "identity_post": [],
+      "identity_pre": [],
+      "process_pid": 1864277,
+      "tag": "case-3072-B-devnone-004"
+    },
+    {
+      "binary_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+      "fatal_findings": [],
+      "identity_post": [],
+      "identity_pre": [],
+      "process_pid": 1875311,
+      "tag": "case-3072-B-devnone-005"
+    }
+  ]
+}

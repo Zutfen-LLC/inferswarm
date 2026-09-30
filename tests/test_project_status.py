@@ -97,14 +97,21 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_tracks_only_the_authorized_r8a_static_frontier(self):
+    def test_current_record_tracks_completed_250_without_physical_authority(self):
         output = sync.render(self.record)['frontier']
-        self.assertIn('Issue #189', output)
-        self.assertIn('R8A_STATIC_RESEARCH_AUTHORIZED', output)
-        self.assertIn('authorization:** authorized', output)
-        self.assertIn('CPU/static/read-only R8-A research only', output)
-        self.assertIn('does not authorize a model download', output)
-        self.assertIn('later R8-B work requires separate maintainer authority', output)
+        for required in (
+            'Issue #250', 'Arm A COMPLETE', 'deterministic 5/5',
+            'accepted #248 nonzero-Vulkan ngl=1',
+            'R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED',
+            'zero↔nonzero Vulkan participation',
+            'No further physical work is authorized under #250',
+            'no B/C/C1/C2/D work is required or authorized',
+            'not established as root cause',
+            'mechanism below the localized boundary remain unresolved',
+            'PR #251 remains unmerged pending maintainer exact-head review',
+        ):
+            self.assertIn(required, output)
+        self.assertEqual(self.record['frontier']['execution']['state'], 'blocked')
         self.assertNotIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):

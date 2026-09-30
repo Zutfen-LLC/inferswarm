@@ -3293,6 +3293,227 @@
    "replacement": null,
    "test_count_at_audit": 39
   },
+  "test_issue250_diagnostic": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.33,
+   "baseline_test_count": 67,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3B runtime-boundary localization (#250 correction pass 4) tooling keeps the accepted #241/#248 terminals read-only: d250 namespace/authority gates, exact accepted identities, proven pinned-build controls (-dev none CPU-only, thread regimes, frozen text-parameter ladder with the source-proven indexer selection-width boundary pair INDEXER_ALL_CELLS_MAX=2051 / INDEXER_SELECTIVE_MIN=2052 (all-cells through 2051, selective from 2052)), digest-only determinism under the FROZEN PREFIX POPULATION LAW (valid mismatch early-stop; deterministic claims only at the frozen repeat count; gaps/cherry-picks/execution past the stop point fail closed), and mechanical terminal derivation with fail-closed boundaries.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/terminal-reduction.json",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": []
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/METHODOLOGY.md"
+   ],
+   "rationale": "Current #250 diagnostic authority; physical probes run only under a maintainer diagnostic dispatch at this head.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_phase0.py",
+    "scripts/issue250_diagnostic.py"
+   ],
+   "test_count_at_audit": 67
+  },
+  "test_issue250_pass6_corrections": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 2.0,
+   "baseline_test_count": 29,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Correction pass 6 (AMENDMENT-003) producer/authority contract for #250: the retired global 1200 s HTTP timeout never returns to the request path (the retained v1 defect constant stays pinned as the defect record only); every request deadline is derived by the frozen per-arm/unit timeout-budget authority (rate basis incl. the retained ~2.25 tok/s CPU-only measurement; 1.5 safety factor; 1920 s startup/decode margin; bounded [1800 s, 14400 s] sanity bounds; gated-C2-only 36000 s ceiling) and is mechanically bound to the frozen unit/arm plan; receipts retain the budget and its full derivation and fail closed on any mutation; the frozen prospective cost gate loads the retained canonical SHA-256-bound record at both producer entry points, exactly recomputes every condition and cost field, refuses forged rate/cost/count/ceiling values, keeps Arm A authorized / Arm B and D conditional, and admits the over-ceiling serial condition only under its separate C2 maintainer gate; C1 (-t 4 -tb 4) is a bounded screening probe, never a LOCALIZED terminal without the issue-required serial C2 comparison; generic Arm-C and C1 authority cannot authorize serial C2 (dedicated d250-arm-c2 namespace + explicit gate line + completed-C1 verdict record binding both live authority digests); the v1 evidence generation gen-1-v1-timeout-defect is retired read-only and canonical writes require gen-2-pass6 with no cross-generation mixing; dispatch comment 5852485456 binds only head 1c86e97 and is mechanically stale at any moved head.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "issue250_timeout",
+     "issue250_physical",
+     "issue250_diagnostic",
+     "issue250_terminal"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY-AMENDMENT-003.md"
+   ],
+   "rationale": "Current #250 correction-pass-6 authority: timeout-budget law, cost gate, C1/C2 authority separation, evidence-generation custody, stale-dispatch regression; offline only, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 29
+  },
+  "test_issue250_physical": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 16.8,
+   "baseline_test_count": 84,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3B physical producer (#250 correction pass 4) runs only under a revalidated live maintainer dispatch at the exact head: frozen arm plans, namespace<->arm exact binding, campaign model attestation with per-unit stat witnesses, append-only raw custody, accepted #248 identity/health reuse, PER-REQUEST live authority revalidation inside the same-process Arm-B lifecycle with generation cross-binding and DURABLE DRIFT-PREFIX CUSTODY (a gate failure before request N retains and finalizes requests 0..N-1 with unit receipts + truncated lifecycle record; no unit for N or later; truncated is never terminal-complete), TASK-BOUND reset proofs, the frozen prefix population law with mismatch-triggered early stop, and the ATTRIBUTED tokenizer-server process authority (launch/attribute/verify PID + /proc/<pid>/exe SHA == accepted binary SHA, frozen argv bound to the accepted model member, pre-existing unknown port listener fails closed, raw tokenize response bytes + digests retained and mutation-checked; a bare HTTP callback is not production authority).",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": [
+     "issue248_health",
+     "issue248_identity"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY.md"
+   ],
+   "rationale": "Current #250 physical producer authority; executes only under maintainer diagnostic dispatch at the reviewed head (fake-runner suite here).",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_physical.py"
+   ],
+   "test_count_at_audit": 84
+  },
+  "test_issue250_terminal": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 112.5,
+   "baseline_test_count": 39,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+     "docs/investigations/qwen38-flash-next-r8-i3a-ref-nondeterminism/evidence/physical/terminal-reduction.json"
+    ],
+    "scripts_imported": [
+     "issue250_physical"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY.md"
+   ],
+   "rationale": "Current #250 terminal-reducer authority; offline retained-byte reduction only, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_terminal.py"
+   ],
+   "test_count_at_audit": 39
+  },
+  "test_issue250_terminalization": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 54.16,
+   "baseline_test_count": 30,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Additive repository-only Issue #250 terminalization authenticates retained dispatch/adjudications/source-build bytes, reuses the frozen retained-byte reducer, and emits the accepted zero-to-nonzero Vulkan-participation boundary only for complete deterministic five-repeat CPU Arm A against the accepted variable #248 contrast; caller-selected terminals and later-arm execution are impossible.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_terminalization.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/research/r8i3b-reference-runtime-boundary-localized-250-terminalization/MANIFEST.sha256"
+   ],
+   "rationale": "Strict offline terminalization wrapper; no physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_terminalization.py"
+   ],
+   "test_count_at_audit": 30
+  },
+  "test_issue250_v0n_nvidia": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 4.0,
+   "baseline_test_count": 56,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The R8-I3B V0n current-window NVIDIA leg (AMENDMENT-007) is Vulkan-only and fail-closed: NVIDIA ICD + GGML_VK_VISIBLE_DEVICES=0 + CUDA_VISIBLE_DEVICES=-1 + dynamic-link CUDA exclusion + cuda_participation=False in every receipt; wrong backend/device/ngl/placement/binary/source/model/prompt/request and PID reuse reject; the 2-then-conditional-third screen stops on a first-pair mismatch; the four prospective states compare FULL 993280-byte rows (never winner/token only) against the AMD current-window row digest and BOTH retained #248 NVIDIA Vulkan ngl=1 rows, never emit an Issue #250 terminal, never grant A-eligibility, never auto-dispatch CPU Arms A-D, and stale dispatches (5852485456/5862772797/completed AMD 5868617068) can never authorize a unit.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_timeout.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the prospective NVIDIA-current Vulkan screen prepared by METHODOLOGY-AMENDMENT-007; all fixtures fake/injected, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 56
+  },
+  "test_issue250_amendment008": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.6,
+   "baseline_test_count": 34,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_timeout.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the METHODOLOGY-AMENDMENT-008 Arm-A reachability bridge; all fixtures fake/injected, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 34
+  },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.17,
@@ -4446,7 +4667,102 @@
    "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
    "retired_in": "PR #247 correction round 1",
    "test_count_at_audit": null
-  }
+  },
+  "test_issue250_amendment008_round2": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 7.0,
+   "baseline_test_count": 50,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The corrected AMENDMENT-008 Arm-A bridge law (correction round 2, reviewed head 35f427b) decides Arm-A reachability from an EXACT authenticated predecessor decision, never a historical refusal-message prefix: the rederived V0 state must be AMD_VARIABLE-eligible (historical path) or an adjudicated maintainer stop / bridge-only root (bridge path), and INVALID V0 evidence never opens the bridge; the bridge revalidates BOTH predecessors from retained mount bytes through the FROZEN verifiers and reducers (three-unit repeat law + accepted contrast for V0; full backend/identity/residency/dispatch/argv/env/PID/generation custody + CURRENT_NVIDIA_VARIABLE_STOP for V0n) under byte-exact reconstructed accepted dispatch authorities; original evidence stays immutable behind read-only predecessor-v0//predecessor-v0n/ mounts (symlinks refused); Arm-A receipts persist reachability_source from the frozen vocabulary and later-arm receipts carry none; a completed bridge-path Arm-A population stops the terminal ladder at ARM_A_STOPS_LADDER on every outcome with no Vulkan root cause inferred and no B/C/C1/C2/D reachability granted; fresh exact-head dispatch, clean-head, model, cost, fixture and two-pass launch gates stay preserved; a mutation matrix covers every corrected boundary.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_timeout.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the corrected AMENDMENT-008 bridge law (round 2); all fixtures synthetic with real digests, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 50
+  },
+ "test_issue250_amendment008_reducer_admission": {
+  "baseline_group": "r8i-qwen-qualification",
+  "baseline_serial_seconds": 10.0,
+  "baseline_test_count": 24,
+  "category": "CURRENT_CONTRACT",
+  "disposition": "retain",
+  "group": "r8i-qwen-qualification",
+  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+  "named_by_evidence": [],
+  "owned_surfaces": {
+  "evidence_read": [
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+  ],
+  "scripts_imported": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ]
+  },
+  "pinned_by_evidence": [],
+  "rationale": "Regression authority for the AMENDMENT-008 reducer-admission correction (path-aware bridge vs historical V0 admission); all fixtures synthetic with real digests, zero physical execution.",
+  "referenced_by_scripts": [],
+  "replacement": null,
+  "source_modules": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ],
+  "test_count_at_audit": 3
+ },
+ "test_issue250_amendment008_reducer_admission_negative": {
+  "baseline_group": "r8i-qwen-qualification",
+  "baseline_serial_seconds": 10.0,
+  "baseline_test_count": 24,
+  "category": "CURRENT_CONTRACT",
+  "disposition": "retain",
+  "group": "r8i-qwen-qualification",
+  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+  "named_by_evidence": [],
+  "owned_surfaces": {
+  "evidence_read": [
+  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+  ],
+  "scripts_imported": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ]
+  },
+  "pinned_by_evidence": [],
+  "rationale": "Negative mutation matrix for the AMENDMENT-008 reducer-admission correction: every broken-bridge shape (record absent/tampered/malformed, predecessor mounts missing/symlinked, row/freeze/authority/state drift, mixed or missing Arm-A reachability provenance) fails closed without historical fallback, and a valid bridge stop fetches no later-arm authority.",
+  "referenced_by_scripts": [],
+  "replacement": null,
+  "source_modules": [
+  "scripts/issue250_diagnostic.py",
+  "scripts/issue250_physical.py",
+  "scripts/issue250_terminal.py"
+  ],
+  "test_count_at_audit": 25
+ }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
  "schema": "inferswarm.ci.test-retention-audit/1",

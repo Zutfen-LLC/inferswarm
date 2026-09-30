@@ -904,19 +904,18 @@ cleanup — not by revisiting the failed campaign.
 #### Current architecture-integration frontier
 
 <!-- project-status:frontier:start -->
-**[Issue #189 — R8-A Qwen3.8-Flash-Next static census and runtime-fit](https://github.com/Zutfen-LLC/inferswarm/issues/189)**
+**[Issue #250 — R8-I3B zero/nonzero Vulkan boundary localized; exact-head review pending](https://github.com/Zutfen-LLC/inferswarm/issues/250)**
 
-Determine whether Qwen3.8-Flash-Next is an architecturally valuable, practical heterogeneous-residency target and freeze the authority/prerequisites for a later separately authorized physical campaign.
+Arm A COMPLETE: true CPU-only case-3072 is deterministic 5/5 while accepted #248 nonzero-Vulkan ngl=1 fresh-process rows are variable. Repository-only terminalization derives R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED at zero↔nonzero Vulkan participation; PR #251 remains unmerged pending maintainer exact-head review.
 
-- **R8 program — static research authority observation:** [`R8A_STATIC_RESEARCH_AUTHORIZED`](https://github.com/Zutfen-LLC/inferswarm/issues/188).
-- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/188).
-- **Recorded execution authorization:** authorized — Issue #189 authorizes CPU/static/read-only R8-A research only: retain source/runtime/fleet analysis and one bounded prerequisite or future-subject recommendation, with no physical R8-B execution. Correction round complete: terminal R8A_QWEN38_RUNTIME_PREREQUISITE re-derived from the bounded GGUF header census (PLE n-gram table identity/bytes established) and the measured 96-GiB deployed accelerator census (80 GiB NVIDIA + 16 GiB AMD).. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/189).
+- **Accepted Arm-A physical population and accepted #248 variable contrast observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
+- **Recorded execution authorization:** blocked — No further physical work is authorized under #250. The Arm-A localization terminates the predeclared discriminator sequence; no B/C/C1/C2/D work is required or authorized. Repository-only terminalization is complete once mechanically emitted, pending exact-head review; do not merge PR #251. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
 
-- Issue #188 is roadmap authority for R8-A only. It does not authorize a model download, GPU execution, serving campaign, planner change, backend policy, or R8-B physical run.
-- R8-A must keep official Qwen and third-party GGUF authorities distinct, pin every source/runtime identity, and treat an observed static conclusion as neither acceptance nor R8-B authorization.
-- The accepted Issue #117 Arm A-E sequence remains historical evidence for its frozen Gemma subject/topology; it does not qualify Qwen3.8, GGUF, llama.cpp, another backend, or a successor topology.
-- The 2026-09-14 correction round (maintainer review 5672736372) additionally requires: fleet-fit conclusions derive from the mechanical hardware census (no authored aggregate constants), the GGUF header/tensor census is retained evidence, and reported-but-unobserved or pending hardware contributes zero bytes to deployed totals.
-- Any later R8-B work requires separate maintainer authority after an accepted R8-A record; green CPU checks, a generated terminal, and issue closure do not substitute for that authority.
+- The localized factor is zero↔nonzero Vulkan participation under the frozen accepted runtime/model/request conditions only. Vulkan participation is a necessary boundary for the observed fresh-process case-3072 nondeterminism; Vulkan, NVIDIA driver/hardware, a kernel, or vendor correctness is not established as root cause.
+- Implementation fix and exact lower-level mechanism below the localized boundary remain unresolved. A narrower Vulkan/device/driver/runtime follow-up needs separate scope and authority.
+- Accepted physical bytes, original REDUCTION_FAILURE wrapper record, historical bridge paths, and parent manifests remain preserved. This pass performs zero new physical execution or dispatch.
+- Accepted prior R8-A/Gemma/serving evidence remains historical and subject-specific; this boundary diagnosis grants no qualification, planner, holdout, R8-J, or predictive-work authorization.
 <!-- project-status:frontier:end -->
 
 The retained implementation and preflight evidence is under

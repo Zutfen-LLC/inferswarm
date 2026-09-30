@@ -1,0 +1,5 @@
+{
+  "error": "['Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops for maintainer review \u2014 no B/C/C1/C2/D arm is auto-reachable from an Arm-A result without a new maintainer decision']",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/hermes/is250-execute-arm-a-5d015b5.py\", line 97, in <module>\n    assert reduction['terminal'] is None and reduction['problems']==['ARM_A_STOPS_LADDER'],reduction['problems']\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: ['Arm-A completed under METHODOLOGY-AMENDMENT-008; the ladder stops for maintainer review \u2014 no B/C/C1/C2/D arm is auto-reachable from an Arm-A result without a new maintainer decision']\n",
+  "type": "AssertionError"
+}

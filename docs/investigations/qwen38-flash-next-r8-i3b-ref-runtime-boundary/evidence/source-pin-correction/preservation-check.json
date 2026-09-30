@@ -1,0 +1,35 @@
+{
+  "arm_a_attempted_this_correction": 0,
+  "llama_server_processes_after": [],
+  "new_execution_dispatch_posted": false,
+  "original_inferswarm05_v0_equals_inferswarm01_copy": true,
+  "reviewed_head": "6bb83a4bdfd4a9cb5f87f5e58635e3bc4bceca1a",
+  "roots": {
+    "248": {
+      "after_inventory_sha256": "7e45656469d0e1349d52cbbb9fbd0140fcfa9db06a06d8fd1e0bc8ebbeece96a",
+      "before_inventory_sha256": "7e45656469d0e1349d52cbbb9fbd0140fcfa9db06a06d8fd1e0bc8ebbeece96a",
+      "byte_preserved": true,
+      "files": 535
+    },
+    "preparation": {
+      "after_inventory_sha256": "84781b75e102bb2dcc8098eb8beecb6bf775588193d18cdd727b379ee4ab02c2",
+      "before_inventory_sha256": "84781b75e102bb2dcc8098eb8beecb6bf775588193d18cdd727b379ee4ab02c2",
+      "byte_preserved": true,
+      "files": 78
+    },
+    "v0": {
+      "after_inventory_sha256": "588123698d294095c2095783453b1b6f32a7db9dfe4058eddb827054271f1d95",
+      "before_inventory_sha256": "588123698d294095c2095783453b1b6f32a7db9dfe4058eddb827054271f1d95",
+      "byte_preserved": true,
+      "files": 43
+    },
+    "v0n": {
+      "after_inventory_sha256": "6934d6983b07f21a108f14be07acec8ce8f1859af5b9f1443554973fa259ed1d",
+      "before_inventory_sha256": "6934d6983b07f21a108f14be07acec8ce8f1859af5b9f1443554973fa259ed1d",
+      "byte_preserved": true,
+      "files": 27
+    }
+  },
+  "schema": "inferswarm.issue250.source-pin-preservation/1",
+  "top_level_populations_synthesized": false
+}
