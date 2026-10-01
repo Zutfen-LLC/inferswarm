@@ -228,6 +228,12 @@ class ProducerFixtureMixin:
         dispatch = self.offline_fetch(arm, head)()
         return PR.build_live_capture(dispatch)
 
+    def fixture_prompt(self):
+        """The accepted frozen case-3072 prompt from the fixture ladder
+        copied into the fixture repo (same authority run_unit uses)."""
+        import issue250_physical as B250
+        return B250.verify_fixtures(self.repo)[D.CASE]["prompt_text"]
+
     # -- fake physical executor ------------------------------------------
 
     def patched_orchestration(self, arm="A3", execute=None, fetch=None):
@@ -293,7 +299,8 @@ class ProducerFixtureMixin:
                     "binary_sha256": C252.COMPARATOR_SHA256,
                     "model_stat_witness": witness,
                     "argv": argv, "env": env, "request": request,
-                    "request_sha256": sha(b"req"),
+                    "request_sha256": PR.execution_payload_digest(
+                        prompt, request=request),
                     "response_raw": response,
                     "response_raw_sha256": sha(response),
                     "observer_rows": rows, "observer_meta": meta,
@@ -312,7 +319,8 @@ class ProducerFixtureMixin:
                         authority=None, fix_commit=None,
                         binary_sha256=C252.COMPARATOR_SHA256,
                         server_log=None, with_attestation=True,
-                        mutate_attestation=None, namespace=None):
+                        mutate_attestation=None, namespace=None,
+                        request_prompt=None):
         """Retain one complete unit directory (receipt + attestation)."""
         ns = namespace or A.ARMS[arm]["namespace"]
         tag = f"case-3072-B-{arm.lower()}-{index:03d}"
@@ -357,7 +365,9 @@ class ProducerFixtureMixin:
             "model_stat_witness": witness,
             "server_argv": receipt["server_argv"],
             "server_env": receipt["server_env"],
-            "request_sha256": sha(b"req"),
+            "request_sha256": PR.execution_payload_digest(
+                request_prompt if request_prompt is not None
+                else self.fixture_prompt()),
             "response_raw_sha256": sha(response),
             "response_raw_bytes": len(response),
             "observer_meta_sha256": sha(meta),
@@ -801,9 +811,9 @@ class ProductionEntrypointSeamTests(ProducerFixtureMixin, unittest.TestCase):
         params = inspect.signature(PR.run_unit).parameters
         self.assertEqual(list(params),
                          ["repo_root", "evidence_root", "arm", "binary",
-                          "timeout_s", "prompt"])
+                          "timeout_s"])
         for banned in ("fetch", "execute", "identity_observer",
-                       "health_runner", "kwargs"):
+                       "health_runner", "kwargs", "prompt"):
             self.assertNotIn(banned, params)
         self.assertFalse(any(p.kind is inspect.Parameter.VAR_KEYWORD
                              for p in params.values()))
@@ -1049,6 +1059,169 @@ class ProvenanceAdversarialTests(ProducerFixtureMixin, unittest.TestCase):
             raw, sort_keys=True, separators=(",", ":"),
             ensure_ascii=False).encode())
         return forged
+
+
+class PromptBindingRound3Tests(ProducerFixtureMixin, unittest.TestCase):
+    """Round-3 required regressions (prompt-binding defect): the executed
+    prompt is mechanically bound to the frozen case-3072 authority at
+    production time and independently verified at reduction time."""
+
+    def setUp(self):
+        self.fixture()
+        self.arm = "A3"
+        self.ns = A.ARMS[self.arm]["namespace"]
+
+    def verdict(self):
+        with mock.patch.object(P252, "fetch_dispatch_comment",
+                               self.offline_comment_refetch()):
+            return T252.derive_terminal(self.evidence, {})
+
+    def populated(self, n=5, **kwargs):
+        cap = self.live_capture(self.arm)
+        for i in range(1, n + 1):
+            self.write_unit_tree(self.arm, i, cap, **kwargs)
+        return cap
+
+    def authority(self, cap):
+        (self.evidence / "authority.json").write_text(json.dumps({
+            "repo_root": str(self.repo),
+            "dispatch_capture": cap}, sort_keys=True))
+
+    def test_run_unit_prompt_kwarg_is_typeerror(self):
+        # GREEN 4: run_unit(..., prompt="wrong") raises TypeError (the
+        # reviewed head accepted it and published a unit — RED 1).
+        with self.patched_orchestration(self.arm):
+            with self.assertRaises(TypeError):
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm,
+                            binary=Path("/nonexistent/llama-server"),
+                            timeout_s=60, prompt="wrong")
+
+    def test_run_unit_obtains_prompt_only_from_accepted_fixture(self):
+        # the executed prompt is the accepted case-3072 prompt_text and
+        # the retained digest is the canonical payload digest
+        seen = {}
+        base_exec = self.fake_execute_unit()
+
+        def spying_execute(**kwargs):
+            seen["prompt"] = kwargs.get("prompt")
+            return base_exec(**kwargs)
+
+        with self.patched_orchestration(self.arm, execute=spying_execute):
+            outcome = PR.run_unit(
+                repo_root=self.repo, evidence_root=self.evidence,
+                arm=self.arm, binary=Path("/nonexistent/llama-server"),
+                timeout_s=60)
+        self.assertEqual(seen["prompt"], self.fixture_prompt())
+        att = json.loads((Path(outcome["unit_dir"]) /
+                          "producer-attestation.json").read_bytes())
+        self.assertEqual(att["request_sha256"],
+                         PR.execution_payload_digest(self.fixture_prompt()))
+
+    def test_run_unit_fails_closed_without_fixture_prompt(self):
+        # the accepted fixture authority unavailable -> ProducerError
+        with mock.patch.object(PR.B250, "verify_fixtures",
+                               side_effect=OSError("ladder gone")):
+            with self.patched_orchestration(self.arm):
+                with self.assertRaises(PR.ProducerError):
+                    PR.run_unit(repo_root=self.repo,
+                                evidence_root=self.evidence,
+                                arm=self.arm,
+                                binary=Path("/nonexistent/llama-server"),
+                                timeout_s=60)
+
+    def test_canonical_digest_is_wire_bytes_and_order_independent(self):
+        prompt = self.fixture_prompt()
+        expected_wire = json.dumps(
+            {**D.REQUEST_CONTRACT, "prompt": prompt}).encode()
+        self.assertEqual(PR.execution_payload_bytes(prompt), expected_wire)
+        # insertion-order independence: a reordered caller dict yields
+        # the SAME canonical bytes/digest
+        reordered = dict(reversed(list(D.REQUEST_CONTRACT.items())))
+        self.assertEqual(PR.execution_payload_bytes(prompt, request=reordered),
+                         expected_wire)
+        self.assertEqual(PR.execution_payload_digest(prompt),
+                         hashlib.sha256(expected_wire).hexdigest())
+        self.assertNotEqual(
+            PR.execution_payload_digest("a different prompt"),
+            PR.execution_payload_digest(prompt))
+        mutated = dict(D.REQUEST_CONTRACT)
+        mutated["temperature"] = 0.5
+        self.assertNotEqual(
+            PR.execution_payload_digest(prompt, request=mutated),
+            PR.execution_payload_digest(prompt))
+
+    def test_authentic_digest_accepted_terminal(self):
+        # GREEN 5: authentic frozen case-3072 payload digest accepted; the
+        # existing producer-attested positive population still reaches the
+        # existing terminal path (GREEN 9).
+        cap = self.populated(5)
+        self.authority(cap)
+        self.assertEqual(self.verdict(), C252.NOT_VALIDATED_TERMINAL)
+
+    def test_mutated_retained_digest_blocked(self):
+        # GREEN 6: one unit's retained payload digest mutated => BLOCKED
+        cap = self.populated(5)
+        unit = self.evidence / self.ns / "case-3072-B-a3-003"
+        att = json.loads((unit / "producer-attestation.json").read_bytes())
+        att["request_sha256"] = "e" * 64
+        (unit / "producer-attestation.json").write_text(
+            json.dumps(att, sort_keys=True))
+        self.authority(cap)
+        self.assertEqual(self.verdict(), T252.BLOCKED)
+
+    def test_wrong_prompt_digest_blocked(self):
+        # GREEN 7: digest for a DIFFERENT prompt with all other physical
+        # evidence internally consistent => BLOCKED (the reviewed head
+        # admitted exactly this population to the terminal path — RED 2).
+        cap = self.live_capture(self.arm)
+        wrong = "attacker prompt that is not case-3072"
+        for i in range(1, 6):
+            self.write_unit_tree(self.arm, i, cap, request_prompt=wrong)
+        self.authority(cap)
+        self.assertEqual(self.verdict(), T252.BLOCKED)
+
+    def test_altered_request_semantics_digest_blocked(self):
+        # GREEN 8: digest over altered request semantics (not the accepted
+        # contract) with the authentic prompt => BLOCKED
+        cap = self.live_capture(self.arm)
+        mutated = dict(D.REQUEST_CONTRACT)
+        mutated["temperature"] = 0.5
+        forged = hashlib.sha256(json.dumps(
+            {**mutated, "prompt": self.fixture_prompt()}).encode()
+        ).hexdigest()
+        for i in range(1, 6):
+            self.write_unit_tree(
+                self.arm, i, cap,
+                mutate_attestation=lambda att: att.update(
+                    request_sha256=forged))
+        self.authority(cap)
+        self.assertEqual(self.verdict(), T252.BLOCKED)
+
+    def test_reducer_uses_retained_authority_repo_root_only(self):
+        # the expected digest is derived from the RETAINED authority
+        # document's repo_root; a repo_root whose fixture ladder carries a
+        # different case-3072 prompt must BLOCK the same population
+        cap = self.populated(5)
+        other_repo = self.root / "other-repo"
+        other_repo.mkdir()
+        git(other_repo, "init", "-q")
+        git(other_repo, "config", "user.name", "Fixture")
+        git(other_repo, "config", "user.email", "fixture@example.invalid")
+        dst = other_repo / D.FIXTURE_LADDER_REL
+        dst.parent.mkdir(parents=True)
+        doc = json.loads((ROOT / D.FIXTURE_LADDER_REL).read_bytes())
+        for entry in doc["cases"]:
+            if entry.get("case_id") == D.CASE:
+                entry["prompt_text"] = "a substituted prompt"
+        dst.write_text(json.dumps(doc))
+        (other_repo / "s.txt").write_text("x" + NL)
+        git(other_repo, "add", "-A")
+        git(other_repo, "commit", "-qm", "x")
+        (self.evidence / "authority.json").write_text(json.dumps({
+            "repo_root": str(other_repo),
+            "dispatch_capture": cap}, sort_keys=True))
+        self.assertEqual(self.verdict(), T252.BLOCKED)
 
 
 class Phase0RegressionTests(ProducerFixtureMixin, unittest.TestCase):

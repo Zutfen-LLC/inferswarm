@@ -86,8 +86,17 @@ def _authority(root: Path, rel: str) -> dict[str, Any]:
     return verified
 
 
+def _repo_root_of(root: Path, rel: str) -> Path:
+    """Repo root retained in an authority document (verified path)."""
+    repo = _json(root, rel).get("repo_root")
+    if not isinstance(repo, str) or not repo:
+        raise ValueError("authority document repo_root missing")
+    return Path(repo)
+
+
 def _unit(root: Path, directory: Path, auth: dict[str, Any], idx: int,
-          fix: dict[str, Any] | None = None) -> tuple[str, ...]:
+          fix: dict[str, Any] | None = None,
+          repo_root: Path | None = None) -> tuple[str, ...]:
     rec = _json(directory, "unit.json")
     P.validate_unit_receipt(rec)
     if (rec.get("authority") != auth or rec.get("unit_index") != idx
@@ -105,7 +114,12 @@ def _unit(root: Path, directory: Path, auth: dict[str, Any], idx: int,
     if auth.get("schema") == "inferswarm.issue254.dispatch-capture/3":
         import issue254_producer as PR254
         try:
-            PR254.verify_unit_producer_binding(directory, rec, head)
+            # Round-3 prompt binding (#254): the attested execution-payload
+            # digest must equal the digest independently derived from the
+            # accepted fixture authority at the authority document's own
+            # retained repo_root (no second configuration source).
+            PR254.verify_unit_producer_binding(
+                directory, rec, head, repo_root=repo_root)
         except PR254.ProducerError as exc:
             raise ValueError(
                 f"unit lacks producer-authenticated physical custody: "
@@ -141,7 +155,8 @@ def _unit(root: Path, directory: Path, auth: dict[str, Any], idx: int,
 
 
 def _population(root: Path, namespace: str, auth: dict[str, Any],
-                fix: dict[str, Any] | None = None) -> str:
+                fix: dict[str, Any] | None = None,
+                repo_root: Path | None = None) -> str:
     base = root / namespace
     if base.is_symlink() or not base.is_dir():
         raise ValueError("required arm namespace absent or symlink")
@@ -155,7 +170,8 @@ def _population(root: Path, namespace: str, auth: dict[str, Any],
         raise ValueError("duplicate units")
     rows = {}
     for name in retained:
-        rows[name] = _unit(root, base / name, auth, planned.index(name) + 1, fix)
+        rows[name] = _unit(root, base / name, auth, planned.index(name) + 1,
+                           fix, repo_root)
     # Same frozen prefix law as #250: 001..N; stop exactly at first
     # mismatch; 3 matching is a screen, never deterministic.
     facts = D.prefix_population_facts(planned, retained, rows,
@@ -263,6 +279,11 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
         if A.validate_arms():
             raise ValueError("frozen arms invalid")
         auth = _authority(root, "authority.json")
+        # Round-3 prompt binding (#254): the repo root retained in the
+        # authority document is the single configuration source the /3
+        # reducer path uses to re-derive the expected case-3072 payload
+        # digest (accepted request contract + frozen fixture prompt).
+        repo_root = _repo_root_of(root, "authority.json")
         namespaces = {spec["namespace"] for spec in A.ARMS.values()}
         present = {p.name for p in root.iterdir() if p.is_dir() or p.is_symlink()}
         expected_dirs = namespaces | ({"fixed"} if (root / "fix.json").is_file() else set())
@@ -282,12 +303,14 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
                 continue
             if ns == auth["namespace"]:
                 arm_auth = auth
+                arm_repo_root = repo_root
             else:
                 arm_auth = _authority(root, f"authority-{arm}.json")
                 if (arm_auth.get("arm") != arm or arm_auth.get("namespace") != ns
                         or arm_auth.get("head_sha") != auth["head_sha"]):
                     raise ValueError("arm-specific dispatch absent/mismatched")
-            states[arm] = _population(root, ns, arm_auth)
+                arm_repo_root = _repo_root_of(root, f"authority-{arm}.json")
+            states[arm] = _population(root, ns, arm_auth, repo_root=arm_repo_root)
         corrected = [arm for arm, state in states.items() if state == "deterministic"]
         if len(corrected) > 1:
             raise ValueError("ambiguous multi-factor localization")

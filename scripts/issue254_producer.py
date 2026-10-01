@@ -566,7 +566,7 @@ def _wait_healthy(proc: subprocess.Popen, port: int) -> None:
 
 def _post_completion(port: int, request: dict[str, Any],
                      prompt: str, timeout_s: float) -> tuple[bytes, Any]:
-    payload = json.dumps({**request, "prompt": prompt}).encode()
+    payload = execution_payload_bytes(prompt, request=request)
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/completion", data=payload,
         headers={"Content-Type": "application/json"}, method="POST")
@@ -701,9 +701,12 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
             "model_stat_witness": stats_pre,
             "argv": argv, "env": env,
             "request": request,
-            "request_sha256": _sha(json.dumps(
-                {**request, "prompt": prompt},
-                sort_keys=True).encode()),
+            # request_sha256 binds the EXACT EXECUTION PAYLOAD (accepted
+            # request contract + executed prompt) through the one shared
+            # canonical helper; the reducer re-derives it independently
+            # from the accepted #250 fixture authority (#254 round 3).
+            "request_sha256": execution_payload_digest(
+                prompt, request=request),
             "response_raw": raw_response,
             "response_raw_sha256": _sha(raw_response),
             "observer_rows": rows, "observer_meta": meta,
@@ -712,6 +715,39 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
             "placement": placement,
             "process_exit": exit_info,
             "health": (health_runner or _default_health_runner)()}
+
+
+def execution_payload_bytes(prompt: str,
+                            request: dict[str, Any] | None = None,
+                            ) -> bytes:
+    """THE one canonical execution-payload byte encoding (#254 round 3).
+
+    Exactly the wire semantics of ``_post_completion``: the accepted
+    request-contract object plus the exact prompt under the ``prompt``
+    key, JSON-encoded. Deterministic in VALUE, never in the caller's
+    dictionary insertion order: the payload is rebuilt in the frozen
+    contract's declared key order (any extra keys sorted, ``prompt``
+    last), so for the accepted contract the encoding is byte-exact with
+    the historical wire form ``json.dumps({**D.REQUEST_CONTRACT,
+    "prompt": p})`` for every caller regardless of how the caller's dict
+    was constructed. Both the producer (retention) and the reducer
+    (independent verification) derive the digest from THESE bytes via
+    :func:`execution_payload_digest` — there is no second implementation
+    to drift.
+    """
+    contract = D.REQUEST_CONTRACT if request is None else request
+    payload: dict[str, Any] = {k: contract[k] for k in D.REQUEST_CONTRACT}
+    for key in sorted(set(contract) - set(D.REQUEST_CONTRACT)):
+        payload[key] = contract[key]
+    payload["prompt"] = prompt
+    return json.dumps(payload).encode()
+
+
+def execution_payload_digest(prompt: str,
+                             request: dict[str, Any] | None = None,
+                             ) -> str:
+    """SHA-256 of the canonical execution payload bytes (one helper)."""
+    return _sha(execution_payload_bytes(prompt, request=request))
 
 
 def _default_identity_observer() -> dict[str, Any]:
@@ -1026,7 +1062,6 @@ def retain_status_record(evidence_root: Path, namespace: str,
 
 def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
              binary: Path, timeout_s: float,
-             prompt: str | None = None,
              ) -> dict[str, Any]:
     """Re-authenticate dispatch, derive the next legal unit, execute, retain.
 
@@ -1036,10 +1071,16 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
     unconditionally calls the production fetch_live_dispatch,
     execute_unit, identity-observation and health paths, which obtain
     every observation from the producer's own launched process and host
-    probes. Offline tests exercise this same production logic by
-    patching the internal production function objects from test code
-    (unittest.mock), never through this signature. There is deliberately
-    no **kwargs: a generic kwargs escape could recreate the removed seams.
+    probes. Round-3 correction (prompt-binding defect): NO prompt
+    parameter either — the executed prompt is UNCONDITIONALLY the
+    accepted frozen case-3072 ``prompt_text`` obtained through
+    ``B250.verify_fixtures(repo_root)[D.CASE]["prompt_text"]`` (fail
+    closed when the accepted fixture does not provide it), so no caller
+    can substitute the executed experiment's prompt. Offline tests
+    exercise this same production logic by patching the internal
+    production function objects from test code (unittest.mock),
+    never through this signature. There is deliberately no **kwargs: a
+    generic kwargs escape could recreate the removed seams.
     """
     if arm not in A.ARMS:
         raise ProducerError("unknown arm")
@@ -1052,10 +1093,21 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
         raise ProducerError(
             "live dispatch authorizes a different arm (one dispatch = one arm)")
     tag = f"case-3072-B-{arm.lower()}-{index:03d}"
-    if prompt is None:
+    # Round-3 prompt binding: the executed prompt comes ONLY from the
+    # accepted frozen case-3072 fixture authority (sha-verified ladder),
+    # never from a caller. Fail closed if the accepted fixture does not
+    # provide the expected prompt text.
+    try:
         fixtures = B250.verify_fixtures(repo_root)
-        prompt = fixtures[D.CASE]["prompt_text"]
-        assert prompt is not None  # frozen fixture always carries the text
+    except Exception as exc:
+        raise ProducerError(
+            f"accepted fixture authority unavailable: {exc}") from exc
+    entry = fixtures.get(D.CASE) if isinstance(fixtures, dict) else None
+    prompt = entry.get("prompt_text") if isinstance(entry, dict) else None
+    if not isinstance(prompt, str) or not prompt:
+        raise ProducerError(
+            "accepted fixture does not provide the frozen case-3072 "
+            "prompt_text (fail closed)")
     staging = Path(evidence_root) / namespace
     staging.mkdir(parents=True, exist_ok=True)
     work = staging / f".exec-{tag}.tmp"
@@ -1156,14 +1208,55 @@ def run_arm(*, repo_root: Path, evidence_root: Path, arm: str,
 # Reducer-side admission: producer-attested physical evidence
 # ---------------------------------------------------------------------------
 
+def expected_case3072_payload_digest(repo_root: Path) -> str:
+    """Reducer-side independent derivation of the ONLY admissible payload.
+
+    Derives the expected canonical execution-payload digest from the two
+    accepted authorities alone (#254 round 3):
+
+    * the accepted ``D.REQUEST_CONTRACT`` (frozen #250 contract), and
+    * the frozen case-3072 prompt obtained from the retained/repo
+      authority the campaign already uses —
+      ``B250.verify_fixtures(repo_root)[D.CASE]["prompt_text"]`` — where
+      ``repo_root`` is the one already present in the retained authority
+      document (no second configuration source).
+
+    The result must equal the retained producer-attestation
+    ``request_sha256`` exactly; a self-consistent digest over any other
+    prompt or request semantics is not the authorized experiment.
+    """
+    try:
+        fixtures = B250.verify_fixtures(Path(repo_root))
+    except Exception as exc:
+        raise ProducerError(
+            f"accepted fixture authority unavailable: {exc}") from exc
+    entry = fixtures.get(D.CASE) if isinstance(fixtures, dict) else None
+    prompt = entry.get("prompt_text") if isinstance(entry, dict) else None
+    if not isinstance(prompt, str) or not prompt:
+        raise ProducerError(
+            "accepted fixture does not provide the frozen case-3072 "
+            "prompt_text (fail closed)")
+    return execution_payload_digest(prompt)
+
+
 def verify_unit_producer_binding(unit_dir: Path, receipt: dict[str, Any],
-                                 expected_head: str) -> None:
+                                 expected_head: str,
+                                 repo_root: Path | None = None) -> None:
     """Re-derive the producer attestation binding from retained bytes.
 
     The receipt alone (self-consistent bytes) is NOT physical authority: the
     retained producer attestation must exist, validate, match every digest
     the receipt carries, name the same unit/dispatch/head, and the retained
     live capture must independently re-verify (verify_live_capture).
+
+    #254 round 3 (prompt binding): the attested ``request_sha256`` — the
+    canonical execution-payload digest (accepted request contract + the
+    exact executed prompt) — must EQUAL the digest independently derived
+    from the accepted fixture authority at ``repo_root``. A
+    self-consistent digest over an arbitrary prompt is insufficient.
+    ``repo_root`` is the one from the retained authority document (the
+    reducer passes it explicitly); deriving from a caller-chosen root
+    would reintroduce the substituted-authority hole.
     """
     att_path = Path(unit_dir) / "producer-attestation.json"
     if att_path.is_symlink() or not att_path.is_file():
@@ -1172,6 +1265,12 @@ def verify_unit_producer_binding(unit_dir: Path, receipt: dict[str, Any],
     validate_producer_attestation(att)
     if att["producer_head"] != expected_head:
         raise ProducerError("producer attestation head mismatch")
+    if repo_root is not None:
+        expected = expected_case3072_payload_digest(repo_root)
+        if att["request_sha256"] != expected:
+            raise ProducerError(
+                "producer attestation request payload digest does not "
+                "match the accepted case-3072 request+prompt authority")
     if (att["unit_index"] != receipt["unit_index"]
             or att["tag"] != receipt["tag"]):
         raise ProducerError("producer attestation unit mismatch")
