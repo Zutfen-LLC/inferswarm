@@ -904,18 +904,18 @@ cleanup — not by revisiting the failed campaign.
 #### Current architecture-integration frontier
 
 <!-- project-status:frontier:start -->
-**[Issue #250 — R8-I3B zero/nonzero Vulkan boundary localized; exact-head review pending](https://github.com/Zutfen-LLC/inferswarm/issues/250)**
+**[Issue #252 — R8-I3C Vulkan mechanism; Phase 0 complete, maintainer review pending](https://github.com/Zutfen-LLC/inferswarm/issues/252)**
 
-Arm A COMPLETE: true CPU-only case-3072 is deterministic 5/5 while accepted #248 nonzero-Vulkan ngl=1 fresh-process rows are variable. Repository-only terminalization derives R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED at zero↔nonzero Vulkan participation; PR #251 remains unmerged pending maintainer exact-head review.
+Issue #250 localized zero↔nonzero Vulkan participation as a necessary boundary; its accepted predecessor record states Arm A COMPLETE: true CPU-only case-3072 deterministic 5/5 while accepted #248 nonzero-Vulkan ngl=1 rows vary, deriving R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED. That predecessor does not establish root cause; Vulkan is not established as root cause and the mechanism below the localized boundary remain unresolved. PR #251 remains unmerged pending maintainer exact-head review. #252 performs repository-only Phase-0 reconstruction and prospectively freezes one-factor Vulkan mechanism arms. Six candidate classes remain unproven; no root cause or fix validation is claimed.
 
-- **Accepted Arm-A physical population and accepted #248 variable contrast observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
+- **Accepted #250 R8-I3B localized boundary (Arm-A population and accepted #248 variable contrast) observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
 - **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
-- **Recorded execution authorization:** blocked — No further physical work is authorized under #250. The Arm-A localization terminates the predeclared discriminator sequence; no B/C/C1/C2/D work is required or authorized. Repository-only terminalization is complete once mechanically emitted, pending exact-head review; do not merge PR #251. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
+- **Recorded execution authorization:** blocked — No further physical work is authorized under #250; the accepted Arm-A localization terminates its predeclared discriminator sequence and no B/C/C1/C2/D work is required or authorized. Issue #252 Phase 0 is repository-only and grants zero physical authority; STOP for maintainer exact-head review of PR #253; do not merge automatically. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/252).
 
-- The localized factor is zero↔nonzero Vulkan participation under the frozen accepted runtime/model/request conditions only. Vulkan participation is a necessary boundary for the observed fresh-process case-3072 nondeterminism; Vulkan, NVIDIA driver/hardware, a kernel, or vendor correctness is not established as root cause.
-- Implementation fix and exact lower-level mechanism below the localized boundary remain unresolved. A narrower Vulkan/device/driver/runtime follow-up needs separate scope and authority.
-- Accepted physical bytes, original REDUCTION_FAILURE wrapper record, historical bridge paths, and parent manifests remain preserved. This pass performs zero new physical execution or dispatch.
-- Accepted prior R8-A/Gemma/serving evidence remains historical and subject-specific; this boundary diagnosis grants no qualification, planner, holdout, R8-J, or predictive-work authorization.
+- The #250 localized factor is zero↔nonzero Vulkan participation under the frozen accepted runtime/model/request conditions only. Vulkan participation is a necessary boundary for the observed case-3072 fresh-process nondeterminism; Vulkan, NVIDIA driver/hardware, a kernel, or vendor correctness is not established as root cause.
+- The six Phase-0 candidate classes are unproven; source analysis alone establishes no runtime root cause.
+- Physical work requires a current exact-head maintainer dispatch naming one arm, its namespace, owner/member, and all frozen authorities.
+- The accepted #248/#250 evidence and comparator are read-only; no predecessor evidence rewrite or substitution is permitted.
 <!-- project-status:frontier:end -->
 
 The retained implementation and preflight evidence is under

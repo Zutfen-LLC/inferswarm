@@ -1,0 +1,1250 @@
+{
+  "controls": [
+    {
+      "effect": "Allow a graphics-capable compute queue instead of avoiding it.",
+      "kind": "env",
+      "name": "GGML_VK_ALLOW_GRAPHICS_QUEUE",
+      "proven": [
+        {
+          "lines": [
+            6827
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_ALLOW_GRAPHICS_QUEUE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Allow coherent system-memory fallback on device allocation failure.",
+      "kind": "env",
+      "name": "GGML_VK_ALLOW_SYSMEM_FALLBACK",
+      "proven": [
+        {
+          "lines": [
+            6559
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_ALLOW_SYSMEM_FALLBACK\")"
+        }
+      ]
+    },
+    {
+      "effect": "Use transfer queue for asynchronous transfers if available.",
+      "kind": "env",
+      "name": "GGML_VK_ASYNC_USE_TRANSFER_QUEUE",
+      "proven": [
+        {
+          "lines": [
+            7418
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_ASYNC_USE_TRANSFER_QUEUE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Enable debug-utils object/command labels if extension available.",
+      "kind": "env",
+      "name": "GGML_VK_DEBUG_MARKERS",
+      "proven": [
+        {
+          "lines": [
+            7737
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DEBUG_MARKERS\")"
+        }
+      ]
+    },
+    {
+      "effect": "Turn off backend asynchronous interface support.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_ASYNC",
+      "proven": [
+        {
+          "lines": [
+            6724
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_ASYNC\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable BF16 extension branch.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_BFLOAT16",
+      "proven": [
+        {
+          "lines": [
+            6621
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_BFLOAT16\")"
+        },
+        {
+          "lines": [
+            7510
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_BFLOAT16\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable KHR cooperative-matrix feature detection.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_COOPMAT",
+      "proven": [
+        {
+          "lines": [
+            6600
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT\")"
+        },
+        {
+          "lines": [
+            7492
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable NV cooperative-matrix2 feature detection.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_COOPMAT2",
+      "proven": [
+        {
+          "lines": [
+            6608
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT2\")"
+        },
+        {
+          "lines": [
+            7497
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT2\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable NV cooperative-matrix2 decode-vector extension.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_COOPMAT2_DECODE_VECTOR",
+      "proven": [
+        {
+          "lines": [
+            6612
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT2_DECODE_VECTOR\")"
+        },
+        {
+          "lines": [
+            7501
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_COOPMAT2_DECODE_VECTOR\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable mixed-float dot2 feature branch.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_DOT2",
+      "proven": [
+        {
+          "lines": [
+            6633
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_DOT2\")"
+        },
+        {
+          "lines": [
+            7522
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_DOT2\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable FP16 storage/compute feature use.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_F16",
+      "proven": [
+        {
+          "lines": [
+            6809
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_F16\")"
+        },
+        {
+          "lines": [
+            7529
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_F16\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable Vulkan op fusion, including add/RMS fusion.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_FUSION",
+      "proven": [
+        {
+          "lines": [
+            7437
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_FUSION\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable Vulkan graph optimization/reordering.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_GRAPH_OPTIMIZE",
+      "proven": [
+        {
+          "lines": [
+            6562
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_GRAPH_OPTIMIZE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Prefer device-local-only allocation instead of host-visible VRAM.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM",
+      "proven": [
+        {
+          "lines": [
+            6556
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable accelerated integer-dot shader branch.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_INTEGER_DOT_PRODUCT",
+      "proven": [
+        {
+          "lines": [
+            6616
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_INTEGER_DOT_PRODUCT\")"
+        },
+        {
+          "lines": [
+            7505
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_INTEGER_DOT_PRODUCT\")"
+        }
+      ]
+    },
+    {
+      "effect": "Force off matrix-vector quantized-activation route.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_MMVQ",
+      "proven": [
+        {
+          "lines": [
+            7446
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_MMVQ\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable multi-add optimization.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_MULTI_ADD",
+      "proven": [
+        {
+          "lines": [
+            7052
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_MULTI_ADD\")"
+        }
+      ]
+    },
+    {
+      "effect": "Disable optional OCP FP4 feature branch.",
+      "kind": "env",
+      "name": "GGML_VK_DISABLE_OCP_FP4",
+      "proven": [
+        {
+          "lines": [
+            7046
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_OCP_FP4\")"
+        },
+        {
+          "lines": [
+            7687
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_DISABLE_OCP_FP4\")"
+        }
+      ]
+    },
+    {
+      "effect": "Opt into EXT memory priority for allocations.",
+      "kind": "env",
+      "name": "GGML_VK_ENABLE_MEMORY_PRIORITY",
+      "proven": [
+        {
+          "lines": [
+            6638
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_ENABLE_MEMORY_PRIORITY\")"
+        }
+      ]
+    },
+    {
+      "effect": "Override queried maximum allocation size (integer bytes).",
+      "kind": "env",
+      "name": "GGML_VK_FORCE_MAX_ALLOCATION_SIZE",
+      "proven": [
+        {
+          "lines": [
+            6730
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_FORCE_MAX_ALLOCATION_SIZE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Override queried maximum buffer size (integer bytes).",
+      "kind": "env",
+      "name": "GGML_VK_FORCE_MAX_BUFFER_SIZE",
+      "proven": [
+        {
+          "lines": [
+            6740
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_FORCE_MAX_BUFFER_SIZE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Force matrix-vector quantized-activation route when available.",
+      "kind": "env",
+      "name": "GGML_VK_FORCE_MMVQ",
+      "proven": [
+        {
+          "lines": [
+            7448
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_FORCE_MMVQ\")"
+        }
+      ]
+    },
+    {
+      "effect": "Override batching threshold (minimum one node).",
+      "kind": "env",
+      "name": "GGML_VK_MAX_NODES_PER_SUBMIT",
+      "proven": [
+        {
+          "lines": [
+            6803
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_MAX_NODES_PER_SUBMIT\")"
+        }
+      ]
+    },
+    {
+      "effect": "Enable Vulkan allocation logging.",
+      "kind": "env",
+      "name": "GGML_VK_MEMORY_LOGGER",
+      "proven": [
+        {
+          "lines": [
+            7789
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_MEMORY_LOGGER\")"
+        }
+      ]
+    },
+    {
+      "effect": "Enable Vulkan performance logging and fence/wait instrumentation.",
+      "kind": "env",
+      "name": "GGML_VK_PERF_LOGGER",
+      "proven": [
+        {
+          "lines": [
+            7786
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_PERF_LOGGER\")"
+        }
+      ]
+    },
+    {
+      "effect": "Select concurrent performance-logging grouping.",
+      "kind": "env",
+      "name": "GGML_VK_PERF_LOGGER_CONCURRENT",
+      "proven": [
+        {
+          "lines": [
+            7787
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_PERF_LOGGER_CONCURRENT\")"
+        }
+      ]
+    },
+    {
+      "effect": "Override performance logger frequency (integer).",
+      "kind": "env",
+      "name": "GGML_VK_PERF_LOGGER_FREQUENCY",
+      "proven": [
+        {
+          "lines": [
+            7794
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_PERF_LOGGER_FREQUENCY\")"
+        }
+      ]
+    },
+    {
+      "effect": "Select pipeline-statistics logging filter.",
+      "kind": "env",
+      "name": "GGML_VK_PIPELINE_STATS",
+      "proven": [
+        {
+          "lines": [
+            7790
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_PIPELINE_STATS\")"
+        }
+      ]
+    },
+    {
+      "effect": "Prefer coherent host-visible allocation before device-local.",
+      "kind": "env",
+      "name": "GGML_VK_PREFER_HOST_MEMORY",
+      "proven": [
+        {
+          "lines": [
+            6553
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_PREFER_HOST_MEMORY\")"
+        }
+      ]
+    },
+    {
+      "effect": "Submit compute work with a fence rather than unfenced batching.",
+      "kind": "env",
+      "name": "GGML_VK_SERIALIZE_SUBMISSIONS",
+      "proven": [
+        {
+          "lines": [
+            7435
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_SERIALIZE_SUBMISSIONS\")"
+        }
+      ]
+    },
+    {
+      "effect": "Override suballocation block size (integer bytes).",
+      "kind": "env",
+      "name": "GGML_VK_SUBALLOCATION_BLOCK_SIZE",
+      "proven": [
+        {
+          "lines": [
+            6750
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_SUBALLOCATION_BLOCK_SIZE\")"
+        }
+      ]
+    },
+    {
+      "effect": "Log synchronization and graph nodes.",
+      "kind": "env",
+      "name": "GGML_VK_SYNC_LOGGER",
+      "proven": [
+        {
+          "lines": [
+            7788
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_SYNC_LOGGER\")"
+        }
+      ]
+    },
+    {
+      "effect": "Filter/reorder Vulkan enumerated device indices.",
+      "kind": "env",
+      "name": "GGML_VK_VISIBLE_DEVICES",
+      "proven": [
+        {
+          "lines": [
+            7806
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_VISIBLE_DEVICES\")"
+        }
+      ]
+    },
+    {
+      "effect": "No application cache-control env variable or persistent pipeline cache; creation passes null cache.",
+      "kind": "code_absent",
+      "name": "vk::PipelineCache / GGML_VK_PIPELINE_CACHE",
+      "proven": [
+        {
+          "lines": [
+            3260
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "createComputePipeline(VK_NULL_HANDLE"
+        }
+      ]
+    },
+    {
+      "effect": "None of these upstream-sounding toggles is handled by a getenv in this pin; disable coopmat and integer dot separately instead.",
+      "kind": "code_absent",
+      "name": "GGML_VK_FORCE_SCALAR / GGML_VK_SUBGROUP_SIZE / GGML_VK_DETERMINISTIC",
+      "proven": [
+        {
+          "lines": [
+            6760
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->subgroup_size = subgroup_props.subgroupSize;"
+        }
+      ]
+    },
+    {
+      "effect": "No n_threads parameter in Vulkan MUL_MAT dispatch; CPU -t/-tb can alter host computation feeding Vulkan, not a Vulkan shader thread count.",
+      "kind": "code",
+      "name": "backend n_threads",
+      "proven": [
+        {
+          "lines": [
+            10383
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_vk_mul_mat(ggml_backend_vk_context"
+        }
+      ]
+    }
+  ],
+  "device_identity_ref": {
+    "authority": "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/METHODOLOGY.md:21-23; docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/evidence/phase0/phase0-analysis.json:108-116,239-255",
+    "bdf": "00000000:03:00.0",
+    "comparator_sha256": "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad",
+    "driver": "610.57.04",
+    "gpu": "NVIDIA RTX 3060",
+    "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "host": "inferswarm01",
+    "icd": "nvidia",
+    "placement": "ngl=1 output head Vulkan, input embedding and all repeating blocks CPU; R5 accepted #250",
+    "scope": "offline pinned-source inference only; no physical execution",
+    "vulkan": "1.4.341"
+  },
+  "limitations": [
+    "No runtime shader variant, per-tensor output quant type, driver features, allocation path, queue depth, race, or numerical root cause is proven by static source alone.",
+    "VulkanExtension is not a symbol in the pinned source tree; vk::enumerateInstanceExtensionProperties and physical device extension enumeration are the actual path.",
+    "VK_ICD_FILENAMES and CUDA_VISIBLE_DEVICES are external launch/environment controls from #250, not GGML_VK_ backend getters.",
+    "No backend RNG or address-based arithmetic located in the output GEMM dispatch path; absence is scoped to source code, not the driver."
+  ],
+  "nondeterminism_candidates": [
+    {
+      "affects_output_layer_gemm": true,
+      "mechanism": "GPU input or scratch content/padding not initialized before read (unproven)",
+      "rank": 1,
+      "source_basis": [
+        {
+          "lines": [
+            16735
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static enum ggml_status ggml_backend_vk_buffer_init_tensor"
+        },
+        {
+          "lines": [
+            9665
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->prealloc_y_last_k_padded"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "Allocations are not zeroed; if a quantization/padding/buffer-reuse path reads unwritten bytes, fresh allocations could contain different data. Requires a concrete read-before-write proof; weights are explicitly loaded and ordinary destinations fully written."
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "mechanism": "cross-queue synchronization or aliasing gap (unproven)",
+      "rank": 2,
+      "source_basis": [
+        {
+          "lines": [
+            16042
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "if (a_buf == o_buf)"
+        },
+        {
+          "lines": [
+            8572
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->transfer_semaphore.value++;"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "Fresh-process queue timing could expose a missing dependency if source's barrier/overlap tracking misses a real alias. Explicit barriers, semaphores and final fence argue against treating async alone as a proven race."
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "mechanism": "driver-reported memory type/capability or allocation fallback varies",
+      "rank": 3,
+      "source_basis": [
+        {
+          "lines": [
+            3747
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "for (auto mtype_it = memory_type_indices.begin()"
+        },
+        {
+          "lines": [
+            6760
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->subgroup_size = subgroup_props.subgroupSize;"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "Memory pressure and driver heap/type ordering can change device-local vs mapped/staging paths or selected subgroup/coopmat paths. Must inspect actual device/feature/log path per process; a fixed device/driver does not establish variation."
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "mechanism": "driver compile or implicit driver shader cache",
+      "rank": 4,
+      "source_basis": [
+        {
+          "lines": [
+            3260
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "createComputePipeline(VK_NULL_HANDLE"
+        },
+        {
+          "lines": [
+            3080
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "vk::ShaderModuleCreateInfo shader_module_create_info"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "createComputePipeline has null application cache and consumes embedded SPIR-V; driver-internal compilation/cache is implementation-defined and not evidenced as changing numerical results. There is no runtime glslang/dxc random seed or app cache key."
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "mechanism": "shape-sensitive reduction, MMVQ, cooperative matrix and split-K",
+      "rank": 5,
+      "source_basis": [
+        {
+          "lines": [
+            9052
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "if (k >= 2048)"
+        },
+        {
+          "lines": [
+            9839
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_should_use_mmvq(ctx->device, ne01, ne11, ne10, src0->type)"
+        },
+        {
+          "lines": [
+            97
+          ],
+          "path": "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl",
+          "what": "temp[j][n] = subgroupAdd(temp[j][n]);"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "Output prompt-ubatch shape can choose a different floating accumulation tree, but for identical shape/capabilities selection is deterministic. K>=2048 alone does not imply split-K; tiling/occupancy gate must also pass."
+    },
+    {
+      "affects_output_layer_gemm": false,
+      "mechanism": "ASLR/pointer-keyed reuse and submission timeline values",
+      "rank": 6,
+      "source_basis": [
+        {
+          "lines": [
+            9664
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->prealloc_y_last_tensor_used != src1"
+        },
+        {
+          "lines": [
+            8572
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->transfer_semaphore.value++;"
+        }
+      ],
+      "why_it_can_differ_across_fresh_processes": "Fresh processes have different pointer addresses and command/timeline histories; pointers appear in cache/alias predicates and counters in synchronization, but the source has no address-to-FP-value operation or RNG in output GEMM. Only a latent alias bug could turn this into numeric variance."
+    }
+  ],
+  "path_trace": [
+    {
+      "files": [
+        {
+          "lines": [
+            7723
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "vk::enumerateInstanceVersion()"
+        },
+        {
+          "lines": [
+            7773
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "vk_instance.instance = vk::createInstance"
+        },
+        {
+          "lines": [
+            7806
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "getenv(\"GGML_VK_VISIBLE_DEVICES\")"
+        },
+        {
+          "lines": [
+            6541
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "enumeratePhysicalDevices();"
+        },
+        {
+          "lines": [
+            3467
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_find_queue_family_index(std::vector"
+        },
+        {
+          "lines": [
+            3558
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_create_context(ggml_backend_vk_context * ctx"
+        }
+      ],
+      "narrative": "Vulkan loader (external VK_ICD_FILENAMES from accepted #250 env) supplies physical devices; ggml filters GGML_VK_VISIBLE_DEVICES indices. There is no VulkanExtension symbol at this pin. Physical-device extensions/features then gate coopmat, integer dot and subgroup; compute queue prefers non-graphics, transfer queue prefers transfer-only. Context owns a command pool/queue, not an independently enumerated device.",
+      "topic": "device_selection"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            1496
+          ],
+          "path": "src/llama-model.cpp",
+          "what": "const int i_gpu_start = std::max(n_layer_all + 1 - n_gpu_layers, 0);"
+        },
+        {
+          "lines": [
+            1521
+          ],
+          "path": "src/llama-model.cpp",
+          "what": "pimpl->dev_output = get_layer_buft_list(n_layer_all);"
+        },
+        {
+          "lines": [
+            10383
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_vk_mul_mat(ggml_backend_vk_context"
+        }
+      ],
+      "narrative": "Accepted #250 R5 proves ngl=1 places output head (full-vocabulary MUL_MAT) on Vulkan and embedding/repeating blocks on CPU; #250 R2 says first divergent row comes from last prompt ubatch. File-type IQ1_S family does NOT prove the specific output tensor quantization; exact variant is conditional on tensor type, activation type, shape, capability and compiled shaders. FQ/flash attention does not execute in this output projection.",
+      "topic": "output_projection"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            3628
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_find_memory_properties(const"
+        },
+        {
+          "lines": [
+            3749
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "buf->device_memory = device->device.allocateMemory({ mem_req.size"
+        },
+        {
+          "lines": [
+            3809
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static vk_buffer ggml_vk_create_buffer_device"
+        },
+        {
+          "lines": [
+            16756
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_backend_vk_buffer_set_tensor"
+        },
+        {
+          "lines": [
+            8755
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_ensure_sync_staging_buffer(dst->device, staging_size);"
+        }
+      ],
+      "narrative": "Tensor buffers choose host-visible/coherent device-local (ReBAR) if possible, otherwise device-local; memory types come from driver's requirements and available heaps, retried on failure. Output weight bytes must be loaded via set_tensor, direct mapped host-visible memcpy or host-coherent staging/copyBuffer with a fence. Device-buffer creation maps/binds but does not zero memory.",
+      "topic": "buffer_allocation"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            16735
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static enum ggml_status ggml_backend_vk_buffer_init_tensor"
+        },
+        {
+          "lines": [
+            16740
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "return GGML_STATUS_SUCCESS;"
+        },
+        {
+          "lines": [
+            16743
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_backend_vk_buffer_memset_tensor"
+        },
+        {
+          "lines": [
+            9030
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "subctx->s->buffer->buf.fillBuffer(dst->buffer, offset, size, c);"
+        },
+        {
+          "lines": [
+            8821
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_submit(subctx, dst->device->fence);"
+        }
+      ],
+      "narrative": "init_tensor only validates a view and returns success; NO blanket zero-fill. Explicit memset_tensor/clear uses vkCmdFillBuffer and waits for its fence; CPU memcpy for mapped memory or staging memcpy before submit initialize only written spans. Uninitialized allocation/padding is a conditional candidate, NOT proof that output GEMM reads uninitialized data.",
+      "topic": "buffer_initialization"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            3390
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_vk_submit(vk_context& ctx"
+        },
+        {
+          "lines": [
+            3462
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->p->q->handle->submit(submit_infos, fence);"
+        },
+        {
+          "lines": [
+            6802
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->max_nodes_per_submit = 100;"
+        },
+        {
+          "lines": [
+            16580
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->device->serialize_submissions) {"
+        },
+        {
+          "lines": [
+            3537
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->queue_submit_mutex"
+        },
+        {
+          "lines": [
+            17236
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->device->compute_queue->handle->submit({}, ctx->fence);"
+        }
+      ],
+      "narrative": "Command buffer records and ends, queue.submit accepts multiple ordered submissions with timeline waits/signals. Default graph submits unfenced chunks; a final synchronize submits a fence and waits. max_nodes_per_submit defaults to 100 and flops/almost-ready/end-node thresholds also submit. Multiple chunks can be in flight; NVIDIA serializes concurrent host queue submissions under queue_submit_mutex (not GPU command execution). Transfer queue is normally separate/aliased as driver permits, with timeline dependency.",
+      "topic": "submission"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            3864
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_vk_sync_buffers"
+        },
+        {
+          "lines": [
+            3873
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "subctx->s->buffer->buf.pipelineBarrier("
+        },
+        {
+          "lines": [
+            8774
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "subctx->s->buffer->buf.copyBuffer(staging_buffer->buffer, dst->buffer, slices);"
+        },
+        {
+          "lines": [
+            8572
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->transfer_semaphore.value++;"
+        },
+        {
+          "lines": [
+            413
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static void ggml_vk_synchronize(ggml_backend_vk_context * ctx)"
+        }
+      ],
+      "narrative": "ggml_vk_sync_buffers emits shader-read/write and transfer-read/write pipelineBarrier. Host-to-GPU pinned or staging writes use copyBuffer and submit; non-UMA reads use staging and fence, outgoing memcpy after completion. Async transfers can signal timeline semaphores; default async interface is supported on NVIDIA unless disabled.",
+      "topic": "host_device_sync"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            10451
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_mul_mat_vec_q_f16(ctx, subctx, cgraph, node_idx);"
+        },
+        {
+          "lines": [
+            10453
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_mul_mat_q_f16(ctx, subctx, src0, src1, dst, false);"
+        },
+        {
+          "lines": [
+            9839
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_should_use_mmvq(ctx->device, ne01, ne11, ne10, src0->type)"
+        },
+        {
+          "lines": [
+            5614
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "pipeline_dequant_mul_mat_vec_q8_1_f32[w][GGML_TYPE_IQ1_S][i]"
+        },
+        {
+          "lines": [
+            5553
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_IQ1_S][i]"
+        },
+        {
+          "lines": [
+            5582
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "pipeline_dequant_mul_mat_vec_f16_f32[w][GGML_TYPE_IQ1_S][i]"
+        },
+        {
+          "lines": [
+            9533
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_guess_matmul_pipeline_map(ctx, *mmp_map, ne01, ne11, aligned, false)"
+        },
+        {
+          "lines": [
+            4856
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "X(GGML_TYPE_IQ1_S,   iq1_s)"
+        },
+        {
+          "lines": [
+            4986
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "FOR_EACH_LUT_TYPE_NONFP4(X_CM2)"
+        },
+        {
+          "lines": [
+            5110
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "FOR_EACH_LUT_TYPE_NONFP4(X_CM1)"
+        },
+        {
+          "lines": [
+            5244
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "FOR_EACH_LUT_TYPE(X_SG)"
+        },
+        {
+          "lines": [
+            5352
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "FOR_EACH_LUT_TYPE(X_SG_FP32)"
+        },
+        {
+          "lines": [
+            5428
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->matmul_tile_selector = [](uint32_t m, uint32_t n"
+        },
+        {
+          "lines": [
+            3070
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_create_pipeline_func(vk_device& device"
+        }
+      ],
+      "narrative": "Output GGML_OP_MUL_MAT: vector path when <= mul_mat_vec_max_cols activation rows (e.g. one-token decode); otherwise matmul path. Vector IQ1_S may dispatch IQ1_S/Q8_1 integer-dot (if capability and MMVQ heuristic) or IQ1_S/F32/F16 dequant vector shader with subgroup/hybrid/shared-memory reduction; GEMM chooses quantized Q8_1 when possible then quantized F16/F32 map, finally dequantize-to-F16 fallback. Coopmat1/2 versus scalar is extension/build dependent, not established from #250's device label alone. Tile-selector, subgroup and workgroup dispatch all read device properties. Embedded SPIR-V is loaded; GLSL compiler is not invoked by this runtime path.",
+      "topic": "shader_dispatch"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            3335
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "if (!pipeline->compiled)"
+        },
+        {
+          "lines": [
+            857
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "compile_cv"
+        },
+        {
+          "lines": [
+            3260
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "createComputePipeline(VK_NULL_HANDLE"
+        },
+        {
+          "lines": [
+            7405
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_vk_load_shaders(device);"
+        }
+      ],
+      "narrative": "Pipelines are per-process vk_pipeline objects with compiled flag and compile mutex/CV; lazy compile once per requested variant. Vulkan createComputePipeline receives VK_NULL_HANDLE (NO application-managed vk::PipelineCache); no GGML_VK_PIPELINE_CACHE or GGML_VK_SHADER_CACHE getenv and no backend disk persistence path. Driver's own implicit cache is outside source proof: a cache hit cannot select another app-level variant; driver compilation behavior is not proven bitwise equivalent across processes.",
+      "topic": "pipeline_cache"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            2242
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ggml_pipeline_allocate_descriptor_sets(ggml_backend_vk_context"
+        },
+        {
+          "lines": [
+            8467
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->descriptor_sets[ctx->descriptor_set_idx++]"
+        },
+        {
+          "lines": [
+            16643
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->descriptor_set_idx = 0;"
+        },
+        {
+          "lines": [
+            16042
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "if (a_buf == o_buf)"
+        },
+        {
+          "lines": [
+            9664
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "ctx->prealloc_y_last_tensor_used != src1"
+        }
+      ],
+      "narrative": "Descriptor sets expand in per-context pools; each dispatch increments descriptor_set_idx and rewrites its bindings. Graph cleanup resets the index for next graph but keeps pools/sets until backend cleanup. Overlapping tensor buffer ranges are detected by buffer identity and offsets before barriers; prealloc_x/y/split_k scratch is shared/reused with explicit barriers. Pointer identity controls reuse but is not itself a floating arithmetic input.",
+      "topic": "descriptor_reuse"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            97
+          ],
+          "path": "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl",
+          "what": "temp[j][n] = subgroupAdd(temp[j][n]);"
+        },
+        {
+          "lines": [
+            157
+          ],
+          "path": "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl",
+          "what": "temp[j][n] += tmpsh[j][n][s];"
+        },
+        {
+          "lines": [
+            195
+          ],
+          "path": "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl",
+          "what": "tmpsh[j][n][tid] += tmpsh[j][n][tid + s];"
+        },
+        {
+          "lines": [
+            646
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "SHADER_REDUCTION_MODE_HYBRID"
+        },
+        {
+          "lines": [
+            9039
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "static uint32_t ggml_vk_guess_split_k"
+        },
+        {
+          "lines": [
+            9052
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "if (k >= 2048)"
+        },
+        {
+          "lines": [
+            9128
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "pipeline_matmul_split_k_reduce, { split_k_buffer, d }"
+        },
+        {
+          "lines": [
+            6760
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "device->subgroup_size = subgroup_props.subgroupSize;"
+        }
+      ],
+      "narrative": "IQ1_S vector shader includes subgroupAdd or shared-memory/hybrid sum and a device/shape-selected workgroup. Matmul tiles fix per-work-item accumulation order via specialization dimensions; split-K is chosen from K, tile count, shader core count when K>=2048 and uses a second ordered reduction pass. These can CHANGE arithmetic across distinct paths/geometries but no source proof says identical inputs/device/shape choose a different path per fresh process; split-K is not a presumed cause.",
+      "topic": "reduction_order"
+    },
+    {
+      "files": [
+        {
+          "lines": [
+            16533
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "#if defined(GGML_VULKAN_CHECK_RESULTS)"
+        },
+        {
+          "lines": [
+            15217
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "x[i] = (rand() / (float)RAND_MAX)"
+        },
+        {
+          "lines": [
+            3
+          ],
+          "path": "ggml/src/ggml-vulkan/ggml-vulkan.cpp",
+          "what": "#if defined(GGML_VULKAN_RUN_TESTS)"
+        }
+      ],
+      "narrative": "rand() calls exist only inside GGML_VULKAN_RUN_TESTS/ GGML_VULKAN_CHECK_RESULTS test helpers, not the production output GEMM path. This is a source-scoped exclusion, not a statement about driver internal randomness.",
+      "topic": "rng_scope"
+    }
+  ],
+  "schema": "inferswarm.issue252.vulkan-path.phase0/1",
+  "source_identity": {
+    "head": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+    "pinned_repository": "llama.cpp",
+    "predecessor_250_commit_literal_mismatch": true,
+    "predecessor_250_reported_commit_literal": "b29c606e28a01b1bc8c1351026a0fae616bf6c4",
+    "predecessor_250_tree_match": true,
+    "tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+    "verification": "git rev-parse HEAD HEAD^{tree}"
+  }
+}

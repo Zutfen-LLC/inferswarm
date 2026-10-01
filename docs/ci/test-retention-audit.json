@@ -4762,7 +4762,69 @@
   "scripts/issue250_terminal.py"
   ],
   "test_count_at_audit": 25
- }
+ },
+  "test_issue252_arms": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":6,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Prospective one-factor Vulkan discriminator definitions remain frozen and distinct; exact accepted source/model/request authority is bound without asserting causality from source inspection.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_arms.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_arms.py"],"test_count_at_audit":6},
+  "test_issue252_phase0": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":10,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Phase-0 source-first Vulkan path reconstruction and ranked hypothesis matrix authenticate pinned source and retained authority without physical execution.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_phase0.py","scripts/issue252_vulkanpath.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_phase0.py","scripts/issue252_vulkanpath.py"],"test_count_at_audit":10},
+  "test_issue252_physical": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":14,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Physical discriminator tooling fails closed on exact-head dispatch, frozen arm identity, one-factor plan, and append-only evidence custody; tests use fake execution only.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_physical.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_physical.py"],"test_count_at_audit":14},
+  "test_issue252_terminal": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":12,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Terminal reduction derives allowed outcomes from retained bytes and frozen discriminators; caller-supplied conclusions cannot grant a terminal.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_terminal.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_terminal.py"],"test_count_at_audit":12},
+  "test_issue252_vulkanpath": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":5,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Pinned llama.cpp Vulkan execution-path facts remain mechanically tied to the authenticated source tree and source-first evidence.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_vulkanpath.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_vulkanpath.py"],"test_count_at_audit":5},
+  "test_issue252_round4": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":26,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Round-4 adversarial contracts: the production reducer/capture API exposes no fetcher or offline-mode flag, A5 staging/allocation pairing is one-to-one and ordered per the pinned source, and A4 is honestly non-terminal-capable at pin b29c606e.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_terminal.py","scripts/issue252_capture.py","scripts/issue252_mechanism.py","scripts/issue252_physical.py"]},"pinned_by_evidence":[],"rationale":"Round-4 correction round (review of head 6bc9251); no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_terminal.py","scripts/issue252_capture.py","scripts/issue252_mechanism.py"],"test_count_at_audit":26},
+  "test_issue252_round5": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":11,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Round-5 adversarial contracts: A5 staging is an ordered buffer state transition per the pinned source (strict-< growth, destroy-current-then-allocate, no-op emission at or below active size); historical staging allocations are never summed.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_mechanism.py"]},"pinned_by_evidence":[],"rationale":"Round-5 correction round (review of head 9a18d4a); no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_mechanism.py"],"test_count_at_audit":11},
+  "test_issue252_capture": {
+    "baseline_group": "r8i-qwen-qualification",
+    "baseline_serial_seconds": 0.0,
+    "baseline_test_count": 15,
+    "category": "CURRENT_CONTRACT",
+    "disposition": "retain",
+    "group": "r8i-qwen-qualification",
+    "invariant": "Retained dispatch authority is retrieval-bound: a capture authenticates only when its immutable GitHub comment is independently re-fetched by exact ID and compared byte-for-byte; locally consistent objects never authorize retained evidence.",
+    "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+    "named_by_evidence": [],
+    "owned_surfaces": {
+      "evidence_read": [
+        "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+      ],
+      "scripts_imported": [
+        "scripts/issue252_capture.py"
+      ]
+    },
+    "pinned_by_evidence": [],
+    "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+    "referenced_by_scripts": [],
+    "replacement": null,
+    "source_modules": [
+      "scripts/issue252_capture.py"
+    ],
+    "test_count_at_audit": 15
+  },
+  "test_issue252_mechanism": {
+    "baseline_group": "r8i-qwen-qualification",
+    "baseline_serial_seconds": 0.0,
+    "baseline_test_count": 17,
+    "category": "CURRENT_CONTRACT",
+    "disposition": "retain",
+    "group": "r8i-qwen-qualification",
+    "invariant": "Each frozen arm's bounded mechanism claim requires retained raw Vulkan-side observations (enumeration, async marker, allocation-type/staging lines) proving the named intervention changed the intended runtime path; A1 is non-terminal-capable at this pin.",
+    "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+    "named_by_evidence": [],
+    "owned_surfaces": {
+      "evidence_read": [
+        "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+      ],
+      "scripts_imported": [
+        "scripts/issue252_mechanism.py"
+      ]
+    },
+    "pinned_by_evidence": [],
+    "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+    "referenced_by_scripts": [],
+    "replacement": null,
+    "source_modules": [
+      "scripts/issue252_mechanism.py"
+    ],
+    "test_count_at_audit": 17
+  }
+
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
  "schema": "inferswarm.ci.test-retention-audit/1",

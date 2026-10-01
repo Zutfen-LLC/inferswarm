@@ -242,6 +242,17 @@ GROUP_TEST_MODULES = {
         # cost gate, C1/C2 authority separation, evidence generation,
         # stale-dispatch regressions.
         "test_issue250_pass6_corrections",
+        # Issue #252 R8-I3C: source-first Vulkan mechanism localization,
+        # frozen one-factor arms, exact-head physical gate, and retained reducer.
+        "test_issue252_arms",
+        "test_issue252_phase0",
+        "test_issue252_physical",
+        "test_issue252_terminal",
+        "test_issue252_capture",
+        "test_issue252_mechanism",
+        "test_issue252_vulkanpath",
+        "test_issue252_round4",
+        "test_issue252_round5",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -347,6 +358,15 @@ PATH_GROUPS = {
     "tests/test_issue187_r7a.py": ["issue-187-r7a"],
     "tests/test_issue209_r7b.py": ["issue-209-r7b"],
     "tests/test_issue222_r7c.py": ["issue-222-r7c"],
+    "tests/test_issue252_arms.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_phase0.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_physical.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_terminal.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_capture.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_mechanism.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_vulkanpath.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_round4.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_round5.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full
@@ -642,6 +662,7 @@ PATH_GROUPS = {
     #
     # Current R8-I Qwen heterogeneous-Vulkan qualification (#237/#244).
     "docs/qualification/qwen38-vulkan-v1/": ["r8i-qwen-qualification"],
+    "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/": ["r8i-qwen-qualification"],
     "scripts/issue237_build_exclusion_inventory.py":
         ["r8i-qwen-qualification"],
     "scripts/issue237_freeze_tooling.py": ["r8i-qwen-qualification"],

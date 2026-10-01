@@ -1,0 +1,204 @@
+{
+  "arms": {
+    "A1": {
+      "contrast": "accepted #248/#250 retained populations read-only",
+      "control": {
+        "kind": "env",
+        "name": "GGML_VK_SERIALIZE_SUBMISSIONS",
+        "provenance": "ggml/src/ggml-vulkan/ggml-vulkan.cpp:7435"
+      },
+      "geometry": {
+        "case": "case-3072",
+        "fresh_process_per_unit": true,
+        "ngl": 1,
+        "request_contract": "byte-exact accepted #241/#250"
+      },
+      "namespace": "d252-arm-serialize",
+      "one_factor": "Enable GGML_VK_SERIALIZE_SUBMISSIONS to fence/serialize compute submissions",
+      "units": {
+        "min": 2,
+        "variable_stop": 5
+      }
+    },
+    "A2": {
+      "contrast": "accepted #248/#250 retained populations read-only",
+      "control": {
+        "kind": "env",
+        "name": "GGML_VK_DISABLE_COOPMAT",
+        "provenance": "ggml/src/ggml-vulkan/ggml-vulkan.cpp:6600"
+      },
+      "geometry": {
+        "case": "case-3072",
+        "fresh_process_per_unit": true,
+        "ngl": 1,
+        "request_contract": "byte-exact accepted #241/#250"
+      },
+      "namespace": "d252-arm-no-coopmat",
+      "one_factor": "Enable GGML_VK_DISABLE_COOPMAT to disable KHR cooperative-matrix feature detection",
+      "units": {
+        "min": 2,
+        "variable_stop": 5
+      }
+    },
+    "A3": {
+      "contrast": "accepted #248/#250 retained populations read-only",
+      "control": {
+        "kind": "env",
+        "name": "GGML_VK_DISABLE_ASYNC",
+        "provenance": "ggml/src/ggml-vulkan/ggml-vulkan.cpp:6724"
+      },
+      "geometry": {
+        "case": "case-3072",
+        "fresh_process_per_unit": true,
+        "ngl": 1,
+        "request_contract": "byte-exact accepted #241/#250"
+      },
+      "namespace": "d252-arm-no-async",
+      "one_factor": "Enable GGML_VK_DISABLE_ASYNC to disable backend asynchronous interface support",
+      "units": {
+        "min": 2,
+        "variable_stop": 5
+      }
+    },
+    "A4": {
+      "contrast": "accepted #248/#250 retained populations read-only",
+      "control": {
+        "kind": "env",
+        "name": "GGML_VK_PREFER_HOST_MEMORY",
+        "provenance": "ggml/src/ggml-vulkan/ggml-vulkan.cpp:6553"
+      },
+      "geometry": {
+        "case": "case-3072",
+        "fresh_process_per_unit": true,
+        "ngl": 1,
+        "request_contract": "byte-exact accepted #241/#250"
+      },
+      "namespace": "d252-arm-host-memory",
+      "one_factor": "Enable GGML_VK_PREFER_HOST_MEMORY to prefer coherent host-visible allocation",
+      "units": {
+        "min": 2,
+        "variable_stop": 5
+      }
+    },
+    "A5": {
+      "contrast": "accepted #248/#250 retained populations read-only",
+      "control": {
+        "kind": "env",
+        "name": "GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM",
+        "provenance": "ggml/src/ggml-vulkan/ggml-vulkan.cpp:6556"
+      },
+      "geometry": {
+        "case": "case-3072",
+        "fresh_process_per_unit": true,
+        "ngl": 1,
+        "request_contract": "byte-exact accepted #241/#250"
+      },
+      "namespace": "d252-arm-device-local",
+      "one_factor": "Enable GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM to prefer device-local-only allocation",
+      "units": {
+        "min": 2,
+        "variable_stop": 5
+      }
+    }
+  },
+  "authority": "repository-only; zero physical authority",
+  "hypotheses": [
+    {
+      "affects_output_layer_gemm": true,
+      "cost": "high",
+      "discriminator_arm": null,
+      "id": "H1",
+      "info_value": "high",
+      "mechanism": "GPU input/scratch content or padding read before initialization (unproven)",
+      "note": "No proven single-factor control establishes or forces initialization; source only shows conditional uninitialized-allocation exposure.",
+      "rank": 1,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:16735",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:9665"
+      ]
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "cost": "low",
+      "discriminator_arm": "A1",
+      "id": "H2",
+      "info_value": "high",
+      "mechanism": "Cross-queue synchronization or buffer-aliasing gap (unproven)",
+      "note": "Submission serialization is one isolated control; it can screen submission-order sensitivity but does not independently repair/prove alias tracking.",
+      "rank": 2,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:16042",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:8572"
+      ]
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "cost": "medium",
+      "discriminator_arm": "A4",
+      "id": "H3",
+      "info_value": "medium",
+      "mechanism": "Driver-reported memory type/capability or allocation fallback varies (unproven)",
+      "note": "Host-visible preference changes only the memory-type preference; it is a prospective allocation-path discriminator, not a forced fallback.",
+      "rank": 3,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:3747",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:6760"
+      ]
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "cost": "high",
+      "discriminator_arm": null,
+      "id": "H4",
+      "info_value": "low",
+      "mechanism": "Driver shader compilation or implicit driver shader cache (unproven numerical effect)",
+      "note": "No backend cache-control switch exists; VK_NULL_HANDLE excludes application cache, not driver-internal behavior.",
+      "rank": 4,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:3260",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:3080"
+      ]
+    },
+    {
+      "affects_output_layer_gemm": true,
+      "cost": "low",
+      "discriminator_arm": "A2",
+      "id": "H5",
+      "info_value": "high",
+      "mechanism": "Shape-sensitive reduction, MMVQ, cooperative matrix and split-K path selection",
+      "note": "Disabling only coopmat capability is a narrow shader-family/reduction-path screen; it does not jointly toggle MMVQ or split-K.",
+      "rank": 5,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:9052",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:9839",
+        "ggml/src/ggml-vulkan/vulkan-shaders/mul_mat_vec_base.glsl:97"
+      ]
+    },
+    {
+      "affects_output_layer_gemm": false,
+      "cost": "high",
+      "discriminator_arm": null,
+      "id": "H6",
+      "info_value": "low",
+      "mechanism": "ASLR/pointer-keyed reuse and submission timeline values (unproven indirect effect)",
+      "note": "No control directly fixes pointer-keyed reuse or makes pointer values arithmetic inputs; serialization is assigned to H2, not double-counted here.",
+      "rank": 6,
+      "source_basis": [
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:9664",
+        "ggml/src/ggml-vulkan/ggml-vulkan.cpp:8572"
+      ]
+    }
+  ],
+  "repeat_law": {
+    "deterministic_requires": 5,
+    "first_mismatch": "arm_variable_stop",
+    "screening_stability": 3,
+    "selection": "never_select_favorable_repeats"
+  },
+  "schema": "inferswarm.issue252.hypothesis-matrix.phase0/1",
+  "terminal_vocabulary": [
+    "R8I3C_VULKAN_MECHANISM_LOCALIZED_FIX_VALIDATED",
+    "R8I3C_VULKAN_MECHANISM_LOCALIZED_FIX_NOT_VALIDATED",
+    "R8I3C_VULKAN_MECHANISM_UNRESOLVED"
+  ]
+}

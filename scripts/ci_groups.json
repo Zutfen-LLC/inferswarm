@@ -123,7 +123,16 @@
     "test_issue250_amendment008_round2",
     "test_issue250_amendment008_reducer_admission",
     "test_issue250_amendment008_reducer_admission_negative",
-    "test_issue250_pass6_corrections"
+    "test_issue250_pass6_corrections",
+    "test_issue252_arms",
+    "test_issue252_phase0",
+    "test_issue252_physical",
+    "test_issue252_terminal",
+    "test_issue252_capture",
+    "test_issue252_mechanism",
+    "test_issue252_vulkanpath",
+    "test_issue252_round4",
+    "test_issue252_round5"
    ]
   },
   "repo-integrity": {
@@ -300,6 +309,9 @@
    "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/": [
+   "r8i-qwen-qualification"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/": [
    "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
@@ -1561,6 +1573,33 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue250_v0n_nvidia.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_arms.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_capture.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_mechanism.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_phase0.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_round4.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_round5.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_terminal.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_vulkanpath.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
