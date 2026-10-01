@@ -450,5 +450,244 @@ class RealExecuteEnumFreeTests(ProducerFixtureMixin, unittest.TestCase):
             PR.validate_producer_attestation(att)
 
 
+class FailureCrashRestartTests(ProducerFixtureMixin, unittest.TestCase):
+    """CPU-only real run_unit exception/finally and orphan restart controls."""
+
+    def setUp(self):
+        self.fixture()
+        self.arm = "A3"
+        self.ns = A.ARMS[self.arm]["namespace"]
+        self.work = (self.evidence / self.ns
+                     / ".exec-case-3072-B-a3-001.tmp")
+        self.artifacts = {"server.log": b"diagnostic server log\n",
+                          "obs.meta.json": b'{"pid":123}\n',
+                          "obs.row0.f32": b"\x00\x01\x02",
+                          "response.json.raw": b'{"tokens":[1]}'}
+        self.failure = PR.ProducerError("original execution failure")
+
+    def failing_execute(self, **kwargs):
+        work = kwargs["unit_dir"]
+        for name, raw in self.artifacts.items():
+            (work / name).write_bytes(raw)
+        raise self.failure
+
+    def run_failure(self):
+        with self.patched_orchestration(self.arm, execute=self.failing_execute):
+            with self.assertRaises(PR.ProducerError) as caught:
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm, binary=Path("/nonexistent"),
+                            timeout_s=60)
+        self.assertIs(caught.exception, self.failure)
+
+    def assert_preserved(self, work):
+        self.assertEqual({p.name: p.read_bytes() for p in work.iterdir()},
+                         self.artifacts)
+
+    def test_pre_rename_quarantine_failure_preserves_scratch(self):
+        quarantine = mock.Mock(side_effect=OSError("forced pre-rename failure"))
+        with mock.patch.object(PR, "quarantine_unit_failure", quarantine):
+            self.run_failure()
+        quarantine.assert_called_once()
+        self.assertTrue(self.work.is_dir(),
+                        "finally destroyed non-empty failed execution scratch")
+        self.assert_preserved(self.work)
+        self.assertIn("forced pre-rename failure",
+                      " ".join(getattr(self.failure, "__notes__", [])))
+
+    def test_quarantine_destination_collision_preserves_scratch(self):
+        with mock.patch.object(PR.time, "strftime", return_value="fixed"):
+            dest = (self.evidence / "producer-failure-quarantine" / self.ns
+                    / (self.work.name.lstrip(".") + "-fixed"))
+            dest.mkdir(parents=True)
+            (dest / "sentinel").write_bytes(b"prior failure")
+            self.run_failure()
+        self.assertTrue(self.work.is_dir(), "collision deleted evidence")
+        self.assert_preserved(self.work)
+        self.assertEqual((dest / "sentinel").read_bytes(), b"prior failure")
+
+    def test_orphan_exec_without_status_refuses_restart(self):
+        self.work.mkdir(parents=True)
+        for name, raw in self.artifacts.items():
+            (self.work / name).write_bytes(raw)
+        self.assertFalse((self.evidence /
+                          f"producer-status-{self.ns}.json").exists())
+        self.assertEqual(PR.retained_tags(self.evidence, self.ns), [])
+        with self.assertRaisesRegex(PR.ProducerError, "incomplete"):
+            PR.next_legal_unit(self.evidence, self.arm)
+        self.assert_preserved(self.work)
+
+    def test_orphan_unit_publication_staging_refuses_restart(self):
+        work = self.work.with_name(".unit-case-3072-B-a3-001.tmp")
+        work.mkdir(parents=True)
+        (work / "server.log").write_bytes(b"partial publication")
+        with self.assertRaisesRegex(PR.ProducerError, "incomplete"):
+            PR.next_legal_unit(self.evidence, self.arm)
+        self.assertEqual((work / "server.log").read_bytes(), b"partial publication")
+
+    def test_scratch_symlinks_and_unexpected_paths_refuse_restart(self):
+        base = self.work.parent
+        base.mkdir(parents=True)
+        for name in (self.work.name, ".unit-case-3072-B-a3-001.tmp",
+                     "case-3072-B-a3-001", ".unexpected"):
+            for kind in ("file", "dangling", "directory-link"):
+                with self.subTest(name=name, kind=kind):
+                    path = base / name
+                    if kind == "file":
+                        path.write_bytes(b"unexpected")
+                    else:
+                        path.symlink_to(self.root / "missing" if kind == "dangling"
+                                        else self.repo, target_is_directory=True)
+                    try:
+                        with self.assertRaises(PR.ProducerError):
+                            PR.next_legal_unit(self.evidence, self.arm)
+                    finally:
+                        path.unlink()
+
+    def test_namespace_symlink_and_file_refuse_restart(self):
+        base = self.work.parent
+        for kind in ("file", "dangling", "directory-link"):
+            with self.subTest(kind=kind):
+                if kind == "file":
+                    base.write_bytes(b"unexpected")
+                else:
+                    base.symlink_to(self.root / "missing" if kind == "dangling"
+                                    else self.repo, target_is_directory=True)
+                try:
+                    with self.assertRaises(PR.ProducerError):
+                        PR.next_legal_unit(self.evidence, self.arm)
+                finally:
+                    base.unlink()
+
+    def test_status_unexpected_path_refuses_restart(self):
+        status = self.evidence / f"producer-status-{self.ns}.json"
+        status.symlink_to(self.root / "missing")
+        with self.assertRaises(PR.ProducerError):
+            PR.next_legal_unit(self.evidence, self.arm)
+
+    def test_status_write_failure_does_not_mask_original_or_delete_scratch(self):
+        with mock.patch.object(PR, "retain_status_record",
+                               side_effect=OSError("status write failed")), \
+             mock.patch.object(PR, "quarantine_unit_failure",
+                               side_effect=OSError("quarantine failed")):
+            self.run_failure()
+        self.assert_preserved(self.work)
+        notes = " ".join(self.failure.__notes__)
+        self.assertIn("status write failed", notes)
+        self.assertIn("quarantine failed", notes)
+
+    def test_failed_nested_scratch_preserved_byte_for_byte(self):
+        def fail(**kwargs):
+            self.failing_execute(**kwargs)
+        def nested_fail(**kwargs):
+            nested = kwargs["unit_dir"] / "nested"
+            nested.mkdir()
+            (nested / "observer").write_bytes(b"nested artifact")
+            fail(**kwargs)
+        with self.patched_orchestration(self.arm, execute=nested_fail), \
+             mock.patch.object(PR, "quarantine_unit_failure",
+                               side_effect=OSError("quarantine failed")):
+            with self.assertRaises(PR.ProducerError) as caught:
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm, binary=Path("/nonexistent"), timeout_s=60)
+        self.assertIs(caught.exception, self.failure)
+        self.assertEqual((self.work / "nested" / "observer").read_bytes(),
+                         b"nested artifact")
+        for name, raw in self.artifacts.items():
+            self.assertEqual((self.work / name).read_bytes(), raw)
+
+    def test_successful_quarantine_preserves_all_execution_artifacts(self):
+        self.run_failure()
+        self.assertFalse(self.work.exists())
+        base = self.evidence / "producer-failure-quarantine" / self.ns
+        retained = list(base.iterdir())
+        self.assertEqual(len(retained), 1)
+        for name, raw in self.artifacts.items():
+            self.assertEqual((retained[0] / name).read_bytes(), raw)
+        self.assertEqual(json.loads((retained[0] / "failure-status.json")
+                                   .read_bytes())["error"],
+                         "ProducerError: original execution failure")
+
+
+    def test_quarantine_symlink_refused_without_evidence_loss(self):
+        target = self.root / "elsewhere"
+        target.mkdir()
+        base = self.evidence / "producer-failure-quarantine"
+        base.symlink_to(target, target_is_directory=True)
+        self.run_failure()
+        self.assert_preserved(self.work)
+        self.assertEqual(list(target.iterdir()), [])
+        self.assertIn("unexpected quarantine directory path",
+                      " ".join(self.failure.__notes__))
+
+    def test_post_rename_status_failure_preserves_quarantined_bytes(self):
+        write = PR._write_json_fsynced
+        def fail_quarantine_metadata(path, doc):
+            if path.name == "failure-status.json":
+                raise OSError("quarantine metadata failed")
+            return write(path, doc)
+        with mock.patch.object(PR, "_write_json_fsynced", fail_quarantine_metadata):
+            self.run_failure()
+        self.assertFalse(self.work.exists())
+        base = self.evidence / "producer-failure-quarantine" / self.ns
+        retained = list(base.iterdir())
+        self.assertEqual(len(retained), 1)
+        self.assert_preserved(retained[0])
+        self.assertIn("quarantine metadata failed", " ".join(self.failure.__notes__))
+
+    def test_successful_publication_cleans_duplicate_execution_scratch(self):
+        execute = self.fake_execute_unit()
+        def with_scratch(**kwargs):
+            unit = execute(**kwargs)
+            (kwargs["unit_dir"] / "server.log").write_bytes(unit["server_log"])
+            return unit
+        with self.patched_orchestration(self.arm, execute=with_scratch):
+            outcome = PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                                  arm=self.arm, binary=Path("/nonexistent"),
+                                  timeout_s=60)
+        self.assertFalse(self.work.exists())
+        self.assertTrue((Path(outcome["unit_dir"]) / "server.log").is_file())
+        self.assertEqual(PR.next_legal_unit(self.evidence, self.arm), 2)
+
+    def test_empty_orphan_exec_still_requires_explicit_recovery(self):
+        # Only the current run's pre-artifact scratch may be cleaned. An
+        # orphan's emptiness alone cannot authorize resuming a crashed run.
+        self.work.mkdir(parents=True)
+        with self.assertRaisesRegex(PR.ProducerError, "incomplete"):
+            PR.next_legal_unit(self.evidence, self.arm)
+
+    def test_discovery_covers_all_current_unpublished_directory_forms(self):
+        self.work.parent.mkdir(parents=True)
+        names = [".exec-case-3072-B-a3-001.tmp", ".unit-case-3072-B-a3-002.tmp"]
+        for name in names:
+            (self.work.parent / name).mkdir()
+        self.assertEqual(PR.incomplete_producer_scratch(self.evidence, self.ns),
+                         sorted(names))
+
+    def test_orphan_scratch_cannot_supply_mechanism_or_terminal_evidence(self):
+        # An otherwise fully admissible population must be BLOCKED by an
+        # orphan, not promoted or counted. Reducer policing is unchanged.
+        cap = self.live_capture(self.arm)
+        for i in range(1, 6):
+            self.write_unit_tree(self.arm, i, cap)
+        (self.evidence / "authority.json").write_text(json.dumps({
+            "repo_root": str(self.repo), "dispatch_capture": cap}))
+        with mock.patch.object(P252, "fetch_dispatch_comment",
+                               self.offline_comment_refetch()):
+            self.assertNotEqual(T252.derive_terminal(self.evidence, {}),
+                                T252.BLOCKED)
+            for prefix in (".exec-", ".unit-"):
+                work = self.work.with_name(prefix + "case-3072-B-a3-001.tmp")
+                work.mkdir()
+                (work / "server.log").write_bytes(b"diagnostic only")
+                try:
+                    self.assertEqual(T252.derive_terminal(self.evidence, {}),
+                                     T252.BLOCKED)
+                    with self.assertRaises(M.MechanismInvalid):
+                        M.mechanism_status(self.evidence, self.arm, self.ns)
+                    self.assertFalse((work / "unit.json").exists())
+                finally:
+                    shutil.rmtree(work)
+
+
 if __name__ == "__main__":
     unittest.main()
