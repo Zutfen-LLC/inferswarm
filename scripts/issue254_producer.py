@@ -53,6 +53,7 @@ import json
 import os
 import re
 import signal
+import shutil
 import subprocess
 import time
 import urllib.error
@@ -1048,12 +1049,31 @@ def retained_tags(evidence_root: Path, namespace: str) -> list[str]:
                   and not p.name.startswith("."))
 
 
-def staging_directories(evidence_root: Path, namespace: str) -> list[str]:
-    base = Path(evidence_root) / namespace
-    if not base.is_dir():
+def incomplete_producer_scratch(evidence_root: Path,
+                                namespace: str) -> list[str]:
+    """Discover BOTH unpublished forms; reject links/unexpected path types.
+
+    .exec-* holds execution artifacts before publication; .unit-* holds
+    atomic-publication staging. Neither is a retained unit, even without
+    a producer-status record after a hard crash. Discovery never promotes
+    or moves scratch and never follows namespace/entry symlinks.
+    """
+    root = Path(evidence_root)
+    base = root / namespace
+    for path in (root, base):
+        if path.is_symlink() or (path.exists() and not path.is_dir()):
+            raise ProducerError(f"unexpected producer directory path: {path}")
+    if not base.exists():
         return []
-    return sorted(p.name for p in base.iterdir()
-                  if p.is_dir() and p.name.startswith(".unit-"))
+    incomplete = []
+    for path in base.iterdir():
+        if path.is_symlink() or not path.is_dir():
+            raise ProducerError(f"unexpected producer namespace entry: {path.name}")
+        if path.name.startswith((".exec-", ".unit-")):
+            incomplete.append(path.name)
+        elif path.name.startswith("."):
+            raise ProducerError(f"unexpected producer namespace entry: {path.name}")
+    return sorted(incomplete)
 
 
 def next_legal_unit(evidence_root: Path, arm: str) -> int | None:
@@ -1064,13 +1084,13 @@ def next_legal_unit(evidence_root: Path, arm: str) -> int | None:
     stop) blocks further execution.
     """
     namespace = A.ARMS[arm]["namespace"]
-    if staging_directories(evidence_root, namespace):
+    if incomplete_producer_scratch(evidence_root, namespace):
         raise ProducerError(
             "incomplete staging unit present: crash recovery requires "
             "explicit quarantine before any continuation")
     status_path = (Path(evidence_root)
                    / f"producer-status-{namespace}.json")
-    if status_path.is_file():
+    if status_path.exists() or status_path.is_symlink():
         # Round-5 fail-closed continuation law (AMENDMENT-005 section D):
         # a prior unit failed after launch; its scratch is quarantined for
         # diagnosis and this evidence root refuses further execution unless
@@ -1151,7 +1171,11 @@ def quarantine_unit_failure(evidence_root: Path, namespace: str,
     physical evidence.
     """
     root = Path(evidence_root)
-    base = root / "producer-failure-quarantine" / namespace
+    quarantine = root / "producer-failure-quarantine"
+    base = quarantine / namespace
+    for path in (root, quarantine, base, work):
+        if path.is_symlink() or (path.exists() and not path.is_dir()):
+            raise ProducerError(f"unexpected quarantine directory path: {path}")
     base.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     dest = base / f"{work.name.lstrip('.')}-{stamp}"
@@ -1219,6 +1243,7 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
     if work.exists() or work.is_symlink():
         raise ProducerError(f"execution scratch already present: {work.name}")
     work.mkdir()
+    published = False
     try:
         capture = build_live_capture(dispatch)
         validate_live_capture_structure(capture)
@@ -1257,37 +1282,53 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
         final = publish_unit_atomically(
             evidence_root=Path(evidence_root), namespace=namespace, tag=tag,
             artifacts=artifacts, receipt=receipt, attestation=attestation)
-        return {"tag": tag, "unit_dir": str(final), "index": index,
-                "row_digest": _sha(b"".join(unit["observer_rows"]))}
+        outcome = {"tag": tag, "unit_dir": str(final), "index": index,
+                   "row_digest": _sha(b"".join(unit["observer_rows"]))}
+        published = True
+        return outcome
     except Exception as exc:
         record = {
             "status": "unit_failed", "arm": arm, "tag": tag,
             "error": f"{type(exc).__name__}: {exc}",
             "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
-        retain_status_record(Path(evidence_root), namespace, record)
-        # Round-5 quarantine (AMENDMENT-005 section D): preserve the failed
-        # scratch (server.log, obs.* rows/meta, raw response bytes when
-        # present) in a non-reducer namespace BEFORE cleanup — the scratch
-        # is the only holder of the unit's diagnostic server log. Only a
-        # scratch that never reached execute_unit (no artifacts at all) is
-        # simply removed by the finally block.
-        if work.exists() and any(work.iterdir()):
-            try:
+        try:
+            retain_status_record(Path(evidence_root), namespace, record)
+        except Exception as status_exc:
+            exc.add_note(f"producer status retention failed: {status_exc!r}")
+        # Preserve every failed non-empty scratch. Keep the ORIGINAL unit
+        # exception primary; secondary custody failures remain visible in
+        # its traceback notes and, when writable, the root status record.
+        try:
+            if work.is_symlink() or (work.exists() and not work.is_dir()):
+                raise ProducerError("unexpected execution scratch path")
+            if work.exists() and any(work.iterdir()):
                 quarantine_unit_failure(Path(evidence_root), namespace,
                                         work, record)
-            except Exception:
-                # Quarantine must never mask the original failure; the
-                # status record above still names it. If quarantine itself
-                # fails, LEAVE the scratch in place (never delete it) and
-                # the staging-refusal law blocks continuation.
-                pass
+        except Exception as quarantine_exc:
+            exc.add_note(f"failure quarantine failed: {quarantine_exc!r}; "
+                         f"scratch preserved if still present: {work}")
+            record["quarantine_error"] = repr(quarantine_exc)
+            try:
+                retain_status_record(Path(evidence_root), namespace, record)
+            except Exception as status_exc:
+                exc.add_note(f"producer status update failed: {status_exc!r}")
         raise
     finally:
-        if work.exists():
-            for child in sorted(work.rglob("*"), reverse=True):
-                if child.is_file():
-                    child.unlink()
-            work.rmdir()
+        if published:
+            # Only successful atomic publication permits removing duplicate
+            # execution artifacts: custody now lives in the validated unit.
+            if work.is_symlink() or not work.is_dir():
+                raise ProducerError("unexpected published execution scratch path")
+            shutil.rmtree(work)
+        elif not work.is_symlink():
+            # A failed/aborted run may remove ONLY an empty directory.
+            # rmdir is atomic and cannot delete artifacts (including nested
+            # files, dangling links, or files appearing since inspection).
+            # Missing after successful quarantine is also a harmless no-op.
+            try:
+                work.rmdir()
+            except OSError:
+                pass
 
 
 def run_arm(*, repo_root: Path, evidence_root: Path, arm: str,
