@@ -344,30 +344,41 @@ def _mechanism_a3(root: Path, namespace: str) -> dict[str, Any]:
 def _mechanism_a5(root: Path, namespace: str) -> dict[str, Any]:
     """A5: host-visible VRAM disabled; device-local path selected.
 
-    Per-unit law, enforced as an ORDERED one-to-one pairing over the
-    retained event stream (source-derived at pin b29c606e):
+    Per-unit law, enforced as an ORDERED STAGING-BUFFER STATE TRANSITION
+    over the retained event stream (source-derived at pin b29c606e,
+    ggml_vk_ensure_sync_staging_buffer :8601/:8611):
 
-    - With host-visible VRAM disabled and no sysmem fallback, weight
-      buffers are not host-visible, so uploads route through the staged
-      copy path: for every exact STAGING_LINE (:8603/:8613) the NEXT
-      memory-logger allocation line must be its own HOST-typed allocation
-      (:8605/:8615 -> log_allocation :2757) whose size equals the staging
-      line's size under the pin's format_size (:2249) 2-decimal rounding.
-      Between the two, at most ONE HOST-typed DEALLOCATION line — and only
-      when its size equals the CURRENT staging buffer's last allocation
-      (the growth path :8604 destroys the smaller existing buffer first).
-      One-to-one and multiplicity-enforcing: a staging line without its
-      allocation, two staging lines sharing one allocation, a same-sized
-      allocation from elsewhere, and a correct-sized allocation in the
-      wrong position are ALL rejected. Aggregate set/multiset/total
-      equality proves nothing and is not consulted.
+    - Growth condition (:8602): the ensure grows the buffer only when
+      `sync_staging == nullptr || sync_staging->size < size` (strict <).
+      On growth the pin logs the exact STAGING_LINE (:8603/:8613), then
+      DESTROYS the current buffer (:8604 — ggml_vk_destroy_buffer logs a
+      host-typed deallocation of exactly the CURRENT buffer's size, and is
+      a null no-op when no buffer exists), then allocates the new buffer
+      of exactly the requested size (host-typed allocation under the
+      pin's format_size :2249 2-decimal rounding). A repeated ensure that
+      does NOT require growth emits NOTHING — no staging line, no
+      deallocation, no allocation.
+    - State machine over the ordered stream: initial active staging size
+      is none; each exact STAGING_LINE opens one pending transition; with
+      no active buffer the very next memory event must be the paired
+      +host allocation of the exact staging size; with an active buffer
+      the request must strictly exceed it (a staging line for a request
+      at or below the active size is inauthentic — the pin would have
+      emitted nothing) and the transition must be exactly one -host
+      deallocation matching the CURRENT active size followed by the
+      paired +host allocation of the requested size. After pairing the
+      active size becomes the new allocation's size. Historical staging
+      allocations are already deallocated: they are never summed, never
+      again deallocatable, and a deallocation of their sizes is a foreign
+      host buffer.
+    - Every other host-typed memory event anywhere in the unit is
+      rejected: no unrelated host allocation may exist (a host-visible
+      weight buffer would prove the intervention was NOT live), no
+      duplicate or reordered deallocation, no missing destroy on growth.
+      One-to-one and multiplicity-enforcing by construction: aggregate
+      set/multiset/total equality proves nothing and is not consulted.
     - At least one DEVICE-typed allocation must be retained (Vulkan
       compute placement active).
-    - No OTHER host-typed allocation may exist anywhere in the unit (a
-      host-visible weight buffer would prove the intervention was NOT
-      live). Staging-buffers' own paired allocations are the only legal
-      host-typed lines; a host deallocation is legal only as the growth
-      replacement above.
     - The enumeration line must report the frozen subject family
       (one-factor law).
     - The arithmetic running-total ledger law stays independently enforced
@@ -382,88 +393,87 @@ def _mechanism_a5(root: Path, namespace: str) -> dict[str, Any]:
                 "A5 retained server log lacks the exact sync-staging line; "
                 "device-local-only path not evidenced")
         events = obs["ordered"]
-        stagings = obs["staging_sizes"]
-        allocated_as_staging: set[int] = set()
-        for st in stagings:
-            ai = st.get("alloc_index")
-            if ai is None:
-                raise MechanismInvalid(
-                    "A5 staging line without its matching host-typed "
-                    "staging allocation")
-            kind, direction, size = events[ai]
-            # The paired allocation must be the NEXT allocation line after
-            # the staging line (direct: index+1), or index+2 when exactly one
-            # host deallocation of the CURRENT staging buffer sits between
-            # (the pin's growth path :8604 destroys the smaller existing
-            # buffer before allocating the larger one).
-            if ai == st["index"] + 1:
-                # growth path: exactly one host deallocation of the current
-                # staging buffer between the staging line and its allocation
-                dkind, ddir, dsize = events[ai - 1]
-                if not (dkind == "host" and ddir == "-"
-                        and _size_eq(dsize, _current_staging_host_total(obs, ai - 1))):
-                    raise MechanismInvalid(
-                        "A5 host deallocation retained outside the "
-                        "staging growth-replacement path")
-            elif ai != st["index"]:
-                raise MechanismInvalid(
-                    "A5 staging event not immediately followed by its "
-                    "own host-typed allocation (ordered pairing law)")
-            if kind != "host" or direction != "+" or not _size_eq(size, st["size"]):
-                raise MechanismInvalid(
-                    "A5 paired allocation is not the staging buffer's own "
-                    "host-typed allocation of the exact staging size")
-            allocated_as_staging.add(ai)
+        transition_at = {st["index"]: st for st in obs["staging_sizes"]}
+        active: float | None = None  # current live staging buffer size
+        paired_events: set[int] = set()
         for idx, (kind, direction, size) in enumerate(events):
-            if kind != "host" or idx in allocated_as_staging:
+            st = transition_at.get(idx)
+            if st is not None:
+                # A staging transition opens at this position: the pin
+                # logs the staging line BEFORE the (optional) destroy and
+                # the paired allocation, so the transition occupies the
+                # immediately following event(s) — nothing may interleave.
+                requested = st["size"]
+                ai = st.get("alloc_index")
+                if active is None:
+                    # First buffer: the pin's destroy is a null no-op
+                    # (:3848 early return) — the NEXT event must be the
+                    # paired +host allocation itself.
+                    if ai != idx:
+                        raise MechanismInvalid(
+                            "A5 initial staging transition not immediately "
+                            "followed by its own host-typed staging "
+                            "allocation (ordered pairing law)")
+                else:
+                    if requested <= active:
+                        raise MechanismInvalid(
+                            "A5 retained staging line for a request that "
+                            "does not require growth: the pin emits nothing "
+                            "when sync_staging->size >= size (:8602), so an "
+                            "exact staging line here is inauthentic")
+                    if ai != idx + 1:
+                        raise MechanismInvalid(
+                            "A5 staging growth must destroy the current "
+                            "staging buffer before allocating (:8604): "
+                            "exactly one host deallocation then the paired "
+                            "host-typed staging allocation (ordered "
+                            "transition law)")
+                    dkind, ddir, dsize = events[idx]
+                    if not (dkind == "host" and ddir == "-"
+                            and _size_eq(dsize, active)):
+                        raise MechanismInvalid(
+                            "A5 growth deallocation does not match the "
+                            "CURRENT active staging buffer size; historical "
+                            "staging allocations are already deallocated "
+                            "and are never summed")
+                    paired_events.add(idx)
+                pkind, pdir, psize = events[ai]
+                if pkind != "host" or pdir != "+" or not _size_eq(psize,
+                                                                  requested):
+                    raise MechanismInvalid(
+                        "A5 paired allocation is not the staging buffer's "
+                        "own host-typed allocation of the exact staging "
+                        "size")
+                paired_events.add(ai)
+                active = psize
                 continue
-            if direction == "+":
+            if kind == "host" and idx not in paired_events:
                 raise MechanismInvalid(
-                    "A5 host-typed allocation other than the staging buffer "
-                    "itself retained; host-visible VRAM not disabled as claimed")
-            # host deallocation outside pairing: only legal as the growth
-            # path's replaced buffer (immediately followed by the paired
-            # larger allocation); anything else is a foreign host buffer
-            if not _is_growth_replacement_dealloc(obs, idx):
-                raise MechanismInvalid(
-                    "A5 host deallocation outside the staging "
-                    "growth-replacement path retained")
+                    "A5 host-typed memory event outside the staging "
+                    "growth-replacement state machine retained"
+                    + ("; host-visible VRAM not disabled as claimed"
+                       if direction == "+" else
+                       " (unrelated/duplicate/reordered host "
+                       "deallocation)"))
         if not any(kind == "device" for kind, _, _ in events):
             raise MechanismInvalid("A5 no device-typed allocation retained")
-        staging_events += len(stagings)
+        staging_events += len(obs["staging_sizes"])
     return {"arm": "A5", "staging_events": staging_events,
             "mechanism": "host-visible VRAM disabled and staged-upload path "
-                         "selected (every exact sync-staging line paired "
-                         "one-to-one, in order, with its own host-typed "
-                         "allocation of the exact staging size; no other "
-                         "host-typed allocation; device-typed compute "
-                         "allocations in every unit)"}
+                         "selected (every exact sync-staging line drives an "
+                         "ordered staging-buffer state transition: initial "
+                         "or growth pairing with its own host-typed "
+                         "allocation of the exact staging size, growth "
+                         "destroying exactly the current buffer, no "
+                         "no-growth staging lines, no other host-typed "
+                         "memory event; device-typed compute allocations "
+                         "in every unit)"}
 
 
 def _size_eq(a: float, b: float) -> bool:
     """Equality under the pin's format_size (:2249) 2-decimal rounding."""
     quantum = max(a, b) * 0.005 + 1.0
     return abs(a - b) <= quantum
-
-
-def _current_staging_host_total(obs: dict[str, Any], up_to: int) -> float:
-    """Host bytes allocated by staging-paired allocations before index."""
-    total = 0.0
-    for st in obs["staging_sizes"]:
-        ai = st.get("alloc_index")
-        if ai is not None and ai < up_to:
-            total += obs["ordered"][ai][2]
-    return total
-
-
-def _is_growth_replacement_dealloc(obs: dict[str, Any], idx: int) -> bool:
-    """True when host-dealloc at idx is the growth path's replaced buffer
-    (immediately followed by a staging-paired host allocation)."""
-    for st in obs["staging_sizes"]:
-        ai = st.get("alloc_index")
-        if ai is not None and ai == idx + 1:
-            return True
-    return False
 
 
 # A1: GGML_VK_SERIALIZE_SUBMISSIONS sets device->serialize_submissions

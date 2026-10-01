@@ -187,7 +187,10 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         # host-visible memory was NOT disabled.
         log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2), ("host", 16 * 1024 ** 2)])
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
-        with self.assertRaisesRegex(M.MechanismInvalid, "other than the staging"):
+        # Round 5 renamed the vocabulary: host allocations outside the
+        # staging state machine (previously "other than the staging").
+        with self.assertRaisesRegex(M.MechanismInvalid,
+                                    "outside the staging"):
             M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_without_staging_allocation_rejected(self):

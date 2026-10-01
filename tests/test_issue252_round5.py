@@ -94,7 +94,11 @@ class MultiGrowthTests(FixtureMixin, unittest.TestCase):
         events += [("staging", 8 * MIB), ("dealloc", "host", 5 * MIB),
                    ("alloc", "host", 8 * MIB), ("alloc", "device", 64 * MIB)]
         write(self.evidence, A5_NS, "u1", build_log(events))
-        with self.assertRaisesRegex(M.MechanismInvalid, "staging"):
+        # At the corrected head the arithmetic ledger fires first (a
+        # sum-of-history deallocation always exceeds the live host bytes,
+        # underflowing the running total); the staging law rejects it
+        # independently. Either vocabulary proves rejection.
+        with self.assertRaisesRegex(M.MechanismInvalid, "staging|ledger"):
             self.status()
 
     def test_red_growth_without_required_dealloc_rejected(self):
