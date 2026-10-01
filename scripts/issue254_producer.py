@@ -596,30 +596,69 @@ def _collect_observer(observer_prefix: Path) -> tuple[list[bytes], bytes]:
 
 
 def _placement_from_log(server_log: bytes,
-                        env: dict[str, str]) -> dict[str, Any]:
-    """ngl=1 Vulkan placement evidence from retained log + env law."""
+                        env: dict[str, str],
+                        argv: list[str] | None = None) -> dict[str, Any]:
+    """ngl=1 Vulkan placement evidence from retained facts (AMENDMENT-005).
+
+    Round-5 correction (second physical A3 attempt, dispatched head
+    a090c41): the retained server-log stream of this frozen host/runtime
+    family physically carries NO ``ggml_vulkan`` device-enumeration banner,
+    so requiring exactly one enum line made every physically real unit fail
+    placement after a fully successful inference. The exact enum-line
+    requirement is removed (AMENDMENT-005); placement is derived
+    mechanically from the retained facts captured for every unit:
+
+    - frozen launch geometry: ``-ngl 1`` in argv;
+    - ``CUDA_VISIBLE_DEVICES=-1`` (no CUDA participation);
+    - ``VK_ICD_FILENAMES`` equals the frozen NVIDIA Vulkan ICD;
+    - ``GGML_VK_VISIBLE_DEVICES=0``;
+    - frozen GPU UUID (HOST_FACTS identity authority);
+    - the frozen HOST_FACTS capability as identity authority for
+      ``vulkan_family`` (never a per-unit log observation — no enumeration
+      line is fabricated).
+
+    A retained enum banner is still checked WHEN PRESENT: more than one
+    remains a hard failure (second participating device). A2/A5 mechanism
+    enum/memory laws are unchanged (issue252_mechanism).
+    """
     if env.get("CUDA_VISIBLE_DEVICES") != "-1":
         raise ProducerError("CUDA not excluded from the execution path")
     if env.get("VK_ICD_FILENAMES") != P252.ICD:
         raise ProducerError("Vulkan ICD is not the frozen subject ICD")
+    if env.get("GGML_VK_VISIBLE_DEVICES") != "0":
+        raise ProducerError(
+            "Vulkan visible devices is not the frozen single-device value")
+    if argv is not None:
+        ngl = [i for i, a in enumerate(argv) if a == "-ngl"]
+        if len(ngl) != 1 or argv[ngl[0] + 1] != "1":
+            raise ProducerError(
+                "launch argv does not carry exactly the frozen -ngl 1 "
+                "geometry")
     text = server_log.decode("utf-8", errors="strict")
     import issue252_mechanism as M
     enum_lines = [line for line in text.splitlines()
                   if M.ENUM_LINE.match(line)]
-    if len(enum_lines) != 1:
+    if len(enum_lines) > 1:
+        # Not required (AMENDMENT-005), but a second banner is still the
+        # second-GPU evidence the adversarial law polices.
         raise ProducerError(
-            "server log does not carry exactly one Vulkan device "
-            "enumeration line")
-    family = M.ENUM_LINE.match(enum_lines[0]).group("family")
-    if family not in ("NV_coopmat2",):
-        raise ProducerError(
-            f"participating Vulkan device family {family!r} is not the "
-            "frozen subject capability")
-    return {"output_projection": "Vulkan", "embedding": "CPU", "ngl": 1,
-            "gpu_uuid": C252.HOST_FACTS["gpu_uuid"],
-            "vulkan_family": family,
-            "cuda_participation": False,
-            "enumeration_line": enum_lines[0]}
+            "server log carries more than one Vulkan device enumeration "
+            "line (second participating device)")
+    placement: dict[str, Any] = {
+        "output_projection": "Vulkan", "embedding": "CPU", "ngl": 1,
+        "gpu_uuid": C252.HOST_FACTS["gpu_uuid"],
+        "vulkan_family": M.SUBJECT_ENUM_FAMILY,
+        "vulkan_family_authority": "frozen-host-facts",
+        "cuda_participation": False}
+    if enum_lines:
+        enum_match = M.ENUM_LINE.match(enum_lines[0])
+        family = enum_match.group("family") if enum_match else None
+        if family != M.SUBJECT_ENUM_FAMILY:
+            raise ProducerError(
+                f"participating Vulkan device family {family!r} is not the "
+                "frozen subject capability")
+        placement["enumeration_line"] = enum_lines[0]
+    return placement
 
 
 def _terminate_group(proc: subprocess.Popen) -> None:
@@ -701,8 +740,11 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
         if proc is not None:
             _terminate_group(proc)
     # Placement evidence is derived from the COMPLETE retained server log
-    # (read only after the measured process has terminated).
-    placement = _placement_from_log(log_path.read_bytes(), env)
+    # (read only after the measured process has terminated) under the
+    # AMENDMENT-005 law: frozen geometry/identity facts; the enum banner is
+    # NOT required (physically absent from this instrument's retained
+    # stream).
+    placement = _placement_from_log(log_path.read_bytes(), env, argv)
     stats_post = observe_model_stats(MODEL_DIR)
     drift = stat_witness_changed(stats_pre, stats_post)
     if drift:
@@ -1026,6 +1068,17 @@ def next_legal_unit(evidence_root: Path, arm: str) -> int | None:
         raise ProducerError(
             "incomplete staging unit present: crash recovery requires "
             "explicit quarantine before any continuation")
+    status_path = (Path(evidence_root)
+                   / f"producer-status-{namespace}.json")
+    if status_path.is_file():
+        # Round-5 fail-closed continuation law (AMENDMENT-005 section D):
+        # a prior unit failed after launch; its scratch is quarantined for
+        # diagnosis and this evidence root refuses further execution unless
+        # an operator explicitly moves to a fresh evidence root.
+        raise ProducerError(
+            "prior unit failure retained on this evidence root "
+            f"({status_path.name}): continuation requires a fresh "
+            "evidence root (fail-closed)")
     planned = planned_tags(arm)
     retained = retained_tags(evidence_root, namespace)
     if set(retained) - set(planned):
@@ -1078,6 +1131,38 @@ def retain_status_record(evidence_root: Path, namespace: str,
     doc = {"schema": "inferswarm.issue254.producer-status/1",
            "namespace": namespace, **record}
     _write_json_fsynced(path, doc)
+
+
+def quarantine_unit_failure(evidence_root: Path, namespace: str,
+                            work: Path, record: dict[str, Any]) -> Path:
+    """Round-5 fail-closed quarantine of a failed unit's scratch (AMENDMENT-005).
+
+    A real unit that failed after launch but before atomic publication is
+    the ONLY holder of its diagnostic server.log / observer rows / raw
+    response bytes — the scratch cleanup must never destroy them. This
+    moves every file of the failed scratch directory into a clearly
+    non-reducer namespace (``producer-failure-quarantine/<namespace>/``)
+    under the evidence root, plus the failure/status metadata. The
+    quarantine namespace is never a planned retained unit, is not the
+    arm namespace, and the reducer's namespace policing
+    (derive_terminal unplanned-namespace check + _arm_units) refuses it
+    as physical population evidence. Quarantined artifacts are diagnostic
+    ONLY: they are never promoted to unit.json / producer-attested
+    physical evidence.
+    """
+    root = Path(evidence_root)
+    base = root / "producer-failure-quarantine" / namespace
+    base.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    dest = base / f"{work.name.lstrip('.')}-{stamp}"
+    if dest.exists() or dest.is_symlink():
+        raise ProducerError(f"quarantine destination exists: {dest.name}")
+    work.rename(dest)
+    _write_json_fsynced(dest / "failure-status.json", {
+        "schema": "inferswarm.issue254.failure-quarantine/1",
+        "namespace": namespace, "source_scratch": work.name, **record})
+    _fsync_dir(base)
+    return dest
 
 
 def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
@@ -1175,10 +1260,27 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
         return {"tag": tag, "unit_dir": str(final), "index": index,
                 "row_digest": _sha(b"".join(unit["observer_rows"]))}
     except Exception as exc:
-        retain_status_record(Path(evidence_root), namespace, {
+        record = {
             "status": "unit_failed", "arm": arm, "tag": tag,
             "error": f"{type(exc).__name__}: {exc}",
-            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        retain_status_record(Path(evidence_root), namespace, record)
+        # Round-5 quarantine (AMENDMENT-005 section D): preserve the failed
+        # scratch (server.log, obs.* rows/meta, raw response bytes when
+        # present) in a non-reducer namespace BEFORE cleanup — the scratch
+        # is the only holder of the unit's diagnostic server log. Only a
+        # scratch that never reached execute_unit (no artifacts at all) is
+        # simply removed by the finally block.
+        if work.exists() and any(work.iterdir()):
+            try:
+                quarantine_unit_failure(Path(evidence_root), namespace,
+                                        work, record)
+            except Exception:
+                # Quarantine must never mask the original failure; the
+                # status record above still names it. If quarantine itself
+                # fails, LEAVE the scratch in place (never delete it) and
+                # the staging-refusal law blocks continuation.
+                pass
         raise
     finally:
         if work.exists():

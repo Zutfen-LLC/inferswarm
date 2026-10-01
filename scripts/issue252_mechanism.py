@@ -320,25 +320,108 @@ def _mechanism_a2(root: Path, namespace: str) -> dict[str, Any]:
                          "'none' in every unit)"}
 
 
+def _require_retained_a3_placement(unit: Path) -> None:
+    """A3 placement/identity law under METHODOLOGY-AMENDMENT-005 (round 5).
+
+    Physical fact (second A3 attempt, dispatched head a090c41): the retained
+    server-log stream of this frozen host/runtime family physically carries
+    NO ``ggml_vulkan`` device-enumeration banner, so the enum line can no
+    longer be REQUIRED as A3's Vulkan-participation observable. The A3
+    placement proof instead re-derives from the retained facts captured for
+    every unit: the frozen producer-attested Vulkan placement (the /3
+    producer law — env CUDA_VISIBLE_DEVICES=-1, frozen NVIDIA ICD,
+    GGML_VK_VISIBLE_DEVICES=0, ngl=1, frozen GPU UUID, no CUDA
+    participation, argv/env read back from /proc and bound into the
+    attestation) and the frozen subject identity observations (pre/post
+    equal to the frozen HOST_FACTS). This helper is A3-only; A2/A5 keep
+    their genuine enum/memory observables untouched.
+    """
+    import issue254_producer as PR254
+
+    def _obj(rel: str) -> dict[str, Any]:
+        path = unit / rel
+        if path.is_symlink() or not path.is_file():
+            raise MechanismInvalid(
+                f"A3 retained unit lacks {rel} (placement/identity evidence)")
+        try:
+            doc = json.loads(path.read_bytes())
+        except json.JSONDecodeError as exc:
+            raise MechanismInvalid(
+                f"A3 retained {rel} is not valid JSON") from exc
+        if not isinstance(doc, dict):
+            raise MechanismInvalid(f"A3 retained {rel} is not an object")
+        return doc
+
+    placement = _obj("placement.json")
+    if (placement.get("output_projection") != "Vulkan"
+            or placement.get("embedding") != "CPU"
+            or placement.get("ngl") != 1
+            or placement.get("cuda_participation") is not False):
+        raise MechanismInvalid(
+            "A3 retained placement is not the frozen producer-attested "
+            "Vulkan geometry (Vulkan output projection, CPU embedding, "
+            "ngl=1, no CUDA participation)")
+    gpu_uuid = placement.get("gpu_uuid")
+    if (not isinstance(gpu_uuid, str)
+            or not gpu_uuid
+            or gpu_uuid != PR254.C252.HOST_FACTS["gpu_uuid"]):
+        raise MechanismInvalid(
+            "A3 retained placement GPU UUID differs from the frozen "
+            "subject identity")
+    family = placement.get("vulkan_family")
+    if family is not None and family != SUBJECT_ENUM_FAMILY:
+        # identity-authority value only (frozen HOST_FACTS capability);
+        # when present it must be the frozen subject capability.
+        raise MechanismInvalid(
+            "A3 placement vulkan_family differs from the frozen HOST_FACTS "
+            "capability authority")
+    for phase in ("identity-pre.json", "identity-post.json"):
+        identity = _obj(phase)
+        if any(identity.get(k) != v
+               for k, v in PR254.C252.HOST_FACTS.items()):
+            raise MechanismInvalid(
+                f"A3 retained {phase} differs from the frozen subject "
+                "identity (one-factor law)")
+
+
 def _mechanism_a3(root: Path, namespace: str) -> dict[str, Any]:
     """A3: async backend behavior disabled for the measured execution.
 
-    Law: every retained unit's server.log contains the EXACT stderr line the
-    pin emits when support_async is false (:6727), full-line equality — plus
-    the exact enumeration line proving the Vulkan path stayed active on the
-    frozen subject (one-factor law: A3's control cannot change the reported
-    matrix-core family).
+    Law (amended round 5, METHODOLOGY-AMENDMENT-005): every retained unit's
+    server.log contains the EXACT stderr line the pin emits when
+    support_async is false (:6727), full-line equality — plus the frozen
+    producer-attested Vulkan placement/identity facts for the same unit
+    (enum banner no longer physically retained by this instrument, so the
+    old one-factor enum requirement is replaced by the /3 producer
+    attestation's retained identity/env facts; A2/A5 unchanged).
     """
     for unit in _arm_units(root, namespace):
         obs = _unit_observations(_unit_server_log(unit))
         if not obs["async_disabled"]:
             raise MechanismInvalid(
                 "A3 retained server log lacks the exact async-disabled line")
-        _require_subject_family(obs, "A3")
+        if obs["families"] and obs["families"][0] != SUBJECT_ENUM_FAMILY:
+            # The enum banner is no longer REQUIRED (AMENDMENT-005), but a
+            # banner that IS retained must still report the frozen subject
+            # capability: a forged family change under A3 violates the
+            # one-factor law (A3's control cannot change coopmat detection).
+            raise MechanismInvalid(
+                f"A3 enumeration family {obs['families'][0]!r} differs "
+                f"from the frozen subject capability "
+                f"{SUBJECT_ENUM_FAMILY!r}; this arm's control cannot "
+                "change cooperative-matrix detection — the run was not "
+                "one-factor on the frozen subject")
+        if len(obs["families"]) > 1:
+            raise MechanismInvalid(
+                "multiple device enumeration lines in one unit; the "
+                "frozen one-device launch emits exactly one")
+        _require_retained_a3_placement(unit)
     return {"arm": "A3",
             "mechanism": "backend async interface disabled at runtime "
-                         "(exact disabled-marker line retained in every unit, "
-                         "Vulkan path active)"}
+                         "(exact disabled-marker line retained in every "
+                         "unit, producer-attested Vulkan placement and "
+                         "frozen subject identity retained per unit "
+                         "(AMENDMENT-005))"}
 
 
 def _mechanism_a5(root: Path, namespace: str) -> dict[str, Any]:

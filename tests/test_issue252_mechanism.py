@@ -5,6 +5,7 @@ allocation lines, mixed-unit tallies, and near-miss markers must all be
 rejected by the exact-format + ledger laws.
 """
 from __future__ import annotations
+import json
 import unittest
 from pathlib import Path
 
@@ -68,6 +69,17 @@ def write(root: Path, namespace: str, name: str, log: str) -> None:
     unit = root / namespace / name
     unit.mkdir(parents=True, exist_ok=True)
     (unit / "server.log").write_text(log, encoding="utf-8")
+    # AMENDMENT-005: A3's retained placement/identity law reads these
+    # per-unit files; A2/A5 validators ignore them.
+    (unit / "placement.json").write_text(json.dumps({
+        "output_projection": "Vulkan", "embedding": "CPU", "ngl": 1,
+        "gpu_uuid": C.HOST_FACTS["gpu_uuid"],
+        "vulkan_family": "NV_coopmat2",
+        "vulkan_family_authority": "frozen-host-facts",
+        "cuda_participation": False}, sort_keys=True))
+    for phase in ("identity-pre.json", "identity-post.json"):
+        (unit / phase).write_text(
+            json.dumps(dict(C.HOST_FACTS), sort_keys=True))
 
 
 class MechanismTests(FixtureMixin, unittest.TestCase):

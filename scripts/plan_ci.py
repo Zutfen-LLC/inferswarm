@@ -256,6 +256,9 @@ GROUP_TEST_MODULES = {
         # Issue #254 R8-I3C Phase 1: live producer/custody + adversarial
         # matrix (no physical execution in Phase A).
         "test_issue254_producer",
+        # Issue #254 round 5: enum-free A3 placement/mechanism law
+        # (AMENDMENT-005) + pre-publication failure quarantine regressions.
+        "test_issue254_round5",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).

@@ -133,7 +133,8 @@
     "test_issue252_vulkanpath",
     "test_issue252_round4",
     "test_issue252_round5",
-    "test_issue254_producer"
+    "test_issue254_producer",
+    "test_issue254_round5"
    ]
   },
   "repo-integrity": {
