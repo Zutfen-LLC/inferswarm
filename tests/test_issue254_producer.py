@@ -260,7 +260,7 @@ class ProducerFixtureMixin:
             request = request if request is not None else D.REQUEST_CONTRACT
             geom = P252.launch_geometry(
                 arm, binary, PR.MODEL_DIR / next(iter(C252.MODEL_MEMBERS)),
-                unit_dir)
+                unit_dir / "obs")
             argv, env = geom["argv"], geom["env"]
             if env_tamper:
                 env = {**env, **env_tamper}
@@ -397,6 +397,155 @@ class ProducerFixtureMixin:
             (unit_dir / "producer-attestation.json").write_text(
                 json.dumps(attestation, sort_keys=True))
         return unit_dir
+
+
+class ObserverPrefixLawTests(ProducerFixtureMixin, unittest.TestCase):
+    """Phase-B A3 correction: LLAMA_OBSERVE_OUT is a path PREFIX.
+
+    The pinned comparator emits ``<prefix>.rowN.f32`` / ``<prefix>.meta.json``
+    as SIBLINGS of the LLAMA_OBSERVE_OUT string (the accepted #250 producer's
+    ``unit_dir / "obs"`` seam), never children of a directory. At the
+    reviewed head 37d91cde the producer passed the bare scratch directory
+    through launch_geometry AND collected the directory as if it were the
+    prefix, so the frozen env carried LLAMA_OBSERVE_OUT=<unit_dir> and every
+    real unit failed collection with FileNotFoundError after successful
+    inference (Phase-B A3 unit-001). These regressions pin the prefix
+    contract against the REAL collector and the REAL launch seam.
+    """
+
+    def test_collect_observer_consumes_comparator_prefix_naming(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_dir = Path(tmp)
+            prefix = unit_dir / "obs"
+            # Simulate the comparator's EXACT output naming law: prefix
+            # siblings <prefix>.meta.json / <prefix>.rowN.f32.
+            meta = NL.join(json.dumps({"pos": i, "pid": 4242}) + NL
+                           for i in range(D.DECISIONS)).encode()
+            rows = [bytes([i]) + bytes(D.ROW_BYTES - 1)
+                    for i in range(D.DECISIONS)]
+            Path(f"{prefix}.meta.json").write_bytes(meta)
+            for n, row in enumerate(rows):
+                Path(f"{prefix}.row{n}.f32").write_bytes(row)
+            collected_rows, collected_meta = PR._collect_observer(prefix)
+            self.assertEqual(collected_meta, meta)
+            self.assertEqual(collected_rows, rows)
+
+    def test_collect_observer_fails_closed_on_prefix_law_violation(self):
+        # A directory carrying children shaped like the RETAINED names
+        # (obs.rowN.f32 inside the unit dir) is NOT reachable through the
+        # prefix law: the real comparator writes prefix siblings, so a
+        # collector that accepted directory children here would hide the
+        # divergence again (collector-vs-instrument naming divergence).
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_dir = Path(tmp)
+            (unit_dir / "obs.meta.json").write_bytes(b'{"pos": 0}')
+            for n in range(D.DECISIONS):
+                (unit_dir / f"obs.row{n}.f32").write_bytes(b"\0" * D.ROW_BYTES)
+            with self.assertRaises(FileNotFoundError):
+                PR._collect_observer(unit_dir)
+
+    def test_execute_unit_launches_with_observer_prefix_not_unit_dir(self):
+        # REAL end-to-end execute_unit: a real subprocess playing the
+        # pinned comparator (real Popen, real /proc attribution readback,
+        # real launch seam). Only the physical-host seams unavailable on a
+        # CPU host are mocked (comparator/model bytes, identity, health) —
+        # observation collection runs unmocked against REAL files written
+        # by the real child following the comparator's prefix naming law.
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "llama-server"
+            # The fake comparator follows the PINNED naming law exactly:
+            # LLAMA_OBSERVE_OUT is a path PREFIX; it writes
+            # <prefix>.meta.json / <prefix>.rowN.f32 siblings.
+            binary.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, os\n"
+                "from http.server import BaseHTTPRequestHandler, HTTPServer\n"
+                f"OUT = os.environ['LLAMA_OBSERVE_OUT']\n"
+                f"ROW_BYTES = {D.ROW_BYTES}\n"
+                "ENUM = (" + repr(ENUM_LINE) + ")\n"
+                "class H(BaseHTTPRequestHandler):\n"
+                "    def log_message(self, *a):\n"
+                "        pass\n"
+                "    def do_GET(self):\n"
+                "        if self.path == '/health':\n"
+                "            self.send_response(200)\n"
+                "            self.end_headers()\n"
+                "            self.wfile.write(b'ok')\n"
+                "        else:\n"
+                "            self.send_response(404)\n"
+                "            self.end_headers()\n"
+                "    def do_POST(self):\n"
+                "        n = int(self.headers.get('Content-Length', 0))\n"
+                "        self.rfile.read(n)\n"
+                "        with open(OUT + '.meta.json', 'w') as f:\n"
+                "            f.write(''.join(json.dumps(\n"
+                "                {'pos': i, 'pid': os.getpid()}) + chr(10)\n"
+                "                for i in range(8)))\n"
+                "        for i in range(8):\n"
+                "            with open(OUT + '.row%d.f32' % i, 'wb') as f:\n"
+                "                f.write(bytes([i]) + bytes(ROW_BYTES - 1))\n"
+                "        body = json.dumps({'tokens': [1, 2, 3, 4, 5, 6, 7, 8],\n"
+                "                           'content': 'x' * 8,\n"
+                "                           'timings': {'prompt_n': 3072}}\n"
+                "                          ).encode()\n"
+                "        self.send_response(200)\n"
+                "        self.send_header('Content-Type', 'application/json')\n"
+                "        self.send_header('Content-Length', str(len(body)))\n"
+                "        self.end_headers()\n"
+                "        self.wfile.write(body)\n"
+                "print('ggml_vulkan: WARNING: Async execution disabled on "
+                "certain Intel devices.', flush=True)\n"
+                "print(ENUM, flush=True)\n"
+                f"HTTPServer(('127.0.0.1', {PR.PORT}), H).serve_forever()\n")
+            binary.chmod(0o755)
+            work = Path(tmp) / "unit"
+            work.mkdir()
+            dispatch = {"comment_id": 1, "body_sha256": "0" * 64,
+                        "head_sha": "1" * 40, "arm": "A3"}
+            witness = {m: {"bytes": 1, "device": 1, "inode": 1,
+                           "mtime_ns": 1, "ctime_ns": 1}
+                       for m in C252.MODEL_MEMBERS}
+            # Shebang limitation: /proc/<pid>/cmdline of an env-wrapper
+            # script is "/usr/bin/env python3 <script> ...", so the argv
+            # readback seam is mocked to the EXACT argv the frozen launch
+            # geometry builds for these same inputs. The env attribution
+            # is NOT mocked: _check_process_attribution reads the REAL
+            # /proc/<pid>/environ of the REAL child, which must carry the
+            # frozen observer-prefix env verbatim.
+            expected_argv = P252.launch_geometry(
+                "A3", binary,
+                PR.MODEL_DIR / next(iter(C252.MODEL_MEMBERS)),
+                work / "obs")["argv"]
+            with mock.patch.object(PR, "verify_comparator",
+                                   lambda b: "0" * 64), \
+                    mock.patch.object(PR, "observe_model_stats",
+                                      lambda md: witness), \
+                    mock.patch.object(PR, "_default_identity_observer",
+                                      lambda: dict(C252.HOST_FACTS)), \
+                    mock.patch.object(PR, "_default_health_runner",
+                                      lambda: {"rc": 0,
+                                               "nvidia_smi_raw": ""}), \
+                    mock.patch.object(PR, "_proc_readback",
+                                      lambda pid: {"argv": list(expected_argv),
+                                                   "env_raw_sha256": "0" * 64}):
+                unit = PR.execute_unit(
+                    dispatch=dispatch, arm="A3", unit_index=1,
+                    binary=binary, unit_dir=work,
+                    prompt="p", timeout_s=30)
+            # launch_geometry received the observer PREFIX, not the bare
+            # unit directory: the frozen env carries LLAMA_OBSERVE_OUT=
+            # <unit_dir>/obs.
+            self.assertEqual(unit["env"]["LLAMA_OBSERVE_OUT"],
+                             str(work / "obs"))
+            # The REAL collector consumed the comparator's prefix-sibling
+            # outputs, which land at the retained accepted names
+            # (<unit_dir>/obs.rowN.f32 / obs.meta.json).
+            self.assertEqual(len(unit["observer_rows"]), D.DECISIONS)
+            for n in range(D.DECISIONS):
+                self.assertEqual(unit["observer_rows"][n],
+                                 bytes([n]) + bytes(D.ROW_BYTES - 1))
+                self.assertTrue((work / f"obs.row{n}.f32").is_file())
+            self.assertTrue((work / "obs.meta.json").is_file())
 
 
 class LiveDispatchTests(ProducerFixtureMixin, unittest.TestCase):

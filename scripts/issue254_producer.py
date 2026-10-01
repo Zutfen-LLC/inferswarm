@@ -577,9 +577,20 @@ def _post_completion(port: int, request: dict[str, Any],
     return raw, json.loads(raw)
 
 
-def _collect_observer(unit_dir: Path) -> tuple[list[bytes], bytes]:
-    meta = (unit_dir / "obs.meta.json").read_bytes()
-    rows = [(unit_dir / f"obs.row{n}.f32").read_bytes()
+def _collect_observer(observer_prefix: Path) -> tuple[list[bytes], bytes]:
+    """Collect the comparator's observer output from its PATH PREFIX law.
+
+    The pinned comparator (llama.cpp b29c606e) treats LLAMA_OBSERVE_OUT as
+    a path PREFIX, emitting ``<prefix>.meta.json`` and ``<prefix>.rowN.f32``
+    as SIBLINGS of the prefix string — never children of a directory (the
+    accepted #250 producer's ``unit_dir / "obs"`` seam). Collecting a unit
+    directory as if it were the prefix is the collector-vs-instrument
+    naming divergence: it only fails on the first real unit, after all
+    GPU work completed (Phase-B A3 unit-001 FileNotFoundError).
+    """
+    prefix = Path(observer_prefix)
+    meta = Path(f"{prefix}.meta.json").read_bytes()
+    rows = [Path(f"{prefix}.row{n}.f32").read_bytes()
             for n in range(D.DECISIONS)]
     return rows, meta
 
@@ -647,8 +658,17 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
         raise ProducerError("dispatch arm does not match the executing arm")
     request = D.validate_request_contract(
         request if request is not None else D.REQUEST_CONTRACT)
-    observer_dir = unit_dir
-    geom = P252.launch_geometry(arm, binary, MODEL_DIR / next(iter(C252.MODEL_MEMBERS)), observer_dir)
+    # Observer seam (accepted #250 law): LLAMA_OBSERVE_OUT is a path
+    # PREFIX, so the observer prefix lives INSIDE the unit directory —
+    # the comparator emits <prefix>.rowN.f32 / <prefix>.meta.json as
+    # siblings of that prefix string, and _collect_observer consumes
+    # exactly those files. Passing the bare unit directory made the
+    # frozen env carry LLAMA_OBSERVE_OUT=<unit_dir>, so the comparator
+    # wrote <unit_dir>.rowN.f32 NEXT TO the scratch dir and every real
+    # unit failed collection after successful inference (Phase-B A3
+    # unit-001 FileNotFoundError).
+    observer_prefix = unit_dir / "obs"
+    geom = P252.launch_geometry(arm, binary, MODEL_DIR / next(iter(C252.MODEL_MEMBERS)), observer_prefix)
     argv, env = geom["argv"], geom["env"]
     binary_sha = verify_comparator(binary)
     stats_pre = observe_model_stats(MODEL_DIR)
@@ -671,7 +691,7 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
             raw_response, response = _post_completion(
                 PORT, request, prompt, timeout_s)
             server_pid = proc.pid
-            rows, meta = _collect_observer(unit_dir)
+            rows, meta = _collect_observer(observer_prefix)
             identity_post = (identity_observer or _default_identity_observer)()
             identity_post_problems = _identity_problems(identity_post)
             if identity_post_problems:
@@ -1129,7 +1149,7 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
         receipt = P252.build_unit_receipt(
             authority=capture, unit_index=index, binary=Path(binary),
             model_member=MODEL_DIR / next(iter(C252.MODEL_MEMBERS)),
-            observer_dir=work, identity_pre=unit["identity_pre"],
+            observer_dir=work / "obs", identity_pre=unit["identity_pre"],
             identity_post=unit["identity_post"],
             placement=unit["placement"], raw_response=unit["response_raw"],
             rows=unit["observer_rows"], observer_meta=unit["observer_meta"],
