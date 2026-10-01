@@ -132,7 +132,8 @@
     "test_issue252_mechanism",
     "test_issue252_vulkanpath",
     "test_issue252_round4",
-    "test_issue252_round5"
+    "test_issue252_round5",
+    "test_issue254_producer"
    ]
   },
   "repo-integrity": {
@@ -1600,6 +1601,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue252_vulkanpath.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue254_producer.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

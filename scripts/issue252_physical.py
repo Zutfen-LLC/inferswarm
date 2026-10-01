@@ -242,15 +242,24 @@ def validate_unit_receipt(receipt: dict[str, Any]) -> None:
         raise ValueError("receipt arm unknown")
     spec = A.ARMS[arm]
     auth = r.get("authority")
-    # Retained authority in a receipt is the structural dispatch capture
-    # (issue252_capture); receipt validation checks STRUCTURE only. Actual
-    # authority admission happens exclusively in the reducer via
-    # CAP.verify_capture's independent comment re-fetch -- a self-consistent
-    # receipt-embedded capture alone never grants authority.
-    try:
-        CAP.validate_capture_structure(auth)
-    except CAP.CaptureInvalid as exc:
-        raise ValueError(f"receipt dispatch authority invalid: {exc}") from exc
+    # Retained authority in a receipt is a dispatch capture (issue252_capture
+    # schema /2 for the merged Phase-0 campaign, or the additive #254 live
+    # producer capture schema /3); receipt validation checks STRUCTURE only.
+    # Actual authority admission happens exclusively in the reducer via
+    # the capture verifiers' independent comment re-fetch -- a
+    # self-consistent receipt-embedded capture alone never grants authority.
+    if (isinstance(auth, dict) and auth.get("schema")
+            == "inferswarm.issue254.dispatch-capture/3"):
+        import issue254_producer as PR254
+        try:
+            PR254.validate_live_capture_structure(auth)
+        except PR254.ProducerError as exc:
+            raise ValueError(f"receipt dispatch authority invalid: {exc}") from exc
+    else:
+        try:
+            CAP.validate_capture_structure(auth)  # type: ignore[arg-type]
+        except CAP.CaptureInvalid as exc:
+            raise ValueError(f"receipt dispatch authority invalid: {exc}") from exc
     if (auth.get("arm") != arm or auth.get("head_sha") != r.get("head_sha")
             or not isinstance(r.get("head_sha"), str) or not SHA.fullmatch(r["head_sha"])):
         raise ValueError("receipt dispatch authority/head mismatch")

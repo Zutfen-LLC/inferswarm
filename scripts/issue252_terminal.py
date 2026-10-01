@@ -56,11 +56,13 @@ def _authority(root: Path, rel: str) -> dict[str, Any]:
     """Admit retained dispatch authority ONLY through capture verification.
 
     ``rel`` holds {"repo_root": ..., "dispatch_capture": {...}}. The capture
-    is authenticated by CAP.verify_capture: structural law PLUS independent
-    re-fetch of the immutable comment by exact ID with byte equality —
-    through the PRODUCTION GitHub HTTPS seam only; this function has no
-    fetch parameter, so no caller can supply an authority fetcher. The
-    legacy path — trusting a self-consistent dispatch dict — is gone.
+    is authenticated by CAP.verify_capture (schema /2, merged Phase-0
+    campaign) or, additively, by the #254 live-producer capture verifier
+    (schema /3): structural law PLUS independent re-fetch of the immutable
+    comment by exact ID with byte equality — through the PRODUCTION GitHub
+    HTTPS seam only; this function has no fetch parameter, so no caller can
+    supply an authority fetcher. The legacy path — trusting a
+    self-consistent dispatch dict — is gone.
     """
     doc = _json(root, rel)
     repo = doc.get("repo_root")
@@ -71,7 +73,13 @@ def _authority(root: Path, rel: str) -> dict[str, Any]:
     if (not isinstance(accepted, dict) or accepted.get("terminal") != C.PREDECESSOR_TERMINAL
             or accepted.get("execution_head") != C.ACCEPTED_EXECUTION_HEAD):
         raise ValueError("retained parent terminalization unauthenticated")
-    verified = CAP.verify_capture(capture, repo_pr_number=C.CAMPAIGN_PR)
+    if capture.get("schema") == "inferswarm.issue254.dispatch-capture/3":
+        # Additive #254 live-producer capture: re-fetched by exact ID
+        # through the production seam by its own verifier.
+        import issue254_producer as PR254
+        verified = PR254.verify_live_capture(capture)
+    else:
+        verified = CAP.verify_capture(capture, repo_pr_number=C.CAMPAIGN_PR)
     if (verified.get("parent_terminalization_head", C.ACCEPTED_TERMINALIZATION_HEAD) != (
             C.ACCEPTED_TERMINALIZATION_HEAD)):
         raise ValueError("retained capture parent terminalization mismatch")
@@ -89,6 +97,19 @@ def _unit(root: Path, directory: Path, auth: dict[str, Any], idx: int,
     head = fix["dispatch_capture"]["head_sha"] if fix else auth["head_sha"]
     if rec["head_sha"] != head:
         raise ValueError("unit head not authenticated")
+    # #254 producer custody: a unit retained under a live-producer capture
+    # (schema /3) is physical evidence ONLY with a valid producer
+    # attestation that re-binds to every retained byte. A hand-built,
+    # internally consistent unit tree without producer execution is
+    # refused as physical authority right here (adversarial matrix #17).
+    if auth.get("schema") == "inferswarm.issue254.dispatch-capture/3":
+        import issue254_producer as PR254
+        try:
+            PR254.verify_unit_producer_binding(directory, rec, head)
+        except PR254.ProducerError as exc:
+            raise ValueError(
+                f"unit lacks producer-authenticated physical custody: "
+                f"{exc}") from exc
     raw = _read(directory, "response.json.raw")
     if _sha(raw) != rec["response_raw_sha256"] or len(raw) != rec["response_raw_bytes"]:
         raise ValueError("raw response bytes mismatch")
