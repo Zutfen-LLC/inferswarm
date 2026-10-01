@@ -105,6 +105,22 @@ class FixtureMixin:
             return registry[cid]
         return fetch
 
+    def offline_authority_fetch(self, arm=None, head=None):
+        """TEST-ONLY facility: patch the PRODUCTION fetch function object.
+
+        This is the separated offline mechanism the round-4 review required:
+        synthetic-fixture tests exercise reducer authority admission by
+        patching issue252_physical.fetch_dispatch_comment with the offline
+        registry — through the standard unittest seam, on the module the
+        production code itself imports. It is NOT reachable through the
+        shipped reducer/capture API (derive_terminal(evidence_root,
+        arms_result) and verify_capture(retained, repo_pr_number=...) have
+        no fetch parameter and no test flag), so no caller controlling
+        reducer invocation can substitute an authority fetcher.
+        """
+        return mock.patch.object(P, "fetch_dispatch_comment",
+                                 self.fetcher(arm, head))
+
     def authority(self, arm=None, head=None):
         return self.capture(arm, head)
 

@@ -143,50 +143,33 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         with self.assertRaisesRegex(M.MechanismInvalid, "non-exact"):
             M.mechanism_status(self.evidence, "A3", A.ARMS["A3"]["namespace"])
 
-    # --- A4 ----------------------------------------------------------------
+    # --- A4 (non-terminal-capable at pin b29c606e; round 4) -----------------
 
-    def test_a4_positive(self):
-        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2), ("host", 16 * 1024 ** 2)]))
+    def test_a4_non_terminal_capable_with_source_reason(self):
+        # Round-4 source audit: no retained observable binds an allocation
+        # line to the prefer_host_memory branch (logger carries no buffer
+        # identity/call site; staging and pinned-host paths produce
+        # host-typed lines regardless; no preference-off baseline ledger).
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2",
+            [("device", 4 * 1024 ** 2), ("host", 16 * 1024 ** 2)]))
         status = M.mechanism_status(self.evidence, "A4", self.ns)
-        self.assertTrue(status["capable"])
-        self.assertGreaterEqual(status["facts"]["allocations"]["host"], 1)
-        self.assertGreaterEqual(status["facts"]["allocations"]["device"], 1)
+        self.assertFalse(status["capable"])
+        self.assertIn("b29c606e", status["reason"])
+        self.assertIn("no retained observable", status["reason"])
 
-    def test_a4_no_host_allocation_rejected(self):
-        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
-        with self.assertRaisesRegex(M.MechanismInvalid, "host-typed"):
-            M.mechanism_status(self.evidence, "A4", self.ns)
+    def test_a4_unrelated_host_allocations_cannot_satisfy(self):
+        # Adversarial case: a rich mixed host/device ledger (even one
+        # containing staging-sized host lines) must not prove the
+        # preference-controlled branch changed the model/weight path.
+        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2",
+            [("staging", 4 * 1024 ** 2), ("device", 4 * 1024 ** 2),
+             ("host", 16 * 1024 ** 2)]))
+        self.assertFalse(
+            M.mechanism_status(self.evidence, "A4", self.ns)["capable"])
 
-    def test_a4_no_device_allocation_rejected(self):
-        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("host", 16 * 1024 ** 2)]))
-        with self.assertRaisesRegex(M.MechanismInvalid, "device-typed"):
-            M.mechanism_status(self.evidence, "A4", self.ns)
-
-    def test_a4_fabricated_allocation_lines_rejected(self):
-        # Adversarial-review case: attacker-crafted allocation lines with
-        # UNRELATED text (ledger-breaking totals) must be refused.
-        spoof = (ENUM_ONLY + MEM + "fake: +1 MiB host at 0xbeef UNRELATED" + NL)
-        write(self.evidence, self.ns, "u1", spoof)
-        with self.assertRaisesRegex(M.MechanismInvalid, "ledger"):
-            M.mechanism_status(self.evidence, "A4", self.ns)
-
-    def test_a4_ledger_arithmetic_must_balance(self):
-        # A well-formed line whose printed totals contradict the running
-        # sums is fabricated/copied evidence.
-        bad = (ENUM_ONLY + MEM + "+16.00 MiB host at 0x2."
-               " Total device: 9.00 MiB, total host: 16.00 MiB" + NL)
-        write(self.evidence, self.ns, "u1", bad)
-        with self.assertRaisesRegex(M.MechanismInvalid, "arithmetic"):
-            M.mechanism_status(self.evidence, "A4", self.ns)
-
-    def test_a4_mixed_unit_tally_cannot_localize(self):
-        # Adversarial-review case: host line in one unit, device line only
-        # in a DIFFERENT unit — a namespace-wide tally would pass, the
-        # per-unit law must refuse.
-        write(self.evidence, self.ns, "u1", make_log("NV_coopmat2", [("host", 16 * 1024 ** 2)]))
-        write(self.evidence, self.ns, "u2", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
-        with self.assertRaisesRegex(M.MechanismInvalid, "device-typed"):
-            M.mechanism_status(self.evidence, "A4", self.ns)
+    def test_a4_no_validator_registered(self):
+        self.assertNotIn("A4", M.MECHANISM_VALIDATORS)
+        self.assertIn("A4", M.NON_TERMINAL_CAPABLE)
 
     # --- A5 ----------------------------------------------------------------
 
@@ -238,8 +221,9 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
     # --- generic mutation discipline ---------------------------------------
 
     def test_missing_namespace_rejected(self):
+        # A3 is still validator-backed after A4 became non-terminal-capable.
         with self.assertRaisesRegex(M.MechanismInvalid, "absent/unsafe"):
-            M.mechanism_status(self.evidence, "A4", "d252-nonexistent")
+            M.mechanism_status(self.evidence, "A3", "d252-nonexistent")
 
     def test_unknown_arm_rejected(self):
         with self.assertRaisesRegex(M.MechanismInvalid, "no prospective"):
@@ -247,9 +231,10 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
 
     def test_mechanism_separate_from_determinism(self):
         # Mechanism facts carry no determinism claim; a capable status is
-        # independent of retained rows/counts.
-        write(self.evidence, self.ns, "only-one-unit", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2), ("host", 16 * 1024 ** 2)]))
-        status = M.mechanism_status(self.evidence, "A4", self.ns)
+        # independent of retained rows/counts. Uses A5 (still capable).
+        log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
+        write(self.evidence, A.ARMS["A5"]["namespace"], "only-one-unit", log)
+        status = M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
         self.assertTrue(status["capable"])
         self.assertNotIn("deterministic", str(status["facts"]).lower())
 

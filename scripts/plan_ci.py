@@ -251,6 +251,7 @@ GROUP_TEST_MODULES = {
         "test_issue252_capture",
         "test_issue252_mechanism",
         "test_issue252_vulkanpath",
+        "test_issue252_round4",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -363,6 +364,7 @@ PATH_GROUPS = {
     "tests/test_issue252_capture.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_mechanism.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_vulkanpath.py": ["r8i-qwen-qualification"],
+    "tests/test_issue252_round4.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full

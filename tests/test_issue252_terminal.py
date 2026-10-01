@@ -12,7 +12,9 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.test_issue252_physical import FixtureMixin, git, sha, A, C, D, CAP
+from tests.test_issue252_physical import (FixtureMixin, git, sha, A, C, D, CAP,
+                                          P)
+from unittest import mock
 import issue252_terminal as T
 import issue252_mechanism as M
 
@@ -58,17 +60,22 @@ ARM_LOGS = {"A2": MECH_A2_LOG, "A3": MECH_A3_LOG, "A4": MECH_A4_LOG, "A5": MECH_
 class TerminalTests(FixtureMixin, unittest.TestCase):
     def setUp(self):
         self.fixture()
-        self.arm = "A4"  # a terminal-capable arm with a real mechanism seam
+        # Round 4: A4 is non-terminal-capable at this pin; the positive-path
+        # fixture arm is A5 (ordered staging/allocation pairing law).
+        self.arm = "A5"
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
-            "dispatch_capture": self.authority("A4")})
+            "dispatch_capture": self.authority("A5")})
 
     def verdict(self, arm=None):
         arm = arm or self.arm
-        return T.derive_terminal(self.evidence, {}, fetch=self.fetcher(arm),
-                             _test_only_fetch=True)
+        # Round-4 separated test facility: the offline registry is installed
+        # by patching the PRODUCTION fetch function object — never through a
+        # reducer parameter.
+        with self.offline_authority_fetch(arm):
+            return T.derive_terminal(self.evidence, {})
 
-    def deterministic(self, arm="A4", n=5):
+    def deterministic(self, arm="A5", n=5):
         for i in range(1, n + 1):
             self.retain(arm, i, server_log=ARM_LOGS[arm])
 
@@ -90,21 +97,20 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         git(self.repo, "add", "ggml/src/ggml-vulkan/ggml-vulkan.cpp")
         git(self.repo, "commit", "-qm", "synthetic Vulkan code change")
         commit = git(self.repo, "rev-parse", "HEAD")
-        capture = self.capture("A4", head=commit)
+        capture = self.capture("A5", head=commit)
         raw = json.dumps(capture, sort_keys=True).encode()
         (self.evidence / "fix-dispatch.json").write_bytes(raw)
         self.write_json(self.evidence / "fix.json", {
             "repo_root": str(self.repo), "commit": commit,
             "dispatch_capture": capture, "authority_sha256": sha(raw)})
-        fixed_ns = "fixed/" + A.ARMS["A4"]["namespace"]
+        fixed_ns = "fixed/" + A.ARMS["A5"]["namespace"]
         for i in range(1, 6):
-            self.retain("A4", i, authority=capture, namespace=fixed_ns,
+            self.retain("A5", i, authority=capture, namespace=fixed_ns,
                         fix_commit=commit, binary_sha256="a" * 64,
-                        server_log=ARM_LOGS["A4"])
-        self.assertEqual(
-            T.derive_terminal(self.evidence, {}, fetch=self.fetcher("A4", head=commit),
-                             _test_only_fetch=True),
-            C.ACCEPTED_TERMINAL)
+                        server_log=ARM_LOGS["A5"])
+        with self.offline_authority_fetch("A5", head=commit):
+            self.assertEqual(T.derive_terminal(self.evidence, {}),
+                             C.ACCEPTED_TERMINAL)
 
     def test_mismatch_at_unit_two_variable_all_arms_complete_unresolved(self):
         for arm in A.ARMS:
@@ -160,10 +166,11 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
 
     def test_caller_boolean_cannot_decide_terminal(self):
         self.deterministic()
-        self.assertEqual(T.derive_terminal(self.evidence, {"fix_implemented": True,
-                         "vulkan_participation_proven": True},
-                         fetch=self.fetcher(), _test_only_fetch=True),
-                         T.BLOCKED)
+        with self.offline_authority_fetch():
+            self.assertEqual(T.derive_terminal(
+                self.evidence, {"fix_implemented": True,
+                                "vulkan_participation_proven": True}),
+                T.BLOCKED)
 
     def test_five_identical_without_mechanism_observations_cannot_localize(self):
         # Retained server logs lack every mechanism marker: five matching rows
@@ -216,12 +223,20 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
             "repo_root": str(self.repo), "dispatch_capture": self.authority("A3")})
         self.assertEqual(self.verdict("A3"), T.BLOCKED)
 
-    def test_a4_no_host_allocation_blocks(self):
+    def test_a4_deterministic_repeats_cannot_localize(self):
+        # Round 4: A4 is non-terminal-capable at pin b29c606e — five
+        # deterministic repeats plus ANY retained ledger (even one that
+        # previously satisfied the old host+device predicate) stay BLOCKED.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1."
-               " Total device: 4.00 MiB, total host: 0 B\n")
+               " Total device: 4.00 MiB, total host: 0 B\n"
+               "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2."
+               " Total device: 4.00 MiB, total host: 16.00 MiB\n")
         for i in range(1, 6):
             self.retain("A4", i, server_log=log)
+        self.write_json(self.evidence / "authority.json", {
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A4")})
         self.assertEqual(self.verdict("A4"), T.BLOCKED)
 
     def test_a5_host_allocation_blocks(self):
@@ -247,7 +262,7 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
 
     # ---------- forged-authority adversarial matrix ----------
 
-    def _valid_authority_file(self, arm="A4"):
+    def _valid_authority_file(self, arm="A5"):
         self.deterministic(arm)
 
     def _authority_doc(self):
@@ -258,7 +273,7 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         mutate(doc)
         self.write_json(self.evidence / "authority.json", doc)
 
-    def _forged_rejected(self, mutate, arm="A4"):
+    def _forged_rejected(self, mutate, arm="A5"):
         self._valid_authority_file(arm)
         self._mutate_authority(mutate)
         self.assertEqual(self.verdict(arm), T.BLOCKED)
@@ -388,17 +403,16 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
             served = dict(real)
             served["author_association"] = "CONTRIBUTOR"
             return served
-        self.assertEqual(T.derive_terminal(self.evidence, {}, fetch=forged_fetch,
-                                     _test_only_fetch=True),
-                         T.BLOCKED)
+        with mock.patch.object(P, "fetch_dispatch_comment", forged_fetch):
+            self.assertEqual(T.derive_terminal(self.evidence, {}), T.BLOCKED)
 
 
     def test_forged_lambda_fetcher_cannot_authorize_any_terminal(self):
-        # Adversarial-review BLOCKER regression: a caller-controlled fetcher
-        # serving locally fabricated OWNER comments (recomputed digests, full
-        # internally-consistent evidence tree, even a synthetic fix commit)
-        # must NOT reach any terminal. The reducer refuses caller-supplied
-        # fetchers outright in production mode.
+        # Round-3/round-4 BLOCKER regression: a caller-controlled fetcher
+        # serving locally fabricated OWNER comments (recomputed digests,
+        # full internally-consistent evidence tree, even a synthetic fix
+        # commit) must NOT reach any terminal. The reducer API has no fetch
+        # parameter at all, so the forged lambda cannot even be passed.
         from tests.test_issue252_physical import A as _A, git as _git, sha as _sha
         import json as _json
         self.deterministic()
@@ -436,23 +450,35 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
 
         def forged(url):
             return invented[url.rsplit("/", 1)[-1]]
-        # Production mode: the forged lambda is refused outright.
-        self.assertEqual(T.derive_terminal(self.evidence, {}, fetch=forged),
-                         T.BLOCKED)
-        # Even opted-in offline mode, a fabricated login is not the
-        # registered commenter: re-fetch byte-equality fails.
-        # (The fixture registry serves only registered synthetic comments.)
+        # The public API has no fetch parameter: the forged lambda cannot
+        # be supplied at all.
+        with self.assertRaises(TypeError):
+            T.derive_terminal(self.evidence, {}, fetch=forged)
+        with self.assertRaises(TypeError):
+            T.derive_terminal(self.evidence, {}, fetch=forged,
+                              _test_only_fetch=True)
+        # And even a monkeypatched production seam serving the invented
+        # comments fails byte-equality: fabricated logins/ids have no real
+        # registry behind them — but the retained capture WAS built from the
+        # same factory, so the meaningful law here is that no API reaches
+        # offline mode. The registry-served rejection is covered by
+        # test_fetcher_serving_forged_comment_rejected above.
 
     def test_production_fetcher_is_the_github_seam(self):
-        # The default fetch path must be the production HTTPS seam.
+        # The only re-fetch implementation the reducer can call is the
+        # production HTTPS seam, and verify_capture takes no fetcher.
+        import inspect
         self.assertEqual(T.P.fetch_dispatch_comment.__name__,
                          "fetch_dispatch_comment")
-        import issue252_capture as _CAP
+        params = inspect.signature(CAP.verify_capture).parameters
+        self.assertEqual(set(params), {"retained", "repo_pr_number"})
         self.deterministic()
-        with self.assertRaises(_CAP.CaptureInvalid):
-            _CAP.verify_capture(self.authority(self.arm),
-                                self.fetcher(self.arm),
-                                repo_pr_number=C.CAMPAIGN_PR)
+        # Unpatched production seam: a synthetic comment id has no real
+        # GitHub comment behind it; admission must fail closed without a
+        # network probe escaping the canonical URL prefix.
+        with self.assertRaises(CAP.CaptureInvalid):
+            CAP.verify_capture(self.authority(self.arm),
+                               repo_pr_number=C.CAMPAIGN_PR)
 
     def test_authentic_synthetic_authority_fixture_succeeds(self):
         # Positive control for the whole matrix: the unmutated capture built

@@ -130,7 +130,8 @@
     "test_issue252_terminal",
     "test_issue252_capture",
     "test_issue252_mechanism",
-    "test_issue252_vulkanpath"
+    "test_issue252_vulkanpath",
+    "test_issue252_round4"
    ]
   },
   "repo-integrity": {
@@ -1586,6 +1587,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue252_physical.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue252_round4.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_issue252_terminal.py": [

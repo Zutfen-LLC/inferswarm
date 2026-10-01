@@ -7,10 +7,12 @@ evidence admission (the retained-byte reducer) are deliberately SEPARATE:
   each unit and emits a canonical retained capture bound to those raw bytes;
 - the REDUCER consumes only the retained capture, and re-authenticates it by
   INDEPENDENTLY RE-FETCHING the immutable GitHub comment by exact ID through
-  an injected fetcher, requiring every authentication-bearing field of the
-  live comment to equal the retained capture bytes. A locally fabricated,
-  merely self-consistent authority object can never satisfy admission because
-  the retained fields must byte-equal a real GitHub API comment.
+  the PRODUCTION HTTPS SEAM ONLY (issue252_physical.fetch_dispatch_comment),
+  requiring every authentication-bearing field of the live comment to equal
+  the retained capture bytes. A locally fabricated, merely self-consistent
+  authority object can never satisfy admission because the retained fields
+  must byte-equal a real GitHub API comment — and no API in this module or
+  the reducer accepts a caller-supplied fetcher.
 
 Immutable comment fields (id, body, author_association, created_at, html_url,
 user.login, issue_url) never change after creation, so this re-fetch is not a
@@ -19,8 +21,9 @@ state are authenticated against the RETAINED execution-time snapshot only,
 never re-derived from the live repository at reduction time.
 
 No code in this module performs a physical launch, and no fetch happens at
-import time. Network access occurs only inside fetch_comment() when a caller
-supplies a URL, and callers inject offline fetchers in tests.
+import time. Network access occurs only inside the production seam
+(issue252_physical.fetch_dispatch_comment) when verify_capture re-fetches
+a retained comment; the verify API has no fetch parameter.
 """
 from __future__ import annotations
 
@@ -28,7 +31,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import issue252_constants as C
 import issue252_arms as A
@@ -42,7 +45,9 @@ API_ROOT = "https://api.github.com/repos/Zutfen-LLC/inferswarm"
 # review comment, another repository) is not admissible.
 COMMENTS_URL_PREFIX = API_ROOT + "/issues/comments/"
 
-Fetch = Callable[[str], dict[str, Any]]
+# The production fetch seam (issue252_physical.fetch_dispatch_comment) is
+# the ONLY re-fetch implementation; no API in this module accepts a
+# caller-supplied fetcher, so there is no fetcher type alias here.
 
 
 class CaptureInvalid(ValueError):
@@ -202,15 +207,17 @@ def validate_capture_structure(retained: dict[str, Any]) -> dict[str, Any]:
     return retained
 
 
-def verify_capture(retained: dict[str, Any], fetch: Fetch,
-                   *, repo_pr_number: int,
-                   _test_only: bool = False) -> dict[str, Any]:
+def verify_capture(retained: dict[str, Any], *,
+                   repo_pr_number: int) -> dict[str, Any]:
     """Reducer-side admission of a RETAINED capture. Fail closed.
 
     Requires, in order:
       1. retained capture structural law (schema, repo, PR number, arm,
          namespace, head, body, digests);
-      2. INDEPENDENT re-fetch of the exact comment by ID through ``fetch``;
+      2. INDEPENDENT re-fetch of the exact comment by ID through the
+         PRODUCTION GitHub HTTPS seam (issue252_physical.
+         fetch_dispatch_comment) — there is NO fetch parameter, so no
+         caller of this API can substitute an authority fetcher;
       3. every authentication-bearing live field byte-equal to the retained
          capture (self-consistency of the retained object proves nothing);
       4. live comment still satisfies the immutable comment law.
@@ -218,31 +225,36 @@ def verify_capture(retained: dict[str, Any], fetch: Fetch,
     Returns the authenticated capture. Never trusts caller-supplied
     author_association, comment ID, PR state, or body.
 
-    TRUST BOUNDARY: the fetcher must be the production HTTPS seam
-    (issue252_physical.fetch_dispatch_comment), which enforces the
-    canonical-repository URL prefix and real network transport. A
-    caller-supplied callable is NOT independent GitHub authority — a lambda
-    serving a local dictionary can satisfy any digest check — so it is
-    refused unless explicitly marked _test_only (offline synthetic
-    fixtures). Adversarial probe: a local-dict fetcher with fabricated
-    OWNER comments cannot reach any terminal through the reducer.
+    TRUST BOUNDARY: the only fetch implementation is the production HTTPS
+    seam, which enforces the canonical-repository URL prefix and real
+    network transport. A caller-supplied callable is NOT independent
+    GitHub authority — a lambda serving a local dictionary can satisfy any
+    digest check — and is structurally unrepresentable through this API
+    (round-4 adversarial review; previously a runtime boolean check).
+    Offline synthetic-fixture tests verify the same law through a module
+    seam patch of the production fetch function owned by the test
+    (tests/test_issue252_physical.py::OfflineRegistryMixin), never through
+    this API.
     """
     validate_capture_structure(retained)
     if type(repo_pr_number) is not int or retained.get("pr_number") != repo_pr_number:
         raise CaptureInvalid("retained capture PR number mismatch")
-    if not _test_only:
-        # Deferred import: issue252_physical imports this module.
-        import issue252_physical as _P
-        if fetch is not _P.fetch_dispatch_comment:
-            raise CaptureInvalid(
-                "authority re-fetch must use the production GitHub seam; "
-                "caller-supplied fetchers are not GitHub authority")
+    # Deferred import: issue252_physical imports this module.
+    import issue252_physical as _P
     arm = retained["arm"]
     head = retained["head_sha"]
 
     # Independent retrieval of the real GitHub comment by exact ID.
     url = f"{COMMENTS_URL_PREFIX}{retained['comment_id']}"
-    live = fetch(url)
+    try:
+        live = _P.fetch_dispatch_comment(url)
+    except _P.DispatchRefused as exc:
+        raise CaptureInvalid(f"dispatch comment re-fetch refused: {exc}") from exc
+    except OSError as exc:
+        # transport failure (offline host, timeout, DNS): fail closed as a
+        # capture-invalid admission, never a crash-to-caller
+        raise CaptureInvalid(
+            f"dispatch comment re-fetch transport failure: {exc}") from exc
     if not isinstance(live, dict):
         raise CaptureInvalid("re-fetched comment object missing")
     live_raw = canonical_bytes(live)

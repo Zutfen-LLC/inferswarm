@@ -52,16 +52,15 @@ def _json(root: Path, rel: str) -> dict[str, Any]:
     return val
 
 
-def _authority(root: Path, rel: str, fetch: CAP.Fetch,
-               *, _test_only: bool = False) -> dict[str, Any]:
+def _authority(root: Path, rel: str) -> dict[str, Any]:
     """Admit retained dispatch authority ONLY through capture verification.
 
     ``rel`` holds {"repo_root": ..., "dispatch_capture": {...}}. The capture
     is authenticated by CAP.verify_capture: structural law PLUS independent
     re-fetch of the immutable comment by exact ID with byte equality —
-    through the PRODUCTION GitHub seam only; a caller-supplied fetcher is
-    refused there (a local callable is not GitHub authority). The legacy
-    path — trusting a self-consistent dispatch dict — is gone.
+    through the PRODUCTION GitHub HTTPS seam only; this function has no
+    fetch parameter, so no caller can supply an authority fetcher. The
+    legacy path — trusting a self-consistent dispatch dict — is gone.
     """
     doc = _json(root, rel)
     repo = doc.get("repo_root")
@@ -72,8 +71,7 @@ def _authority(root: Path, rel: str, fetch: CAP.Fetch,
     if (not isinstance(accepted, dict) or accepted.get("terminal") != C.PREDECESSOR_TERMINAL
             or accepted.get("execution_head") != C.ACCEPTED_EXECUTION_HEAD):
         raise ValueError("retained parent terminalization unauthenticated")
-    verified = CAP.verify_capture(capture, fetch, repo_pr_number=C.CAMPAIGN_PR,
-                                  _test_only=_test_only)
+    verified = CAP.verify_capture(capture, repo_pr_number=C.CAMPAIGN_PR)
     if (verified.get("parent_terminalization_head", C.ACCEPTED_TERMINALIZATION_HEAD) != (
             C.ACCEPTED_TERMINALIZATION_HEAD)):
         raise ValueError("retained capture parent terminalization mismatch")
@@ -171,14 +169,17 @@ def _vulkan_participation_active(root: Path, namespace: str) -> bool:
             return False
         # The exact device-enumeration line (same full-line law as the
         # mechanism contracts) — arbitrary text containing the two markers
-        # is not evidence of Vulkan participation.
-        if not any(M.ENUM_LINE.match(line) for line in text.splitlines()):
+        # is not evidence of Vulkan participation — and exactly ONE per
+        # unit: the frozen one-device launch emits a single enumeration
+        # line, so multiple lines are doctored/unrelated-context copies.
+        enum_lines = [line for line in text.splitlines()
+                      if M.ENUM_LINE.match(line)]
+        if len(enum_lines) != 1:
             return False
     return True
 
 
-def _fix(root: Path, original: dict[str, Any], fetch: CAP.Fetch,
-         *, _test_only: bool = False) -> dict[str, Any] | None:
+def _fix(root: Path, original: dict[str, Any]) -> dict[str, Any] | None:
     path = root / "fix.json"
     if not path.is_file() or path.is_symlink():
         return None
@@ -196,8 +197,7 @@ def _fix(root: Path, original: dict[str, Any], fetch: CAP.Fetch,
     # Prospective fix dispatch authority is held to the SAME retrieval-bound
     # custody contract as the original arm dispatch: retained capture plus
     # independent re-fetch of the immutable comment by exact ID.
-    verified = CAP.verify_capture(capture, fetch, repo_pr_number=C.CAMPAIGN_PR,
-                                  _test_only=_test_only)
+    verified = CAP.verify_capture(capture, repo_pr_number=C.CAMPAIGN_PR)
     if (verified["arm"] != original["arm"]
             or verified["namespace"] != original["namespace"]
             or verified["head_sha"] != commit):
@@ -221,35 +221,27 @@ def _fix(root: Path, original: dict[str, Any], fetch: CAP.Fetch,
     return {"commit": commit, "dispatch_capture": verified, "repo_root": repo}
 
 
-def derive_terminal(evidence_root: Path, arms_result: dict[str, Any],
-                    fetch: CAP.Fetch | None = None,
-                    *, _test_only_fetch: bool = False) -> str:
+def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
     """Return exactly a frozen terminal or BLOCKED; ignore verdict summaries.
 
     ``arms_result`` is not authority: any nonempty caller verdict/selection
     mapping is refused, so it cannot hide a retained arm or select a winner.
-    ``fetch`` re-fetches immutable dispatch comments by exact ID for
-    retrieval-bound authority admission; when None the live GitHub seam is
-    used. In production (``_test_only_fetch`` False) a caller-SUPPLIED
-    fetcher is refused outright: a local callable serving fabricated
-    comments is not GitHub authority (adversarial review round). Offline
-    synthetic-fixture tests must opt in explicitly. Terminal derivation
+    Authority re-fetch happens ONLY through the production GitHub HTTPS seam
+    (issue252_physical.fetch_dispatch_comment); this public API has NO
+    fetch parameter and NO test flag — a caller-supplied fetcher is
+    structurally unrepresentable, not merely rejected at runtime (round-4
+    adversarial review: a reducer-invocation controller must not be able to
+    enable an offline authority mode with one boolean). Terminal derivation
     depends only on retained bytes plus immutable comment re-fetches —
     never on mutable current PR/issue state.
     """
     try:
-        if fetch is None:
-            fetch = P.fetch_dispatch_comment
-        if not _test_only_fetch and fetch is not P.fetch_dispatch_comment:
-            raise ValueError(
-                "dispatch authority re-fetch must use the production "
-                "GitHub seam; caller-supplied fetchers are not authority")
         root = Path(evidence_root)
         if arms_result != {} or root.is_symlink() or not root.is_dir():
             raise ValueError("caller result or evidence root invalid")
         if A.validate_arms():
             raise ValueError("frozen arms invalid")
-        auth = _authority(root, "authority.json", fetch, _test_only=_test_only_fetch)
+        auth = _authority(root, "authority.json")
         namespaces = {spec["namespace"] for spec in A.ARMS.values()}
         present = {p.name for p in root.iterdir() if p.is_dir() or p.is_symlink()}
         expected_dirs = namespaces | ({"fixed"} if (root / "fix.json").is_file() else set())
@@ -270,8 +262,7 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any],
             if ns == auth["namespace"]:
                 arm_auth = auth
             else:
-                arm_auth = _authority(root, f"authority-{arm}.json", fetch,
-                                      _test_only=_test_only_fetch)
+                arm_auth = _authority(root, f"authority-{arm}.json")
                 if (arm_auth.get("arm") != arm or arm_auth.get("namespace") != ns
                         or arm_auth.get("head_sha") != auth["head_sha"]):
                     raise ValueError("arm-specific dispatch absent/mismatched")
@@ -292,13 +283,13 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any],
         # strictly separate from the determinism contrast.
         status = M.mechanism_status(root, arm, A.ARMS[arm]["namespace"])
         if not status["capable"]:
-            # Non-terminal-capable arm (e.g. A1 at this pin): deterministic
+            # Non-terminal-capable arm (e.g. A1/A4 at this pin): deterministic
             # contrast alone cannot localize a bounded mechanism. With the
             # complete arm set retained this genuinely fails to localize.
             if set(states) == set(A.ARMS) and (root / "fix.json").exists() is False:
                 return C.UNRESOLVED_TERMINAL
             raise ValueError("five matching rows alone do not localize a mechanism")
-        fix = _fix(root, auth, fetch, _test_only=_test_only_fetch)
+        fix = _fix(root, auth)
         if fix is None:
             return C.NOT_VALIDATED_TERMINAL
         fixed_ns = "fixed/" + A.ARMS[arm]["namespace"]

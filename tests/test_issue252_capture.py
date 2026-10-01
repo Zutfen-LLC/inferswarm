@@ -2,7 +2,8 @@
 from __future__ import annotations
 import unittest
 
-from tests.test_issue252_physical import FixtureMixin, A, C, CAP
+from tests.test_issue252_physical import FixtureMixin, A, C, CAP, P
+from unittest import mock
 
 
 class CaptureTests(FixtureMixin, unittest.TestCase):
@@ -11,8 +12,9 @@ class CaptureTests(FixtureMixin, unittest.TestCase):
 
     def test_build_and_verify_positive(self):
         cap = self.capture("A2")
-        verified = CAP.verify_capture(cap, self.fetcher("A2"),
-                                      repo_pr_number=C.CAMPAIGN_PR, _test_only=True)
+        with self.offline_authority_fetch("A2"):
+            verified = CAP.verify_capture(cap,
+                                          repo_pr_number=C.CAMPAIGN_PR)
         self.assertEqual(verified["arm"], "A2")
         self.assertEqual(verified["comment_id"], cap["comment_id"])
 
@@ -81,25 +83,33 @@ class CaptureTests(FixtureMixin, unittest.TestCase):
     def test_verify_rejects_nonexistent_comment_id(self):
         cap = self.capture("A2")
         cap["comment_id"] = 424242  # no re-fetchable comment behind it
-        with self.assertRaisesRegex(CAP.CaptureInvalid, "not found|differs"):
-            CAP.verify_capture(cap, self.fetcher("A2"), repo_pr_number=C.CAMPAIGN_PR, _test_only=True)
+        with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A2")):
+            with self.assertRaisesRegex(CAP.CaptureInvalid, "not found|differs"):
+                CAP.verify_capture(cap,
+                                   repo_pr_number=C.CAMPAIGN_PR)
 
     def test_verify_rejects_altered_retained_digest(self):
         cap = self.capture("A2")
         cap["raw_comment_sha256"] = "0" * 64
-        with self.assertRaisesRegex(CAP.CaptureInvalid, "bytes differ from retained"):
-            CAP.verify_capture(cap, self.fetcher("A2"), repo_pr_number=C.CAMPAIGN_PR, _test_only=True)
+        with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A2")):
+            with self.assertRaisesRegex(CAP.CaptureInvalid, "bytes differ from retained"):
+                CAP.verify_capture(cap,
+                                   repo_pr_number=C.CAMPAIGN_PR)
 
     def test_verify_rejects_wrong_pr_number_binding(self):
         cap = self.capture("A2")
-        with self.assertRaisesRegex(CAP.CaptureInvalid, "PR number"):
-            CAP.verify_capture(cap, self.fetcher("A2"), repo_pr_number=999, _test_only=True)
+        with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A2")):
+            with self.assertRaisesRegex(CAP.CaptureInvalid, "PR number"):
+                CAP.verify_capture(cap,
+                                   repo_pr_number=999)
 
     def test_verify_rejects_exec_time_state_drift(self):
         cap = self.capture("A2")
         cap["execution_time_state"]["pr_head"] = "e" * 40
-        with self.assertRaisesRegex(CAP.CaptureInvalid, "execution-time state"):
-            CAP.verify_capture(cap, self.fetcher("A2"), repo_pr_number=C.CAMPAIGN_PR, _test_only=True)
+        with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A2")):
+            with self.assertRaisesRegex(CAP.CaptureInvalid, "execution-time state"):
+                CAP.verify_capture(cap,
+                                   repo_pr_number=C.CAMPAIGN_PR)
 
     def test_structural_law_rejects_legacy_dict(self):
         legacy = {"head_sha": self.head, "arm": "A1",
@@ -121,8 +131,10 @@ class CaptureTests(FixtureMixin, unittest.TestCase):
         cap["head_sha"] = "f" * 40
         cap["body"] = f"{C.DISPATCH_PHRASE_FORMAT}\nhead={'f' * 40}\narm=A2"
         cap["execution_time_state"]["pr_head"] = "f" * 40
-        with self.assertRaisesRegex(CAP.CaptureInvalid, "differs"):
-            CAP.verify_capture(cap, self.fetcher("A2"), repo_pr_number=C.CAMPAIGN_PR, _test_only=True)
+        with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A2")):
+            with self.assertRaisesRegex(CAP.CaptureInvalid, "differs"):
+                CAP.verify_capture(cap,
+                                   repo_pr_number=C.CAMPAIGN_PR)
 
 
 if __name__ == "__main__":
