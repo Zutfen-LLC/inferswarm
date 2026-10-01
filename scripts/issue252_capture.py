@@ -230,12 +230,12 @@ def verify_capture(retained: dict[str, Any], *,
     network transport. A caller-supplied callable is NOT independent
     GitHub authority — a lambda serving a local dictionary can satisfy any
     digest check — and is structurally unrepresentable through this API
-    (round-4 adversarial review; previously a runtime boolean check).
-    Offline synthetic-fixture tests verify the same law through a module
-    seam patch of the production fetch function owned by the test
-    (tests/test_issue252_physical.py::OfflineRegistryMixin), never through
-    this API.
-    """
+ (round-4 adversarial review; previously a runtime boolean check).
+ Offline synthetic-fixture tests verify the same law by patching the
+ production fetch function object with a standard unittest seam owned
+ by the test (FixtureMixin.offline_authority_fetch), never through
+ this API.
+ """
     validate_capture_structure(retained)
     if type(repo_pr_number) is not int or retained.get("pr_number") != repo_pr_number:
         raise CaptureInvalid("retained capture PR number mismatch")
