@@ -50,6 +50,45 @@ def git(repo, *args):
                           ).stdout.strip()
 
 
+class _OfflineOrchestration:
+    """Test-only context manager (round-2 correction, review blocker 1).
+
+    Runs the PRODUCTION run_unit/run_arm code paths offline by patching
+    the internal production function objects PR.fetch_live_dispatch and
+    PR.execute_unit from test code (unittest.mock.patch.object) with the
+    fixture registry and the fake executor — never through the
+    production signatures, which expose no injectable seams.
+    """
+
+    def __init__(self, fixture, arm, execute, fetch):
+        self._fixture = fixture
+        self._arm = arm
+        self._execute = execute
+        self._fetch = fetch
+
+    def __enter__(self):
+        fixture = self._fixture
+        self._fetch_patch = mock.patch.object(
+            PR, "fetch_live_dispatch",
+            self._fetch or fixture.offline_fetch(self._arm))
+        self._execute_patch = mock.patch.object(
+            PR, "execute_unit",
+            self._execute if self._execute is not None
+            else fixture.fake_execute_unit())
+        self._fetch_patch.start()
+        self._execute_patch.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._execute_patch.stop()
+        self._fetch_patch.stop()
+        return False
+
+
+def patched_orchestration(fixture, arm, execute, fetch):
+    return _OfflineOrchestration(fixture, arm, execute, fetch)
+
+
 ENUM_LINE = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | uma: 0 | "
              "fp16: 1 | bf16: 0 | fp4: 0 | warp size: 32 | shared memory: "
              "49152 | int dot: 1 | matrix cores: NV_coopmat2")
@@ -83,6 +122,14 @@ class ProducerFixtureMixin:
         self.pr_number = 301
         self._comments: dict[int, dict] = {}
         self._next_id = 7000
+        # Offline producer-PR registry (round-2 provenance law: the /3
+        # verifier also re-fetches pulls/<n> through the production seam).
+        self._prs: dict[int, dict] = {
+            self.pr_number: {
+                "number": self.pr_number, "state": "open", "merged": False,
+                "draft": False, "base": {"ref": "main"},
+                "head": {"ref": "issue-254-fixture-producer",
+                         "sha": self.head}}}
         self.parent_patch = mock.patch.object(
             P252.P0, "verify_terminalization", return_value={
                 "terminal": C252.PREDECESSOR_TERMINAL,
@@ -97,7 +144,8 @@ class ProducerFixtureMixin:
     # -- synthetic #254 dispatch comments -------------------------------
 
     def dispatch_comment(self, arm="A3", head=None, body=None,
-                         association="OWNER", pr=None):
+                         association="OWNER", pr=None,
+                         issue_url=None, html_url=None):
         head = head or self.head
         pr = pr or self.pr_number
         cid = self._next_id
@@ -108,9 +156,11 @@ class ProducerFixtureMixin:
                    "author_association": association,
                    "created_at": "2026-10-01T12:00:00Z",
                    "user": {"login": "ezutfen"},
-                   "html_url": (f"https://github.com/Zutfen-LLC/inferswarm/"
+                   "html_url": (html_url if html_url is not None else
+                                f"https://github.com/Zutfen-LLC/inferswarm/"
                                 f"pull/{pr}#issuecomment-{cid}"),
-                   "issue_url": (f"https://api.github.com/repos/"
+                   "issue_url": (issue_url if issue_url is not None else
+                                 f"https://api.github.com/repos/"
                                  f"Zutfen-LLC/inferswarm/issues/{pr}")}
         self._comments[cid] = comment
         return comment
@@ -141,23 +191,37 @@ class ProducerFixtureMixin:
                     "author_association": c["author_association"],
                     "created_at": c["created_at"],
                     "issue_url": c["issue_url"], "body": c["body"],
+                    "html_url": c["html_url"],
                     "body_sha256": sha(c["body"].encode()),
                     "issue_state": "open"}
         return fetch
 
     def offline_comment_refetch(self):
-        """Offline re-fetch of comments by ID through the production seam
-        object (mock.patch on issue252_physical.fetch_dispatch_comment)."""
+        """Offline re-fetch of comments by ID (and producer PR objects)
+        through the production seam object (mock.patch on
+        issue252_physical.fetch_dispatch_comment)."""
         registry = dict(self._comments)
+        prs = self._prs
+        comment_prefix = ("https://api.github.com/repos/Zutfen-LLC/"
+                          "inferswarm/issues/comments/")
+        pulls_prefix = ("https://api.github.com/repos/Zutfen-LLC/"
+                        "inferswarm/pulls/")
         def fetch(url):
-            prefix = ("https://api.github.com/repos/Zutfen-LLC/inferswarm/"
-                      "issues/comments/")
-            if not url.startswith(prefix):
-                raise PR.ProducerError("bad url")
-            cid = int(url[len(prefix):])
-            if cid not in registry:
-                raise P252.DispatchRefused("comment not found")
-            return registry[cid]
+            if url.startswith(comment_prefix):
+                cid = int(url[len(comment_prefix):])
+                if cid not in registry:
+                    raise P252.DispatchRefused("comment not found")
+                return registry[cid]
+            if url.startswith(pulls_prefix):
+                number = int(url[len(pulls_prefix):])
+                if number in prs:
+                    return dict(prs[number])
+                # any unregistered PR is a NON-producer PR
+                return {"number": number, "state": "closed",
+                        "merged": True, "draft": False,
+                        "base": {"ref": "main"},
+                        "head": {"ref": "other-branch", "sha": "0" * 40}}
+            raise PR.ProducerError("bad url")
         return fetch
 
     def live_capture(self, arm="A3", head=None):
@@ -165,6 +229,15 @@ class ProducerFixtureMixin:
         return PR.build_live_capture(dispatch)
 
     # -- fake physical executor ------------------------------------------
+
+    def patched_orchestration(self, arm="A3", execute=None, fetch=None):
+        """Test-only orchestration harness (round-2 law: run_unit/run_arm
+        expose no injectable seams): patches the INTERNAL production
+        function objects PR.fetch_live_dispatch / PR.execute_unit with the
+        fixture registry / fake executor, so the production run_unit and
+        run_arm code paths run offline against test doubles — the same
+        doctrine as the schema-/2 suite's offline_authority_fetch."""
+        return patched_orchestration(self, arm, execute, fetch)
 
     def fake_execute_unit(self, *, response_tokens=None, row_seed=0,
                           exit_ok=True, kill_alive=False, missing_row=False,
@@ -366,12 +439,11 @@ class LiveDispatchTests(ProducerFixtureMixin, unittest.TestCase):
     def test_dispatch_comment_targets_another_arm(self):
         # case 11: dispatch authorizes A5, execution requests A3
         self.dispatch_comment("A5", self.head)
-        fetch = self.offline_fetch("A5")
-        with self.assertRaises(PR.ProducerError):
-            PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
-                        arm="A3", binary=Path("/nonexistent"),
-                        timeout_s=60, fetch=fetch,
-                        execute=self.fake_execute_unit())
+        with self.patched_orchestration("A3"):
+            with self.assertRaises(PR.ProducerError):
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm="A3", binary=Path("/nonexistent"),
+                            timeout_s=60)
 
     def test_association_none_owner(self):
         comment = self.dispatch_comment("A3", body=(
@@ -416,13 +488,14 @@ class ProducerCustodyTests(ProducerFixtureMixin, unittest.TestCase):
         self.ns = A.ARMS[self.arm]["namespace"]
 
     def run_unit(self, **kwargs):
-        defaults = dict(repo_root=self.repo, evidence_root=self.evidence,
-                        arm=self.arm, binary=Path("/nonexistent/llama-server"),
-                        timeout_s=60, fetch=self.offline_fetch(self.arm),
-                        execute=self.fake_execute_unit(**kwargs.pop(
-                            "execute_kwargs", {})))
-        defaults.update(kwargs)
-        return PR.run_unit(**defaults)
+        execute = self.fake_execute_unit(**kwargs.pop(
+            "execute_kwargs", {}))
+        kwargs.pop("execute", None)  # legacy seam arg, if any, is unused
+        with self.patched_orchestration(self.arm, execute=execute):
+            return PR.run_unit(
+                repo_root=self.repo, evidence_root=self.evidence,
+                arm=self.arm, binary=Path("/nonexistent/llama-server"),
+                timeout_s=60, **kwargs)
 
     def test_unit_001_must_be_first(self):
         outcome = self.run_unit()
@@ -526,8 +599,12 @@ class ProducerCustodyTests(ProducerFixtureMixin, unittest.TestCase):
     def test_failure_retains_status_record(self):
         def failing_execute(**kwargs):
             raise PR.ProducerError("synthetic launch failure")
-        with self.assertRaises(PR.ProducerError):
-            self.run_unit(execute=failing_execute)
+        with self.patched_orchestration(self.arm, execute=failing_execute):
+            with self.assertRaises(PR.ProducerError):
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm,
+                            binary=Path("/nonexistent/llama-server"),
+                            timeout_s=60)
         status = self.evidence / f"producer-status-{self.ns}.json"
         self.assertTrue(status.is_file())
         doc = json.loads(status.read_bytes())
@@ -597,11 +674,11 @@ class AdversarialMatrixTests(ProducerFixtureMixin, unittest.TestCase):
     def test_case_4_missing_observer_row(self):
         # fake executor that drops a row fails at retention time
         execute = self.fake_execute_unit(missing_row=True)
-        with self.assertRaises(Exception):
-            PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
-                        arm=self.arm, binary=Path("/nonexistent"),
-                        timeout_s=60, fetch=self.offline_fetch(self.arm),
-                        execute=execute)
+        with self.patched_orchestration(self.arm, execute=execute):
+            with self.assertRaises(Exception):
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm, binary=Path("/nonexistent"),
+                            timeout_s=60)
 
     def test_case_5_altered_raw_response_after_receipt(self):
         cap = self._populated(2)
@@ -639,11 +716,11 @@ class AdversarialMatrixTests(ProducerFixtureMixin, unittest.TestCase):
         # env tampering (CUDA enabled) breaks the frozen geometry equality
         execute = self.fake_execute_unit(env_tamper={
             "CUDA_VISIBLE_DEVICES": "0"})
-        with self.assertRaises(PR.ProducerError):
-            PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
-                        arm=self.arm, binary=Path("/nonexistent"),
-                        timeout_s=60, fetch=self.offline_fetch(self.arm),
-                        execute=execute)
+        with self.patched_orchestration(self.arm, execute=execute):
+            with self.assertRaises(PR.ProducerError):
+                PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                            arm=self.arm, binary=Path("/nonexistent"),
+                            timeout_s=60)
 
     def test_case_15_completed_evidence_mutated_before_reduction(self):
         cap = self._populated(5)
@@ -709,6 +786,269 @@ class LiveCaptureVerifierTests(ProducerFixtureMixin, unittest.TestCase):
         bad["dispatch_phrase"] = "R8I3C PHYSICAL DISPATCH #252"
         with self.assertRaises(PR.ProducerError):
             PR.validate_live_capture_structure(bad)
+
+
+class ProductionEntrypointSeamTests(ProducerFixtureMixin, unittest.TestCase):
+    """Round-2 required RED regressions (review blocker 1): the shipped
+    production orchestration entrypoints expose NO injectable authority,
+    execution, identity or health seams of any kind."""
+
+    def setUp(self):
+        self.fixture()
+
+    def test_run_unit_signature_has_only_production_inputs(self):
+        import inspect
+        params = inspect.signature(PR.run_unit).parameters
+        self.assertEqual(list(params),
+                         ["repo_root", "evidence_root", "arm", "binary",
+                          "timeout_s", "prompt"])
+        for banned in ("fetch", "execute", "identity_observer",
+                       "health_runner", "kwargs"):
+            self.assertNotIn(banned, params)
+        self.assertFalse(any(p.kind is inspect.Parameter.VAR_KEYWORD
+                             for p in params.values()))
+
+    def test_run_arm_signature_has_only_production_inputs(self):
+        import inspect
+        params = inspect.signature(PR.run_arm).parameters
+        self.assertEqual(list(params),
+                         ["repo_root", "evidence_root", "arm", "binary",
+                          "timeout_s"])
+        for banned in ("fetch", "execute", "identity_observer",
+                       "health_runner", "kwargs"):
+            self.assertNotIn(banned, params)
+        self.assertFalse(any(p.kind is inspect.Parameter.VAR_KEYWORD
+                             for p in params.values()))
+
+    def test_run_unit_rejects_every_seam_with_typeerror(self):
+        def fake(**kwargs):
+            return None
+        for seam in ("execute", "fetch", "identity_observer",
+                     "health_runner"):
+            with self.assertRaises(TypeError, msg=seam):
+                PR.run_unit(**{seam: fake}, repo_root=self.repo,
+                            evidence_root=self.evidence, arm="A3",
+                            binary=Path("/nonexistent"), timeout_s=60)
+
+    def test_run_arm_rejects_every_seam_with_typeerror(self):
+        def fake(**kwargs):
+            return None
+        for seam in ("execute", "fetch", "identity_observer",
+                     "health_runner"):
+            with self.assertRaises(TypeError, msg=seam):
+                PR.run_arm(**{seam: fake}, repo_root=self.repo,
+                           evidence_root=self.evidence, arm="A3",
+                           binary=Path("/nonexistent"), timeout_s=60)
+
+    def test_adversarial_fake_executor_through_public_api_cannot_publish(self):
+        """End-to-end adversarial reproduction (required regression 8):
+
+        A caller holding a genuine fixture dispatch capture (equivalent to
+        a real valid #254 dispatch: exact body, OWNER association, exact
+        producer-PR provenance) attempts to substitute the test fake
+        executor through the PUBLIC production API. The call itself is a
+        TypeError: no producer-attested physical unit can be published.
+        """
+        # A real valid synthetic dispatch capture exists in the registry.
+        capture = self.live_capture("A3")
+        PR.validate_live_capture_structure(capture)
+        fake = self.fake_execute_unit()
+        with self.assertRaises(TypeError):
+            PR.run_unit(repo_root=self.repo, evidence_root=self.evidence,
+                        arm="A3", binary=Path("/nonexistent"),
+                        timeout_s=60, execute=fake)
+        # Nothing was published: no namespace directory, no units, no
+        # producer-attested physical evidence of any kind.
+        ns = A.ARMS["A3"]["namespace"]
+        base = self.evidence / ns
+        self.assertFalse(base.exists() or base.is_symlink())
+        # And the reducer path admits nothing for this evidence root.
+        with mock.patch.object(P252, "fetch_dispatch_comment",
+                               self.offline_comment_refetch()):
+            self.assertEqual(T252.derive_terminal(self.evidence, {}),
+                             T252.BLOCKED)
+
+    def test_offline_tests_patch_internal_production_objects(self):
+        """Required positive test (regression 9): offline unit tests
+        exercise the production run_unit logic solely by patching the
+        internal production function objects from test code."""
+        fetch_mock = mock.Mock(side_effect=self.offline_fetch("A3"))
+        exec_mock = mock.Mock(side_effect=self.fake_execute_unit())
+        with mock.patch.object(PR, "fetch_live_dispatch", fetch_mock), \
+             mock.patch.object(PR, "execute_unit", exec_mock):
+            outcome = PR.run_unit(repo_root=self.repo,
+                                  evidence_root=self.evidence, arm="A3",
+                                  binary=Path("/nonexistent"),
+                                  timeout_s=60)
+        self.assertEqual(outcome["index"], 1)
+        self.assertTrue(fetch_mock.called)
+        self.assertTrue(exec_mock.called)
+        self.assertTrue(Path(outcome["unit_dir"]).is_dir())
+
+
+class ProvenanceAdversarialTests(ProducerFixtureMixin, unittest.TestCase):
+    """Round-2 required adversarial tests (review blocker 2): a /3 capture
+    can authenticate against NOTHING except the exact producer PR's
+    top-level conversation."""
+
+    def setUp(self):
+        self.fixture()
+
+    def verified(self, cap):
+        with mock.patch.object(P252, "fetch_dispatch_comment",
+                               self.offline_comment_refetch()):
+            return PR.verify_live_capture(cap)
+
+    def test_dispatch_body_on_issue_254_timeline_rejected(self):
+        # adversarial 1: exact body on the #254 ISSUE timeline
+        comment = self.dispatch_comment(
+            "A3", self.head,
+            issue_url="https://api.github.com/repos/Zutfen-LLC/inferswarm/"
+                      "issues/254",
+            html_url="https://github.com/Zutfen-LLC/inferswarm/"
+                     "issues/254#issuecomment-7010")
+        cap = self.live_capture("A3")
+        # hand-build the capture to point at the issue-timeline comment
+        # while keeping every internal field consistent with it
+        forged = self.rebound_capture(cap, comment)
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_dispatch_body_on_another_issue_rejected(self):
+        comment = self.dispatch_comment(
+            "A3", self.head,
+            issue_url="https://api.github.com/repos/Zutfen-LLC/inferswarm/"
+                      "issues/199",
+            html_url="https://github.com/Zutfen-LLC/inferswarm/"
+                     "issues/199#issuecomment-7020")
+        cap = self.live_capture("A3")
+        forged = self.rebound_capture(cap, comment)
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_dispatch_body_on_another_pr_conversation_rejected(self):
+        comment = self.dispatch_comment("A3", self.head, pr=444)
+        cap = self.live_capture("A3")
+        forged = self.rebound_capture(cap, comment)
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_mutated_pr_number_with_recomputed_digest_rejected(self):
+        # adversarial 4: cap.pr_number changed and every internally
+        # consistent field/digest recomputed — still rejected because the
+        # live comment's issue_url/html_url are bound to the ORIGINAL PR.
+        cap = self.live_capture("A3")
+        forged = copy.deepcopy(cap)
+        forged["pr_number"] = 444
+        forged["html_url"] = ("https://github.com/Zutfen-LLC/inferswarm/"
+                              "pull/444"
+                              f"#issuecomment-{forged['comment_id']}")
+        forged["issue_url"] = ("https://api.github.com/repos/"
+                               "Zutfen-LLC/inferswarm/issues/444")
+        raw = {"author_association": forged["author_association"],
+               "body": forged["body"], "created_at": forged["created_at"],
+               "html_url": forged["html_url"], "id": forged["comment_id"],
+               "issue_url": forged["issue_url"],
+               "user": {"login": forged["commenter_login"]}}
+        forged["raw_comment_sha256"] = sha(json.dumps(
+            raw, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False).encode())
+        # structurally valid (all laws hold against the forged number)
+        PR.validate_live_capture_structure(forged)
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_mutated_commenter_login_rejected(self):
+        # adversarial 5: retained commenter_login altered
+        cap = self.live_capture("A3")
+        forged = copy.deepcopy(cap)
+        forged["commenter_login"] = "attacker"
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_retained_html_and_issue_provenance_altered_rejected(self):
+        # adversarial 6: retained issue_url/html_url provenance altered
+        cap = self.live_capture("A3")
+        bad_html = copy.deepcopy(cap)
+        bad_html["html_url"] = ("https://github.com/Zutfen-LLC/inferswarm/"
+                                "pull/301/files"
+                                f"#issuecomment-{bad_html['comment_id']}")
+        with self.assertRaises(PR.ProducerError):
+            PR.validate_live_capture_structure(bad_html)
+        bad_issue = copy.deepcopy(cap)
+        bad_issue["issue_url"] = ("https://api.github.com/repos/"
+                                  "Zutfen-LLC/inferswarm/issues/302")
+        with self.assertRaises(PR.ProducerError):
+            PR.validate_live_capture_structure(bad_issue)
+
+    def test_inline_review_comment_provenance_rejected(self):
+        # adversarial 7: an inline review comment (pulls review-comment
+        # API shape: html_url anchored on the diff hunk of another PR's
+        # files page) with the exact dispatch body is not authority.
+        comment = self.dispatch_comment(
+            "A3", self.head, pr=444,
+            html_url=("https://github.com/Zutfen-LLC/inferswarm/"
+                      "pull/444/files#diff-abc"
+                      f"#issuecomment-{self._next_id}"))
+        cap = self.live_capture("A3")
+        forged = self.rebound_capture(cap, comment)
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def test_authentic_producer_pr_conversation_comment_accepted(self):
+        # adversarial 8 (positive): an authentic top-level comment on the
+        # producer PR conversation verifies end-to-end.
+        cap = self.live_capture("A3")
+        self.assertEqual(self.verified(cap), cap)
+
+    def test_old_law_forgery_on_another_pr_rejected(self):
+        """[RED] old-defect anchor (round 2): a /3 capture backed by an
+        exact-body OWNER comment on ANOTHER PR, with the digest computed
+        per the PRE-round-2 six-field projection (no html_url) — exactly
+        the forgery the reviewed head's verifier accepted. The corrected
+        verifier must reject it on PROVENANCE, not digest luck."""
+        comment = self.dispatch_comment("A3", self.head, pr=444)
+        cap = self.live_capture("A3")
+        forged = copy.deepcopy(cap)
+        forged["comment_id"] = comment["id"]
+        forged["commenter_login"] = comment["user"]["login"]
+        forged["author_association"] = comment["author_association"]
+        forged["created_at"] = comment["created_at"]
+        forged["body"] = comment["body"]
+        forged["html_url"] = comment["html_url"]
+        forged["issue_url"] = comment["issue_url"]
+        raw = {"author_association": forged["author_association"],
+               "body": forged["body"], "created_at": forged["created_at"],
+               "id": forged["comment_id"],
+               "issue_url": forged["issue_url"],
+               "user": {"login": forged["commenter_login"]}}
+        # old projection law: canonical_bytes drops absent html_url, so
+        # this digest is exactly what the pre-correction verifier derived.
+        forged["raw_comment_sha256"] = sha(CAP.canonical_bytes(raw))
+        self.assertIn("html_url", CAP.AUTH_FIELDS)  # new law retains it
+        with self.assertRaises(PR.ProducerError):
+            self.verified(forged)
+
+    def rebound_capture(self, cap, comment):
+        """Rebind a valid capture onto another comment, recomputing every
+        internally consistent field and digest (competent forgery)."""
+        forged = copy.deepcopy(cap)
+        forged["comment_id"] = comment["id"]
+        forged["commenter_login"] = comment["user"]["login"]
+        forged["author_association"] = comment["author_association"]
+        forged["created_at"] = comment["created_at"]
+        forged["body"] = comment["body"]
+        forged["html_url"] = comment["html_url"]
+        forged["issue_url"] = comment["issue_url"]
+        raw = {"author_association": forged["author_association"],
+               "body": forged["body"], "created_at": forged["created_at"],
+               "html_url": forged["html_url"], "id": forged["comment_id"],
+               "issue_url": forged["issue_url"],
+               "user": {"login": forged["commenter_login"]}}
+        forged["raw_comment_sha256"] = sha(json.dumps(
+            raw, sort_keys=True, separators=(",", ":"),
+            ensure_ascii=False).encode())
+        return forged
 
 
 class Phase0RegressionTests(ProducerFixtureMixin, unittest.TestCase):

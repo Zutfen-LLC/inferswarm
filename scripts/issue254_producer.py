@@ -172,6 +172,42 @@ def validate_live_body(body: Any) -> tuple[str, str]:
     return head_line[5:], arm_line[4:]
 
 
+def validate_live_comment_provenance(comment: Any, *,
+                                     pr_number: int) -> None:
+    """Authority-bearing provenance law of a #254 dispatch comment.
+
+    Round-2 correction (review blocker 2); mirrors the hardened schema-/2
+    doctrine (issue252_capture.validate_capture_body): the comment must
+    be a TOP-LEVEL CONVERSATION comment of the exact producer PR in the
+    canonical repository. An exact three-line dispatch body on an issue
+    timeline, another PR's conversation, or an inline review comment is
+    not authority. Pure; consumes the live/re-fetched comment object and
+    never trusts capture-retained copies.
+    """
+    if not isinstance(comment, dict):
+        raise ProducerError("dispatch comment object missing")
+    cid = comment.get("id")
+    if type(cid) is not int or cid <= 0:
+        raise ProducerError("dispatch comment id missing")
+    if type(pr_number) is not int or pr_number <= 0:
+        raise ProducerError("producer PR number malformed")
+    if comment.get("issue_url") != f"{API_ROOT}/issues/{pr_number}":
+        raise ProducerError(
+            "dispatch comment is not a top-level conversation comment of "
+            "the producer PR (issue_url mismatch)")
+    html_url = comment.get("html_url")
+    if not isinstance(html_url, str) or html_url != (
+            f"https://github.com/Zutfen-LLC/inferswarm/pull/{pr_number}"
+            f"#issuecomment-{cid}"):
+        raise ProducerError(
+            "dispatch comment html provenance is not an exact producer-PR "
+            "conversation comment")
+    user = comment.get("user")
+    login = user.get("login") if isinstance(user, dict) else None
+    if not isinstance(login, str) or not login:
+        raise ProducerError("dispatch commenter login missing")
+
+
 def fetch_live_dispatch(repo_root: Path, expected_head: str | None = None,
                         head_branch: str | None = None,
                         pr_number: int | None = None) -> dict[str, Any]:
@@ -242,8 +278,14 @@ def fetch_live_dispatch(repo_root: Path, expected_head: str | None = None,
             continue  # stale dispatch for an older head: not authority
         if comment.get("author_association") not in ("OWNER", "MEMBER"):
             continue
-        expected_url = (f"{API_ROOT}/issues/{pr_number}")
-        if comment.get("issue_url") != expected_url:
+        # Round-2 provenance law (review blocker 2): the comment must be a
+        # top-level conversation comment of THIS producer PR in the
+        # canonical repository (issue/other-PR/review bodies are skipped;
+        # a surviving exact-body comment elsewhere yields zero valid
+        # candidates, which refuses below with the ambiguity error).
+        try:
+            validate_live_comment_provenance(comment, pr_number=pr_number)
+        except ProducerError:
             continue
         valid.append(comment)
     if len(valid) != 1:
@@ -293,6 +335,13 @@ def build_live_capture(dispatch: dict[str, Any]) -> dict[str, Any]:
                    "id": dispatch["comment_id"],
                    "issue_url": dispatch["issue_url"],
                    "user": {"login": dispatch["commenter_login"]}}
+    # Round-2 provenance binding (review blocker 2): html_url is retained
+    # in the /3 capture and its canonical projection, mirroring the
+    # hardened schema-/2 AUTH_FIELDS doctrine (issue252_capture).
+    html_url = (f"https://github.com/Zutfen-LLC/inferswarm/pull/"
+                f"{dispatch['pr_number']}"
+                f"#issuecomment-{dispatch['comment_id']}")
+    raw_comment["html_url"] = html_url
     return {
         "schema": C.LIVE_CAPTURE_SCHEMA,
         "repo": "Zutfen-LLC/inferswarm",
@@ -307,6 +356,8 @@ def build_live_capture(dispatch: dict[str, Any]) -> dict[str, Any]:
         "author_association": dispatch["author_association"],
         "created_at": dispatch["created_at"],
         "body": dispatch["body"],
+        "html_url": html_url,
+        "issue_url": dispatch["issue_url"],
         "raw_comment_sha256": _sha(CAP252.canonical_bytes(raw_comment)),
         "execution_time_state": {
             "pr_open": True, "pr_merged": False, "pr_draft": False,
@@ -340,6 +391,24 @@ def validate_live_capture_structure(cap: dict[str, Any]) -> None:
         raise ProducerError("live capture author not OWNER/MEMBER")
     if type(cap.get("comment_id")) is not int or cap["comment_id"] <= 0:
         raise ProducerError("live capture comment ID missing")
+    if not isinstance(cap.get("commenter_login"), str) or not cap[
+            "commenter_login"]:
+        raise ProducerError("live capture commenter login missing")
+    # Round-2 provenance law (review blocker 2): the retained capture must
+    # carry the exact canonical PR-conversation html_url for this comment
+    # (mirrors the schema-/2 doctrine); verify_live_capture additionally
+    # re-derives it from the independently re-fetched live comment.
+    number = cap["pr_number"]
+    cid = cap["comment_id"]
+    if cap.get("html_url") != (
+            f"https://github.com/Zutfen-LLC/inferswarm/pull/{number}"
+            f"#issuecomment-{cid}"):
+        raise ProducerError(
+            "live capture html provenance is not an exact producer-PR "
+            "conversation comment")
+    if cap.get("issue_url") != f"{API_ROOT}/issues/{number}":
+        raise ProducerError(
+            "live capture is not a top-level comment of the producer PR")
     raw = cap.get("raw_comment_sha256")
     if not isinstance(raw, str) or not re.fullmatch(r"[0-9a-f]{64}", raw):
         raise ProducerError("live capture raw digest malformed")
@@ -353,11 +422,39 @@ def validate_live_capture_structure(cap: dict[str, Any]) -> None:
 def verify_live_capture(cap: dict[str, Any]) -> dict[str, Any]:
     """Reducer-side admission of a retained /3 live capture: independent
     re-fetch of the immutable comment by exact ID through the production
-    HTTPS seam; byte-equality of every authentication-bearing field."""
+    HTTPS seam; byte-equality of every authentication-bearing field.
+
+    Round-2 correction (review blocker 2): the re-fetched comment's
+    authority-bearing PROVENANCE is mechanically bound to the exact
+    producer PR at reduction time — ``issue_url`` must be the PR's issues
+    API URL and ``html_url`` the exact canonical PR-conversation comment
+    URL for ``cap['pr_number']`` and the exact comment id. An exact-body
+    OWNER/MEMBER comment on an issue timeline, another PR, or an inline
+    review comment cannot back a /3 capture (mirrors the hardened
+    schema-/2 verify_capture doctrine).
+    """
     validate_live_capture_structure(cap)
     live = P252.fetch_dispatch_comment(
         f"{API_ROOT}/issues/comments/{cap['comment_id']}")
     validate_live_body(live.get("body"))
+    # Live provenance law: the re-fetched comment must BE a top-level
+    # conversation comment of the exact producer PR named by the capture.
+    validate_live_comment_provenance(live, pr_number=cap["pr_number"])
+    # Round-2 cross-check: the retained pr_number must resolve to a PR
+    # whose IMMUTABLE head ref carries the frozen #254 producer-branch
+    # prefix (the same law resolve_producer_pr uses at dispatch time).
+    # This binds the PR number to a producer PR without checking mutable
+    # PR state (open/merged/draft/base are execution-time facts retained
+    # in the capture, never re-derived at reduction time) — the /2
+    # doctrine of validating only immutable identity at reduction.
+    pr = P252.fetch_dispatch_comment(f"{API_ROOT}/pulls/{cap['pr_number']}")
+    if (not isinstance(pr, dict) or pr.get("number") != cap["pr_number"]):
+        raise ProducerError("retained producer PR does not resolve")
+    head_ref = pr.get("head", {}).get("ref")
+    if not isinstance(head_ref, str) or not head_ref.startswith(
+            C.PRODUCER_BRANCH_PREFIX):
+        raise ProducerError(
+            "retained producer PR head branch is not a #254 producer branch")
     # Same projection as build time: every authentication-bearing field,
     # with ``user`` reduced to the login (the only retained authority
     # semantics; the live API's extra user fields are not authority).
@@ -367,6 +464,7 @@ def verify_live_capture(cap: dict[str, Any]) -> dict[str, Any]:
                  "created_at": live.get("created_at"),
                  "id": live.get("id"),
                  "issue_url": live.get("issue_url"),
+                 "html_url": live.get("html_url"),
                  "user": {"login": user.get("login") if isinstance(
                      user, dict) else None}}
     if _sha(CAP252.canonical_bytes(projected)) != cap["raw_comment_sha256"]:
@@ -380,6 +478,12 @@ def verify_live_capture(cap: dict[str, Any]) -> dict[str, Any]:
         raise ProducerError("re-fetched comment author differs")
     if live.get("created_at") != cap["created_at"]:
         raise ProducerError("re-fetched comment creation differs")
+    if live.get("html_url") != cap["html_url"]:
+        raise ProducerError("re-fetched comment html provenance differs")
+    if live.get("issue_url") != cap["issue_url"]:
+        raise ProducerError("re-fetched comment issue provenance differs")
+    if projected["user"]["login"] != cap["commenter_login"]:
+        raise ProducerError("re-fetched commenter login differs")
     return cap
 
 
@@ -923,20 +1027,19 @@ def retain_status_record(evidence_root: Path, namespace: str,
 def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
              binary: Path, timeout_s: float,
              prompt: str | None = None,
-             fetch: Callable[..., dict[str, Any]] | None = None,
-             execute: Callable[..., dict[str, Any]] | None = None,
-             identity_observer: Callable[[], dict[str, Any]] | None = None,
-             health_runner: Callable[[], Any] | None = None,
              ) -> dict[str, Any]:
     """Re-authenticate dispatch, derive the next legal unit, execute, retain.
 
-    The single production orchestration entrypoint. ``fetch``, ``execute``,
-    ``identity_observer`` and ``health_runner`` are TEST SEAMS ONLY
-    (injectable offline registries / fake executors, the accepted #250
-    producer pattern); production resolves fetch_live_dispatch and
-    execute_unit, which obtain every observation from the producer's own
-    launched process and host probes. No parameter can supply authority or
-    observations.
+    The single production orchestration entrypoint. Round-2 correction
+    (review blocker 1): NO injectable seams — this function exposes no
+    fetch, execute, identity-observer or health-runner parameter and
+    unconditionally calls the production fetch_live_dispatch,
+    execute_unit, identity-observation and health paths, which obtain
+    every observation from the producer's own launched process and host
+    probes. Offline tests exercise this same production logic by
+    patching the internal production function objects from test code
+    (unittest.mock), never through this signature. There is deliberately
+    no **kwargs: a generic kwargs escape could recreate the removed seams.
     """
     if arm not in A.ARMS:
         raise ProducerError("unknown arm")
@@ -944,8 +1047,7 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
     index = next_legal_unit(evidence_root, arm)
     if index is None:
         raise ProducerError("arm has no next legal unit (stopped/complete)")
-    fetcher = fetch or fetch_live_dispatch
-    dispatch = fetcher(repo_root=repo_root)
+    dispatch = fetch_live_dispatch(repo_root=repo_root)
     if dispatch["arm"] != arm:
         raise ProducerError(
             "live dispatch authorizes a different arm (one dispatch = one arm)")
@@ -963,12 +1065,9 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
     try:
         capture = build_live_capture(dispatch)
         validate_live_capture_structure(capture)
-        executor = execute or execute_unit
-        unit = executor(dispatch=dispatch, arm=arm, unit_index=index,
-                        binary=Path(binary), unit_dir=work,
-                        prompt=prompt, timeout_s=timeout_s,
-                        identity_observer=identity_observer,
-                        health_runner=health_runner)
+        unit = execute_unit(dispatch=dispatch, arm=arm, unit_index=index,
+                            binary=Path(binary), unit_dir=work,
+                            prompt=prompt, timeout_s=timeout_s)
         attestation = build_producer_attestation(unit)
         # Retained receipt: the #252 frozen unit-receipt contract, with the
         # retained authority being EXACTLY the #254 live capture (schema
@@ -1019,21 +1118,19 @@ def run_unit(*, repo_root: Path, evidence_root: Path, arm: str,
 
 def run_arm(*, repo_root: Path, evidence_root: Path, arm: str,
             binary: Path, timeout_s: float,
-            fetch: Callable[..., dict[str, Any]] | None = None,
-            execute: Callable[..., dict[str, Any]] | None = None,
-            identity_observer: Callable[[], dict[str, Any]] | None = None,
-            health_runner: Callable[[], Any] | None = None,
             ) -> dict[str, Any]:
-    """Execute an arm under the fail-closed stop law (unit-by-unit)."""
+    """Execute an arm under the fail-closed stop law (unit-by-unit).
+
+    Round-2 correction (review blocker 1): calls ONLY the production
+    run_unit path — no fetch/execute/identity/health injection of any
+    kind (tests patch internal production function objects instead).
+    """
     results = []
     while True:
         try:
             outcome = run_unit(repo_root=repo_root,
                                evidence_root=evidence_root, arm=arm,
-                               binary=binary, timeout_s=timeout_s,
-                               fetch=fetch, execute=execute,
-                               identity_observer=identity_observer,
-                               health_runner=health_runner)
+                               binary=binary, timeout_s=timeout_s)
         except ProducerError as exc:
             if "no next legal unit" in str(exc) and results:
                 break

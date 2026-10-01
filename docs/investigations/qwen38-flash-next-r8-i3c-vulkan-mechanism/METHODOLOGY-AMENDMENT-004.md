@@ -70,15 +70,34 @@ receipt and marks them physical. The only physical path is
 `execute_unit`, which launches the pinned comparator process itself,
 reads back the live `/proc/<pid>/cmdline`+`environ`, issues the byte-exact
 accepted request itself, and derives placement evidence from the retained
-complete server log plus the no-CUDA environment law. Test doubles are
-injectable seams only (`fetch`, `execute`, `identity_observer`,
-`health_runner`), the accepted #250 producer pattern.
+complete server log plus the no-CUDA environment law.
+
+Round-2 correction (maintainer review of d668f628): the production
+orchestration entrypoints `run_unit` and `run_arm` expose NO injectable
+seams of any kind — no `fetch`, `execute`, `identity_observer`,
+`health_runner` parameter and no generic `**kwargs` escape.
+`run_unit` unconditionally calls `fetch_live_dispatch`, `execute_unit`,
+and the production identity/health paths; `run_arm` calls only the
+production `run_unit` path. Offline tests exercise the production
+orchestration logic solely by patching the internal production function
+objects (`PR.fetch_live_dispatch`, `PR.execute_unit`) from test code
+with `unittest.mock` — the same doctrine as the schema-/2 suite's
+`offline_authority_fetch`. The /3 capture verifier additionally binds
+comment provenance to the exact producer PR conversation (see the
+round-2 provenance law in `scripts/issue254_producer.py`:
+`validate_live_comment_provenance`), mirroring the hardened schema-/2
+doctrine: `issue_url == API_ROOT/issues/<pr_number>` and the exact
+canonical `html_url` `.../pull/<pr_number>#issuecomment-<comment_id>`
+are retained in the /3 capture, its canonical projection, and
+re-derived from the independently re-fetched live comment at
+reduction time; the retained `commenter_login` must equal the live
+commenter login.
 
 ## E. Zero physical authority in Phase A
 
 Phase A (this PR) performs NO model inference and NO physical
 discriminator execution. `execute_unit` cannot start: it requires a fresh
 live `#254` dispatch, and no dispatch comment may exist for this PR before
-maintainer review. All 29 tests run against offline fixtures and injected
-doubles. Phase B (A3 first) requires the separate exact-head OWNER/MEMBER
-dispatch defined in issue #254.
+maintainer review. All 44 tests run against offline fixtures and patched
+internal production objects. Phase B (A3 first) requires the separate
+exact-head OWNER/MEMBER dispatch defined in issue #254.
