@@ -70,26 +70,26 @@ def compare_memory_choices(base: dict, intervention: dict) -> bool:
 
 
 def compare_arm_pairs(baseline: list[dict], intervention: list[dict], arm: str) -> list[dict]:
-    """Pair every completed unit by ordinal; fail closed on incomplete/ambiguous arms."""
-    if len(baseline) != len(intervention) or not baseline:
-        raise ReportError(f"{arm} comparison has ambiguous unit counts")
+    """Contrast every BASE/intervention unit; unequal legal arm counts are valid."""
+    for name, units in (("BASE", baseline), (arm, intervention)):
+        if [u.get("unit_index") for u in units] != list(range(1, len(units) + 1)) or len(units) not in (2, 3):
+            raise ReportError(f"{name} comparison has invalid unit identities/count")
     pairs = []
-    for left, right in zip(baseline, intervention):
-        if left.get("unit_index") != right.get("unit_index"):
-            raise ReportError(f"{arm} comparison unit identities do not align")
-        bt = left.get("markers", {}).get("h2h3", {}).get("target")
-        it = right.get("markers", {}).get("h2h3", {}).get("target")
-        if bt is None or it is None:
-            raise ReportError(f"{arm} comparison lacks target choice")
-        changed = compare_memory_choices({"target": bt}, {"target": it})
-        record = {"baseline_unit": left["unit_index"], "intervention_arm": arm,
-                  "intervention_unit": right["unit_index"],
-                  "baseline_row_digest": left.get("row_digest"),
-                  "intervention_row_digest": right.get("row_digest"),
-                  "baseline_target": bt, "intervention_target": it,
-                  "choice_changed": changed}
-        record["comparison_sha256"] = _sha(json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
-        pairs.append(record)
+    for left in baseline:
+        for right in intervention:
+            bt = left.get("markers", {}).get("h2h3", {}).get("target")
+            it = right.get("markers", {}).get("h2h3", {}).get("target")
+            if bt is None or it is None:
+                raise ReportError(f"H3 {arm} comparison lacks target choice")
+            changed = compare_memory_choices({"target": bt}, {"target": it})
+            record = {"baseline_unit": left["unit_index"], "intervention_arm": arm,
+                      "intervention_unit": right["unit_index"],
+                      "baseline_row_digest": left.get("row_digest"),
+                      "intervention_row_digest": right.get("row_digest"),
+                      "baseline_target": bt, "intervention_target": it,
+                      "choice_changed": changed}
+            record["comparison_sha256"] = _sha(json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
+            pairs.append(record)
     return pairs
 
 
@@ -163,6 +163,12 @@ def _unit_dir(path: Path, arm: str) -> dict:
     log_hash = _sha(log)
     if meta.get("server_log_sha256") != log_hash:
         raise ReportError(f"server.log digest mismatch: {path}")
+    if meta.get("response_raw_sha256") != _sha((path / "response.json.raw").read_bytes()):
+        raise ReportError(f"response.json.raw digest mismatch: {path}")
+    for key in ("binary_sha256", "request_sha256"):
+        value = meta.get(key)
+        if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+            raise ReportError(f"invalid {key} in retained unit metadata: {path}")
     rows = []
     for i in range(ROWS):
         row = (path / f"obs.row{i}.f32").read_bytes()
@@ -182,14 +188,26 @@ def _unit_dir(path: Path, arm: str) -> dict:
     target = h2h3.get("target")
     selected = []
     if target:
-        buffer_marker = f"|buffer={target['buffer']}|"
+        allocation = []
+        binding = []
         for number, line in enumerate(text.splitlines(), 1):
-            if (("ggml_vk_i260:v1|memory|role=backend|" in line and buffer_marker in line)
-                    or ("ggml_vk_i260:v1|tensor|name=output.weight|" in line
-                        and buffer_marker in line)):
-                selected.append({"line": number, "text": line})
-        if len(selected) < 2:
+            memory = I260.MEMORY.search(line)
+            tensor = I260.TENSOR.search(line)
+            if memory and memory.end() == len(line):
+                buffer, branch, memory_type, flags = memory.groups()
+                if (int(buffer), branch, int(memory_type), int(flags, 16)) == (
+                        target["buffer"], target["branch"], target["type"], target["flags"]):
+                    allocation.append({"line": number, "text": line, "kind": "allocation"})
+            if tensor and tensor.end() == len(line):
+                buffer, offset, size, allocation_size = map(int, tensor.groups())
+                if (buffer, offset, size, allocation_size) == (
+                        target["buffer"], target["offset"], target["bytes"], target["allocation_size"]):
+                    binding.append({"line": number, "text": line, "kind": "tensor-binding"})
+        if len(allocation) != 1 or len(binding) != 1 or allocation[0]["line"] >= binding[0]["line"]:
             raise ReportError(f"parsed H3 target lacks exact allocation/tensor provenance: {path}")
+        unit_hash = _sha((path / "unit.json").read_bytes())
+        selected = [{**entry, "server_log_sha256": log_hash, "unit_json_sha256": unit_hash}
+                    for entry in allocation + binding]
         target["provenance"] = selected
     h2h3["source_lines"] = selected
     h2h3["graphs"] = len(h2h3.get("graphs", []))
@@ -198,13 +216,27 @@ def _unit_dir(path: Path, arm: str) -> dict:
     if arm != "A1" and not h2h3.get("target"):
         raise ReportError(f"missing parsed output.weight target: {path}")
     return {"unit_index": meta["unit_index"], "row_digest": digest,
+            "tag": meta.get("tag", path.name),
+            "binary_sha256": meta.get("binary_sha256"),
+            "request_sha256": meta.get("request_sha256"),
+            "response_raw_sha256": meta.get("response_raw_sha256"),
             "server_log_sha256": log_hash, "log": log, "markers": markers,
+            "accepted_comparison": {"identity": "sha256(concat obs.row0.f32..obs.row7.f32)",
+                                    "digest": digest},
             "source": {"unit_dir": path.name,
                        "unit_json_sha256": _sha((path / "unit.json").read_bytes()),
                        "server_log_sha256": log_hash}}
 
 
-def reduce_evidence(root: Path, context: dict | None = None) -> dict:
+def _unanimous_contrast(pairs: list[dict], arm: str) -> bool:
+    outcomes = {p["choice_changed"] for p in pairs}
+    if len(outcomes) != 1:
+        raise ReportError(f"{arm} target choice contrasts disagree across completed pairs")
+    return outcomes.pop()
+
+
+def reduce_evidence(root: Path, context: dict | None = None,
+                    *, require_complete: bool = False) -> dict:
     root = Path(root)
     if not root.is_dir():
         raise ReportError(f"retained evidence directory missing: {root}")
@@ -223,18 +255,12 @@ def reduce_evidence(root: Path, context: dict | None = None) -> dict:
             arms[arm] = units
     if "BASE" not in arms:
         raise ReportError("BASE evidence absent")
-    base_target = arms["BASE"][0]["markers"]["h2h3"].get("target")
-    a5_contrast = False
-    if "A5" in arms:
-        a5_target = arms["A5"][0]["markers"]["h2h3"].get("target")
-        if base_target is None or a5_target is None:
-            raise ReportError("H3 comparison requires retained BASE and A5 target")
-        a5_contrast = compare_memory_choices({"target": base_target},
-                                             {"target": a5_target})
-    a5_pairs = compare_arm_pairs(arms["BASE"], arms["A5"], "A5") if "A5" in arms else []
-    a5_contrast = any(pair["choice_changed"] for pair in a5_pairs)
+    a5_pairs = compare_arm_pairs(arms["BASE"], arms["A5"], "A5")
+    a5_contrast = _unanimous_contrast(a5_pairs, "A5")
     a4_needed = a4_required(a5_contrast)
     a4_executed = "A4" in arms
+    if a4_needed and not a4_executed and require_complete:
+        raise ReportError("A4 required but not executed; refusing final report")
     h3_status = ("contrast-observed" if a5_contrast else
                  "awaiting-required-A4" if a4_needed and not a4_executed else
                  "no-memory-choice-contrast")
@@ -247,7 +273,7 @@ def reduce_evidence(root: Path, context: dict | None = None) -> dict:
             if target is None:
                 raise ReportError("A4 unit lacks target allocation fields")
         a4_pairs = compare_arm_pairs(arms["BASE"], arms["A4"], "A4")
-        a4_contrast = any(pair["choice_changed"] for pair in a4_pairs)
+        a4_contrast = _unanimous_contrast(a4_pairs, "A4")
         h3_status = "contrast-observed" if a4_contrast else "no-memory-choice-contrast"
     h5_observations = [u["markers"]["h5"] for u in arms["BASE"]]
     eligibility = [h5_candidate_eligibility(obs) for obs in h5_observations]
@@ -259,8 +285,23 @@ def reduce_evidence(root: Path, context: dict | None = None) -> dict:
     routes = h5_observations[0].get("routes", {})
     output_route = routes
 
+    for arm, units in arms.items():
+        expected_submission = "serialized" if arm == "A1" else "normal"
+        if any(u["markers"]["h2h3"].get("submission") != expected_submission for u in units):
+            raise ReportError(f"H2 {arm} submission observation disagrees with accepted law")
     quarantine_dirs = sorted(p for p in (root / "producer-defect-quarantine").iterdir()
                              if p.is_dir()) if (root / "producer-defect-quarantine").is_dir() else []
+    quarantine = {}
+    for directory in quarantine_dirs:
+        prefix = f"producer-defect-quarantine/{directory.name}/"
+        files = {key[len(prefix):]: value for key, value in inventory.items() if key.startswith(prefix)}
+        if "obs.meta.json" not in files or "server.log" not in files:
+            raise ReportError(f"quarantine provenance incomplete: {directory.name}")
+        quarantine[directory.name] = {
+            "defect": "known producer/parser defect; excluded from accepted screening",
+            "obs_meta_json_sha256": files["obs.meta.json"]["sha256"],
+            "server_log_sha256": files["server.log"]["sha256"],
+            "inventory": {"file": "remote-inventory.tsv", "paths": files}}
     quarantine_files = [name for name in inventory if name.startswith("producer-defect-quarantine/")]
     if context is not None and not isinstance(context, dict):
         raise ReportError("context authority must be a JSON object")
@@ -270,16 +311,26 @@ def reduce_evidence(root: Path, context: dict | None = None) -> dict:
         "comparator_sha256", "source_tree") if key in context}
     return {"schema": "inferswarm.issue262.retained-report/1",
             "authority": authority,
-            "evidence": {"root": str(root), "logical_root": "Issue #262 retained evidence (authenticated copy)",
-                         "inventory": "sibling remote-inventory.tsv",
+            "evidence": {"root": "/home/hermes/is262-evidence",
+                         "logical_root": "/home/hermes/is262-evidence",
+                         "inventory": "remote-inventory.tsv",
                          "inventory_file_count": len(inventory),
                          "inventory_sha256": _sha((root.parent / "remote-inventory.tsv").read_bytes())},
             "arms": {arm: {"classification": classify_units(units),
-                           "units": [{**{k: u[k] for k in ("unit_index", "row_digest", "source")},
+                           "n_units": len(units),
+                           "arm_env_single_factor": P.ARM_ENV[arm],
+                           "units": [{**{k: u.get(k) for k in (
+                               "unit_index", "row_digest", "source", "tag", "binary_sha256",
+                               "request_sha256", "response_raw_sha256", "server_log_sha256")},
+                                      "accepted_comparison": u.get("accepted_comparison", {
+                                          "identity": "sha256(concat obs.row0.f32..obs.row7.f32)",
+                                          "digest": u["row_digest"]}),
                                       "h2h3": u["markers"]["h2h3"], "h5": u["markers"]["h5"]}
                                      for u in units]}
                      for arm, units in arms.items()},
-            "h2": {"unit_observations": {arm: [{"unit_index": u["unit_index"],
+            "h2": {"result": "A1 serialized; BASE/A5/A4 normal" if a4_executed else
+                              "A1 serialized; BASE/A5 normal; A4 pending" if a4_needed else
+                              "A1 serialized; BASE/A5 normal","unit_observations": {arm: [{"unit_index": u["unit_index"],
                                                     "submission": u["markers"]["h2h3"].get("submission"),
                                                     "row_digest": u["row_digest"],
                                                     "source": u["source"]}
@@ -296,6 +347,7 @@ def reduce_evidence(root: Path, context: dict | None = None) -> dict:
                    "candidate_executed": "H5_CANDIDATE" in arms,
                    "mmv_control_live": candidate_eligible},
             "quarantined_units": len(quarantine_dirs),
+            "quarantine": quarantine,
             "quarantine_inventory_files": len(quarantine_files),
             "interpretation": {
                 "h2": "serialized/normal observations are retained facts, not a numerical causal conclusion",
@@ -309,8 +361,7 @@ def render(report: dict) -> str:
     """Render prose only from reducer JSON; no additional observations inferred."""
     lines = ["# Issue #262 retained pilot report (CPU-only)", "", "## Evidence provenance",
              f"- Logical retained root: `{report['evidence'].get('logical_root', 'retained evidence')}`",
-             f"- Inventory: {report['evidence']['inventory_file_count']} files; SHA-256 `{report['evidence']['inventory_sha256']}`",
-             f"- Raw retained location (for operator invocation only): `{report['evidence']['root']}`"]
+             f"- Inventory: `remote-inventory.tsv`, {report['evidence']['inventory_file_count']} files; SHA-256 `{report['evidence']['inventory_sha256']}`"]
     for key, value in report.get("authority", {}).items():
         lines.append(f"- {key}: `{value}`")
     lines += ["", "## Arms"]
@@ -318,8 +369,11 @@ def render(report: dict) -> str:
         lines += [f"### {arm}: {result['classification']} ({len(result['units'])} units)"]
         for unit in result["units"]:
             target = unit["h2h3"].get("target")
-            lines.append(f"- Unit {unit['unit_index']}: row SHA-256 `{unit['row_digest']}`; "
+            lines.append(f"- Unit {unit['unit_index']} (`{unit.get('tag')}`): row SHA-256 `{unit['row_digest']}`; "
                          f"unit metadata `{unit['source']['unit_json_sha256']}`; log `{unit['source']['server_log_sha256']}`")
+            lines.append(f"  - Binary `{unit.get('binary_sha256')}`; request `{unit.get('request_sha256')}`; "
+                         f"raw response `{unit.get('response_raw_sha256')}`; accepted comparison "
+                         f"`{unit['accepted_comparison']['identity']}` = `{unit['accepted_comparison']['digest']}`")
             if target:
                 lines.append(f"  - H3: branch `{target['branch']}`, type `{target['type']}`, flags `{target['flags']}`, "
                              f"buffer `{target['buffer']}`, offset `{target['offset']}`, bytes `{target['bytes']}`, "
@@ -328,9 +382,13 @@ def render(report: dict) -> str:
                     lines.append(f"  - Log line {marker['line']}: `{marker['text']}`")
             lines.append(f"  - H2 submission: `{unit['h2h3'].get('submission')}`")
     h3 = report["h3"]
-    lines += ["", "## H3 full-pair contrasts",
+    lines += ["", "## H2 observed submission paths",
+              f"{report['h2']['result']}. This is a parsed submission-path observation, not numerical causal proof.",
+              "", "## H3 full-pair contrasts",
               f"A5 contrast: **{h3['a5_target_choice_contrast']}**; A4 required: **{h3['a4_required']}**; "
-              f"A4 executed: **{h3['a4_executed']}**; status: **{h3['status']}**."]
+              f"A4 executed: **{h3['a4_executed']}**; A4 target-choice contrast: **{h3['a4_target_choice_contrast']}**; "
+              f"status: **{h3['status']}**. A contrast requires observed target memory type/flags change, "
+              "not just a branch change, and is necessary but not terminal mechanistic proof."]
     for label, pairs in (("BASE vs A5", h3["a5_comparison_pairs"]), ("BASE vs A4", h3.get("a4_comparison_pairs", []))):
         lines += [f"### {label}"]
         for pair in pairs:
@@ -342,8 +400,13 @@ def render(report: dict) -> str:
               f"candidate eligible={h5['candidate_eligible']}; executed={h5['candidate_executed']}; "
               f"reason: {h5['eligibility_reason']}.", "",
               f"Quarantine: {report['quarantined_units']} known-defect units excluded; "
-              f"{report['quarantine_inventory_files']} inventoried quarantine files.", "",
-              "## Interpretation"]
+              f"{report['quarantine_inventory_files']} inventoried quarantine files."]
+    for name, entry in report["quarantine"].items():
+        lines.append(f"- `{name}`: known parser/producer defect, not an accepted unit; "
+                     f"obs.meta.json SHA-256 `{entry['obs_meta_json_sha256']}`; "
+                     f"server.log SHA-256 `{entry['server_log_sha256']}`; "
+                     f"source `remote-inventory.tsv` ({len(entry['inventory']['paths'])} files).")
+    lines += ["", "## Interpretation"]
     lines.extend(f"- {key}: {value}" for key, value in report["interpretation"].items())
     return "\n".join(lines) + "\n"
 
@@ -354,10 +417,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", dest="json_path", type=Path)
     parser.add_argument("--text", dest="text_path", type=Path)
     parser.add_argument("--context", type=Path, help="optional preserved execution/provenance authority JSON")
+    parser.add_argument("--require-complete", action="store_true",
+                        help="refuse final publication while required A4 evidence is absent")
     args = parser.parse_args(argv)
     try:
         context = _read_json(args.context) if args.context else None
-        report = reduce_evidence(args.evidence_root, context)
+        report = reduce_evidence(args.evidence_root, context, require_complete=args.require_complete)
     except ReportError as exc:
         print(f"issue262-report: refusing: {exc}", file=sys.stderr)
         return 2
