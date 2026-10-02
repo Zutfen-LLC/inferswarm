@@ -267,6 +267,9 @@ GROUP_TEST_MODULES = {
         # capability-explicit terminal derivation; A5 nonterminal per
         # accepted #257; honest UNRESOLVED for the accepted A3/A5 state.
         "test_issue258_theorem",
+        # Issue #260: prospective source/observation grammar and fail-closed H5.
+        "test_issue260_source_patch",
+        "test_issue260_observation",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -385,6 +388,8 @@ PATH_GROUPS = {
     "tests/test_issue254_round5.py": ["r8i-qwen-qualification"],
     "tests/test_issue254_round7.py": ["r8i-qwen-qualification"],
     "tests/test_issue258_theorem.py": ["r8i-qwen-qualification"],
+    "tests/test_issue260_source_patch.py": ["r8i-qwen-qualification"],
+    "tests/test_issue260_observation.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full

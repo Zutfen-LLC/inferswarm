@@ -20,6 +20,7 @@ The hashes above are to be literal SHA-256 values; generate/verify them from the
 - `scripts/issue252_physical.py` — fail-closed physical execution/custody gates; does not itself grant dispatch authority.
 - `scripts/issue252_terminal.py` — retained-byte terminal derivation (AMENDMENT-006: capability-explicit arm-set theorem).
 - `scripts/issue258_theorem.py` — frozen per-arm terminal-capability law and hypothesis-coverage derivation (#258; consumed by the reducer; grants no execution authority).
+- [`METHODOLOGY-AMENDMENT-007.md`](METHODOLOGY-AMENDMENT-007.md) — #260 source-only H2/H3 instrumentation freeze and explicit H5 boundedness blocker. `issue260-source-identity.json` and `patches/issue260-vulkan-instrumentation.patch` pin the distinct prospective source; `scripts/issue260_instrumentation.py` parses synthetic exact-format markers. No physical result, new-arm dispatch, binary freeze, or amendment of historical A1–A5 evidence follows from this addition.
 
 From the repository root, run the focused CPU-only tests:
 
