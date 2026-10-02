@@ -326,6 +326,22 @@ class RetainedReportTests(unittest.TestCase):
         self.assertIn("base-run2-parser-defect-001", text)
         self.assertIn("not terminal mechanism proof", text)
 
+    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+                         "authenticated retained evidence not staged in this session")
+    def test_real_retained_root_rejects_false_context_authority(self):
+        import issue262_report as R
+        root = Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy")
+        metadata = json.loads((root / "d262-base/base-001/unit.json").read_text())
+        inventory_before = (root.parent / "remote-inventory.tsv").read_bytes()
+        with self.assertRaisesRegex(R.ReportError, "context comparator_sha256 differs"):
+            R.reduce_evidence(root, {"comparator_sha256": "0" * 64}, require_complete=True)
+        false_subject = dict(metadata["subject"],
+                             gpu_uuid="GPU-00000000-0000-0000-0000-000000000000")
+        with self.assertRaisesRegex(R.ReportError, "context subject differs"):
+            R.reduce_evidence(root, {"subject": false_subject}, require_complete=True)
+        self.assertEqual((root.parent / "remote-inventory.tsv").read_bytes(), inventory_before)
+        self.assertTrue(R._inventory(root))
+
     def test_published_markdown_is_exact_json_roundtrip_render(self):
         import issue262_report as R
         evidence = (Path(__file__).resolve().parents[1] / "docs/investigations"
