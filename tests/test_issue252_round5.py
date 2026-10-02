@@ -63,7 +63,11 @@ class MultiGrowthTests(FixtureMixin, unittest.TestCase):
         self.fixture()
 
     def status(self):
-        return M.mechanism_status(self.evidence, "A5", A5_NS)
+        # #258 correction round 3: A5 is nonterminal (#257), so the
+        # retained ordered staging custody law is exercised through the
+        # public retained_observation_status boundary.
+        return {"capable": True,
+                "facts": M.retained_observation_status(self.evidence, "A5", A5_NS)}
 
     # --- authentic multi-growth positives (RED at 9a18d4a) ---------------
 

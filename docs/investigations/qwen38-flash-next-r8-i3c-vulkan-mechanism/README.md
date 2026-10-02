@@ -18,12 +18,13 @@ The hashes above are to be literal SHA-256 values; generate/verify them from the
 - `scripts/issue252_vulkanpath.py` — deterministic pinned-source path/control reconstruction.
 - `scripts/issue252_arms.py` — frozen hypotheses, five one-factor arms, validation, and deterministic hypothesis-matrix generation.
 - `scripts/issue252_physical.py` — fail-closed physical execution/custody gates; does not itself grant dispatch authority.
-- `scripts/issue252_terminal.py` — retained-byte terminal derivation.
+- `scripts/issue252_terminal.py` — retained-byte terminal derivation (AMENDMENT-006: capability-explicit arm-set theorem).
+- `scripts/issue258_theorem.py` — frozen per-arm terminal-capability law and hypothesis-coverage derivation (#258; consumed by the reducer; grants no execution authority).
 
 From the repository root, run the focused CPU-only tests:
 
 ```sh
-.venv/bin/python -m unittest tests.test_issue252_phase0 tests.test_issue252_vulkanpath tests.test_issue252_arms tests.test_issue252_physical tests.test_issue252_terminal
+.venv/bin/python -m unittest tests.test_issue252_phase0 tests.test_issue252_vulkanpath tests.test_issue252_arms tests.test_issue252_physical tests.test_issue252_terminal tests.test_issue258_theorem
 ```
 
 Then validate documentation/status and planning CI:
