@@ -136,6 +136,16 @@ class ProspectiveObservationTests(unittest.TestCase):
         with self.assertRaises(ObservationError):
             self.parse(memory(3, "disable_host_visible") + tensor(3), "A5", PIN)
 
+    def test_submit_ids_must_strictly_increase_across_unit(self):
+        for bad, arm in (
+            (graph(5) + submit(5, 23) + wait(5, 23) + submit(5, 21) + wait(5, 21)
+             + graph(5, "end", 2), "A1"),
+            (graph(1) + submit(1, 7, "normal") + graph(1, "end", 1)
+             + graph(2) + submit(2, 3, "normal") + graph(2, "end", 1), "BASE"),
+        ):
+            with self.subTest(bad=bad):
+                self.rejected(bad, arm)
+
     def test_prospective_h5_gap_remains(self):
         import issue258_theorem as H
         import issue260_instrumentation as I
