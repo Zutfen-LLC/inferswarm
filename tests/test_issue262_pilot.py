@@ -13,10 +13,10 @@ import issue262_pilot as P
 import issue262_h5 as H
 
 ROUTE_LINE = (
-    "ggml_vk_i262:v1|route|id=1|graph=1|weight=output.weight"
+    "0.05.069.746 I ggml_vk_i262:v1|route|id=1|graph=1|weight=output.weight"
     "|node=result.output|side=0|route=mat-vec"
-    "|pipe=mul_mat_vec_iq1_s_f32_f32|family=mmv|quant_y=0|split_k=0"
-    "|64b=0|dims=248320x2048:1x2048->1x248320|types=IQ1_S*F32->F32\n")
+    "|pipe=mul_mat_vec_q4_k_f32_f32|family=mmv|quant_y=0|split_k=0"
+    "|64b=0|dims=2560x248320:2560x1->248320x1|types=q4_K*f32->f32\n")
 
 
 def i260_log(arm="BASE"):

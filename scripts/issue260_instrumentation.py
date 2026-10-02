@@ -23,6 +23,16 @@ INSTRUMENTED_TREE = (json.loads(IDENTITY_PATH.read_text(encoding="utf-8"))["inst
 INSTRUMENTED262_TREE = (json.loads(IDENTITY262_PATH.read_text(encoding="utf-8"))["instrumented262_tree"]
                         if IDENTITY262_PATH.is_file() else "")
 PREFIX = "ggml_vk_i260:v1|"
+# GGML common-log line prefix retained in the real server-log stream (e.g.
+# ``0.03.976.621 I ``). A marker line must be bare or carry exactly this
+# shape before the marker; any other prefix fails closed (#262 real-stream
+# law — the synthetic-only startswith check never survived a real log).
+# Interleaved memory-banner lines may carry the marker wrapped in a
+# ``ggml_vulkan memory: Vulkan0: -<timestamp> I `` banner (the memory
+# logger interleaves its own prefix); both shapes are accepted, anything
+# else fails closed.
+LOG_PREFIX = re.compile(
+    r"(\d+\.\d+\.\d+\.\d+ |ggml_vulkan memory: Vulkan0: -\d+\.\d+\.\d+\.\d+ )[IWEC] ")
 POS = r"([1-9][0-9]*)"
 NONNEG = r"(0|[1-9][0-9]*)"
 GRAPH_BEGIN = re.compile(re.escape(PREFIX) + r"graph\|id=" + POS + r"\|phase=begin")
@@ -61,9 +71,15 @@ def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
     graph_submits = 0
     pending: set[int] = set()
     paths: set[str] = set()
-    for line in log.splitlines():
-        if "ggml_vk_i260:" not in line:
+    for raw_line in log.splitlines():
+        if "ggml_vk_i260:" not in raw_line:
             continue
+        line = raw_line
+        if not line.startswith(PREFIX):
+            index = line.find(PREFIX)
+            if index < 0 or not LOG_PREFIX.fullmatch(line[:index]):
+                raise ObservationError("copied or unknown instrumented marker")
+            line = line[index:]
         if not line.startswith(PREFIX):
             raise ObservationError("copied or unknown instrumented marker")
         if match := GRAPH_BEGIN.fullmatch(line):

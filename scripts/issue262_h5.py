@@ -28,6 +28,10 @@ PREFIX = "ggml_vk_i262:v1|"
 POS = r"([1-9][0-9]*)"
 NONNEG = r"(0|[1-9][0-9]*)"
 WORD = r"[A-Za-z0-9._+-]+"
+# GGML common-log line prefix as retained in the server log stream
+# (e.g. ``0.03.976.621 I ``). A marker line must be either bare or carry
+# exactly this shape before the marker; anything else fails closed.
+LOG_PREFIX = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] ")
 
 ROUTE = re.compile(
     re.escape(PREFIX) + r"route\|id=" + POS + r"\|graph=" + NONNEG
@@ -40,15 +44,18 @@ ROUTE = re.compile(
     + r"\|types=(" + WORD + r")\*(" + WORD + r")->(" + WORD + r")")
 
 # Weight-tensor shape of the frozen output projection (Qwen3.8-Flash-Next
-# UD-IQ1_S): output.weight is [n_vocab, n_embd] = 248320 x 2048, IQ1_S.
-WEIGHT_NE = (248320, 2048)
-WEIGHT_TYPE = "IQ1_S"
-# Vector route: activation [1, 2048] F32 -> logits [1, 248320] F32.
-VEC_IN_NE = (1, 2048)
-VEC_OUT_NE = (1, 248320)
-# Mat-mat route (prompt prefill): [3072, 2048] -> [3072, 248320].
-MAT_IN_NE = (3072, 2048)
-MAT_OUT_NE = (3072, 248320)
+# UD-IQ1_S): output.weight is [k, n] = [n_embd, n_vocab] = 2560 x 248320,
+# q4_K (observed in the first real #262 baseline unit; the ggml mul-mat
+# operand convention carries K x N for src0).
+WEIGHT_NE = (2560, 248320)
+WEIGHT_TYPE = "q4_K"
+# Vector route (every position of this hybrid-SSM model is a single-token
+# decode): activation [2560, 1] f32 -> logits [248320, 1] f32.
+VEC_IN_NE = (2560, 1)
+VEC_OUT_NE = (248320, 1)
+# Mat-mat route (prompt prefill): [2560, 3072] -> [248320, 3072].
+MAT_IN_NE = (2560, 3072)
+MAT_OUT_NE = (248320, 3072)
 LIMIT = (1 << 64) - 1
 
 
@@ -64,9 +71,15 @@ def parse_routes(log: str) -> list[dict]:
     routes = []
     seen: set[int] = set()
     last_id = 0
-    for line in log.splitlines():
-        if "ggml_vk_i262:" not in line:
+    for raw_line in log.splitlines():
+        if "ggml_vk_i262:" not in raw_line:
             continue
+        line = raw_line
+        if not line.startswith(PREFIX):
+            index = line.find(PREFIX)
+            if index < 0 or not LOG_PREFIX.fullmatch(line[:index]):
+                raise RouteError("copied or unknown i262 marker")
+            line = line[index:]
         if not line.startswith(PREFIX):
             raise RouteError("copied or unknown i262 marker")
         match = ROUTE.fullmatch(line)
@@ -111,7 +124,7 @@ def output_projection_routes(routes: list[dict]) -> dict:
         w_dims = r["dims"]["src0"] if side == 0 else r["dims"]["src1"]
         if w_dims != WEIGHT_NE:
             raise RouteError(f"weight shape {w_dims} is not the frozen projection")
-        if r["types"][side] != WEIGHT_TYPE:
+        if r["types"][side].lower() != WEIGHT_TYPE.lower():
             raise RouteError(f"weight type {r['types'][side]} is not {WEIGHT_TYPE}")
         if r["route"] == "mat-vec":
             expect_in, expect_out = VEC_IN_NE, VEC_OUT_NE
@@ -122,7 +135,9 @@ def output_projection_routes(routes: list[dict]) -> dict:
             raise RouteError(
                 f"{r['route']} shapes {in_dims}->{r['dims']['dst']} are not "
                 f"the frozen geometry {expect_in}->{expect_out}")
-        if r["types"][2] != "F32":
+        # ggml type names are case-normalized (the Vulkan stream reports
+        # lowercase f32/f16; the frozen law is case-insensitive on type).
+        if r["types"][2].upper() != "F32":
             raise RouteError("projection output type is not F32")
     per_route = {r["route"]: r for r in routes}
     if len(per_route) != len(routes):
