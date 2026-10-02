@@ -198,7 +198,7 @@ class RetainedReportTests(unittest.TestCase):
 
     def test_first_two_distinct_row_digests_are_screening_variable(self):
         import issue262_report as R
-        units = [{"row_digest": "a"}, {"row_digest": "b"}]
+        units = [{"unit_index": 1, "row_digest": "a"}, {"unit_index": 2, "row_digest": "b"}]
         self.assertEqual(R.classify_units(units), "screening-variable")
 
     def test_h3_comparison_requires_target_type_and_flags(self):
@@ -215,8 +215,20 @@ class RetainedReportTests(unittest.TestCase):
 
     def test_mm_vq_baseline_disallows_h5_candidate(self):
         import issue262_report as R
-        with self.assertRaises(R.ReportError):
-            R.h5_candidate_eligibility({"route": "mat-vec", "family": "mmv"})
+        self.assertFalse(R.h5_candidate_eligibility({"routes": {"mat-vec": {"family": "mmv"}}})[0])
+
+    def test_final_reducer_rejects_wrong_screen_unit_count_and_order(self):
+        import issue262_report as R
+        for units in ([], [{"row_digest": "a"}],
+                      [{"row_digest": "a"}, {"row_digest": "a"}, {"row_digest": "a"}, {"row_digest": "a"}],
+                      [{"row_digest": "a"}, {"row_digest": "a"}, {"row_digest": "b"}],
+                      [{"row_digest": "a"}, {"row_digest": "a"}, {"row_digest": "a"}][::-1]):
+            with self.subTest(units=units), self.assertRaises(R.ReportError):
+                R.validate_screen_units(units)
+
+    def test_final_reducer_h5_uses_real_observation_predicate(self):
+        import issue262_report as R
+        self.assertFalse(R.h5_candidate_eligibility({"routes": {"mat-vec": {"family": "mmv"}}})[0])
 
 
 class IdentityLawTests(unittest.TestCase):

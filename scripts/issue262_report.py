@@ -33,8 +33,26 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def classify_units(units: list[dict]) -> str:
+def validate_screen_units(units: list[dict]) -> str:
+    """Validate complete 2/3-unit screening sequence and return immutable class."""
+    if not isinstance(units, list) or len(units) not in (2, 3):
+        raise ReportError("screening requires exactly two or three completed units")
+    indices = [u.get("unit_index") for u in units]
+    if indices != list(range(1, len(units) + 1)):
+        raise ReportError("screening unit identity/order must be 1..N")
+    digests = [u.get("row_digest") for u in units]
+    if any(not isinstance(d, str) or not d for d in digests):
+        raise ReportError("screening row digest missing")
+    if digests[0] != digests[1]:
+        if len(units) != 2:
+            raise ReportError("screening-variable arm must stop after two differing units")
+    elif len(units) != 3:
+        raise ReportError("matching first two screening units require a third")
     return P.screen_class(units)
+
+
+def classify_units(units: list[dict]) -> str:
+    return validate_screen_units(units)
 
 
 def compare_memory_choices(base: dict, intervention: dict) -> bool:
@@ -57,15 +75,12 @@ def a4_required(a5_contrast: bool) -> bool:
     return not a5_contrast
 
 
-def h5_candidate_eligibility(route: dict) -> bool:
-    """Only retained output node coopmat2-dependent paths admit candidate."""
-    if not isinstance(route, dict):
-        raise ReportError("missing retained BASE H5 route")
-    # The accepted H5 parser's route objects bind output projection by node
-    # identity and state whether this exact dispatch uses coopmat2.
-    if route.get("node") != "result.output" or not route.get("coopmat2"):
-        raise ReportError("BASE output path proves H5_CANDIDATE is not live")
-    return True
+def h5_candidate_eligibility(observation: dict) -> tuple[bool, str]:
+    """Delegate eligibility to the accepted route/shape/family law."""
+    try:
+        return H5.coopmat2_candidate_eligible(observation)
+    except (AttributeError, TypeError) as exc:
+        raise ReportError("invalid retained BASE H5 observation") from exc
 
 
 def _read_json(path: Path) -> dict:
@@ -139,15 +154,19 @@ def _unit_dir(path: Path, arm: str) -> dict:
     except Exception as exc:
         raise ReportError(f"retained marker parse failed: {path}: {exc}") from exc
     h2h3 = markers["h2h3"]
+    text = log.decode("utf-8", errors="strict")
     target = h2h3.get("target")
     selected = []
     if target:
         buffer_marker = f"|buffer={target['buffer']}|"
-        for number, line in enumerate(log.decode("utf-8", errors="strict").splitlines(), 1):
+        for number, line in enumerate(text.splitlines(), 1):
             if (("ggml_vk_i260:v1|memory|role=backend|" in line and buffer_marker in line)
                     or ("ggml_vk_i260:v1|tensor|name=output.weight|" in line
                         and buffer_marker in line)):
                 selected.append({"line": number, "text": line})
+        if len(selected) < 2:
+            raise ReportError(f"parsed H3 target lacks exact allocation/tensor provenance: {path}")
+        target["provenance"] = selected
     h2h3["source_lines"] = selected
     h2h3["graphs"] = len(h2h3.get("graphs", []))
     h5_lines = _source_lines(log, ("ggml_vk_i262:v1|route|",))
@@ -216,12 +235,16 @@ def reduce_evidence(root: Path) -> dict:
             {"target": base_target},
             {"target": arms["A4"][0]["markers"]["h2h3"]["target"]})
         h3_status = "contrast-observed" if a4_contrast else "no-memory-choice-contrast"
-    base_h5 = arms["BASE"][0]["markers"]["h5"]
-    routes = base_h5.get("routes", {})
-    output_route = routes.get("mat-vec") or routes.get("mat-mat")
-    candidate_eligible = bool(output_route and output_route.get("family") != "mmv")
+    h5_observations = [u["markers"]["h5"] for u in arms["BASE"]]
+    eligibility = [h5_candidate_eligibility(obs) for obs in h5_observations]
+    if len({eligible for eligible, _reason in eligibility}) != 1:
+        raise ReportError("BASE units disagree on H5 candidate eligibility")
+    candidate_eligible, eligibility_reason = eligibility[0]
     if "H5_CANDIDATE" in arms and not candidate_eligible:
-        raise ReportError("retained H5_CANDIDATE ran without live BASE contrast")
+        raise ReportError(f"retained H5_CANDIDATE ran without live BASE contrast: {eligibility_reason}")
+    routes = h5_observations[0].get("routes", {})
+    output_route = routes
+
     quarantine_dirs = sorted(p for p in (root / "producer-defect-quarantine").iterdir()
                              if p.is_dir()) if (root / "producer-defect-quarantine").is_dir() else []
     quarantine_files = [name for name in inventory if name.startswith("producer-defect-quarantine/")]
@@ -245,6 +268,7 @@ def reduce_evidence(root: Path) -> dict:
                    "a4_required": a4_needed, "a4_executed": a4_executed,
                    "a4_target_choice_contrast": a4_contrast, "status": h3_status},
             "h5": {"baseline_route": output_route,
+                   "eligibility_reason": eligibility_reason,
                    "candidate_eligible": candidate_eligible,
                    "candidate_executed": "H5_CANDIDATE" in arms,
                    "mmv_control_live": candidate_eligible},
