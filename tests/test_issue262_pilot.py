@@ -219,15 +219,14 @@ class RetainedReportTests(unittest.TestCase):
                     inventory.append(f"{path.relative_to(root).as_posix()}\t{len(blob)}\t{digest(blob)}")
             (root.parent / "remote-inventory.tsv").write_text("\n".join(inventory) + "\n")
 
-        scratch = Path.home() / ".hermes/cache/scratch"
-        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "retained"
             fixture(root)
             report = R.reduce_evidence(root, context, require_complete=True)
             self.assertEqual(report["authority"], context)
 
         def reject(label, *, context_delta=None, override=None, reason):
-            with self.subTest(label=label), tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp) / "retained"
                 fixture(root, override=override)
                 claimed = {**context, **(context_delta or {})}
@@ -258,7 +257,7 @@ class RetainedReportTests(unittest.TestCase):
         reject("missing unit subject", override={('A1', 2): lambda m: m.pop('subject')}, reason="subject")
         reject("malformed unit subject", override={('BASE', 2): lambda m: m.update(subject={"gpu_uuid": subject["gpu_uuid"]})}, reason="subject")
         reject("typed unit subject", override={('BASE', 2): lambda m: m['subject'].update(driver=610)}, reason="subject")
-        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "retained"
             fixture(root)
             self.assertEqual(R.reduce_evidence(root, require_complete=True)["authority"],
