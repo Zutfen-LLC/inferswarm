@@ -160,6 +160,65 @@ class ScreeningLawTests(unittest.TestCase):
             "screening-variable")
 
 
+class RetainedReportTests(unittest.TestCase):
+    def test_reducer_requires_authenticated_retained_unit_directory(self):
+        import issue262_report as R
+        with self.assertRaises(R.ReportError):
+            R.reduce_evidence(Path("/definitely/missing"))
+
+    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+                         "authenticated retained evidence not staged in this session")
+    def test_real_raw_logs_supply_h3_target_missing_from_old_summary(self):
+        import issue262_report as R
+        root = Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy")
+        self.assertTrue(R._inventory(root))
+        item = R._unit_dir(root / "d262-base/base-001", "BASE")
+        target = item["markers"]["h2h3"]["target"]
+        self.assertEqual((target["buffer"], target["type"], target["flags"]), (2, 1, 1))
+        # Use parsed raw bytes for allocation identity; summary JSON is not input.
+        self.assertEqual(item["markers"]["h2h3"]["target"]["offset"], 7004160)
+
+    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+                         "authenticated retained evidence not staged in this session")
+    def test_real_retained_root_reports_a4_as_required_intermediate(self):
+        import issue262_report as R
+        root = Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy")
+        report = R.reduce_evidence(root)
+        self.assertEqual(report["h3"]["a5_target_choice_contrast"], False)
+        self.assertTrue(report["h3"]["a4_required"])
+        self.assertFalse(report["h3"]["a4_executed"])
+        self.assertEqual(report["h3"]["status"], "awaiting-required-A4")
+        self.assertEqual(len(report["h3"]["a5_comparison_pairs"]), 2)
+        self.assertTrue(all(len(pair["comparison_sha256"]) == 64
+                            for pair in report["h3"]["a5_comparison_pairs"]))
+        for arm in ("BASE", "A1", "A5"):
+            self.assertEqual(report["arms"][arm]["classification"], "screening-variable")
+        self.assertFalse(report["h5"]["candidate_eligible"])
+        self.assertEqual(report["quarantined_units"], 3)
+
+    def test_first_two_distinct_row_digests_are_screening_variable(self):
+        import issue262_report as R
+        units = [{"row_digest": "a"}, {"row_digest": "b"}]
+        self.assertEqual(R.classify_units(units), "screening-variable")
+
+    def test_h3_comparison_requires_target_type_and_flags(self):
+        import issue262_report as R
+        base = {"target": {"branch": "default", "buffer": 1}}
+        a5 = {"target": {"branch": "disable_host_visible", "buffer": 2}}
+        with self.assertRaises(R.ReportError):
+            R.compare_memory_choices(base, a5)
+
+    def test_a4_required_only_without_a5_contrast(self):
+        import issue262_report as R
+        self.assertTrue(R.a4_required(False))
+        self.assertFalse(R.a4_required(True))
+
+    def test_mm_vq_baseline_disallows_h5_candidate(self):
+        import issue262_report as R
+        with self.assertRaises(R.ReportError):
+            R.h5_candidate_eligibility({"route": "mat-vec", "family": "mmv"})
+
+
 class IdentityLawTests(unittest.TestCase):
     def test_260_parser_accepts_262_tree_and_rejects_others(self):
         import issue260_instrumentation as I
