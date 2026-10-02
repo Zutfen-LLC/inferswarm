@@ -208,6 +208,24 @@ class RetainedReportTests(unittest.TestCase):
         with self.assertRaises(R.ReportError):
             R.compare_memory_choices(base, a5)
 
+    def test_full_pair_comparison_rejects_ambiguous_counts_and_compares_every_unit(self):
+        import issue262_report as R
+        def unit(i, branch):
+            target = {"branch": branch, "type": 1, "flags": 1, "buffer": 2,
+                      "offset": 7004160, "bytes": 357580800,
+                      "allocation_size": 364584960}
+            return {"unit_index": i, "row_digest": str(i), "markers": {"h2h3": {"target": target}}}
+        # Memory-choice contrast requires a type/flags difference, not merely branch movement.
+        shifted = unit(1, "disable_host_visible")
+        shifted["markers"]["h2h3"]["target"]["flags"] = 2
+        result = R.compare_arm_pairs([unit(1, "default"), unit(2, "default")],
+                                     [shifted, unit(2, "default")], "A5")
+        self.assertEqual(len(result), 2)
+        self.assertTrue(result[0]["choice_changed"])
+        self.assertFalse(result[1]["choice_changed"])
+        with self.assertRaises(R.ReportError):
+            R.compare_arm_pairs([unit(1,"default")], [unit(1,"default"),unit(2,"default")], "A5")
+
     def test_a4_required_only_without_a5_contrast(self):
         import issue262_report as R
         self.assertTrue(R.a4_required(False))

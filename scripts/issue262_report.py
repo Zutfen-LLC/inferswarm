@@ -69,6 +69,30 @@ def compare_memory_choices(base: dict, intervention: dict) -> bool:
     return I260.memory_choice_changed(base, intervention)
 
 
+def compare_arm_pairs(baseline: list[dict], intervention: list[dict], arm: str) -> list[dict]:
+    """Pair every completed unit by ordinal; fail closed on incomplete/ambiguous arms."""
+    if len(baseline) != len(intervention) or not baseline:
+        raise ReportError(f"{arm} comparison has ambiguous unit counts")
+    pairs = []
+    for left, right in zip(baseline, intervention):
+        if left.get("unit_index") != right.get("unit_index"):
+            raise ReportError(f"{arm} comparison unit identities do not align")
+        bt = left.get("markers", {}).get("h2h3", {}).get("target")
+        it = right.get("markers", {}).get("h2h3", {}).get("target")
+        if bt is None or it is None:
+            raise ReportError(f"{arm} comparison lacks target choice")
+        changed = compare_memory_choices({"target": bt}, {"target": it})
+        record = {"baseline_unit": left["unit_index"], "intervention_arm": arm,
+                  "intervention_unit": right["unit_index"],
+                  "baseline_row_digest": left.get("row_digest"),
+                  "intervention_row_digest": right.get("row_digest"),
+                  "baseline_target": bt, "intervention_target": it,
+                  "choice_changed": changed}
+        record["comparison_sha256"] = _sha(json.dumps(record, sort_keys=True, separators=(",", ":")).encode())
+        pairs.append(record)
+    return pairs
+
+
 def a4_required(a5_contrast: bool) -> bool:
     if type(a5_contrast) is not bool:
         raise ReportError("A5 contrast must be a proven boolean")
@@ -180,7 +204,7 @@ def _unit_dir(path: Path, arm: str) -> dict:
                        "server_log_sha256": log_hash}}
 
 
-def reduce_evidence(root: Path) -> dict:
+def reduce_evidence(root: Path, context: dict | None = None) -> dict:
     root = Path(root)
     if not root.is_dir():
         raise ReportError(f"retained evidence directory missing: {root}")
@@ -207,17 +231,8 @@ def reduce_evidence(root: Path) -> dict:
             raise ReportError("H3 comparison requires retained BASE and A5 target")
         a5_contrast = compare_memory_choices({"target": base_target},
                                              {"target": a5_target})
-    h3_pairs = []
-    if "A5" in arms:
-        for base_unit, a5_unit in zip(arms["BASE"], arms["A5"]):
-            bt = base_unit["markers"]["h2h3"]["target"]
-            at = a5_unit["markers"]["h2h3"]["target"]
-            identity = {"baseline_unit": base_unit["unit_index"],
-                        "intervention_arm": "A5", "intervention_unit": a5_unit["unit_index"],
-                        "baseline_target": bt, "intervention_target": at,
-                        "choice_changed": compare_memory_choices({"target": bt}, {"target": at})}
-            identity["comparison_sha256"] = _sha(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode())
-            h3_pairs.append(identity)
+    a5_pairs = compare_arm_pairs(arms["BASE"], arms["A5"], "A5") if "A5" in arms else []
+    a5_contrast = any(pair["choice_changed"] for pair in a5_pairs)
     a4_needed = a4_required(a5_contrast)
     a4_executed = "A4" in arms
     h3_status = ("contrast-observed" if a5_contrast else
@@ -231,9 +246,8 @@ def reduce_evidence(root: Path) -> dict:
             target = unit["markers"]["h2h3"].get("target")
             if target is None:
                 raise ReportError("A4 unit lacks target allocation fields")
-        a4_contrast = compare_memory_choices(
-            {"target": base_target},
-            {"target": arms["A4"][0]["markers"]["h2h3"]["target"]})
+        a4_pairs = compare_arm_pairs(arms["BASE"], arms["A4"], "A4")
+        a4_contrast = any(pair["choice_changed"] for pair in a4_pairs)
         h3_status = "contrast-observed" if a4_contrast else "no-memory-choice-contrast"
     h5_observations = [u["markers"]["h5"] for u in arms["BASE"]]
     eligibility = [h5_candidate_eligibility(obs) for obs in h5_observations]
@@ -248,8 +262,16 @@ def reduce_evidence(root: Path) -> dict:
     quarantine_dirs = sorted(p for p in (root / "producer-defect-quarantine").iterdir()
                              if p.is_dir()) if (root / "producer-defect-quarantine").is_dir() else []
     quarantine_files = [name for name in inventory if name.startswith("producer-defect-quarantine/")]
+    if context is not None and not isinstance(context, dict):
+        raise ReportError("context authority must be a JSON object")
+    context = context or {}
+    authority = {key: context[key] for key in (
+        "original_execution_head", "a4_execution_head", "subject",
+        "comparator_sha256", "source_tree") if key in context}
     return {"schema": "inferswarm.issue262.retained-report/1",
-            "evidence": {"root": str(root), "inventory": str(root.parent / "remote-inventory.tsv"),
+            "authority": authority,
+            "evidence": {"root": str(root), "logical_root": "Issue #262 retained evidence (authenticated copy)",
+                         "inventory": "sibling remote-inventory.tsv",
                          "inventory_file_count": len(inventory),
                          "inventory_sha256": _sha((root.parent / "remote-inventory.tsv").read_bytes())},
             "arms": {arm: {"classification": classify_units(units),
@@ -264,7 +286,8 @@ def reduce_evidence(root: Path) -> dict:
                                                    for u in units]
                                             for arm, units in arms.items()}},
             "h3": {"a5_target_choice_contrast": a5_contrast,
-                   "a5_comparison_pairs": h3_pairs,
+                   "a5_comparison_pairs": a5_pairs,
+                   "a4_comparison_pairs": a4_pairs if a4_executed else [],
                    "a4_required": a4_needed, "a4_executed": a4_executed,
                    "a4_target_choice_contrast": a4_contrast, "status": h3_status},
             "h5": {"baseline_route": output_route,
@@ -284,15 +307,44 @@ def reduce_evidence(root: Path) -> dict:
 
 def render(report: dict) -> str:
     """Render prose only from reducer JSON; no additional observations inferred."""
-    lines = ["Issue #262 retained pilot report (CPU-only)"]
+    lines = ["# Issue #262 retained pilot report (CPU-only)", "", "## Evidence provenance",
+             f"- Logical retained root: `{report['evidence'].get('logical_root', 'retained evidence')}`",
+             f"- Inventory: {report['evidence']['inventory_file_count']} files; SHA-256 `{report['evidence']['inventory_sha256']}`",
+             f"- Raw retained location (for operator invocation only): `{report['evidence']['root']}`"]
+    for key, value in report.get("authority", {}).items():
+        lines.append(f"- {key}: `{value}`")
+    lines += ["", "## Arms"]
     for arm, result in report["arms"].items():
-        lines.append(f"{arm}: {result['classification']} ({len(result['units'])} retained units)")
+        lines += [f"### {arm}: {result['classification']} ({len(result['units'])} units)"]
+        for unit in result["units"]:
+            target = unit["h2h3"].get("target")
+            lines.append(f"- Unit {unit['unit_index']}: row SHA-256 `{unit['row_digest']}`; "
+                         f"unit metadata `{unit['source']['unit_json_sha256']}`; log `{unit['source']['server_log_sha256']}`")
+            if target:
+                lines.append(f"  - H3: branch `{target['branch']}`, type `{target['type']}`, flags `{target['flags']}`, "
+                             f"buffer `{target['buffer']}`, offset `{target['offset']}`, bytes `{target['bytes']}`, "
+                             f"allocation_size `{target['allocation_size']}`")
+                for marker in target.get("provenance", []):
+                    lines.append(f"  - Log line {marker['line']}: `{marker['text']}`")
+            lines.append(f"  - H2 submission: `{unit['h2h3'].get('submission')}`")
     h3 = report["h3"]
-    lines.append(f"H3: A5 target choice contrast={h3['a5_target_choice_contrast']}; A4 required={h3['a4_required']}; A4 executed={h3['a4_executed']}; status={h3['status']}.")
+    lines += ["", "## H3 full-pair contrasts",
+              f"A5 contrast: **{h3['a5_target_choice_contrast']}**; A4 required: **{h3['a4_required']}**; "
+              f"A4 executed: **{h3['a4_executed']}**; status: **{h3['status']}**."]
+    for label, pairs in (("BASE vs A5", h3["a5_comparison_pairs"]), ("BASE vs A4", h3.get("a4_comparison_pairs", []))):
+        lines += [f"### {label}"]
+        for pair in pairs:
+            lines.append(f"- Unit {pair['baseline_unit']} vs {pair['intervention_unit']}: "
+                         f"choice_changed={pair['choice_changed']}; pair SHA-256 `{pair['comparison_sha256']}`; "
+                         f"row digests `{pair['baseline_row_digest']}` / `{pair['intervention_row_digest']}`")
     h5 = report["h5"]
-    lines.append(f"H5: baseline route={h5['baseline_route']}; candidate eligible={h5['candidate_eligible']}; executed={h5['candidate_executed']}.")
-    lines.append(f"Quarantined units retained but excluded: {report['quarantined_units']}.")
-    lines.extend(report["interpretation"].values())
+    lines += ["", "## H5", f"Baseline route: `{json.dumps(h5['baseline_route'], sort_keys=True)}`; "
+              f"candidate eligible={h5['candidate_eligible']}; executed={h5['candidate_executed']}; "
+              f"reason: {h5['eligibility_reason']}.", "",
+              f"Quarantine: {report['quarantined_units']} known-defect units excluded; "
+              f"{report['quarantine_inventory_files']} inventoried quarantine files.", "",
+              "## Interpretation"]
+    lines.extend(f"- {key}: {value}" for key, value in report["interpretation"].items())
     return "\n".join(lines) + "\n"
 
 
@@ -301,9 +353,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("evidence_root", type=Path)
     parser.add_argument("--json", dest="json_path", type=Path)
     parser.add_argument("--text", dest="text_path", type=Path)
+    parser.add_argument("--context", type=Path, help="optional preserved execution/provenance authority JSON")
     args = parser.parse_args(argv)
     try:
-        report = reduce_evidence(args.evidence_root)
+        context = _read_json(args.context) if args.context else None
+        report = reduce_evidence(args.evidence_root, context)
     except ReportError as exc:
         print(f"issue262-report: refusing: {exc}", file=sys.stderr)
         return 2
