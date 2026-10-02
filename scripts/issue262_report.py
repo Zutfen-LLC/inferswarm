@@ -23,6 +23,7 @@ import issue262_pilot as P
 
 ARMS = ("BASE", "A1", "A5", "A4", "H5_CANDIDATE")
 ROWS = 8
+SUBJECT_KEYS = frozenset(("gpu", "gpu_uuid", "bdf", "driver", "binding"))
 
 
 class ReportError(ValueError):
@@ -31,6 +32,17 @@ class ReportError(ValueError):
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _subject(value: Any) -> bool:
+    """Require the complete retained subject identity, not just its UUID."""
+    return (isinstance(value, dict) and value.keys() == SUBJECT_KEYS
+            and all(isinstance(v, str) and bool(v) for v in value.values()))
+
+
+def _digest(value: Any) -> bool:
+    return (isinstance(value, str) and len(value) == 64
+            and all(c in "0123456789abcdef" for c in value))
 
 
 def validate_screen_units(units: list[dict]) -> str:
@@ -167,8 +179,10 @@ def _unit_dir(path: Path, arm: str) -> dict:
         raise ReportError(f"response.json.raw digest mismatch: {path}")
     for key in ("binary_sha256", "request_sha256"):
         value = meta.get(key)
-        if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+        if not _digest(value):
             raise ReportError(f"invalid {key} in retained unit metadata: {path}")
+    if not _subject(meta.get("subject")):
+        raise ReportError(f"invalid subject in retained unit metadata: {path}")
     rows = []
     for i in range(ROWS):
         row = (path / f"obs.row{i}.f32").read_bytes()
@@ -218,6 +232,7 @@ def _unit_dir(path: Path, arm: str) -> dict:
     return {"unit_index": meta["unit_index"], "row_digest": digest,
             "tag": meta.get("tag", path.name),
             "binary_sha256": meta.get("binary_sha256"),
+            "subject": meta["subject"],
             "request_sha256": meta.get("request_sha256"),
             "response_raw_sha256": meta.get("response_raw_sha256"),
             "server_log_sha256": log_hash, "log": log, "markers": markers,
@@ -306,9 +321,28 @@ def reduce_evidence(root: Path, context: dict | None = None,
     if context is not None and not isinstance(context, dict):
         raise ReportError("context authority must be a JSON object")
     context = context or {}
+    accepted = [unit for units in arms.values() for unit in units]
+    comparator = accepted[0]["binary_sha256"]
+    subject = accepted[0]["subject"]
+    if not _digest(comparator) or any(u.get("binary_sha256") != comparator for u in accepted):
+        raise ReportError("retained unit comparator_sha256 mismatch")
+    if not _subject(subject) or any(not _subject(u.get("subject")) or u["subject"] != subject
+                                for u in accepted):
+        raise ReportError("retained unit subject mismatch or malformed")
+    if "comparator_sha256" in context and (not _digest(context["comparator_sha256"])
+                                            or context["comparator_sha256"] != comparator):
+        raise ReportError("context comparator_sha256 differs from retained unit metadata")
+    if "subject" in context and (not _subject(context["subject"])
+                                 or context["subject"] != subject):
+        raise ReportError("context subject differs from retained unit metadata")
+    if "source_tree" in context and context["source_tree"] != P.INSTRUMENTED262_TREE:
+        raise ReportError("context source_tree differs from accepted parser source identity")
     authority = {key: context[key] for key in (
         "original_execution_head", "a4_execution_head", "subject",
         "comparator_sha256", "source_tree") if key in context}
+    authority.setdefault("subject", subject)
+    authority.setdefault("comparator_sha256", comparator)
+    authority.setdefault("source_tree", P.INSTRUMENTED262_TREE)
     return {"schema": "inferswarm.issue262.retained-report/1",
             "authority": authority,
             "evidence": {"root": "/home/hermes/is262-evidence",

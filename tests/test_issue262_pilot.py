@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import contextlib
+import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
@@ -167,6 +171,100 @@ class RetainedReportTests(unittest.TestCase):
         with self.assertRaises(R.ReportError):
             R.reduce_evidence(Path("/definitely/missing"))
 
+    def test_context_authority_is_bound_to_every_authenticated_unit(self):
+        import issue262_report as R
+        subject = {"gpu": "NVIDIA GeForce RTX 3060",
+                   "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                   "bdf": "00000000:03:00.0", "driver": "610.57.04",
+                   "binding": "historical-A3/A5-subject-reused"}
+        comparator = "a" * 64
+        context = {"subject": subject, "comparator_sha256": comparator,
+                   "source_tree": P.INSTRUMENTED262_TREE}
+
+        def digest(blob):
+            return hashlib.sha256(blob).hexdigest()
+
+        def fixture(root, *, override=None):
+            override = override or {}
+            for arm in ("BASE", "A1", "A5", "A4"):
+                for index in (1, 2):
+                    folder = root / f"d262-{arm.lower()}" / f"{arm.lower()}-{index:03d}"
+                    folder.mkdir(parents=True)
+                    log = i260_log(arm)
+                    if arm == "A1":
+                        log = log.replace("|path=normal\n", "|path=serialized\n"
+                                          + "ggml_vk_i260:v1|submit|graph=1|id=1|phase=wait|path=serialized|wait=success\n")
+                    if arm == "A5":
+                        log = log.replace("branch=default", "branch=disable_host_visible")
+                    if arm == "A4":
+                        log = log.replace("branch=default", "branch=prefer_host").replace("flags=0xf", "flags=0x1")
+                    raw = b"{}"
+                    (folder / "server.log").write_bytes(log.encode())
+                    (folder / "response.json.raw").write_bytes(raw)
+                    rows = [f"{arm}-{index}-{n}".encode() for n in range(8)]
+                    for n, row in enumerate(rows):
+                        (folder / f"obs.row{n}.f32").write_bytes(row)
+                    meta = {"arm": arm, "unit_index": index,
+                            "server_log_sha256": digest(log.encode()),
+                            "response_raw_sha256": digest(raw),
+                            "binary_sha256": comparator, "request_sha256": "b" * 64,
+                            "row_digest": digest(b"".join(rows)), "subject": dict(subject)}
+                    if (arm, index) in override:
+                        override[(arm, index)](meta)
+                    (folder / "unit.json").write_text(json.dumps(meta))
+            inventory = []
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    blob = path.read_bytes()
+                    inventory.append(f"{path.relative_to(root).as_posix()}\t{len(blob)}\t{digest(blob)}")
+            (root.parent / "remote-inventory.tsv").write_text("\n".join(inventory) + "\n")
+
+        scratch = Path.home() / ".hermes/cache/scratch"
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            root = Path(tmp) / "retained"
+            fixture(root)
+            report = R.reduce_evidence(root, context, require_complete=True)
+            self.assertEqual(report["authority"], context)
+
+        def reject(label, *, context_delta=None, override=None, reason):
+            with self.subTest(label=label), tempfile.TemporaryDirectory(dir=scratch) as tmp:
+                root = Path(tmp) / "retained"
+                fixture(root, override=override)
+                claimed = {**context, **(context_delta or {})}
+                with self.assertRaisesRegex(R.ReportError, reason):
+                    R.reduce_evidence(root, claimed, require_complete=True)
+                output = Path(tmp) / "final.json"
+                text = Path(tmp) / "REPORT.md"
+                context_file = Path(tmp) / "context.json"
+                context_file.write_text(json.dumps(claimed))
+                with contextlib.redirect_stderr(io.StringIO()) as err:
+                    self.assertEqual(R.main([str(root), "--context", str(context_file),
+                                             "--require-complete", "--json", str(output),
+                                             "--text", str(text)]), 2)
+                self.assertIn(reason, err.getvalue())
+                self.assertFalse(output.exists())
+                self.assertFalse(text.exists())
+
+        reject("false comparator", context_delta={"comparator_sha256": "0" * 64}, reason="comparator")
+        reject("malformed comparator", context_delta={"comparator_sha256": "nope"}, reason="comparator")
+        reject("other GPU", context_delta={"subject": {**subject, "gpu_uuid": "GPU-other"}}, reason="subject")
+        reject("other driver", context_delta={"subject": {**subject, "driver": "other"}}, reason="subject")
+        reject("partial subject", context_delta={"subject": {"gpu_uuid": subject["gpu_uuid"]}}, reason="subject")
+        reject("typed subject", context_delta={"subject": {**subject, "driver": 610}}, reason="subject")
+        reject("extra subject", context_delta={"subject": {**subject, "other": "untrusted"}}, reason="subject")
+        reject("wrong source tree", context_delta={"source_tree": "0" * 40}, reason="source_tree")
+        reject("second unit comparator", override={('A4', 2): lambda m: m.update(binary_sha256="0" * 64)}, reason="comparator")
+        reject("second unit subject", override={('A5', 2): lambda m: m['subject'].update(gpu="Other GPU")}, reason="subject")
+        reject("missing unit subject", override={('A1', 2): lambda m: m.pop('subject')}, reason="subject")
+        reject("malformed unit subject", override={('BASE', 2): lambda m: m.update(subject={"gpu_uuid": subject["gpu_uuid"]})}, reason="subject")
+        reject("typed unit subject", override={('BASE', 2): lambda m: m['subject'].update(driver=610)}, reason="subject")
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            root = Path(tmp) / "retained"
+            fixture(root)
+            self.assertEqual(R.reduce_evidence(root, require_complete=True)["authority"],
+                             {"subject": subject, "comparator_sha256": comparator,
+                              "source_tree": P.INSTRUMENTED262_TREE})
+
     @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
                          "authenticated retained evidence not staged in this session")
     def test_real_raw_logs_supply_h3_target_missing_from_old_summary(self):
@@ -270,12 +368,17 @@ class RetainedReportTests(unittest.TestCase):
     def test_final_reducer_contrast_and_execution_gates(self):
         import issue262_report as R
         import tempfile
+        subject = {"gpu": "NVIDIA GeForce RTX 3060",
+                   "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                   "bdf": "00000000:03:00.0", "driver": "610.57.04",
+                   "binding": "historical-A3/A5-subject-reused"}
         def unit(i, arm, flags=1, target=True, digest=None):
             choice = {"branch": {"BASE": "default", "A5": "disable_host_visible",
                                  "A4": "prefer_host", "H5_CANDIDATE": "default"}.get(arm, "default"),
                       "type": 1, "flags": flags, "buffer": 2, "offset": 8,
                       "bytes": 16, "allocation_size": 64} if target else None
             return {"unit_index": i, "row_digest": digest or f"{arm}-{i}",
+                    "binary_sha256": "a" * 64, "subject": dict(subject),
                     "source": {"unit_json_sha256": "u", "server_log_sha256": "l"},
                     "markers": {"h2h3": {"target": choice, "submission": "serialized" if arm == "A1" else "normal"},
                                 "h5": {"routes": {"mat-vec": {"family": "mmv"}}}}}
