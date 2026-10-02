@@ -602,12 +602,62 @@ MECHANISM_VALIDATORS = {
 }
 
 
+# Retained-observation/custody law registry (correction round 3, #258
+# review). This registry is MECHANICALLY INDEPENDENT of terminal/
+# localization capability: it maps every arm that HAS a frozen
+# retained-observation law to that law, whether or not the arm can
+# localize a terminal. A5 is nonterminal (#257,
+# A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL) and has ZERO localization
+# authority (absent from MECHANISM_VALIDATORS above and from
+# issue258_theorem.TERMINAL_CAPABLE), yet its frozen retained-observation
+# law (_mechanism_a5, retained verbatim) remains PRODUCTION-ENFORCED
+# custody: A5 evidence present in a derive_terminal() reduction must
+# still satisfy it. A1/A4 have no frozen retained-observation law at
+# this pin (no retained observable exists — see NON_TERMINAL_CAPABLE),
+# so retained A1/A4 evidence carries no observation law to enforce.
+RETAINED_OBSERVATION_LAWS = {
+    "A2": _mechanism_a2,
+    "A3": _mechanism_a3,
+    "A5": _mechanism_a5,
+}
+
+
+def retained_observation_status(root: Path, arm: str,
+                                namespace: str) -> dict[str, Any]:
+    """Validate one retained arm against its frozen custody/observation
+    law (public helper boundary — production and tests consume THIS, not
+    the private ``_mechanism_*`` functions).
+
+    Fail closed: an arm with no frozen retained-observation law raises
+    MechanismInvalid (custody is never silently skipped for an arm whose
+    law exists, and never invented for an arm whose law does not). This
+    is the CUSTODY question — whether the retained bytes satisfy the
+    arm's frozen observation law — and is entirely separate from the
+    CAPABILITY question (mechanism_status / issue258_theorem), which
+    governs only whether an arm may localize a terminal.
+    """
+    law = RETAINED_OBSERVATION_LAWS.get(arm)
+    if law is None:
+        raise MechanismInvalid(
+            f"no frozen retained-observation/custody law for arm {arm}")
+    facts = law(root, namespace)
+    return {"arm": arm, "custody_valid": True, "facts": facts}
+
+
 def mechanism_status(root: Path, arm: str, namespace: str) -> dict[str, Any]:
     """Derive the retained mechanism facts for one arm. Fail closed.
 
     Returns {"capable": bool, "facts": dict} — never a caller boolean. For a
     non-terminal-capable arm the status is {"capable": False, reason} and no
     retained observation can localize through this arm.
+
+    NOTE (two independent laws): this function answers ONLY the
+    terminal/localization-capability question. Custody/observation
+    validation of retained evidence is a separate law, enforced through
+    RETAINED_OBSERVATION_LAWS / retained_observation_status() — an arm
+    can be nonterminal (this function returns capable=False, e.g. A5 per
+    #257) while its retained evidence remains subject to its frozen
+    observation law. The two registries must not be conflated.
     """
     if arm in NON_TERMINAL_CAPABLE:
         return {"capable": False, "arm": arm, "reason": NON_TERMINAL_CAPABLE[arm]}

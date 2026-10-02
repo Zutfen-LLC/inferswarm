@@ -322,9 +322,20 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
         # proof) is inadmissible evidence and blocks the whole reduction.
         # Terminal capability governs only localization eligibility and
         # non-localization coverage counting, never custody admission.
+        # Correction round 3 (#258 review): the gate consults the
+        # RETAINED_OBSERVATION_LAWS registry — the custody/observation
+        # law set (A2/A3/A5) — NOT the localization-capability registry
+        # (A2/A3). Keying custody to capability membership silently
+        # dropped A5 validation when #258 correctly removed A5 from the
+        # capable set: malformed retained A5 evidence reduced to
+        # UNRESOLVED without its frozen observation law (_mechanism_a5)
+        # ever being consulted. The two laws are mechanically
+        # independent: A5 remains nonterminal with zero localization
+        # authority while its retained-observation law is still
+        # production-enforced.
         for arm in states:
-            if arm in M.MECHANISM_VALIDATORS:
-                M.mechanism_status(root, arm, A.ARMS[arm]["namespace"])
+            if arm in M.RETAINED_OBSERVATION_LAWS:
+                M.retained_observation_status(root, arm, A.ARMS[arm]["namespace"])
         # AMENDMENT-006 (#258): terminal capability is explicit per arm
         # (issue258_theorem.TERMINAL_CAPABLE), never inferred from arm
         # existence or evidence presence. Nonterminal/dead arms can never

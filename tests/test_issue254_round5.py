@@ -247,8 +247,9 @@ class A3EnumFreeMechanismTests(ProducerFixtureMixin, unittest.TestCase):
         (self.evidence / ns5 / "u1" / "server.log").write_text(
             ASYNC_ONLY_LOG + enum_free, encoding="utf-8")
         with self.assertRaisesRegex(M.MechanismInvalid, "enumeration"):
-            # #258: retained custody law invoked directly (A5 nonterminal).
-            M._mechanism_a5(self.evidence, ns5)
+            # #258 correction round 3: retained custody law through the
+            # public boundary (A5 nonterminal).
+            M.retained_observation_status(self.evidence, "A5", ns5)
         # A5 keeps the frozen-family enum requirement even with a valid
         # staging ledger (fresh root so the enum-free u1 above is not the
         # unit that raises first).
@@ -266,12 +267,12 @@ class A3EnumFreeMechanismTests(ProducerFixtureMixin, unittest.TestCase):
         (alt / ns5 / "u1").mkdir(parents=True)
         (alt / ns5 / "u1" / "server.log").write_text(
             staging_log, encoding="utf-8")
-        # #258 (AMENDMENT-006): A5 is withdrawn from the localization
+        # #258 correction round 3: A5 is withdrawn from the localization
         # registry (mechanism_status short-circuits nonterminal), so the
-        # retained custody law is exercised directly — its frozen enum
-        # requirement is unchanged.
+        # retained custody law is exercised through the public boundary —
+        # its frozen enum requirement is unchanged.
         with self.assertRaisesRegex(M.MechanismInvalid, "differs from"):
-            M._mechanism_a5(alt, ns5)
+            M.retained_observation_status(alt, "A5", ns5)
 
 
 class FailureQuarantineTests(ProducerFixtureMixin, unittest.TestCase):

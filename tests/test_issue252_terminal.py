@@ -250,9 +250,13 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         self.assertEqual(self.verdict("A4"), C.UNRESOLVED_TERMINAL)
 
     def test_a5_host_allocation_blocks(self):
-        # #258 (AMENDMENT-006): A5 is nonterminal (#257), so five identical
-        # rows under A5 can never reach a localized terminal — honest
-        # UNRESOLVED regardless of the retained stream's staging shape.
+        # Correction round 3 (#258 review): A5 is nonterminal (#257) so
+        # five identical rows under A5 can never LOCALIZE — but A5's
+        # retained-observation/custody law is still production-enforced
+        # (RETAINED_OBSERVATION_LAWS). This stream carries an exact
+        # staging line with NO paired host-typed allocation (a doctored
+        # log): it is malformed retained A5 evidence and must fail
+        # closed to BLOCKED, never reduce as if admissible.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2."
                " Total device: 0 B, total host: 16.00 MiB\n"
@@ -262,10 +266,14 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
             "dispatch_capture": self.authority("A5")})
-        self.assertEqual(self.verdict("A5"), C.UNRESOLVED_TERMINAL)
+        self.assertEqual(self.verdict("A5"), T.BLOCKED)
 
     def test_a5_staging_line_missing_blocks(self):
-        # Same honest-UNRESOLVED law with a staging-free log.
+        # Correction round 3 (#258 review): same custody law — an A5
+        # stream with no exact sync-staging marker at all (device-only
+        # ledger) is inadmissible under the frozen A5 observation law:
+        # BLOCKED, not the honest-UNRESOLVED that an ADMISSIBLE
+        # nonterminal A5 population earns.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1."
                " Total device: 4.00 MiB, total host: 0 B\n")
@@ -274,6 +282,18 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
             "dispatch_capture": self.authority("A5")})
+        self.assertEqual(self.verdict("A5"), T.BLOCKED)
+
+    def test_a5_valid_observational_evidence_admissible_but_nonterminal(self):
+        # The other side of the corrected law: an AUTHENTIC A5 staging
+        # stream (exact marker, correctly paired host allocation,
+        # device-typed compute allocations) stays ADMISSIBLE — honest
+        # UNRESOLVED, never localized and never blocked.
+        self.write_json(self.evidence / "authority.json", {
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A5")})
+        for i in range(1, 6):
+            self.retain("A5", i, server_log=ARM_LOGS["A5"])
         self.assertEqual(self.verdict("A5"), C.UNRESOLVED_TERMINAL)
 
     # ---------- forged-authority adversarial matrix ----------

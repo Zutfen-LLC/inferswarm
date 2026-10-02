@@ -211,10 +211,11 @@ class A5PairingTests(FixtureMixin, unittest.TestCase):
         self.fixture()
 
     def status(self):
-        # #258 (AMENDMENT-006): A5 is nonterminal (#257), so the retained
-        # ordered staging custody law is exercised directly.
+        # #258 correction round 3: A5 is nonterminal (#257), so the
+        # retained ordered staging custody law is exercised through the
+        # public retained_observation_status boundary.
         return {"capable": True,
-                "facts": M._mechanism_a5(self.evidence, A5_NS)}
+                "facts": M.retained_observation_status(self.evidence, "A5", A5_NS)}
 
     def test_red_multiset_substitution_rejected(self):
         # staging 4096 + staging 8192 with host 4096 + host 4096.
@@ -382,8 +383,9 @@ class ProactiveReviewTests(FixtureMixin, unittest.TestCase):
                          ("alloc", "device", 4 * MIB)], family="none")
         write(self.evidence, A5_NS, "u1", log)
         with self.assertRaisesRegex(M.MechanismInvalid, "family|one-factor|capability"):
-            # #258: retained custody law invoked directly (A5 nonterminal).
-            M._mechanism_a5(self.evidence, A5_NS)
+            # #258 correction round 3: retained custody law through the
+            # public boundary (A5 nonterminal).
+            M.retained_observation_status(self.evidence, "A5", A5_NS)
 
     def test_red_forged_family_change_under_a3_rejected(self):
         log = ASYNC_OFF + build_log([("alloc", "device", 4 * MIB)],

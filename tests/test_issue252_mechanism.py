@@ -201,11 +201,14 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
 
     def test_a5_retained_law_authentic_staging_accepted(self):
         # The retained law still validates an authentic staging stream
-        # when invoked directly (custody law, not localization authority).
+        # through the PUBLIC custody helper (custody law, not
+        # localization authority; correction round 3 moved the boundary
+        # from the private _mechanism_a5 to retained_observation_status).
         log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
-        facts = M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
-        self.assertIn("staging", str(facts["mechanism"]))
+        status = M.retained_observation_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+        self.assertTrue(status["custody_valid"])
+        self.assertIn("staging", str(status["facts"]["mechanism"]))
 
     def test_a5_host_allocation_beyond_staging_rejected(self):
         # A host-typed allocation that is NOT the staging buffer proves
@@ -214,7 +217,7 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
         with self.assertRaisesRegex(M.MechanismInvalid,
                                     "outside the staging"):
-            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
+            M.retained_observation_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_without_staging_allocation_rejected(self):
         # Staging line present but its matching host-typed allocation line
@@ -228,12 +231,12 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         # printed running totals) or the staging/allocation pairing.
         with self.assertRaisesRegex(M.MechanismInvalid,
                                     "ledger|matching host-typed"):
-            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
+            M.retained_observation_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_missing_rejected(self):
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
         with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
-            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
+            M.retained_observation_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     def test_a5_spoofed_staging_call_text_rejected(self):
         # Adversarial-review case: staging function name inside a random
@@ -242,7 +245,7 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
                  + ENUM_ONLY + DEV_ALLOC)
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", spoof)
         with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
-            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
+            M.retained_observation_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
 
     # --- generic mutation discipline ---------------------------------------
 
