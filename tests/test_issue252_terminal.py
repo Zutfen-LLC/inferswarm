@@ -60,12 +60,15 @@ ARM_LOGS = {"A2": MECH_A2_LOG, "A3": MECH_A3_LOG, "A4": MECH_A4_LOG, "A5": MECH_
 class TerminalTests(FixtureMixin, unittest.TestCase):
     def setUp(self):
         self.fixture()
-        # Round 4: A4 is non-terminal-capable at this pin; the positive-path
-        # fixture arm is A5 (ordered staging/allocation pairing law).
-        self.arm = "A5"
+        # #258 (AMENDMENT-006): the positive-path fixture arm is A3 — the
+        # only terminal-capable arm at this pin. A5 was the round-4
+        # positive arm but is NONTERMINAL per accepted #257
+        # (A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL); its five-identical-rows
+        # path can no longer reach a localized terminal.
+        self.arm = "A3"
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
-            "dispatch_capture": self.authority("A5")})
+            "dispatch_capture": self.authority("A3")})
 
     def verdict(self, arm=None):
         arm = arm or self.arm
@@ -75,7 +78,7 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         with self.offline_authority_fetch(arm):
             return T.derive_terminal(self.evidence, {})
 
-    def deterministic(self, arm="A5", n=5):
+    def deterministic(self, arm="A3", n=5):
         for i in range(1, n + 1):
             self.retain(arm, i, server_log=ARM_LOGS[arm])
 
@@ -97,18 +100,18 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         git(self.repo, "add", "ggml/src/ggml-vulkan/ggml-vulkan.cpp")
         git(self.repo, "commit", "-qm", "synthetic Vulkan code change")
         commit = git(self.repo, "rev-parse", "HEAD")
-        capture = self.capture("A5", head=commit)
+        capture = self.capture("A3", head=commit)
         raw = json.dumps(capture, sort_keys=True).encode()
         (self.evidence / "fix-dispatch.json").write_bytes(raw)
         self.write_json(self.evidence / "fix.json", {
             "repo_root": str(self.repo), "commit": commit,
             "dispatch_capture": capture, "authority_sha256": sha(raw)})
-        fixed_ns = "fixed/" + A.ARMS["A5"]["namespace"]
+        fixed_ns = "fixed/" + A.ARMS["A3"]["namespace"]
         for i in range(1, 6):
-            self.retain("A5", i, authority=capture, namespace=fixed_ns,
+            self.retain("A3", i, authority=capture, namespace=fixed_ns,
                         fix_commit=commit, binary_sha256="a" * 64,
-                        server_log=ARM_LOGS["A5"])
-        with self.offline_authority_fetch("A5", head=commit):
+                        server_log=ARM_LOGS["A3"])
+        with self.offline_authority_fetch("A3", head=commit):
             self.assertEqual(T.derive_terminal(self.evidence, {}),
                              C.ACCEPTED_TERMINAL)
 
@@ -187,9 +190,16 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
     # ---------- A1 non-terminal-capable ----------
 
     def test_a1_deterministic_cannot_localize(self):
+        # #258 (AMENDMENT-006): five identical rows under a NON-TERMINAL-
+        # CAPABLE arm are honest UNRESOLVED (a capable arm could still
+        # exist among unretained arms), never a localized terminal and
+        # never BLOCKED-for-completion-count. Own-arm authority retained.
+        self.write_json(self.evidence / "authority.json", {
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A1")})
         for i in range(1, 6):
             self.retain("A1", i)
-        self.assertEqual(self.verdict("A1"), T.BLOCKED)
+        self.assertEqual(self.verdict("A1"), C.UNRESOLVED_TERMINAL)
 
     def test_a1_mechanism_status_non_capable(self):
         status = M.mechanism_status(self.evidence, "A1", A.ARMS["A1"]["namespace"])
@@ -224,9 +234,9 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         self.assertEqual(self.verdict("A3"), T.BLOCKED)
 
     def test_a4_deterministic_repeats_cannot_localize(self):
-        # Round 4: A4 is non-terminal-capable at pin b29c606e — five
-        # deterministic repeats plus ANY retained ledger (even one that
-        # previously satisfied the old host+device predicate) stay BLOCKED.
+        # Round 4: A4 is non-terminal-capable at pin b29c606e. #258
+        # (AMENDMENT-006): deterministic repeats under an incapable arm are
+        # honest UNRESOLVED, not BLOCKED-for-completion-count.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1."
                " Total device: 4.00 MiB, total host: 0 B\n"
@@ -237,9 +247,12 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
             "dispatch_capture": self.authority("A4")})
-        self.assertEqual(self.verdict("A4"), T.BLOCKED)
+        self.assertEqual(self.verdict("A4"), C.UNRESOLVED_TERMINAL)
 
     def test_a5_host_allocation_blocks(self):
+        # #258 (AMENDMENT-006): A5 is nonterminal (#257), so five identical
+        # rows under A5 can never reach a localized terminal — honest
+        # UNRESOLVED regardless of the retained stream's staging shape.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +16.00 MiB host at 0x2."
                " Total device: 0 B, total host: 16.00 MiB\n"
@@ -247,18 +260,21 @@ class TerminalTests(FixtureMixin, unittest.TestCase):
         for i in range(1, 6):
             self.retain("A5", i, server_log=log)
         self.write_json(self.evidence / "authority.json", {
-            "repo_root": str(self.repo), "dispatch_capture": self.authority("A5")})
-        self.assertEqual(self.verdict("A5"), T.BLOCKED)
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A5")})
+        self.assertEqual(self.verdict("A5"), C.UNRESOLVED_TERMINAL)
 
     def test_a5_staging_line_missing_blocks(self):
+        # Same honest-UNRESOLVED law with a staging-free log.
         log = ("ggml_vulkan: 0 = NVIDIA GeForce RTX 3060 (NVIDIA) | matrix cores: NV_coopmat2\n"
                "ggml_vulkan memory: NVIDIA GeForce RTX 3060: +4.00 MiB device at 0x1."
                " Total device: 4.00 MiB, total host: 0 B\n")
         for i in range(1, 6):
             self.retain("A5", i, server_log=log)
         self.write_json(self.evidence / "authority.json", {
-            "repo_root": str(self.repo), "dispatch_capture": self.authority("A5")})
-        self.assertEqual(self.verdict("A5"), T.BLOCKED)
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A5")})
+        self.assertEqual(self.verdict("A5"), C.UNRESOLVED_TERMINAL)
 
     # ---------- forged-authority adversarial matrix ----------
 

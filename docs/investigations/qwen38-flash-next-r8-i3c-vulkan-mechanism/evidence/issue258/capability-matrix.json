@@ -1,0 +1,75 @@
+{
+  "capability_matrix": {
+    "A1": {
+      "capability_reason": "no retained submission-serialization observable exists at pin b29c606e; the serialized wait path emits no distinguishable retained bytes",
+      "control": "GGML_VK_SERIALIZE_SUBMISSIONS",
+      "control_kind": "env",
+      "dead_control_on_frozen_subject": false,
+      "hypothesis_class": "H2",
+      "intended_mechanism": "Enable GGML_VK_SERIALIZE_SUBMISSIONS to fence/serialize compute submissions",
+      "reducer_treatment": "never required for terminal completion; never grants terminal authority from determinism contrast or evidence presence",
+      "terminal_capable": false
+    },
+    "A2": {
+      "capability_reason": "dead control on the frozen RTX 3060 / NV_coopmat2 subject: the KHR-only coopmat disable does not remove the subject's selected coopmat2 family, so the control cannot change the selected path",
+      "control": "GGML_VK_DISABLE_COOPMAT",
+      "control_kind": "env",
+      "dead_control_on_frozen_subject": true,
+      "hypothesis_class": "H5",
+      "intended_mechanism": "Enable GGML_VK_DISABLE_COOPMAT to disable KHR cooperative-matrix feature detection",
+      "reducer_treatment": "never required for terminal completion; never grants terminal authority from determinism contrast or evidence presence",
+      "terminal_capable": false
+    },
+    "A3": {
+      "capability_reason": "terminal-capable at pin b29c606e: the exact async-disabled line (:6727) plus producer-attested placement (AMENDMENT-005) uniquely prove the intervention was live",
+      "control": "GGML_VK_DISABLE_ASYNC",
+      "control_kind": "env",
+      "dead_control_on_frozen_subject": false,
+      "hypothesis_class": null,
+      "intended_mechanism": "Enable GGML_VK_DISABLE_ASYNC to disable backend asynchronous interface support",
+      "reducer_treatment": "mechanism validator admissible for localization",
+      "terminal_capable": true
+    },
+    "A4": {
+      "capability_reason": "no retained observable at pin b29c606e binds an allocation line to the prefer_host_memory branch",
+      "control": "GGML_VK_PREFER_HOST_MEMORY",
+      "control_kind": "env",
+      "dead_control_on_frozen_subject": false,
+      "hypothesis_class": "H3",
+      "intended_mechanism": "Enable GGML_VK_PREFER_HOST_MEMORY to prefer coherent host-visible allocation",
+      "reducer_treatment": "never required for terminal completion; never grants terminal authority from determinism contrast or evidence presence",
+      "terminal_capable": false
+    },
+    "A5": {
+      "capability_reason": "A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL (#257): control attested live and staging authentic, but no retained observable uniquely discriminates the selected model-buffer memory type / upload path at this pin",
+      "control": "GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM",
+      "control_kind": "env",
+      "dead_control_on_frozen_subject": false,
+      "hypothesis_class": null,
+      "intended_mechanism": "Enable GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM to prefer device-local-only allocation",
+      "reducer_treatment": "never required for terminal completion; never grants terminal authority from determinism contrast or evidence presence",
+      "terminal_capable": false
+    }
+  },
+  "hypothesis_coverage": {
+    "covered": false,
+    "gaps": [
+      {
+        "discriminator_arm": "A1",
+        "hypothesis": "H2",
+        "reason": "no retained submission-serialization observable exists at pin b29c606e; the serialized wait path emits no distinguishable retained bytes"
+      },
+      {
+        "discriminator_arm": "A4",
+        "hypothesis": "H3",
+        "reason": "no retained observable at pin b29c606e binds an allocation line to the prefer_host_memory branch"
+      },
+      {
+        "discriminator_arm": "A2",
+        "hypothesis": "H5",
+        "reason": "dead control on the frozen RTX 3060 / NV_coopmat2 subject: the KHR-only coopmat disable does not remove the subject's selected coopmat2 family, so the control cannot change the selected path"
+      }
+    ]
+  },
+  "schema": "inferswarm.issue258.capability-matrix/1"
+}

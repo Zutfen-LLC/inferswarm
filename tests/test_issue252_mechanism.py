@@ -183,27 +183,38 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         self.assertNotIn("A4", M.MECHANISM_VALIDATORS)
         self.assertIn("A4", M.NON_TERMINAL_CAPABLE)
 
-    # --- A5 ----------------------------------------------------------------
+    # --- A5 (#258/AMENDMENT-006: nonterminal per #257; the frozen
+    # staging state-machine law is retained and directly tested as the
+    # falsified prospective law) -------------------------------------------
 
-    def test_a5_positive(self):
-        # Genuine A5 log at the pin: staging line + its own host-typed
-        # staging allocation + device compute allocations, nothing else
-        # host-typed.
+    def test_a5_nonterminal_classification_with_257_reason(self):
+        write(self.evidence, A.ARMS["A5"]["namespace"], "u1",
+              make_log("NV_coopmat2",
+                       [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)]))
+        status = M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+        self.assertFalse(status["capable"])
+        self.assertIn("OBSERVATIONALLY_CAPABLE_NONTERMINAL", status["reason"])
+
+    def test_a5_withdrawn_from_capable_registry(self):
+        self.assertNotIn("A5", M.MECHANISM_VALIDATORS)
+        self.assertIn("A5", M.NON_TERMINAL_CAPABLE)
+
+    def test_a5_retained_law_authentic_staging_accepted(self):
+        # The retained law still validates an authentic staging stream
+        # when invoked directly (custody law, not localization authority).
         log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
-        status = M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
-        self.assertTrue(status["capable"])
+        facts = M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
+        self.assertIn("staging", str(facts["mechanism"]))
 
     def test_a5_host_allocation_beyond_staging_rejected(self):
         # A host-typed allocation that is NOT the staging buffer proves
         # host-visible memory was NOT disabled.
         log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2), ("host", 16 * 1024 ** 2)])
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", log)
-        # Round 5 renamed the vocabulary: host allocations outside the
-        # staging state machine (previously "other than the staging").
         with self.assertRaisesRegex(M.MechanismInvalid,
                                     "outside the staging"):
-            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_without_staging_allocation_rejected(self):
         # Staging line present but its matching host-typed allocation line
@@ -217,12 +228,12 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
         # printed running totals) or the staging/allocation pairing.
         with self.assertRaisesRegex(M.MechanismInvalid,
                                     "ledger|matching host-typed"):
-            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
 
     def test_a5_staging_line_missing_rejected(self):
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)]))
         with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
-            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
 
     def test_a5_spoofed_staging_call_text_rejected(self):
         # Adversarial-review case: staging function name inside a random
@@ -231,7 +242,7 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
                  + ENUM_ONLY + DEV_ALLOC)
         write(self.evidence, A.ARMS["A5"]["namespace"], "u1", spoof)
         with self.assertRaisesRegex(M.MechanismInvalid, "sync-staging"):
-            M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+            M._mechanism_a5(self.evidence, A.ARMS["A5"]["namespace"])
 
     # --- generic mutation discipline ---------------------------------------
 
@@ -246,10 +257,10 @@ class MechanismTests(FixtureMixin, unittest.TestCase):
 
     def test_mechanism_separate_from_determinism(self):
         # Mechanism facts carry no determinism claim; a capable status is
-        # independent of retained rows/counts. Uses A5 (still capable).
-        log = make_log("NV_coopmat2", [("staging", 4 * 1024 ** 2), ("device", 8 * 1024 ** 2)])
-        write(self.evidence, A.ARMS["A5"]["namespace"], "only-one-unit", log)
-        status = M.mechanism_status(self.evidence, "A5", A.ARMS["A5"]["namespace"])
+        # independent of retained rows/counts. Uses A3 (the capable arm).
+        log = ASYNC_OFF + make_log("NV_coopmat2", [("device", 4 * 1024 ** 2)])
+        write(self.evidence, A.ARMS["A3"]["namespace"], "only-one-unit", log)
+        status = M.mechanism_status(self.evidence, "A3", A.ARMS["A3"]["namespace"])
         self.assertTrue(status["capable"])
         self.assertNotIn("deterministic", str(status["facts"]).lower())
 

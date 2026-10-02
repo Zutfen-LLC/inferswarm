@@ -30,6 +30,7 @@ import issue252_phase0 as P0
 import issue252_capture as CAP
 import issue252_mechanism as M
 import issue250_diagnostic as D
+import issue258_theorem as TH
 
 BLOCKED = "R8I3C_REDUCER_BLOCKED_INCOMPLETE"
 
@@ -292,10 +293,13 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
         original_present = present & namespaces
         if auth["namespace"] not in original_present:
             raise ValueError("retained arm lacks dispatch")
-        # One dispatch authorizes only its named arm: no extra namespace may
-        # be consumed using the authority of another arm.
-        if original_present != {auth["namespace"]} and original_present != namespaces:
-            raise ValueError("mixed arms require independently retained authorities")
+        # One dispatch authorizes only its named arm: every ADDITIONAL
+        # retained namespace is consumed only through its own
+        # independently retained, re-verified arm-specific dispatch
+        # authority (authority-<arm>.json below). The old requirement
+        # that a multi-arm tree contain the COMPLETE named arm set is
+        # withdrawn (AMENDMENT-006 #258): partial multi-arm trees are
+        # legal evidence; terminal semantics handle coverage.
         states = {}
         for arm, spec in A.ARMS.items():
             ns = spec["namespace"]
@@ -311,15 +315,43 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
                     raise ValueError("arm-specific dispatch absent/mismatched")
                 arm_repo_root = _repo_root_of(root, f"authority-{arm}.json")
             states[arm] = _population(root, ns, arm_auth, repo_root=arm_repo_root)
-        corrected = [arm for arm, state in states.items() if state == "deterministic"]
+        # Custody/mechanism-law gate (AMENDMENT-006): every retained arm
+        # that HAS a frozen retained-observation law must satisfy it,
+        # regardless of terminal capability — a stream violating its
+        # arm's law (forged markers, one-factor violation, dead-control
+        # proof) is inadmissible evidence and blocks the whole reduction.
+        # Terminal capability governs only localization eligibility and
+        # non-localization coverage counting, never custody admission.
+        for arm in states:
+            if arm in M.MECHANISM_VALIDATORS:
+                M.mechanism_status(root, arm, A.ARMS[arm]["namespace"])
+        # AMENDMENT-006 (#258): terminal capability is explicit per arm
+        # (issue258_theorem.TERMINAL_CAPABLE), never inferred from arm
+        # existence or evidence presence. Nonterminal/dead arms can never
+        # localize and are never required for terminal completion; a
+        # physically executed nonterminal arm gains no authority.
+        corrected = [arm for arm, state in states.items()
+                     if state == "deterministic" and TH.terminal_capable(arm)]
         if len(corrected) > 1:
             raise ValueError("ambiguous multi-factor localization")
         if not corrected:
             if (root / "fix.json").exists():
                 raise ValueError("unexplained fix artifact without localized arm")
-            if set(states) == set(A.ARMS):
+            # Honest non-localization-family terminal. LOCALIZED requires a
+            # capable arm above; the non-localization family now splits:
+            # NON_LOCALIZED only when every frozen hypothesis class with a
+            # discriminator arm is covered by a terminal-capable arm AND
+            # every capable arm produced an admissible variable population;
+            # UNRESOLVED otherwise (coverage absent/incomplete, no capable
+            # arm admitted, or only nonterminal arms executed). The old
+            # complete-named-arm-set condition is withdrawn (AMENDMENT-006).
+            if states and TH.hypothesis_coverage()["covered"]:
+                required = TH.required_arms()
+                if all(states.get(arm) == "variable" for arm in required):
+                    return C.NON_LOCALIZED_TERMINAL
+            if states:
                 return C.UNRESOLVED_TERMINAL
-            raise ValueError("non-localization needs complete frozen arm set")
+            raise ValueError("no retained arms")
         arm = corrected[0]
         # Five identical rows establish deterministic behavior under the arm;
         # the bounded mechanism/discriminator claimed by the arm needs its own
@@ -327,12 +359,13 @@ def derive_terminal(evidence_root: Path, arms_result: dict[str, Any]) -> str:
         # strictly separate from the determinism contrast.
         status = M.mechanism_status(root, arm, A.ARMS[arm]["namespace"])
         if not status["capable"]:
-            # Non-terminal-capable arm (e.g. A1/A4 at this pin): deterministic
-            # contrast alone cannot localize a bounded mechanism. With the
-            # complete arm set retained this genuinely fails to localize.
-            if set(states) == set(A.ARMS) and (root / "fix.json").exists() is False:
-                return C.UNRESOLVED_TERMINAL
-            raise ValueError("five matching rows alone do not localize a mechanism")
+            # Non-terminal-capable arm (A1/A4/A5 at this pin): deterministic
+            # contrast alone cannot localize a bounded mechanism. Honest
+            # UNRESOLVED under AMENDMENT-006 (#258) — never a localized
+            # terminal through an incapable arm.
+            if (root / "fix.json").exists():
+                raise ValueError("unexplained fix artifact without localized arm")
+            return C.UNRESOLVED_TERMINAL
         fix = _fix(root, auth)
         if fix is None:
             return C.NOT_VALIDATED_TERMINAL

@@ -562,8 +562,8 @@ def _size_eq(a: float, b: float) -> bool:
 # A1: GGML_VK_SERIALIZE_SUBMISSIONS sets device->serialize_submissions
 # (:7435) and the serialized submission path waits on the device fence
 # (:18105), but the pin emits NO retained observable distinguishing a
-# serialized submission from an unfenced batch. Marking it here (not in the
-# reducer's control flow) keeps the reason auditable and testable.
+# serialized submission from an unfenced batch. Marking it here (not in
+# the reducer's control flow) keeps the reason auditable and testable.
 NON_TERMINAL_CAPABLE = {
     "A1": "no retained submission-serialization observable exists at pin "
           "b29c606e; the serialized wait path emits no distinguishable "
@@ -575,12 +575,30 @@ NON_TERMINAL_CAPABLE = {
           "identically from the staging (:8605/:8615) and pinned-host "
           "(:8222) paths, and no preference-off baseline allocation ledger "
           "exists to compare same-site typing against",
+    # Issue #258 (AMENDMENT-006): A5 is withdrawn from the admissible
+    # localization validators. Accepted #257 classification
+    # A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL — the control is attested
+    # live and staging activity authentic, but NO retained observable at
+    # this pin uniquely discriminates the selected model-buffer memory
+    # type / upload path relative to the no-A5 branch (both staging-marker
+    # overloads, eDeviceLocal reachable from both branches, no property
+    # flags or attempt order logged). The ordered staging state-machine
+    # law below (_mechanism_a5) is retained VERBATIM as the falsified
+    # prospective law; it is no longer consulted for localization.
+    "A5": "A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL (#257): control attested "
+          "live and staging authentic, but no retained observable uniquely "
+          "discriminates the selected model-buffer memory type / upload "
+          "path at pin b29c606e; reopening A5 requires new prospective "
+          "instrumentation under its own reviewed freeze",
 }
 
+# Canonical registry of arms that CAN localize a terminal at this pin
+# (frozen mechanism contract retained + unique retained observable).
+# issue258_theorem.TERMINAL_CAPABLE must agree; the reducer consumes the
+# theorem module, and a test pins the agreement.
 MECHANISM_VALIDATORS = {
     "A2": _mechanism_a2,
     "A3": _mechanism_a3,
-    "A5": _mechanism_a5,
 }
 
 

@@ -15,6 +15,13 @@ PREDECESSOR_TERMINAL = "R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED"
 ACCEPTED_TERMINAL = "R8I3C_VULKAN_MECHANISM_LOCALIZED_FIX_VALIDATED"
 NOT_VALIDATED_TERMINAL = "R8I3C_VULKAN_MECHANISM_LOCALIZED_FIX_NOT_VALIDATED"
 UNRESOLVED_TERMINAL = "R8I3C_VULKAN_MECHANISM_UNRESOLVED"
+# Issue #258 (AMENDMENT-006): non-localization terminal — every frozen
+# hypothesis class with a discriminator arm is covered by a terminal-capable
+# arm, every terminal-capable arm produced an admissible population, and
+# every such population is variable. Not reachable at the current pin
+# (coverage provably incomplete); emitted only under a future
+# instrumented arm set frozen by its own reviewed amendment.
+NON_LOCALIZED_TERMINAL = "R8I3C_VULKAN_MECHANISM_NON_LOCALIZED"
 DISPATCH_PHRASE_FORMAT = "R8I3C PHYSICAL DISPATCH #252"
 LOCALIZED_FACTOR = "zero↔nonzero Vulkan participation"
 COMPARATOR_SHA256 = "6f8b56bd44d116cdc691911f8a1131840f5c7a720133c05febe11e467c2636ad"
