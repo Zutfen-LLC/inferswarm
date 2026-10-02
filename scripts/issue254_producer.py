@@ -712,7 +712,15 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
     argv, env = geom["argv"], geom["env"]
     binary_sha = verify_comparator(binary)
     stats_pre = observe_model_stats(MODEL_DIR)
-    identity_pre = (identity_observer or _default_identity_observer)()
+    # Round-7 canonical normalization boundary: the observation (raw #248
+    # shape from the production observer) is authenticated and normalized
+    # into the ONE canonical retained representation at the producer seam,
+    # BEFORE custody/attestation/receipt retention — identity_pre and
+    # identity_post are both normalized here, and run_unit binds exactly
+    # these objects into build_unit_receipt, build_producer_attestation,
+    # and the retained identity-pre.json / identity-post.json artifacts.
+    identity_pre = _retained_identity(
+        (identity_observer or _default_identity_observer)())
     identity_pre_problems = _identity_problems(identity_pre)
     if identity_pre_problems:
         raise ProducerError(f"pre-launch identity drift: {identity_pre_problems}")
@@ -732,7 +740,11 @@ def execute_unit(*, dispatch: dict[str, Any], arm: str, unit_index: int,
                 PORT, request, prompt, timeout_s)
             server_pid = proc.pid
             rows, meta = _collect_observer(observer_prefix)
-            identity_post = (identity_observer or _default_identity_observer)()
+            # Round-7: same canonical normalization boundary for the
+            # post-unit observation (identity_pre/identity_post share ONE
+            # representation).
+            identity_post = _retained_identity(
+                (identity_observer or _default_identity_observer)())
             identity_post_problems = _identity_problems(identity_post)
             if identity_post_problems:
                 raise ProducerError(
@@ -847,6 +859,101 @@ def _flat_identity(observation: dict[str, Any]) -> dict[str, Any]:
             "vulkan": derived["vulkan_api"]}
     # Retain the raw bytes for custody alongside the derived flat view.
     return {**flat, "raw": observation["raw"]}
+
+
+def normalize_retained_identity(observation: dict[str, Any],
+                                ) -> dict[str, Any]:
+    """THE one canonical producer/receipt identity normalization boundary.
+
+    Round-7 correction (third physical A3 attempt, dispatched head
+    d0df403): the real production observer returns the accepted RAW #248
+    observation (schema/arm/raw), which passed the producer identity law
+    (that law flattens internally) but reached receipt construction in a
+    shape ``validate_unit_receipt`` can never accept — every genuine
+    production observation died post-inference with ``receipt identity_pre
+    identity missing or drifted``. Offline suites missed it because every
+    test seam injected an already-flat identity dict.
+
+    This helper produces the ONE canonical normalized representation that
+    is bound identically into the unit (identity_pre/identity_post), the
+    #252 receipt, the producer attestation, and the retained
+    identity-pre.json / identity-post.json artifacts:
+
+    * a #248 raw observation (schema/arm/raw) is validated by the
+      accepted #248 identity law, then flattened through the EXISTING
+      ``_flat_identity``/``I248.derive_identity_from_raw`` path (there is
+      no second parser), and the derived frozen fields must equal
+      C252.HOST_FACTS exactly (fail closed on any drift). The
+      authenticated raw #248 block is retained for custody inside the
+      same object (the pre-existing ``_flat_identity`` representation),
+      so the flat retained identity remains mechanically derived from —
+      and independently re-derivable from — the accepted raw bytes;
+    * an already-flat observation (legacy test shape) must carry EVERY
+      HOST_FACTS field exactly. A partial flat dict fails closed, and
+      caller-supplied ``raw`` material is never allowed to masquerade as
+      authenticated custody (a flat dict with a ``raw`` key is rejected:
+      the raw block exists ONLY as the product of the accepted #248
+      observation path, never as caller input).
+
+    Fail-closed: raises ProducerError; never returns a partial or
+    narrative identity.
+    """
+    if not isinstance(observation, dict):
+        raise ProducerError(
+            "retained identity must be a dict (raw #248 observation or "
+            "flat HOST_FACTS view)")
+    if observation.get("schema") == I248.IDENTITY_SCHEMA:
+        problems = I248.identity_problems("B", observation)
+        if problems:
+            raise ProducerError(
+                f"identity observation drift: {problems}")
+        normalized = _flat_identity(observation)
+        drift = [f"{k}: {normalized.get(k)!r} != {v!r}"
+                 for k, v in C252.HOST_FACTS.items()
+                 if normalized.get(k) != v]
+        if drift:
+            raise ProducerError(
+                f"normalized identity drift: {drift}")
+        return normalized
+    if "raw" in observation:
+        # A flat document carrying a raw block is accepted ONLY as an
+        # already-normalized document that is EXACTLY the canonical
+        # derivation of its own raw block: the raw block must pass the
+        # accepted #248 identity law and derive every flat field (and
+        # the raw custody itself) byte-for-byte. Caller-supplied raw
+        # material can therefore never override derived values — a
+        # narrative flat+raw pair that does not re-derive identically
+        # fails closed.
+        claimed_raw = observation.get("raw")
+        if not isinstance(claimed_raw, dict):
+            raise ProducerError(
+                "retained identity raw custody must be an object")
+        canonical = normalize_retained_identity(
+            {"schema": I248.IDENTITY_SCHEMA, "arm": "B",
+             "raw": claimed_raw})
+        if observation != canonical:
+            raise ProducerError(
+                "normalized identity is not the canonical derivation of "
+                "its own raw custody (flat fields or raw block altered)")
+        return canonical
+    # Already-flat shape: require EVERY frozen field exactly.
+    drift = [f"{k}: {observation.get(k)!r} != {v!r}"
+             for k, v in C252.HOST_FACTS.items()
+             if observation.get(k) != v]
+    if drift:
+        raise ProducerError(f"flat identity drift: {drift}")
+    return dict(observation)
+
+
+def _retained_identity(observation: dict[str, Any]) -> dict[str, Any]:
+    """Normalized retained identity for one observation at the seam where
+    the producer's own-process observation is retained into the unit.
+
+    The normalization law itself lives in
+    :func:`normalize_retained_identity`; this seam exists so the boundary
+    is one place in execute_unit, applied to BOTH identity_pre and
+    identity_post."""
+    return normalize_retained_identity(observation)
 
 
 def _identity_problems(observation: dict[str, Any]) -> list[str]:
@@ -1449,7 +1556,9 @@ def verify_unit_producer_binding(unit_dir: Path, receipt: dict[str, Any],
             or att["server_log_sha256"] != receipt["server_log_sha256"]
             or att["response_raw_sha256"] != receipt["response_raw_sha256"]
             or att["observer_row_sha256"] != receipt["observer_rows"]
-            or att["placement"] != receipt["placement"]):
+            or att["placement"] != receipt["placement"]
+            or att["identity_pre"] != receipt["identity_pre"]
+            or att["identity_post"] != receipt["identity_post"]):
         raise ProducerError(
             "producer attestation does not bind the retained unit bytes")
     authority = receipt["authority"]

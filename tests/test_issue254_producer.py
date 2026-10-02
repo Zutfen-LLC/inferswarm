@@ -140,6 +140,23 @@ class ProducerFixtureMixin:
         self.parent_patch.start(); self.pin_patch.start()
         self.addCleanup(self.pin_patch.stop)
         self.addCleanup(self.parent_patch.stop)
+        # Round-7: offline default for the production identity-observer
+        # seam. The REAL _default_identity_observer reads the physical
+        # host (sysfs/nvidia-smi/vulkaninfo) and cannot run on a CPU
+        # host; offline suites get the accepted census-shaped raw #248
+        # observation — the EXACT contract shape the real observer
+        # returns (schema/arm/raw), never an already-flat substitute
+        # (an injected flat seam is how the round-6 identity-shape
+        # defect escaped every prior offline suite). Individual tests
+        # may still override the observer with their own patch.
+        from tests.test_issue248_diagnostic import CENSUS_RAW_B
+        observation = {"schema": PR.I248.IDENTITY_SCHEMA, "arm": "B",
+                       "raw": CENSUS_RAW_B}
+        self.identity_patch = mock.patch.object(
+            PR, "_default_identity_observer",
+            lambda: json.loads(json.dumps(observation)))
+        self.identity_patch.start()
+        self.addCleanup(self.identity_patch.stop)
 
     # -- synthetic #254 dispatch comments -------------------------------
 
@@ -276,9 +293,23 @@ class ProducerFixtureMixin:
             rows = [row for _ in range(D.DECISIONS)]
             meta = NL.join(json.dumps({"pos": i, "pid": 4242}) + NL
                            for i in range(D.DECISIONS)).encode()
-            identity = dict(C252.HOST_FACTS)
+            # Round-7 fixture truth: the double mirrors the REAL
+            # execute_unit identity law — it calls the observer seam and
+            # retains identity through the production normalization
+            # boundary (the previous fixture built an already-flat dict
+            # inline, which encoded the receipt validator's shape and hid
+            # the producer/receipt identity-shape divergence).
+            observed = (identity_observer
+                        or PR._default_identity_observer)()
             if identity_drift:
-                identity = {**identity, "driver": "999.99.99"}
+                if observed.get("schema") == PR.I248.IDENTITY_SCHEMA:
+                    observed = json.loads(json.dumps(observed))
+                    observed["raw"]["nvidia-smi"] = observed[
+                        "raw"]["nvidia-smi"].replace("610.57.04",
+                                                     "999.99.99")
+                else:
+                    observed = {**observed, "driver": "999.99.99"}
+            identity = PR._retained_identity(observed)
             witness = {m: {"bytes": 1, "device": 1, "inode": 1,
                            "mtime_ns": 1, "ctime_ns": 1}
                        for m in C252.MODEL_MEMBERS}
@@ -320,21 +351,27 @@ class ProducerFixtureMixin:
                         binary_sha256=C252.COMPARATOR_SHA256,
                         server_log=None, with_attestation=True,
                         mutate_attestation=None, namespace=None,
-                        request_prompt=None):
+                        request_prompt=None, identity=None, rows=None):
         """Retain one complete unit directory (receipt + attestation)."""
         ns = namespace or A.ARMS[arm]["namespace"]
         tag = f"case-3072-B-{arm.lower()}-{index:03d}"
         unit_dir = self.evidence / ns / tag
         unit_dir.mkdir(parents=True, exist_ok=True)
         authority = authority if authority is not None else capture
-        rows = [bytes([row_seed]) + bytes(D.ROW_BYTES - 1)
-                for _ in range(D.DECISIONS)]
+        rows = rows if rows is not None else [
+            bytes([row_seed]) + bytes(D.ROW_BYTES - 1)
+            for _ in range(D.DECISIONS)]
         meta = NL.join(json.dumps({"pos": i, "pid": 4242}) + NL
                        for i in range(D.DECISIONS)).encode()
         response = json.dumps({"tokens": [1, 2, 3, 4, 5, 6, 7, 8],
                                "content": "x" * 8}).encode()
         log = (server_log or MECH_A3_LOG).encode()
-        identity = dict(C252.HOST_FACTS)
+        # Round-7: the retained identity defaults to the canonical
+        # normalized representation derived from the offline raw #248
+        # observation (never a bare flat dict); callers may pass an
+        # explicit identity document.
+        identity = identity if identity is not None else (
+            PR._retained_identity(PR._default_identity_observer()))
         witness = {m: {"bytes": 1, "device": 1, "inode": 1, "mtime_ns": 1,
                        "ctime_ns": 1} for m in C252.MODEL_MEMBERS}
         placement = {"output_projection": "Vulkan", "embedding": "CPU",
