@@ -21,6 +21,7 @@ The hashes above are to be literal SHA-256 values; generate/verify them from the
 - `scripts/issue252_terminal.py` — retained-byte terminal derivation (AMENDMENT-006: capability-explicit arm-set theorem).
 - `scripts/issue258_theorem.py` — frozen per-arm terminal-capability law and hypothesis-coverage derivation (#258; consumed by the reducer; grants no execution authority).
 - [`METHODOLOGY-AMENDMENT-007.md`](METHODOLOGY-AMENDMENT-007.md) — #260 source-only H2/H3 instrumentation freeze and explicit H5 boundedness blocker. `issue260-source-identity.json` and `patches/issue260-vulkan-instrumentation.patch` pin the distinct prospective source; `scripts/issue260_instrumentation.py` parses synthetic exact-format markers. No physical result, new-arm dispatch, binary freeze, or amendment of historical A1–A5 evidence follows from this addition.
+- Issue #262 rapid physical pilot — `issue262-source-identity.json` freezes the full instrumented comparator source chain (pinned b29c606e + #260 H2/H3 patch + `patches/issue262-h5-route.patch` output-projection route markers + accepted R8-E patch + comparator/2 seam); `scripts/issue262_source_patch.py` rebuilds and verifies it; `scripts/issue262_h5.py` parses H5 route markers and derives coopmat2 one-factor eligibility; `scripts/issue262_pilot.py` is the bounded pilot producer (issue-authorized, frozen subject, screening 2–3 units/arm). The `#260` H2/H3 parser accepts the `#262` tree identity additively.
 
 From the repository root, run the focused CPU-only tests:
 

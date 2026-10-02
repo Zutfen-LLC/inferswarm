@@ -13,8 +13,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTITY_PATH = ROOT / "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"
+IDENTITY262_PATH = ROOT / "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"
 INSTRUMENTED_TREE = (json.loads(IDENTITY_PATH.read_text(encoding="utf-8"))["instrumented_tree"]
                      if IDENTITY_PATH.is_file() else "")
+# #262 successor identity: the same H2/H3 marker grammar is emitted unchanged
+# by the #262 instrumented comparator (the H5 route marker is additive and
+# parsed by issue262_h5). H2/H3 parsing accepts EITHER frozen tree identity;
+# every other source identity still fails closed.
+INSTRUMENTED262_TREE = (json.loads(IDENTITY262_PATH.read_text(encoding="utf-8"))["instrumented262_tree"]
+                        if IDENTITY262_PATH.is_file() else "")
 PREFIX = "ggml_vk_i260:v1|"
 POS = r"([1-9][0-9]*)"
 NONNEG = r"(0|[1-9][0-9]*)"
@@ -35,7 +42,8 @@ class ObservationError(ValueError):
 
 def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
     """Validate whole-line producer events; neither generic text nor staging proves H2/H3."""
-    if not INSTRUMENTED_TREE or source_tree != INSTRUMENTED_TREE:
+    accepted_trees = {t for t in (INSTRUMENTED_TREE, INSTRUMENTED262_TREE) if t}
+    if not accepted_trees or source_tree not in accepted_trees:
         raise ObservationError("instrumented source identity required")
     if arm not in EXPECTED or not isinstance(log, str):
         raise ObservationError("unknown arm or malformed log")
