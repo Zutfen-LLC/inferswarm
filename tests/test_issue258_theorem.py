@@ -321,5 +321,143 @@ class ClosureAPIFailClosedTests(unittest.TestCase):
         self.assertFalse(TH.terminal_closure()["closure_possible"])
 
 
+class CustodyLawProductionEnforcementTests(FixtureMixin, unittest.TestCase):
+    """[RED at reviewed head 362d2dc — correction round 3] Custody law is
+    enforced through the production reducer, independent of capability.
+
+    Terminal/localization capability and retained-observation/custody
+    validation must be mechanically independent. Issue #258 correctly
+    removed A5 from M.MECHANISM_VALIDATORS (A5 nonterminal per #257), but
+    the reducer's custody gate consults ONLY that registry, so retained A5
+    evidence in a real derive_terminal() reduction never traverses
+    _mechanism_a5: malformed/forged A5 observation streams reduce to
+    UNRESOLVED without the frozen A5 observation law being checked. These
+    regressions fail at 362d2dc and MUST PASS at the corrected head.
+    """
+
+    def setUp(self):
+        self.fixture()
+        self.arm = "A3"
+        self.write_json(self.evidence / "authority.json", {
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A3")})
+
+    def verdict(self):
+        with self.offline_authority_fetch("A3"):
+            return T.derive_terminal(self.evidence, {})
+
+    def _accepted_a3_variable(self):
+        self.retain("A3", 1, server_log=LOG_A3)
+        self.retain("A3", 2, bytes([1]) * D.ROW_BYTES, server_log=LOG_A3)
+
+    def _retain_a5(self, log):
+        # Otherwise-admissible retained A5 evidence beside the accepted
+        # A3 variable result — the exact accepted physical shape (#257).
+        self.write_json(self.evidence / "authority-A5.json", {
+            "repo_root": str(self.repo),
+            "dispatch_capture": self.authority("A5")})
+        self.retain("A5", 1, server_log=log)
+        self.retain("A5", 2, bytes([1]) * D.ROW_BYTES, server_log=log)
+
+    # Baseline first: the positive case is NOT vacuous.
+
+    def test_pin8_valid_a3_a5_variable_state_still_unresolved(self):
+        # [PIN at both heads] custody-valid A5 observational evidence
+        # beside the accepted A3 variable result stays admissible AND
+        # nonterminal: the honest terminal is UNRESOLVED, never localized
+        # and never blocked.
+        self._accepted_a3_variable()
+        self._retain_a5(LOG_A5)
+        self.assertEqual(self.verdict(), C.UNRESOLVED_TERMINAL)
+
+    # Four independently malformed A5 observation streams, each judged
+    # ONLY through the public production reducer path.
+
+    def test_red8_a5_missing_exact_staging_marker_blocks(self):
+        # Retained A5 log with the exact sync-staging marker removed
+        # (ledger arithmetically consistent): the frozen A5 observation
+        # law must reject it => BLOCKED, not UNRESOLVED.
+        self._accepted_a3_variable()
+        self._retain_a5(_mklog("NV_coopmat2", [("device", 8 * MIB)]))
+        self.assertEqual(self.verdict(), T.BLOCKED)
+
+    def test_red9_a5_wrong_subject_enumeration_family_blocks(self):
+        # Forged family change under A5 (violates the one-factor subject
+        # law) => BLOCKED through the production reducer.
+        self._accepted_a3_variable()
+        self._retain_a5(_mklog("KHR_coopmat",
+                               [("staging", 4 * MIB), ("device", 8 * MIB)]))
+        self.assertEqual(self.verdict(), T.BLOCKED)
+
+    def test_red10_a5_host_allocation_outside_staging_blocks(self):
+        # Host-typed allocation beyond the staging state machine (would
+        # prove host-visible VRAM NOT disabled as claimed) => BLOCKED.
+        self._accepted_a3_variable()
+        self._retain_a5(_mklog("NV_coopmat2", [("staging", 4 * MIB),
+                                               ("device", 8 * MIB),
+                                               ("host", 16 * MIB)]))
+        self.assertEqual(self.verdict(), T.BLOCKED)
+
+    def test_red11_a5_staging_allocation_pairing_mismatch_blocks(self):
+        # Staging line retained but its paired host-typed allocation is
+        # the WRONG size (malformed staging/allocation pairing) => BLOCKED.
+        self._accepted_a3_variable()
+        self._retain_a5(_staging_pairing_mismatch_log())
+        self.assertEqual(self.verdict(), T.BLOCKED)
+
+    # The architecture itself: two independent registries.
+
+    def test_red12_custody_law_registry_independent_of_capability(self):
+        # A frozen retained-observation/custody law registry must exist,
+        # carry A2/A3/A5 per their actual frozen laws, and be SEPARATE
+        # from the localization-capability registry: A5 stays out of
+        # MECHANISM_VALIDATORS (nonterminal, zero localization authority)
+        # while remaining under custody validation.
+        self.assertEqual(set(M.RETAINED_OBSERVATION_LAWS), {"A2", "A3", "A5"})
+        self.assertNotIn("A5", M.MECHANISM_VALIDATORS)
+        self.assertNotIn("A1", M.RETAINED_OBSERVATION_LAWS)
+        self.assertNotIn("A4", M.RETAINED_OBSERVATION_LAWS)
+
+    def test_red13_capability_laws_unchanged_by_custody_fix(self):
+        # The correction grants A5 zero terminal/localization authority.
+        import issue258_theorem as TH
+        self.assertIs(TH.TERMINAL_CAPABLE["A5"], False)
+        self.assertEqual(TH.terminal_capable_arms(), ["A3"])
+        closure = TH.terminal_closure()
+        self.assertIs(closure["closure_possible"], False)
+        self.assertEqual(closure["required_arms"], [])
+        self.assertEqual({g["hypothesis"] for g in closure["coverage_gaps"]},
+                         {"H2", "H3", "H5"})
+
+    def test_red14_reducer_gate_consumes_custody_registry(self):
+        # The production gate must validate retained arms through the
+        # custody registry (every retained arm with a frozen law),
+        # not through the localization-capability membership test.
+        import inspect
+        src = inspect.getsource(T.derive_terminal)
+        self.assertIn("RETAINED_OBSERVATION_LAWS", src)
+        self.assertNotIn("MECHANISM_VALIDATORS", src)
+
+
+def _staging_pairing_mismatch_log():
+    # Staging line for 4 MiB whose immediately following host-typed
+    # allocation is 8 MiB (wrong size), with an arithmetically consistent
+    # running ledger — malformed ONLY under the staging/allocation
+    # pairing law.
+    lines = [ENUM_BASE + "NV_coopmat2",
+             "ggml_vulkan memory: ggml_vk_ensure_sync_staging_buffer("
+             + str(4 * MIB) + ")"]
+    td = th = 0
+    for kind, size in (("host", 8 * MIB), ("device", 8 * MIB)):
+        if kind == "device":
+            td += size
+        else:
+            th += size
+        lines.append(MEM + "+" + _fmt(size) + " " + kind + " at 0x"
+                     + format(len(lines), "x") + ". Total device: "
+                     + _fmt(td) + ", total host: " + _fmt(th))
+    return NL.join(lines) + NL
+
+
 if __name__ == "__main__":
     unittest.main()
