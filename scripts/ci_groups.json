@@ -136,7 +136,9 @@
     "test_issue254_producer",
     "test_issue254_round5",
     "test_issue254_round7",
-    "test_issue258_theorem"
+    "test_issue258_theorem",
+    "test_issue260_source_patch",
+    "test_issue260_observation"
    ]
   },
   "repo-integrity": {
@@ -1616,6 +1618,12 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue258_theorem.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue260_observation.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue260_source_patch.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
