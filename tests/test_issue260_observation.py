@@ -142,9 +142,21 @@ class ProspectiveObservationTests(unittest.TestCase):
              + graph(5, "end", 2), "A1"),
             (graph(1) + submit(1, 7, "normal") + graph(1, "end", 1)
              + graph(2) + submit(2, 3, "normal") + graph(2, "end", 1), "BASE"),
+            (graph(5) + submit(5, 23) + wait(5, 23) + submit(5, 23) + wait(5, 23)
+             + graph(5, "end", 2), "A1"),
+            (graph(1) + submit(1, 7, "normal") + graph(1, "end", 1)
+             + graph(2) + submit(2, 7, "normal") + graph(2, "end", 1), "BASE"),
         ):
             with self.subTest(bad=bad):
                 self.rejected(bad, arm)
+        self.assertEqual(
+            self.parse(graph(5) + submit(5, 7) + wait(5, 7) + submit(5, 23) + wait(5, 23)
+                       + submit(5, 400) + wait(5, 400) + graph(5, "end", 3), "A1")["graphs"],
+            [5])
+        self.assertEqual(
+            self.parse(graph(1) + submit(1, 9, "normal") + graph(1, "end", 1)
+                       + graph(2) + submit(2, 12, "normal") + graph(2, "end", 1), "BASE")["graphs"],
+            [1, 2])
 
     def test_prospective_h5_gap_remains(self):
         import issue258_theorem as H

@@ -48,6 +48,7 @@ def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
     graphs: list[int] = []
     seen_graphs: set[int] = set()
     seen_submits: set[int] = set()
+    last_submit_id: int | None = None
     active_graph: int | None = None
     graph_submits = 0
     pending: set[int] = set()
@@ -77,9 +78,11 @@ def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
             graph_id, submit_id, path = match.groups()
             graph_id, submit_id = int(graph_id), int(submit_id)
             if (graph_id != active_graph or submit_id > limit or submit_id in seen_submits
+                    or (last_submit_id is not None and submit_id <= last_submit_id)
                     or (path == "serialized" and pending)):
-                raise ObservationError("unscoped, duplicate or unpaired submission")
+                raise ObservationError("unscoped, duplicate or non-monotonic submission")
             seen_submits.add(submit_id)
+            last_submit_id = submit_id
             graph_submits += 1
             paths.add(path)
             if path == "serialized":
