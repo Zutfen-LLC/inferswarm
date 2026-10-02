@@ -192,14 +192,51 @@ def terminal_capable(arm: str) -> bool:
     return TERMINAL_CAPABLE.get(arm, False)
 
 
-def required_arms() -> list[str]:
-    """The minimal physically required arm set under the new theorem.
+def terminal_capable_arms() -> list[str]:
+    """Existing terminal-capable arms, sorted (inventory fact only).
 
-    The terminal-closure set is the set of terminal-capable arms: each must
-    produce an admissible population before NON_LOCALIZED may be emitted.
-    Nonterminal/dead arms are never members (AMENDMENT-006 §4).
+    This is NOT a closure set: terminal-capable is a per-arm property
+    (retained-observable existence at the pin), independent of whether
+    non-localization coverage is satisfiable. Closure additionally
+    requires hypothesis coverage (see terminal_closure()).
     """
     return sorted(a for a, capable in TERMINAL_CAPABLE.items() if capable)
+
+
+def terminal_closure() -> dict[str, object]:
+    """Structured terminal-closure fact (fail-closed).
+
+    Returns {"closure_possible": bool, "required_arms": [...],
+    "coverage_gaps": [...]}. required_arms is non-empty ONLY when every
+    discriminator-bearing frozen hypothesis class is covered by at least
+    one terminal-capable arm; while coverage is impossible at the current
+    freeze (gaps non-empty) closure is not possible and the required-arm
+    set is [] — an existing terminal-capable arm (A3) is never a
+    sufficient closure set on its own.
+    """
+    coverage = hypothesis_coverage()
+    possible = coverage["covered"]
+    return {
+        "closure_possible": possible,
+        "required_arms": terminal_capable_arms() if possible else [],
+        "coverage_gaps": coverage["gaps"],
+    }
+
+
+def required_arms() -> list[str]:
+    """Physical arms required for NON_LOCALIZED closure, IF closure is
+    possible at all.
+
+    Fail-closed: returns [] while hypothesis coverage is incomplete at
+    the current freeze — which it provably is (H2/H3/H5 gaps) — because
+    no set of existing-arm executions can make NON_LOCALIZED reachable
+    then. The terminal-capable inventory (A3 today) is a per-arm fact
+    exposed separately by terminal_capable_arms(); it is NOT by itself a
+    closure claim (AMENDMENT-006 §4).
+    """
+    if not hypothesis_coverage()["covered"]:
+        return []
+    return terminal_capable_arms()
 
 
 def validate_theorem() -> list[str]:

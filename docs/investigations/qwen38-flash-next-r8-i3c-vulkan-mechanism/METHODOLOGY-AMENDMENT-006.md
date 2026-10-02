@@ -37,7 +37,9 @@ Old strings `LOCALIZED_FIX_VALIDATED`, `LOCALIZED_FIX_NOT_VALIDATED`, `UNRESOLVE
 
 ## 4. Required arm set under the new theorem
 
-At the current frozen pin/subject, the required PHYSICAL arm set for terminal closure is **{A3}** — the only terminal-capable arm. A3's accepted physical result (variable) is already retained and consumable unchanged for both its determinism contrast and its mechanism fact (its mechanism law's retained observables are unchanged by this amendment). NON_LOCALIZED is NOT currently reachable: hypothesis coverage is provably incomplete (H2→A1 nonterminal, H3→A4/A5 nonterminal, H5→A2 dead-control), so the honest current terminal for an admissible all-variable state — including the accepted A3+A5 state — is **UNRESOLVED**.
+**Correction (round 2, 2026-10-02):** this section originally stated "the required PHYSICAL arm set for terminal closure is **{A3}**", conflating the per-arm terminal-capability inventory with closure sufficiency. Corrected statement:
+
+At the current frozen pin/subject, terminal closure is **NOT possible**: hypothesis coverage is provably incomplete (H2→A1 nonterminal, H3→A4/A5 nonterminal, H5→A2 dead-control), so NON_LOCALIZED is unreachable regardless of which existing arms execute, and the theorem's machine-readable required-arm API fails closed to the empty set (`issue258_theorem.required_arms() == []`, `terminal_closure()["closure_possible"] is False`). The existing terminal-capable arm inventory is **{A3}** (`terminal_capable_arms() == ["A3"]`) — a per-arm capability fact, NOT a closure set; A3's execution alone cannot close NON_LOCALIZED at this pin. A3's accepted physical result (variable) remains retained and consumable unchanged for both its determinism contrast and its mechanism fact (its mechanism law's retained observables are unchanged by this amendment). The honest current terminal for an admissible all-variable state — including the accepted A3+A5 state — is **UNRESOLVED**.
 
 Arms removed from any terminal requirement: **A1, A2, A4, A5**. A1/A4/A5 are non-terminal-capable at this pin; A2 is a dead control on this subject. Executing them under unchanged instrumentation produces no information capable of changing any terminal. Their physical execution remains permitted only as separately dispatched negative-control/diagnostic facts, never as terminal-closure requirements.
 
@@ -59,7 +61,7 @@ Any such instrumentation is a llama.cpp source change: it changes the source ide
 
 ## 7. Implementation record
 
-- `scripts/issue258_theorem.py` — frozen capability law + coverage derivation (this amendment's machine-readable form).
+- `scripts/issue258_theorem.py` — frozen capability law + coverage derivation (this amendment's machine-readable form; round-2 correction: the closure API (`terminal_capable_arms()` / `terminal_closure()` / fail-closed `required_arms()`) mechanically separates the terminal-capable inventory ({A3}) from closure sufficiency (not possible at this pin; required-arm set is empty while H2/H3/H5 coverage gaps remain).
 - `scripts/issue252_terminal.py` — reducer updated to derive terminals under this theorem (capability-explicit admission; UNRESOLVED on coverage failure; nonterminal arms never required for completion and never granted terminal authority).
 - `scripts/issue252_mechanism.py` — `_mechanism_a5` withdrawn from the admissible localization validators (retained verbatim as the falsified prospective law #257 refuted; `mechanism_status` classifies A5 nonterminal via the theorem module).
 - Tests: `tests/test_issue258_theorem.py` (RED suite at head `2dce4e1a`, GREEN at the corrected head), plus updated pins in `tests/test_issue252_terminal.py` and `tests/test_issue254_round7.py` (old-law anchors superseded by the new theorem; every updated pin documented).
