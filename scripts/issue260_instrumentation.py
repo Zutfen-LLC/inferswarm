@@ -27,12 +27,40 @@ PREFIX = "ggml_vk_i260:v1|"
 # ``0.03.976.621 I ``). A marker line must be bare or carry exactly this
 # shape before the marker; any other prefix fails closed (#262 real-stream
 # law — the synthetic-only startswith check never survived a real log).
-# Interleaved memory-banner lines may carry the marker wrapped in a
-# ``ggml_vulkan memory: Vulkan0: -<timestamp> I `` banner (the memory
-# logger interleaves its own prefix); both shapes are accepted, anything
-# else fails closed.
-LOG_PREFIX = re.compile(
-    r"(\d+\.\d+\.\d+\.\d+ |ggml_vulkan memory: Vulkan0: -\d+\.\d+\.\d+\.\d+ )[IWEC] ")
+LOG_PREFIX_PLAIN = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] ")
+# Interleaved lines from other GGML log sites can wrap a marker in their
+# own banner (two shapes observed in the real #262 stream: the memory
+# logger ``ggml_vulkan memory: Vulkan0: -<ts> I `` and the preallocate
+# trace ``ggml_vulkan memory: ggml_vk_preallocate_buffers(x_size: <ts> I
+# ``). Law: the marker must be bare, preceded by the plain common-log
+# prefix, or wrapped by exactly one of the observed banner shapes;
+# anything else fails closed. A banner shape is only admitted when it
+# ends with the common-log prefix, so arbitrary banner text can never
+# carry a marker.
+_BANNER_END = re.compile(r"[IWEC] $")
+_BANNERS = (
+    "ggml_vulkan memory: ",
+    "ggml_vulkan memory: ggml_vk_preallocate_buffers(x_size: ",
+)
+
+
+def _valid_prefix(prefix: str) -> bool:
+    if prefix == "":
+        return True
+    if LOG_PREFIX_PLAIN.fullmatch(prefix):
+        return True
+    if not _BANNER_END.search(prefix):
+        return False
+    for banner in _BANNERS:
+        if not prefix.startswith(banner):
+            continue
+        rest = prefix[len(banner):]
+        # the banner may carry a site tag (e.g. ``Vulkan0: ``) and/or a
+        # leading ``-``; exactly one common-log prefix must remain
+        rest = re.sub(r"^[A-Za-z0-9]+: -?", "", rest)
+        if LOG_PREFIX_PLAIN.fullmatch(rest):
+            return True
+    return False
 POS = r"([1-9][0-9]*)"
 NONNEG = r"(0|[1-9][0-9]*)"
 GRAPH_BEGIN = re.compile(re.escape(PREFIX) + r"graph\|id=" + POS + r"\|phase=begin")
@@ -77,7 +105,7 @@ def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
         line = raw_line
         if not line.startswith(PREFIX):
             index = line.find(PREFIX)
-            if index < 0 or not LOG_PREFIX.fullmatch(line[:index]):
+            if index < 0 or not _valid_prefix(line[:index]):
                 raise ObservationError("copied or unknown instrumented marker")
             line = line[index:]
         if not line.startswith(PREFIX):
