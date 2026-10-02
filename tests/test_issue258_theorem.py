@@ -244,5 +244,82 @@ class CapabilityExplicitnessTests(unittest.TestCase):
         self.assertIn("terminal_capable", src)
 
 
+class ClosureAPIFailClosedTests(unittest.TestCase):
+    """[RED at reviewed head 4d22517 — correction round 2] The terminal-closure
+    API must mechanically distinguish "terminal-capable" (A3 exists) from
+    "sufficient for closure" (coverage — provably false at this pin).
+
+    At 4d22517 required_arms() returns ["A3"] and documents it as the
+    "minimal physically required arm set" / "terminal-closure set" while the
+    same module proves hypothesis coverage incomplete: false advertising to
+    any later planner/operator consumer. These regressions fail there.
+    """
+
+    def test_red_terminal_capable_arms_inventory_is_exactly_a3(self):
+        # Requirement 1: existing terminal-capable arm inventory == ["A3"].
+        import issue258_theorem as TH
+        self.assertEqual(TH.terminal_capable_arms(), ["A3"])
+
+    def test_red_coverage_false_with_gaps_exactly_h2_h3_h5(self):
+        # Requirement 2: coverage false; gaps exactly H2/H3/H5.
+        import issue258_theorem as TH
+        covered = TH.hypothesis_coverage()
+        self.assertFalse(covered["covered"])
+        self.assertEqual({g["hypothesis"] for g in covered["gaps"]},
+                         {"H2", "H3", "H5"})
+
+    def test_red_required_arms_never_claims_a3_closes_while_uncovered(self):
+        # Requirement 3: while coverage is false the required-arm API must
+        # NOT return ["A3"] as a sufficient closure set. At 4d22517 it
+        # returns exactly ["A3"].
+        import issue258_theorem as TH
+        self.assertNotEqual(TH.required_arms(), ["A3"])
+
+    def test_red_terminal_closure_fails_closed_at_current_pin(self):
+        # Requirement 4 (structured form): closure_possible False,
+        # required_arms [] (not {A3}), coverage gaps carried.
+        import issue258_theorem as TH
+        closure = TH.terminal_closure()
+        self.assertIs(closure["closure_possible"], False)
+        self.assertEqual(closure["required_arms"], [])
+        self.assertEqual({g["hypothesis"] for g in closure["coverage_gaps"]},
+                         {"H2", "H3", "H5"})
+        # The two forms of the API must agree mechanically.
+        self.assertEqual(TH.required_arms(), closure["required_arms"])
+
+    def test_red_no_existing_arm_execution_set_closes_non_localized(self):
+        # Requirement 5: NON_LOCALIZED reachability is preconditioned on
+        # hypothesis coverage, which is a frozen pin/subject fact DERIVED
+        # from capability law — it does not vary with any execution set.
+        # Mechanically: for EVERY subset of the existing arms, the coverage
+        # precondition stays false, so no existing execution set closes.
+        import itertools
+        import issue258_theorem as TH
+        arms = sorted(A.ARMS)
+        for r in range(len(arms) + 1):
+            for subset in itertools.combinations(arms, r):
+                covered = TH.hypothesis_coverage()
+                self.assertFalse(covered["covered"],
+                                 f"subset {subset} would close NON_LOCALIZED")
+        closure = TH.terminal_closure()
+        self.assertFalse(closure["closure_possible"])
+
+    def test_red_required_arms_coverage_conditional_not_constant(self):
+        # The distinction must be MECHANICAL, not a swapped constant: with
+        # coverage satisfiable (hypothetically capable discriminators),
+        # required_arms() returns the capable set; with today's law it must
+        # fail closed to []. At 4d22517 required_arms() returns ["A3"]
+        # unconditionally (this fails on the second assertion there).
+        import issue258_theorem as TH
+        capable_all = {"A1": True, "A2": True, "A3": True, "A4": True,
+                       "A5": False}
+        with mock.patch.dict(TH.TERMINAL_CAPABLE, capable_all):
+            self.assertTrue(TH.hypothesis_coverage()["covered"])
+            self.assertEqual(TH.required_arms(), ["A1", "A2", "A3", "A4"])
+            self.assertTrue(TH.terminal_closure()["closure_possible"])
+        self.assertEqual(TH.required_arms(), [])
+        self.assertFalse(TH.terminal_closure()["closure_possible"])
+
+
 if __name__ == "__main__":
     unittest.main()
