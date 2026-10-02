@@ -228,6 +228,15 @@ class RetainedReportTests(unittest.TestCase):
         self.assertIn("base-run2-parser-defect-001", text)
         self.assertIn("not terminal mechanism proof", text)
 
+    def test_published_markdown_is_exact_json_roundtrip_render(self):
+        import issue262_report as R
+        evidence = (Path(__file__).resolve().parents[1] / "docs/investigations"
+                    / "qwen38-flash-next-r8-i3c-vulkan-mechanism/evidence/issue262")
+        report = json.loads((evidence / "pilot-report.json").read_text())
+        self.assertEqual(R.render(report), (evidence / "REPORT.md").read_text())
+        reordered = json.loads(json.dumps(report, sort_keys=True))
+        self.assertEqual(R.render(report), R.render(reordered))
+
     def test_first_two_distinct_row_digests_are_screening_variable(self):
         import issue262_report as R
         units = [{"unit_index": 1, "row_digest": "a"}, {"unit_index": 2, "row_digest": "b"}]

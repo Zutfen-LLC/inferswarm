@@ -1,0 +1,19 @@
+{
+  "a4_required": true,
+  "a5_memory_choice_changed": false,
+  "authority": {
+    "head_sha": "1a0997dbb850e78b6899243b463a27fb8ab4fb56",
+    "issue_state": "open",
+    "pr_number": 263
+  },
+  "comparator_sha256": "1981bd5d0f2832482cde079f57fbf82f6b21040387b61b5fff59911a776e0988",
+  "execution_head": "1a0997dbb850e78b6899243b463a27fb8ab4fb56",
+  "retained_units_preserved": true,
+  "subject": {
+    "bdf": "00000000:03:00.0",
+    "binding": "historical-A3/A5-subject-reused",
+    "driver": "610.57.04",
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+  }
+}

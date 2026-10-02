@@ -358,7 +358,8 @@ def reduce_evidence(root: Path, context: dict | None = None,
 
 
 def render(report: dict) -> str:
-    """Render prose only from reducer JSON; no additional observations inferred."""
+    """Render prose only from canonical reducer JSON, independent of key order."""
+    report = json.loads(json.dumps(report, sort_keys=True))
     lines = ["# Issue #262 retained pilot report (CPU-only)", "", "## Evidence provenance",
              f"- Logical retained root: `{report['evidence'].get('logical_root', 'retained evidence')}`",
              f"- Inventory: `remote-inventory.tsv`, {report['evidence']['inventory_file_count']} files; SHA-256 `{report['evidence']['inventory_sha256']}`"]
