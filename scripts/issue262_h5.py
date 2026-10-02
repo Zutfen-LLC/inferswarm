@@ -31,7 +31,7 @@ WORD = r"[A-Za-z0-9._+-]+"
 # GGML common-log line prefix as retained in the server log stream
 # (e.g. ``0.03.976.621 I ``). A marker line must be either bare or carry
 # exactly this shape before the marker; anything else fails closed.
-LOG_PREFIX = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] ")
+LOG_PREFIX = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] $")
 
 ROUTE = re.compile(
     re.escape(PREFIX) + r"route\|id=" + POS + r"\|graph=" + NONNEG
@@ -77,7 +77,7 @@ def parse_routes(log: str) -> list[dict]:
         line = raw_line
         if not line.startswith(PREFIX):
             index = line.find(PREFIX)
-            if index < 0 or not LOG_PREFIX.fullmatch(line[:index]):
+            if index < 0 or LOG_PREFIX.search(line[:index]) is None:
                 raise RouteError("copied or unknown i262 marker")
             line = line[index:]
         if not line.startswith(PREFIX):
