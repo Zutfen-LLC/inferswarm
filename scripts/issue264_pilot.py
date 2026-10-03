@@ -268,7 +268,19 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   if any(sha(data)!=hashes[n] for n,data in files.items()):raise PilotError("retained byte hash mismatch")
   meta=json.loads(files["unit.json"])
   if sha(files["request.json"])!=meta.get("request_sha256") or sha(files["response.json.raw"])!=meta.get("response_sha256") or sha(files["server.log"])!=meta.get("server_log_sha256") or sha(files["obs.meta.json"])!=meta.get("observer_meta_sha256"):raise PilotError("retained request/response/log/meta digest mismatch")
-  if meta.get("source_tree")!=SOURCE_TREE or meta.get("binary_sha256")!=BINARY_SHA:raise PilotError("retained source/binary identity mismatch")
+  context=load_execution_context(root)
+  context_sha=sha(canonical(context))
+  if (meta.get("execution_context_sha256")!=context_sha
+      or meta.get("expected_head")!=context.get("expected_head")
+      or meta.get("fixture_payload_sha256")!=context.get("fixture_payload_sha256")
+      or meta.get("fixture_sha256")!=context.get("fixture_sha256")
+      or meta.get("source_tree")!=context.get("source_tree")
+      or meta.get("binary_sha256")!=context.get("binary_sha256")):
+   raise PilotError("retained unit differs from bound execution context")
+  if (meta.get("source_tree")!=SOURCE_TREE or meta.get("binary_sha256")!=BINARY_SHA
+      or meta.get("model_stats_pre")!=context.get("model_stats")
+      or meta.get("model_stats_post")!=context.get("model_stats")):
+   raise PilotError("retained source/binary/model stat identity mismatch")
   rows=[files[f"obs.row{x}.f32"] for x in range(D.DECISIONS)]
   _validate_observer(files["obs.meta.json"],rows)
   if len(rows)!=8 or sha(b"".join(rows))!=meta.get("row_digest") or [sha(x) for x in rows]!=meta.get("row_sha256"):raise PilotError("retained full-row digest mismatch")
@@ -285,8 +297,13 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   if files["request.json"]!=request_bytes or meta.get("fixture_payload_sha256")!=sha(request_bytes) or meta.get("fixture_sha256")!=sha(canonical(fixture)):raise PilotError("retained frozen fixture/request mismatch")
   if not isinstance(meta.get("execution_context_sha256"),str) or not re.fullmatch(r"[0-9a-f]{64}",meta["execution_context_sha256"]) or not re.fullmatch(r"[0-9a-f]{40}",str(meta.get("expected_head",""))):raise PilotError("retained execution context identity missing")
   if meta.get("model_stats_pre")!=meta.get("model_stats_post") or not isinstance(meta.get("model_stats_pre"),list) or len(meta["model_stats_pre"])!=len(C252.MODEL_MEMBERS):raise PilotError("retained model stat witnesses differ or malformed")
-  if meta.get("argv")!=launch_argv(Path(meta.get("argv",[""])[0])) or meta.get("env")!=launch_env(arm,Path(meta.get("env",{}).get("LLAMA_OBSERVE_OUT",""))):raise PilotError("retained launch identity mismatch")
-  out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"response_sha256":sha(files["response.json.raw"]),"server_log_sha256":sha(log)})
+  argv=meta.get("argv")
+  env=meta.get("env")
+  if (not isinstance(argv,list) or not argv or not isinstance(env,dict)
+      or argv!=launch_argv(Path(argv[0]))
+      or env!=launch_env(arm,Path(env.get("LLAMA_OBSERVE_OUT","")))):
+   raise PilotError("retained launch identity mismatch")
+  out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"response_sha256":sha(files["response.json.raw"]),"response_raw":files["response.json.raw"],"observer_meta_sha256":sha(files["obs.meta.json"]),"server_log_sha256":sha(log)})
  return out
 def screen_class(units:list[dict])->str:
  if any(units[i]["row_digest"]!=units[i-1]["row_digest"] for i in range(1,len(units))):return "screening-variable"

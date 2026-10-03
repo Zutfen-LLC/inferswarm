@@ -98,8 +98,12 @@ class PilotContracts(unittest.TestCase):
                 P.publish_unit(stage,target,record)
 
     def test_missing_controller_build_identity_fails_before_binary_use(self):
-        with self.assertRaisesRegex(P.PilotError,"build identity absent"):
-            P.verify_source_and_binary(Path("/not-used/llama-server"))
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            missing=Path(tmp)/"not-yet-written-build-identity.json"
+            with mock.patch.object(P,"BUILD_IDENTITY",missing):
+                with self.assertRaisesRegex(P.PilotError,"build identity absent"):
+                    P.verify_source_and_binary(Path("/not-used/llama-server"))
 
     def test_execution_context_required_and_freezes_self_consistent_head(self):
         with tempfile.TemporaryDirectory() as tmp:
