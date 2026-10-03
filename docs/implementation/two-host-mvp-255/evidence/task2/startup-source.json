@@ -1,0 +1,22 @@
+{
+  "below_upstream_hash_threshold_immutable_bytes_calculated": 85129984,
+  "below_upstream_hash_threshold_tensors": 62,
+  "cache_hit_count": 9,
+  "cache_hit_immutable_bytes": 473497600,
+  "cache_hits_by_path": {
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/1605502f1f402285": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/176864379c059e34": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/32acb3b6e11267a8": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/331a33ac3361e4f4": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/960dea06a116e301": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b2bc473e4dbdf301": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/bf2f72a84ab89ba8": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d2e1b96a057b7c8d": 1,
+    "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d884a05065652e1d": 1
+  },
+  "client_rpc_tcp_bytes_received_at_first_request_before": 1049421,
+  "client_rpc_tcp_bytes_sent_at_first_request_before": 86359771,
+  "explanation": "RPC caches only payloads above 10 MiB. Nine traced O_RDONLY file opens prove startup local backing; 62 smaller tensors (85,129,984 B) are sent normally during load. No dedicated immutable-byte wire counter; figure for small tensors is calculated and TCP startup delta includes overhead.",
+  "immutable_bytes_sent_counter": null,
+  "startup_network_scope": "Cumulative owned TCP socket bytes at first request-before snapshot; socket created during startup/load, includes all protocol/model traffic before first request, not an exact immutable-payload counter."
+}

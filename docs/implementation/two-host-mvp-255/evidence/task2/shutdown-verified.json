@@ -1,0 +1,14 @@
+{
+  "01": {
+    "gpu_memory_after_release_mib": 1,
+    "port_listening": false,
+    "process_alive": false,
+    "raw": "    PID STAT CMD\nState Recv-Q Send-Q Local Address:Port Peer Address:Port\n1, 0\n"
+  },
+  "04": {
+    "gpu_memory_after_release_mib": 1,
+    "port_listening": false,
+    "process_alive": false,
+    "raw": "    PID STAT CMD\nState Recv-Q Send-Q Local Address:Port Peer Address:Port\n1, 0\n"
+  }
+}
