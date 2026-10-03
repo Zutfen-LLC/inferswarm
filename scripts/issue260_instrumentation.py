@@ -13,9 +13,36 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTITY_PATH = ROOT / "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"
+IDENTITY262_PATH = ROOT / "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"
 INSTRUMENTED_TREE = (json.loads(IDENTITY_PATH.read_text(encoding="utf-8"))["instrumented_tree"]
                      if IDENTITY_PATH.is_file() else "")
+# #262 successor identity: the same H2/H3 marker grammar is emitted unchanged
+# by the #262 instrumented comparator (the H5 route marker is additive and
+# parsed by issue262_h5). H2/H3 parsing accepts EITHER frozen tree identity;
+# every other source identity still fails closed.
+INSTRUMENTED262_TREE = (json.loads(IDENTITY262_PATH.read_text(encoding="utf-8"))["instrumented262_tree"]
+                        if IDENTITY262_PATH.is_file() else "")
 PREFIX = "ggml_vk_i260:v1|"
+# GGML common-log line prefix retained in the real server-log stream (e.g.
+# ``0.03.976.621 I ``). A marker line must be bare or carry exactly this
+# shape before the marker; any other prefix fails closed (#262 real-stream
+# law — the synthetic-only startswith check never survived a real log).
+LOG_PREFIX_PLAIN = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] ")
+# Interleaving law (real-stream, #262): the common-log sink always writes
+# ``<ts> <level> `` IMMEDIATELY before the marker; other GGML log sites
+# (memory logger, preallocate trace) may interleave their own text before
+# that, mid-line, as concurrent writes to the same stream. The anchor law:
+# a marker line is admitted iff the text before the marker is empty (bare
+# synthetic form) or ends with a valid common-log prefix. The marker body
+# itself is still validated by strict whole-line fullmatch — all
+# integrity lives there; the prefix check only polices line anchoring.
+LOG_PREFIX = re.compile(r"\d+\.\d+\.\d+\.\d+ [IWEC] $")
+
+
+def _valid_prefix(prefix: str) -> bool:
+    return prefix == "" or LOG_PREFIX.search(prefix) is not None
+
+
 POS = r"([1-9][0-9]*)"
 NONNEG = r"(0|[1-9][0-9]*)"
 GRAPH_BEGIN = re.compile(re.escape(PREFIX) + r"graph\|id=" + POS + r"\|phase=begin")
@@ -35,7 +62,8 @@ class ObservationError(ValueError):
 
 def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
     """Validate whole-line producer events; neither generic text nor staging proves H2/H3."""
-    if not INSTRUMENTED_TREE or source_tree != INSTRUMENTED_TREE:
+    accepted_trees = {t for t in (INSTRUMENTED_TREE, INSTRUMENTED262_TREE) if t}
+    if not accepted_trees or source_tree not in accepted_trees:
         raise ObservationError("instrumented source identity required")
     if arm not in EXPECTED or not isinstance(log, str):
         raise ObservationError("unknown arm or malformed log")
@@ -53,9 +81,15 @@ def parse_unit(log: str, *, arm: str, source_tree: str) -> dict:
     graph_submits = 0
     pending: set[int] = set()
     paths: set[str] = set()
-    for line in log.splitlines():
-        if "ggml_vk_i260:" not in line:
+    for raw_line in log.splitlines():
+        if "ggml_vk_i260:" not in raw_line:
             continue
+        line = raw_line
+        if not line.startswith(PREFIX):
+            index = line.find(PREFIX)
+            if index < 0 or not _valid_prefix(line[:index]):
+                raise ObservationError("copied or unknown instrumented marker")
+            line = line[index:]
         if not line.startswith(PREFIX):
             raise ObservationError("copied or unknown instrumented marker")
         if match := GRAPH_BEGIN.fullmatch(line):

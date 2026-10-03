@@ -270,6 +270,12 @@ GROUP_TEST_MODULES = {
         # Issue #260: prospective source/observation grammar and fail-closed H5.
         "test_issue260_source_patch",
         "test_issue260_observation",
+        # Issue #262: rapid physical pilot — H5 route-marker grammar and
+        # coopmat2 one-factor eligibility, instrumented source chain
+        # identity, and the bounded pilot producer's offline law.
+        "test_issue262_source_patch",
+        "test_issue262_h5",
+        "test_issue262_pilot",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -390,6 +396,12 @@ PATH_GROUPS = {
     "tests/test_issue258_theorem.py": ["r8i-qwen-qualification"],
     "tests/test_issue260_source_patch.py": ["r8i-qwen-qualification"],
     "tests/test_issue260_observation.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_source_patch.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_h5.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_pilot.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_source_patch.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_h5.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_pilot.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full
