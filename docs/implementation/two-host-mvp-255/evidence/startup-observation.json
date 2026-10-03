@@ -1,0 +1,71 @@
+{
+  "client_host": "inferswarm01",
+  "execution": {
+    "gpu_samples": {
+      "01": {
+        "min_used_MiB": 1055,
+        "peak_used_MiB": 1479,
+        "peak_util_percent": 67,
+        "sample_count": 165,
+        "samples_nonzero_util": 24
+      },
+      "04": {
+        "min_used_MiB": 952,
+        "peak_used_MiB": 980,
+        "peak_util_percent": 1,
+        "sample_count": 166,
+        "samples_nonzero_util": 4
+      }
+    },
+    "remote_cuda_graph_warmup_lines": 4
+  },
+  "local_backing": {
+    "below_upstream_10MiB_hash_threshold_bytes": 85129984,
+    "below_upstream_10MiB_hash_threshold_count": 62,
+    "cache_hit_immutable_bytes": 473497600,
+    "cache_hit_tensor_count": 9,
+    "cache_root": "/home/hermes/issue255-mvp-retry/cache-layer/rpc",
+    "new_rpc_saved_payloads": 0,
+    "proof": "04/rpc-cache-open.strace: O_RDONLY paths matched against 04/staging-layer*.json; every staged final path re-read SHA-256 matched on participant",
+    "staged_bytes": 558627584,
+    "staged_tensors": 71
+  },
+  "model_verified_member_authority": [
+    "01/discovery.json",
+    "04/discovery.json"
+  ],
+  "placement": {
+    "CPU": "layers 0-40 and all MoE expert weights (-cmoe)",
+    "CUDA0_model_buffer_MiB": 248.45,
+    "CUDA0_on_01": "layers 41-44",
+    "RPC0_model_buffer_MiB": 532.75,
+    "RPC0_on_04": "layers 45-47 plus output layer 48",
+    "device_split": "--device CUDA0,RPC0 --split-mode layer --tensor-split 1,1 -ngl 8 -cmoe"
+  },
+  "remote_host": "inferswarm04",
+  "request": {
+    "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
+    "generated_tokens": 53,
+    "generation_ms": 12950.395,
+    "generation_tokens_per_second": 4.015321540385448,
+    "prompt": "In one sentence, explain why local backups are useful.",
+    "prompt_eval_ms": 5194.907,
+    "prompt_tokens": 63,
+    "settings": {
+      "max_tokens": 64,
+      "seed": 42,
+      "stream": false,
+      "temperature": 0
+    },
+    "stop_reason": "stop"
+  },
+  "schema": "issue255.startup-observation/1",
+  "startup": {
+    "client_tcp_bytes_after_one_request": 142256308,
+    "client_tcp_bytes_sent_at_ready": 86359771,
+    "client_tcp_request_window_delta": 55896537,
+    "server_log_loaded_seconds": 6.839677,
+    "tcp_source": "01/rpc-tcp-before.txt; 01/rpc-tcp-after.txt; includes protocol and dynamic state, not pure immutable payload"
+  },
+  "status": "TWO_HOST_STARTUP_GENERATION_PROVEN_NOT_FINAL_MVP_PASS"
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "name": "output.weight",
+    "offset": 37696,
+    "bytes": 357580800,
+    "ggml_type": 12,
+    "sha256": "30e5450eec8babd494c3a3ff8e580ed8196da9c40599b241e196cc70f09f5203",
+    "fnv1a": "960dea06a116e301",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/960dea06a116e301"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "name": "output_hc_down.weight",
+    "offset": 357618496,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "4af3192e837760ac348062a9d59bb706326aaa1c868cdc7ae4217afdc106de50",
+    "fnv1a": "ac6ad10680fbc006",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/ac6ad10680fbc006"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "name": "output_hc_norm.weight",
+    "offset": 361100096,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "a31d120fe2c798e3dd3172a0f215937686d01decd6bfe6173452a3d69eb082ab",
+    "fnv1a": "9ac7a2a96e489be5",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/9ac7a2a96e489be5"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+    "name": "output_hc_up.weight",
+    "offset": 361141056,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "51a9db1ef827f17dc5b9d6a6a4c603cd79e4051916b4b941450db2ab3f1b363e",
+    "fnv1a": "ba7f36c3fe92862f",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/ba7f36c3fe92862f"
+  }
+]

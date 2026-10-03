@@ -1,0 +1,672 @@
+[
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.attn_gate.weight",
+    "offset": 19637463328,
+    "bytes": 10813440,
+    "ggml_type": 13,
+    "sha256": "f9d84dab425dc40cfa7200dcb05e5c28144b146f8710e9a61121bd7d1b2f42f3",
+    "fnv1a": "176864379c059e34",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/176864379c059e34"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.attn_qkv.weight",
+    "offset": 19648276768,
+    "bytes": 18022400,
+    "ggml_type": 13,
+    "sha256": "cfaabc6688c498b59be15589e10e176d19d4c0c3a6e276b87b9a247cb631f8cd",
+    "fnv1a": "bf2f72a84ab89ba8",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/bf2f72a84ab89ba8"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ffn_down_shexp.weight",
+    "offset": 20138158368,
+    "bytes": 1740800,
+    "ggml_type": 8,
+    "sha256": "39ddadd3fdd10fd58b32f6e8d8433feb987406eb96535445f0c8eb8346ca2c3b",
+    "fnv1a": "d912e53944fdd045",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d912e53944fdd045"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ffn_gate_inp.weight",
+    "offset": 20356167968,
+    "bytes": 5242880,
+    "ggml_type": 0,
+    "sha256": "716e86907b98006efcd8f5fe429a1a534486a2805233f0ed0898a2fe21443e12",
+    "fnv1a": "25fc35e3c4dafb47",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/25fc35e3c4dafb47"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ffn_gate_inp_shexp.weight",
+    "offset": 20361410848,
+    "bytes": 10240,
+    "ggml_type": 0,
+    "sha256": "e97868f76058d3d1896c0191cf5789ab16b0fad7ff4252ad00872444d9933e7a",
+    "fnv1a": "23ca83920356b5bf",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/23ca83920356b5bf"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ffn_gate_shexp.weight",
+    "offset": 20361421088,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "2ac4c7ade27e1612a928726cd1e19717030665394958ab8cb7340710ad9d3409",
+    "fnv1a": "124927848fd9c0cb",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/124927848fd9c0cb"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ffn_up_shexp.weight",
+    "offset": 20578816288,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "8c3d43ba6e6c8ed97df054285d78379c42dd3b076e89edd7733537bce7e07aa1",
+    "fnv1a": "3f00b2421b3236af",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/3f00b2421b3236af"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_attn_down.weight",
+    "offset": 20579942688,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "0eabf381dd6c0610759968c256b287c21b9303a1c69a8a2f2d668d54d4cb03c9",
+    "fnv1a": "001d36cc97219d76",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/001d36cc97219d76"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_attn_inject.weight",
+    "offset": 20583424288,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "ddc89755d431cedf9fec9eb9b21c93a0d4758956c118e93ab1eaba1eacfa05cc",
+    "fnv1a": "6fa3d3f8fde01338",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/6fa3d3f8fde01338"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_attn_norm.weight",
+    "offset": 20583588128,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "b5a230415a263eb59f903cd823e65cca63c7c423cc829c2f921b59233858e976",
+    "fnv1a": "1b9148489fa9661c",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/1b9148489fa9661c"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_attn_up.weight",
+    "offset": 20583629088,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "ed6d5b91920ee171cc9401b63aca70ec941c931f6a2f665c02eb5aaf64d14462",
+    "fnv1a": "22311d822a269ce1",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/22311d822a269ce1"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_ffn_down.weight",
+    "offset": 20587110688,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "0b1952a2e5534fadf39609870dc0f26d808fd331266f430f9b87866a35d3000f",
+    "fnv1a": "cc7c132ec727e012",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/cc7c132ec727e012"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_ffn_inject.weight",
+    "offset": 20590592288,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "ac5c78cc702f28b862212b02b06b5fbd927d987c6607cadeb5acb4f182b33fe2",
+    "fnv1a": "b3e32cfd97bd1240",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b3e32cfd97bd1240"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_ffn_norm.weight",
+    "offset": 20590756128,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "bb8c62648f9baacef49f4fd1bbbe10e8c6368fe4598218538df4f93af1d34241",
+    "fnv1a": "4f63235c62154e5c",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/4f63235c62154e5c"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.hc_ffn_up.weight",
+    "offset": 20590797088,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "d17838b3a553269356d7a26e114f97abc8a5bd1fce293625376f48485325f6b6",
+    "fnv1a": "157c2597759cae8d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/157c2597759cae8d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_a",
+    "offset": 20594278688,
+    "bytes": 192,
+    "ggml_type": 0,
+    "sha256": "6762389d6bad375ec15ee05f60dec0cce38f19e886b484dc3984e085b2cd935a",
+    "fnv1a": "451b34cae8a5146a",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/451b34cae8a5146a"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_alpha.weight",
+    "offset": 20594278880,
+    "bytes": 491520,
+    "ggml_type": 0,
+    "sha256": "c5e9b05a4e49a2ab5c96fa7c658a118ced07d09cdb6b4c4db81fc06d69962943",
+    "fnv1a": "efd193e49302fd1f",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/efd193e49302fd1f"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_beta.weight",
+    "offset": 20594770400,
+    "bytes": 491520,
+    "ggml_type": 0,
+    "sha256": "7aca7fe54a63ab696433a5edfd3cb767895c5e7c726e2a787e2eefdc2002ebce",
+    "fnv1a": "37aef1801e4aa388",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/37aef1801e4aa388"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_conv1d.weight",
+    "offset": 20595261920,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "941a8b678441e56e953c9bccdd7ea99f949f664bd5b9f439ce35b58af63f1ebb",
+    "fnv1a": "82f6f2a0b4213ae6",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/82f6f2a0b4213ae6"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_dt.bias",
+    "offset": 20595425760,
+    "bytes": 192,
+    "ggml_type": 0,
+    "sha256": "005f36b9443c29a7f2677db048317d4dfd947ca401386b0e6009ba91f1edf0a1",
+    "fnv1a": "c6665ffb0f1b0c39",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/c6665ffb0f1b0c39"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_norm.weight",
+    "offset": 20595425952,
+    "bytes": 512,
+    "ggml_type": 0,
+    "sha256": "952bec8446cfe804b18ab6bc99a951e43be0fd366e67ee40e15053dfd20ff20d",
+    "fnv1a": "4df64e48c36e1063",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/4df64e48c36e1063"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.45.ssm_out.weight",
+    "offset": 20595426464,
+    "bytes": 12902400,
+    "ggml_type": 14,
+    "sha256": "d4df13c9842ba1c86da8c7ec1c3c638a3ffa8a3b9fe56676d11b77b53dd5c383",
+    "fnv1a": "32acb3b6e11267a8",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/32acb3b6e11267a8"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.attn_gate.weight",
+    "offset": 20608328864,
+    "bytes": 10813440,
+    "ggml_type": 13,
+    "sha256": "ca64cbb344ea39d249a8da100c84eb03e54e5a4dc5894f170246dbdd0ddf0aa0",
+    "fnv1a": "b2bc473e4dbdf301",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b2bc473e4dbdf301"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.attn_qkv.weight",
+    "offset": 20619142304,
+    "bytes": 18022400,
+    "ggml_type": 13,
+    "sha256": "652ff0edff16ba6d29deee32d44b8bfef4cce9b297e65cef423ca957c3cbca49",
+    "fnv1a": "331a33ac3361e4f4",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/331a33ac3361e4f4"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ffn_down_shexp.weight",
+    "offset": 21109023904,
+    "bytes": 1740800,
+    "ggml_type": 8,
+    "sha256": "4a0375c3811d552220aa2b55c3c5c5f741c96738fe0259be646404918d034749",
+    "fnv1a": "ab2e5cec52e1677d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/ab2e5cec52e1677d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ffn_gate_inp.weight",
+    "offset": 21327033504,
+    "bytes": 5242880,
+    "ggml_type": 0,
+    "sha256": "6647c66ac7ade9cd0b2997660c35a70c1f7de9ff94060e5686ca9c4decb2064e",
+    "fnv1a": "b75db7b9df9d372c",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b75db7b9df9d372c"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ffn_gate_inp_shexp.weight",
+    "offset": 21332276384,
+    "bytes": 10240,
+    "ggml_type": 0,
+    "sha256": "aa649ff658521daa1478f1141bb2f57f9cb0f2b4d0f099dc2c61aa834ee161c3",
+    "fnv1a": "3782601fe623670d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/3782601fe623670d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ffn_gate_shexp.weight",
+    "offset": 21332286624,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "ec64984fbc73499bfdd1984b0f5331c25117598d34c13286e5b4ab4fa85d95ae",
+    "fnv1a": "c435d77e50b894f9",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/c435d77e50b894f9"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ffn_up_shexp.weight",
+    "offset": 21549681824,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "ef690a510620b328d7778a53aab3f6aa295e615f2699a6a29adbea057bb6ca48",
+    "fnv1a": "ec59c8016f2965f5",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/ec59c8016f2965f5"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_attn_down.weight",
+    "offset": 21550808224,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "3c33f861e7a04145ff40a93a8676d9604c4cbdb3b7d10c0249612712947727f4",
+    "fnv1a": "72be050b755222bd",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/72be050b755222bd"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_attn_inject.weight",
+    "offset": 21554289824,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "c8be826168c2b0bed1f584ae2491d0564b18a43d8202c6d3208375ae862738d4",
+    "fnv1a": "e261bee1ba3be043",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/e261bee1ba3be043"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_attn_norm.weight",
+    "offset": 21554453664,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "2e9bd3d33597cb0494f4a7063d0cad341ecd6d82bf27f55c2fdc43eb5e3ae6f9",
+    "fnv1a": "e30d437d9d11a6c4",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/e30d437d9d11a6c4"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_attn_up.weight",
+    "offset": 21554494624,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "3f29f772022768b4d85302e225e43de4dbc30832d11e063a8b521d1733ad28e4",
+    "fnv1a": "acd1ba047307ceae",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/acd1ba047307ceae"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_ffn_down.weight",
+    "offset": 21557976224,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "98e8fd7363642d63775c3d9d191340eb9c9e3324871d3fc8ab6719ff679f126e",
+    "fnv1a": "ddb3f1557fe68fbf",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/ddb3f1557fe68fbf"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_ffn_inject.weight",
+    "offset": 21561457824,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "e2570ffc654b35fffbbdef959041454c9decca19063d6d895ef9c739f399822f",
+    "fnv1a": "5e07f49615e5b641",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/5e07f49615e5b641"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_ffn_norm.weight",
+    "offset": 21561621664,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "7d0573ea772fef8fdd86ec06329ae0467a38d36e5676c10ba1a204b06a2b7caf",
+    "fnv1a": "1025e4992d9a8215",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/1025e4992d9a8215"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.hc_ffn_up.weight",
+    "offset": 21561662624,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "6b92a7f7a4d899eb0bf5eb9ea540f7dcb4b55d40ce516057f4dd9109b41f147b",
+    "fnv1a": "141154365449dee6",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/141154365449dee6"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_a",
+    "offset": 21565144224,
+    "bytes": 192,
+    "ggml_type": 0,
+    "sha256": "850ce06862054629ae829ad2021c4c69494295fcba1eef32e0b5130d9ca49641",
+    "fnv1a": "c57ee3e3d41dbbb3",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/c57ee3e3d41dbbb3"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_alpha.weight",
+    "offset": 21565144416,
+    "bytes": 491520,
+    "ggml_type": 0,
+    "sha256": "b6a71c40f9d284d6e01d167487b201de4b48085223593ef4d6314a422469eb7b",
+    "fnv1a": "030185e65e73e120",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/030185e65e73e120"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_beta.weight",
+    "offset": 21565635936,
+    "bytes": 491520,
+    "ggml_type": 0,
+    "sha256": "180fcc3bf4c3464702d6bdac9f937b8be7f51cde73c69fd2a7d356d0ed110e07",
+    "fnv1a": "a8b89d3701ba4b12",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/a8b89d3701ba4b12"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_conv1d.weight",
+    "offset": 21566127456,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "5a517bdff61bb4a5f699565236b4a003bcfb426c8f8ca93679579f9c23edf455",
+    "fnv1a": "c8ddaa58316ecd8a",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/c8ddaa58316ecd8a"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_dt.bias",
+    "offset": 21566291296,
+    "bytes": 192,
+    "ggml_type": 0,
+    "sha256": "f688c3ca1e295db7249c64a0da22a1f806566f0e3820c8ddff29764552651d3c",
+    "fnv1a": "68df1ce26365b418",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/68df1ce26365b418"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_norm.weight",
+    "offset": 21566291488,
+    "bytes": 512,
+    "ggml_type": 0,
+    "sha256": "960a242739b3f442396a29af174c8c53305468fb7eb288a740f5ce14911d3943",
+    "fnv1a": "d97f373b422fe7e0",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d97f373b422fe7e0"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.46.ssm_out.weight",
+    "offset": 21566292000,
+    "bytes": 12902400,
+    "ggml_type": 14,
+    "sha256": "12507011d72e299baf07f385880f028c054c1967ab8ba750c31ccf5d3b5f46fe",
+    "fnv1a": "d2e1b96a057b7c8d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d2e1b96a057b7c8d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_k.weight",
+    "offset": 21579194400,
+    "bytes": 901120,
+    "ggml_type": 13,
+    "sha256": "32bef307f4df4084870e69621558d3ec1433433836f604709ff73b1c60938ec8",
+    "fnv1a": "5803018bf1d0cf16",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/5803018bf1d0cf16"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_k_norm.weight",
+    "offset": 21580095520,
+    "bytes": 1024,
+    "ggml_type": 0,
+    "sha256": "b3e3e72c5b21535b3896cb16fac00e91184323284612226bfe0e767a9a66063a",
+    "fnv1a": "e41a205cfa094065",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/e41a205cfa094065"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_output.weight",
+    "offset": 21580096544,
+    "bytes": 10813440,
+    "ggml_type": 13,
+    "sha256": "14cb7cfeffa256dba77ca3d1725ee851455f18761a763d07fb954ef399fd5cf6",
+    "fnv1a": "d884a05065652e1d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d884a05065652e1d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_q.weight",
+    "offset": 21590909984,
+    "bytes": 21626880,
+    "ggml_type": 13,
+    "sha256": "ac30d4d510c03990511149ed4d22d676a5c31f753ede31b1212162bda6c9eadc",
+    "fnv1a": "1605502f1f402285",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/1605502f1f402285"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_q_norm.weight",
+    "offset": 21612536864,
+    "bytes": 1024,
+    "ggml_type": 0,
+    "sha256": "7ffd31786ea6001972106f568760f90af2585c3f3b36d1cba3869c8fa5227968",
+    "fnv1a": "120cf52d40798973",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/120cf52d40798973"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.attn_v.weight",
+    "offset": 21612537888,
+    "bytes": 901120,
+    "ggml_type": 13,
+    "sha256": "e458a01370c369b60cf32cb5dffa51f99953053d89cc7f8ecafdc7d1bdb2fa00",
+    "fnv1a": "2399df153a9ec950",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/2399df153a9ec950"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.ffn_down_shexp.weight",
+    "offset": 22085298208,
+    "bytes": 1740800,
+    "ggml_type": 8,
+    "sha256": "6195954c077e243a2205cabcd00cef420dbcdab2f684ed0c6d6f04156fc71656",
+    "fnv1a": "091ed707fc009f77",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/091ed707fc009f77"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.ffn_gate_inp.weight",
+    "offset": 22303307808,
+    "bytes": 5242880,
+    "ggml_type": 0,
+    "sha256": "418104d20e8c36a0ad9f0ac27f922b663e3bedc4c998fe4471547734e8e0d454",
+    "fnv1a": "a150a71b145ca190",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/a150a71b145ca190"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.ffn_gate_inp_shexp.weight",
+    "offset": 22308550688,
+    "bytes": 10240,
+    "ggml_type": 0,
+    "sha256": "59159ff58823cccd76fc9a148d9e6248e163dac5be09d38f64be4d2b832602eb",
+    "fnv1a": "b3b769d75d7f24e7",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b3b769d75d7f24e7"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.ffn_gate_shexp.weight",
+    "offset": 22308560928,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "1de6b570f87c7ba15b9737ea7224244212e9971d5b1662e98a1e8a4abe95807f",
+    "fnv1a": "6242573732614d0d",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/6242573732614d0d"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.ffn_up_shexp.weight",
+    "offset": 22525956128,
+    "bytes": 1126400,
+    "ggml_type": 13,
+    "sha256": "4c54299139a05496b4c2aff7ad05b87ad8985126c03a2e9ab96a97b238592208",
+    "fnv1a": "04b791814188163f",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/04b791814188163f"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_attn_down.weight",
+    "offset": 22527082528,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "0ed5839c3a22965ff157154c74d8543fb6f1891a416cdfeaf1e92fafba98a4f1",
+    "fnv1a": "63047b94d54ffe18",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/63047b94d54ffe18"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_attn_inject.weight",
+    "offset": 22530564128,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "ff8e7f980c9481cdbc9c27b63ad62a743b3d38129613976a6e4e3dadd3aea5fd",
+    "fnv1a": "cf865dc3a7d0f6bb",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/cf865dc3a7d0f6bb"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_attn_norm.weight",
+    "offset": 22530727968,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "e6f3f26814fcdbc424166b5d6d1e085856e205125894654944a4e6a6215ec3d3",
+    "fnv1a": "0aa56f6eff4deb12",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/0aa56f6eff4deb12"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_attn_up.weight",
+    "offset": 22530768928,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "62df167cd9e4e4f8cb4dd28f796c06e3310a06faef5934635613ef1efe1b27a1",
+    "fnv1a": "713b4e2baea5ae76",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/713b4e2baea5ae76"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_ffn_down.weight",
+    "offset": 22534250528,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "d891bb6dd71adde2f62f1bfc61e4b43e3abe2faf9d957ac9131f0052ea29d992",
+    "fnv1a": "9581f67cfee79678",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/9581f67cfee79678"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_ffn_inject.weight",
+    "offset": 22537732128,
+    "bytes": 163840,
+    "ggml_type": 0,
+    "sha256": "85c61bf15c4c11e306e359b951ec0b95eea4aa3e4fddc2c777ab8529e8c783b0",
+    "fnv1a": "e0c1335f94792631",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/e0c1335f94792631"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_ffn_norm.weight",
+    "offset": 22537895968,
+    "bytes": 40960,
+    "ggml_type": 0,
+    "sha256": "2cc6c797c40a8c26b662d1346181a97630845942b91764951f8a2ca08e9c614f",
+    "fnv1a": "bdd739e1d53f4a54",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/bdd739e1d53f4a54"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.hc_ffn_up.weight",
+    "offset": 22537936928,
+    "bytes": 3481600,
+    "ggml_type": 8,
+    "sha256": "8fbba7e2ce53642de82de628dfd812ed1a6342b24d2abdf643f4f8efbff89149",
+    "fnv1a": "5ede9912568d1f10",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/5ede9912568d1f10"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.indexer.k_norm.weight",
+    "offset": 22541418528,
+    "bytes": 512,
+    "ggml_type": 0,
+    "sha256": "d28d4cdbb25bddb09ce031e2f77fa65c3c127e18ceaa6f1d8f87e8804aa1a93e",
+    "fnv1a": "68969381c5c3973f",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/68969381c5c3973f"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.indexer.k_proj.weight",
+    "offset": 22541419040,
+    "bytes": 655360,
+    "ggml_type": 30,
+    "sha256": "bd437eaf0a98276c6cf854f70920bb1b3f3c95dec08f9c6fd427fb29c3185056",
+    "fnv1a": "e1a314edfe36922b",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/e1a314edfe36922b"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.indexer.q_norm.weight",
+    "offset": 22542074400,
+    "bytes": 512,
+    "ggml_type": 0,
+    "sha256": "0c877347ab335799ca2b719da590d89ccd701d267f2c26fdcedd7a137982645c",
+    "fnv1a": "284164f640ee50cc",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/284164f640ee50cc"
+  },
+  {
+    "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+    "name": "blk.47.indexer.q_proj.weight",
+    "offset": 22542074912,
+    "bytes": 2621440,
+    "ggml_type": 30,
+    "sha256": "0b8a32715e497bf625c291823178e41f8a3f6a79903a046df13f6b9c86432bc3",
+    "fnv1a": "b7f6beba00d01d84",
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b7f6beba00d01d84"
+  }
+]
