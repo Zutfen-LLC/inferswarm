@@ -497,13 +497,6 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
-      - name: Install issue-255 operator test HTTP client (CPU-only)
-        run: |
-          if .venv/bin/python -m pip --version >/dev/null 2>&1; then
-            .venv/bin/python -m pip install 'requests==2.32.5'
-          else
-            uv pip install --python .venv/bin/python 'requests==2.32.5'
-          fi
       - name: Run group issue-99-103
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof tests.test_issue255_mvp tests.test_issue255_measure tests.test_issue255_baseline -v
 

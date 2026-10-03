@@ -47,7 +47,7 @@ REQUIRED_EXACT_PYTHON = ("3", "12")
 # Living CPU test dependencies that the doctor must find importable.
 # This mirrors requirements-test.txt's direct (non-referenced) entries;
 # the authority check below proves the mirror cannot drift silently.
-EXPECTED_DIRECT_PACKAGES = frozenset({"jsonschema", "numpy", "pyyaml"})
+EXPECTED_DIRECT_PACKAGES = frozenset({"jsonschema", "numpy", "pyyaml", "requests"})
 
 # Referenced immutable frozen requirement files (authoritative for their
 # own exact pins; the doctor parses them dynamically and enforces their
