@@ -1,0 +1,3662 @@
+0.46.893.971 D Using specialized template: Qwen3-Coder
+0.46.897.668 I srv  server_strea: conv_id= (empty=1)
+0.46.898.494 I srv    operator(): chat format: peg-native
+0.46.898.682 D srv  eval_llama_c: reasoning budget: tokens=-1, generation_prompt='<|im_start|>assistant
+<think>
+', start=1 toks, end=2 seqs, forced=1 toks
+0.46.898.754 D res  add_waiting_: add task 110 to waiting list. current waiting = 0 (before add)
+0.46.898.759 D que          post: new task, id = 110/1, front = 0
+0.46.898.822 D que    start_loop: processing new tasks
+0.46.898.837 D que  process_new_: processing task, id = 110
+0.46.898.847 I slot get_availabl: id  0 | task -1 |  - checking sim = 1.000 (63/63) > 0.100
+0.46.898.851 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.548
+0.46.899.041 D slot launch_slot_: id  0 | task -1 | launching slot : {"id":0,"n_ctx":1024,"speculative":false,"is_processing":false,"id_task":56,"n_prompt_tokens":115,"n_prompt_tokens_processed":0,"n_prompt_tokens_cache":0,"params":{"seed":42,"temperature":0.0,"dynatemp_range":0.0,"dynatemp_exponent":1.0,"top_k":20,"top_p":0.949999988079071,"min_p":0.05000000074505806,"top_n_sigma":-1.0,"xtc_probability":0.0,"xtc_threshold":0.10000000149011612,"typical_p":1.0,"repeat_last_n":64,"repeat_penalty":1.0,"presence_penalty":0.0,"frequency_penalty":0.0,"dry_multiplier":0.0,"dry_base":1.75,"dry_allowed_length":2,"dry_penalty_last_n":64,"dry_sequence_breakers":["\n",":","\"","*"],"mirostat":0,"mirostat_tau":5.0,"mirostat_eta":0.10000000149011612,"adaptive_target":-1.0,"adaptive_decay":0.8999999761581421,"stop":[],"max_tokens":64,"n_predict":64,"n_keep":0,"n_discard":0,"ignore_eos":false,"stream":true,"logit_bias":[],"n_probs":0,"min_keep":0,"grammar":"","grammar_lazy":false,"grammar_triggers":[],"preserved_tokens":[248058,248059,248068,248069],"chat_format":"peg-native","reasoning_format":"deepseek","reasoning_in_content":false,"generation_prompt":"<|im_start|>assistant\n<think>\n","samplers":["penalties","dry","top_n_sigma","top_k","typ_p","top_p","min_p","xtc","temperature"],"speculative.types":"none","timings_per_token":false,"post_sampling_probs":false,"backend_sampling":false,"lora":[]},"next_token":[{"has_next_token":false,"has_new_line":false,"n_remain":-1,"n_decoded":0}],"prompt":"<|im_start|>system\nReasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>\n<|im_start|>user\nIn one sentence, explain why local backups are useful.<|im_end|>\n<|im_start|>assistant\n<think>\n","generated":""}
+0.46.899.123 D common_sampler_init: prefill token: 248045 = <|im_start|>
+0.46.899.127 D common_sampler_init: prefill token: 74455 = assistant
+0.46.899.128 D common_sampler_init: prefill token: 198 = 
+
+0.46.899.129 D common_sampler_init: prefill token: 248068 = <think>
+0.46.899.130 D common_sampler_init: prefill token: 198 = 
+
+0.46.899.172 I slot launch_slot_: id  0 | task -1 | sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.46.899.187 I slot launch_slot_: id  0 | task -1 | sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 64
+	top_k = 20, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.46.899.192 I slot launch_slot_: id  0 | task 110 | processing task, is_child = 0
+0.46.899.195 D que    start_loop: update slots
+0.46.899.197 D srv  update_slots: posting NEXT_RESPONSE
+0.46.899.199 D que          post: new task, id = 111, front = 0
+0.46.899.207 I slot   operator(): id  0 | task 110 | new prompt, n_ctx_slot = 1024, n_keep = 0, task.n_tokens = 63
+0.46.899.213 I slot   operator(): id  0 | task 110 | checking checkpoint with [58, 58] against 62...
+0.46.962.467 I slot   operator(): id  0 | task 110 | restored context checkpoint (pos_min = 58, pos_max = 58, n_tokens = 59, n_past = 59, size = 112.571 MiB)
+0.46.962.483 D res          send: sending result for task id = 110
+0.46.962.485 D res          send: task id = 110 pushed to result queue
+0.46.962.491 I slot   operator(): id  0 | task 110 | cached n_tokens = 59, memory_seq_rm [59, end)
+0.46.962.580 D srv          stop: all tasks already finished, no need to cancel
+0.46.962.603 I slot init_sampler: id  0 | task 110 | init sampler, took 0.02 ms, tokens: text = 63, total = 63
+0.46.962.607 D slot   operator(): id  0 | task 110 | main/do_checkpoint = yes, pos_min = 58, pos_max = 58
+0.46.962.614 I slot create_check: id  0 | task 110 | superseding context checkpoint at n_tokens = 59
+0.47.107.042 I slot create_check: id  0 | task 110 | created context checkpoint 2 of 32 (pos_min = 58, pos_max = 58, n_tokens = 59, size = 112.571 MiB)
+0.47.107.058 D set_adapters_lora: adapters = (nil)
+0.47.107.059 D adapters_lora_are_same: adapters = (nil)
+0.47.107.061 D set_embeddings: value = 0
+0.47.107.064 D srv        decode: n_batch (effective) = 1024, off = 0
+0.47.107.067 D que  yield_to_que: yielding to queue
+0.47.107.142 D que  process_new_: processing task, id = 111
+0.47.107.145 D srv  process_sing: decoding, decline task, id_task = 111
+0.47.107.146 D que  process_new_: task declined, id = 111
+0.47.130.987 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.146.480 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.158.154 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.167.559 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.176.510 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.185.829 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.194.585 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.202.666 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.211.728 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.224.172 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.233.341 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.243.634 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.255.623 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.264.931 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.273.948 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.282.041 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.290.137 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.298.992 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.307.619 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.315.602 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.323.839 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.332.454 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.341.183 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.349.137 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.357.220 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.365.922 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.374.663 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.382.600 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.390.711 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.399.358 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.407.915 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.415.961 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.424.102 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.432.859 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.441.559 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.449.428 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.457.548 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.466.124 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.474.854 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.482.742 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.491.036 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.496.877 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.500.456 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.504.338 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.508.227 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.511.790 D ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+0.47.554.304 D que  yield_to_que: done yielding to queue
+0.47.558.100 D res          send: sending result for task id = 110
+0.47.558.106 D res          send: task id = 110 pushed to result queue
+0.47.558.113 D slot process_toke: id  0 | task 110 | n_gen = 1, n_remaining = 63, next token:  1596 'We'
+0.47.558.118 D que    start_loop: waiting for new tasks
+0.47.558.119 D que    start_loop: processing new tasks
+0.47.558.126 D que  process_new_: processing task, id = 111
+0.47.558.130 D que    start_loop: update slots
+0.47.558.131 D srv  update_slots: posting NEXT_RESPONSE
+0.47.558.135 D que          post: new task, id = 112, front = 0
+0.47.558.146 D slot handle_last_: id  0 | task 110 | slot decode token, id=1596, n_ctx = 1024, n_tokens = 63, truncated = 0
+0.47.558.155 D set_adapters_lora: adapters = (nil)
+0.47.558.155 D adapters_lora_are_same: adapters = (nil)
+0.47.558.157 D set_embeddings: value = 0
+0.47.558.159 D srv        decode: n_batch (effective) = 1024, off = 0
+0.47.558.163 D que  yield_to_que: yielding to queue
+0.47.558.222 D que  process_new_: processing task, id = 112
+0.47.558.223 D srv  process_sing: decoding, decline task, id_task = 112
+0.47.558.224 D que  process_new_: task declined, id = 112
+0.47.558.351 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"role":"assistant","content":null}}],"created":1791040358,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":"We"}}],"created":1791040358,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.47.814.772 D que  yield_to_que: done yielding to queue
+0.47.815.983 D res          send: sending result for task id = 110
+0.47.815.988 D res          send: task id = 110 pushed to result queue
+0.47.815.993 D slot process_toke: id  0 | task 110 | n_gen = 2, n_remaining = 62, next token:  1144 ' need'
+0.47.815.997 D que    start_loop: waiting for new tasks
+0.47.815.998 D que    start_loop: processing new tasks
+0.47.816.003 D que  process_new_: processing task, id = 112
+0.47.816.004 D que    start_loop: update slots
+0.47.816.005 D srv  update_slots: posting NEXT_RESPONSE
+0.47.816.008 D que          post: new task, id = 113, front = 0
+0.47.816.015 D slot handle_last_: id  0 | task 110 | slot decode token, id=1144, n_ctx = 1024, n_tokens = 64, truncated = 0
+0.47.816.023 D set_adapters_lora: adapters = (nil)
+0.47.816.024 D adapters_lora_are_same: adapters = (nil)
+0.47.816.025 D set_embeddings: value = 0
+0.47.816.026 D srv        decode: n_batch (effective) = 1024, off = 0
+0.47.816.027 D que  yield_to_que: yielding to queue
+0.47.816.075 D que  process_new_: processing task, id = 113
+0.47.816.077 D srv  process_sing: decoding, decline task, id_task = 113
+0.47.816.078 D que  process_new_: task declined, id = 113
+0.47.816.195 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" need"}}],"created":1791040358,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.47.818.647 D CUDA Graph id 7803 reused
+0.47.818.652 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.826.462 D CUDA Graph id 7805 reused
+0.47.826.470 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.833.065 D CUDA Graph id 7807 reused
+0.47.833.074 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.839.071 D CUDA Graph id 7809 reused
+0.47.839.081 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.845.647 D CUDA Graph id 7811 reused
+0.47.845.655 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.851.075 D CUDA Graph id 7813 reused
+0.47.851.082 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.857.308 D CUDA Graph id 7815 reused
+0.47.857.317 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.862.144 D CUDA Graph id 7817 reused
+0.47.862.150 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.867.556 D CUDA Graph id 7819 reused
+0.47.867.563 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.874.125 D CUDA Graph id 7821 reused
+0.47.874.131 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.880.175 D CUDA Graph id 7823 reused
+0.47.880.181 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.884.652 D CUDA Graph id 7825 reused
+0.47.884.660 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.889.794 D CUDA Graph id 7827 reused
+0.47.889.800 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.895.681 D CUDA Graph id 7829 reused
+0.47.895.687 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.900.905 D CUDA Graph id 7831 reused
+0.47.900.911 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.905.329 D CUDA Graph id 7833 reused
+0.47.905.335 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.910.162 D CUDA Graph id 7835 reused
+0.47.910.168 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.915.450 D CUDA Graph id 7837 reused
+0.47.915.456 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.920.663 D CUDA Graph id 7839 reused
+0.47.920.670 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.925.056 D CUDA Graph id 7841 reused
+0.47.925.063 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.929.838 D CUDA Graph id 7843 reused
+0.47.929.844 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.935.058 D CUDA Graph id 7845 reused
+0.47.935.064 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.940.310 D CUDA Graph id 7847 reused
+0.47.940.317 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.944.806 D CUDA Graph id 7849 reused
+0.47.944.812 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.949.661 D CUDA Graph id 7851 reused
+0.47.949.667 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.954.881 D CUDA Graph id 7853 reused
+0.47.954.886 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.960.189 D CUDA Graph id 7855 reused
+0.47.960.195 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.964.598 D CUDA Graph id 7857 reused
+0.47.964.604 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.969.456 D CUDA Graph id 7859 reused
+0.47.969.463 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.974.684 D CUDA Graph id 7861 reused
+0.47.974.690 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.979.925 D CUDA Graph id 7863 reused
+0.47.979.932 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.984.350 D CUDA Graph id 7865 reused
+0.47.984.358 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.989.152 D CUDA Graph id 7867 reused
+0.47.989.158 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.994.414 D CUDA Graph id 7869 reused
+0.47.994.419 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.47.999.619 D CUDA Graph id 7871 reused
+0.47.999.625 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.004.014 D CUDA Graph id 7873 reused
+0.48.004.021 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.008.849 D CUDA Graph id 7875 reused
+0.48.008.856 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.014.084 D CUDA Graph id 7877 reused
+0.48.014.089 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.019.344 D CUDA Graph id 7879 reused
+0.48.019.350 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.023.821 D CUDA Graph id 7881 reused
+0.48.023.828 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.028.660 D CUDA Graph id 7883 reused
+0.48.028.666 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.031.666 D CUDA Graph id 7885 reused
+0.48.031.671 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.033.422 D CUDA Graph id 7887 reused
+0.48.033.426 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.035.340 D CUDA Graph id 7889 reused
+0.48.035.344 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.037.290 D CUDA Graph id 7891 reused
+0.48.037.294 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.039.051 D CUDA Graph id 7893 reused
+0.48.039.054 D ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+0.48.069.339 D que  yield_to_que: done yielding to queue
+0.48.070.554 D res          send: sending result for task id = 110
+0.48.070.558 D res          send: task id = 110 pushed to result queue
+0.48.070.563 D slot process_toke: id  0 | task 110 | n_gen = 3, n_remaining = 61, next token:   310 ' to'
+0.48.070.566 D que    start_loop: waiting for new tasks
+0.48.070.567 D que    start_loop: processing new tasks
+0.48.070.571 D que  process_new_: processing task, id = 113
+0.48.070.573 D que    start_loop: update slots
+0.48.070.574 D srv  update_slots: posting NEXT_RESPONSE
+0.48.070.577 D que          post: new task, id = 114, front = 0
+0.48.070.583 D slot handle_last_: id  0 | task 110 | slot decode token, id=310, n_ctx = 1024, n_tokens = 65, truncated = 0
+0.48.070.596 D set_adapters_lora: adapters = (nil)
+0.48.070.597 D adapters_lora_are_same: adapters = (nil)
+0.48.070.598 D set_embeddings: value = 0
+0.48.070.599 D srv        decode: n_batch (effective) = 1024, off = 0
+0.48.070.600 D que  yield_to_que: yielding to queue
+0.48.070.627 D que  process_new_: processing task, id = 114
+0.48.070.630 D srv  process_sing: decoding, decline task, id_task = 114
+0.48.070.630 D que  process_new_: task declined, id = 114
+0.48.070.781 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" to"}}],"created":1791040358,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.48.073.161 D CUDA Graph id 7803 reused
+0.48.080.552 D CUDA Graph id 7805 reused
+0.48.085.976 D CUDA Graph id 7807 reused
+0.48.090.465 D CUDA Graph id 7809 reused
+0.48.095.284 D CUDA Graph id 7811 reused
+0.48.100.533 D CUDA Graph id 7813 reused
+0.48.105.721 D CUDA Graph id 7815 reused
+0.48.110.285 D CUDA Graph id 7817 reused
+0.48.115.104 D CUDA Graph id 7819 reused
+0.48.120.308 D CUDA Graph id 7821 reused
+0.48.125.590 D CUDA Graph id 7823 reused
+0.48.130.026 D CUDA Graph id 7825 reused
+0.48.135.375 D CUDA Graph id 7827 reused
+0.48.141.098 D CUDA Graph id 7829 reused
+0.48.147.398 D CUDA Graph id 7831 reused
+0.48.153.069 D CUDA Graph id 7833 reused
+0.48.160.480 D CUDA Graph id 7835 reused
+0.48.166.687 D CUDA Graph id 7837 reused
+0.48.172.269 D CUDA Graph id 7839 reused
+0.48.177.705 D CUDA Graph id 7841 reused
+0.48.183.401 D CUDA Graph id 7843 reused
+0.48.190.192 D CUDA Graph id 7845 reused
+0.48.197.581 D CUDA Graph id 7847 reused
+0.48.202.515 D CUDA Graph id 7849 reused
+0.48.207.210 D CUDA Graph id 7851 reused
+0.48.213.589 D CUDA Graph id 7853 reused
+0.48.218.830 D CUDA Graph id 7855 reused
+0.48.223.092 D CUDA Graph id 7857 reused
+0.48.227.825 D CUDA Graph id 7859 reused
+0.48.232.992 D CUDA Graph id 7861 reused
+0.48.238.106 D CUDA Graph id 7863 reused
+0.48.242.380 D CUDA Graph id 7865 reused
+0.48.247.072 D CUDA Graph id 7867 reused
+0.48.252.211 D CUDA Graph id 7869 reused
+0.48.257.356 D CUDA Graph id 7871 reused
+0.48.261.653 D CUDA Graph id 7873 reused
+0.48.266.329 D CUDA Graph id 7875 reused
+0.48.271.430 D CUDA Graph id 7877 reused
+0.48.276.558 D CUDA Graph id 7879 reused
+0.48.280.829 D CUDA Graph id 7881 reused
+0.48.285.573 D CUDA Graph id 7883 reused
+0.48.288.422 D CUDA Graph id 7885 reused
+0.48.289.726 D CUDA Graph id 7887 reused
+0.48.291.122 D CUDA Graph id 7889 reused
+0.48.292.399 D CUDA Graph id 7891 reused
+0.48.293.684 D CUDA Graph id 7893 reused
+0.48.325.668 D que  yield_to_que: done yielding to queue
+0.48.326.947 D res          send: sending result for task id = 110
+0.48.326.952 D res          send: task id = 110 pushed to result queue
+0.48.326.958 D slot process_toke: id  0 | task 110 | n_gen = 4, n_remaining = 60, next token:  4087 ' answer'
+0.48.326.962 D que    start_loop: waiting for new tasks
+0.48.326.962 D que    start_loop: processing new tasks
+0.48.326.968 D que  process_new_: processing task, id = 114
+0.48.326.970 D que    start_loop: update slots
+0.48.326.971 D srv  update_slots: posting NEXT_RESPONSE
+0.48.326.974 D que          post: new task, id = 115, front = 0
+0.48.326.981 D slot handle_last_: id  0 | task 110 | slot decode token, id=4087, n_ctx = 1024, n_tokens = 66, truncated = 0
+0.48.326.988 D set_adapters_lora: adapters = (nil)
+0.48.326.989 D adapters_lora_are_same: adapters = (nil)
+0.48.326.990 D set_embeddings: value = 0
+0.48.326.992 D srv        decode: n_batch (effective) = 1024, off = 0
+0.48.326.993 D que  yield_to_que: yielding to queue
+0.48.327.043 D que  process_new_: processing task, id = 115
+0.48.327.045 D srv  process_sing: decoding, decline task, id_task = 115
+0.48.327.046 D que  process_new_: task declined, id = 115
+0.48.327.177 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" answer"}}],"created":1791040358,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.48.329.744 D CUDA Graph id 7803 reused
+0.48.337.439 D CUDA Graph id 7805 reused
+0.48.342.982 D CUDA Graph id 7807 reused
+0.48.347.518 D CUDA Graph id 7809 reused
+0.48.352.327 D CUDA Graph id 7811 reused
+0.48.357.631 D CUDA Graph id 7813 reused
+0.48.362.856 D CUDA Graph id 7815 reused
+0.48.367.286 D CUDA Graph id 7817 reused
+0.48.372.112 D CUDA Graph id 7819 reused
+0.48.377.338 D CUDA Graph id 7821 reused
+0.48.382.549 D CUDA Graph id 7823 reused
+0.48.386.928 D CUDA Graph id 7825 reused
+0.48.391.777 D CUDA Graph id 7827 reused
+0.48.397.019 D CUDA Graph id 7829 reused
+0.48.402.252 D CUDA Graph id 7831 reused
+0.48.406.630 D CUDA Graph id 7833 reused
+0.48.411.458 D CUDA Graph id 7835 reused
+0.48.416.693 D CUDA Graph id 7837 reused
+0.48.421.931 D CUDA Graph id 7839 reused
+0.48.426.313 D CUDA Graph id 7841 reused
+0.48.431.065 D CUDA Graph id 7843 reused
+0.48.436.302 D CUDA Graph id 7845 reused
+0.48.441.492 D CUDA Graph id 7847 reused
+0.48.445.890 D CUDA Graph id 7849 reused
+0.48.450.675 D CUDA Graph id 7851 reused
+0.48.455.924 D CUDA Graph id 7853 reused
+0.48.461.219 D CUDA Graph id 7855 reused
+0.48.465.709 D CUDA Graph id 7857 reused
+0.48.471.613 D CUDA Graph id 7859 reused
+0.48.478.615 D CUDA Graph id 7861 reused
+0.48.485.630 D CUDA Graph id 7863 reused
+0.48.490.505 D CUDA Graph id 7865 reused
+0.48.495.556 D CUDA Graph id 7867 reused
+0.48.501.766 D CUDA Graph id 7869 reused
+0.48.508.068 D CUDA Graph id 7871 reused
+0.48.514.001 D CUDA Graph id 7873 reused
+0.48.520.714 D CUDA Graph id 7875 reused
+0.48.526.272 D CUDA Graph id 7877 reused
+0.48.532.238 D CUDA Graph id 7879 reused
+0.48.537.329 D CUDA Graph id 7881 reused
+0.48.542.149 D CUDA Graph id 7883 reused
+0.48.545.153 D CUDA Graph id 7885 reused
+0.48.546.528 D CUDA Graph id 7887 reused
+0.48.548.016 D CUDA Graph id 7889 reused
+0.48.549.370 D CUDA Graph id 7891 reused
+0.48.550.727 D CUDA Graph id 7893 reused
+0.48.583.587 D que  yield_to_que: done yielding to queue
+0.48.584.845 D res          send: sending result for task id = 110
+0.48.584.850 D res          send: task id = 110 pushed to result queue
+0.48.584.856 D slot process_toke: id  0 | task 110 | n_gen = 5, n_remaining = 59, next token:  1156 ' user'
+0.48.584.860 D que    start_loop: waiting for new tasks
+0.48.584.860 D que    start_loop: processing new tasks
+0.48.584.865 D que  process_new_: processing task, id = 115
+0.48.584.868 D que    start_loop: update slots
+0.48.584.869 D srv  update_slots: posting NEXT_RESPONSE
+0.48.584.873 D que          post: new task, id = 116, front = 0
+0.48.584.880 D slot handle_last_: id  0 | task 110 | slot decode token, id=1156, n_ctx = 1024, n_tokens = 67, truncated = 0
+0.48.584.887 D set_adapters_lora: adapters = (nil)
+0.48.584.888 D adapters_lora_are_same: adapters = (nil)
+0.48.584.889 D set_embeddings: value = 0
+0.48.584.890 D srv        decode: n_batch (effective) = 1024, off = 0
+0.48.584.891 D que  yield_to_que: yielding to queue
+0.48.584.940 D que  process_new_: processing task, id = 116
+0.48.584.942 D srv  process_sing: decoding, decline task, id_task = 116
+0.48.584.942 D que  process_new_: task declined, id = 116
+0.48.585.062 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" user"}}],"created":1791040359,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.48.587.752 D CUDA Graph id 7803 reused
+0.48.595.292 D CUDA Graph id 7805 reused
+0.48.600.772 D CUDA Graph id 7807 reused
+0.48.605.270 D CUDA Graph id 7809 reused
+0.48.610.147 D CUDA Graph id 7811 reused
+0.48.615.488 D CUDA Graph id 7813 reused
+0.48.620.663 D CUDA Graph id 7815 reused
+0.48.625.009 D CUDA Graph id 7817 reused
+0.48.629.789 D CUDA Graph id 7819 reused
+0.48.634.991 D CUDA Graph id 7821 reused
+0.48.640.215 D CUDA Graph id 7823 reused
+0.48.644.544 D CUDA Graph id 7825 reused
+0.48.649.331 D CUDA Graph id 7827 reused
+0.48.654.476 D CUDA Graph id 7829 reused
+0.48.659.703 D CUDA Graph id 7831 reused
+0.48.664.135 D CUDA Graph id 7833 reused
+0.48.668.932 D CUDA Graph id 7835 reused
+0.48.674.213 D CUDA Graph id 7837 reused
+0.48.679.491 D CUDA Graph id 7839 reused
+0.48.683.826 D CUDA Graph id 7841 reused
+0.48.688.560 D CUDA Graph id 7843 reused
+0.48.693.785 D CUDA Graph id 7845 reused
+0.48.698.974 D CUDA Graph id 7847 reused
+0.48.703.371 D CUDA Graph id 7849 reused
+0.48.708.143 D CUDA Graph id 7851 reused
+0.48.713.358 D CUDA Graph id 7853 reused
+0.48.718.593 D CUDA Graph id 7855 reused
+0.48.722.941 D CUDA Graph id 7857 reused
+0.48.727.768 D CUDA Graph id 7859 reused
+0.48.732.935 D CUDA Graph id 7861 reused
+0.48.738.089 D CUDA Graph id 7863 reused
+0.48.742.486 D CUDA Graph id 7865 reused
+0.48.747.263 D CUDA Graph id 7867 reused
+0.48.752.593 D CUDA Graph id 7869 reused
+0.48.757.827 D CUDA Graph id 7871 reused
+0.48.762.157 D CUDA Graph id 7873 reused
+0.48.766.982 D CUDA Graph id 7875 reused
+0.48.772.237 D CUDA Graph id 7877 reused
+0.48.777.471 D CUDA Graph id 7879 reused
+0.48.781.845 D CUDA Graph id 7881 reused
+0.48.786.869 D CUDA Graph id 7883 reused
+0.48.790.486 D CUDA Graph id 7885 reused
+0.48.792.307 D CUDA Graph id 7887 reused
+0.48.794.380 D CUDA Graph id 7889 reused
+0.48.796.619 D CUDA Graph id 7891 reused
+0.48.798.962 D CUDA Graph id 7893 reused
+0.48.826.375 D que  yield_to_que: done yielding to queue
+0.48.827.534 D res          send: sending result for task id = 110
+0.48.827.537 D res          send: task id = 110 pushed to result queue
+0.48.827.542 D slot process_toke: id  0 | task 110 | n_gen = 6, n_remaining = 58, next token:    25 ':'
+0.48.827.545 D que    start_loop: waiting for new tasks
+0.48.827.546 D que    start_loop: processing new tasks
+0.48.827.550 D que  process_new_: processing task, id = 116
+0.48.827.552 D que    start_loop: update slots
+0.48.827.553 D srv  update_slots: posting NEXT_RESPONSE
+0.48.827.556 D que          post: new task, id = 117, front = 0
+0.48.827.562 D slot handle_last_: id  0 | task 110 | slot decode token, id=25, n_ctx = 1024, n_tokens = 68, truncated = 0
+0.48.827.569 D set_adapters_lora: adapters = (nil)
+0.48.827.570 D adapters_lora_are_same: adapters = (nil)
+0.48.827.571 D set_embeddings: value = 0
+0.48.827.572 D srv        decode: n_batch (effective) = 1024, off = 0
+0.48.827.573 D que  yield_to_que: yielding to queue
+0.48.827.619 D que  process_new_: processing task, id = 117
+0.48.827.622 D srv  process_sing: decoding, decline task, id_task = 117
+0.48.827.626 D que  process_new_: task declined, id = 117
+0.48.827.744 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":":"}}],"created":1791040359,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.48.830.166 D CUDA Graph id 7803 reused
+0.48.837.882 D CUDA Graph id 7805 reused
+0.48.843.999 D CUDA Graph id 7807 reused
+0.48.848.897 D CUDA Graph id 7809 reused
+0.48.853.958 D CUDA Graph id 7811 reused
+0.48.859.607 D CUDA Graph id 7813 reused
+0.48.865.144 D CUDA Graph id 7815 reused
+0.48.869.866 D CUDA Graph id 7817 reused
+0.48.874.926 D CUDA Graph id 7819 reused
+0.48.880.421 D CUDA Graph id 7821 reused
+0.48.885.933 D CUDA Graph id 7823 reused
+0.48.890.662 D CUDA Graph id 7825 reused
+0.48.895.714 D CUDA Graph id 7827 reused
+0.48.901.257 D CUDA Graph id 7829 reused
+0.48.906.774 D CUDA Graph id 7831 reused
+0.48.911.576 D CUDA Graph id 7833 reused
+0.48.916.656 D CUDA Graph id 7835 reused
+0.48.922.257 D CUDA Graph id 7837 reused
+0.48.927.740 D CUDA Graph id 7839 reused
+0.48.932.467 D CUDA Graph id 7841 reused
+0.48.937.544 D CUDA Graph id 7843 reused
+0.48.943.054 D CUDA Graph id 7845 reused
+0.48.948.239 D CUDA Graph id 7847 reused
+0.48.952.600 D CUDA Graph id 7849 reused
+0.48.957.320 D CUDA Graph id 7851 reused
+0.48.962.461 D CUDA Graph id 7853 reused
+0.48.967.669 D CUDA Graph id 7855 reused
+0.48.972.053 D CUDA Graph id 7857 reused
+0.48.976.812 D CUDA Graph id 7859 reused
+0.48.982.007 D CUDA Graph id 7861 reused
+0.48.987.112 D CUDA Graph id 7863 reused
+0.48.991.528 D CUDA Graph id 7865 reused
+0.48.996.232 D CUDA Graph id 7867 reused
+0.49.001.423 D CUDA Graph id 7869 reused
+0.49.006.609 D CUDA Graph id 7871 reused
+0.49.010.962 D CUDA Graph id 7873 reused
+0.49.015.715 D CUDA Graph id 7875 reused
+0.49.020.880 D CUDA Graph id 7877 reused
+0.49.026.063 D CUDA Graph id 7879 reused
+0.49.030.470 D CUDA Graph id 7881 reused
+0.49.035.275 D CUDA Graph id 7883 reused
+0.49.038.291 D CUDA Graph id 7885 reused
+0.49.039.685 D CUDA Graph id 7887 reused
+0.49.041.191 D CUDA Graph id 7889 reused
+0.49.042.532 D CUDA Graph id 7891 reused
+0.49.043.906 D CUDA Graph id 7893 reused
+0.49.070.192 D que  yield_to_que: done yielding to queue
+0.49.071.430 D res          send: sending result for task id = 110
+0.49.071.435 D res          send: task id = 110 pushed to result queue
+0.49.071.440 D slot process_toke: id  0 | task 110 | n_gen = 7, n_remaining = 57, next token:   328 ' "'
+0.49.071.446 D que    start_loop: waiting for new tasks
+0.49.071.447 D que    start_loop: processing new tasks
+0.49.071.452 D que  process_new_: processing task, id = 117
+0.49.071.454 D que    start_loop: update slots
+0.49.071.455 D srv  update_slots: posting NEXT_RESPONSE
+0.49.071.459 D que          post: new task, id = 118, front = 0
+0.49.071.466 D slot handle_last_: id  0 | task 110 | slot decode token, id=328, n_ctx = 1024, n_tokens = 69, truncated = 0
+0.49.071.472 D set_adapters_lora: adapters = (nil)
+0.49.071.473 D adapters_lora_are_same: adapters = (nil)
+0.49.071.474 D set_embeddings: value = 0
+0.49.071.475 D srv        decode: n_batch (effective) = 1024, off = 0
+0.49.071.476 D que  yield_to_que: yielding to queue
+0.49.071.524 D que  process_new_: processing task, id = 118
+0.49.071.526 D srv  process_sing: decoding, decline task, id_task = 118
+0.49.071.527 D que  process_new_: task declined, id = 118
+0.49.071.646 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" \""}}],"created":1791040359,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.49.074.104 D CUDA Graph id 7803 reused
+0.49.081.496 D CUDA Graph id 7805 reused
+0.49.086.867 D CUDA Graph id 7807 reused
+0.49.091.363 D CUDA Graph id 7809 reused
+0.49.097.132 D CUDA Graph id 7811 reused
+0.49.103.876 D CUDA Graph id 7813 reused
+0.49.110.850 D CUDA Graph id 7815 reused
+0.49.115.662 D CUDA Graph id 7817 reused
+0.49.120.583 D CUDA Graph id 7819 reused
+0.49.126.716 D CUDA Graph id 7821 reused
+0.49.133.007 D CUDA Graph id 7823 reused
+0.49.139.116 D CUDA Graph id 7825 reused
+0.49.145.888 D CUDA Graph id 7827 reused
+0.49.151.887 D CUDA Graph id 7829 reused
+0.49.158.330 D CUDA Graph id 7831 reused
+0.49.163.351 D CUDA Graph id 7833 reused
+0.49.168.481 D CUDA Graph id 7835 reused
+0.49.173.894 D CUDA Graph id 7837 reused
+0.49.179.215 D CUDA Graph id 7839 reused
+0.49.183.679 D CUDA Graph id 7841 reused
+0.49.188.312 D CUDA Graph id 7843 reused
+0.49.193.355 D CUDA Graph id 7845 reused
+0.49.198.438 D CUDA Graph id 7847 reused
+0.49.202.745 D CUDA Graph id 7849 reused
+0.49.207.364 D CUDA Graph id 7851 reused
+0.49.212.423 D CUDA Graph id 7853 reused
+0.49.217.647 D CUDA Graph id 7855 reused
+0.49.221.933 D CUDA Graph id 7857 reused
+0.49.226.551 D CUDA Graph id 7859 reused
+0.49.231.640 D CUDA Graph id 7861 reused
+0.49.236.699 D CUDA Graph id 7863 reused
+0.49.241.006 D CUDA Graph id 7865 reused
+0.49.245.632 D CUDA Graph id 7867 reused
+0.49.250.733 D CUDA Graph id 7869 reused
+0.49.255.790 D CUDA Graph id 7871 reused
+0.49.260.088 D CUDA Graph id 7873 reused
+0.49.264.696 D CUDA Graph id 7875 reused
+0.49.269.723 D CUDA Graph id 7877 reused
+0.49.274.800 D CUDA Graph id 7879 reused
+0.49.279.080 D CUDA Graph id 7881 reused
+0.49.283.755 D CUDA Graph id 7883 reused
+0.49.286.624 D CUDA Graph id 7885 reused
+0.49.287.914 D CUDA Graph id 7887 reused
+0.49.289.322 D CUDA Graph id 7889 reused
+0.49.290.615 D CUDA Graph id 7891 reused
+0.49.291.917 D CUDA Graph id 7893 reused
+0.49.319.130 D que  yield_to_que: done yielding to queue
+0.49.320.281 D res          send: sending result for task id = 110
+0.49.320.285 D res          send: task id = 110 pushed to result queue
+0.49.320.289 D slot process_toke: id  0 | task 110 | n_gen = 8, n_remaining = 56, next token:   623 'In'
+0.49.320.292 D que    start_loop: waiting for new tasks
+0.49.320.293 D que    start_loop: processing new tasks
+0.49.320.297 D que  process_new_: processing task, id = 118
+0.49.320.299 D que    start_loop: update slots
+0.49.320.300 D srv  update_slots: posting NEXT_RESPONSE
+0.49.320.303 D que          post: new task, id = 119, front = 0
+0.49.320.309 D slot handle_last_: id  0 | task 110 | slot decode token, id=623, n_ctx = 1024, n_tokens = 70, truncated = 0
+0.49.320.316 D set_adapters_lora: adapters = (nil)
+0.49.320.316 D adapters_lora_are_same: adapters = (nil)
+0.49.320.317 D set_embeddings: value = 0
+0.49.320.318 D srv        decode: n_batch (effective) = 1024, off = 0
+0.49.320.319 D que  yield_to_que: yielding to queue
+0.49.320.376 D que  process_new_: processing task, id = 119
+0.49.320.378 D srv  process_sing: decoding, decline task, id_task = 119
+0.49.320.378 D que  process_new_: task declined, id = 119
+0.49.320.620 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":"In"}}],"created":1791040359,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.49.322.954 D CUDA Graph id 7803 reused
+0.49.330.352 D CUDA Graph id 7805 reused
+0.49.335.791 D CUDA Graph id 7807 reused
+0.49.340.274 D CUDA Graph id 7809 reused
+0.49.345.033 D CUDA Graph id 7811 reused
+0.49.350.240 D CUDA Graph id 7813 reused
+0.49.355.424 D CUDA Graph id 7815 reused
+0.49.359.808 D CUDA Graph id 7817 reused
+0.49.364.524 D CUDA Graph id 7819 reused
+0.49.369.706 D CUDA Graph id 7821 reused
+0.49.374.883 D CUDA Graph id 7823 reused
+0.49.379.265 D CUDA Graph id 7825 reused
+0.49.384.067 D CUDA Graph id 7827 reused
+0.49.389.317 D CUDA Graph id 7829 reused
+0.49.394.457 D CUDA Graph id 7831 reused
+0.49.398.943 D CUDA Graph id 7833 reused
+0.49.403.714 D CUDA Graph id 7835 reused
+0.49.408.952 D CUDA Graph id 7837 reused
+0.49.414.596 D CUDA Graph id 7839 reused
+0.49.419.831 D CUDA Graph id 7841 reused
+0.49.426.941 D CUDA Graph id 7843 reused
+0.49.432.958 D CUDA Graph id 7845 reused
+0.49.438.281 D CUDA Graph id 7847 reused
+0.49.443.705 D CUDA Graph id 7849 reused
+0.49.449.101 D CUDA Graph id 7851 reused
+0.49.455.510 D CUDA Graph id 7853 reused
+0.49.462.644 D CUDA Graph id 7855 reused
+0.49.467.626 D CUDA Graph id 7857 reused
+0.49.472.387 D CUDA Graph id 7859 reused
+0.49.478.702 D CUDA Graph id 7861 reused
+0.49.483.946 D CUDA Graph id 7863 reused
+0.49.488.352 D CUDA Graph id 7865 reused
+0.49.493.103 D CUDA Graph id 7867 reused
+0.49.498.338 D CUDA Graph id 7869 reused
+0.49.503.519 D CUDA Graph id 7871 reused
+0.49.507.939 D CUDA Graph id 7873 reused
+0.49.512.638 D CUDA Graph id 7875 reused
+0.49.517.802 D CUDA Graph id 7877 reused
+0.49.522.964 D CUDA Graph id 7879 reused
+0.49.527.368 D CUDA Graph id 7881 reused
+0.49.532.111 D CUDA Graph id 7883 reused
+0.49.535.113 D CUDA Graph id 7885 reused
+0.49.536.547 D CUDA Graph id 7887 reused
+0.49.538.018 D CUDA Graph id 7889 reused
+0.49.539.335 D CUDA Graph id 7891 reused
+0.49.540.671 D CUDA Graph id 7893 reused
+0.49.566.864 D que  yield_to_que: done yielding to queue
+0.49.568.082 D res          send: sending result for task id = 110
+0.49.568.085 D res          send: task id = 110 pushed to result queue
+0.49.568.089 D slot process_toke: id  0 | task 110 | n_gen = 9, n_remaining = 55, next token:   799 ' one'
+0.49.568.093 D que    start_loop: waiting for new tasks
+0.49.568.093 D que    start_loop: processing new tasks
+0.49.568.097 D que  process_new_: processing task, id = 119
+0.49.568.099 D que    start_loop: update slots
+0.49.568.100 D srv  update_slots: posting NEXT_RESPONSE
+0.49.568.103 D que          post: new task, id = 120, front = 0
+0.49.568.109 D slot handle_last_: id  0 | task 110 | slot decode token, id=799, n_ctx = 1024, n_tokens = 71, truncated = 0
+0.49.568.116 D set_adapters_lora: adapters = (nil)
+0.49.568.117 D adapters_lora_are_same: adapters = (nil)
+0.49.568.118 D set_embeddings: value = 0
+0.49.568.120 D srv        decode: n_batch (effective) = 1024, off = 0
+0.49.568.120 D que  yield_to_que: yielding to queue
+0.49.568.169 D que  process_new_: processing task, id = 120
+0.49.568.171 D srv  process_sing: decoding, decline task, id_task = 120
+0.49.568.171 D que  process_new_: task declined, id = 120
+0.49.568.373 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" one"}}],"created":1791040360,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.49.570.638 D CUDA Graph id 7803 reused
+0.49.578.021 D CUDA Graph id 7805 reused
+0.49.583.436 D CUDA Graph id 7807 reused
+0.49.587.970 D CUDA Graph id 7809 reused
+0.49.592.782 D CUDA Graph id 7811 reused
+0.49.598.014 D CUDA Graph id 7813 reused
+0.49.603.208 D CUDA Graph id 7815 reused
+0.49.607.570 D CUDA Graph id 7817 reused
+0.49.612.303 D CUDA Graph id 7819 reused
+0.49.617.445 D CUDA Graph id 7821 reused
+0.49.622.621 D CUDA Graph id 7823 reused
+0.49.626.989 D CUDA Graph id 7825 reused
+0.49.631.764 D CUDA Graph id 7827 reused
+0.49.636.984 D CUDA Graph id 7829 reused
+0.49.642.170 D CUDA Graph id 7831 reused
+0.49.646.599 D CUDA Graph id 7833 reused
+0.49.651.341 D CUDA Graph id 7835 reused
+0.49.656.525 D CUDA Graph id 7837 reused
+0.49.661.657 D CUDA Graph id 7839 reused
+0.49.666.062 D CUDA Graph id 7841 reused
+0.49.670.808 D CUDA Graph id 7843 reused
+0.49.675.983 D CUDA Graph id 7845 reused
+0.49.681.144 D CUDA Graph id 7847 reused
+0.49.685.532 D CUDA Graph id 7849 reused
+0.49.690.281 D CUDA Graph id 7851 reused
+0.49.695.564 D CUDA Graph id 7853 reused
+0.49.700.809 D CUDA Graph id 7855 reused
+0.49.705.163 D CUDA Graph id 7857 reused
+0.49.709.900 D CUDA Graph id 7859 reused
+0.49.715.051 D CUDA Graph id 7861 reused
+0.49.720.260 D CUDA Graph id 7863 reused
+0.49.724.646 D CUDA Graph id 7865 reused
+0.49.729.343 D CUDA Graph id 7867 reused
+0.49.735.525 D CUDA Graph id 7869 reused
+0.49.742.173 D CUDA Graph id 7871 reused
+0.49.748.079 D CUDA Graph id 7873 reused
+0.49.753.471 D CUDA Graph id 7875 reused
+0.49.758.829 D CUDA Graph id 7877 reused
+0.49.765.085 D CUDA Graph id 7879 reused
+0.49.769.873 D CUDA Graph id 7881 reused
+0.49.775.382 D CUDA Graph id 7883 reused
+0.49.779.647 D CUDA Graph id 7885 reused
+0.49.781.497 D CUDA Graph id 7887 reused
+0.49.783.370 D CUDA Graph id 7889 reused
+0.49.784.940 D CUDA Graph id 7891 reused
+0.49.786.299 D CUDA Graph id 7893 reused
+0.49.812.306 D que  yield_to_que: done yielding to queue
+0.49.813.479 D res          send: sending result for task id = 110
+0.49.813.483 D res          send: task id = 110 pushed to result queue
+0.49.813.488 D slot process_toke: id  0 | task 110 | n_gen = 10, n_remaining = 54, next token: 11316 ' sentence'
+0.49.813.492 D que    start_loop: waiting for new tasks
+0.49.813.492 D que    start_loop: processing new tasks
+0.49.813.496 D que  process_new_: processing task, id = 120
+0.49.813.498 D que    start_loop: update slots
+0.49.813.500 D srv  update_slots: posting NEXT_RESPONSE
+0.49.813.503 D que          post: new task, id = 121, front = 0
+0.49.813.509 D slot handle_last_: id  0 | task 110 | slot decode token, id=11316, n_ctx = 1024, n_tokens = 72, truncated = 0
+0.49.813.516 D set_adapters_lora: adapters = (nil)
+0.49.813.516 D adapters_lora_are_same: adapters = (nil)
+0.49.813.518 D set_embeddings: value = 0
+0.49.813.519 D srv        decode: n_batch (effective) = 1024, off = 0
+0.49.813.520 D que  yield_to_que: yielding to queue
+0.49.813.567 D que  process_new_: processing task, id = 121
+0.49.813.569 D srv  process_sing: decoding, decline task, id_task = 121
+0.49.813.569 D que  process_new_: task declined, id = 121
+0.49.813.800 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" sentence"}}],"created":1791040360,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.49.816.127 D CUDA Graph id 7803 reused
+0.49.823.549 D CUDA Graph id 7805 reused
+0.49.829.013 D CUDA Graph id 7807 reused
+0.49.833.555 D CUDA Graph id 7809 reused
+0.49.838.318 D CUDA Graph id 7811 reused
+0.49.843.612 D CUDA Graph id 7813 reused
+0.49.848.823 D CUDA Graph id 7815 reused
+0.49.853.233 D CUDA Graph id 7817 reused
+0.49.857.973 D CUDA Graph id 7819 reused
+0.49.863.172 D CUDA Graph id 7821 reused
+0.49.868.347 D CUDA Graph id 7823 reused
+0.49.872.749 D CUDA Graph id 7825 reused
+0.49.877.532 D CUDA Graph id 7827 reused
+0.49.882.693 D CUDA Graph id 7829 reused
+0.49.887.874 D CUDA Graph id 7831 reused
+0.49.892.245 D CUDA Graph id 7833 reused
+0.49.896.997 D CUDA Graph id 7835 reused
+0.49.902.210 D CUDA Graph id 7837 reused
+0.49.907.357 D CUDA Graph id 7839 reused
+0.49.911.709 D CUDA Graph id 7841 reused
+0.49.916.431 D CUDA Graph id 7843 reused
+0.49.921.612 D CUDA Graph id 7845 reused
+0.49.926.779 D CUDA Graph id 7847 reused
+0.49.931.147 D CUDA Graph id 7849 reused
+0.49.935.889 D CUDA Graph id 7851 reused
+0.49.941.077 D CUDA Graph id 7853 reused
+0.49.946.269 D CUDA Graph id 7855 reused
+0.49.950.667 D CUDA Graph id 7857 reused
+0.49.955.395 D CUDA Graph id 7859 reused
+0.49.960.583 D CUDA Graph id 7861 reused
+0.49.965.750 D CUDA Graph id 7863 reused
+0.49.970.145 D CUDA Graph id 7865 reused
+0.49.974.869 D CUDA Graph id 7867 reused
+0.49.980.022 D CUDA Graph id 7869 reused
+0.49.985.203 D CUDA Graph id 7871 reused
+0.49.989.576 D CUDA Graph id 7873 reused
+0.49.994.290 D CUDA Graph id 7875 reused
+0.49.999.447 D CUDA Graph id 7877 reused
+0.50.004.615 D CUDA Graph id 7879 reused
+0.50.009.027 D CUDA Graph id 7881 reused
+0.50.013.779 D CUDA Graph id 7883 reused
+0.50.016.667 D CUDA Graph id 7885 reused
+0.50.018.114 D CUDA Graph id 7887 reused
+0.50.019.588 D CUDA Graph id 7889 reused
+0.50.020.938 D CUDA Graph id 7891 reused
+0.50.022.316 D CUDA Graph id 7893 reused
+0.50.055.089 D que  yield_to_que: done yielding to queue
+0.50.056.294 D res          send: sending result for task id = 110
+0.50.056.297 D res          send: task id = 110 pushed to result queue
+0.50.056.302 D slot process_toke: id  0 | task 110 | n_gen = 11, n_remaining = 53, next token:    11 ','
+0.50.056.305 D que    start_loop: waiting for new tasks
+0.50.056.306 D que    start_loop: processing new tasks
+0.50.056.310 D que  process_new_: processing task, id = 121
+0.50.056.312 D que    start_loop: update slots
+0.50.056.313 D srv  update_slots: posting NEXT_RESPONSE
+0.50.056.317 D que          post: new task, id = 122, front = 0
+0.50.056.323 D slot handle_last_: id  0 | task 110 | slot decode token, id=11, n_ctx = 1024, n_tokens = 73, truncated = 0
+0.50.056.329 D set_adapters_lora: adapters = (nil)
+0.50.056.330 D adapters_lora_are_same: adapters = (nil)
+0.50.056.331 D set_embeddings: value = 0
+0.50.056.332 D srv        decode: n_batch (effective) = 1024, off = 0
+0.50.056.333 D que  yield_to_que: yielding to queue
+0.50.056.392 D que  process_new_: processing task, id = 122
+0.50.056.394 D srv  process_sing: decoding, decline task, id_task = 122
+0.50.056.394 D que  process_new_: task declined, id = 122
+0.50.056.553 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":","}}],"created":1791040360,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.50.059.036 D CUDA Graph id 7803 reused
+0.50.066.803 D CUDA Graph id 7805 reused
+0.50.072.882 D CUDA Graph id 7807 reused
+0.50.077.892 D CUDA Graph id 7809 reused
+0.50.083.308 D CUDA Graph id 7811 reused
+0.50.089.152 D CUDA Graph id 7813 reused
+0.50.094.710 D CUDA Graph id 7815 reused
+0.50.099.970 D CUDA Graph id 7817 reused
+0.50.105.133 D CUDA Graph id 7819 reused
+0.50.110.662 D CUDA Graph id 7821 reused
+0.50.116.218 D CUDA Graph id 7823 reused
+0.50.120.937 D CUDA Graph id 7825 reused
+0.50.126.090 D CUDA Graph id 7827 reused
+0.50.131.684 D CUDA Graph id 7829 reused
+0.50.137.400 D CUDA Graph id 7831 reused
+0.50.142.428 D CUDA Graph id 7833 reused
+0.50.147.830 D CUDA Graph id 7835 reused
+0.50.153.814 D CUDA Graph id 7837 reused
+0.50.159.572 D CUDA Graph id 7839 reused
+0.50.164.398 D CUDA Graph id 7841 reused
+0.50.169.616 D CUDA Graph id 7843 reused
+0.50.175.258 D CUDA Graph id 7845 reused
+0.50.180.875 D CUDA Graph id 7847 reused
+0.50.185.624 D CUDA Graph id 7849 reused
+0.50.190.775 D CUDA Graph id 7851 reused
+0.50.196.310 D CUDA Graph id 7853 reused
+0.50.201.968 D CUDA Graph id 7855 reused
+0.50.206.687 D CUDA Graph id 7857 reused
+0.50.211.827 D CUDA Graph id 7859 reused
+0.50.217.386 D CUDA Graph id 7861 reused
+0.50.222.884 D CUDA Graph id 7863 reused
+0.50.227.668 D CUDA Graph id 7865 reused
+0.50.232.866 D CUDA Graph id 7867 reused
+0.50.238.567 D CUDA Graph id 7869 reused
+0.50.244.152 D CUDA Graph id 7871 reused
+0.50.248.915 D CUDA Graph id 7873 reused
+0.50.254.063 D CUDA Graph id 7875 reused
+0.50.259.574 D CUDA Graph id 7877 reused
+0.50.265.279 D CUDA Graph id 7879 reused
+0.50.269.942 D CUDA Graph id 7881 reused
+0.50.275.199 D CUDA Graph id 7883 reused
+0.50.278.504 D CUDA Graph id 7885 reused
+0.50.280.187 D CUDA Graph id 7887 reused
+0.50.282.054 D CUDA Graph id 7889 reused
+0.50.283.717 D CUDA Graph id 7891 reused
+0.50.285.438 D CUDA Graph id 7893 reused
+0.50.318.337 D que  yield_to_que: done yielding to queue
+0.50.319.525 D res          send: sending result for task id = 110
+0.50.319.528 D res          send: task id = 110 pushed to result queue
+0.50.319.533 D slot process_toke: id  0 | task 110 | n_gen = 12, n_remaining = 52, next token: 10033 ' explain'
+0.50.319.537 D que    start_loop: waiting for new tasks
+0.50.319.537 D que    start_loop: processing new tasks
+0.50.319.541 D que  process_new_: processing task, id = 122
+0.50.319.543 D que    start_loop: update slots
+0.50.319.544 D srv  update_slots: posting NEXT_RESPONSE
+0.50.319.547 D que          post: new task, id = 123, front = 0
+0.50.319.553 D slot handle_last_: id  0 | task 110 | slot decode token, id=10033, n_ctx = 1024, n_tokens = 74, truncated = 0
+0.50.319.560 D set_adapters_lora: adapters = (nil)
+0.50.319.561 D adapters_lora_are_same: adapters = (nil)
+0.50.319.562 D set_embeddings: value = 0
+0.50.319.563 D srv        decode: n_batch (effective) = 1024, off = 0
+0.50.319.564 D que  yield_to_que: yielding to queue
+0.50.319.613 D que  process_new_: processing task, id = 123
+0.50.319.615 D srv  process_sing: decoding, decline task, id_task = 123
+0.50.319.615 D que  process_new_: task declined, id = 123
+0.50.319.865 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" explain"}}],"created":1791040360,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.50.322.621 D CUDA Graph id 7803 reused
+0.50.330.514 D CUDA Graph id 7805 reused
+0.50.336.389 D CUDA Graph id 7807 reused
+0.50.341.277 D CUDA Graph id 7809 reused
+0.50.346.444 D CUDA Graph id 7811 reused
+0.50.352.110 D CUDA Graph id 7813 reused
+0.50.357.764 D CUDA Graph id 7815 reused
+0.50.362.687 D CUDA Graph id 7817 reused
+0.50.368.000 D CUDA Graph id 7819 reused
+0.50.373.622 D CUDA Graph id 7821 reused
+0.50.379.200 D CUDA Graph id 7823 reused
+0.50.384.243 D CUDA Graph id 7825 reused
+0.50.389.501 D CUDA Graph id 7827 reused
+0.50.395.356 D CUDA Graph id 7829 reused
+0.50.401.212 D CUDA Graph id 7831 reused
+0.50.406.039 D CUDA Graph id 7833 reused
+0.50.411.276 D CUDA Graph id 7835 reused
+0.50.417.386 D CUDA Graph id 7837 reused
+0.50.422.947 D CUDA Graph id 7839 reused
+0.50.427.629 D CUDA Graph id 7841 reused
+0.50.432.750 D CUDA Graph id 7843 reused
+0.50.438.325 D CUDA Graph id 7845 reused
+0.50.443.874 D CUDA Graph id 7847 reused
+0.50.448.607 D CUDA Graph id 7849 reused
+0.50.453.779 D CUDA Graph id 7851 reused
+0.50.459.337 D CUDA Graph id 7853 reused
+0.50.465.044 D CUDA Graph id 7855 reused
+0.50.469.753 D CUDA Graph id 7857 reused
+0.50.474.899 D CUDA Graph id 7859 reused
+0.50.480.471 D CUDA Graph id 7861 reused
+0.50.486.067 D CUDA Graph id 7863 reused
+0.50.490.876 D CUDA Graph id 7865 reused
+0.50.496.007 D CUDA Graph id 7867 reused
+0.50.501.646 D CUDA Graph id 7869 reused
+0.50.507.194 D CUDA Graph id 7871 reused
+0.50.511.913 D CUDA Graph id 7873 reused
+0.50.517.061 D CUDA Graph id 7875 reused
+0.50.522.611 D CUDA Graph id 7877 reused
+0.50.528.278 D CUDA Graph id 7879 reused
+0.50.532.972 D CUDA Graph id 7881 reused
+0.50.538.238 D CUDA Graph id 7883 reused
+0.50.541.624 D CUDA Graph id 7885 reused
+0.50.543.121 D CUDA Graph id 7887 reused
+0.50.544.754 D CUDA Graph id 7889 reused
+0.50.546.135 D CUDA Graph id 7891 reused
+0.50.547.473 D CUDA Graph id 7893 reused
+0.50.579.372 D que  yield_to_que: done yielding to queue
+0.50.580.578 D res          send: sending result for task id = 110
+0.50.580.581 D res          send: task id = 110 pushed to result queue
+0.50.580.586 D slot process_toke: id  0 | task 110 | n_gen = 13, n_remaining = 51, next token:  3069 ' why'
+0.50.580.590 D que    start_loop: waiting for new tasks
+0.50.580.590 D que    start_loop: processing new tasks
+0.50.580.594 D que  process_new_: processing task, id = 123
+0.50.580.596 D que    start_loop: update slots
+0.50.580.598 D srv  update_slots: posting NEXT_RESPONSE
+0.50.580.601 D que          post: new task, id = 124, front = 0
+0.50.580.608 D slot handle_last_: id  0 | task 110 | slot decode token, id=3069, n_ctx = 1024, n_tokens = 75, truncated = 0
+0.50.580.614 D set_adapters_lora: adapters = (nil)
+0.50.580.615 D adapters_lora_are_same: adapters = (nil)
+0.50.580.616 D set_embeddings: value = 0
+0.50.580.617 D srv        decode: n_batch (effective) = 1024, off = 0
+0.50.580.618 D que  yield_to_que: yielding to queue
+0.50.580.684 D que  process_new_: processing task, id = 124
+0.50.580.686 D srv  process_sing: decoding, decline task, id_task = 124
+0.50.580.687 D que  process_new_: task declined, id = 124
+0.50.580.920 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" why"}}],"created":1791040361,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.50.583.545 D CUDA Graph id 7803 reused
+0.50.591.270 D CUDA Graph id 7805 reused
+0.50.596.856 D CUDA Graph id 7807 reused
+0.50.602.318 D CUDA Graph id 7809 reused
+0.50.608.275 D CUDA Graph id 7811 reused
+0.50.613.597 D CUDA Graph id 7813 reused
+0.50.618.683 D CUDA Graph id 7815 reused
+0.50.622.974 D CUDA Graph id 7817 reused
+0.50.627.707 D CUDA Graph id 7819 reused
+0.50.632.907 D CUDA Graph id 7821 reused
+0.50.638.028 D CUDA Graph id 7823 reused
+0.50.642.302 D CUDA Graph id 7825 reused
+0.50.646.951 D CUDA Graph id 7827 reused
+0.50.652.020 D CUDA Graph id 7829 reused
+0.50.657.119 D CUDA Graph id 7831 reused
+0.50.661.459 D CUDA Graph id 7833 reused
+0.50.666.306 D CUDA Graph id 7835 reused
+0.50.672.632 D CUDA Graph id 7837 reused
+0.50.679.871 D CUDA Graph id 7839 reused
+0.50.685.516 D CUDA Graph id 7841 reused
+0.50.690.728 D CUDA Graph id 7843 reused
+0.50.696.263 D CUDA Graph id 7845 reused
+0.50.702.964 D CUDA Graph id 7847 reused
+0.50.708.180 D CUDA Graph id 7849 reused
+0.50.714.981 D CUDA Graph id 7851 reused
+0.50.721.884 D CUDA Graph id 7853 reused
+0.50.727.364 D CUDA Graph id 7855 reused
+0.50.732.144 D CUDA Graph id 7857 reused
+0.50.737.969 D CUDA Graph id 7859 reused
+0.50.743.152 D CUDA Graph id 7861 reused
+0.50.748.256 D CUDA Graph id 7863 reused
+0.50.752.589 D CUDA Graph id 7865 reused
+0.50.757.265 D CUDA Graph id 7867 reused
+0.50.762.444 D CUDA Graph id 7869 reused
+0.50.767.553 D CUDA Graph id 7871 reused
+0.50.771.863 D CUDA Graph id 7873 reused
+0.50.776.559 D CUDA Graph id 7875 reused
+0.50.781.673 D CUDA Graph id 7877 reused
+0.50.786.839 D CUDA Graph id 7879 reused
+0.50.791.167 D CUDA Graph id 7881 reused
+0.50.795.873 D CUDA Graph id 7883 reused
+0.50.798.724 D CUDA Graph id 7885 reused
+0.50.800.037 D CUDA Graph id 7887 reused
+0.50.801.452 D CUDA Graph id 7889 reused
+0.50.802.728 D CUDA Graph id 7891 reused
+0.50.804.009 D CUDA Graph id 7893 reused
+0.50.830.085 D que  yield_to_que: done yielding to queue
+0.50.831.307 D res          send: sending result for task id = 110
+0.50.831.312 D res          send: task id = 110 pushed to result queue
+0.50.831.317 D slot process_toke: id  0 | task 110 | n_gen = 14, n_remaining = 50, next token:  2136 ' local'
+0.50.831.321 D que    start_loop: waiting for new tasks
+0.50.831.322 D que    start_loop: processing new tasks
+0.50.831.326 D que  process_new_: processing task, id = 124
+0.50.831.329 D que    start_loop: update slots
+0.50.831.330 D srv  update_slots: posting NEXT_RESPONSE
+0.50.831.333 D que          post: new task, id = 125, front = 0
+0.50.831.339 D slot handle_last_: id  0 | task 110 | slot decode token, id=2136, n_ctx = 1024, n_tokens = 76, truncated = 0
+0.50.831.345 D set_adapters_lora: adapters = (nil)
+0.50.831.346 D adapters_lora_are_same: adapters = (nil)
+0.50.831.348 D set_embeddings: value = 0
+0.50.831.349 D srv        decode: n_batch (effective) = 1024, off = 0
+0.50.831.350 D que  yield_to_que: yielding to queue
+0.50.831.400 D que  process_new_: processing task, id = 125
+0.50.831.402 D srv  process_sing: decoding, decline task, id_task = 125
+0.50.831.402 D que  process_new_: task declined, id = 125
+0.50.831.524 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" local"}}],"created":1791040361,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.50.833.970 D CUDA Graph id 7803 reused
+0.50.841.444 D CUDA Graph id 7805 reused
+0.50.846.932 D CUDA Graph id 7807 reused
+0.50.851.452 D CUDA Graph id 7809 reused
+0.50.856.301 D CUDA Graph id 7811 reused
+0.50.861.599 D CUDA Graph id 7813 reused
+0.50.866.820 D CUDA Graph id 7815 reused
+0.50.871.228 D CUDA Graph id 7817 reused
+0.50.876.074 D CUDA Graph id 7819 reused
+0.50.881.411 D CUDA Graph id 7821 reused
+0.50.886.629 D CUDA Graph id 7823 reused
+0.50.891.004 D CUDA Graph id 7825 reused
+0.50.895.812 D CUDA Graph id 7827 reused
+0.50.901.010 D CUDA Graph id 7829 reused
+0.50.906.244 D CUDA Graph id 7831 reused
+0.50.910.656 D CUDA Graph id 7833 reused
+0.50.915.502 D CUDA Graph id 7835 reused
+0.50.920.728 D CUDA Graph id 7837 reused
+0.50.925.955 D CUDA Graph id 7839 reused
+0.50.930.356 D CUDA Graph id 7841 reused
+0.50.935.111 D CUDA Graph id 7843 reused
+0.50.940.345 D CUDA Graph id 7845 reused
+0.50.945.523 D CUDA Graph id 7847 reused
+0.50.949.930 D CUDA Graph id 7849 reused
+0.50.954.769 D CUDA Graph id 7851 reused
+0.50.960.000 D CUDA Graph id 7853 reused
+0.50.965.242 D CUDA Graph id 7855 reused
+0.50.969.595 D CUDA Graph id 7857 reused
+0.50.974.431 D CUDA Graph id 7859 reused
+0.50.979.650 D CUDA Graph id 7861 reused
+0.50.984.834 D CUDA Graph id 7863 reused
+0.50.989.633 D CUDA Graph id 7865 reused
+0.50.995.798 D CUDA Graph id 7867 reused
+0.51.003.152 D CUDA Graph id 7869 reused
+0.51.009.315 D CUDA Graph id 7871 reused
+0.51.013.741 D CUDA Graph id 7873 reused
+0.51.019.662 D CUDA Graph id 7875 reused
+0.51.025.546 D CUDA Graph id 7877 reused
+0.51.032.145 D CUDA Graph id 7879 reused
+0.51.038.204 D CUDA Graph id 7881 reused
+0.51.044.229 D CUDA Graph id 7883 reused
+0.51.047.255 D CUDA Graph id 7885 reused
+0.51.048.642 D CUDA Graph id 7887 reused
+0.51.050.293 D CUDA Graph id 7889 reused
+0.51.051.905 D CUDA Graph id 7891 reused
+0.51.054.052 D CUDA Graph id 7893 reused
+0.51.080.475 D que  yield_to_que: done yielding to queue
+0.51.081.667 D res          send: sending result for task id = 110
+0.51.081.671 D res          send: task id = 110 pushed to result queue
+0.51.081.676 D slot process_toke: id  0 | task 110 | n_gen = 15, n_remaining = 49, next token: 57650 ' backups'
+0.51.081.679 D que    start_loop: waiting for new tasks
+0.51.081.680 D que    start_loop: processing new tasks
+0.51.081.684 D que  process_new_: processing task, id = 125
+0.51.081.686 D que    start_loop: update slots
+0.51.081.687 D srv  update_slots: posting NEXT_RESPONSE
+0.51.081.690 D que          post: new task, id = 126, front = 0
+0.51.081.697 D slot handle_last_: id  0 | task 110 | slot decode token, id=57650, n_ctx = 1024, n_tokens = 77, truncated = 0
+0.51.081.703 D set_adapters_lora: adapters = (nil)
+0.51.081.704 D adapters_lora_are_same: adapters = (nil)
+0.51.081.705 D set_embeddings: value = 0
+0.51.081.706 D srv        decode: n_batch (effective) = 1024, off = 0
+0.51.081.707 D que  yield_to_que: yielding to queue
+0.51.081.756 D que  process_new_: processing task, id = 126
+0.51.081.758 D srv  process_sing: decoding, decline task, id_task = 126
+0.51.081.758 D que  process_new_: task declined, id = 126
+0.51.081.882 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" backups"}}],"created":1791040361,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.51.084.486 D CUDA Graph id 7803 reused
+0.51.091.861 D CUDA Graph id 7805 reused
+0.51.097.310 D CUDA Graph id 7807 reused
+0.51.101.832 D CUDA Graph id 7809 reused
+0.51.106.603 D CUDA Graph id 7811 reused
+0.51.111.855 D CUDA Graph id 7813 reused
+0.51.117.168 D CUDA Graph id 7815 reused
+0.51.121.613 D CUDA Graph id 7817 reused
+0.51.126.398 D CUDA Graph id 7819 reused
+0.51.131.676 D CUDA Graph id 7821 reused
+0.51.137.012 D CUDA Graph id 7823 reused
+0.51.141.893 D CUDA Graph id 7825 reused
+0.51.147.296 D CUDA Graph id 7827 reused
+0.51.153.159 D CUDA Graph id 7829 reused
+0.51.159.130 D CUDA Graph id 7831 reused
+0.51.164.078 D CUDA Graph id 7833 reused
+0.51.169.316 D CUDA Graph id 7835 reused
+0.51.174.892 D CUDA Graph id 7837 reused
+0.51.180.335 D CUDA Graph id 7839 reused
+0.51.184.928 D CUDA Graph id 7841 reused
+0.51.189.782 D CUDA Graph id 7843 reused
+0.51.194.963 D CUDA Graph id 7845 reused
+0.51.200.148 D CUDA Graph id 7847 reused
+0.51.204.509 D CUDA Graph id 7849 reused
+0.51.209.311 D CUDA Graph id 7851 reused
+0.51.214.601 D CUDA Graph id 7853 reused
+0.51.219.814 D CUDA Graph id 7855 reused
+0.51.224.171 D CUDA Graph id 7857 reused
+0.51.228.953 D CUDA Graph id 7859 reused
+0.51.234.122 D CUDA Graph id 7861 reused
+0.51.239.286 D CUDA Graph id 7863 reused
+0.51.243.665 D CUDA Graph id 7865 reused
+0.51.248.447 D CUDA Graph id 7867 reused
+0.51.253.768 D CUDA Graph id 7869 reused
+0.51.259.047 D CUDA Graph id 7871 reused
+0.51.263.433 D CUDA Graph id 7873 reused
+0.51.268.195 D CUDA Graph id 7875 reused
+0.51.273.402 D CUDA Graph id 7877 reused
+0.51.278.624 D CUDA Graph id 7879 reused
+0.51.283.011 D CUDA Graph id 7881 reused
+0.51.287.830 D CUDA Graph id 7883 reused
+0.51.290.746 D CUDA Graph id 7885 reused
+0.51.292.134 D CUDA Graph id 7887 reused
+0.51.293.663 D CUDA Graph id 7889 reused
+0.51.294.986 D CUDA Graph id 7891 reused
+0.51.296.328 D CUDA Graph id 7893 reused
+0.51.324.411 D que  yield_to_que: done yielding to queue
+0.51.325.608 D res          send: sending result for task id = 110
+0.51.325.612 D res          send: task id = 110 pushed to result queue
+0.51.325.616 D slot process_toke: id  0 | task 110 | n_gen = 16, n_remaining = 48, next token:   513 ' are'
+0.51.325.619 D que    start_loop: waiting for new tasks
+0.51.325.620 D que    start_loop: processing new tasks
+0.51.325.624 D que  process_new_: processing task, id = 126
+0.51.325.626 D que    start_loop: update slots
+0.51.325.627 D srv  update_slots: posting NEXT_RESPONSE
+0.51.325.630 D que          post: new task, id = 127, front = 0
+0.51.325.636 D slot handle_last_: id  0 | task 110 | slot decode token, id=513, n_ctx = 1024, n_tokens = 78, truncated = 0
+0.51.325.642 D set_adapters_lora: adapters = (nil)
+0.51.325.643 D adapters_lora_are_same: adapters = (nil)
+0.51.325.644 D set_embeddings: value = 0
+0.51.325.645 D srv        decode: n_batch (effective) = 1024, off = 0
+0.51.325.646 D que  yield_to_que: yielding to queue
+0.51.325.694 D que  process_new_: processing task, id = 127
+0.51.325.696 D srv  process_sing: decoding, decline task, id_task = 127
+0.51.325.697 D que  process_new_: task declined, id = 127
+0.51.325.815 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" are"}}],"created":1791040361,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.51.328.380 D CUDA Graph id 7803 reused
+0.51.337.318 D CUDA Graph id 7805 reused
+0.51.343.590 D CUDA Graph id 7807 reused
+0.51.348.867 D CUDA Graph id 7809 reused
+0.51.354.361 D CUDA Graph id 7811 reused
+0.51.360.406 D CUDA Graph id 7813 reused
+0.51.366.338 D CUDA Graph id 7815 reused
+0.51.371.217 D CUDA Graph id 7817 reused
+0.51.376.624 D CUDA Graph id 7819 reused
+0.51.382.470 D CUDA Graph id 7821 reused
+0.51.388.274 D CUDA Graph id 7823 reused
+0.51.393.173 D CUDA Graph id 7825 reused
+0.51.398.609 D CUDA Graph id 7827 reused
+0.51.404.403 D CUDA Graph id 7829 reused
+0.51.410.213 D CUDA Graph id 7831 reused
+0.51.415.209 D CUDA Graph id 7833 reused
+0.51.420.664 D CUDA Graph id 7835 reused
+0.51.426.600 D CUDA Graph id 7837 reused
+0.51.432.362 D CUDA Graph id 7839 reused
+0.51.437.302 D CUDA Graph id 7841 reused
+0.51.442.701 D CUDA Graph id 7843 reused
+0.51.448.533 D CUDA Graph id 7845 reused
+0.51.454.347 D CUDA Graph id 7847 reused
+0.51.459.278 D CUDA Graph id 7849 reused
+0.51.464.709 D CUDA Graph id 7851 reused
+0.51.470.541 D CUDA Graph id 7853 reused
+0.51.476.498 D CUDA Graph id 7855 reused
+0.51.481.400 D CUDA Graph id 7857 reused
+0.51.486.832 D CUDA Graph id 7859 reused
+0.51.492.612 D CUDA Graph id 7861 reused
+0.51.498.402 D CUDA Graph id 7863 reused
+0.51.503.368 D CUDA Graph id 7865 reused
+0.51.508.827 D CUDA Graph id 7867 reused
+0.51.514.698 D CUDA Graph id 7869 reused
+0.51.520.479 D CUDA Graph id 7871 reused
+0.51.525.384 D CUDA Graph id 7873 reused
+0.51.530.838 D CUDA Graph id 7875 reused
+0.51.536.698 D CUDA Graph id 7877 reused
+0.51.542.606 D CUDA Graph id 7879 reused
+0.51.547.456 D CUDA Graph id 7881 reused
+0.51.553.026 D CUDA Graph id 7883 reused
+0.51.556.467 D CUDA Graph id 7885 reused
+0.51.558.183 D CUDA Graph id 7887 reused
+0.51.560.073 D CUDA Graph id 7889 reused
+0.51.561.766 D CUDA Graph id 7891 reused
+0.51.563.468 D CUDA Graph id 7893 reused
+0.51.595.802 D que  yield_to_que: done yielding to queue
+0.51.596.934 D res          send: sending result for task id = 110
+0.51.596.938 D res          send: task id = 110 pushed to result queue
+0.51.596.943 D slot process_toke: id  0 | task 110 | n_gen = 17, n_remaining = 47, next token:  5222 ' useful'
+0.51.596.946 D que    start_loop: waiting for new tasks
+0.51.596.946 D que    start_loop: processing new tasks
+0.51.596.951 D que  process_new_: processing task, id = 127
+0.51.596.953 D que    start_loop: update slots
+0.51.596.954 D srv  update_slots: posting NEXT_RESPONSE
+0.51.596.956 D que          post: new task, id = 128, front = 0
+0.51.596.963 D slot handle_last_: id  0 | task 110 | slot decode token, id=5222, n_ctx = 1024, n_tokens = 79, truncated = 0
+0.51.596.969 D set_adapters_lora: adapters = (nil)
+0.51.596.970 D adapters_lora_are_same: adapters = (nil)
+0.51.596.971 D set_embeddings: value = 0
+0.51.596.972 D srv        decode: n_batch (effective) = 1024, off = 0
+0.51.596.973 D que  yield_to_que: yielding to queue
+0.51.596.993 D que  process_new_: processing task, id = 128
+0.51.596.995 D srv  process_sing: decoding, decline task, id_task = 128
+0.51.596.995 D que  process_new_: task declined, id = 128
+0.51.597.118 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" useful"}}],"created":1791040362,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.51.599.923 D CUDA Graph id 7803 reused
+0.51.608.439 D CUDA Graph id 7805 reused
+0.51.614.582 D CUDA Graph id 7807 reused
+0.51.619.771 D CUDA Graph id 7809 reused
+0.51.625.549 D CUDA Graph id 7811 reused
+0.51.631.656 D CUDA Graph id 7813 reused
+0.51.637.593 D CUDA Graph id 7815 reused
+0.51.642.860 D CUDA Graph id 7817 reused
+0.51.648.346 D CUDA Graph id 7819 reused
+0.51.654.407 D CUDA Graph id 7821 reused
+0.51.660.433 D CUDA Graph id 7823 reused
+0.51.665.404 D CUDA Graph id 7825 reused
+0.51.671.270 D CUDA Graph id 7827 reused
+0.51.677.100 D CUDA Graph id 7829 reused
+0.51.682.881 D CUDA Graph id 7831 reused
+0.51.687.900 D CUDA Graph id 7833 reused
+0.51.693.339 D CUDA Graph id 7835 reused
+0.51.699.265 D CUDA Graph id 7837 reused
+0.51.705.115 D CUDA Graph id 7839 reused
+0.51.710.045 D CUDA Graph id 7841 reused
+0.51.715.453 D CUDA Graph id 7843 reused
+0.51.721.309 D CUDA Graph id 7845 reused
+0.51.726.436 D CUDA Graph id 7847 reused
+0.51.730.716 D CUDA Graph id 7849 reused
+0.51.735.455 D CUDA Graph id 7851 reused
+0.51.740.584 D CUDA Graph id 7853 reused
+0.51.745.778 D CUDA Graph id 7855 reused
+0.51.750.064 D CUDA Graph id 7857 reused
+0.51.754.750 D CUDA Graph id 7859 reused
+0.51.759.872 D CUDA Graph id 7861 reused
+0.51.765.007 D CUDA Graph id 7863 reused
+0.51.769.297 D CUDA Graph id 7865 reused
+0.51.773.991 D CUDA Graph id 7867 reused
+0.51.779.158 D CUDA Graph id 7869 reused
+0.51.784.300 D CUDA Graph id 7871 reused
+0.51.788.631 D CUDA Graph id 7873 reused
+0.51.793.348 D CUDA Graph id 7875 reused
+0.51.798.499 D CUDA Graph id 7877 reused
+0.51.803.628 D CUDA Graph id 7879 reused
+0.51.807.956 D CUDA Graph id 7881 reused
+0.51.812.678 D CUDA Graph id 7883 reused
+0.51.815.563 D CUDA Graph id 7885 reused
+0.51.816.941 D CUDA Graph id 7887 reused
+0.51.818.364 D CUDA Graph id 7889 reused
+0.51.819.636 D CUDA Graph id 7891 reused
+0.51.821.096 D CUDA Graph id 7893 reused
+0.51.854.013 D que  yield_to_que: done yielding to queue
+0.51.855.237 D res          send: sending result for task id = 110
+0.51.855.241 D res          send: task id = 110 pushed to result queue
+0.51.855.247 D slot process_toke: id  0 | task 110 | n_gen = 18, n_remaining = 46, next token:  1149 '."'
+0.51.855.250 D que    start_loop: waiting for new tasks
+0.51.855.251 D que    start_loop: processing new tasks
+0.51.855.255 D que  process_new_: processing task, id = 128
+0.51.855.258 D que    start_loop: update slots
+0.51.855.259 D srv  update_slots: posting NEXT_RESPONSE
+0.51.855.262 D que          post: new task, id = 129, front = 0
+0.51.855.269 D slot handle_last_: id  0 | task 110 | slot decode token, id=1149, n_ctx = 1024, n_tokens = 80, truncated = 0
+0.51.855.276 D set_adapters_lora: adapters = (nil)
+0.51.855.277 D adapters_lora_are_same: adapters = (nil)
+0.51.855.279 D set_embeddings: value = 0
+0.51.855.280 D srv        decode: n_batch (effective) = 1024, off = 0
+0.51.855.283 D que  yield_to_que: yielding to queue
+0.51.855.333 D que  process_new_: processing task, id = 129
+0.51.855.335 D srv  process_sing: decoding, decline task, id_task = 129
+0.51.855.335 D que  process_new_: task declined, id = 129
+0.51.855.454 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":".\""}}],"created":1791040362,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.51.858.025 D CUDA Graph id 7803 reused
+0.51.865.791 D CUDA Graph id 7805 reused
+0.51.871.350 D CUDA Graph id 7807 reused
+0.51.875.952 D CUDA Graph id 7809 reused
+0.51.880.877 D CUDA Graph id 7811 reused
+0.51.886.179 D CUDA Graph id 7813 reused
+0.51.891.476 D CUDA Graph id 7815 reused
+0.51.895.844 D CUDA Graph id 7817 reused
+0.51.900.615 D CUDA Graph id 7819 reused
+0.51.905.840 D CUDA Graph id 7821 reused
+0.51.911.050 D CUDA Graph id 7823 reused
+0.51.915.439 D CUDA Graph id 7825 reused
+0.51.920.340 D CUDA Graph id 7827 reused
+0.51.926.096 D CUDA Graph id 7829 reused
+0.51.932.468 D CUDA Graph id 7831 reused
+0.51.938.392 D CUDA Graph id 7833 reused
+0.51.944.466 D CUDA Graph id 7835 reused
+0.51.949.794 D CUDA Graph id 7837 reused
+0.51.956.126 D CUDA Graph id 7839 reused
+0.51.961.014 D CUDA Graph id 7841 reused
+0.51.967.016 D CUDA Graph id 7843 reused
+0.51.974.314 D CUDA Graph id 7845 reused
+0.51.980.799 D CUDA Graph id 7847 reused
+0.51.985.251 D CUDA Graph id 7849 reused
+0.51.990.952 D CUDA Graph id 7851 reused
+0.51.996.642 D CUDA Graph id 7853 reused
+0.52.001.942 D CUDA Graph id 7855 reused
+0.52.006.296 D CUDA Graph id 7857 reused
+0.52.011.024 D CUDA Graph id 7859 reused
+0.52.016.186 D CUDA Graph id 7861 reused
+0.52.021.326 D CUDA Graph id 7863 reused
+0.52.025.693 D CUDA Graph id 7865 reused
+0.52.030.398 D CUDA Graph id 7867 reused
+0.52.035.547 D CUDA Graph id 7869 reused
+0.52.040.668 D CUDA Graph id 7871 reused
+0.52.045.026 D CUDA Graph id 7873 reused
+0.52.049.698 D CUDA Graph id 7875 reused
+0.52.054.787 D CUDA Graph id 7877 reused
+0.52.059.920 D CUDA Graph id 7879 reused
+0.52.064.170 D CUDA Graph id 7881 reused
+0.52.068.927 D CUDA Graph id 7883 reused
+0.52.071.813 D CUDA Graph id 7885 reused
+0.52.073.145 D CUDA Graph id 7887 reused
+0.52.074.531 D CUDA Graph id 7889 reused
+0.52.075.780 D CUDA Graph id 7891 reused
+0.52.077.081 D CUDA Graph id 7893 reused
+0.52.109.740 D que  yield_to_que: done yielding to queue
+0.52.111.043 D res          send: sending result for task id = 110
+0.52.111.046 D res          send: task id = 110 pushed to result queue
+0.52.111.051 D slot process_toke: id  0 | task 110 | n_gen = 19, n_remaining = 45, next token: 14235 ' Need'
+0.52.111.055 D que    start_loop: waiting for new tasks
+0.52.111.055 D que    start_loop: processing new tasks
+0.52.111.060 D que  process_new_: processing task, id = 129
+0.52.111.062 D que    start_loop: update slots
+0.52.111.063 D srv  update_slots: posting NEXT_RESPONSE
+0.52.111.066 D que          post: new task, id = 130, front = 0
+0.52.111.073 D slot handle_last_: id  0 | task 110 | slot decode token, id=14235, n_ctx = 1024, n_tokens = 81, truncated = 0
+0.52.111.079 D set_adapters_lora: adapters = (nil)
+0.52.111.080 D adapters_lora_are_same: adapters = (nil)
+0.52.111.082 D set_embeddings: value = 0
+0.52.111.083 D srv        decode: n_batch (effective) = 1024, off = 0
+0.52.111.083 D que  yield_to_que: yielding to queue
+0.52.111.133 D que  process_new_: processing task, id = 130
+0.52.111.135 D srv  process_sing: decoding, decline task, id_task = 130
+0.52.111.136 D que  process_new_: task declined, id = 130
+0.52.111.266 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" Need"}}],"created":1791040362,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.52.113.716 D CUDA Graph id 7803 reused
+0.52.121.569 D CUDA Graph id 7805 reused
+0.52.127.155 D CUDA Graph id 7807 reused
+0.52.131.830 D CUDA Graph id 7809 reused
+0.52.136.692 D CUDA Graph id 7811 reused
+0.52.142.447 D CUDA Graph id 7813 reused
+0.52.148.392 D CUDA Graph id 7815 reused
+0.52.153.352 D CUDA Graph id 7817 reused
+0.52.158.765 D CUDA Graph id 7819 reused
+0.52.164.514 D CUDA Graph id 7821 reused
+0.52.170.197 D CUDA Graph id 7823 reused
+0.52.175.062 D CUDA Graph id 7825 reused
+0.52.180.014 D CUDA Graph id 7827 reused
+0.52.185.405 D CUDA Graph id 7829 reused
+0.52.190.814 D CUDA Graph id 7831 reused
+0.52.195.228 D CUDA Graph id 7833 reused
+0.52.199.968 D CUDA Graph id 7835 reused
+0.52.205.191 D CUDA Graph id 7837 reused
+0.52.210.318 D CUDA Graph id 7839 reused
+0.52.214.577 D CUDA Graph id 7841 reused
+0.52.219.309 D CUDA Graph id 7843 reused
+0.52.224.428 D CUDA Graph id 7845 reused
+0.52.229.620 D CUDA Graph id 7847 reused
+0.52.233.939 D CUDA Graph id 7849 reused
+0.52.238.661 D CUDA Graph id 7851 reused
+0.52.243.785 D CUDA Graph id 7853 reused
+0.52.249.889 D CUDA Graph id 7855 reused
+0.52.255.146 D CUDA Graph id 7857 reused
+0.52.262.550 D CUDA Graph id 7859 reused
+0.52.268.543 D CUDA Graph id 7861 reused
+0.52.273.820 D CUDA Graph id 7863 reused
+0.52.279.434 D CUDA Graph id 7865 reused
+0.52.285.014 D CUDA Graph id 7867 reused
+0.52.291.654 D CUDA Graph id 7869 reused
+0.52.299.369 D CUDA Graph id 7871 reused
+0.52.304.335 D CUDA Graph id 7873 reused
+0.52.309.052 D CUDA Graph id 7875 reused
+0.52.315.358 D CUDA Graph id 7877 reused
+0.52.320.581 D CUDA Graph id 7879 reused
+0.52.324.916 D CUDA Graph id 7881 reused
+0.52.329.625 D CUDA Graph id 7883 reused
+0.52.332.495 D CUDA Graph id 7885 reused
+0.52.333.813 D CUDA Graph id 7887 reused
+0.52.335.206 D CUDA Graph id 7889 reused
+0.52.336.489 D CUDA Graph id 7891 reused
+0.52.337.784 D CUDA Graph id 7893 reused
+0.52.364.962 D que  yield_to_que: done yielding to queue
+0.52.366.145 D res          send: sending result for task id = 110
+0.52.366.149 D res          send: task id = 110 pushed to result queue
+0.52.366.154 D slot process_toke: id  0 | task 110 | n_gen = 20, n_remaining = 44, next token:  1534 ' final'
+0.52.366.158 D que    start_loop: waiting for new tasks
+0.52.366.158 D que    start_loop: processing new tasks
+0.52.366.162 D que  process_new_: processing task, id = 130
+0.52.366.164 D que    start_loop: update slots
+0.52.366.165 D srv  update_slots: posting NEXT_RESPONSE
+0.52.366.168 D que          post: new task, id = 131, front = 0
+0.52.366.174 D slot handle_last_: id  0 | task 110 | slot decode token, id=1534, n_ctx = 1024, n_tokens = 82, truncated = 0
+0.52.366.181 D set_adapters_lora: adapters = (nil)
+0.52.366.182 D adapters_lora_are_same: adapters = (nil)
+0.52.366.183 D set_embeddings: value = 0
+0.52.366.184 D srv        decode: n_batch (effective) = 1024, off = 0
+0.52.366.185 D que  yield_to_que: yielding to queue
+0.52.366.236 D que  process_new_: processing task, id = 131
+0.52.366.238 D srv  process_sing: decoding, decline task, id_task = 131
+0.52.366.239 D que  process_new_: task declined, id = 131
+0.52.366.363 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" final"}}],"created":1791040363,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.52.368.789 D CUDA Graph id 7803 reused
+0.52.376.210 D CUDA Graph id 7805 reused
+0.52.381.679 D CUDA Graph id 7807 reused
+0.52.386.198 D CUDA Graph id 7809 reused
+0.52.390.964 D CUDA Graph id 7811 reused
+0.52.396.252 D CUDA Graph id 7813 reused
+0.52.401.464 D CUDA Graph id 7815 reused
+0.52.405.818 D CUDA Graph id 7817 reused
+0.52.410.623 D CUDA Graph id 7819 reused
+0.52.415.801 D CUDA Graph id 7821 reused
+0.52.421.027 D CUDA Graph id 7823 reused
+0.52.425.426 D CUDA Graph id 7825 reused
+0.52.430.166 D CUDA Graph id 7827 reused
+0.52.435.335 D CUDA Graph id 7829 reused
+0.52.440.531 D CUDA Graph id 7831 reused
+0.52.444.919 D CUDA Graph id 7833 reused
+0.52.449.704 D CUDA Graph id 7835 reused
+0.52.454.950 D CUDA Graph id 7837 reused
+0.52.460.172 D CUDA Graph id 7839 reused
+0.52.464.544 D CUDA Graph id 7841 reused
+0.52.469.316 D CUDA Graph id 7843 reused
+0.52.474.480 D CUDA Graph id 7845 reused
+0.52.479.691 D CUDA Graph id 7847 reused
+0.52.484.043 D CUDA Graph id 7849 reused
+0.52.488.808 D CUDA Graph id 7851 reused
+0.52.494.026 D CUDA Graph id 7853 reused
+0.52.499.275 D CUDA Graph id 7855 reused
+0.52.503.633 D CUDA Graph id 7857 reused
+0.52.508.416 D CUDA Graph id 7859 reused
+0.52.513.613 D CUDA Graph id 7861 reused
+0.52.518.794 D CUDA Graph id 7863 reused
+0.52.523.206 D CUDA Graph id 7865 reused
+0.52.528.016 D CUDA Graph id 7867 reused
+0.52.533.253 D CUDA Graph id 7869 reused
+0.52.538.466 D CUDA Graph id 7871 reused
+0.52.542.877 D CUDA Graph id 7873 reused
+0.52.547.646 D CUDA Graph id 7875 reused
+0.52.552.830 D CUDA Graph id 7877 reused
+0.52.558.129 D CUDA Graph id 7879 reused
+0.52.562.484 D CUDA Graph id 7881 reused
+0.52.567.403 D CUDA Graph id 7883 reused
+0.52.570.996 D CUDA Graph id 7885 reused
+0.52.572.865 D CUDA Graph id 7887 reused
+0.52.574.936 D CUDA Graph id 7889 reused
+0.52.577.264 D CUDA Graph id 7891 reused
+0.52.579.596 D CUDA Graph id 7893 reused
+0.52.608.342 D que  yield_to_que: done yielding to queue
+0.52.609.859 D res          send: sending result for task id = 110
+0.52.609.864 D res          send: task id = 110 pushed to result queue
+0.52.609.869 D slot process_toke: id  0 | task 110 | n_gen = 21, n_remaining = 43, next token:   799 ' one'
+0.52.609.873 D que    start_loop: waiting for new tasks
+0.52.609.874 D que    start_loop: processing new tasks
+0.52.609.880 D que  process_new_: processing task, id = 131
+0.52.609.883 D que    start_loop: update slots
+0.52.609.884 D srv  update_slots: posting NEXT_RESPONSE
+0.52.609.888 D que          post: new task, id = 132, front = 0
+0.52.609.896 D slot handle_last_: id  0 | task 110 | slot decode token, id=799, n_ctx = 1024, n_tokens = 83, truncated = 0
+0.52.609.904 D set_adapters_lora: adapters = (nil)
+0.52.609.905 D adapters_lora_are_same: adapters = (nil)
+0.52.609.907 D set_embeddings: value = 0
+0.52.609.908 D srv        decode: n_batch (effective) = 1024, off = 0
+0.52.609.909 D que  yield_to_que: yielding to queue
+0.52.609.932 D que  process_new_: processing task, id = 132
+0.52.609.934 D srv  process_sing: decoding, decline task, id_task = 132
+0.52.609.934 D que  process_new_: task declined, id = 132
+0.52.610.067 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" one"}}],"created":1791040363,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.52.612.681 D CUDA Graph id 7803 reused
+0.52.621.463 D CUDA Graph id 7805 reused
+0.52.627.580 D CUDA Graph id 7807 reused
+0.52.632.499 D CUDA Graph id 7809 reused
+0.52.637.721 D CUDA Graph id 7811 reused
+0.52.643.344 D CUDA Graph id 7813 reused
+0.52.648.895 D CUDA Graph id 7815 reused
+0.52.653.590 D CUDA Graph id 7817 reused
+0.52.658.726 D CUDA Graph id 7819 reused
+0.52.664.234 D CUDA Graph id 7821 reused
+0.52.669.772 D CUDA Graph id 7823 reused
+0.52.674.425 D CUDA Graph id 7825 reused
+0.52.679.537 D CUDA Graph id 7827 reused
+0.52.685.056 D CUDA Graph id 7829 reused
+0.52.690.546 D CUDA Graph id 7831 reused
+0.52.695.307 D CUDA Graph id 7833 reused
+0.52.700.424 D CUDA Graph id 7835 reused
+0.52.706.085 D CUDA Graph id 7837 reused
+0.52.711.617 D CUDA Graph id 7839 reused
+0.52.716.290 D CUDA Graph id 7841 reused
+0.52.721.409 D CUDA Graph id 7843 reused
+0.52.726.618 D CUDA Graph id 7845 reused
+0.52.731.814 D CUDA Graph id 7847 reused
+0.52.736.202 D CUDA Graph id 7849 reused
+0.52.740.994 D CUDA Graph id 7851 reused
+0.52.746.253 D CUDA Graph id 7853 reused
+0.52.751.480 D CUDA Graph id 7855 reused
+0.52.755.804 D CUDA Graph id 7857 reused
+0.52.760.589 D CUDA Graph id 7859 reused
+0.52.765.781 D CUDA Graph id 7861 reused
+0.52.770.977 D CUDA Graph id 7863 reused
+0.52.775.425 D CUDA Graph id 7865 reused
+0.52.780.127 D CUDA Graph id 7867 reused
+0.52.785.439 D CUDA Graph id 7869 reused
+0.52.790.598 D CUDA Graph id 7871 reused
+0.52.794.978 D CUDA Graph id 7873 reused
+0.52.799.767 D CUDA Graph id 7875 reused
+0.52.804.968 D CUDA Graph id 7877 reused
+0.52.810.119 D CUDA Graph id 7879 reused
+0.52.814.534 D CUDA Graph id 7881 reused
+0.52.819.279 D CUDA Graph id 7883 reused
+0.52.822.185 D CUDA Graph id 7885 reused
+0.52.823.485 D CUDA Graph id 7887 reused
+0.52.824.871 D CUDA Graph id 7889 reused
+0.52.826.151 D CUDA Graph id 7891 reused
+0.52.827.421 D CUDA Graph id 7893 reused
+0.52.853.101 D que  yield_to_que: done yielding to queue
+0.52.854.275 D res          send: sending result for task id = 110
+0.52.854.279 D res          send: task id = 110 pushed to result queue
+0.52.854.285 D slot process_toke: id  0 | task 110 | n_gen = 22, n_remaining = 42, next token: 11316 ' sentence'
+0.52.854.288 D que    start_loop: waiting for new tasks
+0.52.854.288 D que    start_loop: processing new tasks
+0.52.854.292 D que  process_new_: processing task, id = 132
+0.52.854.294 D que    start_loop: update slots
+0.52.854.295 D srv  update_slots: posting NEXT_RESPONSE
+0.52.854.298 D que          post: new task, id = 133, front = 0
+0.52.854.304 D slot handle_last_: id  0 | task 110 | slot decode token, id=11316, n_ctx = 1024, n_tokens = 84, truncated = 0
+0.52.854.310 D set_adapters_lora: adapters = (nil)
+0.52.854.311 D adapters_lora_are_same: adapters = (nil)
+0.52.854.324 D set_embeddings: value = 0
+0.52.854.326 D srv        decode: n_batch (effective) = 1024, off = 0
+0.52.854.327 D que  yield_to_que: yielding to queue
+0.52.854.375 D que  process_new_: processing task, id = 133
+0.52.854.377 D srv  process_sing: decoding, decline task, id_task = 133
+0.52.854.378 D que  process_new_: task declined, id = 133
+0.52.854.592 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" sentence"}}],"created":1791040363,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.52.856.956 D CUDA Graph id 7803 reused
+0.52.864.360 D CUDA Graph id 7805 reused
+0.52.869.820 D CUDA Graph id 7807 reused
+0.52.874.361 D CUDA Graph id 7809 reused
+0.52.880.279 D CUDA Graph id 7811 reused
+0.52.887.297 D CUDA Graph id 7813 reused
+0.52.894.310 D CUDA Graph id 7815 reused
+0.52.899.117 D CUDA Graph id 7817 reused
+0.52.904.160 D CUDA Graph id 7819 reused
+0.52.910.262 D CUDA Graph id 7821 reused
+0.52.916.588 D CUDA Graph id 7823 reused
+0.52.922.328 D CUDA Graph id 7825 reused
+0.52.929.110 D CUDA Graph id 7827 reused
+0.52.934.583 D CUDA Graph id 7829 reused
+0.52.940.506 D CUDA Graph id 7831 reused
+0.52.945.649 D CUDA Graph id 7833 reused
+0.52.950.457 D CUDA Graph id 7835 reused
+0.52.955.768 D CUDA Graph id 7837 reused
+0.52.960.970 D CUDA Graph id 7839 reused
+0.52.965.368 D CUDA Graph id 7841 reused
+0.52.970.110 D CUDA Graph id 7843 reused
+0.52.975.304 D CUDA Graph id 7845 reused
+0.52.980.492 D CUDA Graph id 7847 reused
+0.52.984.914 D CUDA Graph id 7849 reused
+0.52.989.723 D CUDA Graph id 7851 reused
+0.52.994.924 D CUDA Graph id 7853 reused
+0.53.000.126 D CUDA Graph id 7855 reused
+0.53.004.517 D CUDA Graph id 7857 reused
+0.53.009.329 D CUDA Graph id 7859 reused
+0.53.014.538 D CUDA Graph id 7861 reused
+0.53.019.698 D CUDA Graph id 7863 reused
+0.53.024.137 D CUDA Graph id 7865 reused
+0.53.028.941 D CUDA Graph id 7867 reused
+0.53.034.165 D CUDA Graph id 7869 reused
+0.53.039.313 D CUDA Graph id 7871 reused
+0.53.043.756 D CUDA Graph id 7873 reused
+0.53.048.509 D CUDA Graph id 7875 reused
+0.53.053.716 D CUDA Graph id 7877 reused
+0.53.058.922 D CUDA Graph id 7879 reused
+0.53.063.304 D CUDA Graph id 7881 reused
+0.53.068.108 D CUDA Graph id 7883 reused
+0.53.071.045 D CUDA Graph id 7885 reused
+0.53.072.422 D CUDA Graph id 7887 reused
+0.53.073.881 D CUDA Graph id 7889 reused
+0.53.075.201 D CUDA Graph id 7891 reused
+0.53.076.537 D CUDA Graph id 7893 reused
+0.53.102.978 D que  yield_to_que: done yielding to queue
+0.53.104.204 D res          send: sending result for task id = 110
+0.53.104.208 D res          send: task id = 110 pushed to result queue
+0.53.104.214 D slot process_toke: id  0 | task 110 | n_gen = 23, n_remaining = 41, next token:    13 '.'
+0.53.104.217 D que    start_loop: waiting for new tasks
+0.53.104.218 D que    start_loop: processing new tasks
+0.53.104.222 D que  process_new_: processing task, id = 133
+0.53.104.225 D que    start_loop: update slots
+0.53.104.226 D srv  update_slots: posting NEXT_RESPONSE
+0.53.104.229 D que          post: new task, id = 134, front = 0
+0.53.104.235 D slot handle_last_: id  0 | task 110 | slot decode token, id=13, n_ctx = 1024, n_tokens = 85, truncated = 0
+0.53.104.242 D set_adapters_lora: adapters = (nil)
+0.53.104.243 D adapters_lora_are_same: adapters = (nil)
+0.53.104.244 D set_embeddings: value = 0
+0.53.104.246 D srv        decode: n_batch (effective) = 1024, off = 0
+0.53.104.246 D que  yield_to_que: yielding to queue
+0.53.104.305 D que  process_new_: processing task, id = 134
+0.53.104.307 D srv  process_sing: decoding, decline task, id_task = 134
+0.53.104.307 D que  process_new_: task declined, id = 134
+0.53.104.426 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":"."}}],"created":1791040363,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.53.106.800 D CUDA Graph id 7803 reused
+0.53.114.361 D CUDA Graph id 7805 reused
+0.53.119.950 D CUDA Graph id 7807 reused
+0.53.124.520 D CUDA Graph id 7809 reused
+0.53.129.365 D CUDA Graph id 7811 reused
+0.53.134.594 D CUDA Graph id 7813 reused
+0.53.139.879 D CUDA Graph id 7815 reused
+0.53.144.825 D CUDA Graph id 7817 reused
+0.53.150.232 D CUDA Graph id 7819 reused
+0.53.156.051 D CUDA Graph id 7821 reused
+0.53.161.922 D CUDA Graph id 7823 reused
+0.53.166.833 D CUDA Graph id 7825 reused
+0.53.172.039 D CUDA Graph id 7827 reused
+0.53.177.716 D CUDA Graph id 7829 reused
+0.53.183.082 D CUDA Graph id 7831 reused
+0.53.187.715 D CUDA Graph id 7833 reused
+0.53.192.699 D CUDA Graph id 7835 reused
+0.53.198.667 D CUDA Graph id 7837 reused
+0.53.205.346 D CUDA Graph id 7839 reused
+0.53.211.569 D CUDA Graph id 7841 reused
+0.53.217.273 D CUDA Graph id 7843 reused
+0.53.222.686 D CUDA Graph id 7845 reused
+0.53.228.964 D CUDA Graph id 7847 reused
+0.53.233.823 D CUDA Graph id 7849 reused
+0.53.239.194 D CUDA Graph id 7851 reused
+0.53.245.890 D CUDA Graph id 7853 reused
+0.53.251.539 D CUDA Graph id 7855 reused
+0.53.255.874 D CUDA Graph id 7857 reused
+0.53.261.486 D CUDA Graph id 7859 reused
+0.53.266.626 D CUDA Graph id 7861 reused
+0.53.271.739 D CUDA Graph id 7863 reused
+0.53.276.063 D CUDA Graph id 7865 reused
+0.53.280.722 D CUDA Graph id 7867 reused
+0.53.285.892 D CUDA Graph id 7869 reused
+0.53.290.990 D CUDA Graph id 7871 reused
+0.53.295.321 D CUDA Graph id 7873 reused
+0.53.300.053 D CUDA Graph id 7875 reused
+0.53.305.214 D CUDA Graph id 7877 reused
+0.53.310.420 D CUDA Graph id 7879 reused
+0.53.314.701 D CUDA Graph id 7881 reused
+0.53.319.439 D CUDA Graph id 7883 reused
+0.53.322.362 D CUDA Graph id 7885 reused
+0.53.323.668 D CUDA Graph id 7887 reused
+0.53.325.076 D CUDA Graph id 7889 reused
+0.53.326.360 D CUDA Graph id 7891 reused
+0.53.327.647 D CUDA Graph id 7893 reused
+0.53.360.069 D que  yield_to_que: done yielding to queue
+0.53.361.337 D res          send: sending result for task id = 110
+0.53.361.341 D res          send: task id = 110 pushed to result queue
+0.53.361.346 D slot process_toke: id  0 | task 110 | n_gen = 24, n_remaining = 40, next token: 28320 ' Ensure'
+0.53.361.350 D que    start_loop: waiting for new tasks
+0.53.361.350 D que    start_loop: processing new tasks
+0.53.361.354 D que  process_new_: processing task, id = 134
+0.53.361.356 D que    start_loop: update slots
+0.53.361.357 D srv  update_slots: posting NEXT_RESPONSE
+0.53.361.360 D que          post: new task, id = 135, front = 0
+0.53.361.366 D slot handle_last_: id  0 | task 110 | slot decode token, id=28320, n_ctx = 1024, n_tokens = 86, truncated = 0
+0.53.361.372 D set_adapters_lora: adapters = (nil)
+0.53.361.373 D adapters_lora_are_same: adapters = (nil)
+0.53.361.374 D set_embeddings: value = 0
+0.53.361.376 D srv        decode: n_batch (effective) = 1024, off = 0
+0.53.361.376 D que  yield_to_que: yielding to queue
+0.53.361.425 D que  process_new_: processing task, id = 135
+0.53.361.427 D srv  process_sing: decoding, decline task, id_task = 135
+0.53.361.427 D que  process_new_: task declined, id = 135
+0.53.361.679 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" Ensure"}}],"created":1791040364,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.53.363.920 D CUDA Graph id 7803 reused
+0.53.371.531 D CUDA Graph id 7805 reused
+0.53.377.001 D CUDA Graph id 7807 reused
+0.53.381.559 D CUDA Graph id 7809 reused
+0.53.386.303 D CUDA Graph id 7811 reused
+0.53.391.542 D CUDA Graph id 7813 reused
+0.53.396.837 D CUDA Graph id 7815 reused
+0.53.401.191 D CUDA Graph id 7817 reused
+0.53.406.004 D CUDA Graph id 7819 reused
+0.53.411.265 D CUDA Graph id 7821 reused
+0.53.416.509 D CUDA Graph id 7823 reused
+0.53.420.894 D CUDA Graph id 7825 reused
+0.53.425.713 D CUDA Graph id 7827 reused
+0.53.430.937 D CUDA Graph id 7829 reused
+0.53.436.099 D CUDA Graph id 7831 reused
+0.53.440.549 D CUDA Graph id 7833 reused
+0.53.445.364 D CUDA Graph id 7835 reused
+0.53.450.611 D CUDA Graph id 7837 reused
+0.53.455.814 D CUDA Graph id 7839 reused
+0.53.460.162 D CUDA Graph id 7841 reused
+0.53.464.998 D CUDA Graph id 7843 reused
+0.53.470.224 D CUDA Graph id 7845 reused
+0.53.475.418 D CUDA Graph id 7847 reused
+0.53.479.742 D CUDA Graph id 7849 reused
+0.53.484.597 D CUDA Graph id 7851 reused
+0.53.489.834 D CUDA Graph id 7853 reused
+0.53.495.042 D CUDA Graph id 7855 reused
+0.53.499.423 D CUDA Graph id 7857 reused
+0.53.504.206 D CUDA Graph id 7859 reused
+0.53.509.446 D CUDA Graph id 7861 reused
+0.53.514.984 D CUDA Graph id 7863 reused
+0.53.520.283 D CUDA Graph id 7865 reused
+0.53.527.005 D CUDA Graph id 7867 reused
+0.53.533.668 D CUDA Graph id 7869 reused
+0.53.539.024 D CUDA Graph id 7871 reused
+0.53.543.765 D CUDA Graph id 7873 reused
+0.53.549.578 D CUDA Graph id 7875 reused
+0.53.555.308 D CUDA Graph id 7877 reused
+0.53.561.618 D CUDA Graph id 7879 reused
+0.53.566.883 D CUDA Graph id 7881 reused
+0.53.571.824 D CUDA Graph id 7883 reused
+0.53.574.950 D CUDA Graph id 7885 reused
+0.53.576.532 D CUDA Graph id 7887 reused
+0.53.578.535 D CUDA Graph id 7889 reused
+0.53.580.119 D CUDA Graph id 7891 reused
+0.53.581.526 D CUDA Graph id 7893 reused
+0.53.613.698 D que  yield_to_que: done yielding to queue
+0.53.614.964 D res          send: sending result for task id = 110
+0.53.614.968 D res          send: task id = 110 pushed to result queue
+0.53.614.973 D slot process_toke: id  0 | task 110 | n_gen = 25, n_remaining = 39, next token: 61446 ' concise'
+0.53.614.976 D que    start_loop: waiting for new tasks
+0.53.614.977 D que    start_loop: processing new tasks
+0.53.614.981 D que  process_new_: processing task, id = 135
+0.53.614.983 D que    start_loop: update slots
+0.53.614.984 D srv  update_slots: posting NEXT_RESPONSE
+0.53.614.987 D que          post: new task, id = 136, front = 0
+0.53.614.994 D slot handle_last_: id  0 | task 110 | slot decode token, id=61446, n_ctx = 1024, n_tokens = 87, truncated = 0
+0.53.615.000 D set_adapters_lora: adapters = (nil)
+0.53.615.001 D adapters_lora_are_same: adapters = (nil)
+0.53.615.002 D set_embeddings: value = 0
+0.53.615.003 D srv        decode: n_batch (effective) = 1024, off = 0
+0.53.615.004 D que  yield_to_que: yielding to queue
+0.53.615.053 D que  process_new_: processing task, id = 136
+0.53.615.055 D srv  process_sing: decoding, decline task, id_task = 136
+0.53.615.056 D que  process_new_: task declined, id = 136
+0.53.615.187 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":" concise"}}],"created":1791040364,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.53.617.666 D CUDA Graph id 7803 reused
+0.53.625.739 D CUDA Graph id 7805 reused
+0.53.631.642 D CUDA Graph id 7807 reused
+0.53.636.557 D CUDA Graph id 7809 reused
+0.53.641.853 D CUDA Graph id 7811 reused
+0.53.647.539 D CUDA Graph id 7813 reused
+0.53.653.120 D CUDA Graph id 7815 reused
+0.53.657.810 D CUDA Graph id 7817 reused
+0.53.662.945 D CUDA Graph id 7819 reused
+0.53.668.496 D CUDA Graph id 7821 reused
+0.53.674.095 D CUDA Graph id 7823 reused
+0.53.678.829 D CUDA Graph id 7825 reused
+0.53.683.945 D CUDA Graph id 7827 reused
+0.53.689.516 D CUDA Graph id 7829 reused
+0.53.695.055 D CUDA Graph id 7831 reused
+0.53.699.829 D CUDA Graph id 7833 reused
+0.53.704.971 D CUDA Graph id 7835 reused
+0.53.710.612 D CUDA Graph id 7837 reused
+0.53.716.130 D CUDA Graph id 7839 reused
+0.53.720.823 D CUDA Graph id 7841 reused
+0.53.725.964 D CUDA Graph id 7843 reused
+0.53.731.550 D CUDA Graph id 7845 reused
+0.53.737.128 D CUDA Graph id 7847 reused
+0.53.741.800 D CUDA Graph id 7849 reused
+0.53.746.961 D CUDA Graph id 7851 reused
+0.53.752.541 D CUDA Graph id 7853 reused
+0.53.757.792 D CUDA Graph id 7855 reused
+0.53.762.193 D CUDA Graph id 7857 reused
+0.53.766.966 D CUDA Graph id 7859 reused
+0.53.772.204 D CUDA Graph id 7861 reused
+0.53.777.393 D CUDA Graph id 7863 reused
+0.53.781.778 D CUDA Graph id 7865 reused
+0.53.786.551 D CUDA Graph id 7867 reused
+0.53.791.770 D CUDA Graph id 7869 reused
+0.53.797.007 D CUDA Graph id 7871 reused
+0.53.801.364 D CUDA Graph id 7873 reused
+0.53.806.203 D CUDA Graph id 7875 reused
+0.53.811.464 D CUDA Graph id 7877 reused
+0.53.816.691 D CUDA Graph id 7879 reused
+0.53.821.061 D CUDA Graph id 7881 reused
+0.53.825.902 D CUDA Graph id 7883 reused
+0.53.828.824 D CUDA Graph id 7885 reused
+0.53.830.201 D CUDA Graph id 7887 reused
+0.53.832.040 D CUDA Graph id 7889 reused
+0.53.833.815 D CUDA Graph id 7891 reused
+0.53.835.582 D CUDA Graph id 7893 reused
+0.53.868.461 D que  yield_to_que: done yielding to queue
+0.53.869.592 D res          send: sending result for task id = 110
+0.53.869.596 D res          send: task id = 110 pushed to result queue
+0.53.869.600 D slot process_toke: id  0 | task 110 | n_gen = 26, n_remaining = 38, next token:    13 '.'
+0.53.869.604 D que    start_loop: waiting for new tasks
+0.53.869.604 D que    start_loop: processing new tasks
+0.53.869.608 D que  process_new_: processing task, id = 136
+0.53.869.610 D que    start_loop: update slots
+0.53.869.611 D srv  update_slots: posting NEXT_RESPONSE
+0.53.869.614 D que          post: new task, id = 137, front = 0
+0.53.869.619 D slot handle_last_: id  0 | task 110 | slot decode token, id=13, n_ctx = 1024, n_tokens = 88, truncated = 0
+0.53.869.625 D set_adapters_lora: adapters = (nil)
+0.53.869.626 D adapters_lora_are_same: adapters = (nil)
+0.53.869.627 D set_embeddings: value = 0
+0.53.869.628 D srv        decode: n_batch (effective) = 1024, off = 0
+0.53.869.629 D que  yield_to_que: yielding to queue
+0.53.869.657 D que  process_new_: processing task, id = 137
+0.53.869.659 D srv  process_sing: decoding, decline task, id_task = 137
+0.53.869.659 D que  process_new_: task declined, id = 137
+0.53.869.807 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":"."}}],"created":1791040364,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.53.872.214 D CUDA Graph id 7803 reused
+0.53.879.950 D CUDA Graph id 7805 reused
+0.53.885.951 D CUDA Graph id 7807 reused
+0.53.890.822 D CUDA Graph id 7809 reused
+0.53.896.001 D CUDA Graph id 7811 reused
+0.53.901.673 D CUDA Graph id 7813 reused
+0.53.907.181 D CUDA Graph id 7815 reused
+0.53.911.860 D CUDA Graph id 7817 reused
+0.53.916.968 D CUDA Graph id 7819 reused
+0.53.922.487 D CUDA Graph id 7821 reused
+0.53.928.013 D CUDA Graph id 7823 reused
+0.53.932.482 D CUDA Graph id 7825 reused
+0.53.937.257 D CUDA Graph id 7827 reused
+0.53.942.426 D CUDA Graph id 7829 reused
+0.53.947.629 D CUDA Graph id 7831 reused
+0.53.952.010 D CUDA Graph id 7833 reused
+0.53.956.748 D CUDA Graph id 7835 reused
+0.53.962.013 D CUDA Graph id 7837 reused
+0.53.967.197 D CUDA Graph id 7839 reused
+0.53.971.540 D CUDA Graph id 7841 reused
+0.53.976.290 D CUDA Graph id 7843 reused
+0.53.981.508 D CUDA Graph id 7845 reused
+0.53.986.770 D CUDA Graph id 7847 reused
+0.53.991.224 D CUDA Graph id 7849 reused
+0.53.996.015 D CUDA Graph id 7851 reused
+0.54.001.222 D CUDA Graph id 7853 reused
+0.54.006.416 D CUDA Graph id 7855 reused
+0.54.010.795 D CUDA Graph id 7857 reused
+0.54.015.515 D CUDA Graph id 7859 reused
+0.54.020.708 D CUDA Graph id 7861 reused
+0.54.025.872 D CUDA Graph id 7863 reused
+0.54.030.216 D CUDA Graph id 7865 reused
+0.54.034.961 D CUDA Graph id 7867 reused
+0.54.040.164 D CUDA Graph id 7869 reused
+0.54.045.386 D CUDA Graph id 7871 reused
+0.54.049.758 D CUDA Graph id 7873 reused
+0.54.054.517 D CUDA Graph id 7875 reused
+0.54.059.718 D CUDA Graph id 7877 reused
+0.54.065.002 D CUDA Graph id 7879 reused
+0.54.069.313 D CUDA Graph id 7881 reused
+0.54.074.057 D CUDA Graph id 7883 reused
+0.54.077.005 D CUDA Graph id 7885 reused
+0.54.078.370 D CUDA Graph id 7887 reused
+0.54.079.827 D CUDA Graph id 7889 reused
+0.54.081.171 D CUDA Graph id 7891 reused
+0.54.082.554 D CUDA Graph id 7893 reused
+0.54.114.783 D que  yield_to_que: done yielding to queue
+0.54.115.899 D res          send: sending result for task id = 110
+0.54.115.903 D res          send: task id = 110 pushed to result queue
+0.54.115.907 D slot process_toke: id  0 | task 110 | n_gen = 27, n_remaining = 37, next token:   198 '
+'
+0.54.115.910 D que    start_loop: waiting for new tasks
+0.54.115.910 D que    start_loop: processing new tasks
+0.54.115.914 D que  process_new_: processing task, id = 137
+0.54.115.916 D que    start_loop: update slots
+0.54.115.917 D srv  update_slots: posting NEXT_RESPONSE
+0.54.115.920 D que          post: new task, id = 138, front = 0
+0.54.115.926 D slot handle_last_: id  0 | task 110 | slot decode token, id=198, n_ctx = 1024, n_tokens = 89, truncated = 0
+0.54.115.932 D set_adapters_lora: adapters = (nil)
+0.54.115.933 D adapters_lora_are_same: adapters = (nil)
+0.54.115.934 D set_embeddings: value = 0
+0.54.115.935 D srv        decode: n_batch (effective) = 1024, off = 0
+0.54.115.936 D que  yield_to_que: yielding to queue
+0.54.115.961 D que  process_new_: processing task, id = 138
+0.54.115.963 D srv  process_sing: decoding, decline task, id_task = 138
+0.54.115.964 D que  process_new_: task declined, id = 138
+0.54.116.253 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"reasoning_content":"\n"}}],"created":1791040364,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.54.118.624 D CUDA Graph id 7803 reused
+0.54.126.258 D CUDA Graph id 7805 reused
+0.54.131.692 D CUDA Graph id 7807 reused
+0.54.136.476 D CUDA Graph id 7809 reused
+0.54.141.933 D CUDA Graph id 7811 reused
+0.54.148.411 D CUDA Graph id 7813 reused
+0.54.154.379 D CUDA Graph id 7815 reused
+0.54.159.363 D CUDA Graph id 7817 reused
+0.54.165.338 D CUDA Graph id 7819 reused
+0.54.171.170 D CUDA Graph id 7821 reused
+0.54.177.021 D CUDA Graph id 7823 reused
+0.54.182.855 D CUDA Graph id 7825 reused
+0.54.188.022 D CUDA Graph id 7827 reused
+0.54.193.464 D CUDA Graph id 7829 reused
+0.54.199.646 D CUDA Graph id 7831 reused
+0.54.204.056 D CUDA Graph id 7833 reused
+0.54.208.743 D CUDA Graph id 7835 reused
+0.54.213.899 D CUDA Graph id 7837 reused
+0.54.218.973 D CUDA Graph id 7839 reused
+0.54.223.258 D CUDA Graph id 7841 reused
+0.54.228.016 D CUDA Graph id 7843 reused
+0.54.233.144 D CUDA Graph id 7845 reused
+0.54.238.346 D CUDA Graph id 7847 reused
+0.54.242.628 D CUDA Graph id 7849 reused
+0.54.247.303 D CUDA Graph id 7851 reused
+0.54.252.383 D CUDA Graph id 7853 reused
+0.54.257.574 D CUDA Graph id 7855 reused
+0.54.261.859 D CUDA Graph id 7857 reused
+0.54.266.583 D CUDA Graph id 7859 reused
+0.54.271.714 D CUDA Graph id 7861 reused
+0.54.276.829 D CUDA Graph id 7863 reused
+0.54.281.111 D CUDA Graph id 7865 reused
+0.54.285.762 D CUDA Graph id 7867 reused
+0.54.290.880 D CUDA Graph id 7869 reused
+0.54.296.000 D CUDA Graph id 7871 reused
+0.54.300.250 D CUDA Graph id 7873 reused
+0.54.304.966 D CUDA Graph id 7875 reused
+0.54.310.080 D CUDA Graph id 7877 reused
+0.54.315.183 D CUDA Graph id 7879 reused
+0.54.319.447 D CUDA Graph id 7881 reused
+0.54.324.198 D CUDA Graph id 7883 reused
+0.54.327.058 D CUDA Graph id 7885 reused
+0.54.328.346 D CUDA Graph id 7887 reused
+0.54.329.730 D CUDA Graph id 7889 reused
+0.54.331.033 D CUDA Graph id 7891 reused
+0.54.332.374 D CUDA Graph id 7893 reused
+0.54.358.652 D que  yield_to_que: done yielding to queue
+0.54.359.843 D res          send: sending result for task id = 110
+0.54.359.846 D res          send: task id = 110 pushed to result queue
+0.54.359.851 D slot process_toke: id  0 | task 110 | n_gen = 28, n_remaining = 36, next token: 248069 '</think>'
+0.54.359.854 D que    start_loop: waiting for new tasks
+0.54.359.855 D que    start_loop: processing new tasks
+0.54.359.859 D que  process_new_: processing task, id = 138
+0.54.359.861 D que    start_loop: update slots
+0.54.359.862 D srv  update_slots: posting NEXT_RESPONSE
+0.54.359.865 D que          post: new task, id = 139, front = 0
+0.54.359.870 D slot handle_last_: id  0 | task 110 | slot decode token, id=248069, n_ctx = 1024, n_tokens = 90, truncated = 0
+0.54.359.877 D set_adapters_lora: adapters = (nil)
+0.54.359.877 D adapters_lora_are_same: adapters = (nil)
+0.54.359.878 D set_embeddings: value = 0
+0.54.359.880 D srv        decode: n_batch (effective) = 1024, off = 0
+0.54.359.880 D que  yield_to_que: yielding to queue
+0.54.359.908 D que  process_new_: processing task, id = 139
+0.54.359.910 D srv  process_sing: decoding, decline task, id_task = 139
+0.54.359.911 D que  process_new_: task declined, id = 139
+0.54.362.434 D CUDA Graph id 7803 reused
+0.54.369.944 D CUDA Graph id 7805 reused
+0.54.375.382 D CUDA Graph id 7807 reused
+0.54.379.832 D CUDA Graph id 7809 reused
+0.54.384.586 D CUDA Graph id 7811 reused
+0.54.389.827 D CUDA Graph id 7813 reused
+0.54.394.987 D CUDA Graph id 7815 reused
+0.54.399.334 D CUDA Graph id 7817 reused
+0.54.404.064 D CUDA Graph id 7819 reused
+0.54.409.313 D CUDA Graph id 7821 reused
+0.54.414.502 D CUDA Graph id 7823 reused
+0.54.418.840 D CUDA Graph id 7825 reused
+0.54.423.622 D CUDA Graph id 7827 reused
+0.54.428.804 D CUDA Graph id 7829 reused
+0.54.433.938 D CUDA Graph id 7831 reused
+0.54.438.324 D CUDA Graph id 7833 reused
+0.54.443.101 D CUDA Graph id 7835 reused
+0.54.448.321 D CUDA Graph id 7837 reused
+0.54.453.964 D CUDA Graph id 7839 reused
+0.54.459.174 D CUDA Graph id 7841 reused
+0.54.465.926 D CUDA Graph id 7843 reused
+0.54.472.464 D CUDA Graph id 7845 reused
+0.54.477.844 D CUDA Graph id 7847 reused
+0.54.482.718 D CUDA Graph id 7849 reused
+0.54.488.596 D CUDA Graph id 7851 reused
+0.54.494.959 D CUDA Graph id 7853 reused
+0.54.502.130 D CUDA Graph id 7855 reused
+0.54.507.493 D CUDA Graph id 7857 reused
+0.54.512.454 D CUDA Graph id 7859 reused
+0.54.518.592 D CUDA Graph id 7861 reused
+0.54.524.185 D CUDA Graph id 7863 reused
+0.54.528.590 D CUDA Graph id 7865 reused
+0.54.533.416 D CUDA Graph id 7867 reused
+0.54.538.662 D CUDA Graph id 7869 reused
+0.54.543.814 D CUDA Graph id 7871 reused
+0.54.548.202 D CUDA Graph id 7873 reused
+0.54.552.964 D CUDA Graph id 7875 reused
+0.54.558.159 D CUDA Graph id 7877 reused
+0.54.563.382 D CUDA Graph id 7879 reused
+0.54.567.749 D CUDA Graph id 7881 reused
+0.54.572.561 D CUDA Graph id 7883 reused
+0.54.575.566 D CUDA Graph id 7885 reused
+0.54.576.963 D CUDA Graph id 7887 reused
+0.54.578.454 D CUDA Graph id 7889 reused
+0.54.579.799 D CUDA Graph id 7891 reused
+0.54.581.198 D CUDA Graph id 7893 reused
+0.54.607.561 D que  yield_to_que: done yielding to queue
+0.54.608.772 D res          send: sending result for task id = 110
+0.54.608.777 D res          send: task id = 110 pushed to result queue
+0.54.608.783 D slot process_toke: id  0 | task 110 | n_gen = 29, n_remaining = 35, next token:   271 '
+
+'
+0.54.608.787 D que    start_loop: waiting for new tasks
+0.54.608.787 D que    start_loop: processing new tasks
+0.54.608.792 D que  process_new_: processing task, id = 139
+0.54.608.794 D que    start_loop: update slots
+0.54.608.795 D srv  update_slots: posting NEXT_RESPONSE
+0.54.608.798 D que          post: new task, id = 140, front = 0
+0.54.608.805 D slot handle_last_: id  0 | task 110 | slot decode token, id=271, n_ctx = 1024, n_tokens = 91, truncated = 0
+0.54.608.811 D set_adapters_lora: adapters = (nil)
+0.54.608.811 D adapters_lora_are_same: adapters = (nil)
+0.54.608.813 D set_embeddings: value = 0
+0.54.608.814 D srv        decode: n_batch (effective) = 1024, off = 0
+0.54.608.815 D que  yield_to_que: yielding to queue
+0.54.608.841 D que  process_new_: processing task, id = 140
+0.54.608.843 D srv  process_sing: decoding, decline task, id_task = 140
+0.54.608.844 D que  process_new_: task declined, id = 140
+0.54.611.837 D CUDA Graph id 7803 reused
+0.54.619.242 D CUDA Graph id 7805 reused
+0.54.624.643 D CUDA Graph id 7807 reused
+0.54.629.139 D CUDA Graph id 7809 reused
+0.54.633.876 D CUDA Graph id 7811 reused
+0.54.639.137 D CUDA Graph id 7813 reused
+0.54.644.313 D CUDA Graph id 7815 reused
+0.54.648.624 D CUDA Graph id 7817 reused
+0.54.653.392 D CUDA Graph id 7819 reused
+0.54.658.612 D CUDA Graph id 7821 reused
+0.54.663.848 D CUDA Graph id 7823 reused
+0.54.668.236 D CUDA Graph id 7825 reused
+0.54.673.037 D CUDA Graph id 7827 reused
+0.54.678.247 D CUDA Graph id 7829 reused
+0.54.683.482 D CUDA Graph id 7831 reused
+0.54.687.855 D CUDA Graph id 7833 reused
+0.54.692.637 D CUDA Graph id 7835 reused
+0.54.697.903 D CUDA Graph id 7837 reused
+0.54.703.132 D CUDA Graph id 7839 reused
+0.54.707.503 D CUDA Graph id 7841 reused
+0.54.712.236 D CUDA Graph id 7843 reused
+0.54.717.468 D CUDA Graph id 7845 reused
+0.54.722.643 D CUDA Graph id 7847 reused
+0.54.727.064 D CUDA Graph id 7849 reused
+0.54.731.795 D CUDA Graph id 7851 reused
+0.54.736.985 D CUDA Graph id 7853 reused
+0.54.742.199 D CUDA Graph id 7855 reused
+0.54.746.603 D CUDA Graph id 7857 reused
+0.54.751.370 D CUDA Graph id 7859 reused
+0.54.756.572 D CUDA Graph id 7861 reused
+0.54.761.781 D CUDA Graph id 7863 reused
+0.54.766.186 D CUDA Graph id 7865 reused
+0.54.770.947 D CUDA Graph id 7867 reused
+0.54.777.200 D CUDA Graph id 7869 reused
+0.54.783.905 D CUDA Graph id 7871 reused
+0.54.789.931 D CUDA Graph id 7873 reused
+0.54.795.339 D CUDA Graph id 7875 reused
+0.54.800.752 D CUDA Graph id 7877 reused
+0.54.807.073 D CUDA Graph id 7879 reused
+0.54.812.279 D CUDA Graph id 7881 reused
+0.54.818.869 D CUDA Graph id 7883 reused
+0.54.823.170 D CUDA Graph id 7885 reused
+0.54.824.949 D CUDA Graph id 7887 reused
+0.54.826.706 D CUDA Graph id 7889 reused
+0.54.828.236 D CUDA Graph id 7891 reused
+0.54.829.651 D CUDA Graph id 7893 reused
+0.54.856.232 D que  yield_to_que: done yielding to queue
+0.54.857.378 D res          send: sending result for task id = 110
+0.54.857.382 D res          send: task id = 110 pushed to result queue
+0.54.857.387 D slot process_toke: id  0 | task 110 | n_gen = 30, n_remaining = 34, next token:  7090 'Local'
+0.54.857.390 D que    start_loop: waiting for new tasks
+0.54.857.391 D que    start_loop: processing new tasks
+0.54.857.395 D que  process_new_: processing task, id = 140
+0.54.857.397 D que    start_loop: update slots
+0.54.857.398 D srv  update_slots: posting NEXT_RESPONSE
+0.54.857.401 D que          post: new task, id = 141, front = 0
+0.54.857.406 D slot handle_last_: id  0 | task 110 | slot decode token, id=7090, n_ctx = 1024, n_tokens = 92, truncated = 0
+0.54.857.413 D set_adapters_lora: adapters = (nil)
+0.54.857.414 D adapters_lora_are_same: adapters = (nil)
+0.54.857.415 D set_embeddings: value = 0
+0.54.857.416 D srv        decode: n_batch (effective) = 1024, off = 0
+0.54.857.416 D que  yield_to_que: yielding to queue
+0.54.857.442 D que  process_new_: processing task, id = 141
+0.54.857.444 D srv  process_sing: decoding, decline task, id_task = 141
+0.54.857.445 D que  process_new_: task declined, id = 141
+0.54.857.598 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"Local"}}],"created":1791040365,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.54.859.945 D CUDA Graph id 7803 reused
+0.54.867.447 D CUDA Graph id 7805 reused
+0.54.872.869 D CUDA Graph id 7807 reused
+0.54.877.342 D CUDA Graph id 7809 reused
+0.54.882.150 D CUDA Graph id 7811 reused
+0.54.887.329 D CUDA Graph id 7813 reused
+0.54.892.617 D CUDA Graph id 7815 reused
+0.54.896.954 D CUDA Graph id 7817 reused
+0.54.901.741 D CUDA Graph id 7819 reused
+0.54.906.929 D CUDA Graph id 7821 reused
+0.54.912.135 D CUDA Graph id 7823 reused
+0.54.916.529 D CUDA Graph id 7825 reused
+0.54.921.280 D CUDA Graph id 7827 reused
+0.54.926.458 D CUDA Graph id 7829 reused
+0.54.931.640 D CUDA Graph id 7831 reused
+0.54.936.017 D CUDA Graph id 7833 reused
+0.54.940.812 D CUDA Graph id 7835 reused
+0.54.946.067 D CUDA Graph id 7837 reused
+0.54.951.280 D CUDA Graph id 7839 reused
+0.54.955.656 D CUDA Graph id 7841 reused
+0.54.960.426 D CUDA Graph id 7843 reused
+0.54.965.643 D CUDA Graph id 7845 reused
+0.54.970.823 D CUDA Graph id 7847 reused
+0.54.975.220 D CUDA Graph id 7849 reused
+0.54.980.089 D CUDA Graph id 7851 reused
+0.54.985.259 D CUDA Graph id 7853 reused
+0.54.990.500 D CUDA Graph id 7855 reused
+0.54.994.864 D CUDA Graph id 7857 reused
+0.54.999.686 D CUDA Graph id 7859 reused
+0.55.004.890 D CUDA Graph id 7861 reused
+0.55.010.093 D CUDA Graph id 7863 reused
+0.55.014.519 D CUDA Graph id 7865 reused
+0.55.019.306 D CUDA Graph id 7867 reused
+0.55.024.589 D CUDA Graph id 7869 reused
+0.55.029.805 D CUDA Graph id 7871 reused
+0.55.034.189 D CUDA Graph id 7873 reused
+0.55.038.964 D CUDA Graph id 7875 reused
+0.55.044.236 D CUDA Graph id 7877 reused
+0.55.049.473 D CUDA Graph id 7879 reused
+0.55.053.787 D CUDA Graph id 7881 reused
+0.55.058.610 D CUDA Graph id 7883 reused
+0.55.061.547 D CUDA Graph id 7885 reused
+0.55.062.929 D CUDA Graph id 7887 reused
+0.55.064.409 D CUDA Graph id 7889 reused
+0.55.065.749 D CUDA Graph id 7891 reused
+0.55.067.125 D CUDA Graph id 7893 reused
+0.55.099.856 D que  yield_to_que: done yielding to queue
+0.55.101.095 D res          send: sending result for task id = 110
+0.55.101.099 D res          send: task id = 110 pushed to result queue
+0.55.101.103 D slot process_toke: id  0 | task 110 | n_gen = 31, n_remaining = 33, next token: 57650 ' backups'
+0.55.101.107 D que    start_loop: waiting for new tasks
+0.55.101.107 D que    start_loop: processing new tasks
+0.55.101.112 D que  process_new_: processing task, id = 141
+0.55.101.114 D que    start_loop: update slots
+0.55.101.115 D srv  update_slots: posting NEXT_RESPONSE
+0.55.101.118 D que          post: new task, id = 142, front = 0
+0.55.101.124 D slot handle_last_: id  0 | task 110 | slot decode token, id=57650, n_ctx = 1024, n_tokens = 93, truncated = 0
+0.55.101.130 D set_adapters_lora: adapters = (nil)
+0.55.101.131 D adapters_lora_are_same: adapters = (nil)
+0.55.101.132 D set_embeddings: value = 0
+0.55.101.133 D srv        decode: n_batch (effective) = 1024, off = 0
+0.55.101.135 D que  yield_to_que: yielding to queue
+0.55.101.162 D que  process_new_: processing task, id = 142
+0.55.101.164 D srv  process_sing: decoding, decline task, id_task = 142
+0.55.101.165 D que  process_new_: task declined, id = 142
+0.55.101.317 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" backups"}}],"created":1791040365,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.55.104.001 D CUDA Graph id 7803 reused
+0.55.111.407 D CUDA Graph id 7805 reused
+0.55.117.595 D CUDA Graph id 7807 reused
+0.55.122.951 D CUDA Graph id 7809 reused
+0.55.129.526 D CUDA Graph id 7811 reused
+0.55.136.589 D CUDA Graph id 7813 reused
+0.55.142.214 D CUDA Graph id 7815 reused
+0.55.146.948 D CUDA Graph id 7817 reused
+0.55.152.973 D CUDA Graph id 7819 reused
+0.55.158.828 D CUDA Graph id 7821 reused
+0.55.164.770 D CUDA Graph id 7823 reused
+0.55.169.708 D CUDA Graph id 7825 reused
+0.55.174.933 D CUDA Graph id 7827 reused
+0.55.180.667 D CUDA Graph id 7829 reused
+0.55.186.070 D CUDA Graph id 7831 reused
+0.55.190.662 D CUDA Graph id 7833 reused
+0.55.195.650 D CUDA Graph id 7835 reused
+0.55.200.877 D CUDA Graph id 7837 reused
+0.55.205.990 D CUDA Graph id 7839 reused
+0.55.210.250 D CUDA Graph id 7841 reused
+0.55.214.899 D CUDA Graph id 7843 reused
+0.55.220.008 D CUDA Graph id 7845 reused
+0.55.225.183 D CUDA Graph id 7847 reused
+0.55.229.524 D CUDA Graph id 7849 reused
+0.55.234.218 D CUDA Graph id 7851 reused
+0.55.239.326 D CUDA Graph id 7853 reused
+0.55.244.452 D CUDA Graph id 7855 reused
+0.55.248.806 D CUDA Graph id 7857 reused
+0.55.253.473 D CUDA Graph id 7859 reused
+0.55.258.575 D CUDA Graph id 7861 reused
+0.55.263.675 D CUDA Graph id 7863 reused
+0.55.267.988 D CUDA Graph id 7865 reused
+0.55.272.668 D CUDA Graph id 7867 reused
+0.55.277.815 D CUDA Graph id 7869 reused
+0.55.282.918 D CUDA Graph id 7871 reused
+0.55.287.145 D CUDA Graph id 7873 reused
+0.55.291.766 D CUDA Graph id 7875 reused
+0.55.296.899 D CUDA Graph id 7877 reused
+0.55.302.040 D CUDA Graph id 7879 reused
+0.55.306.343 D CUDA Graph id 7881 reused
+0.55.311.056 D CUDA Graph id 7883 reused
+0.55.313.933 D CUDA Graph id 7885 reused
+0.55.315.324 D CUDA Graph id 7887 reused
+0.55.316.718 D CUDA Graph id 7889 reused
+0.55.317.984 D CUDA Graph id 7891 reused
+0.55.319.336 D CUDA Graph id 7893 reused
+0.55.346.216 D que  yield_to_que: done yielding to queue
+0.55.347.456 D res          send: sending result for task id = 110
+0.55.347.460 D res          send: task id = 110 pushed to result queue
+0.55.347.466 D slot process_toke: id  0 | task 110 | n_gen = 32, n_remaining = 32, next token:   513 ' are'
+0.55.347.469 D que    start_loop: waiting for new tasks
+0.55.347.470 D que    start_loop: processing new tasks
+0.55.347.474 D que  process_new_: processing task, id = 142
+0.55.347.476 D que    start_loop: update slots
+0.55.347.477 D srv  update_slots: posting NEXT_RESPONSE
+0.55.347.481 D que          post: new task, id = 143, front = 0
+0.55.347.487 D slot handle_last_: id  0 | task 110 | slot decode token, id=513, n_ctx = 1024, n_tokens = 94, truncated = 0
+0.55.347.494 D set_adapters_lora: adapters = (nil)
+0.55.347.494 D adapters_lora_are_same: adapters = (nil)
+0.55.347.496 D set_embeddings: value = 0
+0.55.347.497 D srv        decode: n_batch (effective) = 1024, off = 0
+0.55.347.498 D que  yield_to_que: yielding to queue
+0.55.347.548 D que  process_new_: processing task, id = 143
+0.55.347.549 D srv  process_sing: decoding, decline task, id_task = 143
+0.55.347.550 D que  process_new_: task declined, id = 143
+0.55.347.682 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" are"}}],"created":1791040366,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.55.350.128 D CUDA Graph id 7803 reused
+0.55.357.574 D CUDA Graph id 7805 reused
+0.55.363.061 D CUDA Graph id 7807 reused
+0.55.367.568 D CUDA Graph id 7809 reused
+0.55.372.318 D CUDA Graph id 7811 reused
+0.55.377.540 D CUDA Graph id 7813 reused
+0.55.382.795 D CUDA Graph id 7815 reused
+0.55.387.199 D CUDA Graph id 7817 reused
+0.55.392.007 D CUDA Graph id 7819 reused
+0.55.397.202 D CUDA Graph id 7821 reused
+0.55.402.647 D CUDA Graph id 7823 reused
+0.55.407.826 D CUDA Graph id 7825 reused
+0.55.414.640 D CUDA Graph id 7827 reused
+0.55.421.745 D CUDA Graph id 7829 reused
+0.55.427.230 D CUDA Graph id 7831 reused
+0.55.432.015 D CUDA Graph id 7833 reused
+0.55.437.764 D CUDA Graph id 7835 reused
+0.55.443.557 D CUDA Graph id 7837 reused
+0.55.450.092 D CUDA Graph id 7839 reused
+0.55.455.208 D CUDA Graph id 7841 reused
+0.55.460.015 D CUDA Graph id 7843 reused
+0.55.465.470 D CUDA Graph id 7845 reused
+0.55.471.436 D CUDA Graph id 7847 reused
+0.55.475.819 D CUDA Graph id 7849 reused
+0.55.480.619 D CUDA Graph id 7851 reused
+0.55.485.833 D CUDA Graph id 7853 reused
+0.55.491.077 D CUDA Graph id 7855 reused
+0.55.495.407 D CUDA Graph id 7857 reused
+0.55.500.181 D CUDA Graph id 7859 reused
+0.55.505.386 D CUDA Graph id 7861 reused
+0.55.510.550 D CUDA Graph id 7863 reused
+0.55.514.965 D CUDA Graph id 7865 reused
+0.55.519.768 D CUDA Graph id 7867 reused
+0.55.525.004 D CUDA Graph id 7869 reused
+0.55.530.209 D CUDA Graph id 7871 reused
+0.55.534.566 D CUDA Graph id 7873 reused
+0.55.539.335 D CUDA Graph id 7875 reused
+0.55.544.581 D CUDA Graph id 7877 reused
+0.55.549.829 D CUDA Graph id 7879 reused
+0.55.554.234 D CUDA Graph id 7881 reused
+0.55.559.051 D CUDA Graph id 7883 reused
+0.55.562.026 D CUDA Graph id 7885 reused
+0.55.563.483 D CUDA Graph id 7887 reused
+0.55.564.964 D CUDA Graph id 7889 reused
+0.55.566.327 D CUDA Graph id 7891 reused
+0.55.567.680 D CUDA Graph id 7893 reused
+0.55.594.191 D que  yield_to_que: done yielding to queue
+0.55.595.441 D res          send: sending result for task id = 110
+0.55.595.445 D res          send: task id = 110 pushed to result queue
+0.55.595.451 D slot process_toke: id  0 | task 110 | n_gen = 33, n_remaining = 31, next token:  5222 ' useful'
+0.55.595.454 D que    start_loop: waiting for new tasks
+0.55.595.455 D que    start_loop: processing new tasks
+0.55.595.459 D que  process_new_: processing task, id = 143
+0.55.595.462 D que    start_loop: update slots
+0.55.595.463 D srv  update_slots: posting NEXT_RESPONSE
+0.55.595.466 D que          post: new task, id = 144, front = 0
+0.55.595.473 D slot handle_last_: id  0 | task 110 | slot decode token, id=5222, n_ctx = 1024, n_tokens = 95, truncated = 0
+0.55.595.480 D set_adapters_lora: adapters = (nil)
+0.55.595.481 D adapters_lora_are_same: adapters = (nil)
+0.55.595.482 D set_embeddings: value = 0
+0.55.595.483 D srv        decode: n_batch (effective) = 1024, off = 0
+0.55.595.484 D que  yield_to_que: yielding to queue
+0.55.595.536 D que  process_new_: processing task, id = 144
+0.55.595.538 D srv  process_sing: decoding, decline task, id_task = 144
+0.55.595.539 D que  process_new_: task declined, id = 144
+0.55.595.661 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" useful"}}],"created":1791040366,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.55.598.221 D CUDA Graph id 7803 reused
+0.55.605.675 D CUDA Graph id 7805 reused
+0.55.611.123 D CUDA Graph id 7807 reused
+0.55.615.678 D CUDA Graph id 7809 reused
+0.55.620.501 D CUDA Graph id 7811 reused
+0.55.625.758 D CUDA Graph id 7813 reused
+0.55.630.998 D CUDA Graph id 7815 reused
+0.55.635.356 D CUDA Graph id 7817 reused
+0.55.640.128 D CUDA Graph id 7819 reused
+0.55.645.315 D CUDA Graph id 7821 reused
+0.55.650.503 D CUDA Graph id 7823 reused
+0.55.654.898 D CUDA Graph id 7825 reused
+0.55.659.751 D CUDA Graph id 7827 reused
+0.55.665.093 D CUDA Graph id 7829 reused
+0.55.670.288 D CUDA Graph id 7831 reused
+0.55.674.743 D CUDA Graph id 7833 reused
+0.55.679.536 D CUDA Graph id 7835 reused
+0.55.684.733 D CUDA Graph id 7837 reused
+0.55.689.952 D CUDA Graph id 7839 reused
+0.55.694.399 D CUDA Graph id 7841 reused
+0.55.699.160 D CUDA Graph id 7843 reused
+0.55.704.350 D CUDA Graph id 7845 reused
+0.55.709.544 D CUDA Graph id 7847 reused
+0.55.713.903 D CUDA Graph id 7849 reused
+0.55.718.676 D CUDA Graph id 7851 reused
+0.55.724.848 D CUDA Graph id 7853 reused
+0.55.731.737 D CUDA Graph id 7855 reused
+0.55.737.895 D CUDA Graph id 7857 reused
+0.55.743.347 D CUDA Graph id 7859 reused
+0.55.748.820 D CUDA Graph id 7861 reused
+0.55.754.956 D CUDA Graph id 7863 reused
+0.55.760.196 D CUDA Graph id 7865 reused
+0.55.766.725 D CUDA Graph id 7867 reused
+0.55.773.789 D CUDA Graph id 7869 reused
+0.55.779.397 D CUDA Graph id 7871 reused
+0.55.783.903 D CUDA Graph id 7873 reused
+0.55.789.594 D CUDA Graph id 7875 reused
+0.55.794.850 D CUDA Graph id 7877 reused
+0.55.800.069 D CUDA Graph id 7879 reused
+0.55.804.457 D CUDA Graph id 7881 reused
+0.55.809.356 D CUDA Graph id 7883 reused
+0.55.812.314 D CUDA Graph id 7885 reused
+0.55.813.735 D CUDA Graph id 7887 reused
+0.55.815.274 D CUDA Graph id 7889 reused
+0.55.816.644 D CUDA Graph id 7891 reused
+0.55.818.081 D CUDA Graph id 7893 reused
+0.55.844.557 D que  yield_to_que: done yielding to queue
+0.55.845.743 D res          send: sending result for task id = 110
+0.55.845.747 D res          send: task id = 110 pushed to result queue
+0.55.845.751 D slot process_toke: id  0 | task 110 | n_gen = 34, n_remaining = 30, next token:  1521 ' because'
+0.55.845.755 D que    start_loop: waiting for new tasks
+0.55.845.755 D que    start_loop: processing new tasks
+0.55.845.760 D que  process_new_: processing task, id = 144
+0.55.845.762 D que    start_loop: update slots
+0.55.845.763 D srv  update_slots: posting NEXT_RESPONSE
+0.55.845.765 D que          post: new task, id = 145, front = 0
+0.55.845.771 D slot handle_last_: id  0 | task 110 | slot decode token, id=1521, n_ctx = 1024, n_tokens = 96, truncated = 0
+0.55.845.778 D set_adapters_lora: adapters = (nil)
+0.55.845.778 D adapters_lora_are_same: adapters = (nil)
+0.55.845.780 D set_embeddings: value = 0
+0.55.845.781 D srv        decode: n_batch (effective) = 1024, off = 0
+0.55.845.782 D que  yield_to_que: yielding to queue
+0.55.845.830 D que  process_new_: processing task, id = 145
+0.55.845.832 D srv  process_sing: decoding, decline task, id_task = 145
+0.55.845.833 D que  process_new_: task declined, id = 145
+0.55.845.965 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" because"}}],"created":1791040366,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.55.848.292 D CUDA Graph id 7803 reused
+0.55.855.766 D CUDA Graph id 7805 reused
+0.55.861.208 D CUDA Graph id 7807 reused
+0.55.865.694 D CUDA Graph id 7809 reused
+0.55.870.523 D CUDA Graph id 7811 reused
+0.55.875.835 D CUDA Graph id 7813 reused
+0.55.881.108 D CUDA Graph id 7815 reused
+0.55.885.547 D CUDA Graph id 7817 reused
+0.55.890.368 D CUDA Graph id 7819 reused
+0.55.895.586 D CUDA Graph id 7821 reused
+0.55.900.822 D CUDA Graph id 7823 reused
+0.55.905.214 D CUDA Graph id 7825 reused
+0.55.910.122 D CUDA Graph id 7827 reused
+0.55.915.311 D CUDA Graph id 7829 reused
+0.55.920.474 D CUDA Graph id 7831 reused
+0.55.924.874 D CUDA Graph id 7833 reused
+0.55.929.651 D CUDA Graph id 7835 reused
+0.55.934.855 D CUDA Graph id 7837 reused
+0.55.940.006 D CUDA Graph id 7839 reused
+0.55.944.373 D CUDA Graph id 7841 reused
+0.55.949.101 D CUDA Graph id 7843 reused
+0.55.954.324 D CUDA Graph id 7845 reused
+0.55.959.540 D CUDA Graph id 7847 reused
+0.55.963.921 D CUDA Graph id 7849 reused
+0.55.968.702 D CUDA Graph id 7851 reused
+0.55.973.893 D CUDA Graph id 7853 reused
+0.55.979.169 D CUDA Graph id 7855 reused
+0.55.983.478 D CUDA Graph id 7857 reused
+0.55.988.250 D CUDA Graph id 7859 reused
+0.55.993.407 D CUDA Graph id 7861 reused
+0.55.998.611 D CUDA Graph id 7863 reused
+0.56.003.032 D CUDA Graph id 7865 reused
+0.56.007.800 D CUDA Graph id 7867 reused
+0.56.013.074 D CUDA Graph id 7869 reused
+0.56.018.278 D CUDA Graph id 7871 reused
+0.56.022.656 D CUDA Graph id 7873 reused
+0.56.027.439 D CUDA Graph id 7875 reused
+0.56.032.633 D CUDA Graph id 7877 reused
+0.56.037.877 D CUDA Graph id 7879 reused
+0.56.042.562 D CUDA Graph id 7881 reused
+0.56.048.699 D CUDA Graph id 7883 reused
+0.56.053.248 D CUDA Graph id 7885 reused
+0.56.055.400 D CUDA Graph id 7887 reused
+0.56.057.367 D CUDA Graph id 7889 reused
+0.56.059.088 D CUDA Graph id 7891 reused
+0.56.060.689 D CUDA Graph id 7893 reused
+0.56.092.776 D que  yield_to_que: done yielding to queue
+0.56.093.898 D res          send: sending result for task id = 110
+0.56.093.902 D res          send: task id = 110 pushed to result queue
+0.56.093.907 D slot process_toke: id  0 | task 110 | n_gen = 35, n_remaining = 29, next token:   781 ' they'
+0.56.093.910 D que    start_loop: waiting for new tasks
+0.56.093.910 D que    start_loop: processing new tasks
+0.56.093.914 D que  process_new_: processing task, id = 145
+0.56.093.916 D que    start_loop: update slots
+0.56.093.918 D srv  update_slots: posting NEXT_RESPONSE
+0.56.093.920 D que          post: new task, id = 146, front = 0
+0.56.093.926 D slot handle_last_: id  0 | task 110 | slot decode token, id=781, n_ctx = 1024, n_tokens = 97, truncated = 0
+0.56.093.932 D set_adapters_lora: adapters = (nil)
+0.56.093.933 D adapters_lora_are_same: adapters = (nil)
+0.56.093.934 D set_embeddings: value = 0
+0.56.093.935 D srv        decode: n_batch (effective) = 1024, off = 0
+0.56.093.936 D que  yield_to_que: yielding to queue
+0.56.093.963 D que  process_new_: processing task, id = 146
+0.56.093.965 D srv  process_sing: decoding, decline task, id_task = 146
+0.56.093.965 D que  process_new_: task declined, id = 146
+0.56.094.122 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" they"}}],"created":1791040366,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.56.097.314 D CUDA Graph id 7803 reused
+0.56.105.050 D CUDA Graph id 7805 reused
+0.56.110.785 D CUDA Graph id 7807 reused
+0.56.115.620 D CUDA Graph id 7809 reused
+0.56.120.709 D CUDA Graph id 7811 reused
+0.56.126.347 D CUDA Graph id 7813 reused
+0.56.131.847 D CUDA Graph id 7815 reused
+0.56.136.542 D CUDA Graph id 7817 reused
+0.56.141.807 D CUDA Graph id 7819 reused
+0.56.147.317 D CUDA Graph id 7821 reused
+0.56.153.062 D CUDA Graph id 7823 reused
+0.56.158.054 D CUDA Graph id 7825 reused
+0.56.163.495 D CUDA Graph id 7827 reused
+0.56.169.354 D CUDA Graph id 7829 reused
+0.56.175.004 D CUDA Graph id 7831 reused
+0.56.179.836 D CUDA Graph id 7833 reused
+0.56.185.055 D CUDA Graph id 7835 reused
+0.56.190.729 D CUDA Graph id 7837 reused
+0.56.196.289 D CUDA Graph id 7839 reused
+0.56.201.023 D CUDA Graph id 7841 reused
+0.56.206.112 D CUDA Graph id 7843 reused
+0.56.211.655 D CUDA Graph id 7845 reused
+0.56.217.176 D CUDA Graph id 7847 reused
+0.56.221.886 D CUDA Graph id 7849 reused
+0.56.226.984 D CUDA Graph id 7851 reused
+0.56.232.540 D CUDA Graph id 7853 reused
+0.56.237.676 D CUDA Graph id 7855 reused
+0.56.242.068 D CUDA Graph id 7857 reused
+0.56.246.724 D CUDA Graph id 7859 reused
+0.56.251.851 D CUDA Graph id 7861 reused
+0.56.256.993 D CUDA Graph id 7863 reused
+0.56.261.343 D CUDA Graph id 7865 reused
+0.56.266.042 D CUDA Graph id 7867 reused
+0.56.271.151 D CUDA Graph id 7869 reused
+0.56.276.246 D CUDA Graph id 7871 reused
+0.56.280.535 D CUDA Graph id 7873 reused
+0.56.285.196 D CUDA Graph id 7875 reused
+0.56.290.282 D CUDA Graph id 7877 reused
+0.56.295.420 D CUDA Graph id 7879 reused
+0.56.299.672 D CUDA Graph id 7881 reused
+0.56.304.368 D CUDA Graph id 7883 reused
+0.56.307.228 D CUDA Graph id 7885 reused
+0.56.308.530 D CUDA Graph id 7887 reused
+0.56.309.926 D CUDA Graph id 7889 reused
+0.56.311.210 D CUDA Graph id 7891 reused
+0.56.312.484 D CUDA Graph id 7893 reused
+0.56.345.695 D que  yield_to_que: done yielding to queue
+0.56.346.860 D res          send: sending result for task id = 110
+0.56.346.864 D res          send: task id = 110 pushed to result queue
+0.56.346.869 D slot process_toke: id  0 | task 110 | n_gen = 36, n_remaining = 28, next token:  3300 ' provide'
+0.56.346.872 D que    start_loop: waiting for new tasks
+0.56.346.873 D que    start_loop: processing new tasks
+0.56.346.877 D que  process_new_: processing task, id = 146
+0.56.346.879 D que    start_loop: update slots
+0.56.346.880 D srv  update_slots: posting NEXT_RESPONSE
+0.56.346.882 D que          post: new task, id = 147, front = 0
+0.56.346.888 D slot handle_last_: id  0 | task 110 | slot decode token, id=3300, n_ctx = 1024, n_tokens = 98, truncated = 0
+0.56.346.895 D set_adapters_lora: adapters = (nil)
+0.56.346.895 D adapters_lora_are_same: adapters = (nil)
+0.56.346.897 D set_embeddings: value = 0
+0.56.346.898 D srv        decode: n_batch (effective) = 1024, off = 0
+0.56.346.898 D que  yield_to_que: yielding to queue
+0.56.346.927 D que  process_new_: processing task, id = 147
+0.56.346.928 D srv  process_sing: decoding, decline task, id_task = 147
+0.56.346.929 D que  process_new_: task declined, id = 147
+0.56.347.088 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" provide"}}],"created":1791040367,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.56.349.885 D CUDA Graph id 7803 reused
+0.56.360.066 D CUDA Graph id 7805 reused
+0.56.367.700 D CUDA Graph id 7807 reused
+0.56.373.013 D CUDA Graph id 7809 reused
+0.56.377.964 D CUDA Graph id 7811 reused
+0.56.384.434 D CUDA Graph id 7813 reused
+0.56.390.073 D CUDA Graph id 7815 reused
+0.56.395.154 D CUDA Graph id 7817 reused
+0.56.401.343 D CUDA Graph id 7819 reused
+0.56.406.910 D CUDA Graph id 7821 reused
+0.56.412.169 D CUDA Graph id 7823 reused
+0.56.417.604 D CUDA Graph id 7825 reused
+0.56.422.441 D CUDA Graph id 7827 reused
+0.56.427.684 D CUDA Graph id 7829 reused
+0.56.432.895 D CUDA Graph id 7831 reused
+0.56.437.282 D CUDA Graph id 7833 reused
+0.56.442.043 D CUDA Graph id 7835 reused
+0.56.447.272 D CUDA Graph id 7837 reused
+0.56.452.480 D CUDA Graph id 7839 reused
+0.56.456.916 D CUDA Graph id 7841 reused
+0.56.461.657 D CUDA Graph id 7843 reused
+0.56.466.855 D CUDA Graph id 7845 reused
+0.56.472.038 D CUDA Graph id 7847 reused
+0.56.476.500 D CUDA Graph id 7849 reused
+0.56.481.288 D CUDA Graph id 7851 reused
+0.56.486.507 D CUDA Graph id 7853 reused
+0.56.491.727 D CUDA Graph id 7855 reused
+0.56.496.133 D CUDA Graph id 7857 reused
+0.56.500.922 D CUDA Graph id 7859 reused
+0.56.506.091 D CUDA Graph id 7861 reused
+0.56.511.247 D CUDA Graph id 7863 reused
+0.56.515.696 D CUDA Graph id 7865 reused
+0.56.520.559 D CUDA Graph id 7867 reused
+0.56.525.790 D CUDA Graph id 7869 reused
+0.56.531.005 D CUDA Graph id 7871 reused
+0.56.535.352 D CUDA Graph id 7873 reused
+0.56.540.077 D CUDA Graph id 7875 reused
+0.56.545.268 D CUDA Graph id 7877 reused
+0.56.550.508 D CUDA Graph id 7879 reused
+0.56.554.915 D CUDA Graph id 7881 reused
+0.56.559.765 D CUDA Graph id 7883 reused
+0.56.562.728 D CUDA Graph id 7885 reused
+0.56.564.101 D CUDA Graph id 7887 reused
+0.56.565.593 D CUDA Graph id 7889 reused
+0.56.566.998 D CUDA Graph id 7891 reused
+0.56.568.371 D CUDA Graph id 7893 reused
+0.56.601.148 D que  yield_to_que: done yielding to queue
+0.56.602.295 D res          send: sending result for task id = 110
+0.56.602.299 D res          send: task id = 110 pushed to result queue
+0.56.602.304 D slot process_toke: id  0 | task 110 | n_gen = 37, n_remaining = 27, next token:  3841 ' quick'
+0.56.602.308 D que    start_loop: waiting for new tasks
+0.56.602.308 D que    start_loop: processing new tasks
+0.56.602.312 D que  process_new_: processing task, id = 147
+0.56.602.314 D que    start_loop: update slots
+0.56.602.315 D srv  update_slots: posting NEXT_RESPONSE
+0.56.602.317 D que          post: new task, id = 148, front = 0
+0.56.602.324 D slot handle_last_: id  0 | task 110 | slot decode token, id=3841, n_ctx = 1024, n_tokens = 99, truncated = 0
+0.56.602.330 D set_adapters_lora: adapters = (nil)
+0.56.602.331 D adapters_lora_are_same: adapters = (nil)
+0.56.602.332 D set_embeddings: value = 0
+0.56.602.333 D srv        decode: n_batch (effective) = 1024, off = 0
+0.56.602.334 D que  yield_to_que: yielding to queue
+0.56.602.361 D que  process_new_: processing task, id = 148
+0.56.602.362 D srv  process_sing: decoding, decline task, id_task = 148
+0.56.602.363 D que  process_new_: task declined, id = 148
+0.56.602.647 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" quick"}}],"created":1791040367,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.56.605.358 D CUDA Graph id 7803 reused
+0.56.613.146 D CUDA Graph id 7805 reused
+0.56.618.724 D CUDA Graph id 7807 reused
+0.56.623.278 D CUDA Graph id 7809 reused
+0.56.628.169 D CUDA Graph id 7811 reused
+0.56.633.477 D CUDA Graph id 7813 reused
+0.56.638.762 D CUDA Graph id 7815 reused
+0.56.643.171 D CUDA Graph id 7817 reused
+0.56.648.012 D CUDA Graph id 7819 reused
+0.56.653.207 D CUDA Graph id 7821 reused
+0.56.658.460 D CUDA Graph id 7823 reused
+0.56.662.839 D CUDA Graph id 7825 reused
+0.56.667.585 D CUDA Graph id 7827 reused
+0.56.673.645 D CUDA Graph id 7829 reused
+0.56.680.346 D CUDA Graph id 7831 reused
+0.56.686.517 D CUDA Graph id 7833 reused
+0.56.691.983 D CUDA Graph id 7835 reused
+0.56.697.544 D CUDA Graph id 7837 reused
+0.56.703.733 D CUDA Graph id 7839 reused
+0.56.708.572 D CUDA Graph id 7841 reused
+0.56.714.047 D CUDA Graph id 7843 reused
+0.56.720.570 D CUDA Graph id 7845 reused
+0.56.726.027 D CUDA Graph id 7847 reused
+0.56.730.465 D CUDA Graph id 7849 reused
+0.56.736.154 D CUDA Graph id 7851 reused
+0.56.741.509 D CUDA Graph id 7853 reused
+0.56.746.860 D CUDA Graph id 7855 reused
+0.56.751.285 D CUDA Graph id 7857 reused
+0.56.756.084 D CUDA Graph id 7859 reused
+0.56.761.282 D CUDA Graph id 7861 reused
+0.56.766.533 D CUDA Graph id 7863 reused
+0.56.771.003 D CUDA Graph id 7865 reused
+0.56.775.794 D CUDA Graph id 7867 reused
+0.56.781.048 D CUDA Graph id 7869 reused
+0.56.786.266 D CUDA Graph id 7871 reused
+0.56.790.676 D CUDA Graph id 7873 reused
+0.56.795.472 D CUDA Graph id 7875 reused
+0.56.800.715 D CUDA Graph id 7877 reused
+0.56.805.946 D CUDA Graph id 7879 reused
+0.56.810.312 D CUDA Graph id 7881 reused
+0.56.815.141 D CUDA Graph id 7883 reused
+0.56.818.162 D CUDA Graph id 7885 reused
+0.56.819.535 D CUDA Graph id 7887 reused
+0.56.821.009 D CUDA Graph id 7889 reused
+0.56.822.385 D CUDA Graph id 7891 reused
+0.56.823.762 D CUDA Graph id 7893 reused
+0.56.851.475 D que  yield_to_que: done yielding to queue
+0.56.852.600 D res          send: sending result for task id = 110
+0.56.852.604 D res          send: task id = 110 pushed to result queue
+0.56.852.608 D slot process_toke: id  0 | task 110 | n_gen = 38, n_remaining = 26, next token:    11 ','
+0.56.852.612 D que    start_loop: waiting for new tasks
+0.56.852.613 D que    start_loop: processing new tasks
+0.56.852.617 D que  process_new_: processing task, id = 148
+0.56.852.618 D que    start_loop: update slots
+0.56.852.619 D srv  update_slots: posting NEXT_RESPONSE
+0.56.852.622 D que          post: new task, id = 149, front = 0
+0.56.852.628 D slot handle_last_: id  0 | task 110 | slot decode token, id=11, n_ctx = 1024, n_tokens = 100, truncated = 0
+0.56.852.634 D set_adapters_lora: adapters = (nil)
+0.56.852.634 D adapters_lora_are_same: adapters = (nil)
+0.56.852.635 D set_embeddings: value = 0
+0.56.852.637 D srv        decode: n_batch (effective) = 1024, off = 0
+0.56.852.637 D que  yield_to_que: yielding to queue
+0.56.852.664 D que  process_new_: processing task, id = 149
+0.56.852.666 D srv  process_sing: decoding, decline task, id_task = 149
+0.56.852.667 D que  process_new_: task declined, id = 149
+0.56.852.844 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":","}}],"created":1791040367,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.56.855.222 D CUDA Graph id 7803 reused
+0.56.862.648 D CUDA Graph id 7805 reused
+0.56.868.127 D CUDA Graph id 7807 reused
+0.56.872.668 D CUDA Graph id 7809 reused
+0.56.877.511 D CUDA Graph id 7811 reused
+0.56.882.791 D CUDA Graph id 7813 reused
+0.56.887.999 D CUDA Graph id 7815 reused
+0.56.892.395 D CUDA Graph id 7817 reused
+0.56.897.151 D CUDA Graph id 7819 reused
+0.56.902.360 D CUDA Graph id 7821 reused
+0.56.907.511 D CUDA Graph id 7823 reused
+0.56.911.878 D CUDA Graph id 7825 reused
+0.56.916.638 D CUDA Graph id 7827 reused
+0.56.921.857 D CUDA Graph id 7829 reused
+0.56.927.042 D CUDA Graph id 7831 reused
+0.56.931.487 D CUDA Graph id 7833 reused
+0.56.936.325 D CUDA Graph id 7835 reused
+0.56.941.531 D CUDA Graph id 7837 reused
+0.56.946.723 D CUDA Graph id 7839 reused
+0.56.951.109 D CUDA Graph id 7841 reused
+0.56.955.818 D CUDA Graph id 7843 reused
+0.56.961.011 D CUDA Graph id 7845 reused
+0.56.966.188 D CUDA Graph id 7847 reused
+0.56.970.529 D CUDA Graph id 7849 reused
+0.56.975.336 D CUDA Graph id 7851 reused
+0.56.980.537 D CUDA Graph id 7853 reused
+0.56.985.798 D CUDA Graph id 7855 reused
+0.56.990.878 D CUDA Graph id 7857 reused
+0.56.997.240 D CUDA Graph id 7859 reused
+0.57.004.619 D CUDA Graph id 7861 reused
+0.57.010.242 D CUDA Graph id 7863 reused
+0.57.014.752 D CUDA Graph id 7865 reused
+0.57.020.375 D CUDA Graph id 7867 reused
+0.57.026.145 D CUDA Graph id 7869 reused
+0.57.032.307 D CUDA Graph id 7871 reused
+0.57.037.854 D CUDA Graph id 7873 reused
+0.57.042.921 D CUDA Graph id 7875 reused
+0.57.048.116 D CUDA Graph id 7877 reused
+0.57.054.169 D CUDA Graph id 7879 reused
+0.57.058.512 D CUDA Graph id 7881 reused
+0.57.063.252 D CUDA Graph id 7883 reused
+0.57.066.116 D CUDA Graph id 7885 reused
+0.57.067.404 D CUDA Graph id 7887 reused
+0.57.068.821 D CUDA Graph id 7889 reused
+0.57.070.096 D CUDA Graph id 7891 reused
+0.57.071.412 D CUDA Graph id 7893 reused
+0.57.098.119 D que  yield_to_que: done yielding to queue
+0.57.099.240 D res          send: sending result for task id = 110
+0.57.099.244 D res          send: task id = 110 pushed to result queue
+0.57.099.249 D slot process_toke: id  0 | task 110 | n_gen = 39, n_remaining = 25, next token: 14294 ' reliable'
+0.57.099.253 D que    start_loop: waiting for new tasks
+0.57.099.253 D que    start_loop: processing new tasks
+0.57.099.257 D que  process_new_: processing task, id = 149
+0.57.099.259 D que    start_loop: update slots
+0.57.099.260 D srv  update_slots: posting NEXT_RESPONSE
+0.57.099.263 D que          post: new task, id = 150, front = 0
+0.57.099.270 D slot handle_last_: id  0 | task 110 | slot decode token, id=14294, n_ctx = 1024, n_tokens = 101, truncated = 0
+0.57.099.276 D set_adapters_lora: adapters = (nil)
+0.57.099.277 D adapters_lora_are_same: adapters = (nil)
+0.57.099.278 D set_embeddings: value = 0
+0.57.099.279 D srv        decode: n_batch (effective) = 1024, off = 0
+0.57.099.281 D que  yield_to_que: yielding to queue
+0.57.099.308 D que  process_new_: processing task, id = 150
+0.57.099.310 D srv  process_sing: decoding, decline task, id_task = 150
+0.57.099.310 D que  process_new_: task declined, id = 150
+0.57.099.473 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" reliable"}}],"created":1791040367,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.57.101.831 D CUDA Graph id 7803 reused
+0.57.109.255 D CUDA Graph id 7805 reused
+0.57.114.694 D CUDA Graph id 7807 reused
+0.57.119.220 D CUDA Graph id 7809 reused
+0.57.124.054 D CUDA Graph id 7811 reused
+0.57.129.363 D CUDA Graph id 7813 reused
+0.57.134.556 D CUDA Graph id 7815 reused
+0.57.138.969 D CUDA Graph id 7817 reused
+0.57.143.763 D CUDA Graph id 7819 reused
+0.57.149.047 D CUDA Graph id 7821 reused
+0.57.154.821 D CUDA Graph id 7823 reused
+0.57.159.830 D CUDA Graph id 7825 reused
+0.57.165.278 D CUDA Graph id 7827 reused
+0.57.171.153 D CUDA Graph id 7829 reused
+0.57.176.856 D CUDA Graph id 7831 reused
+0.57.181.732 D CUDA Graph id 7833 reused
+0.57.186.988 D CUDA Graph id 7835 reused
+0.57.192.431 D CUDA Graph id 7837 reused
+0.57.197.793 D CUDA Graph id 7839 reused
+0.57.202.336 D CUDA Graph id 7841 reused
+0.57.207.014 D CUDA Graph id 7843 reused
+0.57.212.147 D CUDA Graph id 7845 reused
+0.57.217.256 D CUDA Graph id 7847 reused
+0.57.221.566 D CUDA Graph id 7849 reused
+0.57.226.234 D CUDA Graph id 7851 reused
+0.57.231.320 D CUDA Graph id 7853 reused
+0.57.236.442 D CUDA Graph id 7855 reused
+0.57.240.706 D CUDA Graph id 7857 reused
+0.57.245.402 D CUDA Graph id 7859 reused
+0.57.250.499 D CUDA Graph id 7861 reused
+0.57.255.626 D CUDA Graph id 7863 reused
+0.57.259.912 D CUDA Graph id 7865 reused
+0.57.264.618 D CUDA Graph id 7867 reused
+0.57.269.728 D CUDA Graph id 7869 reused
+0.57.274.807 D CUDA Graph id 7871 reused
+0.57.279.051 D CUDA Graph id 7873 reused
+0.57.283.773 D CUDA Graph id 7875 reused
+0.57.288.933 D CUDA Graph id 7877 reused
+0.57.294.060 D CUDA Graph id 7879 reused
+0.57.298.368 D CUDA Graph id 7881 reused
+0.57.303.078 D CUDA Graph id 7883 reused
+0.57.306.542 D CUDA Graph id 7885 reused
+0.57.308.409 D CUDA Graph id 7887 reused
+0.57.310.397 D CUDA Graph id 7889 reused
+0.57.312.292 D CUDA Graph id 7891 reused
+0.57.314.384 D CUDA Graph id 7893 reused
+0.57.340.910 D que  yield_to_que: done yielding to queue
+0.57.343.586 D res          send: sending result for task id = 110
+0.57.343.593 D res          send: task id = 110 pushed to result queue
+0.57.343.600 D slot process_toke: id  0 | task 110 | n_gen = 40, n_remaining = 24, next token:  2528 ' access'
+0.57.343.605 D que    start_loop: waiting for new tasks
+0.57.343.606 D que    start_loop: processing new tasks
+0.57.343.613 D que  process_new_: processing task, id = 150
+0.57.343.616 D que    start_loop: update slots
+0.57.343.617 D srv  update_slots: posting NEXT_RESPONSE
+0.57.343.622 D que          post: new task, id = 151, front = 0
+0.57.343.631 D slot handle_last_: id  0 | task 110 | slot decode token, id=2528, n_ctx = 1024, n_tokens = 102, truncated = 0
+0.57.343.640 D set_adapters_lora: adapters = (nil)
+0.57.343.642 D adapters_lora_are_same: adapters = (nil)
+0.57.343.644 D set_embeddings: value = 0
+0.57.343.646 D srv        decode: n_batch (effective) = 1024, off = 0
+0.57.343.647 D que  yield_to_que: yielding to queue
+0.57.343.698 D que  process_new_: processing task, id = 151
+0.57.343.700 D srv  process_sing: decoding, decline task, id_task = 151
+0.57.343.701 D que  process_new_: task declined, id = 151
+0.57.343.853 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" access"}}],"created":1791040368,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.57.346.805 D CUDA Graph id 7803 reused
+0.57.354.419 D CUDA Graph id 7805 reused
+0.57.360.975 D CUDA Graph id 7807 reused
+0.57.365.536 D CUDA Graph id 7809 reused
+0.57.370.336 D CUDA Graph id 7811 reused
+0.57.375.641 D CUDA Graph id 7813 reused
+0.57.380.831 D CUDA Graph id 7815 reused
+0.57.385.271 D CUDA Graph id 7817 reused
+0.57.390.096 D CUDA Graph id 7819 reused
+0.57.395.263 D CUDA Graph id 7821 reused
+0.57.400.518 D CUDA Graph id 7823 reused
+0.57.404.915 D CUDA Graph id 7825 reused
+0.57.409.718 D CUDA Graph id 7827 reused
+0.57.414.904 D CUDA Graph id 7829 reused
+0.57.420.032 D CUDA Graph id 7831 reused
+0.57.424.497 D CUDA Graph id 7833 reused
+0.57.429.286 D CUDA Graph id 7835 reused
+0.57.434.509 D CUDA Graph id 7837 reused
+0.57.439.702 D CUDA Graph id 7839 reused
+0.57.444.074 D CUDA Graph id 7841 reused
+0.57.448.858 D CUDA Graph id 7843 reused
+0.57.454.064 D CUDA Graph id 7845 reused
+0.57.459.240 D CUDA Graph id 7847 reused
+0.57.463.614 D CUDA Graph id 7849 reused
+0.57.468.463 D CUDA Graph id 7851 reused
+0.57.473.685 D CUDA Graph id 7853 reused
+0.57.478.909 D CUDA Graph id 7855 reused
+0.57.483.252 D CUDA Graph id 7857 reused
+0.57.488.004 D CUDA Graph id 7859 reused
+0.57.493.163 D CUDA Graph id 7861 reused
+0.57.498.324 D CUDA Graph id 7863 reused
+0.57.502.753 D CUDA Graph id 7865 reused
+0.57.507.521 D CUDA Graph id 7867 reused
+0.57.512.755 D CUDA Graph id 7869 reused
+0.57.517.967 D CUDA Graph id 7871 reused
+0.57.522.312 D CUDA Graph id 7873 reused
+0.57.527.058 D CUDA Graph id 7875 reused
+0.57.532.320 D CUDA Graph id 7877 reused
+0.57.537.566 D CUDA Graph id 7879 reused
+0.57.541.917 D CUDA Graph id 7881 reused
+0.57.546.768 D CUDA Graph id 7883 reused
+0.57.549.778 D CUDA Graph id 7885 reused
+0.57.551.199 D CUDA Graph id 7887 reused
+0.57.552.647 D CUDA Graph id 7889 reused
+0.57.553.996 D CUDA Graph id 7891 reused
+0.57.555.357 D CUDA Graph id 7893 reused
+0.57.583.825 D que  yield_to_que: done yielding to queue
+0.57.585.204 D res          send: sending result for task id = 110
+0.57.585.208 D res          send: task id = 110 pushed to result queue
+0.57.585.213 D slot process_toke: id  0 | task 110 | n_gen = 41, n_remaining = 23, next token:   310 ' to'
+0.57.585.216 D que    start_loop: waiting for new tasks
+0.57.585.217 D que    start_loop: processing new tasks
+0.57.585.222 D que  process_new_: processing task, id = 151
+0.57.585.224 D que    start_loop: update slots
+0.57.585.225 D srv  update_slots: posting NEXT_RESPONSE
+0.57.585.228 D que          post: new task, id = 152, front = 0
+0.57.585.234 D slot handle_last_: id  0 | task 110 | slot decode token, id=310, n_ctx = 1024, n_tokens = 103, truncated = 0
+0.57.585.241 D set_adapters_lora: adapters = (nil)
+0.57.585.242 D adapters_lora_are_same: adapters = (nil)
+0.57.585.243 D set_embeddings: value = 0
+0.57.585.245 D srv        decode: n_batch (effective) = 1024, off = 0
+0.57.585.245 D que  yield_to_que: yielding to queue
+0.57.585.293 D que  process_new_: processing task, id = 152
+0.57.585.294 D srv  process_sing: decoding, decline task, id_task = 152
+0.57.585.295 D que  process_new_: task declined, id = 152
+0.57.585.431 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" to"}}],"created":1791040368,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.57.587.740 D CUDA Graph id 7803 reused
+0.57.595.254 D CUDA Graph id 7805 reused
+0.57.600.702 D CUDA Graph id 7807 reused
+0.57.605.240 D CUDA Graph id 7809 reused
+0.57.610.052 D CUDA Graph id 7811 reused
+0.57.616.004 D CUDA Graph id 7813 reused
+0.57.622.598 D CUDA Graph id 7815 reused
+0.57.628.720 D CUDA Graph id 7817 reused
+0.57.634.360 D CUDA Graph id 7819 reused
+0.57.639.762 D CUDA Graph id 7821 reused
+0.57.646.081 D CUDA Graph id 7823 reused
+0.57.651.162 D CUDA Graph id 7825 reused
+0.57.657.379 D CUDA Graph id 7827 reused
+0.57.664.700 D CUDA Graph id 7829 reused
+0.57.670.477 D CUDA Graph id 7831 reused
+0.57.674.922 D CUDA Graph id 7833 reused
+0.57.680.891 D CUDA Graph id 7835 reused
+0.57.686.134 D CUDA Graph id 7837 reused
+0.57.691.376 D CUDA Graph id 7839 reused
+0.57.695.752 D CUDA Graph id 7841 reused
+0.57.700.545 D CUDA Graph id 7843 reused
+0.57.705.816 D CUDA Graph id 7845 reused
+0.57.711.015 D CUDA Graph id 7847 reused
+0.57.715.460 D CUDA Graph id 7849 reused
+0.57.720.233 D CUDA Graph id 7851 reused
+0.57.725.416 D CUDA Graph id 7853 reused
+0.57.730.627 D CUDA Graph id 7855 reused
+0.57.735.020 D CUDA Graph id 7857 reused
+0.57.739.776 D CUDA Graph id 7859 reused
+0.57.744.970 D CUDA Graph id 7861 reused
+0.57.750.192 D CUDA Graph id 7863 reused
+0.57.754.553 D CUDA Graph id 7865 reused
+0.57.759.357 D CUDA Graph id 7867 reused
+0.57.764.590 D CUDA Graph id 7869 reused
+0.57.769.757 D CUDA Graph id 7871 reused
+0.57.774.147 D CUDA Graph id 7873 reused
+0.57.778.926 D CUDA Graph id 7875 reused
+0.57.784.087 D CUDA Graph id 7877 reused
+0.57.789.350 D CUDA Graph id 7879 reused
+0.57.793.750 D CUDA Graph id 7881 reused
+0.57.798.535 D CUDA Graph id 7883 reused
+0.57.801.483 D CUDA Graph id 7885 reused
+0.57.802.850 D CUDA Graph id 7887 reused
+0.57.804.292 D CUDA Graph id 7889 reused
+0.57.805.735 D CUDA Graph id 7891 reused
+0.57.807.128 D CUDA Graph id 7893 reused
+0.57.839.061 D que  yield_to_que: done yielding to queue
+0.57.840.278 D res          send: sending result for task id = 110
+0.57.840.281 D res          send: task id = 110 pushed to result queue
+0.57.840.286 D slot process_toke: id  0 | task 110 | n_gen = 42, n_remaining = 22, next token:   678 ' your'
+0.57.840.289 D que    start_loop: waiting for new tasks
+0.57.840.290 D que    start_loop: processing new tasks
+0.57.840.294 D que  process_new_: processing task, id = 152
+0.57.840.309 D que    start_loop: update slots
+0.57.840.311 D srv  update_slots: posting NEXT_RESPONSE
+0.57.840.314 D que          post: new task, id = 153, front = 0
+0.57.840.321 D slot handle_last_: id  0 | task 110 | slot decode token, id=678, n_ctx = 1024, n_tokens = 104, truncated = 0
+0.57.840.328 D set_adapters_lora: adapters = (nil)
+0.57.840.329 D adapters_lora_are_same: adapters = (nil)
+0.57.840.331 D set_embeddings: value = 0
+0.57.840.332 D srv        decode: n_batch (effective) = 1024, off = 0
+0.57.840.333 D que  yield_to_que: yielding to queue
+0.57.840.381 D que  process_new_: processing task, id = 153
+0.57.840.383 D srv  process_sing: decoding, decline task, id_task = 153
+0.57.840.383 D que  process_new_: task declined, id = 153
+0.57.840.463 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" your"}}],"created":1791040368,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.57.843.332 D CUDA Graph id 7803 reused
+0.57.850.947 D CUDA Graph id 7805 reused
+0.57.856.544 D CUDA Graph id 7807 reused
+0.57.861.085 D CUDA Graph id 7809 reused
+0.57.865.940 D CUDA Graph id 7811 reused
+0.57.871.183 D CUDA Graph id 7813 reused
+0.57.876.338 D CUDA Graph id 7815 reused
+0.57.880.685 D CUDA Graph id 7817 reused
+0.57.885.462 D CUDA Graph id 7819 reused
+0.57.890.622 D CUDA Graph id 7821 reused
+0.57.895.793 D CUDA Graph id 7823 reused
+0.57.900.107 D CUDA Graph id 7825 reused
+0.57.904.899 D CUDA Graph id 7827 reused
+0.57.910.131 D CUDA Graph id 7829 reused
+0.57.915.287 D CUDA Graph id 7831 reused
+0.57.919.690 D CUDA Graph id 7833 reused
+0.57.924.539 D CUDA Graph id 7835 reused
+0.57.929.775 D CUDA Graph id 7837 reused
+0.57.935.591 D CUDA Graph id 7839 reused
+0.57.940.798 D CUDA Graph id 7841 reused
+0.57.947.811 D CUDA Graph id 7843 reused
+0.57.953.916 D CUDA Graph id 7845 reused
+0.57.959.329 D CUDA Graph id 7847 reused
+0.57.964.856 D CUDA Graph id 7849 reused
+0.57.970.439 D CUDA Graph id 7851 reused
+0.57.977.075 D CUDA Graph id 7853 reused
+0.57.984.323 D CUDA Graph id 7855 reused
+0.57.989.311 D CUDA Graph id 7857 reused
+0.57.994.270 D CUDA Graph id 7859 reused
+0.58.000.642 D CUDA Graph id 7861 reused
+0.58.005.888 D CUDA Graph id 7863 reused
+0.58.010.296 D CUDA Graph id 7865 reused
+0.58.015.057 D CUDA Graph id 7867 reused
+0.58.020.286 D CUDA Graph id 7869 reused
+0.58.025.502 D CUDA Graph id 7871 reused
+0.58.029.843 D CUDA Graph id 7873 reused
+0.58.034.623 D CUDA Graph id 7875 reused
+0.58.039.817 D CUDA Graph id 7877 reused
+0.58.045.158 D CUDA Graph id 7879 reused
+0.58.049.476 D CUDA Graph id 7881 reused
+0.58.054.303 D CUDA Graph id 7883 reused
+0.58.057.273 D CUDA Graph id 7885 reused
+0.58.058.679 D CUDA Graph id 7887 reused
+0.58.060.154 D CUDA Graph id 7889 reused
+0.58.061.529 D CUDA Graph id 7891 reused
+0.58.062.910 D CUDA Graph id 7893 reused
+0.58.095.307 D que  yield_to_que: done yielding to queue
+0.58.096.578 D res          send: sending result for task id = 110
+0.58.096.582 D res          send: task id = 110 pushed to result queue
+0.58.096.587 D slot process_toke: id  0 | task 110 | n_gen = 43, n_remaining = 21, next token:   795 ' data'
+0.58.096.590 D que    start_loop: waiting for new tasks
+0.58.096.591 D que    start_loop: processing new tasks
+0.58.096.595 D que  process_new_: processing task, id = 153
+0.58.096.597 D que    start_loop: update slots
+0.58.096.598 D srv  update_slots: posting NEXT_RESPONSE
+0.58.096.601 D que          post: new task, id = 154, front = 0
+0.58.096.607 D slot handle_last_: id  0 | task 110 | slot decode token, id=795, n_ctx = 1024, n_tokens = 105, truncated = 0
+0.58.096.613 D set_adapters_lora: adapters = (nil)
+0.58.096.614 D adapters_lora_are_same: adapters = (nil)
+0.58.096.615 D set_embeddings: value = 0
+0.58.096.617 D srv        decode: n_batch (effective) = 1024, off = 0
+0.58.096.618 D que  yield_to_que: yielding to queue
+0.58.096.665 D que  process_new_: processing task, id = 154
+0.58.096.666 D srv  process_sing: decoding, decline task, id_task = 154
+0.58.096.667 D que  process_new_: task declined, id = 154
+0.58.096.888 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" data"}}],"created":1791040368,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.58.099.258 D CUDA Graph id 7803 reused
+0.58.106.979 D CUDA Graph id 7805 reused
+0.58.112.543 D CUDA Graph id 7807 reused
+0.58.117.187 D CUDA Graph id 7809 reused
+0.58.122.095 D CUDA Graph id 7811 reused
+0.58.127.349 D CUDA Graph id 7813 reused
+0.58.132.646 D CUDA Graph id 7815 reused
+0.58.137.071 D CUDA Graph id 7817 reused
+0.58.141.847 D CUDA Graph id 7819 reused
+0.58.147.216 D CUDA Graph id 7821 reused
+0.58.152.541 D CUDA Graph id 7823 reused
+0.58.157.465 D CUDA Graph id 7825 reused
+0.58.162.830 D CUDA Graph id 7827 reused
+0.58.168.614 D CUDA Graph id 7829 reused
+0.58.174.523 D CUDA Graph id 7831 reused
+0.58.179.433 D CUDA Graph id 7833 reused
+0.58.184.645 D CUDA Graph id 7835 reused
+0.58.190.376 D CUDA Graph id 7837 reused
+0.58.195.777 D CUDA Graph id 7839 reused
+0.58.200.340 D CUDA Graph id 7841 reused
+0.58.205.218 D CUDA Graph id 7843 reused
+0.58.210.312 D CUDA Graph id 7845 reused
+0.58.215.397 D CUDA Graph id 7847 reused
+0.58.219.733 D CUDA Graph id 7849 reused
+0.58.224.406 D CUDA Graph id 7851 reused
+0.58.229.505 D CUDA Graph id 7853 reused
+0.58.234.610 D CUDA Graph id 7855 reused
+0.58.238.964 D CUDA Graph id 7857 reused
+0.58.243.661 D CUDA Graph id 7859 reused
+0.58.248.728 D CUDA Graph id 7861 reused
+0.58.253.926 D CUDA Graph id 7863 reused
+0.58.258.925 D CUDA Graph id 7865 reused
+0.58.264.985 D CUDA Graph id 7867 reused
+0.58.271.179 D CUDA Graph id 7869 reused
+0.58.276.515 D CUDA Graph id 7871 reused
+0.58.280.905 D CUDA Graph id 7873 reused
+0.58.286.370 D CUDA Graph id 7875 reused
+0.58.291.987 D CUDA Graph id 7877 reused
+0.58.298.260 D CUDA Graph id 7879 reused
+0.58.303.828 D CUDA Graph id 7881 reused
+0.58.308.995 D CUDA Graph id 7883 reused
+0.58.311.813 D CUDA Graph id 7885 reused
+0.58.313.366 D CUDA Graph id 7887 reused
+0.58.315.117 D CUDA Graph id 7889 reused
+0.58.317.193 D CUDA Graph id 7891 reused
+0.58.318.781 D CUDA Graph id 7893 reused
+0.58.348.612 D que  yield_to_que: done yielding to queue
+0.58.349.904 D res          send: sending result for task id = 110
+0.58.349.907 D res          send: task id = 110 pushed to result queue
+0.58.349.912 D slot process_toke: id  0 | task 110 | n_gen = 44, n_remaining = 20, next token:  1973 ' without'
+0.58.349.916 D que    start_loop: waiting for new tasks
+0.58.349.917 D que    start_loop: processing new tasks
+0.58.349.921 D que  process_new_: processing task, id = 154
+0.58.349.923 D que    start_loop: update slots
+0.58.349.924 D srv  update_slots: posting NEXT_RESPONSE
+0.58.349.927 D que          post: new task, id = 155, front = 0
+0.58.349.932 D slot handle_last_: id  0 | task 110 | slot decode token, id=1973, n_ctx = 1024, n_tokens = 106, truncated = 0
+0.58.349.939 D set_adapters_lora: adapters = (nil)
+0.58.349.939 D adapters_lora_are_same: adapters = (nil)
+0.58.349.941 D set_embeddings: value = 0
+0.58.349.942 D srv        decode: n_batch (effective) = 1024, off = 0
+0.58.349.943 D que  yield_to_que: yielding to queue
+0.58.349.991 D que  process_new_: processing task, id = 155
+0.58.349.993 D srv  process_sing: decoding, decline task, id_task = 155
+0.58.349.993 D que  process_new_: task declined, id = 155
+0.58.350.257 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" without"}}],"created":1791040369,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.58.352.856 D CUDA Graph id 7803 reused
+0.58.360.283 D CUDA Graph id 7805 reused
+0.58.365.718 D CUDA Graph id 7807 reused
+0.58.370.234 D CUDA Graph id 7809 reused
+0.58.374.998 D CUDA Graph id 7811 reused
+0.58.380.271 D CUDA Graph id 7813 reused
+0.58.385.430 D CUDA Graph id 7815 reused
+0.58.389.792 D CUDA Graph id 7817 reused
+0.58.394.535 D CUDA Graph id 7819 reused
+0.58.399.748 D CUDA Graph id 7821 reused
+0.58.404.954 D CUDA Graph id 7823 reused
+0.58.409.411 D CUDA Graph id 7825 reused
+0.58.414.152 D CUDA Graph id 7827 reused
+0.58.419.339 D CUDA Graph id 7829 reused
+0.58.424.492 D CUDA Graph id 7831 reused
+0.58.428.920 D CUDA Graph id 7833 reused
+0.58.433.718 D CUDA Graph id 7835 reused
+0.58.438.997 D CUDA Graph id 7837 reused
+0.58.444.221 D CUDA Graph id 7839 reused
+0.58.448.577 D CUDA Graph id 7841 reused
+0.58.453.378 D CUDA Graph id 7843 reused
+0.58.458.602 D CUDA Graph id 7845 reused
+0.58.463.784 D CUDA Graph id 7847 reused
+0.58.468.151 D CUDA Graph id 7849 reused
+0.58.472.915 D CUDA Graph id 7851 reused
+0.58.478.106 D CUDA Graph id 7853 reused
+0.58.483.315 D CUDA Graph id 7855 reused
+0.58.487.621 D CUDA Graph id 7857 reused
+0.58.492.355 D CUDA Graph id 7859 reused
+0.58.497.537 D CUDA Graph id 7861 reused
+0.58.502.684 D CUDA Graph id 7863 reused
+0.58.507.132 D CUDA Graph id 7865 reused
+0.58.511.888 D CUDA Graph id 7867 reused
+0.58.517.134 D CUDA Graph id 7869 reused
+0.58.522.354 D CUDA Graph id 7871 reused
+0.58.526.722 D CUDA Graph id 7873 reused
+0.58.531.506 D CUDA Graph id 7875 reused
+0.58.536.661 D CUDA Graph id 7877 reused
+0.58.541.869 D CUDA Graph id 7879 reused
+0.58.546.288 D CUDA Graph id 7881 reused
+0.58.551.086 D CUDA Graph id 7883 reused
+0.58.554.037 D CUDA Graph id 7885 reused
+0.58.555.398 D CUDA Graph id 7887 reused
+0.58.556.875 D CUDA Graph id 7889 reused
+0.58.558.215 D CUDA Graph id 7891 reused
+0.58.559.577 D CUDA Graph id 7893 reused
+0.58.586.119 D que  yield_to_que: done yielding to queue
+0.58.587.301 D res          send: sending result for task id = 110
+0.58.587.304 D res          send: task id = 110 pushed to result queue
+0.58.587.309 D slot process_toke: id  0 | task 110 | n_gen = 45, n_remaining = 19, next token: 11313 ' depending'
+0.58.587.313 D que    start_loop: waiting for new tasks
+0.58.587.313 D que    start_loop: processing new tasks
+0.58.587.317 D que  process_new_: processing task, id = 155
+0.58.587.319 D que    start_loop: update slots
+0.58.587.320 D srv  update_slots: posting NEXT_RESPONSE
+0.58.587.323 D que          post: new task, id = 156, front = 0
+0.58.587.329 D slot handle_last_: id  0 | task 110 | slot decode token, id=11313, n_ctx = 1024, n_tokens = 107, truncated = 0
+0.58.587.335 D set_adapters_lora: adapters = (nil)
+0.58.587.336 D adapters_lora_are_same: adapters = (nil)
+0.58.587.337 D set_embeddings: value = 0
+0.58.587.338 D srv        decode: n_batch (effective) = 1024, off = 0
+0.58.587.339 D que  yield_to_que: yielding to queue
+0.58.587.387 D que  process_new_: processing task, id = 156
+0.58.587.388 D srv  process_sing: decoding, decline task, id_task = 156
+0.58.587.388 D que  process_new_: task declined, id = 156
+0.58.587.612 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" depending"}}],"created":1791040369,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.58.589.942 D CUDA Graph id 7803 reused
+0.58.598.035 D CUDA Graph id 7805 reused
+0.58.603.978 D CUDA Graph id 7807 reused
+0.58.609.305 D CUDA Graph id 7809 reused
+0.58.614.561 D CUDA Graph id 7811 reused
+0.58.620.241 D CUDA Graph id 7813 reused
+0.58.626.376 D CUDA Graph id 7815 reused
+0.58.631.145 D CUDA Graph id 7817 reused
+0.58.636.328 D CUDA Graph id 7819 reused
+0.58.641.903 D CUDA Graph id 7821 reused
+0.58.647.498 D CUDA Graph id 7823 reused
+0.58.652.204 D CUDA Graph id 7825 reused
+0.58.657.398 D CUDA Graph id 7827 reused
+0.58.663.001 D CUDA Graph id 7829 reused
+0.58.668.578 D CUDA Graph id 7831 reused
+0.58.673.422 D CUDA Graph id 7833 reused
+0.58.678.636 D CUDA Graph id 7835 reused
+0.58.684.311 D CUDA Graph id 7837 reused
+0.58.689.890 D CUDA Graph id 7839 reused
+0.58.694.605 D CUDA Graph id 7841 reused
+0.58.699.761 D CUDA Graph id 7843 reused
+0.58.705.350 D CUDA Graph id 7845 reused
+0.58.710.913 D CUDA Graph id 7847 reused
+0.58.715.636 D CUDA Graph id 7849 reused
+0.58.720.783 D CUDA Graph id 7851 reused
+0.58.726.347 D CUDA Graph id 7853 reused
+0.58.732.044 D CUDA Graph id 7855 reused
+0.58.736.772 D CUDA Graph id 7857 reused
+0.58.741.986 D CUDA Graph id 7859 reused
+0.58.747.585 D CUDA Graph id 7861 reused
+0.58.753.190 D CUDA Graph id 7863 reused
+0.58.757.995 D CUDA Graph id 7865 reused
+0.58.763.143 D CUDA Graph id 7867 reused
+0.58.768.826 D CUDA Graph id 7869 reused
+0.58.774.362 D CUDA Graph id 7871 reused
+0.58.779.087 D CUDA Graph id 7873 reused
+0.58.784.232 D CUDA Graph id 7875 reused
+0.58.789.855 D CUDA Graph id 7877 reused
+0.58.795.498 D CUDA Graph id 7879 reused
+0.58.800.243 D CUDA Graph id 7881 reused
+0.58.805.541 D CUDA Graph id 7883 reused
+0.58.808.851 D CUDA Graph id 7885 reused
+0.58.810.549 D CUDA Graph id 7887 reused
+0.58.812.420 D CUDA Graph id 7889 reused
+0.58.813.813 D CUDA Graph id 7891 reused
+0.58.815.218 D CUDA Graph id 7893 reused
+0.58.842.023 D que  yield_to_que: done yielding to queue
+0.58.843.254 D res          send: sending result for task id = 110
+0.58.843.258 D res          send: task id = 110 pushed to result queue
+0.58.843.264 D slot process_toke: id  0 | task 110 | n_gen = 46, n_remaining = 18, next token:   383 ' on'
+0.58.843.267 D que    start_loop: waiting for new tasks
+0.58.843.268 D que    start_loop: processing new tasks
+0.58.843.273 D que  process_new_: processing task, id = 156
+0.58.843.275 D que    start_loop: update slots
+0.58.843.276 D srv  update_slots: posting NEXT_RESPONSE
+0.58.843.279 D que          post: new task, id = 157, front = 0
+0.58.843.286 D slot handle_last_: id  0 | task 110 | slot decode token, id=383, n_ctx = 1024, n_tokens = 108, truncated = 0
+0.58.843.293 D set_adapters_lora: adapters = (nil)
+0.58.843.293 D adapters_lora_are_same: adapters = (nil)
+0.58.843.295 D set_embeddings: value = 0
+0.58.843.296 D srv        decode: n_batch (effective) = 1024, off = 0
+0.58.843.296 D que  yield_to_que: yielding to queue
+0.58.843.347 D que  process_new_: processing task, id = 157
+0.58.843.349 D srv  process_sing: decoding, decline task, id_task = 157
+0.58.843.349 D que  process_new_: task declined, id = 157
+0.58.843.588 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" on"}}],"created":1791040369,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.58.845.949 D CUDA Graph id 7803 reused
+0.58.853.486 D CUDA Graph id 7805 reused
+0.58.858.898 D CUDA Graph id 7807 reused
+0.58.863.401 D CUDA Graph id 7809 reused
+0.58.868.203 D CUDA Graph id 7811 reused
+0.58.873.453 D CUDA Graph id 7813 reused
+0.58.879.632 D CUDA Graph id 7815 reused
+0.58.884.922 D CUDA Graph id 7817 reused
+0.58.892.212 D CUDA Graph id 7819 reused
+0.58.898.042 D CUDA Graph id 7821 reused
+0.58.903.496 D CUDA Graph id 7823 reused
+0.58.908.856 D CUDA Graph id 7825 reused
+0.58.914.716 D CUDA Graph id 7827 reused
+0.58.921.573 D CUDA Graph id 7829 reused
+0.58.928.788 D CUDA Graph id 7831 reused
+0.58.933.695 D CUDA Graph id 7833 reused
+0.58.938.709 D CUDA Graph id 7835 reused
+0.58.944.966 D CUDA Graph id 7837 reused
+0.58.950.184 D CUDA Graph id 7839 reused
+0.58.954.596 D CUDA Graph id 7841 reused
+0.58.959.422 D CUDA Graph id 7843 reused
+0.58.964.636 D CUDA Graph id 7845 reused
+0.58.969.864 D CUDA Graph id 7847 reused
+0.58.974.249 D CUDA Graph id 7849 reused
+0.58.979.102 D CUDA Graph id 7851 reused
+0.58.984.382 D CUDA Graph id 7853 reused
+0.58.989.652 D CUDA Graph id 7855 reused
+0.58.994.077 D CUDA Graph id 7857 reused
+0.58.998.888 D CUDA Graph id 7859 reused
+0.59.004.063 D CUDA Graph id 7861 reused
+0.59.009.291 D CUDA Graph id 7863 reused
+0.59.013.682 D CUDA Graph id 7865 reused
+0.59.018.449 D CUDA Graph id 7867 reused
+0.59.023.691 D CUDA Graph id 7869 reused
+0.59.028.959 D CUDA Graph id 7871 reused
+0.59.033.332 D CUDA Graph id 7873 reused
+0.59.038.157 D CUDA Graph id 7875 reused
+0.59.043.364 D CUDA Graph id 7877 reused
+0.59.048.622 D CUDA Graph id 7879 reused
+0.59.052.977 D CUDA Graph id 7881 reused
+0.59.057.826 D CUDA Graph id 7883 reused
+0.59.060.783 D CUDA Graph id 7885 reused
+0.59.062.136 D CUDA Graph id 7887 reused
+0.59.063.582 D CUDA Graph id 7889 reused
+0.59.064.967 D CUDA Graph id 7891 reused
+0.59.066.327 D CUDA Graph id 7893 reused
+0.59.098.592 D que  yield_to_que: done yielding to queue
+0.59.099.799 D res          send: sending result for task id = 110
+0.59.099.803 D res          send: task id = 110 pushed to result queue
+0.59.099.808 D slot process_toke: id  0 | task 110 | n_gen = 47, n_remaining = 17, next token:  7361 ' internet'
+0.59.099.811 D que    start_loop: waiting for new tasks
+0.59.099.811 D que    start_loop: processing new tasks
+0.59.099.816 D que  process_new_: processing task, id = 157
+0.59.099.817 D que    start_loop: update slots
+0.59.099.819 D srv  update_slots: posting NEXT_RESPONSE
+0.59.099.822 D que          post: new task, id = 158, front = 0
+0.59.099.829 D slot handle_last_: id  0 | task 110 | slot decode token, id=7361, n_ctx = 1024, n_tokens = 109, truncated = 0
+0.59.099.835 D set_adapters_lora: adapters = (nil)
+0.59.099.836 D adapters_lora_are_same: adapters = (nil)
+0.59.099.837 D set_embeddings: value = 0
+0.59.099.838 D srv        decode: n_batch (effective) = 1024, off = 0
+0.59.099.839 D que  yield_to_que: yielding to queue
+0.59.099.887 D que  process_new_: processing task, id = 158
+0.59.099.888 D srv  process_sing: decoding, decline task, id_task = 158
+0.59.099.889 D que  process_new_: task declined, id = 158
+0.59.100.033 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" internet"}}],"created":1791040369,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.59.102.528 D CUDA Graph id 7803 reused
+0.59.110.379 D CUDA Graph id 7805 reused
+0.59.115.981 D CUDA Graph id 7807 reused
+0.59.120.587 D CUDA Graph id 7809 reused
+0.59.125.491 D CUDA Graph id 7811 reused
+0.59.130.831 D CUDA Graph id 7813 reused
+0.59.136.221 D CUDA Graph id 7815 reused
+0.59.140.596 D CUDA Graph id 7817 reused
+0.59.145.422 D CUDA Graph id 7819 reused
+0.59.150.674 D CUDA Graph id 7821 reused
+0.59.156.017 D CUDA Graph id 7823 reused
+0.59.160.816 D CUDA Graph id 7825 reused
+0.59.166.115 D CUDA Graph id 7827 reused
+0.59.171.973 D CUDA Graph id 7829 reused
+0.59.177.917 D CUDA Graph id 7831 reused
+0.59.182.834 D CUDA Graph id 7833 reused
+0.59.188.060 D CUDA Graph id 7835 reused
+0.59.193.733 D CUDA Graph id 7837 reused
+0.59.199.794 D CUDA Graph id 7839 reused
+0.59.205.097 D CUDA Graph id 7841 reused
+0.59.212.490 D CUDA Graph id 7843 reused
+0.59.218.481 D CUDA Graph id 7845 reused
+0.59.223.796 D CUDA Graph id 7847 reused
+0.59.229.379 D CUDA Graph id 7849 reused
+0.59.235.127 D CUDA Graph id 7851 reused
+0.59.241.926 D CUDA Graph id 7853 reused
+0.59.249.115 D CUDA Graph id 7855 reused
+0.59.254.130 D CUDA Graph id 7857 reused
+0.59.258.900 D CUDA Graph id 7859 reused
+0.59.265.185 D CUDA Graph id 7861 reused
+0.59.270.342 D CUDA Graph id 7863 reused
+0.59.274.656 D CUDA Graph id 7865 reused
+0.59.279.336 D CUDA Graph id 7867 reused
+0.59.284.487 D CUDA Graph id 7869 reused
+0.59.289.655 D CUDA Graph id 7871 reused
+0.59.293.905 D CUDA Graph id 7873 reused
+0.59.298.550 D CUDA Graph id 7875 reused
+0.59.303.624 D CUDA Graph id 7877 reused
+0.59.308.743 D CUDA Graph id 7879 reused
+0.59.312.971 D CUDA Graph id 7881 reused
+0.59.317.709 D CUDA Graph id 7883 reused
+0.59.320.569 D CUDA Graph id 7885 reused
+0.59.321.889 D CUDA Graph id 7887 reused
+0.59.323.284 D CUDA Graph id 7889 reused
+0.59.324.536 D CUDA Graph id 7891 reused
+0.59.325.852 D CUDA Graph id 7893 reused
+0.59.358.608 D que  yield_to_que: done yielding to queue
+0.59.359.892 D res          send: sending result for task id = 110
+0.59.359.897 D res          send: task id = 110 pushed to result queue
+0.59.359.903 D slot process_toke: id  0 | task 110 | n_gen = 48, n_remaining = 16, next token: 29270 ' connectivity'
+0.59.359.907 D que    start_loop: waiting for new tasks
+0.59.359.907 D que    start_loop: processing new tasks
+0.59.359.912 D que  process_new_: processing task, id = 158
+0.59.359.914 D que    start_loop: update slots
+0.59.359.915 D srv  update_slots: posting NEXT_RESPONSE
+0.59.359.919 D que          post: new task, id = 159, front = 0
+0.59.359.925 D slot handle_last_: id  0 | task 110 | slot decode token, id=29270, n_ctx = 1024, n_tokens = 110, truncated = 0
+0.59.359.932 D set_adapters_lora: adapters = (nil)
+0.59.359.933 D adapters_lora_are_same: adapters = (nil)
+0.59.359.934 D set_embeddings: value = 0
+0.59.359.936 D srv        decode: n_batch (effective) = 1024, off = 0
+0.59.359.937 D que  yield_to_que: yielding to queue
+0.59.359.985 D que  process_new_: processing task, id = 159
+0.59.359.987 D srv  process_sing: decoding, decline task, id_task = 159
+0.59.359.987 D que  process_new_: task declined, id = 159
+0.59.360.117 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" connectivity"}}],"created":1791040370,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.59.362.632 D CUDA Graph id 7803 reused
+0.59.370.377 D CUDA Graph id 7805 reused
+0.59.375.977 D CUDA Graph id 7807 reused
+0.59.380.582 D CUDA Graph id 7809 reused
+0.59.385.575 D CUDA Graph id 7811 reused
+0.59.390.915 D CUDA Graph id 7813 reused
+0.59.396.111 D CUDA Graph id 7815 reused
+0.59.400.472 D CUDA Graph id 7817 reused
+0.59.405.301 D CUDA Graph id 7819 reused
+0.59.410.545 D CUDA Graph id 7821 reused
+0.59.415.754 D CUDA Graph id 7823 reused
+0.59.420.149 D CUDA Graph id 7825 reused
+0.59.424.997 D CUDA Graph id 7827 reused
+0.59.430.215 D CUDA Graph id 7829 reused
+0.59.435.463 D CUDA Graph id 7831 reused
+0.59.439.933 D CUDA Graph id 7833 reused
+0.59.444.774 D CUDA Graph id 7835 reused
+0.59.450.056 D CUDA Graph id 7837 reused
+0.59.455.247 D CUDA Graph id 7839 reused
+0.59.459.617 D CUDA Graph id 7841 reused
+0.59.464.443 D CUDA Graph id 7843 reused
+0.59.469.720 D CUDA Graph id 7845 reused
+0.59.474.961 D CUDA Graph id 7847 reused
+0.59.479.337 D CUDA Graph id 7849 reused
+0.59.484.127 D CUDA Graph id 7851 reused
+0.59.489.344 D CUDA Graph id 7853 reused
+0.59.494.612 D CUDA Graph id 7855 reused
+0.59.498.995 D CUDA Graph id 7857 reused
+0.59.503.824 D CUDA Graph id 7859 reused
+0.59.509.068 D CUDA Graph id 7861 reused
+0.59.514.283 D CUDA Graph id 7863 reused
+0.59.519.049 D CUDA Graph id 7865 reused
+0.59.525.217 D CUDA Graph id 7867 reused
+0.59.532.798 D CUDA Graph id 7869 reused
+0.59.538.791 D CUDA Graph id 7871 reused
+0.59.543.170 D CUDA Graph id 7873 reused
+0.59.549.156 D CUDA Graph id 7875 reused
+0.59.555.106 D CUDA Graph id 7877 reused
+0.59.561.881 D CUDA Graph id 7879 reused
+0.59.568.116 D CUDA Graph id 7881 reused
+0.59.573.938 D CUDA Graph id 7883 reused
+0.59.576.934 D CUDA Graph id 7885 reused
+0.59.578.347 D CUDA Graph id 7887 reused
+0.59.580.207 D CUDA Graph id 7889 reused
+0.59.582.087 D CUDA Graph id 7891 reused
+0.59.583.810 D CUDA Graph id 7893 reused
+0.59.609.900 D que  yield_to_que: done yielding to queue
+0.59.611.122 D res          send: sending result for task id = 110
+0.59.611.126 D res          send: task id = 110 pushed to result queue
+0.59.611.132 D slot process_toke: id  0 | task 110 | n_gen = 49, n_remaining = 15, next token:   466 ' or'
+0.59.611.135 D que    start_loop: waiting for new tasks
+0.59.611.136 D que    start_loop: processing new tasks
+0.59.611.140 D que  process_new_: processing task, id = 159
+0.59.611.142 D que    start_loop: update slots
+0.59.611.143 D srv  update_slots: posting NEXT_RESPONSE
+0.59.611.147 D que          post: new task, id = 160, front = 0
+0.59.611.153 D slot handle_last_: id  0 | task 110 | slot decode token, id=466, n_ctx = 1024, n_tokens = 111, truncated = 0
+0.59.611.160 D set_adapters_lora: adapters = (nil)
+0.59.611.161 D adapters_lora_are_same: adapters = (nil)
+0.59.611.162 D set_embeddings: value = 0
+0.59.611.164 D srv        decode: n_batch (effective) = 1024, off = 0
+0.59.611.165 D que  yield_to_que: yielding to queue
+0.59.611.213 D que  process_new_: processing task, id = 160
+0.59.611.215 D srv  process_sing: decoding, decline task, id_task = 160
+0.59.611.215 D que  process_new_: task declined, id = 160
+0.59.611.458 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" or"}}],"created":1791040370,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.59.613.809 D CUDA Graph id 7803 reused
+0.59.621.310 D CUDA Graph id 7805 reused
+0.59.626.731 D CUDA Graph id 7807 reused
+0.59.631.252 D CUDA Graph id 7809 reused
+0.59.636.079 D CUDA Graph id 7811 reused
+0.59.641.364 D CUDA Graph id 7813 reused
+0.59.646.610 D CUDA Graph id 7815 reused
+0.59.651.043 D CUDA Graph id 7817 reused
+0.59.655.828 D CUDA Graph id 7819 reused
+0.59.661.016 D CUDA Graph id 7821 reused
+0.59.666.250 D CUDA Graph id 7823 reused
+0.59.670.635 D CUDA Graph id 7825 reused
+0.59.675.452 D CUDA Graph id 7827 reused
+0.59.680.629 D CUDA Graph id 7829 reused
+0.59.685.906 D CUDA Graph id 7831 reused
+0.59.690.318 D CUDA Graph id 7833 reused
+0.59.695.086 D CUDA Graph id 7835 reused
+0.59.700.387 D CUDA Graph id 7837 reused
+0.59.705.641 D CUDA Graph id 7839 reused
+0.59.710.023 D CUDA Graph id 7841 reused
+0.59.714.825 D CUDA Graph id 7843 reused
+0.59.720.025 D CUDA Graph id 7845 reused
+0.59.725.229 D CUDA Graph id 7847 reused
+0.59.729.607 D CUDA Graph id 7849 reused
+0.59.734.457 D CUDA Graph id 7851 reused
+0.59.739.705 D CUDA Graph id 7853 reused
+0.59.744.939 D CUDA Graph id 7855 reused
+0.59.749.335 D CUDA Graph id 7857 reused
+0.59.754.214 D CUDA Graph id 7859 reused
+0.59.759.420 D CUDA Graph id 7861 reused
+0.59.764.687 D CUDA Graph id 7863 reused
+0.59.769.084 D CUDA Graph id 7865 reused
+0.59.773.859 D CUDA Graph id 7867 reused
+0.59.779.127 D CUDA Graph id 7869 reused
+0.59.784.365 D CUDA Graph id 7871 reused
+0.59.788.752 D CUDA Graph id 7873 reused
+0.59.793.549 D CUDA Graph id 7875 reused
+0.59.798.761 D CUDA Graph id 7877 reused
+0.59.804.017 D CUDA Graph id 7879 reused
+0.59.808.361 D CUDA Graph id 7881 reused
+0.59.813.224 D CUDA Graph id 7883 reused
+0.59.816.161 D CUDA Graph id 7885 reused
+0.59.817.562 D CUDA Graph id 7887 reused
+0.59.819.033 D CUDA Graph id 7889 reused
+0.59.820.375 D CUDA Graph id 7891 reused
+0.59.821.745 D CUDA Graph id 7893 reused
+0.59.848.322 D que  yield_to_que: done yielding to queue
+0.59.849.752 D res          send: sending result for task id = 110
+0.59.849.758 D res          send: task id = 110 pushed to result queue
+0.59.849.765 D slot process_toke: id  0 | task 110 | n_gen = 50, n_remaining = 14, next token:  9158 ' cloud'
+0.59.849.770 D que    start_loop: waiting for new tasks
+0.59.849.771 D que    start_loop: processing new tasks
+0.59.849.778 D que  process_new_: processing task, id = 160
+0.59.849.780 D que    start_loop: update slots
+0.59.849.782 D srv  update_slots: posting NEXT_RESPONSE
+0.59.849.786 D que          post: new task, id = 161, front = 0
+0.59.849.794 D slot handle_last_: id  0 | task 110 | slot decode token, id=9158, n_ctx = 1024, n_tokens = 112, truncated = 0
+0.59.849.803 D set_adapters_lora: adapters = (nil)
+0.59.849.804 D adapters_lora_are_same: adapters = (nil)
+0.59.849.806 D set_embeddings: value = 0
+0.59.849.808 D srv        decode: n_batch (effective) = 1024, off = 0
+0.59.849.809 D que  yield_to_que: yielding to queue
+0.59.849.858 D que  process_new_: processing task, id = 161
+0.59.849.860 D srv  process_sing: decoding, decline task, id_task = 161
+0.59.849.860 D que  process_new_: task declined, id = 161
+0.59.850.053 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" cloud"}}],"created":1791040370,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+0.59.852.798 D CUDA Graph id 7803 reused
+0.59.861.428 D CUDA Graph id 7805 reused
+0.59.867.253 D CUDA Graph id 7807 reused
+0.59.872.384 D CUDA Graph id 7809 reused
+0.59.878.434 D CUDA Graph id 7811 reused
+0.59.884.251 D CUDA Graph id 7813 reused
+0.59.889.533 D CUDA Graph id 7815 reused
+0.59.894.908 D CUDA Graph id 7817 reused
+0.59.899.749 D CUDA Graph id 7819 reused
+0.59.905.091 D CUDA Graph id 7821 reused
+0.59.910.348 D CUDA Graph id 7823 reused
+0.59.914.742 D CUDA Graph id 7825 reused
+0.59.919.535 D CUDA Graph id 7827 reused
+0.59.924.735 D CUDA Graph id 7829 reused
+0.59.929.948 D CUDA Graph id 7831 reused
+0.59.934.334 D CUDA Graph id 7833 reused
+0.59.939.134 D CUDA Graph id 7835 reused
+0.59.944.346 D CUDA Graph id 7837 reused
+0.59.949.554 D CUDA Graph id 7839 reused
+0.59.953.923 D CUDA Graph id 7841 reused
+0.59.958.710 D CUDA Graph id 7843 reused
+0.59.963.950 D CUDA Graph id 7845 reused
+0.59.969.135 D CUDA Graph id 7847 reused
+0.59.973.496 D CUDA Graph id 7849 reused
+0.59.978.283 D CUDA Graph id 7851 reused
+0.59.983.558 D CUDA Graph id 7853 reused
+0.59.988.771 D CUDA Graph id 7855 reused
+0.59.993.141 D CUDA Graph id 7857 reused
+0.59.997.920 D CUDA Graph id 7859 reused
+1.00.003.133 D CUDA Graph id 7861 reused
+1.00.008.367 D CUDA Graph id 7863 reused
+1.00.012.741 D CUDA Graph id 7865 reused
+1.00.017.568 D CUDA Graph id 7867 reused
+1.00.022.789 D CUDA Graph id 7869 reused
+1.00.027.989 D CUDA Graph id 7871 reused
+1.00.032.308 D CUDA Graph id 7873 reused
+1.00.037.104 D CUDA Graph id 7875 reused
+1.00.042.268 D CUDA Graph id 7877 reused
+1.00.047.495 D CUDA Graph id 7879 reused
+1.00.051.850 D CUDA Graph id 7881 reused
+1.00.056.649 D CUDA Graph id 7883 reused
+1.00.059.571 D CUDA Graph id 7885 reused
+1.00.060.992 D CUDA Graph id 7887 reused
+1.00.062.495 D CUDA Graph id 7889 reused
+1.00.063.842 D CUDA Graph id 7891 reused
+1.00.065.219 D CUDA Graph id 7893 reused
+1.00.092.073 D que  yield_to_que: done yielding to queue
+1.00.093.336 D res          send: sending result for task id = 110
+1.00.093.340 D res          send: task id = 110 pushed to result queue
+1.00.093.345 D slot process_toke: id  0 | task 110 | n_gen = 51, n_remaining = 13, next token:  3401 ' services'
+1.00.093.349 D que    start_loop: waiting for new tasks
+1.00.093.349 D que    start_loop: processing new tasks
+1.00.093.354 D que  process_new_: processing task, id = 161
+1.00.093.356 D que    start_loop: update slots
+1.00.093.357 D srv  update_slots: posting NEXT_RESPONSE
+1.00.093.360 D que          post: new task, id = 162, front = 0
+1.00.093.366 D slot handle_last_: id  0 | task 110 | slot decode token, id=3401, n_ctx = 1024, n_tokens = 113, truncated = 0
+1.00.093.373 D set_adapters_lora: adapters = (nil)
+1.00.093.373 D adapters_lora_are_same: adapters = (nil)
+1.00.093.374 D set_embeddings: value = 0
+1.00.093.376 D srv        decode: n_batch (effective) = 1024, off = 0
+1.00.093.376 D que  yield_to_que: yielding to queue
+1.00.093.425 D que  process_new_: processing task, id = 162
+1.00.093.427 D srv  process_sing: decoding, decline task, id_task = 162
+1.00.093.427 D que  process_new_: task declined, id = 162
+1.00.093.564 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":" services"}}],"created":1791040370,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+1.00.095.916 D CUDA Graph id 7803 reused
+1.00.103.423 D CUDA Graph id 7805 reused
+1.00.108.939 D CUDA Graph id 7807 reused
+1.00.113.385 D CUDA Graph id 7809 reused
+1.00.118.185 D CUDA Graph id 7811 reused
+1.00.123.453 D CUDA Graph id 7813 reused
+1.00.128.685 D CUDA Graph id 7815 reused
+1.00.133.093 D CUDA Graph id 7817 reused
+1.00.138.061 D CUDA Graph id 7819 reused
+1.00.143.286 D CUDA Graph id 7821 reused
+1.00.148.701 D CUDA Graph id 7823 reused
+1.00.153.688 D CUDA Graph id 7825 reused
+1.00.159.808 D CUDA Graph id 7827 reused
+1.00.166.083 D CUDA Graph id 7829 reused
+1.00.171.917 D CUDA Graph id 7831 reused
+1.00.177.715 D CUDA Graph id 7833 reused
+1.00.183.131 D CUDA Graph id 7835 reused
+1.00.189.131 D CUDA Graph id 7837 reused
+1.00.195.646 D CUDA Graph id 7839 reused
+1.00.200.445 D CUDA Graph id 7841 reused
+1.00.205.489 D CUDA Graph id 7843 reused
+1.00.211.784 D CUDA Graph id 7845 reused
+1.00.217.028 D CUDA Graph id 7847 reused
+1.00.221.361 D CUDA Graph id 7849 reused
+1.00.226.099 D CUDA Graph id 7851 reused
+1.00.231.199 D CUDA Graph id 7853 reused
+1.00.236.426 D CUDA Graph id 7855 reused
+1.00.240.679 D CUDA Graph id 7857 reused
+1.00.245.422 D CUDA Graph id 7859 reused
+1.00.250.514 D CUDA Graph id 7861 reused
+1.00.255.631 D CUDA Graph id 7863 reused
+1.00.259.955 D CUDA Graph id 7865 reused
+1.00.264.639 D CUDA Graph id 7867 reused
+1.00.269.834 D CUDA Graph id 7869 reused
+1.00.274.920 D CUDA Graph id 7871 reused
+1.00.279.183 D CUDA Graph id 7873 reused
+1.00.283.914 D CUDA Graph id 7875 reused
+1.00.289.054 D CUDA Graph id 7877 reused
+1.00.294.167 D CUDA Graph id 7879 reused
+1.00.298.463 D CUDA Graph id 7881 reused
+1.00.303.181 D CUDA Graph id 7883 reused
+1.00.306.073 D CUDA Graph id 7885 reused
+1.00.307.387 D CUDA Graph id 7887 reused
+1.00.308.786 D CUDA Graph id 7889 reused
+1.00.310.069 D CUDA Graph id 7891 reused
+1.00.311.399 D CUDA Graph id 7893 reused
+1.00.343.190 D que  yield_to_que: done yielding to queue
+1.00.344.401 D res          send: sending result for task id = 110
+1.00.344.405 D res          send: task id = 110 pushed to result queue
+1.00.344.410 D slot process_toke: id  0 | task 110 | n_gen = 52, n_remaining = 12, next token:    13 '.'
+1.00.344.414 D que    start_loop: waiting for new tasks
+1.00.344.414 D que    start_loop: processing new tasks
+1.00.344.419 D que  process_new_: processing task, id = 162
+1.00.344.420 D que    start_loop: update slots
+1.00.344.422 D srv  update_slots: posting NEXT_RESPONSE
+1.00.344.443 D que          post: new task, id = 163, front = 0
+1.00.344.451 D slot handle_last_: id  0 | task 110 | slot decode token, id=13, n_ctx = 1024, n_tokens = 114, truncated = 0
+1.00.344.458 D set_adapters_lora: adapters = (nil)
+1.00.344.459 D adapters_lora_are_same: adapters = (nil)
+1.00.344.460 D set_embeddings: value = 0
+1.00.344.462 D srv        decode: n_batch (effective) = 1024, off = 0
+1.00.344.463 D que  yield_to_que: yielding to queue
+1.00.344.514 D que  process_new_: processing task, id = 163
+1.00.344.516 D srv  process_sing: decoding, decline task, id_task = 163
+1.00.344.516 D que  process_new_: task declined, id = 163
+1.00.344.640 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"."}}],"created":1791040371,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+
+1.00.347.067 D CUDA Graph id 7803 reused
+1.00.354.820 D CUDA Graph id 7805 reused
+1.00.360.388 D CUDA Graph id 7807 reused
+1.00.364.939 D CUDA Graph id 7809 reused
+1.00.369.781 D CUDA Graph id 7811 reused
+1.00.375.071 D CUDA Graph id 7813 reused
+1.00.380.412 D CUDA Graph id 7815 reused
+1.00.384.745 D CUDA Graph id 7817 reused
+1.00.389.574 D CUDA Graph id 7819 reused
+1.00.394.763 D CUDA Graph id 7821 reused
+1.00.400.037 D CUDA Graph id 7823 reused
+1.00.404.396 D CUDA Graph id 7825 reused
+1.00.409.205 D CUDA Graph id 7827 reused
+1.00.414.411 D CUDA Graph id 7829 reused
+1.00.419.664 D CUDA Graph id 7831 reused
+1.00.424.071 D CUDA Graph id 7833 reused
+1.00.428.916 D CUDA Graph id 7835 reused
+1.00.434.127 D CUDA Graph id 7837 reused
+1.00.439.276 D CUDA Graph id 7839 reused
+1.00.443.681 D CUDA Graph id 7841 reused
+1.00.448.434 D CUDA Graph id 7843 reused
+1.00.453.708 D CUDA Graph id 7845 reused
+1.00.458.959 D CUDA Graph id 7847 reused
+1.00.463.409 D CUDA Graph id 7849 reused
+1.00.469.401 D CUDA Graph id 7851 reused
+1.00.476.511 D CUDA Graph id 7853 reused
+1.00.483.369 D CUDA Graph id 7855 reused
+1.00.488.028 D CUDA Graph id 7857 reused
+1.00.493.245 D CUDA Graph id 7859 reused
+1.00.499.495 D CUDA Graph id 7861 reused
+1.00.505.790 D CUDA Graph id 7863 reused
+1.00.511.493 D CUDA Graph id 7865 reused
+1.00.518.107 D CUDA Graph id 7867 reused
+1.00.523.627 D CUDA Graph id 7869 reused
+1.00.529.735 D CUDA Graph id 7871 reused
+1.00.534.537 D CUDA Graph id 7873 reused
+1.00.539.371 D CUDA Graph id 7875 reused
+1.00.544.610 D CUDA Graph id 7877 reused
+1.00.549.844 D CUDA Graph id 7879 reused
+1.00.554.344 D CUDA Graph id 7881 reused
+1.00.559.215 D CUDA Graph id 7883 reused
+1.00.562.142 D CUDA Graph id 7885 reused
+1.00.563.602 D CUDA Graph id 7887 reused
+1.00.565.082 D CUDA Graph id 7889 reused
+1.00.566.449 D CUDA Graph id 7891 reused
+1.00.567.830 D CUDA Graph id 7893 reused
+1.00.595.584 D que  yield_to_que: done yielding to queue
+1.00.596.859 D res          send: sending result for task id = 110
+1.00.596.863 D res          send: task id = 110 pushed to result queue
+1.00.596.868 D slot process_toke: id  0 | task 110 | stopped by EOS
+1.00.596.870 D slot process_toke: id  0 | task 110 | n_gen = 53, n_remaining = 11, next token: 248046 ''
+1.00.596.877 I slot print_timing: id  0 | task 110 | prompt eval time =     658.87 ms /     4 tokens (  164.72 ms per token,     6.07 tokens per second)
+1.00.596.881 I slot print_timing: id  0 | task 110 |        eval time =   13038.77 ms /    53 tokens (  250.75 ms per token,     3.99 tokens per second)
+1.00.596.883 I slot print_timing: id  0 | task 110 |       total time =   13697.64 ms /    57 tokens
+1.00.596.885 I slot print_timing: id  0 | task 110 |    graphs reused =        153
+1.00.596.913 D res          send: sending result for task id = 110
+1.00.596.914 D res          send: task id = 110 pushed to result queue
+1.00.596.915 I slot      release: id  0 | task 110 | stop processing: n_tokens = 115, truncated = 0
+1.00.596.917 D slot        reset: id  0 | task 110 | 
+1.00.596.931 D que    start_loop: waiting for new tasks
+1.00.596.931 D que    start_loop: processing new tasks
+1.00.596.935 D que  process_new_: processing task, id = 163
+1.00.596.937 D que    start_loop: update slots
+1.00.596.938 I srv  update_slots: all slots are idle
+1.00.596.939 D que    start_loop: waiting for new tasks
+1.00.597.079 D Parsed message: {"role":"assistant","content":"Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.","reasoning_content":"We need to answer user: \"In one sentence, explain why local backups are useful.\" Need final one sentence. Ensure concise.\n"}
+1.00.597.266 D srv    operator(): http: streamed chunk: data: {"choices":[{"finish_reason":"stop","index":0,"delta":{}}],"created":1791040371,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk"}
+
+data: {"choices":[],"created":1791040371,"id":"chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv","model":"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf","system_fingerprint":"b10964-b29c606e2","object":"chat.completion.chunk","usage":{"completion_tokens":53,"prompt_tokens":63,"total_tokens":116,"prompt_tokens_details":{"cached_tokens":59}},"timings":{"cache_n":59,"prompt_n":4,"prompt_ms":658.871,"prompt_per_token_ms":164.71775,"prompt_per_second":6.070991134835196,"predicted_n":53,"predicted_ms":13038.767,"predicted_per_token_ms":250.74551923076922,"predicted_per_second":3.9881071576783294}}
+
+
+1.00.597.278 D srv    operator(): all results received, terminating stream
+1.00.597.307 D srv    operator(): http: streamed chunk: data: [DONE]
+
+
+1.00.597.351 D srv    operator(): http: stream ended
+1.00.597.365 D res  remove_waiti: remove task 110 from waiting list. current waiting = 1 (before remove)
+1.00.597.367 D srv          stop: all tasks already finished, no need to cancel

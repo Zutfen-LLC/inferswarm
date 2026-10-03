@@ -1,0 +1,211 @@
+{
+  "entries": [
+    {
+      "bytes": 8354,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/README.md",
+      "sha256": "43f06d3cae294dfc5a77d752677df3ba0ccb0c6767a4a5e19cd2bb1d9c1faf62"
+    },
+    {
+      "bytes": 132,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/attempt-01-error.json",
+      "sha256": "5ba4a3ef0797ba170ef73bc1f3e21ec5f63b2f6c24d5fdc72b616b7f6840d1b8"
+    },
+    {
+      "bytes": 2444,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/cache-identity.json",
+      "sha256": "218e6db02b461ba7863136c53ce6eb2a10d7e3953218fe578572c5d4f2e76ca0"
+    },
+    {
+      "bytes": 301,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/cleanup.json",
+      "sha256": "3e72404ee3ec8418adfc993d553e4cea921ae1f2f33ea5bad7e0d3c03c4da404"
+    },
+    {
+      "bytes": 1210333,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/client.log",
+      "sha256": "c9f8033593256ac2614ae0f1ef3c74d7a3899abdf2c9ba47d99e7c6cdf4acb2b"
+    },
+    {
+      "bytes": 33160,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/gpu-01.jsonl",
+      "sha256": "488a87cacccf2b6820bf4f0e4e16e4695e188dffcc1fe1af5d98f049238d6463"
+    },
+    {
+      "bytes": 34129,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/gpu-04.jsonl",
+      "sha256": "1350df7375b4e23ba945d27cc35873009d13033499927da2a4567837dafb4299"
+    },
+    {
+      "bytes": 12248,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/after.json",
+      "sha256": "eb3a7ab7fa4693dc9ff4ff11dec57d54fefc2ed8df37458d1c06b9ae6447e9cc"
+    },
+    {
+      "bytes": 12180,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/before.json",
+      "sha256": "f25a84e468c339a9dd0a6a64ff3ecd6f598af42950ad3f6072f137bde8f483d5"
+    },
+    {
+      "bytes": 191146,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/client-request.log",
+      "sha256": "66b685f00582a133c0a75ede439da84b48cfde7674084117a9108d749f110698"
+    },
+    {
+      "bytes": 240,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/rpc-request.log",
+      "sha256": "4b9ca8042cdf5761ce31593fc735f3f223e1fef094d41d9cfe60c6902ef0b449"
+    },
+    {
+      "bytes": 32977,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/stream.json",
+      "sha256": "dec21ac7bff2d559634c8879561b3c21d5674ceea073bdce4ad3b01e57f370b3"
+    },
+    {
+      "bytes": 3626,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-01/summary.json",
+      "sha256": "724f993261fc290ed3cc31813c95fc27035b91f2b77451c2bee420662981d52d"
+    },
+    {
+      "bytes": 12272,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/after.json",
+      "sha256": "8006c2ac6e0b2270bdba08152156fd542bc1a017deff359ea41d9eb978fb8b08"
+    },
+    {
+      "bytes": 12172,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/before.json",
+      "sha256": "8006e2aeea7837f13aaf757a4ed0cf4bf10273fbf20d218603dfb59c44ce464a"
+    },
+    {
+      "bytes": 194056,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/client-request.log",
+      "sha256": "ba397860abd07ed2805f346081ff16dfc5556c371bfdca90ae654b674af0521f"
+    },
+    {
+      "bytes": 468,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/rpc-request.log",
+      "sha256": "dbf39772bc60d23466f7c5c19e7f42ac902d2bf3535e14c465b720f516a487d7"
+    },
+    {
+      "bytes": 32962,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/stream.json",
+      "sha256": "41745d693a50c593054a14af8bccbccea58213e31b13516e08ae34f1fb1b6948"
+    },
+    {
+      "bytes": 3603,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-02/summary.json",
+      "sha256": "c10ee8229ef502138ab99870d122e303107c59f85213d84523ca6ad974d1bab3"
+    },
+    {
+      "bytes": 12218,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/after.json",
+      "sha256": "d4d23e188585e2c3ecc2a809e87ab3bbeeb577f9e38be002b87186e5223e81e7"
+    },
+    {
+      "bytes": 12187,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/before.json",
+      "sha256": "597f5e86091b48327de13ca12605de33668152e7f677d1eb13ef4a935432b733"
+    },
+    {
+      "bytes": 194508,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/client-request.log",
+      "sha256": "985aee724a65f5df2181e87323e3d8d78611c823b404a374cda28830d62e39d5"
+    },
+    {
+      "bytes": 468,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/rpc-request.log",
+      "sha256": "dbf39772bc60d23466f7c5c19e7f42ac902d2bf3535e14c465b720f516a487d7"
+    },
+    {
+      "bytes": 32966,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/stream.json",
+      "sha256": "e5c55782b054a622f2573b5c0a604e4318df7a10d77bf995b76fec9f0c4f7781"
+    },
+    {
+      "bytes": 3603,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-03/summary.json",
+      "sha256": "4cf6743c389df66bc6de89c97f723a1923168ccd9c95897692711046b57d443d"
+    },
+    {
+      "bytes": 12215,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/after.json",
+      "sha256": "37edb0bfc0435330e4f54d26581472b2c01ff1d004d43edf894421750d9a3c7d"
+    },
+    {
+      "bytes": 12156,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/before.json",
+      "sha256": "49985b9a7d376514088347c59136591b66a2973e24e1ee2a8ac8eeaca2e3d4b2"
+    },
+    {
+      "bytes": 194509,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/client-request.log",
+      "sha256": "11e70a2fabf5435e17ac41319aaad5700bfd739f14271345419f08ab75a19de4"
+    },
+    {
+      "bytes": 468,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/rpc-request.log",
+      "sha256": "dbf39772bc60d23466f7c5c19e7f42ac902d2bf3535e14c465b720f516a487d7"
+    },
+    {
+      "bytes": 32959,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/stream.json",
+      "sha256": "f9054addfc828ca3396564a527e53c9ffeecad6060c411b1ecf1c6bc02832055"
+    },
+    {
+      "bytes": 3603,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/request-04/summary.json",
+      "sha256": "16fdedaa60809b18be63423064dd1b710849a540718687b8cf8d273ce3b7cdef"
+    },
+    {
+      "bytes": 18795,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/rpc-cache-open.strace",
+      "sha256": "98e9c962ad227c78a52edba81ad43c15c20489994cbf563f1422e9c53d0fe898"
+    },
+    {
+      "bytes": 2902,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/rpc.log",
+      "sha256": "c1a943fc2e546c9c4b57fcf704b96165bd84979acbc5735c4494e9ae2fd834f1"
+    },
+    {
+      "bytes": 1050,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/run-summary.json",
+      "sha256": "419e7bd89db17940bd48a3797e8e20440677ab9750092cfd38886bc408c63fed"
+    },
+    {
+      "bytes": 417,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/shutdown-verified.json",
+      "sha256": "915cc950543addb3735a4ac1bb5508f59e42820027ffbfd914b9e1879ee8048d"
+    },
+    {
+      "bytes": 1605,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/startup-source.json",
+      "sha256": "680c50a624c895a2ba0204700f137ca992697197fbcea1d3c1247d5fa5015b58"
+    },
+    {
+      "bytes": 737,
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2/topology.json",
+      "sha256": "fbd989d413bcf882ae13dfee9a22919117ae0d31c403919d7255a9fbae376510"
+    },
+    {
+      "bytes": 6234,
+      "path": "tests/test_issue255_measure.py",
+      "sha256": "a62b0e4b131d22b485bc9e142c681a7b3a5e940f07a70394170f8760135e20f1"
+    },
+    {
+      "bytes": 27123,
+      "path": "tools/issue255_mvp/measure.py",
+      "sha256": "32735a7de60f081174d764dd53d1533ea33448e8cbe2367d0ab52fea1cd09a5c"
+    },
+    {
+      "bytes": 1464,
+      "path": "tools/issue255_mvp/sample_gpu.py",
+      "sha256": "3af49eb7aa1a195fce873b77816f6b962faf954913be47189a1c1dec90f288f2"
+    }
+  ],
+  "parent_startup": {
+    "commit": "8d3a708db903f5532e903ba88b9d49039bf910a4",
+    "path": "docs/implementation/two-host-mvp-255/evidence/MANIFEST.json",
+    "sha256": "572306c13f189cf931c6789ff8e1d15b333168f84f32d7d51964fdacb47bb81f"
+  },
+  "schema": "issue255.task2.bundle/1",
+  "scope": "Measured four-request two-host product observation; not a qualification or final issue terminal"
+}

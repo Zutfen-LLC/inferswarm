@@ -20,6 +20,7 @@
 jsonschema>=4.18,<5
 numpy>=1.26,<3
 pyyaml>=6.0,<7
+requests>=2.31,<3
 
 # Immutable accepted Issue #117 Arm-C-retry frozen tokenizer environment
 # (transformers/tokenizers/Jinja2/MarkupSafe exact pins). Consumed by the

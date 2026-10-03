@@ -1,0 +1,66 @@
+{
+  "elapsed_seconds": 16.52915908698924,
+  "gpu": {
+    "after": {
+      "process_mib": 1562,
+      "used_mib": 1571,
+      "util_percent": 4
+    },
+    "before": {
+      "process_mib": 1536,
+      "used_mib": 1545,
+      "util_percent": 0
+    },
+    "matching_pid_nonzero_util_samples": 33,
+    "process_present_samples": 55,
+    "sample_count": 55,
+    "sampled_peak_process_mib": 1562,
+    "sampled_peak_used_mib": 1571,
+    "sampled_peak_util_percent": 62,
+    "sampling_scope": "nvidia-smi device-wide utilization and memory; simultaneous matching compute PID occupancy. Not per-kernel attribution or absolute peak."
+  },
+  "network": {
+    "client_participant_rpc_bytes": 0,
+    "interface_scope": "Host LAN interface includes unrelated traffic; not a request-specific counter.",
+    "scope": "No RPC participant/socket in single-host topology; SSH tunnel HTTP traffic not measured.",
+    "whole_host_interface_delta": {
+      "rx_bytes": 64915,
+      "tx_bytes": 1199911
+    }
+  },
+  "process_health_after_request": true,
+  "response": {
+    "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
+    "decode_tokens_per_second": 4.41081705381341,
+    "first_token_ttft_seconds": 4.739502620010171,
+    "first_visible_content_seconds": 11.266183176019695,
+    "generated_tokens": 53,
+    "reasoning": "We need to answer user: \"In one sentence, explain why local backups are useful.\" Need final one sentence. Ensure concise.\n",
+    "response_id": "chatcmpl-gNBVoaxqTHmMeuU9CqBXBgphlcxEDZrA",
+    "stop_reason": "stop",
+    "timings": {
+      "cache_n": 0,
+      "predicted_ms": 11789.199,
+      "predicted_n": 53,
+      "predicted_per_second": 4.41081705381341,
+      "predicted_per_token_ms": 226.71536538461538,
+      "prompt_ms": 4729.088,
+      "prompt_n": 63,
+      "prompt_per_second": 13.321807502841986,
+      "prompt_per_token_ms": 75.06488888888889
+    },
+    "usage": {
+      "completion_tokens": 53,
+      "prompt_tokens": 63,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 116
+    }
+  },
+  "sample_window": [
+    1791042669.8209877,
+    1791042686.9831588
+  ],
+  "startup_load_seconds": 4.891594565007836
+}

@@ -1,0 +1,110 @@
+{
+  "elapsed_seconds": 18.503273173002526,
+  "gpu": {
+    "01": {
+      "after": {
+        "process_mib": 1470,
+        "used_mib": 1479,
+        "util_percent": 2
+      },
+      "before": {
+        "process_mib": 1046,
+        "used_mib": 1055,
+        "util_percent": 0
+      },
+      "matching_pid_nonzero_util_samples": 26,
+      "process_present_samples": 63,
+      "sample_count": 63,
+      "sampled_peak_process_mib": 1470,
+      "sampled_peak_used_mib": 1479,
+      "sampled_peak_util_percent": 64,
+      "sampling_scope": "nvidia-smi device-wide utilization and memory; simultaneous matching compute PID occupancy. Not per-kernel attribution or absolute peak."
+    },
+    "04": {
+      "after": {
+        "process_mib": 970,
+        "used_mib": 980,
+        "util_percent": 1
+      },
+      "before": {
+        "process_mib": 942,
+        "used_mib": 952,
+        "util_percent": 0
+      },
+      "matching_pid_nonzero_util_samples": 20,
+      "process_present_samples": 66,
+      "sample_count": 66,
+      "sampled_peak_process_mib": 970,
+      "sampled_peak_used_mib": 980,
+      "sampled_peak_util_percent": 1,
+      "sampling_scope": "nvidia-smi device-wide utilization and memory; simultaneous matching compute PID occupancy. Not per-kernel attribution or absolute peak."
+    }
+  },
+  "index": 1,
+  "interface_deltas": {
+    "01": {
+      "rx_bytes": 72656610,
+      "scope": "Whole-interface counters; includes unrelated LAN traffic.",
+      "tx_bytes": 60354879
+    },
+    "04": {
+      "rx_bytes": 58865757,
+      "scope": "Whole-interface counters; includes unrelated LAN traffic.",
+      "tx_bytes": 72392680
+    }
+  },
+  "network_socket_delta": {
+    "bytes_received": 69043872,
+    "bytes_sent": 55896076,
+    "local": "10.0.0.142:58418",
+    "scope": "Owned client\u2194RPC socket cumulative TCP bytes, whole before/after request window; includes dynamic traffic and protocol, not pure immutable bytes."
+  },
+  "process_health_after_request": {
+    "client": true,
+    "rpc": true,
+    "tracer": true
+  },
+  "request_end_wall_epoch": 1791040337.964834,
+  "request_start_wall_epoch": 1791040319.4615598,
+  "response": {
+    "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
+    "decode_tokens_per_second": 3.925307142073699,
+    "first_token_ttft_seconds": 5.2562211159965955,
+    "first_visible_content_seconds": 12.630350518040359,
+    "generated_tokens": 53,
+    "reasoning": "We need to answer user: \"In one sentence, explain why local backups are useful.\" Need final one sentence. Ensure concise.\n",
+    "response_id": "chatcmpl-GRDq1bYRs48ngc7jvgJZcxM4ZWxxtLPX",
+    "stop_reason": "stop",
+    "timings": {
+      "cache_n": 0,
+      "predicted_ms": 13247.371,
+      "predicted_n": 53,
+      "predicted_per_second": 3.925307142073699,
+      "predicted_per_token_ms": 254.7571346153846,
+      "prompt_ms": 5242.108,
+      "prompt_n": 63,
+      "prompt_per_second": 12.01806601466433,
+      "prompt_per_token_ms": 83.20806349206349
+    },
+    "usage": {
+      "completion_tokens": 53,
+      "prompt_tokens": 63,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 116
+    }
+  },
+  "sample_windows": {
+    "01": {
+      "end_epoch": 1791040338.293104,
+      "start_epoch": 1791040318.6729913
+    },
+    "04": {
+      "end_epoch": 1791040338.1791294,
+      "start_epoch": 1791040318.5890973
+    }
+  },
+  "startup_load_seconds": 7.612349514965899,
+  "startup_scope": "One model launch precedes four serial requests; repeats reuse resident topology."
+}

@@ -1,0 +1,9 @@
+{
+  "hermes@inferswarm01:client.pid": 216736,
+  "hermes@inferswarm01:sampler.pid": 217012,
+  "hermes@inferswarm04:rpc.pid": 486981,
+  "hermes@inferswarm04:sampler.pid": 487244,
+  "hermes@inferswarm04:tracer.pid": {
+    "not_signaled": "owned pid 486978 on hermes@inferswarm04 lost identity: ''"
+  }
+}
