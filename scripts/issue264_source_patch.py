@@ -16,8 +16,8 @@ AREA = parent.AREA
 VK = parent.VK_SOURCE
 PARENT_TREE = I262_TREE = "015c874f0cc0635fa1369650098c0137f9a492f0"
 PARENT_VK_SHA256 = "abb1031f1b35a669cb5a18b776fc6587cfb7927384729128048dd697b8160dbb"
-PATCH = AREA / "patches/issue264-mmv-selector.patch"
-IDENTITY = AREA / "issue264-source-identity.json"
+PATCH = AREA / "patches/issue264-mmv-selector-v2.patch"
+IDENTITY = AREA / "issue264-source-identity-v2.json"
 
 
 def sha(data: bytes) -> str:
