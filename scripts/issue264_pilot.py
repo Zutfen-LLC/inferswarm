@@ -16,6 +16,7 @@ import issue252_constants as C252
 import issue248_identity as I248
 import issue264_h5 as H5
 import issue262_h5 as H262
+import issue254_producer as P254
 
 API="https://api.github.com/repos/Zutfen-LLC/inferswarm"
 ISSUE=264
@@ -27,6 +28,9 @@ BUILD_SCHEMA="inferswarm.issue264.build-identity/1"
 IDENTITY_PATH=Path(__file__).resolve().parents[1]/"docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json"
 BUILD_IDENTITY=IDENTITY_PATH.with_name("issue264-build-identity.json")
 PILOT_SCHEMA="inferswarm.issue264.pilot-unit/1"
+EXECUTION_SCHEMA="inferswarm.issue264.execution-context/1"
+EXECUTION_CONTEXT_NAME="execution-context.json"
+PILOT_CLAUSE="Creation of this issue authorizes **only** the bounded BASE-vs-selected-H5-MMV-candidate pilot below, and only after the pre-execution gate passes on one frozen exact PR head."
 ARMS={"BASE":{},"H5_MMV_CANDIDATE":{"GGML_VK_I264_MMV":"large"}}
 ARM_ENV=ARMS
 MAX_UNITS=3
@@ -42,27 +46,64 @@ def api(path:str)->Any:
  h={"Accept":"application/vnd.github+json","User-Agent":"inferswarm-issue264-pilot"}
  if os.environ.get("GH_TOKEN"):h["Authorization"]="Bearer "+os.environ["GH_TOKEN"]
  with urllib.request.urlopen(urllib.request.Request(f"{API}/{path}",headers=h),timeout=30) as r:return json.loads(r.read())
-def verify_authority(root:Path)->dict:
- """Check immutable recorded #256 ancestor and live exact open stacked PR."""
- if not BUILD_IDENTITY.is_file():raise PilotError("completed issue264-build-identity.json absent; no execution")
- ident=json.loads(BUILD_IDENTITY.read_text())
- if ident.get("schema")!=BUILD_SCHEMA or ident.get("binary_sha256")!=BINARY_SHA:raise PilotError("build identity schema or externally supplied binary digest mismatch")
- expected=ident.get("execution_head")
- if not isinstance(expected,str) or not re.fullmatch(r"[0-9a-f]{40}",expected):raise PilotError("build identity lacks frozen execution_head")
- if git(root,"rev-parse","HEAD")!=expected:raise PilotError("local HEAD differs from frozen execution head")
+def verify_authority(root:Path, context:dict)->dict:
+ """Revalidate captured authority against live issue/PR and local checkout."""
+ expected=context.get("expected_head")
+ if not isinstance(expected,str) or not re.fullmatch(r"[0-9a-f]{40}",expected):raise PilotError("execution context lacks expected HEAD")
+ head=git(root,"rev-parse","HEAD")
+ if head!=expected:raise PilotError("local HEAD differs from execution context expected HEAD")
  if git(root,"status","--porcelain","--untracked-files=all"):raise PilotError("repository worktree is dirty")
- if not git(root,"merge-base","--is-ancestor",BASE_HEAD,expected) == "":
-  # git helper returns empty for success; failures raise.
-  raise PilotError("accepted PR #256 ancestor not preserved")
+ if git(root,"merge-base","--is-ancestor",BASE_HEAD,expected)!="":raise PilotError("accepted PR #256 ancestor not preserved")
  branch=git(root,"symbolic-ref","--short","HEAD")
+ if context.get("branch") not in (None,branch):raise PilotError("local branch differs from execution context")
  issue=api(f"issues/{ISSUE}")
- if issue.get("state")!="open":raise PilotError("issue #264 is not open")
+ issue_body=str(issue.get("body",""))
+ if issue.get("state")!="open" or PILOT_CLAUSE.lower() not in issue_body.lower():raise PilotError("issue #264 is closed or conditional pilot clause absent")
+ issue_body_sha=sha(issue_body.encode())
+ if context.get("issue_body_sha256") not in (None,issue_body_sha):raise PilotError("live issue body differs from execution context")
  pulls=api("pulls?state=all&per_page=100")
  matches=[p for p in pulls if p.get("head",{}).get("ref")==branch and p.get("base",{}).get("ref")=="issue-254-r8i3c-producer"]
  if len(matches)!=1:raise PilotError("exact stacked PR is not uniquely identifiable")
  pr=matches[0]
- if pr.get("state")!="open" or pr.get("merged") or pr.get("draft") or pr.get("head",{}).get("sha")!=expected:raise PilotError("stacked PR is not open, non-draft, unmerged at frozen head")
- return {"issue":ISSUE,"pr":pr["number"],"head":expected}
+ if context.get("pr_number") not in (None,pr.get("number")):raise PilotError("stacked PR differs from execution context")
+ if pr.get("state")!="open" or pr.get("merged") or pr.get("draft") or pr.get("head",{}).get("sha")!=expected:raise PilotError("stacked PR is not open, non-draft, unmerged at expected head")
+ if not git(root,"merge-base","--is-ancestor",BASE_HEAD,pr["head"]["sha"])=="":raise PilotError("current PR head does not preserve PR #256 ancestor")
+ return {"issue":ISSUE,"pr":pr["number"],"head":expected,"issue_body_sha256":issue_body_sha}
+def model_stat_witness()->list[dict]:
+ out=[]
+ for name in C252.MODEL_MEMBERS:
+  p=Path("/srv/models/qwen38-ud-iq1-s")/name
+  try:s=p.stat()
+  except OSError as e:raise PilotError(f"model member unavailable: {name}") from e
+  if not p.is_file():raise PilotError(f"model member is not regular file: {name}")
+  out.append({"name":name,"device":s.st_dev,"inode":s.st_ino,"size":s.st_size,"mtime_ns":s.st_mtime_ns,"ctime_ns":s.st_ctime_ns})
+ return out
+def load_execution_context(evidence_root:Path)->dict:
+ path=Path(evidence_root)/EXECUTION_CONTEXT_NAME
+ if path.is_symlink() or not path.is_file():raise PilotError("execution context absent; prepare execution first")
+ try:context=json.loads(path.read_bytes())
+ except (OSError,json.JSONDecodeError) as e:raise PilotError("execution context malformed") from e
+ if not isinstance(context,dict) or context.get("schema")!=EXECUTION_SCHEMA:raise PilotError("execution context schema mismatch")
+ return context
+def prepare_execution(*,repo_root:Path,evidence_root:Path,binary:Path)->dict:
+ root=Path(repo_root);evidence=Path(evidence_root);path=evidence/EXECUTION_CONTEXT_NAME
+ if path.exists() or path.is_symlink():raise PilotError("execution context already exists; refusing overwrite")
+ evidence.mkdir(parents=True,exist_ok=True)
+ head=git(root,"rev-parse","HEAD")
+ if not re.fullmatch(r"[0-9a-f]{40}",head):raise PilotError("invalid local HEAD")
+ binary_sha=verify_source_and_binary(Path(binary));prompt=frozen_prompt(root)
+ fixture=B250.verify_fixtures(root)
+ request_sha=sha(P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT))
+ stats=model_stat_witness()
+ live=verify_authority(root,{"expected_head":head})
+ branch=git(root,"symbolic-ref","--short","HEAD")
+ context={"schema":EXECUTION_SCHEMA,"expected_head":head,"branch":branch,"pr_number":live["pr"],"issue_number":ISSUE,"issue_body_sha256":live["issue_body_sha256"],"pilot_clause":PILOT_CLAUSE,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":binary_sha,"fixture_payload_sha256":request_sha,"fixture_sha256":sha(canonical(fixture)),"model_stats":stats}
+ payload=canonical(context)+b"\n"
+ try:
+  with path.open("xb") as f:f.write(payload);f.flush();os.fsync(f.fileno())
+ except FileExistsError as e:raise PilotError("execution context already exists; refusing overwrite") from e
+ fd=os.open(evidence,os.O_RDONLY);os.fsync(fd);os.close(fd)
+ return context
 def verify_source_and_binary(binary:Path)->str:
  ident=json.loads(IDENTITY_PATH.read_text())
  if ident.get("issue264_tree")!=SOURCE_TREE or ident.get("issue264_vk_sha256")!=SOURCE_VK_SHA:raise PilotError("gen2 source identity mismatch")
@@ -131,11 +172,20 @@ def _validate_observer(meta:bytes,rows:list[bytes])->None:
   raise PilotError("observer metadata population/order malformed")
  if len(rows)!=D.DECISIONS or any(not isinstance(row,bytes) or len(row)!=D.ROW_BYTES for row in rows):
   raise PilotError("observer full-row byte geometry malformed")
+def validate_execution_freeze(context:dict,*,binary_sha:str,payload_sha:str,fixture_sha:str,model_stats:list[dict])->None:
+ if context.get("source_tree")!=SOURCE_TREE or context.get("source_vk_sha256")!=SOURCE_VK_SHA or context.get("binary_sha256")!=binary_sha:raise PilotError("execution context source/binary identity mismatch")
+ if context.get("fixture_payload_sha256")!=payload_sha or context.get("fixture_sha256")!=fixture_sha:raise PilotError("execution context frozen fixture/request mismatch")
+ if context.get("model_stats")!=model_stats:raise PilotError("execution context model stat witness changed")
+
 def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:int,timeout_s:float=900)->dict:
  """Run one actual unit; all authority and execution identity are internal."""
  if arm not in ARMS or unit_index not in (1,2,3):raise PilotError("invalid arm/unit")
- root=Path(repo_root);evidence=Path(evidence_root);verify_authority(root);binary_sha=verify_source_and_binary(Path(binary));subject=observe_subject()
- fixture=B250.verify_fixtures(root);prompt=frozen_prompt(root);request={**D.REQUEST_CONTRACT,"prompt":prompt};payload=canonical(request)
+ root=Path(repo_root);evidence=Path(evidence_root);context=load_execution_context(evidence);verify_authority(root,context);binary_sha=verify_source_and_binary(Path(binary))
+ fixture=B250.verify_fixtures(root);prompt=frozen_prompt(root);payload=P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT)
+ fixture_sha=sha(canonical(fixture));payload_sha=sha(payload);model_pre=model_stat_witness()
+ validate_execution_freeze(context,binary_sha=binary_sha,payload_sha=payload_sha,fixture_sha=fixture_sha,model_stats=model_pre)
+ subject=observe_subject()
+ context_sha=sha(canonical(context))
  pre=I248.observe_arm_identity("B");problems=I248.identity_problems("B",pre)
  if problems:raise PilotError(f"pre-launch identity drift: {problems}")
  target=evidence/arm/ f"unit-{unit_index:03d}";stage=evidence/arm/ f".unit-{unit_index:03d}.staging"
@@ -165,6 +215,9 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
    if problems:raise PilotError(f"post-unit identity drift: {problems}")
  finally:
   if proc is not None:_stop(proc)
+ model_post=model_stat_witness()
+ if model_post!=model_pre:raise PilotError("model stat witness changed during unit")
+ verify_authority(root,context)
  server_log=log.read_bytes();markers=parse_unit_markers(server_log,ARMS[arm].get("GGML_VK_I264_MMV","base"))
  transition=None
  if arm=="H5_MMV_CANDIDATE":
@@ -172,8 +225,8 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
   if not bases:raise PilotError("candidate requires retained BASE unit from same exact identity")
   transition=validate_pair(bases[0]["markers"],markers)
  ended=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
- record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"request_sha256":sha(payload),"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"completed_at":ended,"fixture_sha256":sha(canonical(fixture))}
- publish_unit(stage,target,record);verify_authority(root)
+ record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"completed_at":ended,"fixture_sha256":fixture_sha}
+ publish_unit(stage,target,record);verify_authority(root,context)
  return {k:record[k] for k in ("arm","unit_index","row_digest","response_sha256","server_log_sha256","markers")}
 def publish_unit(stage:Path,target:Path,r:dict)->None:
  files={"request.json":r["request_raw"],"response.json.raw":r["response_raw"],"server.log":r["server_log"],"obs.meta.json":r["observer_meta"],"identity-pre.json":canonical(r["identity_pre"]),"identity-post.json":canonical(r["identity_post"]),"markers.json":canonical(r["markers"]),"unit.json":canonical({k:v for k,v in r.items() if k not in {"request_raw","response_raw","server_log","observer_meta","observer_rows","identity_pre","identity_post","markers"}})+b"\n"}
@@ -227,8 +280,11 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   if exit_facts.get("cleanup_verified") is not True or not isinstance(exit_facts.get("returncode"),int):raise PilotError("retained process cleanup fact missing")
   pre=json.loads(files["identity-pre.json"]);post=json.loads(files["identity-post.json"])
   if I248.identity_problems("B",pre) or I248.identity_problems("B",post):raise PilotError("retained identity snapshot is invalid")
-  request=json.loads(files["request.json"]);fixture=B250.verify_fixtures(Path(__file__).resolve().parents[1]);entry=fixture.get(D.CASE,{})
-  if request!={**D.REQUEST_CONTRACT,"prompt":entry.get("prompt_text")} or meta.get("fixture_sha256")!=sha(canonical(fixture)):raise PilotError("retained frozen fixture/request mismatch")
+  fixture=B250.verify_fixtures(Path(__file__).resolve().parents[1]);entry=fixture.get(D.CASE,{})
+  request_bytes=P254.execution_payload_bytes(entry.get("prompt_text"),D.REQUEST_CONTRACT) if isinstance(entry.get("prompt_text"),str) else b""
+  if files["request.json"]!=request_bytes or meta.get("fixture_payload_sha256")!=sha(request_bytes) or meta.get("fixture_sha256")!=sha(canonical(fixture)):raise PilotError("retained frozen fixture/request mismatch")
+  if not isinstance(meta.get("execution_context_sha256"),str) or not re.fullmatch(r"[0-9a-f]{64}",meta["execution_context_sha256"]) or not re.fullmatch(r"[0-9a-f]{40}",str(meta.get("expected_head",""))):raise PilotError("retained execution context identity missing")
+  if meta.get("model_stats_pre")!=meta.get("model_stats_post") or not isinstance(meta.get("model_stats_pre"),list) or len(meta["model_stats_pre"])!=len(C252.MODEL_MEMBERS):raise PilotError("retained model stat witnesses differ or malformed")
   if meta.get("argv")!=launch_argv(Path(meta.get("argv",[""])[0])) or meta.get("env")!=launch_env(arm,Path(meta.get("env",{}).get("LLAMA_OBSERVE_OUT",""))):raise PilotError("retained launch identity mismatch")
   out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"response_sha256":sha(files["response.json.raw"]),"server_log_sha256":sha(log)})
  return out
@@ -239,7 +295,7 @@ def screen_class(units:list[dict])->str:
 def run_arm(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,timeout_s:float=900)->dict:
  """Execute/replay one complete arm under the fixed 2/3-unit screening law."""
  if arm not in ARMS:raise PilotError("only BASE and H5_MMV_CANDIDATE are permitted")
- evidence=Path(evidence_root)
+ evidence=Path(evidence_root);context=load_execution_context(evidence)
  if arm=="H5_MMV_CANDIDATE":
   base=load_completed_units(evidence,"BASE")
   if screen_class(base) not in ("screening-variable","screening-stable"):raise PilotError("finish BASE screening prefix before candidate arm")

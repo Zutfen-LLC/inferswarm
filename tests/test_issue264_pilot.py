@@ -101,4 +101,63 @@ class PilotContracts(unittest.TestCase):
         with self.assertRaisesRegex(P.PilotError,"build identity absent"):
             P.verify_source_and_binary(Path("/not-used/llama-server"))
 
+    def test_execution_context_required_and_freezes_self_consistent_head(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with self.assertRaisesRegex(P.PilotError,"execution context"):
+                P.load_execution_context(root)
+
+    def test_execution_context_is_create_only_and_binds_facts(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); evidence=root/"evidence"; evidence.mkdir()
+            with mock.patch.object(P, "git", side_effect=["a"*40, "a"*40, "", "", "issue-264-h5-mmv", "", "issue-264-h5-mmv"]), \
+                 mock.patch.object(P, "api", side_effect=[{"state":"open","body":P.PILOT_CLAUSE}, [{"number":999,"state":"open","merged":False,"draft":False,"head":{"ref":"issue-264-h5-mmv","sha":"a"*40},"base":{"ref":"issue-254-r8i3c-producer"}}]]), \
+                 mock.patch.object(P, "verify_source_and_binary", return_value=P.BINARY_SHA), \
+                 mock.patch.object(P, "model_stat_witness", return_value=[{"name":n,"device":1,"inode":2,"size":3,"mtime_ns":4,"ctime_ns":5} for n in P.C252.MODEL_MEMBERS]), \
+                 mock.patch.object(P, "frozen_prompt", return_value="frozen"), \
+                 mock.patch.object(P.B250, "verify_fixtures", return_value={"fixture":"frozen"}):
+                context=P.prepare_execution(repo_root=root,evidence_root=evidence,binary=root/"llama-server")
+            self.assertEqual(context["schema"],P.EXECUTION_SCHEMA)
+            self.assertEqual(context["expected_head"],"a"*40)
+            self.assertNotIn("execution_head",context)
+            self.assertIn("binary_sha256",context)
+            self.assertTrue((evidence/P.EXECUTION_CONTEXT_NAME).is_file())
+            with self.assertRaisesRegex(P.PilotError,"already exists"):
+                P.prepare_execution(repo_root=root,evidence_root=evidence,binary=root/"llama-server")
+
+    def test_verify_authority_rejects_head_movement(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); context={"expected_head":"a"*40}
+            with mock.patch.object(P,"git",return_value="b"*40):
+                with self.assertRaisesRegex(P.PilotError,"HEAD"):
+                    P.verify_authority(root,context)
+
+    def test_execution_freeze_rejects_changed_model_stats_and_request(self):
+        context={"source_tree":P.SOURCE_TREE,"source_vk_sha256":P.SOURCE_VK_SHA,"binary_sha256":P.BINARY_SHA,"fixture_payload_sha256":"payload","fixture_sha256":"fixture","model_stats":[{"inode":1}]}
+        with self.assertRaisesRegex(P.PilotError,"model stat"):
+            P.validate_execution_freeze(context,binary_sha=P.BINARY_SHA,payload_sha="payload",fixture_sha="fixture",model_stats=[{"inode":2}])
+        with self.assertRaisesRegex(P.PilotError,"fixture/request"):
+            P.validate_execution_freeze(context,binary_sha=P.BINARY_SHA,payload_sha="changed",fixture_sha="fixture",model_stats=[{"inode":1}])
+
+    def test_build_identity_contract_does_not_require_execution_head(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); source=root/"source.json"; build=root/"build.json"; binary=root/"llama-server"
+            source.write_text(json.dumps({"issue264_tree":P.SOURCE_TREE,"issue264_vk_sha256":P.SOURCE_VK_SHA}))
+            identity={"schema":P.BUILD_SCHEMA,"source_tree":P.SOURCE_TREE,"source_vk_sha256":P.SOURCE_VK_SHA,"binary_sha256":P.BINARY_SHA,"binary_path":"inferswarm01:/home/hermes/is264-mmv-v2/build-i264/bin/llama-server","version":"0.4.1-dev","build_number":10964,"predecessor_commit":"b29c606e28a01b1bc8c1351026a0fa6e616bf6c4","compiler":"GNU 14.2.0","gpu_applications_during_build":[]}
+            build.write_text(json.dumps(identity));binary.write_bytes(b"verified-by-test")
+            self.assertNotIn("execution_head",identity)
+            with mock.patch.object(P,"IDENTITY_PATH",source), mock.patch.object(P,"BUILD_IDENTITY",build), mock.patch.object(P,"sha",return_value=P.BINARY_SHA):
+                self.assertEqual(P.verify_source_and_binary(binary),P.BINARY_SHA)
+
+    def test_live_issue_must_retain_exact_conditional_pilot_clause(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with mock.patch.object(P,"git",side_effect=["a"*40,"", "", "issue-264-h5-mmv"]), mock.patch.object(P,"api",return_value={"state":"open","body":"issue remains open but pilot condition removed"}):
+                with self.assertRaisesRegex(P.PilotError,"conditional pilot clause"):
+                    P.verify_authority(root,{"expected_head":"a"*40})
+
 if __name__ == "__main__": unittest.main()
