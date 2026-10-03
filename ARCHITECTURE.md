@@ -604,18 +604,19 @@ applicable qualification evidence enabled a separate successor full-integration
 attempt. Current execution scope is recorded below.
 
 <!-- project-status:frontier:start -->
-**[Issue #252 — R8-I3C Vulkan mechanism; Phase 0 complete, maintainer review pending](https://github.com/Zutfen-LLC/inferswarm/issues/252)**
+**[Issue #264 — conditional H5 MMV pilot; preflight blocked](https://github.com/Zutfen-LLC/inferswarm/issues/264)**
 
-Issue #250 localized zero↔nonzero Vulkan participation as a necessary boundary; its accepted predecessor record states Arm A COMPLETE: true CPU-only case-3072 deterministic 5/5 while accepted #248 nonzero-Vulkan ngl=1 rows vary, deriving R8I3B_REFERENCE_RUNTIME_BOUNDARY_LOCALIZED. That predecessor does not establish root cause; Vulkan is not established as root cause and the mechanism below the localized boundary remain unresolved. PR #251 remains unmerged pending maintainer exact-head review. #252 performs repository-only Phase-0 reconstruction and prospectively freezes one-factor Vulkan mechanism arms. Six candidate classes remain unproven; no root cause or fix validation is claimed.
+Issue #264 records a source-audited minimal experimental selector for the H5 MMV route. Its source and parser Task 1 specification passed and quality is approved, and the Gen2 tree/comparator identity is frozen; these repository/source results are not a live execution or theorem closure. The pilot producer remains under review and is not ready. The next frontier is a conditional, pre-execution-gated H5 MMV pilot, with no physical execution yet and no H2/H3/H5 theorem closure claimed.
 
-- **Accepted #250 R8-I3B localized boundary (Arm-A population and accepted #248 variable contrast) observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
+- **Accepted #250 predecessor anchor: Arm-A localized boundary (preserved, not root-cause evidence) observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
 - **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
-- **Recorded execution authorization:** blocked — No further physical work is authorized under #250; the accepted Arm-A localization terminates its predeclared discriminator sequence and no B/C/C1/C2/D work is required or authorized. Issue #252 Phase 0 is repository-only and grants zero physical authority; STOP for maintainer exact-head review of PR #253; do not merge automatically. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/252).
+- **Recorded execution authorization:** blocked — No further physical work is authorized under #250; no B/C/C1/C2/D work is required or authorized under that predecessor. Issue #264 permits only a conditional pilot after the pre-execution gate passes on the exact open head and its producer is ready; currently the gate is blocked, no physical experiment has run, and this status grants no execution authority. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/264).
 
-- The #250 localized factor is zero↔nonzero Vulkan participation under the frozen accepted runtime/model/request conditions only. Vulkan participation is a necessary boundary for the observed case-3072 fresh-process nondeterminism; Vulkan, NVIDIA driver/hardware, a kernel, or vendor correctness is not established as root cause.
-- The six Phase-0 candidate classes are unproven; source analysis alone establishes no runtime root cause.
-- Physical work requires a current exact-head maintainer dispatch naming one arm, its namespace, owner/member, and all frozen authorities.
-- The accepted #248/#250 evidence and comparator are read-only; no predecessor evidence rewrite or substitution is permitted.
+- The #250 predecessor remains accepted as the ARM_A_STOPS_LADDER localized boundary only; preserve its observation and acceptance anchors, and retain that this was not established as root cause.
+- Issue #264's sole live minimal experimental selector is subgroup32→large128 hybrid for the output.weight MMV q4_K*f32 route; dimensions/types and frozen comparator identity are scoped to that candidate only. The cooperative-matrix candidate is dead; do not revive it.
+- The pilot producer is under review and not ready. Source/parser specification PASS and quality approval do not establish pilot readiness, execution, acceptance, or theorem closure.
+- Before any physical work, pass the pre-execution gate on the exact open issue-264 head; current conditional preflight is blocked. Do not separately dispatch issue #264.
+- If admitted later, final full CPU validation after maintainer GO and hosted CI are mandatory. No automerge, R8J, dead-control, or broad-matrix work is authorized.
 <!-- project-status:frontier:end -->
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
