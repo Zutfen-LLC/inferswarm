@@ -58,6 +58,11 @@ class ProjectStatusTests(unittest.TestCase):
             root = Path(directory)
             self.fixture(root)
             self.assertEqual(self.run_main(root, '--write'), 0)
+            # Synthetic accepted prerequisite for the authorization fixture;
+            # the real #255 observation remains pending and cannot authorize it.
+            self.record['frontier']['prerequisite']['acceptance'] = {
+                'state': 'accepted',
+                'reference': 'https://github.com/Zutfen-LLC/inferswarm/issues/999'}
             self.record['frontier']['execution']['state'] = 'authorized'
             self.record['frontier']['execution']['reference'] = (
                 'https://github.com/Zutfen-LLC/inferswarm/issues/999')
@@ -97,68 +102,73 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_tracks_observed_264_pilot_without_promoting_authority(self):
+    def test_completed_266_authority_preserves_bounded_264_and_250_scope(self):
         output = sync.render(self.record)['frontier']
-        frontier = self.record['frontier']
-        execution = frontier['execution']
-        prerequisite = frontier['prerequisite']
-
-        self.assertIn('Issue #264', output)
-        self.assertIn('subgroup32→large128 hybrid', output)
-        self.assertIn('output.weight MMV q4_K*f32 route', output)
-        self.assertIn('four fresh-process units', output)
-        self.assertIn('path transition', output)
-        self.assertIn('screening-variable', output)
-        self.assertIn('accepted for the bounded scope', output)
-        self.assertIn('H2/H3/H5 theorem closure remain open', output)
-        self.assertIn('PR #265 merged into the aggregate producer branch', output)
-        self.assertIn('aggregate exact-head CI and Full CPU Validation', output)
-        self.assertNotIn('no physical experiment has run', output)
-        self.assertNotIn('pilot producer is under review and not ready', output)
+        execution = self.record['frontier']['execution']
+        for retained in (
+                'Issue #266 is COMPLETED', 'PR #256 is MERGED',
+                '442e2a02ce89e7fb42bceff1f7a47c8789c17733',
+                'historical R8-I3C authority', '5969219338',
+                'SUBGROUP/subgroup/32x1x1', 'LARGE/hybrid/128x1x1',
+                'subgroup32→large128 hybrid', 'output.weight MMV q4_K*f32 route',
+                'four fresh-process units', 'screening-variable',
+                'accepted for the bounded scope', 'H2/H3/H5 theorem closure remain open',
+                'PR #265 merged into the aggregate producer branch',
+                'ARM_A_STOPS_LADDER', '5904093750', '5904094070',
+                'not established as root cause',
+                'No further physical work is authorized under #250',
+                'no B/C/C1/C2/D work is required or authorized',
+                '#241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED',
+                '#244 and #239 remain blocked', '#258'):
+            with self.subTest(retained=retained):
+                self.assertIn(retained, output)
         self.assertEqual(execution['state'], 'blocked')
         self.assertIn('no further execution authority', execution['step'])
-
-        # Observation is a bounded frontier, not an accepted capability or a
-        # promotion of #250's localized predecessor into root-cause evidence.
         self.assertEqual(len(self.record['capabilities']), 8)
         self.assertNotIn('H5', {item['id'] for item in self.record['capabilities']})
 
-        # Preserve the accepted #250 boundary and its authority anchors without
-        # reinstating the stale claim about PR #251's merge state.
-        self.assertEqual(
-            prerequisite['observation']['result'], 'ARM_A_STOPS_LADDER')
-        self.assertEqual(
-            prerequisite['observation']['reference'],
-            'https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750')
-        self.assertEqual(prerequisite['acceptance']['state'], 'accepted')
-        self.assertEqual(
-            prerequisite['acceptance']['reference'],
-            'https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070')
-        self.assertIn('not established as root cause', output)
-        self.assertIn('No further physical work is authorized under #250', output)
-        self.assertIn('no B/C/C1/C2/D work is required or authorized', output)
-        self.assertNotIn('Arm A COMPLETE', output)
-        self.assertNotIn('PR #251 remains unmerged', output)
-        self.assertNotIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
-
-    def test_aggregate_266_frontier_records_accepted_child_without_new_authority(self):
+    def test_255_pending_frontier_cannot_revive_completed_266_review(self):
         frontier = self.record['frontier']
+        prerequisite = frontier['prerequisite']
         output = sync.render(self.record)['frontier']
-        self.assertIn('Issue #266', frontier['title'])
+        self.assertIn('Issue #255', frontier['title'])
+        self.assertIn('UNACCEPTED', frontier['title'])
         self.assertEqual(frontier['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/issues/266')
-        self.assertEqual(frontier['execution']['state'], 'blocked')
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/255')
         self.assertEqual(frontier['execution']['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/issues/266')
-        self.assertIn('5969219338', output)
-        self.assertIn('#258', output)
-        self.assertIn('SUBGROUP/subgroup/32x1x1', output)
-        self.assertIn('LARGE/hybrid/128x1x1', output)
-        self.assertIn('No further physical execution', output)
-        self.assertIn('PR #256 remains OPEN / UNMERGED', output)
-        self.assertNotIn('awaiting maintainer acceptance', output)
-        self.assertNotIn('Await maintainer acceptance', output)
+                         'https://github.com/Zutfen-LLC/inferswarm/pull/267#issuecomment-5971685012')
+        self.assertEqual(prerequisite['acceptance'],
+                         {'state': 'pending', 'reference': None})
+        self.assertEqual(prerequisite['observation']['result'],
+                         'ISSUE255_CUDA_RPC_PRODUCT_OBSERVED')
+        self.assertIn('maintainer exact-head review and Final CPU Validation', output)
+        self.assertIn('Final CPU Validation must NOT run before explicit maintainer GO', output)
+        for denied in ('numerical equivalence', 'mixed-vendor readiness',
+                       'production readiness', 'R8-J/Vulkan execution authority'):
+            self.assertIn(denied, output)
+        self.assertNotIn('MVP_DISTRIBUTED_INFERENCE_PASS',
+                         json.dumps(self.record['capabilities']))
         self.assertEqual(len(self.record['capabilities']), 8)
+
+        # Test the source AND every generated living-status section, plus
+        # authored product prose. Historical evidence is deliberately excluded.
+        surfaces = {'source': json.dumps(self.record), **sync.render(self.record)}
+        for relative, sections in sync.TARGETS.items():
+            content = (sync.ROOT / relative).read_text()
+            surfaces[relative] = '\n'.join(content.split(
+                f'<!-- project-status:{name}:start -->', 1)[1].split(
+                f'<!-- project-status:{name}:end -->', 1)[0] for name in sections)
+        for name in ('README.md', 'product-report.md'):
+            relative = 'docs/implementation/two-host-mvp-255/' + name
+            surfaces[relative] = (sync.ROOT / relative).read_text()
+        for name, content in surfaces.items():
+            with self.subTest(surface=name):
+                self.assertNotRegex(content, r'(?i)PR #256\s+(?:(?:remains|is)\s+)?(?:OPEN|UNMERGED|pending|awaiting)')
+                self.assertNotRegex(content, r'(?i)PR #256[^.\n]*pending maintainer')
+                self.assertNotRegex(content, r'(?i)(?:Issue )?#266[^.\n]*(?:pending|awaiting|requires aggregate|reviews the aggregate)')
+                self.assertNotIn('#266/R8-I3C frontier', content)
+                self.assertNotIn('R8-I3C/#266 frontier', content)
+                self.assertNotIn('Issue #266 — aggregate R8-I3C mainline review', content)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'

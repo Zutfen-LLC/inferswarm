@@ -1,0 +1,22 @@
+{
+  "argv_server": "/home/hermes/llama.cpp/build-v041/bin/llama-server -m /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --device CUDA0 -ngl 8 -cmoe --host 127.0.0.1 --port 8344 -c 1024 -np 1 --no-warmup -lv 5",
+  "leased": true,
+  "owned": {
+    "sampler.pid": [
+      246041,
+      79584135
+    ],
+    "server.pid": [
+      245823,
+      79583642
+    ]
+  },
+  "owned_original_server": [
+    245823,
+    79583642
+  ],
+  "ready_wall_epoch": 1791042668.8832927,
+  "server_pid": 245823,
+  "startup_load_seconds": 4.891594565007836,
+  "token": "77daa437276edfc12dffba4c4c00a26b"
+}

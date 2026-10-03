@@ -79,8 +79,17 @@ class DependencyAuthorityTests(unittest.TestCase):
     def test_authority_exists_and_declares_expected_direct_packages(self):
         text = REQUIREMENTS.read_text(encoding="utf-8")
         packages, references = doctor.parse_requirements(text)
-        self.assertEqual(packages, {"jsonschema", "numpy", "pyyaml"})
+        self.assertEqual(packages, {"jsonschema", "numpy", "pyyaml", "requests"})
         self.assertEqual(references, {doctor.REFERENCED_REQUIREMENTS[0]})
+
+    def test_issue255_http_client_is_bounded_in_canonical_authority(self):
+        authority = REQUIREMENTS.read_text(encoding="utf-8")
+        self.assertRegex(authority, r"(?m)^requests>=2\.\d+(?:\.\d+)?,<3$")
+
+    def test_issue255_ci_has_no_separate_http_client_install(self):
+        workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+        self.assertNotIn("requests==", workflow)
+        self.assertNotIn("Install issue-255 operator test HTTP client", workflow)
 
     def test_authority_references_frozen_tokenizer_without_duplicating_pins(self):
         """The immutable #117 pins are consumed by reference, never copied."""

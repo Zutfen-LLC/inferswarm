@@ -1,0 +1,19 @@
+{
+  "launch": {
+    "argv_client": "/home/hermes/llama.cpp/build-v041/bin/llama-server -m /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf --rpc 10.0.0.204:50055 --device CUDA0,RPC0 --split-mode layer --tensor-split 1,1 -ngl 8 -cmoe --host 127.0.0.1 --port 8343 -c 1024 -np 1 --no-warmup -lv 5",
+    "argv_remote": "env LLAMA_CACHE=/home/hermes/issue255-mvp-retry/cache-layer /usr/bin/strace -f -ttt -e trace=openat -s 200 -o /home/hermes/issue255-mvp/task2/rpc-cache-open.strace /home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server -H 10.0.0.204 -p 50055 -d CUDA0 -c",
+    "client_pid": 216736,
+    "ready_wall_epoch": 1791040318.4105952,
+    "rpc_pid": 486981,
+    "startup_load_seconds": 7.612349514965899,
+    "tracer_pid": 486978
+  },
+  "repeats_success": 3,
+  "request_ids": [
+    "chatcmpl-GRDq1bYRs48ngc7jvgJZcxM4ZWxxtLPX",
+    "chatcmpl-siHAbCObwtwER0rZpZiMRUEVCXHVkFGc",
+    "chatcmpl-hReNG5S7JPIC267cuiajk47NAB5BtsFv",
+    "chatcmpl-jXdSNUm7QvB4dKlKzn0DEeRSiVZnOVHo"
+  ],
+  "status": "FOUR_MEASURED_REQUESTS"
+}

@@ -1,0 +1,148 @@
+{
+  "host": "inferswarm01",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "-C",
+        "/home/hermes/llama.cpp",
+        "rev-parse",
+        "HEAD",
+        "HEAD^{tree}"
+      ],
+      "rc": 0,
+      "stdout": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4\n950999fe62b7fe55f44ab5b7394e3c8542f37f12\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "nvidia-smi",
+        "--query-gpu=uuid,name,pci.bus_id,memory.total,memory.used,driver_version",
+        "--format=csv"
+      ],
+      "rc": 0,
+      "stdout": "uuid, name, pci.bus_id, memory.total [MiB], memory.used [MiB], driver_version\nGPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, NVIDIA GeForce RTX 3060, 00000000:03:00.0, 12288 MiB, 1 MiB, 610.57.04\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "ip",
+        "-br",
+        "addr"
+      ],
+      "rc": 0,
+      "stdout": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \neno1             UP             10.0.0.142/24 fd28:e64f:c45c::934/128 2601:18c:9280:d0a6::934/128 fd28:e64f:c45c:0:4031:33a5:71da:971e/64 2601:18c:9280:d0a6:1d17:fb25:4d65:22c/64 fe80::b17f:821b:c732:4ff3/64 \ntailscale0       UNKNOWN        100.83.93.77/32 fd7a:115c:a1e0::1e2d:5d4e/128 fe80::9ec5:67ec:bf04:925a/64 \n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "ss",
+        "-ltnp"
+      ],
+      "rc": 0,
+      "stdout": "State  Recv-Q Send-Q               Local Address:Port  Peer Address:PortProcess\nLISTEN 0      128                        0.0.0.0:22         0.0.0.0:*          \nLISTEN 0      4096                  100.83.93.77:55247      0.0.0.0:*          \nLISTEN 0      128                           [::]:22            [::]:*          \nLISTEN 0      4096   [fd7a:115c:a1e0::1e2d:5d4e]:49967         [::]:*          \n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-h",
+        "/srv"
+      ],
+      "rc": 0,
+      "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sdb2       216G  133G   72G  66% /\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "free",
+        "-m"
+      ],
+      "rc": 0,
+      "stdout": "               total        used        free      shared  buff/cache   available\nMem:          128731        3926       13386        1545      114185      124805\nSwap:          12300           0       12300\n",
+      "stderr": ""
+    }
+  ],
+  "files": [
+    {
+      "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "size": 10946624,
+      "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+    },
+    {
+      "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+      "size": 49990818368,
+      "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+    },
+    {
+      "path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+      "size": 22544696352,
+      "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server",
+      "size": 190344,
+      "sha256": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libggml-base.so.0.24.0",
+      "size": 891624,
+      "sha256": "7950c57c6c6f552f34a55c3b353222b36b1d733ca71717cd26d091e2c46d47f7"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libggml-cpu.so.0.24.0",
+      "size": 1193512,
+      "sha256": "0c0105f9a02c3c12120a8a956ecac931691e83f89b28c086547cf87f62e59ab2"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libggml-cuda.so.0.24.0",
+      "size": 64481096,
+      "sha256": "aa30a95f6ee8d0e88e9da02b80c86914858f3e4b25de21c2397909ae4f40b290"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libggml-rpc.so.0.24.0",
+      "size": 237416,
+      "sha256": "720cb0d20cda5b485644a9ba74c47f6b83fa49c70906c4f582f98a39981c9f44"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libggml.so.0.24.0",
+      "size": 55768,
+      "sha256": "1af7073294ace8c99267fb31fe3f128df74e6ac96aa447941d661b89e4877db5"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libllama-cli-impl.so",
+      "size": 233712,
+      "sha256": "b90aff44775875cde280b800fe197d2f02154b0ee905bf3f71fca4878ff3fd12"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libllama-common.so.0.4.1",
+      "size": 5773640,
+      "sha256": "36e5fa5cd9758da52e245fb80cef5f9895e7c0dc5ca6de553cb1995fb7ebeed4"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libllama-server-impl.so",
+      "size": 6833768,
+      "sha256": "1d894655c375eb69e7e9f50e1739b5ecca1067a20e5775d6498e79805f6214b0"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libllama.so.0.4.1",
+      "size": 4587232,
+      "sha256": "5bf9cc595cef1a9c30f348d83279d9b57f412ff0a64702aae0b480538728bc84"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/libmtmd.so.0.4.1",
+      "size": 1915992,
+      "sha256": "fd74357dc4979be67d4d333be618eb09f0fb8f8f563e9a42746a9dc673f66493"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/llama-cli",
+      "size": 1233672,
+      "sha256": "3f6b0ed46f42e5c614e4fb4d36b91c56061dfff96096bbb1e4bc0044bd95e77f"
+    },
+    {
+      "path": "/home/hermes/llama.cpp/build-v041/bin/llama-server",
+      "size": 17920,
+      "sha256": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411"
+    }
+  ]
+}

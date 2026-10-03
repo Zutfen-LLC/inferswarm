@@ -1,0 +1,65 @@
+[
+  {
+    "bytes": 357580800,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/960dea06a116e301",
+    "matches_staged_source": true,
+    "name": "output.weight",
+    "sha256": "30e5450eec8babd494c3a3ff8e580ed8196da9c40599b241e196cc70f09f5203"
+  },
+  {
+    "bytes": 10813440,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/176864379c059e34",
+    "matches_staged_source": true,
+    "name": "blk.45.attn_gate.weight",
+    "sha256": "f9d84dab425dc40cfa7200dcb05e5c28144b146f8710e9a61121bd7d1b2f42f3"
+  },
+  {
+    "bytes": 18022400,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/bf2f72a84ab89ba8",
+    "matches_staged_source": true,
+    "name": "blk.45.attn_qkv.weight",
+    "sha256": "cfaabc6688c498b59be15589e10e176d19d4c0c3a6e276b87b9a247cb631f8cd"
+  },
+  {
+    "bytes": 12902400,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/32acb3b6e11267a8",
+    "matches_staged_source": true,
+    "name": "blk.45.ssm_out.weight",
+    "sha256": "d4df13c9842ba1c86da8c7ec1c3c638a3ffa8a3b9fe56676d11b77b53dd5c383"
+  },
+  {
+    "bytes": 10813440,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/b2bc473e4dbdf301",
+    "matches_staged_source": true,
+    "name": "blk.46.attn_gate.weight",
+    "sha256": "ca64cbb344ea39d249a8da100c84eb03e54e5a4dc5894f170246dbdd0ddf0aa0"
+  },
+  {
+    "bytes": 18022400,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/331a33ac3361e4f4",
+    "matches_staged_source": true,
+    "name": "blk.46.attn_qkv.weight",
+    "sha256": "652ff0edff16ba6d29deee32d44b8bfef4cce9b297e65cef423ca957c3cbca49"
+  },
+  {
+    "bytes": 12902400,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d2e1b96a057b7c8d",
+    "matches_staged_source": true,
+    "name": "blk.46.ssm_out.weight",
+    "sha256": "12507011d72e299baf07f385880f028c054c1967ab8ba750c31ccf5d3b5f46fe"
+  },
+  {
+    "bytes": 10813440,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/d884a05065652e1d",
+    "matches_staged_source": true,
+    "name": "blk.47.attn_output.weight",
+    "sha256": "14cb7cfeffa256dba77ca3d1725ee851455f18761a763d07fb954ef399fd5cf6"
+  },
+  {
+    "bytes": 21626880,
+    "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer/rpc/1605502f1f402285",
+    "matches_staged_source": true,
+    "name": "blk.47.attn_q.weight",
+    "sha256": "ac30d4d510c03990511149ed4d22d676a5c31f753ede31b1212162bda6c9eadc"
+  }
+]

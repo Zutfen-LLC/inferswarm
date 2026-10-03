@@ -1,0 +1,6 @@
+{
+  "gpu_memory_after_release_mib": 1,
+  "owned_process_alive": false,
+  "port_listening": false,
+  "raw": "    PID STAT CMD\nState Recv-Q Send-Q Local Address:Port Peer Address:Port\n1, 0\n"
+}
