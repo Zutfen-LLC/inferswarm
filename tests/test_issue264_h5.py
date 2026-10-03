@@ -30,6 +30,9 @@ def event(id=1, state="base", node="result_output", graph=61, prefix=""):
                              reduction=reduction, local=local)
     return prefix + route + "\n" + prefix + variant + "\n"
 
+def population(state="base", prefix=""):
+    return "".join(event(i, state=state, graph=60+i, prefix=prefix) for i in range(1, 11))
+
 
 class SelectorContractTests(unittest.TestCase):
     def test_default_and_two_explicit_states(self):
@@ -69,24 +72,42 @@ class UnitEvidenceTests(unittest.TestCase):
 
     def test_separate_processes_transition_and_log_prefix(self):
         base = H.parse_unit(event(1, prefix="0.05.221.233 I ") +
-                            "ordinary server stdout between events\n" + event(2), state="base")
-        large = H.parse_unit(event(1, state="large") + event(2, state="large"), state="large")
+                            "ordinary server stdout between events\n" +
+                            "".join(event(i, graph=60+i) for i in range(2, 11)), state="base")
+        large = H.parse_unit(population("large"), state="large")
         self.assertEqual(H.candidate_transition(base, large)["variants"], ["subgroup", "large"])
-        self.assertEqual(base["event_ids"], [1, 2])
-        self.assertEqual(large["event_ids"], [1, 2])
+        self.assertEqual(base["event_ids"], list(range(1, 11)))
+        self.assertEqual(large["event_ids"], list(range(1, 11)))
+
+    def test_exact_frozen_event_population_per_arm(self):
+        for state in ("base", "large"):
+            with self.subTest(state=state):
+                self.assertEqual(H.parse_unit(population(state), state=state)["marker_count"], 10)
+                with self.assertRaisesRegex(H.RouteError, "ten|10|population"):
+                    H.parse_unit(population(state)[:-len(event(10, state=state, graph=70))], state=state)
+                with self.assertRaisesRegex(H.RouteError, "missing complete"):
+                    H.parse_unit(population(state)[:-len(event(10, state=state, graph=70))]
+                                 + event(10, state=state, graph=70).splitlines()[0] + "\n", state=state)
+                with self.assertRaisesRegex(H.RouteError, "ten|10|population"):
+                    H.parse_unit(population(state) + event(11, state=state, graph=71), state=state)
 
     def test_rejects_missing_duplicate_out_of_order_reset_and_unbound_marker(self):
-        for log in (ROUTE.format(id=1, graph=61, node="result_output") + "\n",
-                    VARIANT.format(id=1, node="result_output", state="base", wg="subgroup", reduction="subgroup", local=32) + "\n",
-                    event() + event(), event(2) + event(1), event(2) + event(1) + event(3),
-                    event(1).splitlines()[0] + "\n" + event(2),
-                    event(1) + event(2).splitlines()[0] + "\n",
-                    event(1).replace("mmv|id=1", "mmv|id=2")):
+        valid = population()
+        first = event(1)
+        second = event(2, graph=62)
+        for log in (valid.replace(first, first.splitlines()[0] + "\n", 1),
+                    valid.replace(first, first.splitlines()[1] + "\n", 1),
+                    valid.replace(second, first, 1),
+                    valid.replace(first + second, second + first, 1),
+                    valid.replace(first + second, second + first, 1) + event(11, graph=71),
+                    valid.replace(first, first.splitlines()[0] + "\n" + second, 1),
+                    valid.replace(second, second.splitlines()[0] + "\n", 1),
+                    valid.replace("mmv|id=1", "mmv|id=2", 1)):
             with self.subTest(log=log[-100:]), self.assertRaises(H.RouteError):
                 H.parse_unit(log, state="base")
 
     def test_rejects_spoofed_variant_non_mmv_and_wrong_frozen_route(self):
-        valid = event()
+        valid = population()
         variants = (valid.replace("state=base", "state=large"),
                     valid.replace("wg=subgroup", "wg=large"),
                     valid.replace("reduction=subgroup", "reduction=hybrid"),
@@ -112,26 +133,26 @@ class UnitEvidenceTests(unittest.TestCase):
             H.parse_unit("GGML_VK_I264_MMV=large\n", state="large")
 
     def test_rejects_unknown_versions_copied_prefix_and_in_stream_node_drift(self):
-        for log in (event().replace("i264:v1", "i264:v2"),
-                    event().replace("i262:v1", "i262:v2"),
-                    event().replace("ggml_vk_i264:v1", "copied ggml_vk_i264:v1"),
-                    event().replace("ggml_vk_i262:v1", "copied ggml_vk_i262:v1"),
-                    event().replace("ggml_vk_i264:v1", "ggml_vulkan: ggml_vk_i264:v1"),
-                    event() + event(2, node="different"),
-                    event().replace("ggml_vk_i264:v1|mmv", "ggml_vk_i264:v1|other"),
-                    event() + "ggml_vk_i264-v2|mmv|id=2\n",
-                    event() + "ggml_vk_i262-v2|route|id=2\n"):
+        for log in (population().replace("i264:v1", "i264:v2", 1),
+                    population().replace("i262:v1", "i262:v2", 1),
+                    population().replace("ggml_vk_i264:v1", "copied ggml_vk_i264:v1", 1),
+                    population().replace("ggml_vk_i262:v1", "copied ggml_vk_i262:v1", 1),
+                    population().replace("ggml_vk_i264:v1", "ggml_vulkan: ggml_vk_i264:v1", 1),
+                    population()[:-len(event(10, graph=70))] + event(10, node="different", graph=70),
+                    population().replace("ggml_vk_i264:v1|mmv", "ggml_vk_i264:v1|other", 1),
+                    population() + "ggml_vk_i264-v2|mmv|id=11\n",
+                    population() + "ggml_vk_i262-v2|route|id=11\n"):
             with self.subTest(log=log[-100:]), self.assertRaises(H.RouteError):
                 H.parse_unit(log, state="base")
 
     def test_cross_arm_requires_same_node_and_real_variant_change(self):
-        base = H.parse_unit(event(), state="base")
-        large = H.parse_unit(event(state="large"), state="large")
+        base = H.parse_unit(population(), state="base")
+        large = H.parse_unit(population("large"), state="large")
         H.candidate_transition(base, large)
         with self.assertRaises(H.RouteError):
             H.candidate_transition(base, base)
         with self.assertRaises(H.RouteError):
-            H.candidate_transition(base, H.parse_unit(event(state="large", node="other"), state="large"))
+            H.candidate_transition(base, H.parse_unit("".join(event(i, state="large", node="other", graph=60+i) for i in range(1,11)), state="large"))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 """CPU-only contracts for the bounded #264 MMV pilot and byte report."""
 from __future__ import annotations
 import hashlib, json, sys, tempfile, unittest
+from datetime import datetime, timezone
 from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
@@ -8,6 +9,10 @@ import issue264_pilot as P
 import issue264_report as R
 
 def sha(b): return hashlib.sha256(b).hexdigest()
+def utc(value):
+    parsed=datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo != timezone.utc: raise AssertionError("timestamp must be UTC")
+    return parsed
 def retained_skeleton(parent: Path):
     unit=parent/"BASE"/"unit-001";unit.mkdir(parents=True)
     names={"request.json","response.json.raw","server.log","obs.meta.json","identity-pre.json","identity-post.json","markers.json","unit.json",*(f"obs.row{i}.f32" for i in range(8))}
@@ -78,8 +83,8 @@ class PilotContracts(unittest.TestCase):
         self.assertEqual(P.screen_class([{"row_digest":"a"}]*3),"screening-stable")
 
     def test_markers_validate_resolved_arm_name_not_environment_value(self):
-        raw=(b"ggml_vk_i262:v1|route|id=1|graph=1|weight=output.weight|node=n|side=0|route=mat-vec|pipe=mul_mat_vec_q4_k_f32_f32|family=mmv|quant_y=0|split_k=0|64b=0|dims=2560x248320:2560x1->248320x1|types=q4_K*f32->f32\n"
-             b"ggml_vk_i264:v1|mmv|id=1|node=n|weight=output.weight|state=large|route=mat-vec|pipe=mul_mat_vec_q4_k_f32_f32|wg=large|reduction=hybrid|local=128x1x1|dims=2560x248320:2560x1->248320x1|types=q4_K*f32->f32|quant_y=0|split_k=0|64b=0\n")
+        raw=b"".join((f"ggml_vk_i262:v1|route|id={i}|graph={i}|weight=output.weight|node=n|side=0|route=mat-vec|pipe=mul_mat_vec_q4_k_f32_f32|family=mmv|quant_y=0|split_k=0|64b=0|dims=2560x248320:2560x1->248320x1|types=q4_K*f32->f32\n"
+                     f"ggml_vk_i264:v1|mmv|id={i}|node=n|weight=output.weight|state=large|route=mat-vec|pipe=mul_mat_vec_q4_k_f32_f32|wg=large|reduction=hybrid|local=128x1x1|dims=2560x248320:2560x1->248320x1|types=q4_K*f32->f32|quant_y=0|split_k=0|64b=0\n").encode() for i in range(1,11))
         parsed=P.parse_unit_markers(raw,"H5_MMV_CANDIDATE")
         self.assertEqual(parsed["variant"],"large")
         with self.assertRaises(P.PilotError):P.parse_unit_markers(raw,"large")
@@ -336,6 +341,8 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
                     self.assertNotEqual(loaded[0]["row_digest"], loaded[1]["row_digest"])
                     for u in loaded:
                         self.assertEqual(u["markers"]["marker_count"], 10)
+                        self.assertLessEqual(utc(u["started_at"]),utc(u["completed_at"]))
+                        self.assertEqual(u["execution_context_sha256"],P.sha(P.canonical(context)))
                         self.assertEqual(u["argv"], [sys.executable, str(binary), "-ngl", "1", "--port", "19000"])
                     self.assertEqual(P.run_arm(repo_root=REPO, evidence_root=evidence,
                                                arm=arm, binary=binary, timeout_s=15), result)
@@ -361,7 +368,8 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
                 stage=failed/"BASE/.unit-001.staging"
                 self.assertEqual(attempt["staging_files"]["obs.meta.json"],sha((stage/"obs.meta.json").read_bytes()))
                 self.assertEqual(attempt["process_exit"]["cleanup_verified"],True)
-                with self.assertRaisesRegex(P.PilotError,"orphan"):
+                self.assertLessEqual(utc(attempt["started_at"]),utc(attempt["ended_at"]))
+                with self.assertRaisesRegex(P.PilotError,"orphan|failed"):
                     P.run_unit(repo_root=REPO,evidence_root=failed,arm="BASE",binary=binary,unit_index=1,timeout_s=15)
                 timeout_root=root/"timeout-CPU-fixture-NOT-physical"
                 P.prepare_execution(repo_root=REPO,evidence_root=timeout_root,binary=binary)
@@ -371,6 +379,52 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
                 self.assertEqual(timeout_attempt["phase"],"completion")
                 self.assertEqual(timeout_attempt["process_exit"]["cleanup_verified"],True)
                 self.assertIn("server.log",timeout_attempt["staging_files"])
+                self.assertLessEqual(utc(timeout_attempt["started_at"]),utc(timeout_attempt["ended_at"]))
+                authority_root=root/"authority-CPU-fixture-NOT-physical"
+                P.prepare_execution(repo_root=REPO,evidence_root=authority_root,binary=binary)
+                authority_calls=0
+                original_authority=P.verify_authority
+                def revoke_final(repo,ctx):
+                    nonlocal authority_calls
+                    authority_calls+=1
+                    if authority_calls==3: raise P.PilotError("final commit authority revoked")
+                    return original_authority(repo,ctx)
+                with mock.patch.object(P,"verify_authority",side_effect=revoke_final):
+                    with self.assertRaisesRegex(P.PilotError,"final commit authority revoked"):
+                        P.run_unit(repo_root=REPO,evidence_root=authority_root,arm="BASE",binary=binary,unit_index=1,timeout_s=15)
+                self.assertEqual(authority_calls,3)
+                self.assertFalse((authority_root/"BASE/unit-001").exists())
+                authority_stage=authority_root/"BASE/.unit-001.staging"
+                self.assertTrue((authority_stage/"response.json.raw").is_file())
+                authority_receipt=json.loads((authority_root/"attempts/BASE-001.failed.json").read_bytes())
+                self.assertEqual(authority_receipt["staging_files"]["response.json.raw"],sha((authority_stage/"response.json.raw").read_bytes()))
+                self.assertEqual(authority_receipt["execution_context_sha256"],P.sha(P.canonical(context)))
+                self.assertIsInstance(authority_receipt["pid"],int)
+                self.assertTrue(authority_receipt["process_exit"]["cleanup_verified"])
+                self.assertLessEqual(utc(authority_receipt["started_at"]),utc(authority_receipt["ended_at"]))
+                with self.assertRaisesRegex(P.PilotError,"orphan|failed"):
+                    P.run_unit(repo_root=REPO,evidence_root=authority_root,arm="BASE",binary=binary,unit_index=1,timeout_s=15)
+                rename_root=root/"rename-CPU-fixture-NOT-physical"
+                P.prepare_execution(repo_root=REPO,evidence_root=rename_root,binary=binary)
+                target=rename_root/"BASE/unit-001"
+                original_fsync=P.os.fsync
+                def fail_parent_sync(fd):
+                    if target.is_dir() and Path(f"/proc/self/fd/{fd}").resolve()==target.parent:
+                        raise OSError("parent fsync after rename")
+                    return original_fsync(fd)
+                with mock.patch.object(P.os,"fsync",side_effect=fail_parent_sync):
+                    with self.assertRaisesRegex(OSError,"parent fsync after rename"):
+                        P.run_unit(repo_root=REPO,evidence_root=rename_root,arm="BASE",binary=binary,unit_index=1,timeout_s=15)
+                self.assertFalse((rename_root/"BASE/.unit-001.staging").exists())
+                receipt=json.loads((rename_root/"attempts/BASE-001.failed.json").read_bytes())
+                self.assertEqual(receipt["staging_path"],"BASE/unit-001")
+                self.assertEqual(receipt["staging_files"],{p.name:sha(p.read_bytes()) for p in target.iterdir()})
+                self.assertEqual(receipt["execution_context_sha256"],P.sha(P.canonical(context)))
+                self.assertIsInstance(receipt["pid"],int)
+                self.assertTrue(receipt["process_exit"]["cleanup_verified"])
+                self.assertLessEqual(utc(receipt["started_at"]),utc(receipt["ended_at"]))
+                with self.assertRaisesRegex(P.PilotError,"failed"):
+                    P.run_unit(repo_root=REPO,evidence_root=rename_root,arm="BASE",binary=binary,unit_index=2,timeout_s=15)
                 # Reader re-derives semantics even if a local actor updates
                 # both the unit digest and file manifest after publication.
                 tampered=evidence/"BASE/unit-001"
@@ -386,8 +440,8 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
                 manifest_path.write_bytes(json.dumps(manifest).encode())
                 with self.assertRaisesRegex(P.PilotError,"response"):
                     P.load_completed_units(evidence,"BASE")
-            self.assertEqual(len(terminated), 6)
-            self.assertEqual(len(set(terminated)), 6)
+            self.assertEqual(len(terminated), 8)
+            self.assertEqual(len(set(terminated)), 8)
             self.assertFalse(any(evidence.rglob("*.staging")))
 
 if __name__ == "__main__": unittest.main()
