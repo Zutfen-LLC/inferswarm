@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import shlex
 import shutil
 import signal
@@ -146,12 +147,43 @@ def add_gpu_endpoints(summary, evidence=None):
     return summary
 
 
-def owned_pid(host, filename, needle):
-    pid = int(remote(host, f'cat {shlex.quote(ROOT + "/" + filename)}').strip())
-    cmdline = remote(host, f'tr "\\0" " " </proc/{pid}/cmdline', check=False)
-    if needle not in cmdline:
-        raise RuntimeError(f'owned pid {pid} on {host} lost identity: {cmdline!r}')
+def acquire_hosts(state):
+    """An atomic mkdir lease per host; an existing run is never ours to clean."""
+    marker = shlex.quote(ROOT + '/task2-active')
+    token = shlex.quote(state['token'])
+    for host in (CLIENT, REMOTE):
+        remote(host, f'mkdir -p {shlex.quote(ROOT)}; '
+                     f'mkdir {marker} || {{ echo "active lease already exists" >&2; exit 73; }}; '
+                     f'printf "%s\\n" {token} > {marker}/token || '
+                     f'{{ rmdir {marker}; exit 1; }}')
+        state['hosts'][host] = {}
+
+
+def process_start(host, pid):
+    script = ('import pathlib,sys; p=pathlib.Path("/proc")/sys.argv[1]/"stat"; '
+              'print(p.read_text().rsplit(") ",1)[1].split()[19])')
+    return int(remote(host, f'python3 -c {shlex.quote(script)} {pid}').strip())
+
+
+def record_pid(state, host, filename, pid, start=None):
+    start = process_start(host, pid) if start is None else start
+    marker = ROOT + '/task2-active/token'
+    script = ('import pathlib,sys; token,path,record=sys.argv[1:]; '
+              f'assert pathlib.Path({marker!r}).read_text().strip()==token, "lease changed"; '
+              'pathlib.Path(path).write_text(record+"\\n")')
+    remote(host, f'python3 -c {shlex.quote(script)} {shlex.quote(state["token"])} '
+                 f'{shlex.quote(ROOT + "/" + filename)} {pid}:{start}')
+    state['hosts'][host][filename] = (pid, start)
     return pid
+
+
+def spawn_owned(state, host, filename, command, log):
+    marker = shlex.quote(ROOT + '/task2-active/token')
+    token = shlex.quote(state['token'])
+    raw = remote(host, f'test "$(cat {marker})" = {token} || exit 73; '
+                       f'nohup {command} >{ROOT}/{log} 2>&1 </dev/null & pid=$!; '
+                       'printf "%s\\n" "$pid"')
+    return record_pid(state, host, filename, int(raw.strip()))
 
 
 def snapshot(host, pid, *, client=False):
@@ -217,10 +249,8 @@ def streaming_request():
             'elapsed_seconds': finish_mono - start_mono, 'events': events, 'result': result}
 
 
-def launch():
-    for host in (CLIENT, REMOTE):
-        remote(host, f'mkdir -p {ROOT}; test ! -e {ROOT}/task2-active; '
-                     f'touch {ROOT}/task2-active; date -Is > {ROOT}/launch-date')
+def launch(state):
+    acquire_hosts(state)
     # Sampling script is an operator-owned copy; no preexisting namespace is changed.
     for host in (CLIENT, REMOTE):
         subprocess.run(['scp', '-q', str(REPO / 'tools/issue255_mvp/sample_gpu.py'),
@@ -228,8 +258,7 @@ def launch():
     rpc_command = (f'env LLAMA_CACHE={CACHE} /usr/bin/strace -f -ttt -e trace=openat '
                    f'-s 200 -o {ROOT}/rpc-cache-open.strace {RPC} '
                    '-H 10.0.0.204 -p 50055 -d CUDA0 -c')
-    remote(REMOTE, f'nohup {rpc_command} >{ROOT}/rpc.log 2>&1 </dev/null & echo $! >{ROOT}/tracer.pid')
-    tracer = owned_pid(REMOTE, 'tracer.pid', 'strace')
+    tracer = spawn_owned(state, REMOTE, 'tracer.pid', rpc_command, 'rpc.log')
     rpc_pid = None
     for _ in range(60):
         child = remote(REMOTE, f'pgrep -P {tracer} || true').strip().splitlines()
@@ -238,7 +267,7 @@ def launch():
             cmdline = remote(REMOTE, f'tr "\\0" " " </proc/{candidate}/cmdline', check=False)
             if 'ggml-rpc-server' in cmdline:
                 rpc_pid = candidate
-                remote(REMOTE, f'printf "%s\\n" {rpc_pid} >{ROOT}/rpc.pid')
+                record_pid(state, REMOTE, 'rpc.pid', rpc_pid)
                 break
         time.sleep(.25)
     if rpc_pid is None: raise RuntimeError('no owned RPC child')
@@ -250,11 +279,11 @@ def launch():
             '--split-mode layer --tensor-split 1,1 -ngl 8 -cmoe '
             '--host 127.0.0.1 --port 8343 -c 1024 -np 1 --no-warmup -lv 5')
     started = time.monotonic()
-    remote(CLIENT, f'nohup {argv} >{ROOT}/client.log 2>&1 </dev/null & echo $! >{ROOT}/client.pid')
-    client_pid = owned_pid(CLIENT, 'client.pid', 'llama-server')
+    client_pid = spawn_owned(state, CLIENT, 'client.pid', argv, 'client.log')
     tunnel = subprocess.Popen(['ssh', '-o', 'BatchMode=yes', '-o', 'ExitOnForwardFailure=yes',
                                '-N', '-L', f'127.0.0.1:{LOCAL_PORT}:127.0.0.1:8343', CLIENT],
                               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    state['tunnel'] = tunnel  # Register before any health/JSON/timeout failure.
     import requests
     for _ in range(240):
         if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited')
@@ -268,13 +297,13 @@ def launch():
     else: raise RuntimeError('no healthy client within 120 seconds')
     loaded = time.monotonic()
     for host, pid, tag in ((CLIENT, client_pid, '01'), (REMOTE, rpc_pid, '04')):
-        remote(host, f'nohup python3 -u {ROOT}/sample_gpu.py {pid} '
-                     f'>{ROOT}/gpu-{tag}.jsonl 2>{ROOT}/gpu-{tag}.err </dev/null & '
-                     f'echo $! >{ROOT}/sampler.pid')
-    return {'client_pid': client_pid, 'rpc_pid': rpc_pid, 'tracer_pid': tracer,
-            'tunnel': tunnel, 'startup_load_seconds': loaded-started,
-            'argv_client': argv, 'argv_remote': rpc_command,
-            'ready_wall_epoch': time.time()}
+        spawn_owned(state, host, 'sampler.pid',
+                    f'python3 -u {ROOT}/sample_gpu.py {pid}', f'gpu-{tag}.jsonl')
+    state.update({'client_pid': client_pid, 'rpc_pid': rpc_pid, 'tracer_pid': tracer,
+                  'startup_load_seconds': loaded-started,
+                  'argv_client': argv, 'argv_remote': rpc_command,
+                  'ready_wall_epoch': time.time()})
+    return state
 
 
 def collect_request(index, state):
@@ -353,24 +382,79 @@ def finalize_samples(summaries, state):
 
 
 def stop_owned(state):
-    # Kill only PID file identities; preserve logs and cache, no broad matching.
+    # Every signal is guarded remotely by the lease, on-disk record, pidfd and
+    # /proc start-time; never discover ownership from fixed shared PID files.
     result = {}
-    for host, filename, needle in ((CLIENT, 'sampler.pid','sample_gpu.py'),
-                                   (REMOTE, 'sampler.pid','sample_gpu.py'),
-                                   (CLIENT, 'client.pid','llama-server'),
-                                   (REMOTE, 'rpc.pid','ggml-rpc-server'),
-                                   (REMOTE, 'tracer.pid','strace')):
+    script = '''import os, pathlib, signal, sys
+token, marker, path, pid_text, start_text = sys.argv[1:]
+lease, record = pathlib.Path(marker), pathlib.Path(path)
+if lease.read_text().strip() != token:
+    print('lease mismatch')
+    sys.exit(0)
+if record.read_text().strip() != f'{pid_text}:{start_text}':
+    print('record mismatch')
+    sys.exit(0)
+pid = int(pid_text)
+try:
+    fd = os.pidfd_open(pid)
+except ProcessLookupError:
+    record.unlink()
+    print('already-exited')
+    sys.exit(0)
+try:
+    actual = pathlib.Path(f'/proc/{pid}/stat').read_text().rsplit(') ', 1)[1].split()[19]
+    if actual != start_text:
+        print('start-time mismatch')
+    else:
         try:
-            pid = owned_pid(host, filename, needle)
-            remote(host, f'kill -TERM {pid} 2>/dev/null || true')
-            result[f'{host}:{filename}'] = pid
+            signal.pidfd_send_signal(fd, signal.SIGTERM)
+            record.unlink()
+            print('signaled')
+        except ProcessLookupError:
+            record.unlink()
+            print('already-exited')
+finally:
+    os.close(fd)
+'''
+    for host, filename in ((CLIENT, 'sampler.pid'), (REMOTE, 'sampler.pid'),
+                           (CLIENT, 'client.pid'), (REMOTE, 'rpc.pid'),
+                           (REMOTE, 'tracer.pid')):
+        owned = state.get('hosts', {}).get(host, {})
+        if filename not in owned:
+            continue
+        pid, start = owned[filename]
+        try:
+            status = remote(host, f'python3 -c {shlex.quote(script)} '
+                            f'{shlex.quote(state["token"])} '
+                            f'{shlex.quote(ROOT + "/task2-active/token")} '
+                            f'{shlex.quote(ROOT + "/" + filename)} {pid} {start}').strip()
+            result[f'{host}:{filename}'] = status
+            if status in ('signaled', 'already-exited'):
+                del owned[filename]
         except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
             result[f'{host}:{filename}'] = {'not_signaled': str(exc)}
-    tunnel = state.get('tunnel')
-    if tunnel:
-        tunnel.terminate()
+    tunnel = state.pop('tunnel', None)
+    if tunnel is not None:
+        try: tunnel.terminate()
+        except ProcessLookupError: pass
         try: tunnel.wait(timeout=5)
-        except subprocess.TimeoutExpired: tunnel.kill(); tunnel.wait()
+        except subprocess.TimeoutExpired:
+            tunnel.kill()
+            tunnel.wait()
+    for host, owned in list(state.get('hosts', {}).items()):
+        if owned:  # Failed identity check: preserve lease and records for review.
+            continue
+        marker = ROOT + '/task2-active'
+        release = ('import pathlib,sys; path=pathlib.Path(sys.argv[1]); '
+                   'token=sys.argv[2]; '
+                   'assert (path/"token").read_text().strip()==token, "lease changed"; '
+                   '(path/"token").unlink(); path.rmdir(); print("released")')
+        try:
+            result[f'{host}:lease'] = remote(host, f'python3 -c {shlex.quote(release)} '
+                                             f'{shlex.quote(marker)} {shlex.quote(state["token"])}').strip()
+            del state['hosts'][host]
+        except (RuntimeError, subprocess.SubprocessError) as exc:
+            result[f'{host}:lease'] = {'not_released': str(exc)}
     return result
 
 
@@ -452,10 +536,10 @@ def main():
     if (EVIDENCE / 'MANIFEST.json').exists():
         raise RuntimeError('sealed evidence directory; use a fresh output directory for a new run')
     EVIDENCE.mkdir(parents=True, exist_ok=True)
-    state, summaries = {}, []
+    state, summaries = {'token': secrets.token_hex(16), 'hosts': {}}, []
     try:
         checks = validate_source()
-        state = launch()
+        launch(state)
         save(EVIDENCE / 'topology.json', {k:v for k,v in state.items() if k!='tunnel'})
         for i in range(1,5):
             summaries.append(collect_request(i, state))
@@ -488,8 +572,6 @@ def main():
         raise
     finally:
         save(EVIDENCE / 'cleanup.json', stop_owned(state))
-        for host in (CLIENT, REMOTE):
-            remote(host, f'rm -f {ROOT}/task2-active', check=False)
 
 
 if __name__ == '__main__': main()

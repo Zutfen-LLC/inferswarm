@@ -1,0 +1,30 @@
+{
+  "schema": "issue255.task2.lifecycle-correction/1",
+  "scope": "Offline prospective invocation ownership and tunnel cleanup; no physical rerun or reinterpretation of measured requests",
+  "measured_parent": {
+    "commit": "233b4f4a485d96c47d9d5be8e39fec7caeffc75a",
+    "path": "docs/implementation/two-host-mvp-255/evidence/task2/MANIFEST.json",
+    "sha256": "ee769b6f45ea71dce8f472a06f8d0b99fad16d457c584c26104e8512839580b6",
+    "producer_path": "tools/issue255_mvp/measure.py",
+    "producer_sha256": "32735a7de60f081174d764dd53d1533ea33448e8cbe2367d0ab52fea1cd09a5c",
+    "test_path": "tests/test_issue255_measure.py",
+    "test_sha256": "a62b0e4b131d22b485bc9e142c681a7b3a5e940f07a70394170f8760135e20f1"
+  },
+  "entries": [
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task2-correction/README.md",
+      "bytes": 2787,
+      "sha256": "8a2460bf2a420c9df4e8353751f0952a268735c67e023a12879cd2650696da73"
+    },
+    {
+      "path": "tests/test_issue255_measure.py",
+      "bytes": 15831,
+      "sha256": "3f19cf5b32ca41c26ff39dafd2e80f731902359a22d72cdc1f16b07521df14a7"
+    },
+    {
+      "path": "tools/issue255_mvp/measure.py",
+      "bytes": 30470,
+      "sha256": "d61a601a076627df9bbe353c0924520ec3e0dc481300a79e34064023ff93ccc7"
+    }
+  ]
+}

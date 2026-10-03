@@ -1,7 +1,11 @@
 """Offline contract checks for bounded issue 255 physical measurement."""
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -16,6 +20,57 @@ def module():
 
 
 class MeasurementTests(unittest.TestCase):
+    def test_real_offline_pid_start_mismatch_preserves_lease_and_record(self):
+        m = module()
+        with tempfile.TemporaryDirectory() as root:
+            m.ROOT = root
+            marker = Path(root, 'task2-active')
+            marker.mkdir()
+            (marker / 'token').write_text('owned-token\n')
+            state = {'token': 'owned-token', 'hosts': {m.CLIENT: {}}}
+            def local_python(host, command, **kwargs):
+                self.assertEqual(host, m.CLIENT)
+                proc = subprocess.run(command, shell=True, capture_output=True, text=True)
+                if proc.returncode:
+                    raise RuntimeError(proc.stderr)
+                return proc.stdout
+            with mock.patch.object(m, 'remote', side_effect=local_python):
+                m.record_pid(state, m.CLIENT, 'client.pid', os.getpid(), 0)
+                record = Path(root, 'client.pid').read_bytes()
+                self.assertEqual(record, f'{os.getpid()}:0\n'.encode())
+                result = m.stop_owned(state)
+            self.assertEqual(result[f'{m.CLIENT}:client.pid'], 'start-time mismatch')
+            self.assertEqual(Path(root, 'client.pid').read_bytes(), record)
+            self.assertEqual((marker / 'token').read_text(), 'owned-token\n')
+
+    def test_real_offline_owned_child_is_terminated_and_lease_released(self):
+        m = module()
+        with tempfile.TemporaryDirectory() as root:
+            m.ROOT = root
+            marker = Path(root, 'task2-active')
+            marker.mkdir()
+            (marker / 'token').write_text('owned-token\n')
+            child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+            try:
+                state = {'token': 'owned-token', 'hosts': {m.CLIENT: {}}}
+                def local_python(host, command, **kwargs):
+                    proc = subprocess.run(command, shell=True, capture_output=True, text=True)
+                    if proc.returncode:
+                        raise RuntimeError(proc.stderr)
+                    return proc.stdout
+                with mock.patch.object(m, 'remote', side_effect=local_python):
+                    m.record_pid(state, m.CLIENT, 'client.pid', child.pid)
+                    result = m.stop_owned(state)
+                self.assertEqual(result[f'{m.CLIENT}:client.pid'], 'signaled')
+                self.assertEqual(result[f'{m.CLIENT}:lease'], 'released')
+                self.assertIsNotNone(child.wait(timeout=5))
+                self.assertFalse(marker.exists())
+                self.assertFalse(Path(root, 'client.pid').exists())
+            finally:
+                if child.poll() is None:
+                    child.terminate()
+                    child.wait(timeout=5)
+
     def test_rejected_existing_marker_does_not_signal_or_remove_prior_ownership(self):
         m = module()
         records = {'01': {'token': 'first-run', 'pid': '101:111'},
@@ -32,6 +87,36 @@ class MeasurementTests(unittest.TestCase):
             self.assertEqual(m.stop_owned(state), {})
         self.assertEqual(remote.call_count, 1)
         self.assertEqual(json.dumps(records, sort_keys=True), before)
+
+    def test_main_rejected_lease_keeps_other_run_records_unchanged(self):
+        m = module()
+        with tempfile.TemporaryDirectory() as root:
+            m.ROOT = root
+            marker = Path(root, 'task2-active')
+            marker.mkdir()
+            (marker / 'token').write_text('prior-run\n')
+            (Path(root) / 'client.pid').write_text('321:876\n')
+            prior = {p.name: p.read_bytes() for p in marker.iterdir()}
+            prior['client.pid'] = (Path(root) / 'client.pid').read_bytes()
+            output = Path(root, 'new-output')
+            commands = []
+            def local_remote(host, command, **kwargs):
+                commands.append(command)
+                self.assertEqual(host, m.CLIENT)
+                proc = subprocess.run(command, shell=True, capture_output=True, text=True)
+                if proc.returncode:
+                    raise RuntimeError(proc.stderr)
+                return proc.stdout
+            with mock.patch.object(m, 'remote', side_effect=local_remote), \
+                 mock.patch.object(m, 'validate_source', return_value=[]), \
+                 mock.patch.object(sys, 'argv', ['measure.py', '--output', str(output)]):
+                with self.assertRaisesRegex(RuntimeError, 'active lease already exists'):
+                    m.main()
+            self.assertEqual(json.loads((output / 'cleanup.json').read_text()), {})
+            self.assertEqual({p.name: p.read_bytes() for p in marker.iterdir()},
+                             {'token': prior['token']})
+            self.assertEqual((Path(root) / 'client.pid').read_bytes(), prior['client.pid'])
+            self.assertEqual(len(commands), 1)
 
     def test_empty_acquired_state_never_reads_pid_files_or_signals(self):
         m = module()
@@ -51,11 +136,11 @@ class MeasurementTests(unittest.TestCase):
         with mock.patch.object(m, 'remote', side_effect=remote):
             with self.assertRaisesRegex(RuntimeError, 'remote marker occupied'):
                 m.acquire_hosts(state)
+            acquisition_calls = len(calls)
             m.stop_owned(state)
         self.assertTrue(any(host == m.CLIENT and 'partial-run' in cmd and 'rmdir' in cmd
                             for host, cmd in calls))
-        self.assertFalse(any(host == m.REMOTE and ('rmdir' in cmd or 'kill' in cmd)
-                             for host, cmd in calls))
+        self.assertFalse(any(host == m.REMOTE for host, cmd in calls[acquisition_calls:]))
 
     def test_recycled_pid_start_time_refuses_signal_and_preserves_record(self):
         m = module()
@@ -78,6 +163,8 @@ class MeasurementTests(unittest.TestCase):
         tunnel = mock.Mock()
         tunnel.poll.return_value = None
         def remote(host, command, **kwargs):
+            if 'nohup ' in command: return '303\n' if host == m.REMOTE else '101\n'
+            if 'rsplit' in command: return '100\n'
             if 'pgrep -P' in command: return '202\n'
             if '/proc/202/cmdline' in command: return 'ggml-rpc-server'
             if 'ss -ltn' in command: return ':50055'
@@ -87,6 +174,7 @@ class MeasurementTests(unittest.TestCase):
             return ''
         with mock.patch.object(m, 'remote', side_effect=remote), \
              mock.patch.object(m.subprocess, 'run'), \
+             mock.patch.object(m.time, 'sleep'), \
              mock.patch.object(m.subprocess, 'Popen', return_value=tunnel):
             with self.assertRaisesRegex(RuntimeError, 'client exited during startup'):
                 m.launch(state)
