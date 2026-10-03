@@ -199,6 +199,10 @@ GROUP_TEST_MODULES = {
         "test_issue103_planner",
         "test_issue200_r8f_source_policy",
         "test_issue200_r8f_proof",
+        # Issue #255: bounded CUDA/RPC product execution and local baseline.
+        "test_issue255_mvp",
+        "test_issue255_measure",
+        "test_issue255_baseline",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).
@@ -367,6 +371,9 @@ PATH_GROUPS = {
     "scripts/issue137_manifest.py": ["repo-integrity"],
     "scripts/check_phase0_workloads.py": ["repo-integrity"],
     "scripts/check_ci_test_retention.py": ["repo-integrity"],  # + authority -> full
+    # Issue #255 product operator and additive evidence, selected with source-policy tests.
+    "tools/issue255_mvp/": ["issue-99-103"],
+    "docs/implementation/two-host-mvp-255/": ["issue-99-103"],
     "docs/ci/": ["repo-integrity"],
     "docs/project-status.json": ["repo-integrity"],
     "docs/status-maintenance.md": ["repo-integrity"],

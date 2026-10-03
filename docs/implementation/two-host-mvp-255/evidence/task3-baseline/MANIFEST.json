@@ -1,0 +1,80 @@
+{
+  "schema": "issue255.task3-baseline/1",
+  "ancestor": {
+    "commit": "233b4f4a485d96c47d9d5be8e39fec7caeffc75a",
+    "path": "docs/implementation/two-host-mvp-255/evidence/task2/MANIFEST.json",
+    "sha256": "ee769b6f45ea71dce8f472a06f8d0b99fad16d457c584c26104e8512839580b6"
+  },
+  "entries": [
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/after.json",
+      "bytes": 7814,
+      "sha256": "70b0237b091f9d146ef102d4a4f0c69d056cea658d8264125025b74ffe5500d6"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/before.json",
+      "bytes": 8100,
+      "sha256": "ee5c97508d10f2b0b6efd5042d82d7e46fcea1b5abdb23bd21d369ff5ff1c2e4"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/cleanup-race.json",
+      "bytes": 970,
+      "sha256": "6413593d1c0a3a8a3acf47869ccdce9227a9a7df704abff385a349ca4528178a"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/cleanup.json",
+      "bytes": 83,
+      "sha256": "9570990ed290ce214b8ac2110c9c22df16f9d89ab279aa0bc240bdefe66e65a8"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/gpu-01.jsonl",
+      "bytes": 8551,
+      "sha256": "99b718e85330a9c5b1250febb8cb74634aa19925885bc582974d06e943c2b9a5"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/server.log",
+      "bytes": 631925,
+      "sha256": "b76c3d134adddfbea54c9f79658079a62cb633c1114c34fc908c64a7b0057d2c"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/shutdown-verified.json",
+      "bytes": 194,
+      "sha256": "4db5553749dcceffbc9c429748e8c658552ee583f98fd5f6386abdb52336cf46"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/stream.json",
+      "bytes": 32975,
+      "sha256": "b411974534ea3434d1d33c904578751c6f87aa1c9574bad68f1ddba791ec6717"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/summary.json",
+      "bytes": 2279,
+      "sha256": "191cf723bec9f0574df0239ead84e69340799b5de423069814dc6d5dff7ee7d1"
+    },
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/topology.json",
+      "bytes": 607,
+      "sha256": "e195415aceb53fd5d9801018a96ba90610ce0614699474abaa4c657cad838edb"
+    },
+    {
+      "path": "tests/test_issue255_baseline.py",
+      "bytes": 6922,
+      "sha256": "8cb981585014ba545370997d5e97c62063eb769ad0502e15c9b7cb9caa9c7b2f"
+    },
+    {
+      "path": "tools/issue255_mvp/baseline.py",
+      "bytes": 10055,
+      "sha256": "2bc975c234706661b980ddb7d923409dc3a18376a0b7c07ee551a3f60c97a68e"
+    },
+    {
+      "path": "tools/issue255_mvp/measure.py",
+      "bytes": 30470,
+      "sha256": "d61a601a076627df9bbe353c0924520ec3e0dc481300a79e34064023ff93ccc7"
+    },
+    {
+      "path": "tools/issue255_mvp/sample_gpu.py",
+      "bytes": 1464,
+      "sha256": "3af49eb7aa1a195fce873b77816f6b962faf954913be47189a1c1dec90f288f2"
+    }
+  ]
+}

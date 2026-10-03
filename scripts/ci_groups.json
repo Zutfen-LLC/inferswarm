@@ -98,7 +98,10 @@
     "test_issue101_proof",
     "test_issue103_planner",
     "test_issue200_r8f_source_policy",
-    "test_issue200_r8f_proof"
+    "test_issue200_r8f_proof",
+    "test_issue255_mvp",
+    "test_issue255_measure",
+    "test_issue255_baseline"
    ]
   },
   "r8-qwen-lineage": {
@@ -271,6 +274,9 @@
    "issue-117-133"
   ],
   "docs/implementation/r8-f-local-backing-source-policy-200/": [
+   "issue-99-103"
+  ],
+  "docs/implementation/two-host-mvp-255/": [
    "issue-99-103"
   ],
   "docs/investigations/data/": [
@@ -1673,6 +1679,9 @@
   ],
   "tests/test_project_status.py": [
    "repo-integrity"
+  ],
+  "tools/issue255_mvp/": [
+   "issue-99-103"
   ]
  },
  "planner": "scripts/plan_ci.py",

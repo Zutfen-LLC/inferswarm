@@ -1,0 +1,19 @@
+{
+  "observation": "Initial immediate shutdown readback after signaled PID, not a second run",
+  "source": "Task 3 controller tool response from the first baseline.py invocation; its finally-block raised RuntimeError('baseline server not released') after saving shutdown-verified.json. That file was then updated by same-run post-exit readback; the raw first response is preserved here as an interpreted copy, not presented as an independently captured remote file.",
+  "owned_server_pid": 245823,
+  "owned_server_start_ticks": 79583642,
+  "first_readback": {
+    "owned_process_alive": true,
+    "port_listening": false,
+    "gpu_memory_mib": 137,
+    "process_state": "Rl"
+  },
+  "later_same_run_readback": {
+    "owned_process_alive": false,
+    "port_listening": false,
+    "gpu_memory_mib": 1,
+    "path": "shutdown-verified.json"
+  },
+  "correction": "The operator now waits boundedly for exact PID/start exit after signaling before claiming completed cleanup."
+}

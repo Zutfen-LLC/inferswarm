@@ -58,6 +58,7 @@ until real implementations prove the seam.
 - Research / proof of concept; no released production runtime.
 - Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.
 - Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.
+- Issue #255 has an unaccepted observed Qwen3.8-Flash-Next-UD-IQ1_S CUDA/RPC two-host generation and same-settings single-host comparison (docs/implementation/two-host-mvp-255/product-report.md; evidence/task2 and evidence/task3-baseline). This product observation does not promote an accepted capability, grant physical execution authority, close the R8-I3C/#266 frontier, or imply numerical equivalence or production readiness.
 - Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.
 - Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier.
 <!-- project-status:capabilities:end -->
