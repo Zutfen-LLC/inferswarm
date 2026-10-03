@@ -149,6 +149,9 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertIn('MVP_DISTRIBUTED_INFERENCE_PASS',
                       json.dumps(self.record['capabilities']))
         self.assertEqual(len(self.record['capabilities']), 9)
+        self.assertNotRegex(output, r'(?i)Issue #255 does not establish[^.]*accepted capabilities')
+        self.assertNotRegex(output, r'(?i)observation remains outside accepted capabilities')
+        self.assertNotRegex(output, r'(?i)does not assert the MVP terminal')
 
         # Test the source AND every generated living-status section, plus
         # authored product prose. Historical evidence is deliberately excluded.
