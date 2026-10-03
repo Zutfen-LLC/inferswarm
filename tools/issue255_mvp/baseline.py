@@ -45,7 +45,7 @@ def spawn(state, name, command, log):
     return pid
 
 def stop_owned(state):
-    """Only lease-bound exact PID/start pairs; never signal unrelated processes."""
+    """Keep both exact ownership records until every owned process has exited."""
     result = {}
     script = '''import os,pathlib,signal,sys
 marker,token,path,pid_text,start_text=sys.argv[1:]
@@ -57,38 +57,64 @@ if not record.exists() or record.read_text().strip()!=f'{pid_text}:{start_text}'
 pid=int(pid_text)
 try: fd=os.pidfd_open(pid)
 except ProcessLookupError:
-    record.unlink(); print('already-exited'); sys.exit()
+    print('already-exited'); sys.exit()
 try:
-    actual=pathlib.Path(f'/proc/{pid}/stat').read_text().rsplit(') ',1)[1].split()[19]
-    if actual!=start_text: print('start-time mismatch')
+    try: fields=pathlib.Path(f'/proc/{pid}/stat').read_text().rsplit(') ',1)[1].split()
+    except FileNotFoundError: print('already-exited'); sys.exit()
+    if fields[19]!=start_text: print('start-time mismatch')
+    elif fields[0]=='Z': print('already-exited')
     else:
         try: signal.pidfd_send_signal(fd,signal.SIGTERM); print('signaled')
         except ProcessLookupError: print('already-exited')
-        record.unlink()
 finally: os.close(fd)
 '''
-    for name, (pid, start) in list(state.get('owned', {}).items())[::-1]:
-        try:
-            status = m.remote(HOST, f'python3 -c {shlex.quote(script)} '
-                             f'{shlex.quote(ROOT + "/task3-active/token")} {shlex.quote(state["token"])} '
-                             f'{shlex.quote(ROOT + "/" + name)} {pid} {start}').strip()
-            result[name] = status
-            if status in ('signaled', 'already-exited'): del state['owned'][name]
-        except Exception as exc: result[name] = {'not_signaled': str(exc)}
-    tunnel = state.pop('tunnel', None)
-    if tunnel:
-        tunnel.terminate()
-        try: tunnel.wait(timeout=5)
-        except subprocess.TimeoutExpired: tunnel.kill(); tunnel.wait()
-    if state.get('leased') and not state['owned']:
-        release = ('import pathlib,sys; marker=pathlib.Path(sys.argv[1]); '
-                   'assert (marker/"token").read_text().strip()==sys.argv[2]; '
-                   '(marker/"token").unlink(); marker.rmdir(); print("released")')
-        try:
-            result['lease'] = m.remote(HOST, f'python3 -c {shlex.quote(release)} '
-                                      f'{shlex.quote(ROOT + "/task3-active")} {shlex.quote(state["token"])}').strip()
-            state['leased'] = False
-        except Exception as exc: result['lease'] = {'not_released': str(exc)}
+    try:
+        observed = {}
+        for name, (pid, start) in list(state.get('owned', {}).items())[::-1]:
+            try:
+                status = m.remote(HOST, f'python3 -c {shlex.quote(script)} '
+                                 f'{shlex.quote(ROOT + "/task3-active/token")} {shlex.quote(state["token"])} '
+                                 f'{shlex.quote(ROOT + "/" + name)} {pid} {start}').strip()
+                if status in ('signaled', 'already-exited'):
+                    exit_kind = wait_for_exit(pid, start)
+                    result[name] = {'signal': status, 'exit': exit_kind or 'timeout'}
+                    if exit_kind: observed[name] = (pid, start)
+                else:
+                    result[name] = status
+            except Exception as exc: result[name] = {'incomplete': str(exc)}
+        if state.get('leased'):
+            if len(observed) != len(state['owned']):
+                result['lease'] = 'retained-incomplete'
+            else:
+                # Check the token and *all* records before deleting any; a refusal retains the lease.
+                release = '''import pathlib,sys
+marker=pathlib.Path(sys.argv[1]); token=sys.argv[2]; root=marker.parent
+assert (marker/'token').read_text().strip()==token, 'lease mismatch'
+pairs=[]
+for name,value in zip(sys.argv[3::2],sys.argv[4::2]):
+    path=root/name
+    assert path.read_text().strip()==value, 'record mismatch'
+    pid,start=value.split(':')
+    try: fields=(pathlib.Path('/proc')/pid/'stat').read_text().rsplit(') ',1)[1].split()
+    except FileNotFoundError: fields=[]
+    assert not fields or fields[19]!=start or fields[0]=='Z', 'still alive'
+    pairs.append(path)
+for path in pairs: path.unlink()
+(marker/'token').unlink(); marker.rmdir(); print('released')'''
+                args = ' '.join(shlex.quote(part) for name, (pid, start) in observed.items()
+                                for part in (name, f'{pid}:{start}'))
+                try:
+                    result['lease'] = m.remote(HOST, f'python3 -c {shlex.quote(release)} '
+                                              f'{shlex.quote(ROOT + "/task3-active")} {shlex.quote(state["token"])} {args}').strip()
+                    state['leased'] = False
+                    state['owned'].clear()
+                except Exception as exc: result['lease'] = {'not_released': str(exc)}
+    finally:
+        tunnel = state.pop('tunnel', None)
+        if tunnel:
+            tunnel.terminate()
+            try: tunnel.wait(timeout=5)
+            except subprocess.TimeoutExpired: tunnel.kill(); tunnel.wait()
     return result
 
 def save(path, obj):
@@ -151,10 +177,13 @@ def capture(state):
 
 def wait_for_exit(pid, start, timeout=10):
     for _ in range(timeout * 2):
-        current = m.remote(HOST, f'cat /proc/{pid}/stat 2>/dev/null || true', check=False).strip()
-        if not current: return True
+        script = ('import pathlib,sys; p=pathlib.Path("/proc")/sys.argv[1]/"stat"; '
+                  'print(p.read_text() if p.exists() else "absent")')
+        current = m.remote(HOST, f'python3 -c {shlex.quote(script)} {pid}').strip()
+        if current == 'absent': return 'absent'
         suffix = current.rsplit(') ', 1)[1].split()
-        if suffix[19] != str(start) or suffix[0] == 'Z': return True
+        if suffix[19] != str(start): return 'recycled'
+        if suffix[0] == 'Z': return 'zombie'
         time.sleep(.5)
     return False
 
@@ -190,7 +219,9 @@ def main():
         save(EVIDENCE/'run-error.json',{'type':type(exc).__name__,'error':str(exc)})
         raise
     finally:
-        save(EVIDENCE/'cleanup.json',stop_owned(state))
+        cleanup = stop_owned(state)
+        save(EVIDENCE/'cleanup.json', cleanup)
+        if state.get('leased'): raise RuntimeError(f'baseline cleanup incomplete; lease and records retained: {cleanup}')
         if 'owned_original_server' in state: verify_shutdown(state)
 
 if __name__=='__main__': main()

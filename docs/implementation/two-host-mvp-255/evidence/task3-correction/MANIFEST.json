@@ -1,0 +1,30 @@
+{
+  "schema": "issue255.task3.lifecycle-correction/1",
+  "scope": "Offline prospective baseline cleanup; no physical rerun or reinterpretation of measured request",
+  "measured_parent": {
+    "commit": "7026ca82cabe6fc16bc1d68c33d6d309a265150b",
+    "path": "docs/implementation/two-host-mvp-255/evidence/task3-baseline/MANIFEST.json",
+    "sha256": "70d17f1b3c11c5b14e757567bbbf2727cf1efddcd7cdad3d77c74708e447e60c",
+    "producer_path": "tools/issue255_mvp/baseline.py",
+    "producer_sha256": "2bc975c234706661b980ddb7d923409dc3a18376a0b7c07ee551a3f60c97a68e",
+    "test_path": "tests/test_issue255_baseline.py",
+    "test_sha256": "8cb981585014ba545370997d5e97c62063eb769ad0502e15c9b7cb9caa9c7b2f"
+  },
+  "entries": [
+    {
+      "path": "docs/implementation/two-host-mvp-255/evidence/task3-correction/README.md",
+      "bytes": 3219,
+      "sha256": "450d4aaa88fc79981dd09f703009ed78480a2b82b593fbe652d73c779dd0d193"
+    },
+    {
+      "path": "tests/test_issue255_baseline.py",
+      "bytes": 16442,
+      "sha256": "dc9d7a881bd5dedeb143fce670709031fd409b5be9b0b89a4c70d485aa96851a"
+    },
+    {
+      "path": "tools/issue255_mvp/baseline.py",
+      "bytes": 11680,
+      "sha256": "a6e584bfcc6cce88c03e6f66303edd2cbfbe22267376d3c785072fa21f411a13"
+    }
+  ]
+}
