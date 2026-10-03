@@ -2,6 +2,8 @@
 import hashlib
 import importlib.util
 import io
+import json
+from datetime import datetime, timedelta
 import pathlib
 import struct
 import subprocess
@@ -88,6 +90,84 @@ class PrestageTests(unittest.TestCase):
                              ['blk.45.ssm_a', 'blk.46.ssm_a'], root / 'cache', fnv)
             self.assertEqual(result[0]['fnv1a'], result[1]['fnv1a'])
             self.assertEqual(len(list((root / 'cache' / 'rpc').iterdir())), 1)
+
+
+class StartupEvidenceAttributionTests(unittest.TestCase):
+    """Lock each Task-1 summary claim to its own immutable request epoch."""
+
+    def test_first_and_captured_requests_do_not_exchange_evidence(self):
+        root = ROOT / 'docs/implementation/two-host-mvp-255/evidence'
+        summary = json.loads((root / 'startup-observation.json').read_text())
+        first, captured = summary['requests']['first'], summary['requests']['captured']
+        raw_first = json.loads((root / '01/generation.json').read_text())
+        raw_captured = json.loads((root / '01/generation-capture.json').read_text())
+
+        for record, response, response_path, server_log in (
+            (first, raw_first, '01/generation.json', '01/server-layer.log'),
+            (captured, raw_captured, '01/generation-capture.json', '01/server-capture.log'),
+        ):
+            self.assertEqual(record['response_id'], response['id'])
+            self.assertEqual(record['response_created_epoch_seconds'], response['created'])
+            self.assertEqual(record['response_path'], response_path)
+            self.assertEqual(record['server_log'], server_log)
+            self.assertEqual(record['prompt_eval_ms'], response['timings']['prompt_ms'])
+            self.assertEqual(record['generation_ms'], response['timings']['predicted_ms'])
+            self.assertEqual(record['generation_tokens_per_second'],
+                             response['timings']['predicted_per_second'])
+            self.assertEqual(record['completion'], response['choices'][0]['message']['content'])
+            self.assertEqual(record['stop_reason'], response['choices'][0]['finish_reason'])
+            self.assertEqual(record['generated_tokens'], response['usage']['completion_tokens'])
+            log = (root / server_log).read_text()
+            self.assertIn(f"prompt eval time =    {record['prompt_eval_ms']:.2f} ms", log)
+            self.assertIn(f"eval time =   {record['generation_ms']:.2f} ms", log)
+        self.assertNotEqual(first['response_id'], captured['response_id'])
+        self.assertLess(first['response_created_epoch_seconds'],
+                        captured['response_created_epoch_seconds'])
+
+        # The CSVs end before the second response even begins. Validate that
+        # both hosts have nonzero samples during the first request's window.
+        first_window = first['estimated_request_window_local_EDT']
+        start = datetime.fromisoformat(first_window['start'])
+        end = datetime.fromisoformat(first_window['end_exclusive'])
+        self.assertEqual(start.utcoffset(), timedelta(hours=-4))
+        response_second = datetime.fromtimestamp(raw_first['created'], start.tzinfo)
+        self.assertEqual(end, response_second + timedelta(seconds=1))
+        estimated_start = response_second - timedelta(milliseconds=
+            raw_first['timings']['prompt_ms'] + raw_first['timings']['predicted_ms'])
+        self.assertEqual(start, estimated_start)
+        capture_start = datetime.fromisoformat(
+            captured['estimated_request_window_local_EDT']['start'])
+        self.assertEqual(capture_start, datetime.fromtimestamp(raw_captured['created'],
+            start.tzinfo) - timedelta(milliseconds=raw_captured['timings']['prompt_ms']
+                                                 + raw_captured['timings']['predicted_ms']))
+        for host, path in (('01', '01/gpu01.csv'), ('04', '04/gpu04.csv')):
+            self.assertEqual(first['gpu_samples'][host]['path'], path)
+            rows = []
+            for line in (root / path).read_text().splitlines():
+                timestamp, memory, utilization = line.split(', ')
+                at = datetime.strptime(timestamp, '%Y/%m/%d %H:%M:%S.%f').replace(
+                    tzinfo=start.tzinfo)
+                if start <= at < end:
+                    rows.append((at, int(memory.removesuffix(' MiB')),
+                                 int(utilization.removesuffix(' %'))))
+            self.assertEqual(first['gpu_samples'][host]['request_window_sample_count'], len(rows))
+            self.assertEqual(first['gpu_samples'][host]['request_window_nonzero_util_count'],
+                             sum(util > 0 for _, _, util in rows))
+            self.assertGreater(sum(util > 0 for _, _, util in rows), 0)
+            self.assertLess(datetime.fromisoformat(first['gpu_samples'][host]['csv_end_local_EDT']),
+                            datetime.fromtimestamp(raw_captured['created'], start.tzinfo))
+        self.assertIsNone(captured['gpu_samples'])
+        self.assertEqual(captured['gpu_samples_reason'], 'not captured in this request epoch')
+
+        self.assertIsNone(first['request_network'])
+        self.assertEqual(captured['request_network']['before_path'], '01/rpc-tcp-before.txt')
+        self.assertEqual(captured['request_network']['after_path'], '01/rpc-tcp-after.txt')
+        self.assertEqual(captured['request_network']['client_tcp_bytes_sent_delta'], 55896537)
+        self.assertEqual(summary['captured_launch_local_backing']['trace'],
+                         '04/rpc-cache-open.strace')
+        self.assertNotIn('local_backing', first)
+        self.assertNotIn('request', summary)
+        self.assertNotIn('execution', summary)
 
 
 if __name__ == '__main__':

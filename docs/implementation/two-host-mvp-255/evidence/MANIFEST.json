@@ -3,9 +3,9 @@
   "root": "docs/implementation/two-host-mvp-255",
   "rows": [
     {
-      "bytes": 7999,
+      "bytes": 10284,
       "path": "docs/implementation/two-host-mvp-255/README.md",
-      "sha256": "084e0025a9ba8e65ad7e8dbdb85f0a64442deb17f52d4c06752e25735f612926"
+      "sha256": "d79bef3087e9e6eedac6e74991d9c536c7db1312733d793e0c886be5c048c79d"
     },
     {
       "bytes": 7028,
@@ -18,9 +18,9 @@
       "sha256": "f3051c6fdc4f503f4d3027a57debf25098cc4992c48b896b44c97dc18caa28c0"
     },
     {
-      "bytes": 3959,
+      "bytes": 9232,
       "path": "tests/test_issue255_mvp.py",
-      "sha256": "4317b4b610dfc83ed9502fe4cd7b8e6ae6af3876862522305d431ad1a4836044"
+      "sha256": "c5a9f66c06acebb7d19cab78613c593cfd5d2fba380a7a6b89863897fd01809f"
     },
     {
       "bytes": 5523,
@@ -113,9 +113,9 @@
       "sha256": "734eeb802ca9b8bd7dfb4dee706337d7685bafa7811d196775075b15337d3281"
     },
     {
-      "bytes": 2508,
+      "bytes": 6813,
       "path": "docs/implementation/two-host-mvp-255/evidence/startup-observation.json",
-      "sha256": "049c685289ab9dd4a45808e48a59ee6314d47d10945edd896a7229655861a353"
+      "sha256": "a76ff40bf2f7853cb0d4731ac88f2a38202ccdea5c777fb4feba088afdfb9dfb"
     }
   ],
   "schema": "issue255.startup-evidence-manifest/1"

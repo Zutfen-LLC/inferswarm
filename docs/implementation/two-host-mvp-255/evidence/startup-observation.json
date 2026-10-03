@@ -1,71 +1,103 @@
 {
+  "schema": "issue255.startup-observation/2",
+  "status": "TWO_HOST_STARTUP_GENERATION_PROVEN_NOT_FINAL_MVP_PASS",
   "client_host": "inferswarm01",
-  "execution": {
-    "gpu_samples": {
-      "01": {
-        "min_used_MiB": 1055,
-        "peak_used_MiB": 1479,
-        "peak_util_percent": 67,
-        "sample_count": 165,
-        "samples_nonzero_util": 24
-      },
-      "04": {
-        "min_used_MiB": 952,
-        "peak_used_MiB": 980,
-        "peak_util_percent": 1,
-        "sample_count": 166,
-        "samples_nonzero_util": 4
-      }
-    },
-    "remote_cuda_graph_warmup_lines": 4
-  },
-  "local_backing": {
-    "below_upstream_10MiB_hash_threshold_bytes": 85129984,
-    "below_upstream_10MiB_hash_threshold_count": 62,
-    "cache_hit_immutable_bytes": 473497600,
-    "cache_hit_tensor_count": 9,
-    "cache_root": "/home/hermes/issue255-mvp-retry/cache-layer/rpc",
-    "new_rpc_saved_payloads": 0,
-    "proof": "04/rpc-cache-open.strace: O_RDONLY paths matched against 04/staging-layer*.json; every staged final path re-read SHA-256 matched on participant",
-    "staged_bytes": 558627584,
-    "staged_tensors": 71
-  },
-  "model_verified_member_authority": [
-    "01/discovery.json",
-    "04/discovery.json"
-  ],
-  "placement": {
-    "CPU": "layers 0-40 and all MoE expert weights (-cmoe)",
-    "CUDA0_model_buffer_MiB": 248.45,
-    "CUDA0_on_01": "layers 41-44",
-    "RPC0_model_buffer_MiB": 532.75,
-    "RPC0_on_04": "layers 45-47 plus output layer 48",
-    "device_split": "--device CUDA0,RPC0 --split-mode layer --tensor-split 1,1 -ngl 8 -cmoe"
-  },
   "remote_host": "inferswarm04",
-  "request": {
-    "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
-    "generated_tokens": 53,
-    "generation_ms": 12950.395,
-    "generation_tokens_per_second": 4.015321540385448,
+  "model_verified_member_authority": ["01/discovery.json", "04/discovery.json"],
+  "shared_prompt_and_settings": {
+    "path": "01/request.json",
     "prompt": "In one sentence, explain why local backups are useful.",
-    "prompt_eval_ms": 5194.907,
-    "prompt_tokens": 63,
-    "settings": {
-      "max_tokens": 64,
-      "seed": 42,
-      "stream": false,
-      "temperature": 0
+    "temperature": 0,
+    "seed": 42,
+    "max_tokens": 64,
+    "stream": false
+  },
+  "requests": {
+    "first": {
+      "response_id": "chatcmpl-fm4hIet49ps3ItwGzb9R6ierMa50rvbR",
+      "response_created_epoch_seconds": 1791037911,
+      "response_path": "01/generation.json",
+      "server_log": "01/server-layer.log",
+      "server_log_request_lines": "5962-5997 (task 0); 9326-9344 (task 0 timings/result)",
+      "estimated_request_window_local_EDT": {
+        "start": "2026-10-03T10:31:32.854698-04:00",
+        "end_exclusive": "2026-10-03T10:31:52-04:00"
+      },
+      "prompt_eval_ms": 5194.907,
+      "generation_ms": 12950.395,
+      "generation_tokens_per_second": 4.015321540385448,
+      "generated_tokens": 53,
+      "stop_reason": "stop",
+      "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
+      "gpu_samples": {
+        "01": {
+          "path": "01/gpu01.csv",
+          "csv_start_local_EDT": "2026-10-03T10:31:23.596-04:00",
+          "csv_end_local_EDT": "2026-10-03T10:32:04.644-04:00",
+          "request_window_sample_count": 77,
+          "request_window_nonzero_util_count": 23,
+          "request_window_min_used_MiB": 1055,
+          "request_window_peak_used_MiB": 1479,
+          "request_window_peak_util_percent": 67
+        },
+        "04": {
+          "path": "04/gpu04.csv",
+          "csv_start_local_EDT": "2026-10-03T10:31:23.742-04:00",
+          "csv_end_local_EDT": "2026-10-03T10:32:05.068-04:00",
+          "request_window_sample_count": 76,
+          "request_window_nonzero_util_count": 4,
+          "request_window_min_used_MiB": 952,
+          "request_window_peak_used_MiB": 980,
+          "request_window_peak_util_percent": 1
+        }
+      },
+      "request_network": null,
+      "same_request_attribution": "The first response timings match task 0 in 01/server-layer.log. That launch assigns CUDA0 layers 41-44 and RPC0 layers 45-47 plus output 48 (lines 3195-3202), with both device model buffers (5707-5708) and compute buffers (5911-5912). Both host CSVs overlap the response-derived request window and contain nonzero GPU utilization in it. The 04 utilization is only 1%; these samples plus actual remote layer/compute placement support physical participation, not a utilization threshold or per-kernel trace. The untimestamped duplicate RPC logs cannot independently identify this request. No first-request TCP before/after snapshot exists."
     },
-    "stop_reason": "stop"
+    "captured": {
+      "response_id": "chatcmpl-x3ZGggZ18AySd9hi6acBaZHrsJ5dWyOB",
+      "response_created_epoch_seconds": 1791038106,
+      "response_path": "01/generation-capture.json",
+      "server_log": "01/server-capture.log",
+      "server_log_request_lines": "5961-5996 (task 0); 9325-9343 (task 0 timings/result)",
+      "estimated_request_window_local_EDT": {
+        "start": "2026-10-03T10:34:47.327225-04:00",
+        "end_exclusive": "2026-10-03T10:35:07-04:00"
+      },
+      "prompt_eval_ms": 5385.446,
+      "generation_ms": 13287.329,
+      "generation_tokens_per_second": 3.9135028567441963,
+      "generated_tokens": 53,
+      "stop_reason": "stop",
+      "completion": "Local backups are useful because they provide quick, reliable access to your data without depending on internet connectivity or cloud services.",
+      "gpu_samples": null,
+      "gpu_samples_reason": "not captured in this request epoch",
+      "request_network": {
+        "before_path": "01/rpc-tcp-before.txt",
+        "after_path": "01/rpc-tcp-after.txt",
+        "client_tcp_bytes_sent_at_ready": 86359771,
+        "client_tcp_bytes_sent_after_request": 142256308,
+        "client_tcp_bytes_sent_delta": 55896537,
+        "scope": "Same client pid=190045, socket 10.0.0.142:38786 to 10.0.0.204:50055; before at ready and after captured request. Delta includes protocol and dynamic state, not just immutable payload. No first-request network delta is retained."
+      },
+      "same_request_attribution": "The response timings match task 0 in 01/server-capture.log; that launch assigned CUDA0/RPC0 layers and buffers. No per-host GPU CSV was taken during this request. The untimestamped duplicate RPC logs do not independently identify this request or assign their four warmup events to it."
+    }
   },
-  "schema": "issue255.startup-observation/1",
-  "startup": {
-    "client_tcp_bytes_after_one_request": 142256308,
-    "client_tcp_bytes_sent_at_ready": 86359771,
-    "client_tcp_request_window_delta": 55896537,
-    "server_log_loaded_seconds": 6.839677,
-    "tcp_source": "01/rpc-tcp-before.txt; 01/rpc-tcp-after.txt; includes protocol and dynamic state, not pure immutable payload"
+  "request_window_method": "The API created fields are whole-second response timestamps, not exact request-start clocks. Estimated starts subtract each response's own prompt_ms+predicted_ms; end_exclusive is one second after its created second to include its rounding uncertainty. Both first-run CSVs span this estimated first window; neither spans the captured window. These are approximate request windows, not synchronized per-event timestamps or TTFT.",
+  "captured_launch_local_backing": {
+    "cache_root": "/home/hermes/issue255-mvp-retry/cache-layer/rpc",
+    "staged_tensors": 71,
+    "staged_bytes": 558627584,
+    "trace": "04/rpc-cache-open.strace",
+    "trace_cache_open_window_local_EDT": "2026-10-03T10:33:44.943132-04:00 to 2026-10-03T10:33:46.391275-04:00",
+    "cache_hit_tensor_count": 9,
+    "cache_hit_immutable_bytes": 473497600,
+    "below_upstream_10MiB_hash_threshold_count": 62,
+    "below_upstream_10MiB_hash_threshold_bytes": 85129984,
+    "new_rpc_saved_payloads": 0,
+    "scope": "Nine O_RDONLY cache opens occurred during the captured restart's model load, before the captured request. Paths matched 04/staging-layer*.json and staged files were re-read SHA-256 on the participant. The 62 smaller tensors traveled normally during load. These are launch/model-source observations, not cache hits measured within either request."
   },
-  "status": "TWO_HOST_STARTUP_GENERATION_PROVEN_NOT_FINAL_MVP_PASS"
+  "rpc_log_attribution_limit": "04/rpc-layer.log and 04/rpc-capture.log are byte-identical, lack timestamps and request IDs, and contain four CUDA graph warmup lines. They evidence remote graph work at some point in the retained topology but cannot distinguish first from captured request. Do not count the lines once per request or pair them with either response as independently request-specific proof.",
+  "captured_launch_loaded_seconds": 6.839677,
+  "limitations": ["No streaming TTFT in this startup probe", "No captured-request GPU samples", "No first-request TCP snapshots", "No request-scoped cache read counters; local backing is a captured-launch property", "No timestamp/request ID in the duplicate RPC logs"]
 }
