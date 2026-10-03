@@ -212,12 +212,17 @@ class Issue184LivingStatusTests(unittest.TestCase):
         self.record = json.loads(
             (sync.ROOT / sync.SOURCE).read_text(encoding="utf-8"))
 
-    def test_frontier_prerequisite_is_accepted_arm_a_and_variable_contrast(self):
+    def test_current_frontier_is_pending_and_accepted_arm_a_is_preserved(self):
         # Living status only: closed #117 evidence law stays unchanged.
+        # The current product observation is not accepted; #250 remains
+        # accepted historical authority rather than the active prerequisite.
         p = self.record["frontier"]["prerequisite"]
-        self.assertEqual(p["observation"]["result"], "ARM_A_STOPS_LADDER")
-        self.assertEqual(p["acceptance"]["state"], "accepted")
-        self.assertIn("issues/250#issuecomment-5904094070", p["acceptance"]["reference"])
+        self.assertEqual(p["observation"]["result"], "ISSUE255_CUDA_RPC_PRODUCT_OBSERVED")
+        self.assertEqual(p["acceptance"], {"state": "pending", "reference": None})
+        historical = " ".join(self.record["frontier"]["execution"]["constraints"])
+        self.assertIn("#250 predecessor remains accepted as the ARM_A_STOPS_LADDER", historical)
+        self.assertIn("pull/251#issuecomment-5904093750", historical)
+        self.assertIn("issues/250#issuecomment-5904094070", historical)
 
     def test_execution_records_localized_boundary_without_new_authorization(self):
         e = self.record["frontier"]["execution"]
@@ -295,9 +300,12 @@ class Issue184ClosureDocumentsTests(unittest.TestCase):
 class Issue184NegativeControlTests(unittest.TestCase):
     """Mutations of the closure record fail the closure invariants."""
 
-    def test_arm_e_acceptance_without_reference_fails(self):
+    def test_accepted_prerequisite_without_reference_fails(self):
         record = json.loads((sync.ROOT / sync.SOURCE).read_text())
-        record["frontier"]["prerequisite"]["acceptance"]["reference"] = None
+        # The live prerequisite is pending. Manufacture the invalid accepted
+        # shape explicitly instead of relying on a historical frontier state.
+        record["frontier"]["prerequisite"]["acceptance"] = {
+            "state": "accepted", "reference": None}
         with self.assertRaises(ValueError):
             sync.render(record)
 
