@@ -1,7 +1,9 @@
 """Offline contract checks for bounded issue 255 physical measurement."""
 import importlib.util
+import json
 from pathlib import Path
 import unittest
+from unittest import mock
 
 SOURCE = Path(__file__).resolve().parents[1] / 'tools/issue255_mvp/measure.py'
 spec = importlib.util.spec_from_file_location('issue255_measure', SOURCE)
@@ -14,6 +16,103 @@ def module():
 
 
 class MeasurementTests(unittest.TestCase):
+    def test_rejected_existing_marker_does_not_signal_or_remove_prior_ownership(self):
+        m = module()
+        records = {'01': {'token': 'first-run', 'pid': '101:111'},
+                   '04': {'token': 'first-run', 'pid': '202:222'}}
+        before = json.dumps(records, sort_keys=True)
+        def occupied(host, command, **kwargs):
+            if host == m.CLIENT and 'mkdir' in command:
+                raise RuntimeError('active lease already exists')
+            self.fail(f'unexpected remote operation on rejected admission: {command}')
+        state = {'hosts': {}, 'token': 'second-run'}
+        with mock.patch.object(m, 'remote', side_effect=occupied) as remote:
+            with self.assertRaisesRegex(RuntimeError, 'active lease'):
+                m.acquire_hosts(state)
+            self.assertEqual(m.stop_owned(state), {})
+        self.assertEqual(remote.call_count, 1)
+        self.assertEqual(json.dumps(records, sort_keys=True), before)
+
+    def test_empty_acquired_state_never_reads_pid_files_or_signals(self):
+        m = module()
+        with mock.patch.object(m, 'remote') as remote:
+            self.assertEqual(m.stop_owned({'hosts': {}}), {})
+        remote.assert_not_called()
+
+    def test_partial_host_acquisition_releases_only_its_token(self):
+        m = module()
+        calls = []
+        def remote(host, command, **kwargs):
+            calls.append((host, command))
+            if host == m.REMOTE and 'mkdir' in command:
+                raise RuntimeError('remote marker occupied')
+            return 'released' if 'rmdir' in command else ''
+        state = {'hosts': {}, 'token': 'partial-run'}
+        with mock.patch.object(m, 'remote', side_effect=remote):
+            with self.assertRaisesRegex(RuntimeError, 'remote marker occupied'):
+                m.acquire_hosts(state)
+            m.stop_owned(state)
+        self.assertTrue(any(host == m.CLIENT and 'partial-run' in cmd and 'rmdir' in cmd
+                            for host, cmd in calls))
+        self.assertFalse(any(host == m.REMOTE and ('rmdir' in cmd or 'kill' in cmd)
+                             for host, cmd in calls))
+
+    def test_recycled_pid_start_time_refuses_signal_and_preserves_record(self):
+        m = module()
+        state = {'token': 'our-run', 'hosts': {m.CLIENT: {'client.pid': (345, 100)}}}
+        calls = []
+        def remote(host, command, **kwargs):
+            calls.append(command)
+            if 'client.pid' in command and 'pidfd_open' in command:
+                return 'start-time mismatch'
+            return ''
+        with mock.patch.object(m, 'remote', side_effect=remote):
+            result = m.stop_owned(state)
+        self.assertIn('start-time mismatch', str(result))
+        self.assertTrue(any('pidfd_open' in cmd and '100' in cmd and '345' in cmd for cmd in calls))
+        self.assertFalse(any('kill -TERM' in cmd for cmd in calls))
+
+    def test_client_death_after_tunnel_creation_terminates_and_waits(self):
+        m = module()
+        state = {'hosts': {}, 'token': 'tunnel-run'}
+        tunnel = mock.Mock()
+        tunnel.poll.return_value = None
+        def remote(host, command, **kwargs):
+            if 'pgrep -P' in command: return '202\n'
+            if '/proc/202/cmdline' in command: return 'ggml-rpc-server'
+            if 'ss -ltn' in command: return ':50055'
+            if 'pidfd_open' in command: return 'signaled'
+            if '/proc/' in command and '/stat' in command: return '100\n'
+            if 'kill -0' in command: return ''
+            return ''
+        with mock.patch.object(m, 'remote', side_effect=remote), \
+             mock.patch.object(m.subprocess, 'run'), \
+             mock.patch.object(m.subprocess, 'Popen', return_value=tunnel):
+            with self.assertRaisesRegex(RuntimeError, 'client exited during startup'):
+                m.launch(state)
+            m.stop_owned(state)
+        tunnel.terminate.assert_called_once_with()
+        tunnel.wait.assert_called_once_with(timeout=5)
+
+    def test_normal_owned_lifecycle_records_exact_start_and_stops_once(self):
+        m = module()
+        state = {'token': 'normal-run', 'hosts': {m.CLIENT: {'client.pid': (321, 876)}}}
+        tunnel = mock.Mock()
+        state['tunnel'] = tunnel
+        commands = []
+        def remote(host, command, **kwargs):
+            commands.append(command)
+            return 'signaled' if 'pidfd_open' in command else 'released'
+        with mock.patch.object(m, 'remote', side_effect=remote):
+            first = m.stop_owned(state)
+            second = m.stop_owned(state)
+        self.assertEqual(first[f'{m.CLIENT}:client.pid'], 'signaled')
+        self.assertEqual(second, {})
+        self.assertEqual(sum('pidfd_open' in c for c in commands), 1)
+        self.assertTrue(any('321' in c and '876' in c for c in commands))
+        tunnel.terminate.assert_called_once_with()
+        tunnel.wait.assert_called_once_with(timeout=5)
+
     def test_stream_separates_reasoning_and_visible_content_and_uses_usage_tokens(self):
         m = module()
         chunks = [
