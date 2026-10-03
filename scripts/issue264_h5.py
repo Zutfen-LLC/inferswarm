@@ -103,6 +103,8 @@ def parse_unit(log: str, *, state: str) -> dict:
             pending = None
     if pending is not None or not ids:
         raise RouteError("missing complete output MMV dispatch evidence")
+    if len(ids) != 10:
+        raise RouteError("frozen output MMV population requires exactly 10 events")
     wg, reduction, local = VARIANTS[state]
     return {"state": state, "node": node, "dims": DIMS, "types": TYPES,
             "route": "mat-vec", "pipe": PIPE, "family": "mmv",

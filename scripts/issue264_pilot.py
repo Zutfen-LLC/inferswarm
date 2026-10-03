@@ -201,8 +201,8 @@ def validate_execution_freeze(context:dict,*,binary_sha:str,payload_sha:str,fixt
  if context.get("fixture_payload_sha256")!=payload_sha or context.get("fixture_sha256")!=fixture_sha:raise PilotError("execution context frozen fixture/request mismatch")
  if context.get("model_stats")!=model_stats:raise PilotError("execution context model stat witness changed")
 
-def retain_failed_attempt(evidence:Path,stage:Path,arm:str,index:int,context_sha:str,phase:str,started:str,proc,error:Exception,cleanup_verified:bool)->None:
- """Create-only failure status outside the untouched staging tree."""
+def retain_failed_attempt(evidence:Path,stage:Path,arm:str,index:int,context_sha:str,phase:str,started:str,ended:str,proc,error:Exception,cleanup_verified:bool)->None:
+ """Create-only failure status outside the untouched staging/published tree."""
  files={}
  for p in stage.iterdir():
   if p.is_symlink() or not p.is_file():raise PilotError("failed staging contains unknown or symlink entry")
@@ -211,7 +211,7 @@ def retain_failed_attempt(evidence:Path,stage:Path,arm:str,index:int,context_sha
  attempts=evidence/"attempts"
  if attempts.is_symlink():raise PilotError("attempts directory symlink refused")
  attempts.mkdir(exist_ok=True)
- status={"schema":"inferswarm.issue264.failed-attempt/1","arm":arm,"unit_index":index,"execution_context_sha256":context_sha,"phase":phase,"started_at":started,"pid":proc.pid if proc else None,"process_exit":{"returncode":proc.returncode if proc else None,"cleanup_verified":cleanup_verified},"error_type":type(error).__name__,"error":str(error),"staging_path":str(stage.relative_to(evidence)),"staging_files":files}
+ status={"schema":"inferswarm.issue264.failed-attempt/1","arm":arm,"unit_index":index,"execution_context_sha256":context_sha,"phase":phase,"started_at":started,"ended_at":ended,"pid":proc.pid if proc else None,"process_exit":{"returncode":proc.returncode if proc else None,"cleanup_verified":cleanup_verified},"error_type":type(error).__name__,"error":str(error),"staging_path":str(stage.relative_to(evidence)),"staging_files":files}
  with (attempts/f"{arm}-{index:03d}.failed.json").open("xb") as f:f.write(canonical(status)+b"\n");f.flush();os.fsync(f.fileno())
  fd=os.open(attempts,os.O_RDONLY);os.fsync(fd);os.close(fd)
 
@@ -270,10 +270,11 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
    if not bases:raise PilotError("candidate requires retained BASE unit from same exact identity")
    transition=validate_pair(bases[0]["markers"],markers)
   ended=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
-  record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"placement":placement,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"completed_at":ended,"fixture_sha256":fixture_sha}
-  phase="publication";publish_unit(stage,target,record);verify_authority(root,context)
+  record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"placement":placement,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"started_at":started,"completed_at":ended,"fixture_sha256":fixture_sha}
+  phase="publication";verify_authority(root,context);publish_unit(stage,target,record)
  except Exception as e:
-  if stage.is_dir():retain_failed_attempt(evidence,stage,arm,unit_index,context_sha,phase,started,proc,e,cleanup_verified)
+  failed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
+  if stage.is_dir() or target.is_dir():retain_failed_attempt(evidence,stage if stage.is_dir() else target,arm,unit_index,context_sha,phase,started,failed_at,proc,e,cleanup_verified)
   raise
  return {k:record[k] for k in ("arm","unit_index","row_digest","response_sha256","server_log_sha256","markers")}
 def publish_unit(stage:Path,target:Path,r:dict)->None:
@@ -296,6 +297,9 @@ def publish_unit(stage:Path,target:Path,r:dict)->None:
  fd=os.open(target.parent,os.O_RDONLY);os.fsync(fd);os.close(fd)
 def load_completed_units(root:Path,arm:str)->list[dict]:
  if arm not in ARMS:raise PilotError("invalid arm")
+ attempts=Path(root)/"attempts"
+ if attempts.is_symlink():raise PilotError("attempts directory symlink refused")
+ if attempts.is_dir() and any(attempts.glob(f"{arm}-*.failed.json")):raise PilotError("failed attempt receipt prevents completed-unit accounting")
  parent=Path(root)/arm
  if not parent.exists():return []
  if parent.is_symlink():raise PilotError("arm directory symlink refused")
