@@ -17,12 +17,15 @@ import issue248_identity as I248
 import issue264_h5 as H5
 import issue262_h5 as H262
 import issue254_producer as P254
+import issue264_source_patch as S264
 
 API="https://api.github.com/repos/Zutfen-LLC/inferswarm"
 ISSUE=264
 BASE_HEAD="7f666c99b043519e359610a90d4d06f8c34ea798"
 SOURCE_TREE="23d38b96e371ad0634454d7bd6fe238da87eb1cb"
 SOURCE_VK_SHA="551b6e7fd963fbf9cada48510df201cfa4bffa6a64bf4ea1d6d11d9e66999ebe"
+SOURCE_PATCH_SHA="f713767755cd40ee279aba6d4e72648c317e73a334d565a6cd0f176284e3226e"
+SOURCE_ROOT=Path("/home/hermes/is264-mmv-v2")
 BINARY_SHA="2734ba263fb2e0eb0154eaa75b15b07da54d679d8203d22e45eedee25b754330"
 BUILD_SCHEMA="inferswarm.issue264.build-identity/1"
 IDENTITY_PATH=Path(__file__).resolve().parents[1]/"docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json"
@@ -85,19 +88,28 @@ def load_execution_context(evidence_root:Path)->dict:
  except (OSError,json.JSONDecodeError) as e:raise PilotError("execution context malformed") from e
  if not isinstance(context,dict) or context.get("schema")!=EXECUTION_SCHEMA:raise PilotError("execution context schema mismatch")
  return context
+def source_closure(source:Path=SOURCE_ROOT)->dict:
+ """Authenticate committed patch and full working source locally on the physical host."""
+ if not S264.PATCH.is_file() or sha(S264.PATCH.read_bytes())!=SOURCE_PATCH_SHA:raise PilotError("source patch digest drift")
+ if not source.is_dir():raise PilotError("physical source root absent")
+ try:tree=S264.authenticate(source)
+ except (ValueError,OSError) as e:raise PilotError(f"working source tree probe failed: {e}") from e
+ if tree!=SOURCE_TREE:raise PilotError("working source tree drift")
+ if sha((source/S264.VK).read_bytes())!=SOURCE_VK_SHA:raise PilotError("Vulkan source bytes drift")
+ return {"source_root":"inferswarm01:"+str(source),"source_tree":tree,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}
 def prepare_execution(*,repo_root:Path,evidence_root:Path,binary:Path)->dict:
  root=Path(repo_root);evidence=Path(evidence_root);path=evidence/EXECUTION_CONTEXT_NAME
  if path.exists() or path.is_symlink():raise PilotError("execution context already exists; refusing overwrite")
  evidence.mkdir(parents=True,exist_ok=True)
  head=git(root,"rev-parse","HEAD")
  if not re.fullmatch(r"[0-9a-f]{40}",head):raise PilotError("invalid local HEAD")
- binary_sha=verify_source_and_binary(Path(binary));prompt=frozen_prompt(root)
+ binary_sha=verify_source_and_binary(Path(binary));closure=source_closure(SOURCE_ROOT);prompt=frozen_prompt(root)
  fixture=B250.verify_fixtures(root)
  request_sha=sha(P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT))
  stats=model_stat_witness()
  live=verify_authority(root,{"expected_head":head})
  branch=git(root,"symbolic-ref","--short","HEAD")
- context={"schema":EXECUTION_SCHEMA,"expected_head":head,"branch":branch,"pr_number":live["pr"],"issue_number":ISSUE,"issue_body_sha256":live["issue_body_sha256"],"pilot_clause":PILOT_CLAUSE,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":binary_sha,"fixture_payload_sha256":request_sha,"fixture_sha256":sha(canonical(fixture)),"model_stats":stats}
+ context={"schema":EXECUTION_SCHEMA,"expected_head":head,"branch":branch,"pr_number":live["pr"],"issue_number":ISSUE,"issue_body_sha256":live["issue_body_sha256"],"pilot_clause":PILOT_CLAUSE,"source_closure":closure,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":binary_sha,"fixture_payload_sha256":request_sha,"fixture_sha256":sha(canonical(fixture)),"model_stats":stats}
  payload=canonical(context)+b"\n"
  try:
   with path.open("xb") as f:f.write(payload);f.flush();os.fsync(f.fileno())
@@ -106,7 +118,8 @@ def prepare_execution(*,repo_root:Path,evidence_root:Path,binary:Path)->dict:
  return context
 def verify_source_and_binary(binary:Path)->str:
  ident=json.loads(IDENTITY_PATH.read_text())
- if ident.get("issue264_tree")!=SOURCE_TREE or ident.get("issue264_vk_sha256")!=SOURCE_VK_SHA:raise PilotError("gen2 source identity mismatch")
+ if ident.get("issue264_tree")!=SOURCE_TREE or ident.get("issue264_vk_sha256")!=SOURCE_VK_SHA or ident.get("patch_sha256")!=SOURCE_PATCH_SHA:raise PilotError("gen2 source identity mismatch")
+ if not S264.PATCH.is_file() or sha(S264.PATCH.read_bytes())!=SOURCE_PATCH_SHA:raise PilotError("source patch digest drift")
  if not BUILD_IDENTITY.is_file():raise PilotError("build identity absent; refusing binary")
  b=json.loads(BUILD_IDENTITY.read_text())
  required={"schema":BUILD_SCHEMA,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":BINARY_SHA,"binary_path":"inferswarm01:/home/hermes/is264-mmv-v2/build-i264/bin/llama-server","version":"0.4.1-dev","build_number":10964,"predecessor_commit":"b29c606e28a01b1bc8c1351026a0fa6e616bf6c4","compiler":"GNU 14.2.0","gpu_applications_during_build":[]}
@@ -136,6 +149,9 @@ def parse_unit_markers(raw:bytes,arm:str)->dict:
  state="base" if arm=="BASE" else "large"
  try:return H5.parse_unit(text,state=state)
  except (ValueError,TypeError) as e:raise PilotError(f"invalid actual MMV dispatch: {e}") from e
+def placement_from_log(raw:bytes,env:dict,argv:list[str])->dict:
+ try:return P254._placement_from_log(raw,env,argv)
+ except (P254.ProducerError,UnicodeDecodeError,IndexError) as e:raise PilotError(f"invalid placement: {e}") from e
 def validate_pair(base:dict,candidate:dict)->dict:
  try:return H5.candidate_transition(base,candidate)
  except (ValueError,TypeError,KeyError) as e:raise PilotError(str(e)) from e
@@ -165,22 +181,45 @@ def _stop(proc):
   except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait(timeout=5)
  if proc.poll() is None:raise PilotError("server process survived cleanup")
 
-def _validate_observer(meta:bytes,rows:list[bytes])->None:
+def _validate_observer(meta:bytes,rows:list[bytes],response:bytes|None=None)->None:
  try:records=[json.loads(line) for line in meta.decode("utf-8").splitlines()]
  except (UnicodeDecodeError,json.JSONDecodeError) as e:raise PilotError("observer metadata malformed") from e
- if len(records)!=D.DECISIONS or any(not isinstance(r,dict) or r.get("pos")!=i for i,r in enumerate(records)):
+ if len(records)!=D.DECISIONS or any(not isinstance(r,dict) or set(r)!={"pos","sampled_winner","forced_token","n_vocab"} or type(r.get("pos")) is not int or r["pos"]!=i or type(r.get("sampled_winner")) is not int or not 0<=r["sampled_winner"]<D.N_VOCAB or type(r.get("forced_token")) is not int or r["forced_token"]!=-1 or type(r.get("n_vocab")) is not int or r["n_vocab"]!=D.N_VOCAB for i,r in enumerate(records)):
   raise PilotError("observer metadata population/order malformed")
  if len(rows)!=D.DECISIONS or any(not isinstance(row,bytes) or len(row)!=D.ROW_BYTES for row in rows):
   raise PilotError("observer full-row byte geometry malformed")
+ if response is not None:
+  try:parsed=json.loads(response)
+  except (UnicodeDecodeError,json.JSONDecodeError) as e:raise PilotError("response JSON malformed") from e
+  tokens=parsed.get("tokens") if isinstance(parsed,dict) else None
+  if (not isinstance(tokens,list) or len(tokens)!=D.DECISIONS or any(type(t) is not int or not 0<=t<D.N_VOCAB for t in tokens)
+      or type(parsed.get("tokens_predicted")) is not int or parsed["tokens_predicted"]!=D.DECISIONS
+      or tokens!=[r["sampled_winner"] for r in records]):raise PilotError("response decision population disagrees with observer metadata")
 def validate_execution_freeze(context:dict,*,binary_sha:str,payload_sha:str,fixture_sha:str,model_stats:list[dict])->None:
  if context.get("source_tree")!=SOURCE_TREE or context.get("source_vk_sha256")!=SOURCE_VK_SHA or context.get("binary_sha256")!=binary_sha:raise PilotError("execution context source/binary identity mismatch")
+ if context.get("source_closure")!={"source_root":"inferswarm01:"+str(SOURCE_ROOT),"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}:raise PilotError("execution context source closure mismatch")
  if context.get("fixture_payload_sha256")!=payload_sha or context.get("fixture_sha256")!=fixture_sha:raise PilotError("execution context frozen fixture/request mismatch")
  if context.get("model_stats")!=model_stats:raise PilotError("execution context model stat witness changed")
+
+def retain_failed_attempt(evidence:Path,stage:Path,arm:str,index:int,context_sha:str,phase:str,started:str,proc,error:Exception,cleanup_verified:bool)->None:
+ """Create-only failure status outside the untouched staging tree."""
+ files={}
+ for p in stage.iterdir():
+  if p.is_symlink() or not p.is_file():raise PilotError("failed staging contains unknown or symlink entry")
+  files[p.name]=sha(p.read_bytes())
+ fd=os.open(stage,os.O_RDONLY);os.fsync(fd);os.close(fd)
+ attempts=evidence/"attempts"
+ if attempts.is_symlink():raise PilotError("attempts directory symlink refused")
+ attempts.mkdir(exist_ok=True)
+ status={"schema":"inferswarm.issue264.failed-attempt/1","arm":arm,"unit_index":index,"execution_context_sha256":context_sha,"phase":phase,"started_at":started,"pid":proc.pid if proc else None,"process_exit":{"returncode":proc.returncode if proc else None,"cleanup_verified":cleanup_verified},"error_type":type(error).__name__,"error":str(error),"staging_path":str(stage.relative_to(evidence)),"staging_files":files}
+ with (attempts/f"{arm}-{index:03d}.failed.json").open("xb") as f:f.write(canonical(status)+b"\n");f.flush();os.fsync(f.fileno())
+ fd=os.open(attempts,os.O_RDONLY);os.fsync(fd);os.close(fd)
 
 def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:int,timeout_s:float=900)->dict:
  """Run one actual unit; all authority and execution identity are internal."""
  if arm not in ARMS or unit_index not in (1,2,3):raise PilotError("invalid arm/unit")
  root=Path(repo_root);evidence=Path(evidence_root);context=load_execution_context(evidence);verify_authority(root,context);binary_sha=verify_source_and_binary(Path(binary))
+ if source_closure(SOURCE_ROOT)!=context.get("source_closure"):raise PilotError("working source closure differs from frozen execution context")
  fixture=B250.verify_fixtures(root);prompt=frozen_prompt(root);payload=P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT)
  fixture_sha=sha(canonical(fixture));payload_sha=sha(payload);model_pre=model_stat_witness()
  validate_execution_freeze(context,binary_sha=binary_sha,payload_sha=payload_sha,fixture_sha=fixture_sha,model_stats=model_pre)
@@ -188,6 +227,8 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
  context_sha=sha(canonical(context))
  pre=I248.observe_arm_identity("B");problems=I248.identity_problems("B",pre)
  if problems:raise PilotError(f"pre-launch identity drift: {problems}")
+ if evidence.is_symlink() or not evidence.is_dir() or any(p.is_symlink() or p.name not in {EXECUTION_CONTEXT_NAME,*ARMS,"attempts"} for p in evidence.iterdir()):raise PilotError("unknown or symlink evidence root entry")
+ for name in ARMS:load_completed_units(evidence,name)
  target=evidence/arm/ f"unit-{unit_index:03d}";stage=evidence/arm/ f".unit-{unit_index:03d}.staging"
  if target.exists() or target.is_symlink() or stage.exists() or stage.is_symlink():raise PilotError("unit destination/staging already exists")
  completed=load_completed_units(evidence,arm)
@@ -196,37 +237,44 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
  if unit_index==3 and (len(completed)!=2 or completed[0]["row_digest"]!=completed[1]["row_digest"]):raise PilotError("unit 003 allowed only after two matching full-row digests")
  stage.mkdir(parents=True)
  env=launch_env(arm,stage/"obs");argv=launch_argv(Path(binary));log=stage/"server.log";proc=None
+ phase="launch";started=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime());cleanup_verified=False
  try:
-  with log.open("wb") as fp:
-   child_env=dict(env)
-   proc=subprocess.Popen(argv,env=child_env,stdout=fp,stderr=subprocess.STDOUT,start_new_session=True)
-   _healthy(proc,timeout_s)
-   actual=[x.decode("utf-8","surrogateescape") for x in Path(f"/proc/{proc.pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")]
-   if actual!=argv:raise PilotError("live argv mismatch")
-   live=dict(x.split(b"=",1) for x in Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0") if b"=" in x)
-   if live!={k.encode():v.encode() for k,v in env.items()}:raise PilotError("live process environment differs from exact allowlist")
-   req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
-   with urllib.request.urlopen(req,timeout=timeout_s) as response:
-    if response.status!=200:raise PilotError("completion request failed")
-    response_bytes=response.read(16*1024*1024)
-   meta=(stage/"obs.meta.json").read_bytes();rows=[(stage/f"obs.row{i}.f32").read_bytes() for i in range(D.DECISIONS)]
-   _validate_observer(meta,rows)
-   post=I248.observe_arm_identity("B");problems=I248.identity_problems("B",post)
-   if problems:raise PilotError(f"post-unit identity drift: {problems}")
- finally:
-  if proc is not None:_stop(proc)
- model_post=model_stat_witness()
- if model_post!=model_pre:raise PilotError("model stat witness changed during unit")
- verify_authority(root,context)
- server_log=log.read_bytes();markers=parse_unit_markers(server_log,arm)
- transition=None
- if arm=="H5_MMV_CANDIDATE":
-  bases=load_completed_units(evidence,"BASE")
-  if not bases:raise PilotError("candidate requires retained BASE unit from same exact identity")
-  transition=validate_pair(bases[0]["markers"],markers)
- ended=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
- record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"completed_at":ended,"fixture_sha256":fixture_sha}
- publish_unit(stage,target,record);verify_authority(root,context)
+  with (stage/"request.json").open("xb") as f:f.write(payload);f.flush();os.fsync(f.fileno())
+  try:
+   with log.open("wb") as fp:
+    proc=subprocess.Popen(argv,env=dict(env),stdout=fp,stderr=subprocess.STDOUT,start_new_session=True)
+    phase="health";_healthy(proc,timeout_s)
+    actual=[x.decode("utf-8","surrogateescape") for x in Path(f"/proc/{proc.pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")]
+    if actual!=argv:raise PilotError("live argv mismatch")
+    live=dict(x.split(b"=",1) for x in Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0") if b"=" in x)
+    if live!={k.encode():v.encode() for k,v in env.items()}:raise PilotError("live process environment differs from exact allowlist")
+    phase="completion";req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
+    with urllib.request.urlopen(req,timeout=timeout_s) as response:
+     if response.status!=200:raise PilotError("completion request failed")
+     response_bytes=response.read(16*1024*1024)
+    with (stage/"response.json.raw").open("xb") as f:f.write(response_bytes);f.flush();os.fsync(f.fileno())
+    phase="observer";meta=(stage/"obs.meta.json").read_bytes();rows=[(stage/f"obs.row{i}.f32").read_bytes() for i in range(D.DECISIONS)]
+    _validate_observer(meta,rows,response_bytes)
+    post=I248.observe_arm_identity("B");problems=I248.identity_problems("B",post)
+    if problems:raise PilotError(f"post-unit identity drift: {problems}")
+  finally:
+   if proc is not None:_stop(proc)
+   cleanup_verified=True
+  phase="postflight";model_post=model_stat_witness()
+  if model_post!=model_pre:raise PilotError("model stat witness changed during unit")
+  verify_authority(root,context)
+  server_log=log.read_bytes();placement=placement_from_log(server_log,env,argv);markers=parse_unit_markers(server_log,arm)
+  transition=None
+  if arm=="H5_MMV_CANDIDATE":
+   bases=load_completed_units(evidence,"BASE")
+   if not bases:raise PilotError("candidate requires retained BASE unit from same exact identity")
+   transition=validate_pair(bases[0]["markers"],markers)
+  ended=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
+  record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"placement":placement,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"completed_at":ended,"fixture_sha256":fixture_sha}
+  phase="publication";publish_unit(stage,target,record);verify_authority(root,context)
+ except Exception as e:
+  if stage.is_dir():retain_failed_attempt(evidence,stage,arm,unit_index,context_sha,phase,started,proc,e,cleanup_verified)
+  raise
  return {k:record[k] for k in ("arm","unit_index","row_digest","response_sha256","server_log_sha256","markers")}
 def publish_unit(stage:Path,target:Path,r:dict)->None:
  files={"request.json":r["request_raw"],"response.json.raw":r["response_raw"],"server.log":r["server_log"],"obs.meta.json":r["observer_meta"],"identity-pre.json":canonical(r["identity_pre"]),"identity-post.json":canonical(r["identity_post"]),"markers.json":canonical(r["markers"]),"unit.json":canonical({k:v for k,v in r.items() if k not in {"request_raw","response_raw","server_log","observer_meta","observer_rows","identity_pre","identity_post","markers"}})+b"\n"}
@@ -270,6 +318,7 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   if sha(files["request.json"])!=meta.get("request_sha256") or sha(files["response.json.raw"])!=meta.get("response_sha256") or sha(files["server.log"])!=meta.get("server_log_sha256") or sha(files["obs.meta.json"])!=meta.get("observer_meta_sha256"):raise PilotError("retained request/response/log/meta digest mismatch")
   context=load_execution_context(root)
   context_sha=sha(canonical(context))
+  if context.get("source_closure")!={"source_root":"inferswarm01:"+str(SOURCE_ROOT),"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}:raise PilotError("retained source closure mismatch")
   if (meta.get("execution_context_sha256")!=context_sha
       or meta.get("expected_head")!=context.get("expected_head")
       or meta.get("fixture_payload_sha256")!=context.get("fixture_payload_sha256")
@@ -282,11 +331,12 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
       or meta.get("model_stats_post")!=context.get("model_stats")):
    raise PilotError("retained source/binary/model stat identity mismatch")
   rows=[files[f"obs.row{x}.f32"] for x in range(D.DECISIONS)]
-  _validate_observer(files["obs.meta.json"],rows)
+  _validate_observer(files["obs.meta.json"],rows,files["response.json.raw"])
   if len(rows)!=8 or sha(b"".join(rows))!=meta.get("row_digest") or [sha(x) for x in rows]!=meta.get("row_sha256"):raise PilotError("retained full-row digest mismatch")
   markers=json.loads(files["markers.json"]); log=files["server.log"]
   state="base" if arm=="BASE" else "large"
   if H5.parse_unit(log.decode("utf-8"),state=state)!=markers:raise PilotError("retained dispatch parse mismatch")
+  if meta.get("placement")!=placement_from_log(log,meta.get("env",{}),meta.get("argv",[])):raise PilotError("retained placement parse mismatch")
   if meta.get("schema")!=PILOT_SCHEMA or meta.get("arm")!=arm or meta.get("unit_index")!=i:raise PilotError("retained unit identity mismatch")
   exit_facts=meta.get("process_exit",{})
   if exit_facts.get("cleanup_verified") is not True or not isinstance(exit_facts.get("returncode"),int):raise PilotError("retained process cleanup fact missing")
@@ -303,7 +353,7 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
       or argv!=launch_argv(Path(argv[0]))
       or env!=launch_env(arm,Path(env.get("LLAMA_OBSERVE_OUT","")))):
    raise PilotError("retained launch identity mismatch")
-  out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"response_sha256":sha(files["response.json.raw"]),"response_raw":files["response.json.raw"],"observer_meta_sha256":sha(files["obs.meta.json"]),"server_log_sha256":sha(log)})
+  out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"row_bytes":rows,"response_sha256":sha(files["response.json.raw"]),"response_raw":files["response.json.raw"],"observer_meta_sha256":sha(files["obs.meta.json"]),"server_log_sha256":sha(log)})
  return out
 def screen_class(units:list[dict])->str:
  if any(units[i]["row_digest"]!=units[i-1]["row_digest"] for i in range(1,len(units))):return "screening-variable"
