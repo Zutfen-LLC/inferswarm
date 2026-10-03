@@ -1,0 +1,150 @@
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index 1b2997d8f..aa111c799 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -237,6 +237,10 @@ struct vk_pipeline_struct {
+     uint32_t parameter_count;
+     std::array<uint32_t, 3> wg_denoms;
+     uint32_t align;
++    // #264: immutable identity populated at q4_K/f32 DMMV pipeline creation.
++    uint32_t i264_wg = 99;
++    uint32_t i264_reduction = 99;
++    uint32_t i264_local_x = 0;
+     // true if fields have been set by ggml_vk_create_pipeline
+     bool initialized {};
+     // true while a compile is in flight, used to dedupe concurrent claims.
+@@ -5580,6 +5584,13 @@ static void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q2_K][i], "mul_mat_vec_q2_k_f32_f32", arr_dmmv_q2_k_f32_f32_len[reduc16], arr_dmmv_q2_k_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q3_K][i], "mul_mat_vec_q3_k_f32_f32", arr_dmmv_q3_k_f32_f32_len[reduc16], arr_dmmv_q3_k_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q4_K][i], "mul_mat_vec_q4_k_f32_f32", arr_dmmv_q4_k_f32_f32_len[reduc16], arr_dmmv_q4_k_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
++            // Bind the selected SPIR-V reduction and local-size specialization to BOTH
++            // pipeline identities, including the optional 64-bit indexing successor.
++            for (vk_pipeline p = device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q4_K][i]; p; p = p->next) {
++                p->i264_wg = w;
++                p->i264_reduction = reduc16;
++                p->i264_local_x = wg_size_subgroup16;
++            }
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q5_K][i], "mul_mat_vec_q5_k_f32_f32", arr_dmmv_q5_k_f32_f32_len[reduc16], arr_dmmv_q5_k_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_Q6_K][i], "mul_mat_vec_q6_k_f32_f32", arr_dmmv_q6_k_f32_f32_len[reduc16], arr_dmmv_q6_k_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
+             ggml_vk_create_pipeline(device, device->pipeline_dequant_mul_mat_vec_f32_f32[w][GGML_TYPE_TQ1_0][i], "mul_mat_vec_tq1_0_f32_f32", arr_dmmv_tq1_0_f32_f32_len[reduc16], arr_dmmv_tq1_0_f32_f32_data[reduc16], "main", mul_mat_vec_num_bindings, sizeof(vk_mat_vec_push_constants), {rm_kq, 1, 1}, {wg_size_subgroup16, rm_kq, i+1}, 1, true, use_subgroups16, force_subgroup_size16);
+@@ -7995,6 +8006,17 @@ static void ggml_vk_instance_init() {
+     }
+ }
+ 
++// #264 experiment-only, parsed during backend initialization before inference.
++static int ggml_vk_i264_mmv_state() {
++    static const int state = []() {
++        const char * value = getenv("GGML_VK_I264_MMV");
++        if (!value || strcmp(value, "base") == 0) { return 0; }
++        if (strcmp(value, "large") == 0) { return 1; }
++        GGML_ABORT("GGML_VK_I264_MMV must be exactly base or large");
++    }();
++    return state;
++}
++
+ static void ggml_vk_init(ggml_backend_vk_context * ctx, size_t idx) {
+     VK_LOG_DEBUG("ggml_vk_init(" << ctx->name << ", " << idx << ")");
+     ggml_vk_instance_init();
+@@ -9498,7 +9520,7 @@ static vk_pipeline ggml_vk_get_64b_indexing_pipeline(ggml_backend_vk_context * c
+ // ---------------------------------------------------------------------------
+ static std::atomic<uint64_t> ggml_vk_i262_next_route_id { 1 };
+ 
+-static void ggml_vk_i262_emit_output_route(ggml_backend_vk_context * ctx,
++static uint64_t ggml_vk_i262_emit_output_route(ggml_backend_vk_context * ctx,
+                                            const ggml_tensor * dst,
+                                            const ggml_tensor * src0,
+                                            const ggml_tensor * src1,
+@@ -9510,7 +9532,7 @@ static void ggml_vk_i262_emit_output_route(ggml_backend_vk_context * ctx,
+     int side = -1;
+     if (src0 && strcmp(src0->name, "output.weight") == 0) { w = src0; side = 0; }
+     else if (src1 && strcmp(src1->name, "output.weight") == 0) { w = src1; side = 1; }
+-    if (w == nullptr) { return; }
++    if (w == nullptr) { return 0; }
+     std::string family;
+     if (strcmp(route, "mat-vec") == 0) {
+         family = quantize_y ? "mmvq-idp" : "mmv";
+@@ -9534,6 +9556,7 @@ static void ggml_vk_i262_emit_output_route(ggml_backend_vk_context * ctx,
+         (unsigned long long) (dst ? dst->ne[0] : 0), (unsigned long long) (dst ? dst->ne[1] : 0),
+         src0 ? ggml_type_name(src0->type) : "-", src1 ? ggml_type_name(src1->type) : "-",
+         dst ? ggml_type_name(dst->type) : "-");
++    return rid;
+ }
+ 
+ static void ggml_vk_mul_mat_q_f16(ggml_backend_vk_context * ctx, vk_context& subctx, const ggml_tensor * src0, const ggml_tensor * src1, ggml_tensor * dst, bool disable_split_k) {
+@@ -9892,6 +9915,16 @@ static bool ggml_vk_should_use_mmvq(const vk_device& device, uint32_t m, uint32_
+     GGML_UNUSED(m);
+ }
+ 
++// Exact frozen node only. No capability, model, quantization or route override.
++static bool ggml_vk_i264_target(const ggml_tensor * dst, const ggml_tensor * x, const ggml_tensor * y, bool quantize_y) {
++    return !quantize_y && strcmp(x->name, "output.weight") == 0 &&
++           x->type == GGML_TYPE_Q4_K && y->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32 &&
++           x->ne[0] == 2560 && x->ne[1] == 248320 &&
++           y->ne[0] == 2560 && y->ne[1] == 1 && dst->ne[0] == 248320 && dst->ne[1] == 1 &&
++           x->ne[2] == 1 && x->ne[3] == 1 && y->ne[2] == 1 && y->ne[3] == 1 &&
++           dst->ne[2] == 1 && dst->ne[3] == 1;
++}
++
+ static void ggml_vk_mul_mat_vec_q_f16(ggml_backend_vk_context * ctx, vk_context& subctx, const struct ggml_cgraph * cgraph, int node_idx, bool swap_inputs = false) {
+     ggml_tensor * dst = cgraph->nodes[node_idx];
+     const ggml_tensor * src0 = dst->src[swap_inputs ? 1 : 0];
+@@ -9958,6 +9991,12 @@ static void ggml_vk_mul_mat_vec_q_f16(ggml_backend_vk_context * ctx, vk_context&
+         to_q8_1 = ggml_vk_get_quantize_pipeline(ctx, GGML_TYPE_Q8_1);
+     }
+ 
++    const bool i264_target = !swap_inputs && ggml_vk_i264_target(dst, src0, src1, quantize_y);
++    if (i264_target && ggml_vk_i264_mmv_state() == 1) {
++        // The existing LARGE q4_K/f32 DMMV implementation, not a new shader.
++        dmmv = ctx->device->pipeline_dequant_mul_mat_vec_f32_f32[DMMV_WG_SIZE_LARGE][GGML_TYPE_Q4_K][ne11-1];
++        if (!dmmv) { GGML_ABORT("#264 LARGE DMMV pipeline absent"); }
++    }
+     if (ggml_nbytes(src0) > ctx->device->properties.limits.maxStorageBufferRange) {
+         dmmv = ggml_vk_get_64b_indexing_pipeline(ctx, dmmv);
+     }
+@@ -9972,7 +10011,7 @@ static void ggml_vk_mul_mat_vec_q_f16(ggml_backend_vk_context * ctx, vk_context&
+     GGML_ASSERT(!qy_needs_dequant || to_fp16_vk_1 != nullptr);  // NOLINT
+     GGML_ASSERT(dmmv != nullptr);
+     // #262 H5: the vector-path selection (incl. 64b variant) is final here.
+-    ggml_vk_i262_emit_output_route(ctx, cgraph->nodes[node_idx], src0, src1, "mat-vec", dmmv, quantize_y, 0);
++    const uint64_t i264_route_id = ggml_vk_i262_emit_output_route(ctx, cgraph->nodes[node_idx], src0, src1, "mat-vec", dmmv, quantize_y, 0);
+ 
+     const uint64_t x_ne = ggml_nelements(src0);
+     const uint64_t y_ne = ggml_nelements(src1);
+@@ -10106,6 +10145,29 @@ static void ggml_vk_mul_mat_vec_q_f16(ggml_backend_vk_context * ctx, vk_context&
+     }
+ 
+     ggml_pipeline_request_descriptor_sets(ctx, dmmv, CEIL_DIV(ne12 * ne13, ctx->device->properties.limits.maxComputeWorkGroupCount[1]));
++    // Actual final, compiled pipeline identity (not the requested environment value).
++    if (i264_target) {
++        if (!i264_route_id || !dmmv || !dmmv->compiled || !dmmv->pipeline ||
++            dmmv->name != "mul_mat_vec_q4_k_f32_f32" ||
++            dmmv->i264_wg != (ggml_vk_i264_mmv_state() ? DMMV_WG_SIZE_LARGE : DMMV_WG_SIZE_SUBGROUP) ||
++            dmmv->i264_reduction != (ggml_vk_i264_mmv_state() ? SHADER_REDUCTION_MODE_HYBRID : SHADER_REDUCTION_MODE_SUBGROUP) ||
++            dmmv->i264_local_x != (ggml_vk_i264_mmv_state() ? 128u : 32u)) {
++            GGML_ABORT("#264 actual final DMMV pipeline identity does not match selected state");
++        }
++#if defined(VK_EXT_shader_64bit_indexing)
++        if (dmmv->is_64b_indexing) { GGML_ABORT("#264 frozen route requires 32-bit indexing"); }
++#endif
++        GGML_LOG_INFO("ggml_vk_i264:v1|mmv|id=%llu|node=%s|weight=output.weight|state=%s|route=mat-vec|pipe=%s|wg=%s|reduction=%s|local=%ux1x1|dims=%llux%llu:%llux%llu->%llux%llu|types=%s*%s->%s|quant_y=0|split_k=0|64b=0\n",
++            (unsigned long long) i264_route_id, dst->name,
++            ggml_vk_i264_mmv_state() ? "large" : "base", dmmv->name.c_str(),
++            dmmv->i264_wg == DMMV_WG_SIZE_LARGE ? "large" : "subgroup",
++            dmmv->i264_reduction == SHADER_REDUCTION_MODE_HYBRID ? "hybrid" : "subgroup",
++            dmmv->i264_local_x,
++            (unsigned long long) src0->ne[0], (unsigned long long) src0->ne[1],
++            (unsigned long long) src1->ne[0], (unsigned long long) src1->ne[1],
++            (unsigned long long) dst->ne[0], (unsigned long long) dst->ne[1],
++            ggml_type_name(src0->type), ggml_type_name(src1->type), ggml_type_name(dst->type));
++    }
+ 
+     uint32_t base_work_group_y = 0;
+     while (base_work_group_y < ne12 * ne13) {
+@@ -19105,6 +19167,7 @@ static ggml_guid_t ggml_backend_vk_guid() {
+ ggml_backend_t ggml_backend_vk_init(size_t dev_num) {
+     VK_LOG_DEBUG("ggml_backend_vk_init(" << dev_num << ")");
+ 
++    (void) ggml_vk_i264_mmv_state(); // Reject invalid values before inference.
+     ggml_backend_vk_context * ctx = new ggml_backend_vk_context;
+     ggml_vk_init(ctx, dev_num);
+ 

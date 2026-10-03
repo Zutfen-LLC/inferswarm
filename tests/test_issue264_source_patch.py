@@ -29,7 +29,8 @@ class SourceTransformTests(unittest.TestCase):
         self.assertIn("ggml_vk_i262", patch)
         self.assertIn("subgroup", patch)
         self.assertIn("hybrid", patch)
-        self.assertIn("local_size", patch)
+        self.assertIn("i264_local_x", patch)  # actual local-size specialization, not a claimed flag
+        self.assertIn("dst->ne[2] == 1 && dst->ne[3] == 1", patch)
         self.assertTrue(S.I262_TREE == "015c874f0cc0635fa1369650098c0137f9a492f0")
 
     def test_transform_requires_new_output_and_exact_authenticated_parent(self):
