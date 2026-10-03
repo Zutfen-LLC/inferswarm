@@ -109,10 +109,10 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertIn('four fresh-process units', output)
         self.assertIn('path transition', output)
         self.assertIn('screening-variable', output)
-        self.assertIn('awaiting maintainer acceptance', output)
+        self.assertIn('accepted for the bounded scope', output)
         self.assertIn('H2/H3/H5 theorem closure remain open', output)
-        self.assertIn('Hosted CI passed 15/15 checks at the physical execution head', output)
-        self.assertIn('final-head CI and full CPU validation after maintainer GO remain required', output)
+        self.assertIn('PR #265 merged into the aggregate producer branch', output)
+        self.assertIn('aggregate exact-head CI and Full CPU Validation', output)
         self.assertNotIn('no physical experiment has run', output)
         self.assertNotIn('pilot producer is under review and not ready', output)
         self.assertEqual(execution['state'], 'blocked')
@@ -140,6 +140,25 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertNotIn('Arm A COMPLETE', output)
         self.assertNotIn('PR #251 remains unmerged', output)
         self.assertNotIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
+
+    def test_aggregate_266_frontier_records_accepted_child_without_new_authority(self):
+        frontier = self.record['frontier']
+        output = sync.render(self.record)['frontier']
+        self.assertIn('Issue #266', frontier['title'])
+        self.assertEqual(frontier['reference'],
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/266')
+        self.assertEqual(frontier['execution']['state'], 'blocked')
+        self.assertEqual(frontier['execution']['reference'],
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/266')
+        self.assertIn('5969219338', output)
+        self.assertIn('#258', output)
+        self.assertIn('SUBGROUP/subgroup/32x1x1', output)
+        self.assertIn('LARGE/hybrid/128x1x1', output)
+        self.assertIn('No further physical execution', output)
+        self.assertIn('PR #256 remains OPEN / UNMERGED', output)
+        self.assertNotIn('awaiting maintainer acceptance', output)
+        self.assertNotIn('Await maintainer acceptance', output)
+        self.assertEqual(len(self.record['capabilities']), 8)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'

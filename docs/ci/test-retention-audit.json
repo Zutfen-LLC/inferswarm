@@ -4024,7 +4024,7 @@
    "rationale": "Guards the living status authority every PR must maintain (docs/status-maintenance.md).",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 8
+   "test_count_at_audit": 9
   },
   "test_run_full_cpu_suite": {
    "baseline_group": "repo-integrity",
