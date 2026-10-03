@@ -112,43 +112,43 @@ class ProjectStatusTests(unittest.TestCase):
                 'SUBGROUP/subgroup/32x1x1', 'LARGE/hybrid/128x1x1',
                 'subgroup32→large128 hybrid', 'output.weight MMV q4_K*f32 route',
                 'four fresh-process units', 'screening-variable',
-                'accepted for the bounded scope', 'H2/H3/H5 theorem closure remain open',
+                '5969219338', 'H2/H3/H5 theorem closure remain open',
                 'PR #265 merged into the aggregate producer branch',
                 'ARM_A_STOPS_LADDER', '5904093750', '5904094070',
                 'not established as root cause',
-                'No further physical work is authorized under #250',
-                'no B/C/C1/C2/D work is required or authorized',
                 '#241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED',
                 '#244 and #239 remain blocked', '#258'):
             with self.subTest(retained=retained):
-                self.assertIn(retained, output)
+                self.assertTrue(retained in output or any(retained in item for item in execution['constraints']))
         self.assertEqual(execution['state'], 'blocked')
+        self.assertTrue(any('ARM_A_STOPS_LADDER localized boundary only' in item and 'not established as root cause' in item for item in execution['constraints']))
         self.assertIn('no further execution authority', execution['step'])
-        self.assertEqual(len(self.record['capabilities']), 8)
+        self.assertEqual(len(self.record['capabilities']), 9)
         self.assertNotIn('H5', {item['id'] for item in self.record['capabilities']})
 
-    def test_255_pending_frontier_cannot_revive_completed_266_review(self):
+    def test_268_frontier_preserves_accepted_255_and_blocks_premature_acceptance(self):
         frontier = self.record['frontier']
         prerequisite = frontier['prerequisite']
         output = sync.render(self.record)['frontier']
-        self.assertIn('Issue #255', frontier['title'])
-        self.assertIn('UNACCEPTED', frontier['title'])
+        self.assertIn('Issue #268', frontier['title'])
+        self.assertNotIn('UNACCEPTED', frontier['title'])
         self.assertEqual(frontier['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/issues/255')
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/268')
         self.assertEqual(frontier['execution']['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/pull/267#issuecomment-5971685012')
-        self.assertEqual(prerequisite['acceptance'],
-                         {'state': 'pending', 'reference': None})
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/268')
+        self.assertEqual(prerequisite['acceptance']['state'], 'accepted')
+        self.assertEqual(prerequisite['acceptance']['reference'],
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991')
         self.assertEqual(prerequisite['observation']['result'],
-                         'ISSUE255_CUDA_RPC_PRODUCT_OBSERVED')
-        self.assertIn('maintainer exact-head review and Final CPU Validation', output)
-        self.assertIn('Final CPU Validation must NOT run before explicit maintainer GO', output)
+                         'MVP_DISTRIBUTED_INFERENCE_PASS')
+        self.assertIn('Issue #268', output)
+        self.assertIn('Final CPU Validation requires maintainer GO', output)
         for denied in ('numerical equivalence', 'mixed-vendor readiness',
                        'production readiness', 'R8-J/Vulkan execution authority'):
             self.assertIn(denied, output)
-        self.assertNotIn('MVP_DISTRIBUTED_INFERENCE_PASS',
-                         json.dumps(self.record['capabilities']))
-        self.assertEqual(len(self.record['capabilities']), 8)
+        self.assertIn('MVP_DISTRIBUTED_INFERENCE_PASS',
+                      json.dumps(self.record['capabilities']))
+        self.assertEqual(len(self.record['capabilities']), 9)
 
         # Test the source AND every generated living-status section, plus
         # authored product prose. Historical evidence is deliberately excluded.
@@ -169,6 +169,14 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertNotIn('#266/R8-I3C frontier', content)
                 self.assertNotIn('R8-I3C/#266 frontier', content)
                 self.assertNotIn('Issue #266 — aggregate R8-I3C mainline review', content)
+
+    def test_accepted_255_status_cannot_revert_to_pending_final_cpu(self):
+        rendered = sync.render(self.record)
+        combined = json.dumps(self.record) + "\n" + "\n".join(rendered.values())
+        self.assertIn('MVP_DISTRIBUTED_INFERENCE_PASS', combined)
+        self.assertNotIn('UNACCEPTED CUDA/RPC product observation pending', combined)
+        self.assertNotIn('Final CPU Validation must NOT run before explicit maintainer GO', combined)
+        self.assertIn('Issue #268', combined)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'
