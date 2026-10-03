@@ -165,6 +165,18 @@ class ScreeningLawTests(unittest.TestCase):
             "screening-variable")
 
 
+def _staged_retained_copy_available() -> bool:
+    """True only if the staged 150-file retained copy is actually readable.
+
+    is_dir() can raise PermissionError on hosts where /home/zutfen exists but
+    is unreadable (e.g. shared validation hosts); treat that as unavailable.
+    """
+    try:
+        return Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir()
+    except OSError:
+        return False
+
+
 class RetainedReportTests(unittest.TestCase):
     def test_reducer_requires_authenticated_retained_unit_directory(self):
         import issue262_report as R
@@ -264,7 +276,7 @@ class RetainedReportTests(unittest.TestCase):
                              {"subject": subject, "comparator_sha256": comparator,
                               "source_tree": P.INSTRUMENTED262_TREE})
 
-    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+    @unittest.skipUnless(_staged_retained_copy_available(),
                          "authenticated retained evidence not staged in this session")
     def test_real_raw_logs_supply_h3_target_missing_from_old_summary(self):
         import issue262_report as R
@@ -279,7 +291,7 @@ class RetainedReportTests(unittest.TestCase):
         # Use parsed raw bytes for allocation identity; summary JSON is not input.
         self.assertEqual(item["markers"]["h2h3"]["target"]["offset"], 7004160)
 
-    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+    @unittest.skipUnless(_staged_retained_copy_available(),
                          "authenticated retained evidence not staged in this session")
     def test_real_retained_root_reports_completed_a4_contrast(self):
         import issue262_report as R
@@ -325,7 +337,7 @@ class RetainedReportTests(unittest.TestCase):
         self.assertIn("base-run2-parser-defect-001", text)
         self.assertIn("not terminal mechanism proof", text)
 
-    @unittest.skipUnless(Path("/home/zutfen/.hermes/cache/scratch/pr263-correction/remote-copy").is_dir(),
+    @unittest.skipUnless(_staged_retained_copy_available(),
                          "authenticated retained evidence not staged in this session")
     def test_real_retained_root_rejects_false_context_authority(self):
         import issue262_report as R
