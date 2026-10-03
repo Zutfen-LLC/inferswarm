@@ -1,0 +1,39 @@
+{
+  "schema": "inferswarm.issue264.build-identity/1",
+  "source_tree": "23d38b96e371ad0634454d7bd6fe238da87eb1cb",
+  "source_vk_sha256": "551b6e7fd963fbf9cada48510df201cfa4bffa6a64bf4ea1d6d11d9e66999ebe",
+  "source_patch_sha256": "f713767755cd40ee279aba6d4e72648c317e73a334d565a6cd0f176284e3226e",
+  "source_root": "inferswarm01:/home/hermes/is264-mmv-v2",
+  "binary_sha256": "2734ba263fb2e0eb0154eaa75b15b07da54d679d8203d22e45eedee25b754330",
+  "binary_path": "inferswarm01:/home/hermes/is264-mmv-v2/build-i264/bin/llama-server",
+  "version": "0.4.1-dev",
+  "build_number": 10964,
+  "predecessor_commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "compiler": "GNU 14.2.0",
+  "gpu_applications_during_build": [],
+  "build_configuration": {
+    "generator": "Ninja",
+    "build_type": "Release",
+    "target": "llama-server",
+    "jobs": 4,
+    "GGML_VULKAN": true,
+    "GGML_CUDA": false,
+    "GGML_NATIVE": false,
+    "GGML_AVX": false,
+    "GGML_AVX2": false,
+    "GGML_AVX512": false,
+    "GGML_FMA": false,
+    "GGML_F16C": false,
+    "GGML_BUILD_TESTS": false,
+    "GGML_BUILD_EXAMPLES": false,
+    "LLAMA_BUILD_TESTS": false,
+    "LLAMA_BUILD_EXAMPLES": false,
+    "LLAMA_CURL": false
+  },
+  "verification": {
+    "build_exit_code": 0,
+    "version_exit_code": 0,
+    "source_tree_local_remote_equal": true,
+    "no_inference_run": true
+  }
+}
