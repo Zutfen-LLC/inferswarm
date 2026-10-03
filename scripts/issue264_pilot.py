@@ -6,7 +6,7 @@ exact-head checkout with the completed binary identity record. This module
 never accepts caller authority, identity, prompt, or observations.
 """
 from __future__ import annotations
-import hashlib, json, os, re, signal, subprocess, sys, time, urllib.request
+import hashlib, json, os, re, signal, socket, subprocess, sys, time, urllib.request
 from pathlib import Path
 from typing import Any
 sys.path.insert(0,str(Path(__file__).resolve().parent))
@@ -163,14 +163,41 @@ def observe_subject()->dict:
   cells=[x.strip() for x in line.split(",")]
   if len(cells)==4 and cells[1]==wanted["gpu_uuid"] and cells[2].lower()==wanted["bdf"].lower():return {"gpu":cells[0],"gpu_uuid":cells[1],"bdf":cells[2],"driver":cells[3]}
  raise PilotError("frozen RTX 3060 UUID/BDF not present")
+def _require_free_port():
+ """Refuse a pre-existing fixed-port service before staging or launch."""
+ try:
+  with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as probe:
+   probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+   probe.bind(("127.0.0.1",19000))
+ except OSError as e:raise PilotError("fixed port 19000 occupied") from e
+def _listener_owned_by(proc)->bool:
+ """Check the loopback listening socket's inode against the child's fds."""
+ if proc.poll() is not None:raise PilotError("server exited before HTTP request")
+ try:
+  listeners=[]
+  for line in Path("/proc/net/tcp").read_text().splitlines()[1:]:
+   fields=line.split()
+   address,port=fields[1].split(":")
+   if port==f"{19000:04X}" and address in ("0100007F","00000000") and fields[3]=="0A":
+    listeners.append(fields[9])
+  if not listeners:return False
+  fds={os.readlink(p) for p in Path(f"/proc/{proc.pid}/fd").iterdir() if p.is_symlink()}
+ except OSError as e:raise PilotError("cannot verify server listener ownership") from e
+ if not all(f"socket:[{inode}]" in fds for inode in listeners):
+  raise PilotError("fixed port listener is not owned by launched server")
+ if proc.poll() is not None:raise PilotError("server exited before HTTP request")
+ return True
 def _healthy(proc,timeout):
  import urllib.error
  end=time.monotonic()+timeout
  while time.monotonic()<end:
   if proc.poll() is not None:raise PilotError(f"server exited early rc={proc.returncode}")
+  if not _listener_owned_by(proc):time.sleep(1);continue
   try:
    with urllib.request.urlopen("http://127.0.0.1:19000/health",timeout=2) as r:
-    if r.status==200:return
+    if r.status==200:
+     if not _listener_owned_by(proc):raise PilotError("server listener disappeared after health")
+     return
   except (urllib.error.URLError,OSError):time.sleep(1)
  raise PilotError("server health timeout")
 def _stop(proc):
@@ -235,6 +262,7 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
  if len(completed)!=unit_index-1:raise PilotError("units must replay a contiguous legal prefix")
  if completed and completed[-1]["row_digest"]!=completed[0]["row_digest"] and unit_index>2:raise PilotError("repeat law forbids continuing after mismatch")
  if unit_index==3 and (len(completed)!=2 or completed[0]["row_digest"]!=completed[1]["row_digest"]):raise PilotError("unit 003 allowed only after two matching full-row digests")
+ _require_free_port()
  stage.mkdir(parents=True)
  env=launch_env(arm,stage/"obs");argv=launch_argv(Path(binary));log=stage/"server.log";proc=None
  phase="launch";started=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime());cleanup_verified=False
@@ -248,7 +276,9 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
     if actual!=argv:raise PilotError("live argv mismatch")
     live=dict(x.split(b"=",1) for x in Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0") if b"=" in x)
     if live!={k.encode():v.encode() for k,v in env.items()}:raise PilotError("live process environment differs from exact allowlist")
-    phase="completion";req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
+    phase="completion"
+    if not _listener_owned_by(proc):raise PilotError("server listener disappeared before completion")
+    req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
     with urllib.request.urlopen(req,timeout=timeout_s) as response:
      if response.status!=200:raise PilotError("completion request failed")
      response_bytes=response.read(16*1024*1024)

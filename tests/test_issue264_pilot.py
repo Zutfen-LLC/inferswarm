@@ -232,6 +232,89 @@ class RealSubprocessPilotRegression(unittest.TestCase):
     This is not a physical GPU observation or inference result.
     """
 
+    def test_occupied_fixed_port_refuses_launch_and_never_posts_to_unrelated_listener(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from threading import Thread
+        from unittest import mock
+
+        posts=[]
+        class Unrelated(BaseHTTPRequestHandler):
+            def log_message(self, format, *args): pass
+            def do_GET(self):
+                self.send_response(200);self.end_headers()
+            def do_POST(self):
+                posts.append(self.rfile.read(int(self.headers["Content-Length"])))
+                self.send_response(200);self.end_headers()
+
+        with HTTPServer(("127.0.0.1",19000),Unrelated) as server, tempfile.TemporaryDirectory() as tmp:
+            thread=Thread(target=server.serve_forever,daemon=True);thread.start()
+            root=Path(tmp);evidence=root/"evidence";evidence.mkdir()
+            sleeper=root/"not-a-server.py";sleeper.write_text("import time; time.sleep(30)\n")
+            context={"schema":P.EXECUTION_SCHEMA,"expected_head":"a"*40,"source_closure":{}}
+            real_popen=P.subprocess.Popen
+            with mock.patch.object(P,"load_execution_context",return_value=context), \
+                 mock.patch.object(P,"verify_authority"), \
+                 mock.patch.object(P,"verify_source_and_binary",return_value=P.BINARY_SHA), \
+                 mock.patch.object(P,"source_closure",return_value={}), \
+                 mock.patch.object(P.B250,"verify_fixtures",return_value={}), \
+                 mock.patch.object(P,"frozen_prompt",return_value="fixture"), \
+                 mock.patch.object(P,"model_stat_witness",return_value=[]), \
+                 mock.patch.object(P,"validate_execution_freeze"), \
+                 mock.patch.object(P,"observe_subject",return_value={}), \
+                 mock.patch.object(P.I248,"observe_arm_identity",return_value={}), \
+                 mock.patch.object(P.I248,"identity_problems",return_value=[]), \
+                 mock.patch.object(P,"load_completed_units",return_value=[]), \
+                 mock.patch.object(P,"launch_argv",return_value=[sys.executable,str(sleeper)]), \
+                 mock.patch.object(P.subprocess,"Popen",wraps=real_popen) as launched:
+                with self.assertRaisesRegex(P.PilotError,"port|listener|occupied"):
+                    P.run_unit(repo_root=REPO,evidence_root=evidence,arm="BASE",binary=sleeper,unit_index=1,timeout_s=3)
+                self.assertEqual(launched.call_count,0)
+            self.assertEqual(posts,[])
+            self.assertTrue(thread.is_alive())
+            self.assertFalse((evidence/"BASE/.unit-001.staging").exists())
+            server.shutdown();thread.join(timeout=3)
+
+    def test_health_200_from_unrelated_listener_is_not_child_health(self):
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from threading import Thread
+        import subprocess
+
+        class Unrelated(BaseHTTPRequestHandler):
+            def log_message(self, format, *args): pass
+            def do_GET(self):
+                self.send_response(200);self.end_headers()
+        with HTTPServer(("127.0.0.1",19000),Unrelated) as server:
+            thread=Thread(target=server.serve_forever,daemon=True);thread.start()
+            proc=subprocess.Popen([sys.executable,"-c","import time;time.sleep(30)"],start_new_session=True)
+            try:
+                with self.assertRaisesRegex(P.PilotError,"listener|owned"):
+                    P._healthy(proc,2)
+            finally:
+                P._stop(proc);server.shutdown();thread.join(timeout=3)
+
+    def test_listener_disappearing_after_health_refuses_completion(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);script=root/"one-health.py";posted=root/"posted"
+            script.write_text('''import sys,time
+from http.server import BaseHTTPRequestHandler,HTTPServer
+class Handler(BaseHTTPRequestHandler):
+ def log_message(self,format,*args):pass
+ def do_GET(self):
+  self.server.server_close()
+  self.send_response(200);self.end_headers();self.wfile.flush()
+ def do_POST(self):
+  open(sys.argv[1],"w").write("unexpected")
+server=HTTPServer(("127.0.0.1",19000),Handler)
+server.handle_request();time.sleep(30)
+''')
+            proc=subprocess.Popen([sys.executable,str(script),str(posted)],start_new_session=True)
+            try:
+                with self.assertRaisesRegex(P.PilotError,"disappeared|exited"):
+                    P._healthy(proc,5)
+                self.assertFalse(posted.exists())
+            finally:P._stop(proc)
+
     def test_two_arms_execute_retain_replay_and_report_real_subprocesses(self):
         from unittest import mock
         from tests.test_issue248_diagnostic import CENSUS_RAW_B
