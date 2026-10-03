@@ -89,6 +89,7 @@ def frozen_prompt(root:Path)->str:
  if not isinstance(prompt,str) or not prompt:raise PilotError("frozen case-3072 prompt unavailable")
  return prompt
 def parse_unit_markers(raw:bytes,arm:str)->dict:
+ if arm not in ARMS:raise PilotError("only BASE and H5_MMV_CANDIDATE are permitted")
  try:text=raw.decode("utf-8")
  except UnicodeDecodeError as e:raise PilotError("server log not UTF-8") from e
  state="base" if arm=="BASE" else "large"
@@ -122,6 +123,14 @@ def _stop(proc):
   try:proc.wait(timeout=15)
   except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait(timeout=5)
  if proc.poll() is None:raise PilotError("server process survived cleanup")
+
+def _validate_observer(meta:bytes,rows:list[bytes])->None:
+ try:records=[json.loads(line) for line in meta.decode("utf-8").splitlines()]
+ except (UnicodeDecodeError,json.JSONDecodeError) as e:raise PilotError("observer metadata malformed") from e
+ if len(records)!=D.DECISIONS or any(not isinstance(r,dict) or r.get("pos")!=i for i,r in enumerate(records)):
+  raise PilotError("observer metadata population/order malformed")
+ if len(rows)!=D.DECISIONS or any(not isinstance(row,bytes) or len(row)!=D.ROW_BYTES for row in rows):
+  raise PilotError("observer full-row byte geometry malformed")
 def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:int,timeout_s:float=900)->dict:
  """Run one actual unit; all authority and execution identity are internal."""
  if arm not in ARMS or unit_index not in (1,2,3):raise PilotError("invalid arm/unit")
@@ -139,19 +148,19 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
  env=launch_env(arm,stage/"obs");argv=launch_argv(Path(binary));log=stage/"server.log";proc=None
  try:
   with log.open("wb") as fp:
-   child_env={k:v for k,v in os.environ.items() if not k.startswith("GGML_VK_") and k not in env};child_env.update(env)
+   child_env=dict(env)
    proc=subprocess.Popen(argv,env=child_env,stdout=fp,stderr=subprocess.STDOUT,start_new_session=True)
    _healthy(proc,timeout_s)
    actual=[x.decode("utf-8","surrogateescape") for x in Path(f"/proc/{proc.pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")]
    if actual!=argv:raise PilotError("live argv mismatch")
    live=dict(x.split(b"=",1) for x in Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0") if b"=" in x)
-   for k,v in env.items():
-    if live.get(k.encode())!=v.encode():raise PilotError(f"live environment mismatch {k}")
+   if live!={k.encode():v.encode() for k,v in env.items()}:raise PilotError("live process environment differs from exact allowlist")
    req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
    with urllib.request.urlopen(req,timeout=timeout_s) as response:
     if response.status!=200:raise PilotError("completion request failed")
     response_bytes=response.read(16*1024*1024)
-   meta=(stage/"obs.meta.json").read_bytes();rows=[(stage/f"obs.row{i}.f32").read_bytes() for i in range(8)]
+   meta=(stage/"obs.meta.json").read_bytes();rows=[(stage/f"obs.row{i}.f32").read_bytes() for i in range(D.DECISIONS)]
+   _validate_observer(meta,rows)
    post=I248.observe_arm_identity("B");problems=I248.identity_problems("B",post)
    if problems:raise PilotError(f"post-unit identity drift: {problems}")
  finally:
@@ -170,10 +179,20 @@ def publish_unit(stage:Path,target:Path,r:dict)->None:
  files={"request.json":r["request_raw"],"response.json.raw":r["response_raw"],"server.log":r["server_log"],"obs.meta.json":r["observer_meta"],"identity-pre.json":canonical(r["identity_pre"]),"identity-post.json":canonical(r["identity_post"]),"markers.json":canonical(r["markers"]),"unit.json":canonical({k:v for k,v in r.items() if k not in {"request_raw","response_raw","server_log","observer_meta","observer_rows","identity_pre","identity_post","markers"}})+b"\n"}
  for i,data in enumerate(r["observer_rows"]):files[f"obs.row{i}.f32"]=data
  for name,data in files.items():
-  with (stage/name).open("xb") as f:f.write(data);f.flush();os.fsync(f.fileno())
+  path=stage/name
+  if path.exists():
+   if path.is_symlink() or not path.is_file() or path.read_bytes()!=data:raise PilotError(f"staged bytes differ from retained record: {name}")
+  else:
+   with path.open("xb") as f:f.write(data);f.flush();os.fsync(f.fileno())
  hashmap={n:sha(b) for n,b in sorted(files.items())}
- with (stage/"files.sha256.json").open("xb") as f:f.write(canonical(hashmap)+b"\n");f.flush();os.fsync(f.fileno())
+ manifest=stage/"files.sha256.json";manifest_bytes=canonical(hashmap)+b"\n"
+ if manifest.exists():
+  if manifest.is_symlink() or not manifest.is_file() or manifest.read_bytes()!=manifest_bytes:raise PilotError("staged file manifest differs from retained record")
+ else:
+  with manifest.open("xb") as f:f.write(manifest_bytes);f.flush();os.fsync(f.fileno())
+ fd=os.open(stage,os.O_RDONLY);os.fsync(fd);os.close(fd)
  os.rename(stage,target)
+ fd=os.open(target.parent,os.O_RDONLY);os.fsync(fd);os.close(fd)
 def load_completed_units(root:Path,arm:str)->list[dict]:
  if arm not in ARMS:raise PilotError("invalid arm")
  parent=Path(root)/arm
@@ -197,7 +216,8 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   meta=json.loads(files["unit.json"])
   if sha(files["request.json"])!=meta.get("request_sha256") or sha(files["response.json.raw"])!=meta.get("response_sha256") or sha(files["server.log"])!=meta.get("server_log_sha256") or sha(files["obs.meta.json"])!=meta.get("observer_meta_sha256"):raise PilotError("retained request/response/log/meta digest mismatch")
   if meta.get("source_tree")!=SOURCE_TREE or meta.get("binary_sha256")!=BINARY_SHA:raise PilotError("retained source/binary identity mismatch")
-  rows=[files[f"obs.row{x}.f32"] for x in range(8)]
+  rows=[files[f"obs.row{x}.f32"] for x in range(D.DECISIONS)]
+  _validate_observer(files["obs.meta.json"],rows)
   if len(rows)!=8 or sha(b"".join(rows))!=meta.get("row_digest") or [sha(x) for x in rows]!=meta.get("row_sha256"):raise PilotError("retained full-row digest mismatch")
   markers=json.loads(files["markers.json"]); log=files["server.log"]
   state="base" if arm=="BASE" else "large"
@@ -213,8 +233,8 @@ def load_completed_units(root:Path,arm:str)->list[dict]:
   out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"response_sha256":sha(files["response.json.raw"]),"server_log_sha256":sha(log)})
  return out
 def screen_class(units:list[dict])->str:
- if len(units)>=2 and units[0]["row_digest"]!=units[1]["row_digest"]:return "screening-variable"
- if len(units)==3 and len({u["row_digest"] for u in units})==1:return "screening-stable"
+ if any(units[i]["row_digest"]!=units[i-1]["row_digest"] for i in range(1,len(units))):return "screening-variable"
+ if len(units)==3:return "screening-stable"
  return "matching-prefix" if units else "not-run"
 def run_arm(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,timeout_s:float=900)->dict:
  """Execute/replay one complete arm under the fixed 2/3-unit screening law."""
