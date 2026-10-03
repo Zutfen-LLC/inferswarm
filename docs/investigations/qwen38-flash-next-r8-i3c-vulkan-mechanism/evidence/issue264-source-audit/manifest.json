@@ -1,0 +1,9 @@
+{
+  "schema": "is264-source-audit-evidence-manifest/1",
+  "scope": "Hashes only for newly created source-audit artifacts; excludes living status files and any accepted/physical evidence.",
+  "files": {
+    "audit.md": "829d99ad5503fc27b2487ea6393ad03b2b860b7183beceece32bd5901aca8b5d",
+    "candidates.json": "427e6427608c03ab230a579aad36d408d0cc2de4c98209e2bf812260dd4c7fe8"
+  },
+  "methodology": "../../../../METHODOLOGY-ISSUE264.md"
+}

@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""Issue #264 bounded real BASE/H5-MMV pilot producer.
+
+CPU-only until run_unit is explicitly invoked on a maintainer-prepared,
+exact-head checkout with the completed binary identity record. This module
+never accepts caller authority, identity, prompt, or observations.
+"""
+from __future__ import annotations
+import hashlib, json, os, re, signal, socket, subprocess, sys, time, urllib.request
+from pathlib import Path
+from typing import Any
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import issue250_diagnostic as D
+import issue250_physical as B250
+import issue252_constants as C252
+import issue248_identity as I248
+import issue264_h5 as H5
+import issue262_h5 as H262
+import issue254_producer as P254
+import issue264_source_patch as S264
+
+API="https://api.github.com/repos/Zutfen-LLC/inferswarm"
+ISSUE=264
+BASE_HEAD="7f666c99b043519e359610a90d4d06f8c34ea798"
+SOURCE_TREE="23d38b96e371ad0634454d7bd6fe238da87eb1cb"
+SOURCE_VK_SHA="551b6e7fd963fbf9cada48510df201cfa4bffa6a64bf4ea1d6d11d9e66999ebe"
+SOURCE_PATCH_SHA="f713767755cd40ee279aba6d4e72648c317e73a334d565a6cd0f176284e3226e"
+SOURCE_ROOT=Path("/home/hermes/is264-mmv-v2")
+BINARY_SHA="2734ba263fb2e0eb0154eaa75b15b07da54d679d8203d22e45eedee25b754330"
+BUILD_SCHEMA="inferswarm.issue264.build-identity/1"
+IDENTITY_PATH=Path(__file__).resolve().parents[1]/"docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json"
+BUILD_IDENTITY=IDENTITY_PATH.with_name("issue264-build-identity.json")
+PILOT_SCHEMA="inferswarm.issue264.pilot-unit/1"
+EXECUTION_SCHEMA="inferswarm.issue264.execution-context/1"
+EXECUTION_CONTEXT_NAME="execution-context.json"
+PILOT_CLAUSE="Creation of this issue authorizes **only** the bounded BASE-vs-selected-H5-MMV-candidate pilot below, and only after the pre-execution gate passes on one frozen exact PR head."
+ARMS={"BASE":{},"H5_MMV_CANDIDATE":{"GGML_VK_I264_MMV":"large"}}
+ARM_ENV=ARMS
+MAX_UNITS=3
+class PilotError(RuntimeError): pass
+
+def sha(data:bytes)->str:return hashlib.sha256(data).hexdigest()
+def canonical(value:Any)->bytes:return json.dumps(value,sort_keys=True,separators=(",",":"),ensure_ascii=False).encode()
+def git(root:Path,*args:str)->str:
+ p=subprocess.run(["git","-C",str(root),*args],capture_output=True,text=True)
+ if p.returncode: raise PilotError(f"git {args[0]} failed: {p.stderr.strip()}")
+ return p.stdout.strip()
+def api(path:str)->Any:
+ h={"Accept":"application/vnd.github+json","User-Agent":"inferswarm-issue264-pilot"}
+ if os.environ.get("GH_TOKEN"):h["Authorization"]="Bearer "+os.environ["GH_TOKEN"]
+ with urllib.request.urlopen(urllib.request.Request(f"{API}/{path}",headers=h),timeout=30) as r:return json.loads(r.read())
+def verify_authority(root:Path, context:dict)->dict:
+ """Revalidate captured authority against live issue/PR and local checkout."""
+ expected=context.get("expected_head")
+ if not isinstance(expected,str) or not re.fullmatch(r"[0-9a-f]{40}",expected):raise PilotError("execution context lacks expected HEAD")
+ head=git(root,"rev-parse","HEAD")
+ if head!=expected:raise PilotError("local HEAD differs from execution context expected HEAD")
+ if git(root,"status","--porcelain","--untracked-files=all"):raise PilotError("repository worktree is dirty")
+ if git(root,"merge-base","--is-ancestor",BASE_HEAD,expected)!="":raise PilotError("accepted PR #256 ancestor not preserved")
+ branch=git(root,"symbolic-ref","--short","HEAD")
+ if context.get("branch") not in (None,branch):raise PilotError("local branch differs from execution context")
+ issue=api(f"issues/{ISSUE}")
+ issue_body=str(issue.get("body",""))
+ if issue.get("state")!="open" or PILOT_CLAUSE.lower() not in issue_body.lower():raise PilotError("issue #264 is closed or conditional pilot clause absent")
+ issue_body_sha=sha(issue_body.encode())
+ if context.get("issue_body_sha256") not in (None,issue_body_sha):raise PilotError("live issue body differs from execution context")
+ pulls=api("pulls?state=all&per_page=100")
+ matches=[p for p in pulls if p.get("head",{}).get("ref")==branch and p.get("base",{}).get("ref")=="issue-254-r8i3c-producer"]
+ if len(matches)!=1:raise PilotError("exact stacked PR is not uniquely identifiable")
+ pr=matches[0]
+ if context.get("pr_number") not in (None,pr.get("number")):raise PilotError("stacked PR differs from execution context")
+ if pr.get("state")!="open" or pr.get("merged") or pr.get("draft") or pr.get("head",{}).get("sha")!=expected:raise PilotError("stacked PR is not open, non-draft, unmerged at expected head")
+ if not git(root,"merge-base","--is-ancestor",BASE_HEAD,pr["head"]["sha"])=="":raise PilotError("current PR head does not preserve PR #256 ancestor")
+ return {"issue":ISSUE,"pr":pr["number"],"head":expected,"issue_body_sha256":issue_body_sha}
+def model_stat_witness()->list[dict]:
+ out=[]
+ for name in C252.MODEL_MEMBERS:
+  p=Path("/srv/models/qwen38-ud-iq1-s")/name
+  try:s=p.stat()
+  except OSError as e:raise PilotError(f"model member unavailable: {name}") from e
+  if not p.is_file():raise PilotError(f"model member is not regular file: {name}")
+  out.append({"name":name,"device":s.st_dev,"inode":s.st_ino,"size":s.st_size,"mtime_ns":s.st_mtime_ns,"ctime_ns":s.st_ctime_ns})
+ return out
+def load_execution_context(evidence_root:Path)->dict:
+ path=Path(evidence_root)/EXECUTION_CONTEXT_NAME
+ if path.is_symlink() or not path.is_file():raise PilotError("execution context absent; prepare execution first")
+ try:context=json.loads(path.read_bytes())
+ except (OSError,json.JSONDecodeError) as e:raise PilotError("execution context malformed") from e
+ if not isinstance(context,dict) or context.get("schema")!=EXECUTION_SCHEMA:raise PilotError("execution context schema mismatch")
+ return context
+def source_closure(source:Path=SOURCE_ROOT)->dict:
+ """Authenticate committed patch and full working source locally on the physical host."""
+ if not S264.PATCH.is_file() or sha(S264.PATCH.read_bytes())!=SOURCE_PATCH_SHA:raise PilotError("source patch digest drift")
+ if not source.is_dir():raise PilotError("physical source root absent")
+ try:tree=S264.authenticate(source)
+ except (ValueError,OSError) as e:raise PilotError(f"working source tree probe failed: {e}") from e
+ if tree!=SOURCE_TREE:raise PilotError("working source tree drift")
+ if sha((source/S264.VK).read_bytes())!=SOURCE_VK_SHA:raise PilotError("Vulkan source bytes drift")
+ return {"source_root":"inferswarm01:"+str(source),"source_tree":tree,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}
+def prepare_execution(*,repo_root:Path,evidence_root:Path,binary:Path)->dict:
+ root=Path(repo_root);evidence=Path(evidence_root);path=evidence/EXECUTION_CONTEXT_NAME
+ if path.exists() or path.is_symlink():raise PilotError("execution context already exists; refusing overwrite")
+ evidence.mkdir(parents=True,exist_ok=True)
+ head=git(root,"rev-parse","HEAD")
+ if not re.fullmatch(r"[0-9a-f]{40}",head):raise PilotError("invalid local HEAD")
+ binary_sha=verify_source_and_binary(Path(binary));closure=source_closure(SOURCE_ROOT);prompt=frozen_prompt(root)
+ fixture=B250.verify_fixtures(root)
+ request_sha=sha(P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT))
+ stats=model_stat_witness()
+ live=verify_authority(root,{"expected_head":head})
+ branch=git(root,"symbolic-ref","--short","HEAD")
+ context={"schema":EXECUTION_SCHEMA,"expected_head":head,"branch":branch,"pr_number":live["pr"],"issue_number":ISSUE,"issue_body_sha256":live["issue_body_sha256"],"pilot_clause":PILOT_CLAUSE,"source_closure":closure,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":binary_sha,"fixture_payload_sha256":request_sha,"fixture_sha256":sha(canonical(fixture)),"model_stats":stats}
+ payload=canonical(context)+b"\n"
+ try:
+  with path.open("xb") as f:f.write(payload);f.flush();os.fsync(f.fileno())
+ except FileExistsError as e:raise PilotError("execution context already exists; refusing overwrite") from e
+ fd=os.open(evidence,os.O_RDONLY);os.fsync(fd);os.close(fd)
+ return context
+def verify_source_and_binary(binary:Path)->str:
+ ident=json.loads(IDENTITY_PATH.read_text())
+ if ident.get("issue264_tree")!=SOURCE_TREE or ident.get("issue264_vk_sha256")!=SOURCE_VK_SHA or ident.get("patch_sha256")!=SOURCE_PATCH_SHA:raise PilotError("gen2 source identity mismatch")
+ if not S264.PATCH.is_file() or sha(S264.PATCH.read_bytes())!=SOURCE_PATCH_SHA:raise PilotError("source patch digest drift")
+ if not BUILD_IDENTITY.is_file():raise PilotError("build identity absent; refusing binary")
+ b=json.loads(BUILD_IDENTITY.read_text())
+ required={"schema":BUILD_SCHEMA,"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"binary_sha256":BINARY_SHA,"binary_path":"inferswarm01:/home/hermes/is264-mmv-v2/build-i264/bin/llama-server","version":"0.4.1-dev","build_number":10964,"predecessor_commit":"b29c606e28a01b1bc8c1351026a0fa6e616bf6c4","compiler":"GNU 14.2.0","gpu_applications_during_build":[]}
+ if any(b.get(k)!=v for k,v in required.items()):raise PilotError("build identity does not match supplied gen2 build facts")
+ expected=b.get("binary_sha256")
+ if not isinstance(expected,str) or not re.fullmatch("[0-9a-f]{64}",expected):raise PilotError("build identity lacks real comparator SHA-256")
+ if expected!=BINARY_SHA:raise PilotError("build identity binary digest mismatch")
+ if not binary.is_file() or sha(binary.read_bytes())!=expected:raise PilotError("comparator bytes differ from completed build identity")
+ return expected
+def launch_env(arm:str,observer:Path)->dict[str,str]:
+ if arm not in ARMS:raise PilotError("only BASE and H5_MMV_CANDIDATE are permitted")
+ env={"PATH":"/usr/bin:/bin","HOME":"/home/hermes","LANG":"C.UTF-8","CUDA_VISIBLE_DEVICES":"-1","VK_ICD_FILENAMES":"/usr/share/vulkan/icd.d/nvidia_icd.json","GGML_VK_VISIBLE_DEVICES":"0","GGML_VK_MEMORY_LOGGER":"1","LLAMA_OBSERVE_CAPTURE":"8","LLAMA_OBSERVE_OUT":str(observer),"LLAMA_OBSERVE_FORCE":""}
+ env["GGML_VK_I264_MMV"]="base" if arm=="BASE" else "large"
+ return env
+def launch_argv(binary:Path)->list[str]:
+ member=next(iter(C252.MODEL_MEMBERS))
+ return [str(binary),"--model",f"/srv/models/qwen38-ud-iq1-s/{member}","-ngl","1","--ctx-size","8192","--batch-size","512","--host","127.0.0.1","--port","19000","-v"]
+def frozen_prompt(root:Path)->str:
+ fixture=B250.verify_fixtures(root);entry=fixture.get(D.CASE) if isinstance(fixture,dict) else None
+ prompt=entry.get("prompt_text") if isinstance(entry,dict) else None
+ if not isinstance(prompt,str) or not prompt:raise PilotError("frozen case-3072 prompt unavailable")
+ return prompt
+def parse_unit_markers(raw:bytes,arm:str)->dict:
+ if arm not in ARMS:raise PilotError("only BASE and H5_MMV_CANDIDATE are permitted")
+ try:text=raw.decode("utf-8")
+ except UnicodeDecodeError as e:raise PilotError("server log not UTF-8") from e
+ state="base" if arm=="BASE" else "large"
+ try:return H5.parse_unit(text,state=state)
+ except (ValueError,TypeError) as e:raise PilotError(f"invalid actual MMV dispatch: {e}") from e
+def placement_from_log(raw:bytes,env:dict,argv:list[str])->dict:
+ try:return P254._placement_from_log(raw,env,argv)
+ except (P254.ProducerError,UnicodeDecodeError,IndexError) as e:raise PilotError(f"invalid placement: {e}") from e
+def validate_pair(base:dict,candidate:dict)->dict:
+ try:return H5.candidate_transition(base,candidate)
+ except (ValueError,TypeError,KeyError) as e:raise PilotError(str(e)) from e
+def observe_subject()->dict:
+ p=subprocess.run(["nvidia-smi","--query-gpu=name,uuid,pci.bus_id,driver_version","--format=csv,noheader"],capture_output=True,text=True,timeout=20)
+ if p.returncode:raise PilotError("nvidia-smi subject verification failed")
+ wanted=C252.HOST_FACTS
+ for line in p.stdout.splitlines():
+  cells=[x.strip() for x in line.split(",")]
+  if len(cells)==4 and cells[1]==wanted["gpu_uuid"] and cells[2].lower()==wanted["bdf"].lower():return {"gpu":cells[0],"gpu_uuid":cells[1],"bdf":cells[2],"driver":cells[3]}
+ raise PilotError("frozen RTX 3060 UUID/BDF not present")
+def _require_free_port():
+ """Refuse a pre-existing fixed-port service before staging or launch."""
+ try:
+  with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as probe:
+   probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+   probe.bind(("127.0.0.1",19000))
+ except OSError as e:raise PilotError("fixed port 19000 occupied") from e
+def _listener_owned_by(proc)->bool:
+ """Check the loopback listening socket's inode against the child's fds."""
+ if proc.poll() is not None:raise PilotError("server exited before HTTP request")
+ try:
+  listeners=[]
+  for line in Path("/proc/net/tcp").read_text().splitlines()[1:]:
+   fields=line.split()
+   address,port=fields[1].split(":")
+   if port==f"{19000:04X}" and address in ("0100007F","00000000") and fields[3]=="0A":
+    listeners.append(fields[9])
+  if not listeners:return False
+  fds={os.readlink(p) for p in Path(f"/proc/{proc.pid}/fd").iterdir() if p.is_symlink()}
+ except OSError as e:raise PilotError("cannot verify server listener ownership") from e
+ if not all(f"socket:[{inode}]" in fds for inode in listeners):
+  raise PilotError("fixed port listener is not owned by launched server")
+ if proc.poll() is not None:raise PilotError("server exited before HTTP request")
+ return True
+def _healthy(proc,timeout):
+ import urllib.error
+ end=time.monotonic()+timeout
+ while time.monotonic()<end:
+  if proc.poll() is not None:raise PilotError(f"server exited early rc={proc.returncode}")
+  if not _listener_owned_by(proc):time.sleep(1);continue
+  try:
+   with urllib.request.urlopen("http://127.0.0.1:19000/health",timeout=2) as r:
+    if r.status==200:
+     if not _listener_owned_by(proc):raise PilotError("server listener disappeared after health")
+     return
+  except (urllib.error.URLError,OSError):time.sleep(1)
+ raise PilotError("server health timeout")
+def _stop(proc):
+ if proc.poll() is None:
+  try:os.killpg(proc.pid,signal.SIGTERM)
+  except ProcessLookupError:pass
+  try:proc.wait(timeout=15)
+  except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait(timeout=5)
+ if proc.poll() is None:raise PilotError("server process survived cleanup")
+
+def _validate_observer(meta:bytes,rows:list[bytes],response:bytes|None=None)->None:
+ try:records=[json.loads(line) for line in meta.decode("utf-8").splitlines()]
+ except (UnicodeDecodeError,json.JSONDecodeError) as e:raise PilotError("observer metadata malformed") from e
+ if len(records)!=D.DECISIONS or any(not isinstance(r,dict) or set(r)!={"pos","sampled_winner","forced_token","n_vocab"} or type(r.get("pos")) is not int or r["pos"]!=i or type(r.get("sampled_winner")) is not int or not 0<=r["sampled_winner"]<D.N_VOCAB or type(r.get("forced_token")) is not int or r["forced_token"]!=-1 or type(r.get("n_vocab")) is not int or r["n_vocab"]!=D.N_VOCAB for i,r in enumerate(records)):
+  raise PilotError("observer metadata population/order malformed")
+ if len(rows)!=D.DECISIONS or any(not isinstance(row,bytes) or len(row)!=D.ROW_BYTES for row in rows):
+  raise PilotError("observer full-row byte geometry malformed")
+ if response is not None:
+  try:parsed=json.loads(response)
+  except (UnicodeDecodeError,json.JSONDecodeError) as e:raise PilotError("response JSON malformed") from e
+  tokens=parsed.get("tokens") if isinstance(parsed,dict) else None
+  if (not isinstance(tokens,list) or len(tokens)!=D.DECISIONS or any(type(t) is not int or not 0<=t<D.N_VOCAB for t in tokens)
+      or type(parsed.get("tokens_predicted")) is not int or parsed["tokens_predicted"]!=D.DECISIONS
+      or tokens!=[r["sampled_winner"] for r in records]):raise PilotError("response decision population disagrees with observer metadata")
+def validate_execution_freeze(context:dict,*,binary_sha:str,payload_sha:str,fixture_sha:str,model_stats:list[dict])->None:
+ if context.get("source_tree")!=SOURCE_TREE or context.get("source_vk_sha256")!=SOURCE_VK_SHA or context.get("binary_sha256")!=binary_sha:raise PilotError("execution context source/binary identity mismatch")
+ if context.get("source_closure")!={"source_root":"inferswarm01:"+str(SOURCE_ROOT),"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}:raise PilotError("execution context source closure mismatch")
+ if context.get("fixture_payload_sha256")!=payload_sha or context.get("fixture_sha256")!=fixture_sha:raise PilotError("execution context frozen fixture/request mismatch")
+ if context.get("model_stats")!=model_stats:raise PilotError("execution context model stat witness changed")
+
+def retain_failed_attempt(evidence:Path,stage:Path,arm:str,index:int,context_sha:str,phase:str,started:str,ended:str,proc,error:Exception,cleanup_verified:bool)->None:
+ """Create-only failure status outside the untouched staging/published tree."""
+ files={}
+ for p in stage.iterdir():
+  if p.is_symlink() or not p.is_file():raise PilotError("failed staging contains unknown or symlink entry")
+  files[p.name]=sha(p.read_bytes())
+ fd=os.open(stage,os.O_RDONLY);os.fsync(fd);os.close(fd)
+ attempts=evidence/"attempts"
+ if attempts.is_symlink():raise PilotError("attempts directory symlink refused")
+ attempts.mkdir(exist_ok=True)
+ status={"schema":"inferswarm.issue264.failed-attempt/1","arm":arm,"unit_index":index,"execution_context_sha256":context_sha,"phase":phase,"started_at":started,"ended_at":ended,"pid":proc.pid if proc else None,"process_exit":{"returncode":proc.returncode if proc else None,"cleanup_verified":cleanup_verified},"error_type":type(error).__name__,"error":str(error),"staging_path":str(stage.relative_to(evidence)),"staging_files":files}
+ with (attempts/f"{arm}-{index:03d}.failed.json").open("xb") as f:f.write(canonical(status)+b"\n");f.flush();os.fsync(f.fileno())
+ fd=os.open(attempts,os.O_RDONLY);os.fsync(fd);os.close(fd)
+
+def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:int,timeout_s:float=900)->dict:
+ """Run one actual unit; all authority and execution identity are internal."""
+ if arm not in ARMS or unit_index not in (1,2,3):raise PilotError("invalid arm/unit")
+ root=Path(repo_root);evidence=Path(evidence_root);context=load_execution_context(evidence);verify_authority(root,context);binary_sha=verify_source_and_binary(Path(binary))
+ if source_closure(SOURCE_ROOT)!=context.get("source_closure"):raise PilotError("working source closure differs from frozen execution context")
+ fixture=B250.verify_fixtures(root);prompt=frozen_prompt(root);payload=P254.execution_payload_bytes(prompt,D.REQUEST_CONTRACT)
+ fixture_sha=sha(canonical(fixture));payload_sha=sha(payload);model_pre=model_stat_witness()
+ validate_execution_freeze(context,binary_sha=binary_sha,payload_sha=payload_sha,fixture_sha=fixture_sha,model_stats=model_pre)
+ subject=observe_subject()
+ context_sha=sha(canonical(context))
+ pre=I248.observe_arm_identity("B");problems=I248.identity_problems("B",pre)
+ if problems:raise PilotError(f"pre-launch identity drift: {problems}")
+ if evidence.is_symlink() or not evidence.is_dir() or any(p.is_symlink() or p.name not in {EXECUTION_CONTEXT_NAME,*ARMS,"attempts"} for p in evidence.iterdir()):raise PilotError("unknown or symlink evidence root entry")
+ for name in ARMS:load_completed_units(evidence,name)
+ target=evidence/arm/ f"unit-{unit_index:03d}";stage=evidence/arm/ f".unit-{unit_index:03d}.staging"
+ if target.exists() or target.is_symlink() or stage.exists() or stage.is_symlink():raise PilotError("unit destination/staging already exists")
+ completed=load_completed_units(evidence,arm)
+ if len(completed)!=unit_index-1:raise PilotError("units must replay a contiguous legal prefix")
+ if completed and completed[-1]["row_digest"]!=completed[0]["row_digest"] and unit_index>2:raise PilotError("repeat law forbids continuing after mismatch")
+ if unit_index==3 and (len(completed)!=2 or completed[0]["row_digest"]!=completed[1]["row_digest"]):raise PilotError("unit 003 allowed only after two matching full-row digests")
+ _require_free_port()
+ stage.mkdir(parents=True)
+ env=launch_env(arm,stage/"obs");argv=launch_argv(Path(binary));log=stage/"server.log";proc=None
+ phase="launch";started=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime());cleanup_verified=False
+ try:
+  with (stage/"request.json").open("xb") as f:f.write(payload);f.flush();os.fsync(f.fileno())
+  try:
+   with log.open("wb") as fp:
+    proc=subprocess.Popen(argv,env=dict(env),stdout=fp,stderr=subprocess.STDOUT,start_new_session=True)
+    phase="health";_healthy(proc,timeout_s)
+    actual=[x.decode("utf-8","surrogateescape") for x in Path(f"/proc/{proc.pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")]
+    if actual!=argv:raise PilotError("live argv mismatch")
+    live=dict(x.split(b"=",1) for x in Path(f"/proc/{proc.pid}/environ").read_bytes().split(b"\0") if b"=" in x)
+    if live!={k.encode():v.encode() for k,v in env.items()}:raise PilotError("live process environment differs from exact allowlist")
+    phase="completion"
+    if not _listener_owned_by(proc):raise PilotError("server listener disappeared before completion")
+    req=urllib.request.Request("http://127.0.0.1:19000/completion",data=payload,headers={"Content-Type":"application/json"},method="POST")
+    with urllib.request.urlopen(req,timeout=timeout_s) as response:
+     if response.status!=200:raise PilotError("completion request failed")
+     response_bytes=response.read(16*1024*1024)
+    with (stage/"response.json.raw").open("xb") as f:f.write(response_bytes);f.flush();os.fsync(f.fileno())
+    phase="observer";meta=(stage/"obs.meta.json").read_bytes();rows=[(stage/f"obs.row{i}.f32").read_bytes() for i in range(D.DECISIONS)]
+    _validate_observer(meta,rows,response_bytes)
+    post=I248.observe_arm_identity("B");problems=I248.identity_problems("B",post)
+    if problems:raise PilotError(f"post-unit identity drift: {problems}")
+  finally:
+   if proc is not None:_stop(proc)
+   cleanup_verified=True
+  phase="postflight";model_post=model_stat_witness()
+  if model_post!=model_pre:raise PilotError("model stat witness changed during unit")
+  verify_authority(root,context)
+  server_log=log.read_bytes();placement=placement_from_log(server_log,env,argv);markers=parse_unit_markers(server_log,arm)
+  transition=None
+  if arm=="H5_MMV_CANDIDATE":
+   bases=load_completed_units(evidence,"BASE")
+   if not bases:raise PilotError("candidate requires retained BASE unit from same exact identity")
+   transition=validate_pair(bases[0]["markers"],markers)
+  ended=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
+  record={"schema":PILOT_SCHEMA,"arm":arm,"unit_index":unit_index,"execution_context_sha256":context_sha,"expected_head":context["expected_head"],"model_stats_pre":model_pre,"model_stats_post":model_post,"fixture_payload_sha256":payload_sha,"binary_sha256":binary_sha,"source_tree":SOURCE_TREE,"subject":subject,"argv":argv,"env":env,"placement":placement,"request_sha256":payload_sha,"request_raw":payload,"response_sha256":sha(response_bytes),"response_raw":response_bytes,"server_log_sha256":sha(server_log),"server_log":server_log,"observer_meta_sha256":sha(meta),"observer_meta":meta,"row_sha256":[sha(x) for x in rows],"row_digest":sha(b"".join(rows)),"observer_rows":rows,"identity_pre":pre,"identity_post":post,"markers":markers,"transition":transition,"process_exit":{"returncode":proc.returncode,"cleanup_verified":True},"started_at":started,"completed_at":ended,"fixture_sha256":fixture_sha}
+  phase="publication";verify_authority(root,context);publish_unit(stage,target,record)
+ except Exception as e:
+  failed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())
+  if stage.is_dir() or target.is_dir():retain_failed_attempt(evidence,stage if stage.is_dir() else target,arm,unit_index,context_sha,phase,started,failed_at,proc,e,cleanup_verified)
+  raise
+ return {k:record[k] for k in ("arm","unit_index","row_digest","response_sha256","server_log_sha256","markers")}
+def publish_unit(stage:Path,target:Path,r:dict)->None:
+ files={"request.json":r["request_raw"],"response.json.raw":r["response_raw"],"server.log":r["server_log"],"obs.meta.json":r["observer_meta"],"identity-pre.json":canonical(r["identity_pre"]),"identity-post.json":canonical(r["identity_post"]),"markers.json":canonical(r["markers"]),"unit.json":canonical({k:v for k,v in r.items() if k not in {"request_raw","response_raw","server_log","observer_meta","observer_rows","identity_pre","identity_post","markers"}})+b"\n"}
+ for i,data in enumerate(r["observer_rows"]):files[f"obs.row{i}.f32"]=data
+ for name,data in files.items():
+  path=stage/name
+  if path.exists():
+   if path.is_symlink() or not path.is_file() or path.read_bytes()!=data:raise PilotError(f"staged bytes differ from retained record: {name}")
+  else:
+   with path.open("xb") as f:f.write(data);f.flush();os.fsync(f.fileno())
+ hashmap={n:sha(b) for n,b in sorted(files.items())}
+ manifest=stage/"files.sha256.json";manifest_bytes=canonical(hashmap)+b"\n"
+ if manifest.exists():
+  if manifest.is_symlink() or not manifest.is_file() or manifest.read_bytes()!=manifest_bytes:raise PilotError("staged file manifest differs from retained record")
+ else:
+  with manifest.open("xb") as f:f.write(manifest_bytes);f.flush();os.fsync(f.fileno())
+ fd=os.open(stage,os.O_RDONLY);os.fsync(fd);os.close(fd)
+ os.rename(stage,target)
+ fd=os.open(target.parent,os.O_RDONLY);os.fsync(fd);os.close(fd)
+def load_completed_units(root:Path,arm:str)->list[dict]:
+ if arm not in ARMS:raise PilotError("invalid arm")
+ attempts=Path(root)/"attempts"
+ if attempts.is_symlink():raise PilotError("attempts directory symlink refused")
+ if attempts.is_dir() and any(attempts.glob(f"{arm}-*.failed.json")):raise PilotError("failed attempt receipt prevents completed-unit accounting")
+ parent=Path(root)/arm
+ if not parent.exists():return []
+ if parent.is_symlink():raise PilotError("arm directory symlink refused")
+ allowed={f"unit-{i:03d}" for i in range(1,4)}
+ for p in parent.iterdir():
+  if p.is_symlink() or p.name.endswith(".staging") or p.name not in allowed:raise PilotError("orphan, symlink or unexpected retained entry")
+ out=[]
+ for i in range(1,4):
+  p=parent/f"unit-{i:03d}"
+  if not p.exists():
+   if any((parent/f"unit-{j:03d}").exists() for j in range(i+1,4)):raise PilotError("non-contiguous retained units")
+   break
+  if p.is_symlink() or not p.is_dir():raise PilotError("invalid unit path")
+  hashes=json.loads((p/"files.sha256.json").read_text());expected={"request.json","response.json.raw","server.log","obs.meta.json","identity-pre.json","identity-post.json","markers.json","unit.json",*(f"obs.row{x}.f32" for x in range(8))}
+  if set(hashes)!=expected or set(x.name for x in p.iterdir())!=expected|{"files.sha256.json"}:raise PilotError("retained file inventory mismatch")
+  if any((p/n).is_symlink() for n in hashes):raise PilotError("retained file symlink refused")
+  files={n:(p/n).read_bytes() for n in hashes}
+  if any(sha(data)!=hashes[n] for n,data in files.items()):raise PilotError("retained byte hash mismatch")
+  meta=json.loads(files["unit.json"])
+  if sha(files["request.json"])!=meta.get("request_sha256") or sha(files["response.json.raw"])!=meta.get("response_sha256") or sha(files["server.log"])!=meta.get("server_log_sha256") or sha(files["obs.meta.json"])!=meta.get("observer_meta_sha256"):raise PilotError("retained request/response/log/meta digest mismatch")
+  context=load_execution_context(root)
+  context_sha=sha(canonical(context))
+  if context.get("source_closure")!={"source_root":"inferswarm01:"+str(SOURCE_ROOT),"source_tree":SOURCE_TREE,"source_vk_sha256":SOURCE_VK_SHA,"source_patch_sha256":SOURCE_PATCH_SHA}:raise PilotError("retained source closure mismatch")
+  if (meta.get("execution_context_sha256")!=context_sha
+      or meta.get("expected_head")!=context.get("expected_head")
+      or meta.get("fixture_payload_sha256")!=context.get("fixture_payload_sha256")
+      or meta.get("fixture_sha256")!=context.get("fixture_sha256")
+      or meta.get("source_tree")!=context.get("source_tree")
+      or meta.get("binary_sha256")!=context.get("binary_sha256")):
+   raise PilotError("retained unit differs from bound execution context")
+  if (meta.get("source_tree")!=SOURCE_TREE or meta.get("binary_sha256")!=BINARY_SHA
+      or meta.get("model_stats_pre")!=context.get("model_stats")
+      or meta.get("model_stats_post")!=context.get("model_stats")):
+   raise PilotError("retained source/binary/model stat identity mismatch")
+  rows=[files[f"obs.row{x}.f32"] for x in range(D.DECISIONS)]
+  _validate_observer(files["obs.meta.json"],rows,files["response.json.raw"])
+  if len(rows)!=8 or sha(b"".join(rows))!=meta.get("row_digest") or [sha(x) for x in rows]!=meta.get("row_sha256"):raise PilotError("retained full-row digest mismatch")
+  markers=json.loads(files["markers.json"]); log=files["server.log"]
+  state="base" if arm=="BASE" else "large"
+  if H5.parse_unit(log.decode("utf-8"),state=state)!=markers:raise PilotError("retained dispatch parse mismatch")
+  if meta.get("placement")!=placement_from_log(log,meta.get("env",{}),meta.get("argv",[])):raise PilotError("retained placement parse mismatch")
+  if meta.get("schema")!=PILOT_SCHEMA or meta.get("arm")!=arm or meta.get("unit_index")!=i:raise PilotError("retained unit identity mismatch")
+  exit_facts=meta.get("process_exit",{})
+  if exit_facts.get("cleanup_verified") is not True or not isinstance(exit_facts.get("returncode"),int):raise PilotError("retained process cleanup fact missing")
+  pre=json.loads(files["identity-pre.json"]);post=json.loads(files["identity-post.json"])
+  if I248.identity_problems("B",pre) or I248.identity_problems("B",post):raise PilotError("retained identity snapshot is invalid")
+  fixture=B250.verify_fixtures(Path(__file__).resolve().parents[1]);entry=fixture.get(D.CASE,{})
+  request_bytes=P254.execution_payload_bytes(entry.get("prompt_text"),D.REQUEST_CONTRACT) if isinstance(entry.get("prompt_text"),str) else b""
+  if files["request.json"]!=request_bytes or meta.get("fixture_payload_sha256")!=sha(request_bytes) or meta.get("fixture_sha256")!=sha(canonical(fixture)):raise PilotError("retained frozen fixture/request mismatch")
+  if not isinstance(meta.get("execution_context_sha256"),str) or not re.fullmatch(r"[0-9a-f]{64}",meta["execution_context_sha256"]) or not re.fullmatch(r"[0-9a-f]{40}",str(meta.get("expected_head",""))):raise PilotError("retained execution context identity missing")
+  if meta.get("model_stats_pre")!=meta.get("model_stats_post") or not isinstance(meta.get("model_stats_pre"),list) or len(meta["model_stats_pre"])!=len(C252.MODEL_MEMBERS):raise PilotError("retained model stat witnesses differ or malformed")
+  argv=meta.get("argv")
+  env=meta.get("env")
+  if (not isinstance(argv,list) or not argv or not isinstance(env,dict)
+      or argv!=launch_argv(Path(argv[0]))
+      or env!=launch_env(arm,Path(env.get("LLAMA_OBSERVE_OUT","")))):
+   raise PilotError("retained launch identity mismatch")
+  out.append({**meta,"markers":markers,"row_digest":sha(b"".join(rows)),"row_bytes":rows,"response_sha256":sha(files["response.json.raw"]),"response_raw":files["response.json.raw"],"observer_meta_sha256":sha(files["obs.meta.json"]),"server_log_sha256":sha(log)})
+ return out
+def screen_class(units:list[dict])->str:
+ if any(units[i]["row_digest"]!=units[i-1]["row_digest"] for i in range(1,len(units))):return "screening-variable"
+ if len(units)==3:return "screening-stable"
+ return "matching-prefix" if units else "not-run"
+def run_arm(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,timeout_s:float=900)->dict:
+ """Execute/replay one complete arm under the fixed 2/3-unit screening law."""
+ if arm not in ARMS:raise PilotError("only BASE and H5_MMV_CANDIDATE are permitted")
+ evidence=Path(evidence_root);context=load_execution_context(evidence)
+ if arm=="H5_MMV_CANDIDATE":
+  base=load_completed_units(evidence,"BASE")
+  if screen_class(base) not in ("screening-variable","screening-stable"):raise PilotError("finish BASE screening prefix before candidate arm")
+ units=load_completed_units(evidence,arm)
+ if screen_class(units) in ("screening-variable","screening-stable"):return {"arm":arm,"units":len(units),"classification":screen_class(units)}
+ while len(units)<MAX_UNITS:
+  ix=len(units)+1
+  run_unit(repo_root=repo_root,evidence_root=evidence,arm=arm,binary=binary,unit_index=ix,timeout_s=timeout_s)
+  units=load_completed_units(evidence,arm)
+  if len(units)>=2 and units[0]["row_digest"]!=units[1]["row_digest"]:break
+  if len(units)==MAX_UNITS:break
+ return {"arm":arm,"units":len(units),"classification":screen_class(units)}
+def main()->None:
+ import argparse
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument("--repo-root",type=Path,required=True);p.add_argument("--evidence-root",type=Path,required=True);p.add_argument("--binary",type=Path,required=True);p.add_argument("--arm",choices=ARMS,required=True);p.add_argument("--timeout",type=float,default=900);a=p.parse_args()
+ print(json.dumps(run_arm(repo_root=a.repo_root,evidence_root=a.evidence_root,arm=a.arm,binary=a.binary,timeout_s=a.timeout),sort_keys=True))
+if __name__=="__main__":main()

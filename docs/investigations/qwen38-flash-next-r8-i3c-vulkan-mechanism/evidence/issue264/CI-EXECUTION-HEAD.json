@@ -1,0 +1,159 @@
+{
+  "all_success": true,
+  "check_count": 15,
+  "checks": [
+    {
+      "completed_at": "2026-10-03T04:30:33Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111128176020",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111128176020,
+      "name": "CI Gate",
+      "started_at": "2026-10-03T04:30:30Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:37Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810869",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810869,
+      "name": "Group issue-209-r7b",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:23:19Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810867",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810867,
+      "name": "Group issue-222-r7c",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:39Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810850",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810850,
+      "name": "Group issue-187-r7a",
+      "started_at": "2026-10-03T04:22:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:30Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810836",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810836,
+      "name": "Group r8-qwen-lineage",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:23:28Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810835",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810835,
+      "name": "Group issue-99-103",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:58Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810773",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810773,
+      "name": "Group issue-213-gate-ordering",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:49Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810770",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810770,
+      "name": "Group issue-109-110",
+      "started_at": "2026-10-03T04:22:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:30:27Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810762",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810762,
+      "name": "Group r8i-qwen-qualification",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:29Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810739",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810739,
+      "name": "Group issue-83-95",
+      "started_at": "2026-10-03T04:22:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:40Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810717",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810717,
+      "name": "Group issue-74-79",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:22:40Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810710",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810710,
+      "name": "Group issue-115-cleanup",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:24:41Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810686",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810686,
+      "name": "Group repo-integrity (always-on)",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:23:17Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126810678",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126810678,
+      "name": "Group issue-117-133",
+      "started_at": "2026-10-03T04:22:01Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-03T04:21:59Z",
+      "conclusion": "success",
+      "details_url": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37096246862/job/111126665627",
+      "head_sha": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+      "id": 111126665627,
+      "name": "Plan CI (impact selection)",
+      "started_at": "2026-10-03T04:21:43Z",
+      "status": "completed"
+    }
+  ],
+  "head": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+  "schema": "inferswarm.issue264.execution-head-hosted-ci/1",
+  "scope": "Hosted CI on physical execution head only; later final publication head must be verified separately. Full CPU Validation awaits maintainer GO."
+}

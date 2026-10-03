@@ -1,0 +1,219 @@
+{
+  "schema": "is264-h5-mmv-candidate-audit/4",
+  "authority": {
+    "issue": 264,
+    "state": "OPEN",
+    "body_retrieval": "authenticated public GitHub API; complete issue body reviewed",
+    "scope": "one minimal experiment-only BASE/alternate selector at actual DMMV workgroup selection; no production selector, general capability enumeration, inference, GPU dispatch, or CI/reducer changes authorized by this source audit",
+    "physical_execution": "conditional on separate current pre-execution gate; this document grants no execution authority"
+  },
+  "source_identity": {
+    "identity_file": "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json",
+    "issue264_tree": "23d38b96e371ad0634454d7bd6fe238da87eb1cb",
+    "issue264_vk_sha256": "551b6e7fd963fbf9cada48510df201cfa4bffa6a64bf4ea1d6d11d9e66999ebe",
+    "parent_tree": "015c874f0cc0635fa1369650098c0137f9a492f0",
+    "patch_sha256": "f713767755cd40ee279aba6d4e72648c317e73a334d565a6cd0f176284e3226e",
+    "historical_gen1_tree_preserved": "2d7a5693a8bf86648ee564d389a32c7c1671c571"
+  },
+  "subject": {
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "bdf": "00000000:03:00.0",
+    "subgroup_size": 32,
+    "max_compute_workgroup_invocations": 1024
+  },
+  "frozen_operation": {
+    "weight": "output.weight",
+    "route": "mat-vec",
+    "pipeline": "mul_mat_vec_q4_k_f32_f32",
+    "quant_y": 0,
+    "split_k": 0,
+    "dimensions": "2560x248320:2560x1->248320x1",
+    "types": "q4_K*f32->f32"
+  },
+  "required_candidate_fields": [
+    "id",
+    "site",
+    "exact_pipelines",
+    "frozen_eligibility",
+    "one_factor",
+    "subject_capability",
+    "disposition",
+    "reason"
+  ],
+  "candidates": [
+    {
+      "id": "DMMV_WORKGROUP_SUBGROUP_TO_LARGE",
+      "site": "ggml_vk_get_dequantize_mul_mat_vec: existing dmmv_wg selection, before returning the existing f32/f32 DMMV pipeline",
+      "exact_pipelines": {
+        "shared_name": "mul_mat_vec_q4_k_f32_f32",
+        "base": {
+          "workgroup": "SUBGROUP",
+          "reduction": "SUBGROUP",
+          "local_size": [
+            32,
+            1,
+            1
+          ]
+        },
+        "alternate": {
+          "workgroup": "LARGE",
+          "reduction": "HYBRID",
+          "local_size": [
+            128,
+            1,
+            1
+          ]
+        }
+      },
+      "frozen_eligibility": "output.weight; mat-vec; q4_K*f32->f32; quant_y=0; split_k=0; dimensions 2560x248320:2560x1->248320x1",
+      "one_factor": "Only existing DMMV workgroup/reduction variant changes. Preserve route, shared pipeline name, types, quantization, split_k, all dimensions, model/request, and device placement. Emit an exact dispatch marker identifying final dmmv_wg and reduction variant because pipeline name is shared.",
+      "subject_capability": "RTX 3060 subgroup 32; local sizes 32 and 128 invocations are within reported maximum 1024. Existing compiled SPIR-V forms were retained and spirv-val validated; no new build, Vulkan pipeline creation, or dispatch is claimed.",
+      "disposition": "LIVE_CANDIDATE",
+      "reason": "Source shows frozen M=248320 misses NVIDIA post-Turing LARGE heuristic cutoff M<=8192, so baseline is SUBGROUP; both existing enum choices instantiate the exact q4_K/f32 DMMV pipeline. Existing artifacts map BASE SUBGROUP to subgroup/no-shared-memory and alternate LARGE to HYBRID subgroup-plus-shared-memory reduction. This is the single live minimal experiment switch authorized by issue #264; ranked 3, not rank 1, because runtime/env and CLI controls were prioritized ahead of this source-level switch."
+    },
+    {
+      "id": "GGML_VK_DISABLE_MMVQ",
+      "site": "Vulkan MMVQ eligibility/environment gate",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32; quant_y=0"
+      },
+      "frozen_eligibility": "Frozen route is already unquantized-Y f32 DMMV, not MMVQ.",
+      "one_factor": "Environment control only; cannot switch this already non-MMVQ route.",
+      "subject_capability": "No alternate frozen pipeline selected by this control.",
+      "disposition": "DEAD_FOR_FROZEN_PATH",
+      "reason": "No path transition for frozen quant_y=0 route."
+    },
+    {
+      "id": "GGML_VK_FORCE_MMVQ",
+      "site": "Vulkan MMVQ path selection",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32",
+        "forced": "MMVQ Q8_1-RHS path"
+      },
+      "frozen_eligibility": "Frozen source RHS is f32 with quant_y=0.",
+      "one_factor": "Would change RHS quantization/type and pipeline identity, not one factor under frozen operation.",
+      "subject_capability": "Not eligible as exact frozen pipeline comparison.",
+      "disposition": "REJECTED_NOT_ONE_FACTOR",
+      "reason": "Changes operation type/quantization rather than only the existing DMMV workgroup variant."
+    },
+    {
+      "id": "GGML_VK_DISABLE_INTEGER_DOT_PRODUCT",
+      "site": "MMVQ eligibility/capability gate",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32"
+      },
+      "frozen_eligibility": "Frozen quant_y=0 route is not gated into another implementation by this MMVQ control.",
+      "one_factor": "Environment control only; no frozen-path alternative transition.",
+      "subject_capability": "No relevant alternate selected for this operation.",
+      "disposition": "DEAD_FOR_FROZEN_PATH",
+      "reason": "Does not switch the observed unquantized DMMV implementation."
+    },
+    {
+      "id": "GGML_VK_DISABLE_COOPMAT2",
+      "site": "Cooperative-matrix capability / mat-mat dispatch gate",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32"
+      },
+      "frozen_eligibility": "Frozen operation is mat-vec, not mat-mat.",
+      "one_factor": "Changes a control unrelated to frozen DMMV selection.",
+      "subject_capability": "Subject capability enumeration does not establish a selected shader on this vector route.",
+      "disposition": "DEAD_FOR_FROZEN_PATH",
+      "reason": "Coopmat2 is not the control for the observed MMV pipeline."
+    },
+    {
+      "id": "GGML_VK_SERIALIZE_SUBMISSIONS",
+      "site": "ggml_vk_submit: existing device->serialize_submissions conditional queue synchronization branch",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32; unchanged"
+      },
+      "frozen_eligibility": "Environment variable GGML_VK_SERIALIZE_SUBMISSIONS sets device->serialize_submissions; branch serializes queue submissions and does not select MMV shader/workgroup.",
+      "one_factor": "Changes queue submission synchronization, not the selected MMV pipeline/workgroup.",
+      "subject_capability": "No pipeline transition expected or source-supported.",
+      "disposition": "DEAD_FOR_FROZEN_PATH",
+      "reason": "Exact source branch is queue synchronization only; no MMV pipeline/workgroup transition for the frozen path."
+    },
+    {
+      "id": "GGML_VK_PREFER_HOST_MEMORY",
+      "site": "Vulkan allocation-placement branch: GGML_VK_PREFER_HOST_MEMORY (issue #262 source control; allocator memory-type selection)",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32; unchanged"
+      },
+      "frozen_eligibility": "Frozen DMMV pipeline may allocate buffers under this placement policy; it does not select a different MMV pipeline/workgroup.",
+      "one_factor": "Changes allocation placement policy, not the MMV pipeline/workgroup factor.",
+      "subject_capability": "Reported memory types do not make this an independent MMV implementation selector.",
+      "disposition": "REJECTED_NOT_ONE_FACTOR",
+      "reason": "Allocation-placement branch only; not an MMV pipeline change under frozen operation."
+    },
+    {
+      "id": "GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM",
+      "site": "Vulkan allocation-placement branch: GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM (issue #262 source control; allocator memory-type selection)",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32; unchanged"
+      },
+      "frozen_eligibility": "Frozen DMMV pipeline may allocate buffers under this placement policy; it does not select a different MMV pipeline/workgroup.",
+      "one_factor": "Changes allocation placement policy, not the MMV pipeline/workgroup factor.",
+      "subject_capability": "Reported device-local memory availability does not make this an independent MMV implementation selector.",
+      "disposition": "REJECTED_NOT_ONE_FACTOR",
+      "reason": "Allocation-placement branch only; not an MMV pipeline change under frozen operation."
+    },
+    {
+      "id": "SUBGROUP_ARITHMETIC_REDUCTION",
+      "site": "Existing DMMV implementation's automatic subgroup-arithmetic capability branch during implementation/workgroup resolution; no independent frozen-path control exposed",
+      "exact_pipelines": {
+        "frozen": "mul_mat_vec_q4_k_f32_f32; BASE SUBGROUP/SUBGROUP and alternate LARGE/HYBRID remain the only planned pair"
+      },
+      "frozen_eligibility": "Capability may be automatically selected by source/device capability; no separate user-visible control is exposed for this frozen operation.",
+      "one_factor": "No independent selector changes only subgroup arithmetic while holding the selected DMMV implementation and other factors fixed.",
+      "subject_capability": "Capability enumeration is not an exposed intervention and does not establish a distinct dispatch candidate.",
+      "disposition": "REJECTED_NOT_ONE_FACTOR",
+      "reason": "Automatic capability branch with no independently controllable one-factor intervention; not a separate live candidate."
+    }
+  ],
+  "ranking": {
+    "selected_candidate_rank": 3,
+    "priority_order": [
+      "runtime/environment controls",
+      "CLI controls",
+      "minimal source switch"
+    ],
+    "note": "No earlier environment control is live for this exact frozen path."
+  },
+  "scope": "Pinned source audit only; no implementation, build, inference, GPU dispatch, physical outcome, or protected R8-J material.",
+  "workload_repeat_law": {
+    "fixture_authority": "accepted Issue #250 scripts/issue250_physical.py::verify_fixtures(repo_root)",
+    "fixture_ladder_path": "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json",
+    "fixture_ladder_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+    "case": "case-3072",
+    "prompt_tokens": 3077,
+    "request_contract": {
+      "cache_prompt": false,
+      "n_predict": 8,
+      "return_tokens": true,
+      "samplers": [
+        "top_k"
+      ],
+      "seed": 0,
+      "stream": false,
+      "temperature": 0.0,
+      "top_k": 1
+    },
+    "producer_rule": "freeze canonical execution-payload digest from accepted request plus exact verified prompt before launch and revalidate before launch; caller prompt forbidden",
+    "observer_rows": {
+      "count": 8,
+      "decision_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "bytes_each": 993280,
+      "comparison": "sha256(row_bytes[0] || row_bytes[1] || ... || row_bytes[7]) in decision-index order",
+      "screening": "compare first two; mismatch stops at two as screening-variable; match runs third; any third mismatch is screening-variable; three equal is screening-stable; maximum three attempts"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "accepted_inventory_sha256": "806160f67aeff84d2b4d1531d65e582cd7e599cdf601aad877d70f83924f6038",
+  "accepted_preflight_postflight_byte_inventories_equal": true,
+  "controller_postflight_sha256": "e377433931e10baa7246d6382d3dcc1e6f653480fd656303e064d15b7faea0c8",
+  "controller_preflight_sha256": "4a0c2550e4a19ae0fbcf85603284a21a79d43af274b37153bbd9f01e37f6e872",
+  "execution_context_sha256": "6fbd22f768ae92b1e6f8421c305dbe79fdcec631a029661df6821b2927905fb7",
+  "execution_head": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+  "gpu_applications_after_pilot": [],
+  "historical_file_count": 150,
+  "historical_root": "inferswarm01:/home/hermes/is262-evidence",
+  "new_inventory_sha256": "cd8c7d7485fde0f84c8b80c329e86da527d21ff6ceda4864fa0b876983b5990f",
+  "new_retained_file_count": 69,
+  "new_retained_root": "inferswarm01:/home/hermes/is264-evidence",
+  "port19000_after_pilot": "free",
+  "remote_local_new_retained_bytes_equal": true,
+  "schema": "inferswarm.issue264.controller-preservation/1",
+  "scope": "Controller evidence complements the pure report external-pending preservation field; no production authority is minted.",
+  "status": "verified"
+}
