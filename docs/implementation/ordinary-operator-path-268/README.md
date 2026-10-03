@@ -1,31 +1,13 @@
-# Issue #268 — ordinary operator path (design mapping)
+# Issue #268 Task 2 — internal configuration and strategy seam
 
-**Status:** design/mapping only; implementation, physical Stage 4 acceptance, and Final CPU Validation remain pending. The accepted predecessor is Issue #255 `MVP_DISTRIBUTED_INFERENCE_PASS`, accepted by the maintainer closure at https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991. Its bounded authority is homogeneous NVIDIA/CUDA, `inferswarm01` RTX 3060 + `inferswarm04` RTX 3090, exact Qwen3.8-Flash-Next-UD-IQ1_S three-part release, llama.cpp `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`, fixed/manual whole-layer placement, participant-local verified backing, ordinary text generation and repeatability. It does not establish numerical equivalence, mixed-vendor or production readiness, dynamic scheduling, performance superiority, or R8-J/Vulkan authority.
+This stage provides CPU-pure configuration parsing, immutable plan construction and llama.cpp argument binding only. It performs no filesystem backing verification, executable hashing, process launch, network request, or physical execution.
 
-## Current gap and proposed entrypoint
+## Exported API
 
-At the accepted #267 merge base there is no ordinary InferSwarm CLI/runtime package; repository scripts are evidence tooling. The proposed entrypoint is `python -m inferswarm.operator run --config <path>`; this is a design proposal, not an existing command. Operators should not invoke `tools/issue255_mvp/*.py` as the product entrypoint.
+`inferswarm.operator.config` exports `OperatorConfig`, `ModelIdentity`, `Participant`, `Placement`, `parse_config(mapping)`, and `load_config(path)`. JSON schema is `operator-config/1`, with exact top-level keys: `schema`, `plan_id`, `model`, `participants`, `strategy_id`, `placement`, `request`. Model keys: `source_id`, `revision`, `representation`, `members` (nonempty `{name,sha256}` array). Participant keys: `node_id`, `compute_id`, `transport`, `address`, `device`, `source_id`, `source_revision`, and `source_representation` (which must match the model identity), `source_path`, `runtime_executable`, `runtime_sha256`, `cache_path`, `port`, `lifecycle_dir`. Placement rows have `unit_id`, `compute_id`, `native_args`; request keys are `prompt`, `max_tokens`, `temperature`. IDs and values are operator-supplied opaque strings; malformed digest/port/type, duplicate identities, unknown compute references and unknown/missing keys fail closed. Source/cache paths and expected digests are descriptors; parsing does not establish presence or verified bytes. `backing_verified` is always false at this seam.
 
-Configuration/plan concepts remain model-independent and internal/experimental: opaque model/source identity; client/local and remote participant Node/Compute Unit identities; per-participant backing/source paths; explicit fixed immutable placement; generation/request settings. Proposed seams are config validation → immutable operator-authorized plan → participant source/backing identity verification → bounded runtime adapter for connect/startup/readiness/generation/owned-process cleanup → response and structured plan/source/observed-placement receipt. Do not freeze broad public APIs.
+`inferswarm.operator.plan` exports `OperatorPlan` and `build_plan(config)`. Its `digest` is SHA-256 of compact, key-sorted canonical JSON for the validated operator-authorized plan. Nested collections are tuples/frozen records.
 
-## Mapping from #255
+`inferswarm.operator.strategy` exports `LaunchSpec` and `llama_cpp_spec(plan)`. The adapter accepts only the explicit `llama.cpp` strategy with two participants, both CUs explicitly represented in placement, and one `rpc` transport. It returns the selected local executable and expected digest, remote endpoint, device string, operator-provided native placement args, and exact expected placement; it launches nothing. Runtime-specific legality and actual placement observation remain for the next task.
 
-| #255 mechanic | Ordinary product responsibility | Retain as measurement-only evidence |
-|---|---|---|
-| Select source, participants, manual whole-layer split, backing roots, request settings | Operator config and explicit fixed-plan validation | Exact tested host/model/runtime facts remain attributed to #255 |
-| Start/connect client and RPC participant, readiness, request, completion | Bounded adapter and ordinary request surface; own/clean only processes created by that invocation | Benchmark harness request instrumentation is not runtime startup |
-| Select and verify participant-local backing | Bind source to each participant and fail closed on missing/wrong identity; report source provenance | `prestage.py` GGUF tensor indexing/cache-key logic is not product behavior unless separately justified |
-| Attribute execution and lifecycle | Return selected/observed placement and bounded ownership outcome | GPU sampling, TCP/strace attribution, benchmark/repeatability matrix and evidence reduction remain acceptance ceremony |
-
-Keep distinctions explicit: **source** identifies authorized immutable content; **cache/backing** is where verified bytes can be read; **staging** is movement into a target; **residency** is loaded state; **execution** is where computation occurs. One does not prove another.
-
-Generic planner/fabric logic receives opaque identities and the operator-authorized plan; it must not branch on Qwen/model names, GPU vendor/model, hostname, or issue number. Runtime-native flags, GGUF/cache details belong behind the bounded backend adapter. Do not import or invoke the #255 experiment harness from product code, and do not transplant its measurement ceremony.
-
-## Phases and limits
-
-1. This task reconciles accepted #255 living status and supplies the architecture mapping.
-2. Follow-up implementation tasks establish the narrow config/plan/adapter and focused CPU tests.
-3. Local and hosted CI must pass before physical Stage 4; only then can bounded physical acceptance be considered under Issue #268 authority.
-4. Final CPU Validation remains after explicit maintainer GO. Living status is informational and grants no execution permission.
-
-#268 is not accepted here. Its eventual acceptance requires the issue's ordinary-path implementation, focused tests, hosted CI, and bounded authorized physical criteria (three fresh requests, both GPUs materially participating, verified remote local backing, and bounded process ownership). No equivalence, mixed-vendor, production, dynamic-scheduling, performance-superiority, or Vulkan/R8-J claim is made.
+No model-name/vendor/hostname policy, automatic fallback, placement synthesis, source verification claim, or runtime side effect is implemented here.
