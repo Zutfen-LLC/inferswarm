@@ -218,7 +218,7 @@ def run_unit(*,repo_root:Path,evidence_root:Path,arm:str,binary:Path,unit_index:
  model_post=model_stat_witness()
  if model_post!=model_pre:raise PilotError("model stat witness changed during unit")
  verify_authority(root,context)
- server_log=log.read_bytes();markers=parse_unit_markers(server_log,ARMS[arm].get("GGML_VK_I264_MMV","base"))
+ server_log=log.read_bytes();markers=parse_unit_markers(server_log,arm)
  transition=None
  if arm=="H5_MMV_CANDIDATE":
   bases=load_completed_units(evidence,"BASE")
