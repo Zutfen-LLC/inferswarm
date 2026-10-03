@@ -604,19 +604,19 @@ applicable qualification evidence enabled a separate successor full-integration
 attempt. Current execution scope is recorded below.
 
 <!-- project-status:frontier:start -->
-**[Issue #264 — conditional H5 MMV pilot; preflight blocked](https://github.com/Zutfen-LLC/inferswarm/issues/264)**
+**[Issue #264 — bounded H5 MMV path transition observed; awaiting maintainer acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/264)**
 
-Issue #264 records a source-audited minimal experimental selector for the H5 MMV route. Its source and parser Task 1 specification passed and quality is approved, and the Gen2 tree/comparator identity is frozen; these repository/source results are not a live execution or theorem closure. The pilot producer remains under review and is not ready. The next frontier is a conditional, pre-execution-gated H5 MMV pilot, with no physical execution yet and no H2/H3/H5 theorem closure claimed.
+The #264 pilot at execution head 3040a92ccdf278d816a0324ff8fd8317f84d2d34 observed a bounded output.weight MMV path transition in four fresh-process units: BASE subgroup32 and candidate large128 hybrid, with both arms screening-variable. The physical result awaits maintainer acceptance; numerical root cause, general H5 capability, and H2/H3/H5 theorem closure remain open.
 
 - **Accepted #250 predecessor anchor: Arm-A localized boundary (preserved, not root-cause evidence) observation:** [`ARM_A_STOPS_LADDER`](https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750).
 - **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070).
-- **Recorded execution authorization:** blocked — No further physical work is authorized under #250; no B/C/C1/C2/D work is required or authorized under that predecessor. Issue #264 permits only a conditional pilot after the pre-execution gate passes on the exact open head and its producer is ready; currently the gate is blocked, no physical experiment has run, and this status grants no execution authority. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/264).
+- **Recorded execution authorization:** blocked — No further physical work is authorized under #250; no B/C/C1/C2/D work is required or authorized under that predecessor. The conditional #264 gate admitted only the bounded pilot on exact execution head 3040a92ccdf278d816a0324ff8fd8317f84d2d34. That pilot is observed and stopped under its repeat law, awaiting maintainer review; this status and any additive publication commit grant no further execution authority. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/264).
 
 - The #250 predecessor remains accepted as the ARM_A_STOPS_LADDER localized boundary only; preserve its observation and acceptance anchors, and retain that this was not established as root cause.
 - Issue #264's sole live minimal experimental selector is subgroup32→large128 hybrid for the output.weight MMV q4_K*f32 route; dimensions/types and frozen comparator identity are scoped to that candidate only. The cooperative-matrix candidate is dead; do not revive it.
-- The pilot producer is under review and not ready. Source/parser specification PASS and quality approval do not establish pilot readiness, execution, acceptance, or theorem closure.
-- Before any physical work, pass the pre-execution gate on the exact open issue-264 head; current conditional preflight is blocked. Do not separately dispatch issue #264.
-- If admitted later, final full CPU validation after maintainer GO and hosted CI are mandatory. No automerge, R8J, dead-control, or broad-matrix work is authorized.
+- Four fresh-process units at the frozen execution head observed the actual path transition at all 10 output events per unit. BASE and candidate both differ across their two full-row digests and are screening-variable; matching candidate response tokens do not establish numerical stability or causality.
+- The bounded pilot stopped at two units per arm; no third units or retry. Controller preservation verified the accepted #262 150-file inventory unchanged and 69 new retained files byte-identical across remote and local roots. The pure report's preservation field remains external-pending by design.
+- Await maintainer acceptance of the bounded #264 result. Hosted CI passed 15/15 checks at the physical execution head, not the later publication head; final-head CI and full CPU validation after maintainer GO remain required. A source/CI/subagent PASS or additive report head does not grant new physical authority. No automerge, R8-J, dead-control, or broad-matrix work is authorized.
 <!-- project-status:frontier:end -->
 
 FreeToken remains the initial validation/integration vehicle, not the permanent

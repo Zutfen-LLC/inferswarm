@@ -97,7 +97,7 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_tracks_pending_264_frontier_without_physical_authority(self):
+    def test_current_record_tracks_observed_264_pilot_without_promoting_authority(self):
         output = sync.render(self.record)['frontier']
         frontier = self.record['frontier']
         execution = frontier['execution']
@@ -106,13 +106,22 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertIn('Issue #264', output)
         self.assertIn('subgroup32→large128 hybrid', output)
         self.assertIn('output.weight MMV q4_K*f32 route', output)
-        self.assertIn('pre-execution gate', output)
-        self.assertIn('currently the gate is blocked', output)
-        self.assertIn('no physical experiment has run', output)
-        self.assertIn('no H2/H3/H5 theorem closure claimed', output)
-        self.assertIn('pilot producer is under review and not ready', output)
+        self.assertIn('four fresh-process units', output)
+        self.assertIn('path transition', output)
+        self.assertIn('screening-variable', output)
+        self.assertIn('awaiting maintainer acceptance', output)
+        self.assertIn('H2/H3/H5 theorem closure remain open', output)
+        self.assertIn('Hosted CI passed 15/15 checks at the physical execution head', output)
+        self.assertIn('final-head CI and full CPU validation after maintainer GO remain required', output)
+        self.assertNotIn('no physical experiment has run', output)
+        self.assertNotIn('pilot producer is under review and not ready', output)
         self.assertEqual(execution['state'], 'blocked')
-        self.assertIn('no execution authority', execution['step'])
+        self.assertIn('no further execution authority', execution['step'])
+
+        # Observation is a bounded frontier, not an accepted capability or a
+        # promotion of #250's localized predecessor into root-cause evidence.
+        self.assertEqual(len(self.record['capabilities']), 8)
+        self.assertNotIn('H5', {item['id'] for item in self.record['capabilities']})
 
         # Preserve the accepted #250 boundary and its authority anchors without
         # reinstating the stale claim about PR #251's merge state.
