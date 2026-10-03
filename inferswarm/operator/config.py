@@ -14,8 +14,16 @@ class ModelIdentity:
 
 @dataclass(frozen=True)
 class CacheRange:
-    member: str; offset: int; length: int; sha256: str; cache_key: str
-    source_id: str; revision: str; representation: str; unit_id: str
+    state_id: str
+    member: str
+    offset: int
+    length: int
+    sha256: str
+    cache_key: str
+    source_id: str
+    revision: str
+    representation: str
+    unit_id: str
 
 @dataclass(frozen=True)
 class Participant:
@@ -28,7 +36,14 @@ class Participant:
 @dataclass(frozen=True)
 class Placement:
     unit_id: str; compute_id: str; state_ids: tuple[str, ...]
+    state_ranges: tuple[tuple[str, str, int, int], ...]
     first_layer: int; last_layer: int; output: bool
+
+@dataclass(frozen=True)
+class RuntimeBinding:
+    role: str
+    executable: str
+    sha256: str
 
 @dataclass(frozen=True)
 class BackendOptions:
@@ -41,6 +56,7 @@ class OperatorConfig:
     plan_id: str; model: ModelIdentity; participants: tuple[Participant, ...]
     strategy_id: str; placement: tuple[Placement, ...]
     backend_options: BackendOptions; request: tuple[tuple[str, Any], ...]
+    runtime_bindings: tuple[RuntimeBinding, ...]
 
 def _strict_pairs(pairs):
     out = {}
@@ -80,8 +96,9 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
     for r in m["members"]:
         _keys(r,{"name","sha256","size_bytes"},"member"); name=_text(r["name"],"member.name")
         if Path(name).name != name or name in (".",".."): raise ValueError("member.name must be basename")
-        members.append((name,_digest(r["sha256"],"member.sha256"),_int(r["size_bytes"],"member.size_bytes")))
+        members.append((name,_digest(r["sha256"],"member.sha256"),_int(r["size_bytes"],"member.size_bytes",2**63-1)))
     if len({x[0] for x in members}) != len(members): raise ValueError("duplicate model member")
+    sizes = {name: size for name, _, size in members}
     model=ModelIdentity(_text(m["source_id"],"source_id"),_text(m["revision"],"revision"),_text(m["representation"],"representation"),tuple(members))
     if not isinstance(data["participants"],list) or len(data["participants"]) != 2: raise ValueError("exactly two participants required")
     participants=[]; roles=set(); nodes=set(); cus=set(); ports=set()
@@ -103,27 +120,40 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
             if ":" not in endpoint: raise ValueError("rpc_endpoint requires host and port")
         elif endpoint is not None: raise ValueError("client rpc_endpoint must be null")
         if not isinstance(r["cache_ranges"],list) or not r["cache_ranges"]: raise ValueError("cache_ranges must be nonempty")
-        ranges=[]; sizes={n:size for n,_,size in members}
+        ranges=[]
         for cr in r["cache_ranges"]:
-            _keys(cr,{"member","offset","length","sha256","cache_key","source_id","revision","representation","unit_id"},"cache range")
+            _keys(cr,{"state_id","member","offset","length","sha256","cache_key","source_id","revision","representation","unit_id"},"cache range")
             member=_text(cr["member"],"cache.member"); off=cr["offset"]; length=cr["length"]
             if member not in sizes or type(off)is not int or off<0 or type(length)is not int or length<1 or off+length>sizes[member]: raise ValueError("cache range outside source member bounds")
             if (cr["source_id"],cr["revision"],cr["representation"]) != (model.source_id,model.revision,model.representation): raise ValueError("cache range source identity mismatch")
-            ranges.append(CacheRange(member,off,length,_digest(cr["sha256"],"cache.sha256"),_text(cr["cache_key"],"cache_key"),*ident,_text(cr["unit_id"],"unit_id")))
+            ranges.append(CacheRange(_text(cr["state_id"],"cache.state_id"),member,off,length,_digest(cr["sha256"],"cache.sha256"),_text(cr["cache_key"],"cache_key"),*ident,_text(cr["unit_id"],"unit_id")))
         if len({x.cache_key for x in ranges})!=len(ranges): raise ValueError("duplicate cache key")
         participants.append(Participant(role,node,cu,transport,_text(r["execution_address"],"execution_address"),endpoint,_text(r["device"],"device"),_path(r["source_path"],"source_path"),_path(r["runtime_executable"],"runtime_executable"),_digest(r["runtime_sha256"],"runtime_sha256"),_path(r["cache_path"],"cache_path"),port,_path(r["lifecycle_dir"],"lifecycle_dir"),*ident,tuple(ranges)))
     if roles!={"client","remote"}: raise ValueError("exactly one client and one remote role required")
     client=next(x for x in participants if x.role=="client"); remote=next(x for x in participants if x.role=="remote")
-    if (client.runtime_executable,client.runtime_sha256)!=(remote.runtime_executable,remote.runtime_sha256): raise ValueError("runtime executable identity mismatch")
+
     if not isinstance(data["placement"],list) or not data["placement"]: raise ValueError("placement must be nonempty")
     placements=[]; units=set()
     for r in data["placement"]:
-        _keys(r,{"unit_id","compute_id","state_ids","first_layer","last_layer","output"},"placement")
+        _keys(r,{"unit_id","compute_id","state_ids","state_ranges","first_layer","last_layer","output"},"placement")
         uid=_text(r["unit_id"],"unit_id"); cu=_text(r["compute_id"],"compute_id"); states=r["state_ids"]
         if uid in units or cu not in cus: raise ValueError("duplicate unit or unknown compute id")
         if not isinstance(states,list) or not states or any(not isinstance(s,str) or not s for s in states) or len(set(states))!=len(states): raise ValueError("invalid state_ids")
+        raw_ranges = r["state_ranges"]
+        if not isinstance(raw_ranges, list): raise ValueError("placement state_ranges must be a list")
+        state_ranges = []
+        for state_range in raw_ranges:
+            _keys(state_range, {"state_id", "member", "offset", "length"}, "placement state range")
+            state_id = _text(state_range["state_id"], "state_range.state_id")
+            member = _text(state_range["member"], "state_range.member")
+            offset, length = state_range["offset"], state_range["length"]
+            if member not in {m[0] for m in members} or type(offset) is not int or offset < 0 or type(length) is not int or length < 1 or offset + length > sizes[member]:
+                raise ValueError("placement state range outside source member bounds")
+            state_ranges.append((state_id, member, offset, length))
+        if {item[0] for item in state_ranges} != set(states) or len(state_ranges) != len(states):
+            raise ValueError("placement state ranges must describe every state exactly once")
         if type(r["first_layer"]) is not int or type(r["last_layer"]) is not int or type(r["output"]) is not bool: raise ValueError("invalid placement range")
-        units.add(uid); placements.append(Placement(uid,cu,tuple(states),r["first_layer"],r["last_layer"],r["output"]))
+        units.add(uid); placements.append(Placement(uid,cu,tuple(states),tuple(state_ranges),r["first_layer"],r["last_layer"],r["output"]))
     _keys(data["backend_options"],{"hidden_layers","offload_tail","cpu_experts","tensor_split","context","slots","startup_timeout_seconds","split_mode","verbosity"},"backend_options")
     b=data["backend_options"]
     if type(b["cpu_experts"]) is not bool or b["split_mode"]!="layer": raise ValueError("unsupported backend option")
@@ -132,9 +162,10 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
     opts=BackendOptions(_int(b["hidden_layers"],"hidden_layers"),_int(b["offload_tail"],"offload_tail"),b["cpu_experts"],tuple(float(v) for v in ts),_int(b["context"],"context"),_int(b["slots"],"slots"),_int(b["startup_timeout_seconds"],"startup_timeout_seconds",3600),b["split_mode"],_int(b["verbosity"],"verbosity",10))
     _keys(data["request"],{"prompt","max_tokens","temperature","seed"},"request"); q=data["request"]
     if not isinstance(q["prompt"],str) or not q["prompt"] or type(q["max_tokens"]) is not int or q["max_tokens"]<1 or type(q["temperature"]) not in (int,float) or not math.isfinite(q["temperature"]) or not 0<=q["temperature"]<=2 or type(q["seed"]) is not int: raise ValueError("invalid request settings")
-    return OperatorConfig(_text(data["plan_id"],"plan_id"),model,tuple(participants),_text(data["strategy_id"],"strategy_id"),tuple(placements),opts,tuple(sorted(q.items())))
+    bindings = tuple(RuntimeBinding(p.role, p.runtime_executable, p.runtime_sha256) for p in participants)
+    return OperatorConfig(_text(data["plan_id"],"plan_id"),model,tuple(participants),_text(data["strategy_id"],"strategy_id"),tuple(placements),opts,tuple(sorted(q.items())),bindings)
 
 def load_config(path: str | Path) -> OperatorConfig:
     return parse_config_json(Path(path).read_text(encoding="utf-8"))
 
-__all__=["BackendOptions","CacheRange","ModelIdentity","OperatorConfig","Participant","Placement","load_config","parse_config","parse_config_json"]
+__all__=["BackendOptions","CacheRange","ModelIdentity","OperatorConfig","Participant","Placement","RuntimeBinding","load_config","parse_config","parse_config_json"]

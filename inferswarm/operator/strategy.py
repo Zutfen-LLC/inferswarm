@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from .plan import OperatorPlan
+from .config import RuntimeBinding
 
 @dataclass(frozen=True)
 class ExpectedPlacement:
@@ -23,6 +24,7 @@ class LaunchSpec:
     context: int
     slots: int
     startup_timeout_seconds: int
+    rpc_runtime: RuntimeBinding
 
 def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
     if plan.strategy_id != "llama.cpp": raise ValueError("unsupported strategy id")
@@ -50,9 +52,36 @@ def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
     if cursor!=opt.hidden_layers or out!=1: raise ValueError("placement must cover hidden layers and assign output exactly once")
     if {p.compute_id for p in spans}!={client.compute_id,remote.compute_id}: raise ValueError("placement must use both explicit compute units")
     for participant in plan.participants:
-        assigned={p.unit_id for p in spans if p.compute_id==participant.compute_id}
-        if not assigned.issubset({r.unit_id for r in participant.cache_ranges}): raise ValueError("cache descriptors must bind assigned units")
+        # Client layers read the source GGUF directly; RPC layers consume LLAMA_CACHE.
+        if participant.role == "client":
+            continue
+        assigned = {p.unit_id: set(p.state_ids) for p in spans if p.compute_id == participant.compute_id}
+        ranges_by_unit = {}
+        for cache_range in participant.cache_ranges:
+            ranges_by_unit.setdefault(cache_range.unit_id, []).append(cache_range)
+        if set(ranges_by_unit) != set(assigned):
+            raise ValueError("required cache state coverage: cache units must exactly match assigned units")
+        for unit_id, required_states in assigned.items():
+            ranges = ranges_by_unit[unit_id]
+            actual_states = [item.state_id for item in ranges]
+            if len(actual_states) != len(set(actual_states)) or set(actual_states) != required_states:
+                raise ValueError("required cache state coverage: each assigned state must appear exactly once")
+            descriptors = {state_id: (member, offset, length) for row in spans if row.unit_id == unit_id
+                           for state_id, member, offset, length in row.state_ranges}
+            for item in ranges:
+                if descriptors[item.state_id] != (item.member, item.offset, item.length):
+                    raise ValueError("required cache range must cover state source range exactly")
+            by_member = {}
+            for item in ranges:
+                by_member.setdefault(item.member, []).append(item)
+            for member_ranges in by_member.values():
+                ordered_ranges = sorted(member_ranges, key=lambda item: item.offset)
+                for previous, current in zip(ordered_ranges, ordered_ranges[1:]):
+                    if previous.offset + previous.length > current.offset:
+                        raise ValueError("required cache state ranges must not overlap")
+        if any(item.unit_id not in assigned for item in participant.cache_ranges):
+            raise ValueError("required cache state coverage: unrelated cache unit")
     args=("--rpc",remote.rpc_endpoint,"--device",f"{client.device},{remote.device}","--split-mode",opt.split_mode,"--tensor-split",",".join(format(x,".15g") for x in opt.tensor_split),"-ngl",str(opt.offload_tail),"-cmoe" if opt.cpu_experts else "-no-cmoe","-c",str(opt.context),"-np",str(opt.slots),"--no-warmup","-lv",str(opt.verbosity),"--seed",str(dict(plan.request)["seed"]))
-    return LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,remote.rpc_endpoint,f"{client.device},{remote.device}",args,tuple(expected),opt.context,opt.slots,opt.startup_timeout_seconds)
+    return LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,remote.rpc_endpoint,f"{client.device},{remote.device}",args,tuple(expected),opt.context,opt.slots,opt.startup_timeout_seconds,RuntimeBinding(remote.role,remote.runtime_executable,remote.runtime_sha256))
 
 __all__=["ExpectedPlacement","LaunchSpec","llama_cpp_spec"]

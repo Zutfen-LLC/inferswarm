@@ -10,8 +10,8 @@ from inferswarm.operator.strategy import llama_cpp_spec
 def sample():
     model={"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","members":[{"name":"member.gguf","sha256":"a"*64,"size_bytes":1000}]}
     def participant(role, node, cu, transport, address, endpoint, device, cache):
-        return {"role":role,"node_id":node,"compute_id":cu,"transport":transport,"execution_address":address,"rpc_endpoint":endpoint,"device":device,"source_path":"/srv/model/member.gguf","runtime_executable":"/usr/bin/llama","runtime_sha256":"b"*64,"cache_path":cache,"port":8080 if role=="client" else 8081,"lifecycle_dir":"/run/operator/"+node,"source_id":"arbitrary-source","source_revision":"release-1","source_representation":"opaque-format","cache_ranges":[{"member":"member.gguf","offset":0,"length":100,"sha256":"c"*64,"cache_key":"key-"+cu+"-"+unit,"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","unit_id":unit} for unit in (("unit-cpu","unit-compute-x") if role=="client" else ("unit-compute-y",))]}
-    return {"schema":"operator-config/2","plan_id":"plan-arbitrary","model":model,"participants":[participant("client","node-x","compute-x","local","127.0.0.1",None,"device-x","/var/cache/client"),participant("remote","node-y","compute-y","rpc","ssh-y","worker.example:5000","device-y","/var/cache/remote")],"strategy_id":"llama.cpp","placement":[{"unit_id":"unit-cpu","compute_id":"compute-x","state_ids":["opaque-cpu-state"],"first_layer":0,"last_layer":40,"output":False},{"unit_id":"unit-compute-x","compute_id":"compute-x","state_ids":["opaque-state-x"],"first_layer":41,"last_layer":44,"output":False},{"unit_id":"unit-compute-y","compute_id":"compute-y","state_ids":["opaque-state-y"],"first_layer":45,"last_layer":47,"output":True}],"backend_options":{"hidden_layers":48,"offload_tail":8,"cpu_experts":True,"tensor_split":[1,1],"context":1024,"slots":1,"startup_timeout_seconds":90,"split_mode":"layer","verbosity":5},"request":{"prompt":"hello","max_tokens":8,"temperature":0.0,"seed":42}}
+        return {"role":role,"node_id":node,"compute_id":cu,"transport":transport,"execution_address":address,"rpc_endpoint":endpoint,"device":device,"source_path":"/srv/model/member.gguf","runtime_executable":"/usr/bin/llama","runtime_sha256":"b"*64,"cache_path":cache,"port":8080 if role=="client" else 8081,"lifecycle_dir":"/run/operator/"+node,"source_id":"arbitrary-source","source_revision":"release-1","source_representation":"opaque-format","cache_ranges":[{"state_id":"opaque-state-y","member":"member.gguf","offset":0,"length":100,"sha256":"c"*64,"cache_key":"key-"+cu+"-"+unit,"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","unit_id":unit} for unit in (("unit-cpu","unit-compute-x") if role=="client" else ("unit-compute-y",))]}
+    return {"schema":"operator-config/2","plan_id":"plan-arbitrary","model":model,"participants":[participant("client","node-x","compute-x","local","127.0.0.1",None,"device-x","/var/cache/client"),participant("remote","node-y","compute-y","rpc","ssh-y","worker.example:5000","device-y","/var/cache/remote")],"strategy_id":"llama.cpp","placement":[{"unit_id":"unit-cpu","compute_id":"compute-x","state_ids":["opaque-cpu-state"],"state_ranges":[{"state_id":"opaque-cpu-state","member":"member.gguf","offset":200,"length":100}],"first_layer":0,"last_layer":40,"output":False},{"unit_id":"unit-compute-x","compute_id":"compute-x","state_ids":["opaque-state-x"],"state_ranges":[{"state_id":"opaque-state-x","member":"member.gguf","offset":300,"length":100}],"first_layer":41,"last_layer":44,"output":False},{"unit_id":"unit-compute-y","compute_id":"compute-y","state_ids":["opaque-state-y"],"state_ranges":[{"state_id":"opaque-state-y","member":"member.gguf","offset":0,"length":100}],"first_layer":45,"last_layer":47,"output":True}],"backend_options":{"hidden_layers":48,"offload_tail":8,"cpu_experts":True,"tensor_split":[1,1],"context":1024,"slots":1,"startup_timeout_seconds":90,"split_mode":"layer","verbosity":5},"request":{"prompt":"hello","max_tokens":8,"temperature":0.0,"seed":42}}
 
 class OperatorPlanTests(unittest.TestCase):
     def test_parse_build_and_order_independent_digest(self):
@@ -56,5 +56,41 @@ class OperatorPlanTests(unittest.TestCase):
         for key,value in (("seed",True),("temperature",float("nan"))):
             x=sample(); x["request"][key]=value
             with self.assertRaises(ValueError): parse_config(x)
+
+    def test_required_cache_state_ranges_are_complete_and_authoritative(self):
+        cases = []
+        x = sample()
+        x["placement"][2]["state_ids"] = ["not-the-cache-state"]
+        cases.append((x, "placement state ranges must describe every state exactly once"))
+        x = sample()
+        x["participants"][1]["cache_ranges"][0]["state_id"] = "unrelated-state"
+        cases.append((x, "required cache state coverage"))
+        x = sample()
+        x["participants"][1]["cache_ranges"][0].update(state_id="opaque-state-y", offset=0, length=99)
+        cases.append((x, "required cache range must cover state source range exactly"))
+        x = sample()
+        x["participants"][1]["cache_ranges"][0].update(state_id="opaque-state-y", offset=0, length=100)
+        cases.append((x, None))
+        for config, reason in cases:
+            with self.subTest(reason=reason):
+                if reason is None:
+                    llama_cpp_spec(build_plan(parse_config(config)))
+                else:
+                    with self.assertRaisesRegex(ValueError, reason):
+                        llama_cpp_spec(build_plan(parse_config(config)))
+
+    def test_large_members_and_distinct_role_binaries_are_supported(self):
+        x = sample()
+        x["model"]["members"][0]["size_bytes"] = 30 * 1024**3
+        x["participants"][0]["runtime_executable"] = "/usr/bin/llama-server"
+        x["participants"][0]["runtime_sha256"] = "d" * 64
+        x["participants"][1]["runtime_executable"] = "/usr/bin/ggml-rpc-server"
+        x["participants"][1]["runtime_sha256"] = "e" * 64
+        plan = build_plan(parse_config(x))
+        spec = llama_cpp_spec(plan)
+        self.assertEqual(spec.executable, "/usr/bin/llama-server")
+        self.assertEqual(spec.executable_sha256, "d" * 64)
+        self.assertEqual(spec.rpc_runtime.executable, "/usr/bin/ggml-rpc-server")
+        self.assertEqual(spec.rpc_runtime.sha256, "e" * 64)
 
 if __name__ == "__main__": unittest.main()
