@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -38,6 +40,20 @@ class SourceTransformTests(unittest.TestCase):
         self.assertEqual(S.PARENT_VK_SHA256,
                          "abb1031f1b35a669cb5a18b776fc6587cfb7927384729128048dd697b8160dbb")
         self.assertEqual(S.PARENT_TREE, "015c874f0cc0635fa1369650098c0137f9a492f0")
+
+    def test_replay_clean_predecessor_reproduces_complete_frozen_tree(self):
+        # A hosted runner without the pinned upstream checkout skips cleanly;
+        # local audits can supply LLAMA_SRC explicitly.
+        source = Path(os.environ.get("LLAMA_SRC", str(
+            Path.home() / ".hermes/cache/scratch/i264-green-clean")))
+        if not source.is_dir():
+            self.skipTest("pinned clean predecessor absent; set LLAMA_SRC")
+        identity = json.loads(S.IDENTITY.read_text())
+        with tempfile.TemporaryDirectory(prefix="issue264-replay-") as tmp:
+            output = Path(tmp) / "successor"
+            self.assertEqual(S.build(source, output), identity)
+            self.assertEqual(S.authenticate(output), "2d7a5693a8bf86648ee564d389a32c7c1671c571")
+            self.assertTrue((output / S.VK).is_file())
 
 
 if __name__ == "__main__":
