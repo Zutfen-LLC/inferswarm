@@ -1,0 +1,210 @@
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index 0dfa44dbf..9bb709472 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -1,5 +1,6 @@
+ #include "ggml-vulkan.h"
+ #include <vulkan/vulkan_core.h>
++#include <atomic>
+ #if defined(GGML_VULKAN_RUN_TESTS) || defined(GGML_VULKAN_CHECK_RESULTS)
+ #include <chrono>
+ #include "ggml-cpu.h"
+@@ -1291,7 +1292,14 @@ static void ggml_vk_print_device_fault_info(const vk_device& device) {
+     }
+ }
+ 
++// Diagnostic-only monotonic identity: never reuse an address as a buffer identity.
++static std::atomic<uint64_t> ggml_vk_i260_next_buffer_id { 1 };
++static std::atomic<uint64_t> ggml_vk_i260_next_graph_id { 1 };
++static std::atomic<uint64_t> ggml_vk_i260_next_submit_id { 1 };
++
+ struct vk_buffer_struct {
++    uint64_t i260_id = 0;
++    uint32_t i260_memory_type = UINT32_MAX;
+     vk::Buffer buffer = VK_NULL_HANDLE;
+     vk::DeviceMemory device_memory = VK_NULL_HANDLE;
+     vk::MemoryPropertyFlags memory_property_flags;
+@@ -2514,6 +2522,9 @@ struct ggml_backend_vk_context {
+     vk_buffer prealloc_x, prealloc_y, prealloc_split_k, prealloc_add_rms_partials, sync_staging;
+     vk::Fence fence, almost_ready_fence;
+     bool submit_pending {};
++    uint64_t i260_graph_id {};
++    uint64_t i260_graph_submit_count {};
++    uint64_t i260_serialized_submit_id {};
+     bool almost_ready_fence_pending {};
+     // Set before op_add and unset after op_rms_norm to indicate that the add should
+     // write partial sums to accumulate the square of the vector components
+@@ -3676,6 +3687,7 @@ static vk_buffer ggml_vk_create_buffer(vk_device& device, size_t size, const std
+     }
+ 
+     buf->buffer = device->device.createBuffer(buffer_create_info);
++    buf->i260_id = ggml_vk_i260_next_buffer_id.fetch_add(1, std::memory_order_relaxed);
+ 
+     vk::MemoryRequirements mem_req = device->device.getBufferMemoryRequirements(buf->buffer);
+ 
+@@ -3724,6 +3736,7 @@ static vk_buffer ggml_vk_create_buffer(vk_device& device, size_t size, const std
+         }
+ 
+         buf->memory_property_flags = mem_props.memoryTypes[memory_type_idx].propertyFlags;
++        buf->i260_memory_type = memory_type_idx;
+         try {
+             vk::ImportMemoryHostPointerInfoEXT import_info;
+             import_info.handleType = vk::ExternalMemoryHandleTypeFlagBits::eHostAllocationEXT;
+@@ -3748,6 +3761,7 @@ static vk_buffer ggml_vk_create_buffer(vk_device& device, size_t size, const std
+                 try {
+                     buf->device_memory = device->device.allocateMemory({ mem_req.size, *mtype_it, &mem_flags_info });
+                     buf->memory_property_flags = mem_props.memoryTypes[*mtype_it].propertyFlags;
++                    buf->i260_memory_type = *mtype_it;
+                     done = true;
+                     break;
+                 } catch (const vk::SystemError& e) {
+@@ -3808,6 +3822,8 @@ static vk_buffer ggml_vk_create_buffer_check(vk_device& device, size_t size, vk:
+ 
+ static vk_buffer ggml_vk_create_buffer_device(vk_device& device, size_t size) {
+     vk_buffer buf;
++    const char * i260_branch = device->prefer_host_memory ? "prefer_host" :
++        device->uma ? "uma" : device->disable_host_visible_vidmem ? "disable_host_visible" : "default";
+     try {
+         if (device->prefer_host_memory) {
+             buf = ggml_vk_create_buffer(device, size, {vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+@@ -3842,6 +3858,12 @@ static vk_buffer ggml_vk_create_buffer_device(vk_device& device, size_t size) {
+         throw e;
+     }
+ 
++    // Record the actual selected type and flags, not the requested preference list.
++    if (buf && buf->size != 0) {
++        GGML_LOG_INFO("ggml_vk_i260:v1|memory|role=backend|buffer=%llu|branch=%s|type=%u|flags=0x%llx\n",
++            (unsigned long long) buf->i260_id, i260_branch, buf->i260_memory_type,
++            (unsigned long long) static_cast<VkMemoryPropertyFlags>(buf->memory_property_flags));
++    }
+     return buf;
+ }
+ 
+@@ -8601,20 +8623,32 @@ static void deferred_memset(void * dst, uint32_t val, size_t size, std::vector<v
+ static void ggml_vk_ensure_sync_staging_buffer(vk_device& device, size_t size) {
+     if (device->sync_staging == nullptr || device->sync_staging->size < size) {
+         VK_LOG_MEMORY("ggml_vk_ensure_sync_staging_buffer(" << size << ")");
++        if (device->sync_staging) {
++            GGML_LOG_INFO("ggml_vk_i260:v1|staging|owner=device|event=retire|buffer=%llu\n",
++                (unsigned long long) device->sync_staging->i260_id);
++        }
+         ggml_vk_destroy_buffer(device->sync_staging);
+         device->sync_staging = ggml_vk_create_buffer_check(device, size,
+             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached,
+             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
++        GGML_LOG_INFO("ggml_vk_i260:v1|staging|owner=device|event=create|buffer=%llu\n",
++            (unsigned long long) device->sync_staging->i260_id);
+     }
+ }
+ 
+ static void ggml_vk_ensure_sync_staging_buffer(ggml_backend_vk_context * ctx, size_t size) {
+     if (ctx->sync_staging == nullptr || ctx->sync_staging->size < size) {
+         VK_LOG_MEMORY("ggml_vk_ensure_sync_staging_buffer(" << size << ")");
++        if (ctx->sync_staging) {
++            GGML_LOG_INFO("ggml_vk_i260:v1|staging|owner=context|event=retire|buffer=%llu\n",
++                (unsigned long long) ctx->sync_staging->i260_id);
++        }
+         ggml_vk_destroy_buffer(ctx->sync_staging);
+         ctx->sync_staging = ggml_vk_create_buffer_check(ctx->device, size,
+             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached,
+             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
++        GGML_LOG_INFO("ggml_vk_i260:v1|staging|owner=context|event=create|buffer=%llu\n",
++            (unsigned long long) ctx->sync_staging->i260_id);
+     }
+ }
+ 
+@@ -16578,12 +16612,27 @@ static void ggml_vk_compute_forward(ggml_backend_vk_context * ctx, ggml_cgraph *
+         }
+ 
+         if (ctx->device->serialize_submissions) {
++            GGML_ASSERT(ctx->i260_serialized_submit_id == 0);
+             ggml_vk_submit(subctx, ctx->fence);
++            const uint64_t id = ggml_vk_i260_next_submit_id.fetch_add(1, std::memory_order_relaxed);
++            // Retain exact compute submission identity until submit_after waits on its fence.
++            ctx->i260_serialized_submit_id = id;
++            ++ctx->i260_graph_submit_count;
++            GGML_LOG_INFO("ggml_vk_i260:v1|submit|graph=%llu|id=%llu|phase=submit|path=serialized\n",
++                (unsigned long long) ctx->i260_graph_id, (unsigned long long) id);
+         } else if (almost_ready && !ctx->almost_ready_fence_pending) {
+             ggml_vk_submit(subctx, ctx->almost_ready_fence);
++            const uint64_t id = ggml_vk_i260_next_submit_id.fetch_add(1, std::memory_order_relaxed);
++            ++ctx->i260_graph_submit_count;
++            GGML_LOG_INFO("ggml_vk_i260:v1|submit|graph=%llu|id=%llu|phase=submit|path=normal\n",
++                (unsigned long long) ctx->i260_graph_id, (unsigned long long) id);
+             ctx->almost_ready_fence_pending = true;
+         } else {
+             ggml_vk_submit(subctx, {});
++            const uint64_t id = ggml_vk_i260_next_submit_id.fetch_add(1, std::memory_order_relaxed);
++            ++ctx->i260_graph_submit_count;
++            GGML_LOG_INFO("ggml_vk_i260:v1|submit|graph=%llu|id=%llu|phase=submit|path=normal\n",
++                (unsigned long long) ctx->i260_graph_id, (unsigned long long) id);
+         }
+         ctx->submit_pending = true;
+ 
+@@ -16722,6 +16771,10 @@ static bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer) {
+ static void ggml_backend_vk_buffer_free_buffer(ggml_backend_buffer_t buffer) {
+     VK_LOG_MEMORY("ggml_backend_vk_buffer_free_buffer()");
+     ggml_backend_vk_buffer_context * ctx = (ggml_backend_vk_buffer_context *)buffer->context;
++    if (ctx->dev_buffer) {
++        GGML_LOG_INFO("ggml_vk_i260:v1|memory|role=backend|event=retire|buffer=%llu\n",
++            (unsigned long long) ctx->dev_buffer->i260_id);
++    }
+     ggml_vk_destroy_buffer(ctx->dev_buffer);
+     delete ctx;
+ }
+@@ -16737,6 +16790,21 @@ static enum ggml_status ggml_backend_vk_buffer_init_tensor(ggml_backend_buffer_t
+     if (tensor->view_src != nullptr) {
+         GGML_ASSERT(tensor->view_src->buffer->buft == buffer->buft);
+     }
++    if (strcmp(tensor->name, "output.weight") == 0) {
++        ggml_backend_vk_buffer_context * buf_ctx = (ggml_backend_vk_buffer_context *) buffer->context;
++        if (buf_ctx->dev_buffer) {
++            const uint64_t base_offset = vk_tensor_offset(tensor);
++            GGML_ASSERT(tensor->view_offs <= UINT64_MAX - base_offset);
++            const uint64_t offset = base_offset + tensor->view_offs;
++            const uint64_t bytes = ggml_nbytes(tensor);
++            const uint64_t allocation_size = buf_ctx->dev_buffer->size;
++            // Subtraction avoids offset + bytes overflow; a zero-span marker proves nothing.
++            GGML_ASSERT(bytes > 0 && offset <= allocation_size && bytes <= allocation_size - offset);
++            GGML_LOG_INFO("ggml_vk_i260:v1|tensor|name=output.weight|buffer=%llu|offset=%llu|bytes=%llu|allocation_size=%llu\n",
++                (unsigned long long) buf_ctx->dev_buffer->i260_id, (unsigned long long) offset,
++                (unsigned long long) bytes, (unsigned long long) allocation_size);
++        }
++    }
+     return GGML_STATUS_SUCCESS;
+ }
+ 
+@@ -18003,6 +18071,10 @@ static int32_t find_first_set(uint32_t x) {
+ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cgraph * cgraph) {
+     VK_LOG_DEBUG("ggml_backend_vk_graph_compute(" << cgraph->n_nodes << " nodes)");
+     ggml_backend_vk_context * ctx = (ggml_backend_vk_context *)backend->context;
++    GGML_ASSERT(ctx->i260_serialized_submit_id == 0);
++    ctx->i260_graph_id = ggml_vk_i260_next_graph_id.fetch_add(1, std::memory_order_relaxed);
++    ctx->i260_graph_submit_count = 0;
++    GGML_LOG_INFO("ggml_vk_i260:v1|graph|id=%llu|phase=begin\n", (unsigned long long) ctx->i260_graph_id);
+ 
+     ctx->device->diag_cgraph = nullptr;
+     ctx->device->diag_prev_start = -1;
+@@ -18115,6 +18187,11 @@ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cg
+             }
+             ctx->device->device.resetFences({ ctx->fence });
+             ctx->submit_pending = false;
++            if (ctx->i260_serialized_submit_id != 0) {
++                GGML_LOG_INFO("ggml_vk_i260:v1|submit|graph=%llu|id=%llu|phase=wait|path=serialized|wait=success\n",
++                    (unsigned long long) ctx->i260_graph_id, (unsigned long long) ctx->i260_serialized_submit_id);
++                ctx->i260_serialized_submit_id = 0;
++            }
+             ctx->device->diag_cgraph = cgraph;
+             ctx->device->diag_prev_start = start;
+             ctx->device->diag_prev_end = end;
+@@ -18490,6 +18567,10 @@ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cg
+         ggml_vk_synchronize(ctx);
+     }
+ 
++    GGML_ASSERT(ctx->i260_serialized_submit_id == 0);
++    GGML_LOG_INFO("ggml_vk_i260:v1|graph|id=%llu|phase=end|compute_submits=%llu\n",
++        (unsigned long long) ctx->i260_graph_id, (unsigned long long) ctx->i260_graph_submit_count);
++    ctx->i260_graph_id = 0;
+     return GGML_STATUS_SUCCESS;
+ 
+     UNUSED(backend);

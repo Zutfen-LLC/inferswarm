@@ -82,6 +82,18 @@ def write(root: Path, namespace: str, name: str, log: str) -> None:
     unit = root / namespace / name
     unit.mkdir(parents=True, exist_ok=True)
     (unit / "server.log").write_text(log, encoding="utf-8")
+    # AMENDMENT-005: A3's retained placement/identity law reads these
+    # per-unit files; A2/A5 validators ignore them.
+    import json as _json
+    (unit / "placement.json").write_text(_json.dumps({
+        "output_projection": "Vulkan", "embedding": "CPU", "ngl": 1,
+        "gpu_uuid": C.HOST_FACTS["gpu_uuid"],
+        "vulkan_family": "NV_coopmat2",
+        "vulkan_family_authority": "frozen-host-facts",
+        "cuda_participation": False}, sort_keys=True))
+    for phase in ("identity-pre.json", "identity-post.json"):
+        (unit / phase).write_text(
+            _json.dumps(dict(C.HOST_FACTS), sort_keys=True))
 
 
 A5_NS = A.ARMS["A5"]["namespace"]
@@ -199,7 +211,11 @@ class A5PairingTests(FixtureMixin, unittest.TestCase):
         self.fixture()
 
     def status(self):
-        return M.mechanism_status(self.evidence, "A5", A5_NS)
+        # #258 correction round 3: A5 is nonterminal (#257), so the
+        # retained ordered staging custody law is exercised through the
+        # public retained_observation_status boundary.
+        return {"capable": True,
+                "facts": M.retained_observation_status(self.evidence, "A5", A5_NS)}
 
     def test_red_multiset_substitution_rejected(self):
         # staging 4096 + staging 8192 with host 4096 + host 4096.
@@ -326,6 +342,9 @@ class A4DispositionTests(FixtureMixin, unittest.TestCase):
         self.assertFalse(M.mechanism_status(self.evidence, "A4", A4_NS)["capable"])
 
     def test_red_a4_deterministic_repeats_alone_cannot_localize(self):
+        # #258 (AMENDMENT-006): deterministic repeats under nonterminal A4
+        # are honest UNRESOLVED, never a localized terminal and never
+        # BLOCKED-for-completion-count.
         self.write_json(self.evidence / "authority.json", {
             "repo_root": str(self.repo),
             "dispatch_capture": self.authority("A4")})
@@ -334,7 +353,7 @@ class A4DispositionTests(FixtureMixin, unittest.TestCase):
                         server_log=self.rich_log)
         with mock.patch.object(P, "fetch_dispatch_comment", self.fetcher("A4")):
             out = T.derive_terminal(self.evidence, {})
-        self.assertEqual(out, T.BLOCKED)
+        self.assertEqual(out, C.UNRESOLVED_TERMINAL)
 
 
 class ProactiveReviewTests(FixtureMixin, unittest.TestCase):
@@ -364,7 +383,9 @@ class ProactiveReviewTests(FixtureMixin, unittest.TestCase):
                          ("alloc", "device", 4 * MIB)], family="none")
         write(self.evidence, A5_NS, "u1", log)
         with self.assertRaisesRegex(M.MechanismInvalid, "family|one-factor|capability"):
-            M.mechanism_status(self.evidence, "A5", A5_NS)
+            # #258 correction round 3: retained custody law through the
+            # public boundary (A5 nonterminal).
+            M.retained_observation_status(self.evidence, "A5", A5_NS)
 
     def test_red_forged_family_change_under_a3_rejected(self):
         log = ASYNC_OFF + build_log([("alloc", "device", 4 * MIB)],

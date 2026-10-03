@@ -164,7 +164,8 @@ def derive_reconciliation(repo_root: Path, llama_root: Path,
         "localized_factor": C.LOCALIZED_FACTOR,
         "host_facts": C.HOST_FACTS,
         "terminal_vocabulary": [C.ACCEPTED_TERMINAL, C.NOT_VALIDATED_TERMINAL,
-                                 C.UNRESOLVED_TERMINAL],
+                               C.UNRESOLVED_TERMINAL,
+                               C.NON_LOCALIZED_TERMINAL],
         "dispatch_phrase_format": C.DISPATCH_PHRASE_FORMAT,
     }
 

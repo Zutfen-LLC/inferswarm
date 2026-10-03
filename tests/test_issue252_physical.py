@@ -134,8 +134,13 @@ class FixtureMixin:
         auth = authority or self.authority(arm)
         row = row if row is not None else bytes(D.ROW_BYTES)
         identity = dict(C.HOST_FACTS)
-        placement = {"output_projection": "Vulkan", "embedding": "CPU", "ngl": 1,
-                     "gpu_uuid": C.HOST_FACTS["gpu_uuid"]}
+        # AMENDMENT-005 placement shape (frozen geometry facts; the enum
+        # banner is no longer required by the producer law).
+        placement = {"output_projection": "Vulkan", "embedding": "CPU",
+                     "ngl": 1, "gpu_uuid": C.HOST_FACTS["gpu_uuid"],
+                     "vulkan_family": "NV_coopmat2",
+                     "vulkan_family_authority": "frozen-host-facts",
+                     "cuda_participation": False}
         witness = {m: {k: 1 for k in ("bytes", "device", "inode", "mtime_ns", "ctime_ns")}
                    for m in C.MODEL_MEMBERS}
         raw = json.dumps({"tokens": list(range(D.DECISIONS))}).encode()

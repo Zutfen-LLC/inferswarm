@@ -1,0 +1,23 @@
+{
+ "arm": "BASE",
+ "binary_sha256": "1981bd5d0f2832482cde079f57fbf82f6b21040387b61b5fff59911a776e0988",
+ "ended_at": "2026-10-02T20:36:52Z",
+ "process_exit": {
+  "cleanup_verified": true,
+  "returncode": 0
+ },
+ "request_sha256": "7a4b8ed63a9b0d1bb22cebd21851c7bae0d0d73d142ad9e324c93a4e245f618a",
+ "response_raw_sha256": "6264d7397363f19298916c67d00f8ef9c0282137173a1aa7b9f6ca430ddcacfa",
+ "row_digest": "10dde421202c91277ba23725d717564ca5361af94b1f27ad6743b6e5236e5815",
+ "schema": "inferswarm.issue262.pilot-unit/1",
+ "server_log_sha256": "406f845a7f17602c8cd726f0f5aec7ceca7b181b4fa6b2e5d0b655162cb06894",
+ "started_at": "2026-10-02T20:35:48Z",
+ "subject": {
+  "bdf": "00000000:03:00.0",
+  "binding": "historical-A3/A5-subject-reused",
+  "driver": "610.57.04",
+  "gpu": "NVIDIA GeForce RTX 3060",
+  "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+ },
+ "unit_index": 1
+}

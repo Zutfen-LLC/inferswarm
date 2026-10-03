@@ -253,6 +253,32 @@ GROUP_TEST_MODULES = {
         "test_issue252_vulkanpath",
         "test_issue252_round4",
         "test_issue252_round5",
+        # Issue #254 R8-I3C Phase 1: live producer/custody + adversarial
+        # matrix (no physical execution in Phase A).
+        "test_issue254_producer",
+        # Issue #254 round 5: enum-free A3 placement/mechanism law
+        # (AMENDMENT-005) + pre-publication failure quarantine regressions.
+        "test_issue254_round5",
+        # Issue #254 round 7: canonical producer/receipt identity
+        # normalization boundary (raw #248 observation -> receipt-compatible
+        # frozen identity with retained raw custody).
+        "test_issue254_round7",
+        # Issue #258: prospective arm-set theorem (AMENDMENT-006) —
+        # capability-explicit terminal derivation; A5 nonterminal per
+        # accepted #257; honest UNRESOLVED for the accepted A3/A5 state.
+        "test_issue258_theorem",
+        # Issue #260: prospective source/observation grammar and fail-closed H5.
+        "test_issue260_source_patch",
+        "test_issue260_observation",
+        # Issue #262: rapid physical pilot — H5 route-marker grammar and
+        # coopmat2 one-factor eligibility, instrumented source chain
+        # identity, and the bounded pilot producer's offline law.
+        "test_issue262_source_patch",
+        "test_issue262_h5",
+        "test_issue262_pilot",
+        "test_issue264_source_patch",
+        "test_issue264_h5",
+        "test_issue264_pilot",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -367,6 +393,25 @@ PATH_GROUPS = {
     "tests/test_issue252_vulkanpath.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_round4.py": ["r8i-qwen-qualification"],
     "tests/test_issue252_round5.py": ["r8i-qwen-qualification"],
+    "tests/test_issue254_producer.py": ["r8i-qwen-qualification"],
+    "tests/test_issue254_round5.py": ["r8i-qwen-qualification"],
+    "tests/test_issue254_round7.py": ["r8i-qwen-qualification"],
+    "tests/test_issue258_theorem.py": ["r8i-qwen-qualification"],
+    "tests/test_issue260_source_patch.py": ["r8i-qwen-qualification"],
+    "tests/test_issue260_observation.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_source_patch.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_h5.py": ["r8i-qwen-qualification"],
+    "tests/test_issue262_pilot.py": ["r8i-qwen-qualification"],
+    "tests/test_issue264_source_patch.py": ["r8i-qwen-qualification"],
+    "tests/test_issue264_h5.py": ["r8i-qwen-qualification"],
+    "tests/test_issue264_pilot.py": ["r8i-qwen-qualification"],
+    "scripts/issue264_source_patch.py": ["r8i-qwen-qualification"],
+    "scripts/issue264_h5.py": ["r8i-qwen-qualification"],
+    "scripts/issue264_pilot.py": ["r8i-qwen-qualification"],
+    "scripts/issue264_report.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_source_patch.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_h5.py": ["r8i-qwen-qualification"],
+    "scripts/issue262_pilot.py": ["r8i-qwen-qualification"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full

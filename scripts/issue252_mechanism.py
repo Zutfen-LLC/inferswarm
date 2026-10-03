@@ -320,25 +320,108 @@ def _mechanism_a2(root: Path, namespace: str) -> dict[str, Any]:
                          "'none' in every unit)"}
 
 
+def _require_retained_a3_placement(unit: Path) -> None:
+    """A3 placement/identity law under METHODOLOGY-AMENDMENT-005 (round 5).
+
+    Physical fact (second A3 attempt, dispatched head a090c41): the retained
+    server-log stream of this frozen host/runtime family physically carries
+    NO ``ggml_vulkan`` device-enumeration banner, so the enum line can no
+    longer be REQUIRED as A3's Vulkan-participation observable. The A3
+    placement proof instead re-derives from the retained facts captured for
+    every unit: the frozen producer-attested Vulkan placement (the /3
+    producer law — env CUDA_VISIBLE_DEVICES=-1, frozen NVIDIA ICD,
+    GGML_VK_VISIBLE_DEVICES=0, ngl=1, frozen GPU UUID, no CUDA
+    participation, argv/env read back from /proc and bound into the
+    attestation) and the frozen subject identity observations (pre/post
+    equal to the frozen HOST_FACTS). This helper is A3-only; A2/A5 keep
+    their genuine enum/memory observables untouched.
+    """
+    import issue254_producer as PR254
+
+    def _obj(rel: str) -> dict[str, Any]:
+        path = unit / rel
+        if path.is_symlink() or not path.is_file():
+            raise MechanismInvalid(
+                f"A3 retained unit lacks {rel} (placement/identity evidence)")
+        try:
+            doc = json.loads(path.read_bytes())
+        except json.JSONDecodeError as exc:
+            raise MechanismInvalid(
+                f"A3 retained {rel} is not valid JSON") from exc
+        if not isinstance(doc, dict):
+            raise MechanismInvalid(f"A3 retained {rel} is not an object")
+        return doc
+
+    placement = _obj("placement.json")
+    if (placement.get("output_projection") != "Vulkan"
+            or placement.get("embedding") != "CPU"
+            or placement.get("ngl") != 1
+            or placement.get("cuda_participation") is not False):
+        raise MechanismInvalid(
+            "A3 retained placement is not the frozen producer-attested "
+            "Vulkan geometry (Vulkan output projection, CPU embedding, "
+            "ngl=1, no CUDA participation)")
+    gpu_uuid = placement.get("gpu_uuid")
+    if (not isinstance(gpu_uuid, str)
+            or not gpu_uuid
+            or gpu_uuid != PR254.C252.HOST_FACTS["gpu_uuid"]):
+        raise MechanismInvalid(
+            "A3 retained placement GPU UUID differs from the frozen "
+            "subject identity")
+    family = placement.get("vulkan_family")
+    if family is not None and family != SUBJECT_ENUM_FAMILY:
+        # identity-authority value only (frozen HOST_FACTS capability);
+        # when present it must be the frozen subject capability.
+        raise MechanismInvalid(
+            "A3 placement vulkan_family differs from the frozen HOST_FACTS "
+            "capability authority")
+    for phase in ("identity-pre.json", "identity-post.json"):
+        identity = _obj(phase)
+        if any(identity.get(k) != v
+               for k, v in PR254.C252.HOST_FACTS.items()):
+            raise MechanismInvalid(
+                f"A3 retained {phase} differs from the frozen subject "
+                "identity (one-factor law)")
+
+
 def _mechanism_a3(root: Path, namespace: str) -> dict[str, Any]:
     """A3: async backend behavior disabled for the measured execution.
 
-    Law: every retained unit's server.log contains the EXACT stderr line the
-    pin emits when support_async is false (:6727), full-line equality — plus
-    the exact enumeration line proving the Vulkan path stayed active on the
-    frozen subject (one-factor law: A3's control cannot change the reported
-    matrix-core family).
+    Law (amended round 5, METHODOLOGY-AMENDMENT-005): every retained unit's
+    server.log contains the EXACT stderr line the pin emits when
+    support_async is false (:6727), full-line equality — plus the frozen
+    producer-attested Vulkan placement/identity facts for the same unit
+    (enum banner no longer physically retained by this instrument, so the
+    old one-factor enum requirement is replaced by the /3 producer
+    attestation's retained identity/env facts; A2/A5 unchanged).
     """
     for unit in _arm_units(root, namespace):
         obs = _unit_observations(_unit_server_log(unit))
         if not obs["async_disabled"]:
             raise MechanismInvalid(
                 "A3 retained server log lacks the exact async-disabled line")
-        _require_subject_family(obs, "A3")
+        if obs["families"] and obs["families"][0] != SUBJECT_ENUM_FAMILY:
+            # The enum banner is no longer REQUIRED (AMENDMENT-005), but a
+            # banner that IS retained must still report the frozen subject
+            # capability: a forged family change under A3 violates the
+            # one-factor law (A3's control cannot change coopmat detection).
+            raise MechanismInvalid(
+                f"A3 enumeration family {obs['families'][0]!r} differs "
+                f"from the frozen subject capability "
+                f"{SUBJECT_ENUM_FAMILY!r}; this arm's control cannot "
+                "change cooperative-matrix detection — the run was not "
+                "one-factor on the frozen subject")
+        if len(obs["families"]) > 1:
+            raise MechanismInvalid(
+                "multiple device enumeration lines in one unit; the "
+                "frozen one-device launch emits exactly one")
+        _require_retained_a3_placement(unit)
     return {"arm": "A3",
             "mechanism": "backend async interface disabled at runtime "
-                         "(exact disabled-marker line retained in every unit, "
-                         "Vulkan path active)"}
+                         "(exact disabled-marker line retained in every "
+                         "unit, producer-attested Vulkan placement and "
+                         "frozen subject identity retained per unit "
+                         "(AMENDMENT-005))"}
 
 
 def _mechanism_a5(root: Path, namespace: str) -> dict[str, Any]:
@@ -479,8 +562,8 @@ def _size_eq(a: float, b: float) -> bool:
 # A1: GGML_VK_SERIALIZE_SUBMISSIONS sets device->serialize_submissions
 # (:7435) and the serialized submission path waits on the device fence
 # (:18105), but the pin emits NO retained observable distinguishing a
-# serialized submission from an unfenced batch. Marking it here (not in the
-# reducer's control flow) keeps the reason auditable and testable.
+# serialized submission from an unfenced batch. Marking it here (not in
+# the reducer's control flow) keeps the reason auditable and testable.
 NON_TERMINAL_CAPABLE = {
     "A1": "no retained submission-serialization observable exists at pin "
           "b29c606e; the serialized wait path emits no distinguishable "
@@ -492,13 +575,73 @@ NON_TERMINAL_CAPABLE = {
           "identically from the staging (:8605/:8615) and pinned-host "
           "(:8222) paths, and no preference-off baseline allocation ledger "
           "exists to compare same-site typing against",
+    # Issue #258 (AMENDMENT-006): A5 is withdrawn from the admissible
+    # localization validators. Accepted #257 classification
+    # A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL — the control is attested
+    # live and staging activity authentic, but NO retained observable at
+    # this pin uniquely discriminates the selected model-buffer memory
+    # type / upload path relative to the no-A5 branch (both staging-marker
+    # overloads, eDeviceLocal reachable from both branches, no property
+    # flags or attempt order logged). The ordered staging state-machine
+    # law below (_mechanism_a5) is retained VERBATIM as the falsified
+    # prospective law; it is no longer consulted for localization.
+    "A5": "A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL (#257): control attested "
+          "live and staging authentic, but no retained observable uniquely "
+          "discriminates the selected model-buffer memory type / upload "
+          "path at pin b29c606e; reopening A5 requires new prospective "
+          "instrumentation under its own reviewed freeze",
 }
 
+# Canonical registry of arms that CAN localize a terminal at this pin
+# (frozen mechanism contract retained + unique retained observable).
+# issue258_theorem.TERMINAL_CAPABLE must agree; the reducer consumes the
+# theorem module, and a test pins the agreement.
 MECHANISM_VALIDATORS = {
+    "A2": _mechanism_a2,
+    "A3": _mechanism_a3,
+}
+
+
+# Retained-observation/custody law registry (correction round 3, #258
+# review). This registry is MECHANICALLY INDEPENDENT of terminal/
+# localization capability: it maps every arm that HAS a frozen
+# retained-observation law to that law, whether or not the arm can
+# localize a terminal. A5 is nonterminal (#257,
+# A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL) and has ZERO localization
+# authority (absent from MECHANISM_VALIDATORS above and from
+# issue258_theorem.TERMINAL_CAPABLE), yet its frozen retained-observation
+# law (_mechanism_a5, retained verbatim) remains PRODUCTION-ENFORCED
+# custody: A5 evidence present in a derive_terminal() reduction must
+# still satisfy it. A1/A4 have no frozen retained-observation law at
+# this pin (no retained observable exists — see NON_TERMINAL_CAPABLE),
+# so retained A1/A4 evidence carries no observation law to enforce.
+RETAINED_OBSERVATION_LAWS = {
     "A2": _mechanism_a2,
     "A3": _mechanism_a3,
     "A5": _mechanism_a5,
 }
+
+
+def retained_observation_status(root: Path, arm: str,
+                                namespace: str) -> dict[str, Any]:
+    """Validate one retained arm against its frozen custody/observation
+    law (public helper boundary — production and tests consume THIS, not
+    the private ``_mechanism_*`` functions).
+
+    Fail closed: an arm with no frozen retained-observation law raises
+    MechanismInvalid (custody is never silently skipped for an arm whose
+    law exists, and never invented for an arm whose law does not). This
+    is the CUSTODY question — whether the retained bytes satisfy the
+    arm's frozen observation law — and is entirely separate from the
+    CAPABILITY question (mechanism_status / issue258_theorem), which
+    governs only whether an arm may localize a terminal.
+    """
+    law = RETAINED_OBSERVATION_LAWS.get(arm)
+    if law is None:
+        raise MechanismInvalid(
+            f"no frozen retained-observation/custody law for arm {arm}")
+    facts = law(root, namespace)
+    return {"arm": arm, "custody_valid": True, "facts": facts}
 
 
 def mechanism_status(root: Path, arm: str, namespace: str) -> dict[str, Any]:
@@ -507,6 +650,14 @@ def mechanism_status(root: Path, arm: str, namespace: str) -> dict[str, Any]:
     Returns {"capable": bool, "facts": dict} — never a caller boolean. For a
     non-terminal-capable arm the status is {"capable": False, reason} and no
     retained observation can localize through this arm.
+
+    NOTE (two independent laws): this function answers ONLY the
+    terminal/localization-capability question. Custody/observation
+    validation of retained evidence is a separate law, enforced through
+    RETAINED_OBSERVATION_LAWS / retained_observation_status() — an arm
+    can be nonterminal (this function returns capable=False, e.g. A5 per
+    #257) while its retained evidence remains subject to its frozen
+    observation law. The two registries must not be conflated.
     """
     if arm in NON_TERMINAL_CAPABLE:
         return {"capable": False, "arm": arm, "reason": NON_TERMINAL_CAPABLE[arm]}

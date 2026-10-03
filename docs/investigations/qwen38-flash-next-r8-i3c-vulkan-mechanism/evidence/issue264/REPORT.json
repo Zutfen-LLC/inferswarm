@@ -1,0 +1,808 @@
+{
+  "all_unit_pair_count": 4,
+  "arms": {
+    "BASE": {
+      "classification": "screening-variable",
+      "units": [
+        {
+          "markers": {
+            "dims": "2560x248320:2560x1->248320x1",
+            "event_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "family": "mmv",
+            "graph_ids": [
+              61,
+              122,
+              7564,
+              7613,
+              7662,
+              7711,
+              7760,
+              7809,
+              7858,
+              7907
+            ],
+            "indexing64": 0,
+            "local_size": "32x1x1",
+            "marker_count": 10,
+            "node": "result_output",
+            "pipe": "mul_mat_vec_q4_k_f32_f32",
+            "quant_y": 0,
+            "reduction": "subgroup",
+            "route": "mat-vec",
+            "split_k": 0,
+            "state": "base",
+            "types": "q4_K*f32->f32",
+            "variant": "subgroup"
+          },
+          "observer_meta_sha256": "dda2867d00d93a8d9583b26d96c409f0d04e5241554a1582092c9727487df1ee",
+          "placement": {
+            "cuda_participation": false,
+            "embedding": "CPU",
+            "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "ngl": 1,
+            "output_projection": "Vulkan",
+            "vulkan_family": "NV_coopmat2",
+            "vulkan_family_authority": "frozen-host-facts"
+          },
+          "response": {
+            "content": " The lighthouse keeper counted forty-one waves",
+            "tokens": [
+              561,
+              324,
+              55965,
+              51624,
+              29014,
+              34227,
+              18030,
+              16382
+            ],
+            "tokens_predicted": 8
+          },
+          "response_raw": "{\"index\":0,\"content\":\" The lighthouse keeper counted forty-one waves\",\"tokens\":[561,324,55965,51624,29014,34227,18030,16382],\"id_slot\":3,\"stop\":true,\"model\":\"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf\",\"tokens_predicted\":8,\"tokens_evaluated\":3077,\"generation_settings\":{\"seed\":0,\"temperature\":0.0,\"dynatemp_range\":0.0,\"dynatemp_exponent\":1.0,\"top_k\":1,\"top_p\":0.949999988079071,\"min_p\":0.05000000074505806,\"top_n_sigma\":-1.0,\"xtc_probability\":0.0,\"xtc_threshold\":0.10000000149011612,\"typical_p\":1.0,\"repeat_last_n\":64,\"repeat_penalty\":1.0,\"presence_penalty\":0.0,\"frequency_penalty\":0.0,\"dry_multiplier\":0.0,\"dry_base\":1.75,\"dry_allowed_length\":2,\"dry_penalty_last_n\":64,\"dry_sequence_breakers\":[\"\\n\",\":\",\"\\\"\",\"*\"],\"mirostat\":0,\"mirostat_tau\":5.0,\"mirostat_eta\":0.10000000149011612,\"adaptive_target\":-1.0,\"adaptive_decay\":0.8999999761581421,\"stop\":[],\"max_tokens\":8,\"n_predict\":8,\"n_keep\":0,\"n_discard\":0,\"ignore_eos\":false,\"stream\":false,\"logit_bias\":[],\"n_probs\":0,\"min_keep\":0,\"grammar\":\"\",\"grammar_lazy\":false,\"grammar_triggers\":[],\"preserved_tokens\":[],\"chat_format\":\"Content-only\",\"reasoning_format\":\"deepseek\",\"reasoning_in_content\":false,\"generation_prompt\":\"\",\"samplers\":[\"top_k\"],\"speculative.types\":\"none\",\"timings_per_token\":false,\"post_sampling_probs\":false,\"backend_sampling\":false,\"lora\":[]},\"prompt\":\"You are compiling the annual coastal report. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:\",\"has_new_line\":false,\"truncated\":false,\"stop_type\":\"limit\",\"stopping_word\":\"\",\"tokens_cached\":3084,\"timings\":{\"cache_n\":0,\"prompt_n\":3077,\"prompt_ms\":48021.59,\"prompt_per_token_ms\":15.606626584335391,\"prompt_per_second\":64.07534610994763,\"predicted_n\":8,\"predicted_ms\":5699.996,\"predicted_per_token_ms\":814.2851428571429,\"predicted_per_second\":1.2280710372428332}}",
+          "response_sha256": "53be8f7d98cfbee17e9d246ff179625a1a2879e416ff4635fa47f8c61b9f72aa",
+          "row_digest": "75af9ac4d7a3851cc99cb98f1d55be511c08590fff538f2355a9a444f7a0903f",
+          "rows": [
+            {
+              "argmax_token": 561,
+              "argmax_value": 15.78658676147461,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "bc45b8c68aa51ce1778357c42a15bd15001ebcd63b1a07a926c2de0e058fb00b"
+            },
+            {
+              "argmax_token": 324,
+              "argmax_value": 16.839942932128906,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "7fa2a6c034d0ddd9e8926b94f22dc712870fd5bbfab2fb12eaeaf2eab9dc4480"
+            },
+            {
+              "argmax_token": 55965,
+              "argmax_value": 21.355655670166016,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "aced250c9cc7201e3478e8bb0f2dca1f1bf79c151d65926e225233d4dbcc6f6b"
+            },
+            {
+              "argmax_token": 51624,
+              "argmax_value": 19.245967864990234,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "a35b11086c2faa979d674119e9d4c481d967a193c30f145d21817904acc91ae1"
+            },
+            {
+              "argmax_token": 29014,
+              "argmax_value": 17.67704963684082,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "3136ba11307cc265619a47b2c3932849703c887a4f633c5a7fc612aaad89713f"
+            },
+            {
+              "argmax_token": 34227,
+              "argmax_value": 16.480422973632812,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "030077d38e76125803acf45152fbbbe46573a020ccabcf150689dca0d81dbd7b"
+            },
+            {
+              "argmax_token": 18030,
+              "argmax_value": 17.930953979492188,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "bee93c732f6ef4bd7cd19d98e162840ebccc671f2c54178e392ffee6a541b45a"
+            },
+            {
+              "argmax_token": 16382,
+              "argmax_value": 18.281898498535156,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "6617352fbaf707c9df6f4bc6556df13b050c440cbf9cee713b25a8bc0b2bf690"
+            }
+          ],
+          "server_log_sha256": "20102577125655bb49777077844caa9a75e6162645f49d46e4e81115346d9727",
+          "unit_index": 1
+        },
+        {
+          "markers": {
+            "dims": "2560x248320:2560x1->248320x1",
+            "event_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "family": "mmv",
+            "graph_ids": [
+              61,
+              122,
+              7564,
+              7613,
+              7662,
+              7711,
+              7760,
+              7809,
+              7858,
+              7907
+            ],
+            "indexing64": 0,
+            "local_size": "32x1x1",
+            "marker_count": 10,
+            "node": "result_output",
+            "pipe": "mul_mat_vec_q4_k_f32_f32",
+            "quant_y": 0,
+            "reduction": "subgroup",
+            "route": "mat-vec",
+            "split_k": 0,
+            "state": "base",
+            "types": "q4_K*f32->f32",
+            "variant": "subgroup"
+          },
+          "observer_meta_sha256": "35678ce410b6a4a3a1b94452323c2d7f946ee85283c1050d7c47b63977627bd3",
+          "placement": {
+            "cuda_participation": false,
+            "embedding": "CPU",
+            "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "ngl": 1,
+            "output_projection": "Vulkan",
+            "vulkan_family": "NV_coopmat2",
+            "vulkan_family_authority": "frozen-host-facts"
+          },
+          "response": {
+            "content": " \"The lighthouse keeper counted forty-one",
+            "tokens": [
+              328,
+              760,
+              324,
+              55965,
+              51624,
+              29014,
+              34227,
+              18030
+            ],
+            "tokens_predicted": 8
+          },
+          "response_raw": "{\"index\":0,\"content\":\" \\\"The lighthouse keeper counted forty-one\",\"tokens\":[328,760,324,55965,51624,29014,34227,18030],\"id_slot\":3,\"stop\":true,\"model\":\"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf\",\"tokens_predicted\":8,\"tokens_evaluated\":3077,\"generation_settings\":{\"seed\":0,\"temperature\":0.0,\"dynatemp_range\":0.0,\"dynatemp_exponent\":1.0,\"top_k\":1,\"top_p\":0.949999988079071,\"min_p\":0.05000000074505806,\"top_n_sigma\":-1.0,\"xtc_probability\":0.0,\"xtc_threshold\":0.10000000149011612,\"typical_p\":1.0,\"repeat_last_n\":64,\"repeat_penalty\":1.0,\"presence_penalty\":0.0,\"frequency_penalty\":0.0,\"dry_multiplier\":0.0,\"dry_base\":1.75,\"dry_allowed_length\":2,\"dry_penalty_last_n\":64,\"dry_sequence_breakers\":[\"\\n\",\":\",\"\\\"\",\"*\"],\"mirostat\":0,\"mirostat_tau\":5.0,\"mirostat_eta\":0.10000000149011612,\"adaptive_target\":-1.0,\"adaptive_decay\":0.8999999761581421,\"stop\":[],\"max_tokens\":8,\"n_predict\":8,\"n_keep\":0,\"n_discard\":0,\"ignore_eos\":false,\"stream\":false,\"logit_bias\":[],\"n_probs\":0,\"min_keep\":0,\"grammar\":\"\",\"grammar_lazy\":false,\"grammar_triggers\":[],\"preserved_tokens\":[],\"chat_format\":\"Content-only\",\"reasoning_format\":\"deepseek\",\"reasoning_in_content\":false,\"generation_prompt\":\"\",\"samplers\":[\"top_k\"],\"speculative.types\":\"none\",\"timings_per_token\":false,\"post_sampling_probs\":false,\"backend_sampling\":false,\"lora\":[]},\"prompt\":\"You are compiling the annual coastal report. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:\",\"has_new_line\":false,\"truncated\":false,\"stop_type\":\"limit\",\"stopping_word\":\"\",\"tokens_cached\":3084,\"timings\":{\"cache_n\":0,\"prompt_n\":3077,\"prompt_ms\":46946.588,\"prompt_per_token_ms\":15.257259668508288,\"prompt_per_second\":65.54256935562601,\"predicted_n\":8,\"predicted_ms\":5688.423,\"predicted_per_token_ms\":812.6318571428571,\"predicted_per_second\":1.2305695269145773}}",
+          "response_sha256": "4ad67aabc44a6d47f48198c81c1bd41b3442ed67b26db980acb68e700b66b6c4",
+          "row_digest": "7803c2cce113d4a0b1924ca25833517026159a8d0fadb7e0887d604e0e32e03d",
+          "rows": [
+            {
+              "argmax_token": 328,
+              "argmax_value": 15.358774185180664,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "b83d9e4962aa185b42a0c011f817c124998fbc191e7dcce53b49d6ec7d957b1f"
+            },
+            {
+              "argmax_token": 760,
+              "argmax_value": 15.995447158813477,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "cde896faa598675e22483a79a5f027654c5e74ec9341a46289904d0fa3bad386"
+            },
+            {
+              "argmax_token": 324,
+              "argmax_value": 16.841609954833984,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "a7b8ca562a9f7d361a953c7f4950f55777e5faf1519633e5a21c213c7b88358e"
+            },
+            {
+              "argmax_token": 55965,
+              "argmax_value": 20.88121795654297,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "82798ed363e305ef07f2eb742662069c402a9f531e0724c4bb03755b998f6821"
+            },
+            {
+              "argmax_token": 51624,
+              "argmax_value": 19.769699096679688,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "933bb03d8c9bc9b67e06f889aadecd577dde35fc80d5be7a28f0b8acdb9f7ed3"
+            },
+            {
+              "argmax_token": 29014,
+              "argmax_value": 18.090726852416992,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "bb723bb80b93f7d6c8cdeb1837909612dda25987240e7dc46083cbb5b97ddc86"
+            },
+            {
+              "argmax_token": 34227,
+              "argmax_value": 17.93328857421875,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "9d97e0b0657e25331f62f20b1ca5e77f2896229c5bea352320179dbfdc95c688"
+            },
+            {
+              "argmax_token": 18030,
+              "argmax_value": 18.943836212158203,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "688d11af8ffbc347ab19bf604a2797d20e7fd7b9043719ab8bf0eb35e4652f2e"
+            }
+          ],
+          "server_log_sha256": "d1233047e7479401e9b85911154ddd3d172e1db249c10d326df60f13e13ad336",
+          "unit_index": 2
+        }
+      ]
+    },
+    "H5_MMV_CANDIDATE": {
+      "classification": "screening-variable",
+      "units": [
+        {
+          "markers": {
+            "dims": "2560x248320:2560x1->248320x1",
+            "event_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "family": "mmv",
+            "graph_ids": [
+              61,
+              122,
+              7564,
+              7613,
+              7662,
+              7711,
+              7760,
+              7809,
+              7858,
+              7907
+            ],
+            "indexing64": 0,
+            "local_size": "128x1x1",
+            "marker_count": 10,
+            "node": "result_output",
+            "pipe": "mul_mat_vec_q4_k_f32_f32",
+            "quant_y": 0,
+            "reduction": "hybrid",
+            "route": "mat-vec",
+            "split_k": 0,
+            "state": "large",
+            "types": "q4_K*f32->f32",
+            "variant": "large"
+          },
+          "observer_meta_sha256": "35678ce410b6a4a3a1b94452323c2d7f946ee85283c1050d7c47b63977627bd3",
+          "placement": {
+            "cuda_participation": false,
+            "embedding": "CPU",
+            "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "ngl": 1,
+            "output_projection": "Vulkan",
+            "vulkan_family": "NV_coopmat2",
+            "vulkan_family_authority": "frozen-host-facts"
+          },
+          "response": {
+            "content": " \"The lighthouse keeper counted forty-one",
+            "tokens": [
+              328,
+              760,
+              324,
+              55965,
+              51624,
+              29014,
+              34227,
+              18030
+            ],
+            "tokens_predicted": 8
+          },
+          "response_raw": "{\"index\":0,\"content\":\" \\\"The lighthouse keeper counted forty-one\",\"tokens\":[328,760,324,55965,51624,29014,34227,18030],\"id_slot\":3,\"stop\":true,\"model\":\"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf\",\"tokens_predicted\":8,\"tokens_evaluated\":3077,\"generation_settings\":{\"seed\":0,\"temperature\":0.0,\"dynatemp_range\":0.0,\"dynatemp_exponent\":1.0,\"top_k\":1,\"top_p\":0.949999988079071,\"min_p\":0.05000000074505806,\"top_n_sigma\":-1.0,\"xtc_probability\":0.0,\"xtc_threshold\":0.10000000149011612,\"typical_p\":1.0,\"repeat_last_n\":64,\"repeat_penalty\":1.0,\"presence_penalty\":0.0,\"frequency_penalty\":0.0,\"dry_multiplier\":0.0,\"dry_base\":1.75,\"dry_allowed_length\":2,\"dry_penalty_last_n\":64,\"dry_sequence_breakers\":[\"\\n\",\":\",\"\\\"\",\"*\"],\"mirostat\":0,\"mirostat_tau\":5.0,\"mirostat_eta\":0.10000000149011612,\"adaptive_target\":-1.0,\"adaptive_decay\":0.8999999761581421,\"stop\":[],\"max_tokens\":8,\"n_predict\":8,\"n_keep\":0,\"n_discard\":0,\"ignore_eos\":false,\"stream\":false,\"logit_bias\":[],\"n_probs\":0,\"min_keep\":0,\"grammar\":\"\",\"grammar_lazy\":false,\"grammar_triggers\":[],\"preserved_tokens\":[],\"chat_format\":\"Content-only\",\"reasoning_format\":\"deepseek\",\"reasoning_in_content\":false,\"generation_prompt\":\"\",\"samplers\":[\"top_k\"],\"speculative.types\":\"none\",\"timings_per_token\":false,\"post_sampling_probs\":false,\"backend_sampling\":false,\"lora\":[]},\"prompt\":\"You are compiling the annual coastal report. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:\",\"has_new_line\":false,\"truncated\":false,\"stop_type\":\"limit\",\"stopping_word\":\"\",\"tokens_cached\":3084,\"timings\":{\"cache_n\":0,\"prompt_n\":3077,\"prompt_ms\":47325.412,\"prompt_per_token_ms\":15.380374390640233,\"prompt_per_second\":65.01792314032048,\"predicted_n\":8,\"predicted_ms\":5794.638,\"predicted_per_token_ms\":827.8054285714286,\"predicted_per_second\":1.2080133392284385}}",
+          "response_sha256": "ca95431576d513bfd8003afb12d82d8fe1233275a5da687517e930d94b18a20e",
+          "row_digest": "6794f130fe41a19e6f083bc124d47782981721bee6d41362b170cb56263fba60",
+          "rows": [
+            {
+              "argmax_token": 328,
+              "argmax_value": 15.566492080688477,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "ebb801a617665dc320c615b2ee8bf5232a33379464db2d029681f6d886c8cc6d"
+            },
+            {
+              "argmax_token": 760,
+              "argmax_value": 16.628175735473633,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "a3a53e3c235c1fdbf7ac508b4f4cc5bd2e1c201189ec86221b7b20f30b6da261"
+            },
+            {
+              "argmax_token": 324,
+              "argmax_value": 16.725934982299805,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "4561ab50d1b796457c38631ea5972a41cff30ea6a0d9264ebc1b2eb3969de14d"
+            },
+            {
+              "argmax_token": 55965,
+              "argmax_value": 20.78803062438965,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "3ac5261cec934747a4c3e77edd5d6fcd2d0ec1b70573abd663804be636e08696"
+            },
+            {
+              "argmax_token": 51624,
+              "argmax_value": 19.725160598754883,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "5057acb52f5fb62ca26794978bd04010ae06da81e65d432d64851b674f5f7feb"
+            },
+            {
+              "argmax_token": 29014,
+              "argmax_value": 18.29849624633789,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "7841a5472d74fb1e096476248d978c4d2b9a75340a10676b52eff8ec030ccf41"
+            },
+            {
+              "argmax_token": 34227,
+              "argmax_value": 18.000553131103516,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "86f0666fb5fab27cede4539c5b19b28fb011e64d3d38f4a12092c2f93a0aea6e"
+            },
+            {
+              "argmax_token": 18030,
+              "argmax_value": 18.902170181274414,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "920b6482cf1a977f22c3ee43eb3a3d3cb85f21b6340e7212d24202a0c394bfed"
+            }
+          ],
+          "server_log_sha256": "d662b7834045e458fde3a88752afae30a9d047607ed9d3e4145a8f633ee37e36",
+          "unit_index": 1
+        },
+        {
+          "markers": {
+            "dims": "2560x248320:2560x1->248320x1",
+            "event_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "family": "mmv",
+            "graph_ids": [
+              61,
+              122,
+              7564,
+              7613,
+              7662,
+              7711,
+              7760,
+              7809,
+              7858,
+              7907
+            ],
+            "indexing64": 0,
+            "local_size": "128x1x1",
+            "marker_count": 10,
+            "node": "result_output",
+            "pipe": "mul_mat_vec_q4_k_f32_f32",
+            "quant_y": 0,
+            "reduction": "hybrid",
+            "route": "mat-vec",
+            "split_k": 0,
+            "state": "large",
+            "types": "q4_K*f32->f32",
+            "variant": "large"
+          },
+          "observer_meta_sha256": "35678ce410b6a4a3a1b94452323c2d7f946ee85283c1050d7c47b63977627bd3",
+          "placement": {
+            "cuda_participation": false,
+            "embedding": "CPU",
+            "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "ngl": 1,
+            "output_projection": "Vulkan",
+            "vulkan_family": "NV_coopmat2",
+            "vulkan_family_authority": "frozen-host-facts"
+          },
+          "response": {
+            "content": " \"The lighthouse keeper counted forty-one",
+            "tokens": [
+              328,
+              760,
+              324,
+              55965,
+              51624,
+              29014,
+              34227,
+              18030
+            ],
+            "tokens_predicted": 8
+          },
+          "response_raw": "{\"index\":0,\"content\":\" \\\"The lighthouse keeper counted forty-one\",\"tokens\":[328,760,324,55965,51624,29014,34227,18030],\"id_slot\":3,\"stop\":true,\"model\":\"/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf\",\"tokens_predicted\":8,\"tokens_evaluated\":3077,\"generation_settings\":{\"seed\":0,\"temperature\":0.0,\"dynatemp_range\":0.0,\"dynatemp_exponent\":1.0,\"top_k\":1,\"top_p\":0.949999988079071,\"min_p\":0.05000000074505806,\"top_n_sigma\":-1.0,\"xtc_probability\":0.0,\"xtc_threshold\":0.10000000149011612,\"typical_p\":1.0,\"repeat_last_n\":64,\"repeat_penalty\":1.0,\"presence_penalty\":0.0,\"frequency_penalty\":0.0,\"dry_multiplier\":0.0,\"dry_base\":1.75,\"dry_allowed_length\":2,\"dry_penalty_last_n\":64,\"dry_sequence_breakers\":[\"\\n\",\":\",\"\\\"\",\"*\"],\"mirostat\":0,\"mirostat_tau\":5.0,\"mirostat_eta\":0.10000000149011612,\"adaptive_target\":-1.0,\"adaptive_decay\":0.8999999761581421,\"stop\":[],\"max_tokens\":8,\"n_predict\":8,\"n_keep\":0,\"n_discard\":0,\"ignore_eos\":false,\"stream\":false,\"logit_bias\":[],\"n_probs\":0,\"min_keep\":0,\"grammar\":\"\",\"grammar_lazy\":false,\"grammar_triggers\":[],\"preserved_tokens\":[],\"chat_format\":\"Content-only\",\"reasoning_format\":\"deepseek\",\"reasoning_in_content\":false,\"generation_prompt\":\"\",\"samplers\":[\"top_k\"],\"speculative.types\":\"none\",\"timings_per_token\":false,\"post_sampling_probs\":false,\"backend_sampling\":false,\"lora\":[]},\"prompt\":\"You are compiling the annual coastal report. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice. The lighthouse keeper counted forty-one waves before the foghorn answered twice.  The next log entry begins as follows:\",\"has_new_line\":false,\"truncated\":false,\"stop_type\":\"limit\",\"stopping_word\":\"\",\"tokens_cached\":3084,\"timings\":{\"cache_n\":0,\"prompt_n\":3077,\"prompt_ms\":47401.003,\"prompt_per_token_ms\":15.404940851478711,\"prompt_per_second\":64.91423820715355,\"predicted_n\":8,\"predicted_ms\":5808.417,\"predicted_per_token_ms\":829.7738571428572,\"predicted_per_second\":1.2051476331675222}}",
+          "response_sha256": "a9cdaa4bd2b56425287ca5df576b67964791ae4107dedb56f28443800c33c4cf",
+          "row_digest": "de47bd55648dbb1df169ca47555f40de3b2191a16d823ec508a2f3176fd029a6",
+          "rows": [
+            {
+              "argmax_token": 328,
+              "argmax_value": 15.573952674865723,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "cc3380754185ced42a945ff59dd61f18e8b334f530c7c15f08ae1a5578b82b62"
+            },
+            {
+              "argmax_token": 760,
+              "argmax_value": 16.187206268310547,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "dd396d7ddb397d9d4828c7a8b99906376f4df80acf50f9c208687cb1eeda5289"
+            },
+            {
+              "argmax_token": 324,
+              "argmax_value": 16.527877807617188,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "5c523bd75c4e44865c7b4ea70150c261f8d01300a18756fc18b729ae3ff0fcda"
+            },
+            {
+              "argmax_token": 55965,
+              "argmax_value": 20.930419921875,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "e7ebccad6a2126d2aa1bba89eab876c9c27932aecb2dcc2aecca28a442b22a8c"
+            },
+            {
+              "argmax_token": 51624,
+              "argmax_value": 19.92721176147461,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "b4e0c89d9a8c363c4c80dbf575ec2ed3e784deebf650356c3746e10090ae0220"
+            },
+            {
+              "argmax_token": 29014,
+              "argmax_value": 17.90052604675293,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "1f1857401dd3f9a37f9af112bf771713a7d07e3d7c1652b62bb902ae189d45bf"
+            },
+            {
+              "argmax_token": 34227,
+              "argmax_value": 18.298723220825195,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "2d3f5a61bcac17bf0925c0ee972ac6f2536761caf2b63050abd89e7b90d504c5"
+            },
+            {
+              "argmax_token": 18030,
+              "argmax_value": 18.93065643310547,
+              "finite_count": 248320,
+              "nonfinite_count": 0,
+              "sha256": "d1d2254d7778cd4e77545d106094ed636911301afbbba88ac53d18ff5ec4e6d7"
+            }
+          ],
+          "server_log_sha256": "5f397c6540cfdf46b294bfcf300d3d0bc33a0596b7959af04bdabb1a95a725b4",
+          "unit_index": 2
+        }
+      ]
+    }
+  },
+  "control_difference": {
+    "GGML_VK_I264_MMV": {
+      "BASE": "base",
+      "H5_MMV_CANDIDATE": "large"
+    }
+  },
+  "evidence_preservation": {
+    "expected_file_count": 150,
+    "expected_inventory_sha256": "806160f67aeff84d2b4d1531d65e582cd7e599cdf601aad877d70f83924f6038",
+    "pilot_context_sha256": "6fbd22f768ae92b1e6f8421c305dbe79fdcec631a029661df6821b2927905fb7",
+    "scope": "#262 retained 150-file inventory; controller preflight/postflight verification required",
+    "status": "external-pending"
+  },
+  "execution_context_sha256": "6fbd22f768ae92b1e6f8421c305dbe79fdcec631a029661df6821b2927905fb7",
+  "expected_head": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+  "h5_discriminator": {
+    "scope": "frozen output.weight MMV dispatch; not numerical causality or theorem closure",
+    "status": "path-transition-only"
+  },
+  "interpretation": "Row digests, full-row descriptions, and raw responses are descriptive screening observations; no numerical causal inference or theorem closure is asserted.",
+  "paired_path_transition": {
+    "local_sizes": [
+      "32x1x1",
+      "128x1x1"
+    ],
+    "marker_counts": [
+      10,
+      10
+    ],
+    "node": "result_output",
+    "reductions": [
+      "subgroup",
+      "hybrid"
+    ],
+    "variants": [
+      "subgroup",
+      "large"
+    ]
+  },
+  "row_comparisons": {
+    "across_arms": [
+      {
+        "all_rows_equal": false,
+        "argmax_equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "base_unit": 1,
+        "equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "max_abs_finite_difference_by_position": [
+          1.0631823539733887,
+          14.616940021514893,
+          17.92422366142273,
+          17.487194776535034,
+          16.421030282974243,
+          14.485838890075684,
+          14.366812705993652,
+          16.55825424194336
+        ],
+        "other_unit": 1,
+        "response_tokens_equal": false
+      },
+      {
+        "all_rows_equal": false,
+        "argmax_equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "base_unit": 1,
+        "equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "max_abs_finite_difference_by_position": [
+          1.9405059814453125,
+          15.125551700592041,
+          17.823981761932373,
+          17.629584074020386,
+          16.62308144569397,
+          14.087868690490723,
+          14.664982795715332,
+          16.586740493774414
+        ],
+        "other_unit": 2,
+        "response_tokens_equal": false
+      },
+      {
+        "all_rows_equal": false,
+        "argmax_equal_by_position": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "base_unit": 2,
+        "equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "max_abs_finite_difference_by_position": [
+          1.4862580299377441,
+          2.324605703353882,
+          1.3460144996643066,
+          1.3438434600830078,
+          1.238570213317871,
+          1.344858318567276,
+          1.2962080240249634,
+          0.8260703086853027
+        ],
+        "other_unit": 1,
+        "response_tokens_equal": true
+      },
+      {
+        "all_rows_equal": false,
+        "argmax_equal_by_position": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "base_unit": 2,
+        "equal_by_position": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "max_abs_finite_difference_by_position": [
+          1.482820987701416,
+          1.9048684239387512,
+          1.8146394491195679,
+          1.3008460998535156,
+          1.5696237087249756,
+          1.3089118003845215,
+          1.091878890991211,
+          1.1095020771026611
+        ],
+        "other_unit": 2,
+        "response_tokens_equal": true
+      }
+    ],
+    "within_arms": {
+      "BASE": [
+        {
+          "all_rows_equal": false,
+          "argmax_equal_by_position": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "base_unit": 1,
+          "equal_by_position": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "max_abs_finite_difference_by_position": [
+            1.6468230485916138,
+            15.181705951690674,
+            17.74473524093628,
+            17.580382108688354,
+            16.465568780899048,
+            14.278069496154785,
+            14.299548149108887,
+            16.59992027282715
+          ],
+          "other_unit": 2,
+          "response_tokens_equal": false
+        }
+      ],
+      "H5_MMV_CANDIDATE": [
+        {
+          "all_rows_equal": false,
+          "argmax_equal_by_position": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "base_unit": 1,
+          "equal_by_position": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "max_abs_finite_difference_by_position": [
+            1.8939759731292725,
+            1.7445950508117676,
+            1.8083171844482422,
+            1.3054828643798828,
+            1.743295669555664,
+            0.9185104370117188,
+            1.2447130680084229,
+            1.1555891036987305
+          ],
+          "other_unit": 2,
+          "response_tokens_equal": true
+        }
+      ]
+    }
+  },
+  "schema": "inferswarm.issue264.pilot-report/1",
+  "source_closure": {
+    "source_patch_sha256": "f713767755cd40ee279aba6d4e72648c317e73a334d565a6cd0f176284e3226e",
+    "source_root": "inferswarm01:/home/hermes/is264-mmv-v2",
+    "source_tree": "23d38b96e371ad0634454d7bd6fe238da87eb1cb",
+    "source_vk_sha256": "551b6e7fd963fbf9cada48510df201cfa4bffa6a64bf4ea1d6d11d9e66999ebe"
+  },
+  "theorem_gaps": [
+    "H2/H3 mechanisms remain open; not re-tested by the H5 MMV pilot",
+    "H5 numerical attribution beyond screening variability remains open",
+    "prospective H5 hypothesis-class discrimination remains open"
+  ]
+}

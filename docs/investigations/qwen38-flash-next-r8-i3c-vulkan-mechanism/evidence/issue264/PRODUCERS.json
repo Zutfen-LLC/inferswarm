@@ -1,0 +1,20 @@
+{
+  "execution_head": "3040a92ccdf278d816a0324ff8fd8317f84d2d34",
+  "schema": "inferswarm.issue264.execution-producers/1",
+  "scope": "Execution producer/reader/parser and consumed identity/fixture/placement contracts, with focused test identities; later documentation commits do not alter these bytes.",
+  "sha256": {
+    "scripts/issue248_identity.py": "36f2f223a297046654ea9a709fdc1ac6579599c78b30ce0d670ffb8a80472de8",
+    "scripts/issue250_diagnostic.py": "fc116b7a80c027aa7942e5766330a4b869c135d95f162522c61d5d7760616b52",
+    "scripts/issue250_physical.py": "10f27e82e9c50f9c7c8efb7f7c5d4820f63711bf7f6dbd3de57bc2aeb44324f6",
+    "scripts/issue252_constants.py": "a9b245a98262730ce271a264c1818e223b34348f21d0e299cbeac54f0b76ddf9",
+    "scripts/issue254_producer.py": "503677ac8052c3a718f6bd6d3428df761c4e64e05d42b90de9ad96fdcfafcf0d",
+    "scripts/issue262_h5.py": "bb5cf6b038523c7694dd36b3a913c2b81830495eeb34aff8842d88cde5fa2b5b",
+    "scripts/issue264_h5.py": "704896e73d705e05a3831d066fce908ab498121cb4ddb0c21d958d929237b017",
+    "scripts/issue264_pilot.py": "d14dbfb7f2a71d45f3a8ec692bd7e4b5071830d98987f8b1333b56bcb06d17ee",
+    "scripts/issue264_report.py": "ac4b2d8abf92c94ab7b734907c5fdaeb87f585c4c35520b024c1ce2a3a6bdbee",
+    "scripts/issue264_source_patch.py": "7716cb4259bbcb8c842439b014d802c3982100c0278b62d2cddd113c09a48c0a",
+    "tests/test_issue264_h5.py": "4f3ad31cc3ad507fa47002a0f3fe7220d5ce6380eced97449f26f8175731f633",
+    "tests/test_issue264_pilot.py": "9eb1e998b4a4f7ee4bff40513a22c9780e68659c11e31d2f94a9c7293fcb46e5",
+    "tests/test_issue264_source_patch.py": "380c2a65effc68bec463aa12f0b1ac59d02bce569e1b693e1a1bb8c932d344cf"
+  }
+}
