@@ -119,7 +119,10 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
             endpoint=_text(endpoint,"rpc_endpoint")
             if ":" not in endpoint: raise ValueError("rpc_endpoint requires host and port")
         elif endpoint is not None: raise ValueError("client rpc_endpoint must be null")
-        if not isinstance(r["cache_ranges"],list) or not r["cache_ranges"]: raise ValueError("cache_ranges must be nonempty")
+        if not isinstance(r["cache_ranges"], list):
+            raise ValueError("cache_ranges must be a list")
+        if role == "remote" and not r["cache_ranges"]:
+            raise ValueError("remote cache_ranges must be nonempty")
         ranges=[]
         for cr in r["cache_ranges"]:
             _keys(cr,{"state_id","member","offset","length","sha256","cache_key","source_id","revision","representation","unit_id"},"cache range")

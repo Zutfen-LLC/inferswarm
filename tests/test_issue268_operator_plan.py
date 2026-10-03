@@ -79,6 +79,19 @@ class OperatorPlanTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, reason):
                         llama_cpp_spec(build_plan(parse_config(config)))
 
+    def test_source_backed_client_needs_no_rpc_cache_ranges(self):
+        config = sample()
+        config["participants"][0]["cache_ranges"] = []
+        plan = build_plan(parse_config(config))
+        spec = llama_cpp_spec(plan)
+        self.assertEqual(spec.rpc_endpoint, "worker.example:5000")
+
+    def test_remote_cache_ranges_remain_required(self):
+        config = sample()
+        config["participants"][1]["cache_ranges"] = []
+        with self.assertRaisesRegex(ValueError, "remote cache_ranges must be nonempty"):
+            parse_config(config)
+
     def test_large_members_and_distinct_role_binaries_are_supported(self):
         x = sample()
         x["model"]["members"][0]["size_bytes"] = 30 * 1024**3
