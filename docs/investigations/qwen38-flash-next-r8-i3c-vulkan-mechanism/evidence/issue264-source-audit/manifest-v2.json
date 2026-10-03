@@ -1,0 +1,19 @@
+{
+  "schema": "is264-source-audit-evidence-manifest/2",
+  "generation": 2,
+  "scope": "Hashes only for gen2 source-audit artifacts and exact corrected methodology bytes; excludes living status files, accepted evidence, and physical evidence. Gen1 snapshots remain immutable.",
+  "files": {
+    "corrected-audit-v2.md": "2d9a8f5589d1b421c3aa5b5b087e0c039d5f002b82e01925156bcefe73071b15",
+    "candidates-v2.json": "1b424a566dde623f435d6df220a15cb7ffec1a0c2e7f35ff6cdb782acb46be12",
+    "methodology-gen1.md": "7270c66fd668f9b74bf8c648f3bd6408785ac4d234e7ac0e6716ae633bd25a99",
+    "audit-gen1.md": "829d99ad5503fc27b2487ea6393ad03b2b860b7183beceece32bd5901aca8b5d",
+    "candidates-gen1.json": "427e6427608c03ab230a579aad36d408d0cc2de4c98209e2bf812260dd4c7fe8",
+    "manifest-gen1.json": "ddbbfe25c3bb41ed114423369db1729660f9c523436c84e96ecba2d31f48c98d"
+  },
+  "methodology": {
+    "path": "../../METHODOLOGY-ISSUE264.md",
+    "sha256": "fe2e1ba4a6aa7f1791666c033bef04f340da4e33c7c3993378ea9fc4160fcb64",
+    "gen1_snapshot": "evidence/issue264-source-audit/methodology-gen1.md"
+  },
+  "authorization": "source-only corrections; no physical authorization or execution evidence"
+}
