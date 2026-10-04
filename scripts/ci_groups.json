@@ -101,7 +101,9 @@
     "test_issue200_r8f_proof",
     "test_issue255_mvp",
     "test_issue255_measure",
-    "test_issue255_baseline"
+    "test_issue255_baseline",
+    "test_issue268_operator_plan",
+    "test_issue268_operator_runtime"
    ]
   },
   "r8-qwen-lineage": {
@@ -230,6 +232,9 @@
   "docs/implementation/artifact-locality-transition-planning-103/": [
    "issue-99-103",
    "issue-117-133"
+  ],
+  "docs/implementation/ordinary-operator-path-268/": [
+   "issue-99-103"
   ],
   "docs/implementation/plan-driven-artifact-acquisition-99/": [
    "issue-99-103",
@@ -441,6 +446,9 @@
   ],
   "docs/status-maintenance.md": [
    "repo-integrity"
+  ],
+  "inferswarm/operator/": [
+   "issue-99-103"
   ],
   "requirements-test.txt": [
    "repo-integrity"

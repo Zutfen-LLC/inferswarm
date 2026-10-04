@@ -1,6 +1,7 @@
 """Documentation drift and preservation regressions; no network or runtime work."""
 import contextlib
 import copy
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -112,43 +113,46 @@ class ProjectStatusTests(unittest.TestCase):
                 'SUBGROUP/subgroup/32x1x1', 'LARGE/hybrid/128x1x1',
                 'subgroup32→large128 hybrid', 'output.weight MMV q4_K*f32 route',
                 'four fresh-process units', 'screening-variable',
-                'accepted for the bounded scope', 'H2/H3/H5 theorem closure remain open',
+                '5969219338', 'H2/H3/H5 theorem closure remain open',
                 'PR #265 merged into the aggregate producer branch',
                 'ARM_A_STOPS_LADDER', '5904093750', '5904094070',
                 'not established as root cause',
-                'No further physical work is authorized under #250',
-                'no B/C/C1/C2/D work is required or authorized',
                 '#241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED',
                 '#244 and #239 remain blocked', '#258'):
             with self.subTest(retained=retained):
-                self.assertIn(retained, output)
+                self.assertTrue(retained in output or any(retained in item for item in execution['constraints']))
         self.assertEqual(execution['state'], 'blocked')
+        self.assertTrue(any('ARM_A_STOPS_LADDER localized boundary only' in item and 'not established as root cause' in item for item in execution['constraints']))
         self.assertIn('no further execution authority', execution['step'])
-        self.assertEqual(len(self.record['capabilities']), 8)
+        self.assertEqual(len(self.record['capabilities']), 9)
         self.assertNotIn('H5', {item['id'] for item in self.record['capabilities']})
 
-    def test_255_pending_frontier_cannot_revive_completed_266_review(self):
+    def test_268_frontier_preserves_accepted_255_and_blocks_premature_acceptance(self):
         frontier = self.record['frontier']
         prerequisite = frontier['prerequisite']
         output = sync.render(self.record)['frontier']
-        self.assertIn('Issue #255', frontier['title'])
-        self.assertIn('UNACCEPTED', frontier['title'])
+        self.assertIn('Issue #268', frontier['title'])
+        self.assertNotIn('UNACCEPTED', frontier['title'])
         self.assertEqual(frontier['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/issues/255')
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/268')
         self.assertEqual(frontier['execution']['reference'],
-                         'https://github.com/Zutfen-LLC/inferswarm/pull/267#issuecomment-5971685012')
-        self.assertEqual(prerequisite['acceptance'],
-                         {'state': 'pending', 'reference': None})
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/268')
+        self.assertEqual(prerequisite['acceptance']['state'], 'accepted')
+        self.assertEqual(prerequisite['acceptance']['reference'],
+                         'https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991')
         self.assertEqual(prerequisite['observation']['result'],
-                         'ISSUE255_CUDA_RPC_PRODUCT_OBSERVED')
-        self.assertIn('maintainer exact-head review and Final CPU Validation', output)
-        self.assertIn('Final CPU Validation must NOT run before explicit maintainer GO', output)
+                         'MVP_DISTRIBUTED_INFERENCE_PASS')
+        self.assertIn('Issue #268', output)
+        self.assertIn('Final CPU Validation requires maintainer GO', output)
         for denied in ('numerical equivalence', 'mixed-vendor readiness',
                        'production readiness', 'R8-J/Vulkan execution authority'):
             self.assertIn(denied, output)
-        self.assertNotIn('MVP_DISTRIBUTED_INFERENCE_PASS',
-                         json.dumps(self.record['capabilities']))
-        self.assertEqual(len(self.record['capabilities']), 8)
+        self.assertIn('MVP_DISTRIBUTED_INFERENCE_PASS',
+                      json.dumps(self.record['capabilities']))
+        self.assertEqual(len(self.record['capabilities']), 9)
+        self.assertNotRegex(output, r'(?i)Issue #255 does not establish[^.]*accepted capabilities')
+        self.assertNotRegex(output, r'(?i)observation remains outside accepted capabilities')
+        self.assertNotRegex(output, r'(?i)does not assert the MVP terminal')
 
         # Test the source AND every generated living-status section, plus
         # authored product prose. Historical evidence is deliberately excluded.
@@ -169,6 +173,82 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertNotIn('#266/R8-I3C frontier', content)
                 self.assertNotIn('R8-I3C/#266 frontier', content)
                 self.assertNotIn('Issue #266 — aggregate R8-I3C mainline review', content)
+
+    def test_accepted_255_status_cannot_revert_to_pending_final_cpu(self):
+        rendered = sync.render(self.record)
+        combined = json.dumps(self.record) + "\n" + "\n".join(rendered.values())
+        self.assertIn('MVP_DISTRIBUTED_INFERENCE_PASS', combined)
+        self.assertNotIn('UNACCEPTED CUDA/RPC product observation pending', combined)
+        self.assertNotIn('Final CPU Validation must NOT run before explicit maintainer GO', combined)
+        self.assertIn('Issue #268', combined)
+
+    def test_268_physical_observed_but_not_accepted_on_all_living_surfaces(self):
+        frontier = self.record['frontier']
+        execution = frontier['execution']
+        self.assertIn('not accepted', frontier['title'])
+        self.assertEqual(execution['state'], 'blocked')
+        self.assertEqual(frontier['prerequisite']['acceptance']['state'], 'accepted')
+        surfaces = {'source': json.dumps(frontier), **sync.render(self.record)}
+        for relative, sections in sync.TARGETS.items():
+            content = (sync.ROOT / relative).read_text()
+            surfaces[relative] = '\n'.join(content.split(
+                f'<!-- project-status:{name}:start -->', 1)[1].split(
+                f'<!-- project-status:{name}:end -->', 1)[0] for name in sections)
+        for name, content in surfaces.items():
+            if name not in ('source', 'frontier') and 'frontier' not in sync.TARGETS.get(name, ()):
+                continue
+            with self.subTest(surface=name):
+                self.assertIn('three ordinary', content.lower())
+                self.assertIn('not accepted', content.lower())
+                self.assertIn('Final CPU Validation', content)
+                self.assertNotIn('No #268 acceptance or physical execution is asserted here', content)
+                self.assertNotIn('R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS', content)
+                self.assertNotIn('Issue #255 is pending', content)
+
+    def test_268_compact_publication_is_digest_bound_and_nonterminal(self):
+        area = sync.ROOT / 'docs/implementation/ordinary-operator-path-268'
+        evidence = area / 'evidence'
+        compact = json.loads((evidence / 'physical-observation.json').read_text())
+        self.assertEqual(compact['measured_product_head'],
+                         '478eb5efc93476dc2be990ac738c7ddd40e11eab')
+        self.assertEqual(compact['acceptance'], 'NOT_ACCEPTED')
+        self.assertIn('DEFERRED', compact['final_cpu_validation'])
+        self.assertEqual(compact['original_observer_status'], 'INCOMPLETE')
+        self.assertEqual(compact['continuation_attempted_indices'], [2, 3])
+        self.assertEqual(len(compact['requests']), 3)
+        self.assertEqual([r['client']['positive_sm'] for r in compact['requests']],
+                         [8, 8, 9])
+        self.assertEqual([r['remote']['positive_sm'] for r in compact['requests']],
+                         [0, 0, 0])
+        self.assertEqual(len({r['response_id'] for r in compact['requests']}), 3)
+        self.assertEqual(len({r['lease_token'] for r in compact['requests']}), 3)
+        raw = {relative:digest for digest, relative in (line.split('  ', 1)
+              for line in (evidence / 'RAW-MANIFEST.sha256').read_text().splitlines())}
+        self.assertEqual(len(raw), 12)
+        for request in compact['requests']:
+            self.assertEqual(request['raw_receipt_sha256'],
+                             raw[request['raw_receipt']])
+            self.assertEqual(request['remote']['cuda_graph_lines'], 4)
+            self.assertEqual(request['remote']['log_delta_bytes'], [1258, 1498])
+            self.assertEqual(request['backing']['owned_remote_startup_cache_opens'], 9)
+            self.assertTrue(request['cleanup']['exact_owner_absent'])
+        covered = {}
+        for row in (evidence / 'MANIFEST.sha256').read_text().splitlines():
+            digest, relative = row.split('  ', 1)
+            self.assertNotIn(relative, covered)
+            self.assertNotEqual(relative,
+                'docs/implementation/ordinary-operator-path-268/evidence/MANIFEST.sha256')
+            covered[relative] = digest
+            self.assertEqual(hashlib.sha256((sync.ROOT / relative).read_bytes()).hexdigest(),
+                             digest)
+        prefix = 'docs/implementation/ordinary-operator-path-268/'
+        self.assertEqual(set(covered), {prefix + path for path in (
+            'product-report.md', 'evidence/RAW-MANIFEST.sha256',
+            'evidence/physical-observation.json',
+            *(f'evidence/retained-producers/{name}' for name in (
+                'acceptance-observer.py', 'continue-ordinary-acceptance.py',
+                'test_acceptance_observer.py', 'test_continue_ordinary_acceptance.py')),
+        )})
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'

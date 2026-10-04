@@ -10,8 +10,8 @@ Proves the closure record against git and the working tree:
   to the accepted starting head (nothing in the accepted evidence
   namespaces changed in this PR);
 - the closed-parent bindings pinned by the finalizer are byte-unchanged;
-- the living status record renders the accepted Arm-E prerequisite and
-  the completed-sequence step with no stale blocked/pending claim;
+- the living status record preserves the closed sequence and #250 boundary
+  while distinguishing accepted #255 from the pending #268 operator path;
 - the closure summary and the proposed Issue #117 replacement body
   exist, carry exactly the accepted terminals/merges, and the
   replacement is marked as maintainer-applied (Issue #117 itself is not
@@ -212,24 +212,52 @@ class Issue184LivingStatusTests(unittest.TestCase):
         self.record = json.loads(
             (sync.ROOT / sync.SOURCE).read_text(encoding="utf-8"))
 
-    def test_current_frontier_is_pending_and_accepted_arm_a_is_preserved(self):
+    def test_accepted_255_prerequisite_and_historical_250_boundary(self):
         # Living status only: closed #117 evidence law stays unchanged.
-        # The current product observation is not accepted; #250 remains
-        # accepted historical authority rather than the active prerequisite.
-        p = self.record["frontier"]["prerequisite"]
-        self.assertEqual(p["observation"]["result"], "ISSUE255_CUDA_RPC_PRODUCT_OBSERVED")
-        self.assertEqual(p["acceptance"], {"state": "pending", "reference": None})
-        historical = " ".join(self.record["frontier"]["execution"]["constraints"])
+        # #255 is accepted for its bounded MVP; #250 is historical authority,
+        # not the current prerequisite or fresh physical permission.
+        frontier = self.record["frontier"]
+        self.assertEqual(frontier["reference"],
+                         "https://github.com/Zutfen-LLC/inferswarm/issues/268")
+        self.assertEqual(frontier["prerequisite"], {
+            "title": "Issue #255 bounded CUDA/RPC MVP (accepted predecessor)",
+            "observation": {
+                "result": "MVP_DISTRIBUTED_INFERENCE_PASS",
+                "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116",
+            },
+            "acceptance": {
+                "state": "accepted",
+                "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991",
+            },
+        })
+        objective = frontier["objective"]
+        for scope in ("inferswarm01 RTX 3060 plus inferswarm04 RTX 3090",
+                      "Qwen3.8-Flash-Next-UD-IQ1_S",
+                      "fixed/manual whole-layer placement",
+                      "verified participant-local backing",
+                      "ordinary text generation/repeatability"):
+            self.assertIn(scope, objective)
+        historical = " ".join(frontier["execution"]["constraints"])
         self.assertIn("#250 predecessor remains accepted as the ARM_A_STOPS_LADDER", historical)
         self.assertIn("pull/251#issuecomment-5904093750", historical)
         self.assertIn("issues/250#issuecomment-5904094070", historical)
+        self.assertIn("not established as root cause", historical)
 
-    def test_execution_records_localized_boundary_without_new_authorization(self):
-        e = self.record["frontier"]["execution"]
+    def test_pending_268_execution_has_distinct_ci_and_final_cpu_gates(self):
+        frontier = self.record["frontier"]
+        self.assertIn("three physical requests observed; not accepted", frontier["title"])
+        e = frontier["execution"]
         self.assertEqual(e["state"], "blocked")
-        self.assertIn("No further physical work is authorized under #250", e["step"])
-        self.assertIn("no B/C/C1/C2/D work is required or authorized", e["step"])
-        self.assertIn("not established as root cause", "".join(e["constraints"]))
+        self.assertEqual(e["reference"], frontier["reference"])
+        self.assertIn("three ordinary", e["step"].lower())
+        self.assertIn("Living status is informational and grants no execution permission", e["step"])
+        self.assertIn("37169789383", e["step"])
+        self.assertIn("Final CPU Validation requires maintainer GO", e["step"])
+        self.assertIn("not accepted", e["step"])
+        self.assertNotIn("No #268 acceptance or physical execution is asserted here", e["step"])
+        self.assertIn("This status grants no further execution authority", e["step"])
+        self.assertIn("no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority",
+                      " ".join(e["constraints"]))
 
     def test_no_stale_blocked_or_pending_claims(self):
         rendered = sync.render(self.record)["frontier"]
@@ -302,8 +330,8 @@ class Issue184NegativeControlTests(unittest.TestCase):
 
     def test_accepted_prerequisite_without_reference_fails(self):
         record = json.loads((sync.ROOT / sync.SOURCE).read_text())
-        # The live prerequisite is pending. Manufacture the invalid accepted
-        # shape explicitly instead of relying on a historical frontier state.
+        # The live prerequisite is accepted. Remove its reference to prove
+        # that an accepted state without authority cannot render.
         record["frontier"]["prerequisite"]["acceptance"] = {
             "state": "accepted", "reference": None}
         with self.assertRaises(ValueError):

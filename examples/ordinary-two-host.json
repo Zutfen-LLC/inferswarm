@@ -1,0 +1,1469 @@
+{
+  "schema": "operator-config/2",
+  "plan_id": "r8k-accepted-fixed-two-host",
+  "model": {
+    "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+    "revision": "accepted-full-member-sha256-set",
+    "representation": "UD-IQ1_S-GGUF-v3",
+    "members": [
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+        "size_bytes": 10946624
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+        "size_bytes": 49990818368
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+        "size_bytes": 22544696352
+      }
+    ]
+  },
+  "participants": [
+    {
+      "role": "client",
+      "node_id": "inferswarm01",
+      "compute_id": "client-cu",
+      "transport": "local",
+      "execution_address": "inferswarm01",
+      "rpc_endpoint": null,
+      "device": "CUDA0",
+      "source_path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "runtime_executable": "/home/hermes/llama.cpp/build-v041/bin/llama-server",
+      "runtime_sha256": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411",
+      "cache_path": "/home/hermes/inferswarm-operator-268/client-cache",
+      "port": 8345,
+      "lifecycle_dir": "/home/hermes/inferswarm-operator-268/example-run-CHANGE-ME-client",
+      "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+      "source_revision": "accepted-full-member-sha256-set",
+      "source_representation": "UD-IQ1_S-GGUF-v3",
+      "cache_ranges": []
+    },
+    {
+      "role": "remote",
+      "node_id": "inferswarm04",
+      "compute_id": "remote-cu",
+      "transport": "rpc",
+      "execution_address": "inferswarm04",
+      "rpc_endpoint": "10.0.0.204:50056",
+      "device": "RPC0",
+      "source_path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "runtime_executable": "/home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server",
+      "runtime_sha256": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9",
+      "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer",
+      "port": 50056,
+      "lifecycle_dir": "/home/hermes/inferswarm-operator-268/example-run-CHANGE-ME-remote",
+      "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+      "source_revision": "accepted-full-member-sha256-set",
+      "source_representation": "UD-IQ1_S-GGUF-v3",
+      "cache_ranges": [
+        {
+          "state_id": "output.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 37696,
+          "length": 357580800,
+          "sha256": "30e5450eec8babd494c3a3ff8e580ed8196da9c40599b241e196cc70f09f5203",
+          "cache_key": "960dea06a116e301",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "output_hc_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 357618496,
+          "length": 3481600,
+          "sha256": "4af3192e837760ac348062a9d59bb706326aaa1c868cdc7ae4217afdc106de50",
+          "cache_key": "ac6ad10680fbc006",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "output_hc_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 361100096,
+          "length": 40960,
+          "sha256": "a31d120fe2c798e3dd3172a0f215937686d01decd6bfe6173452a3d69eb082ab",
+          "cache_key": "9ac7a2a96e489be5",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "output_hc_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 361141056,
+          "length": 3481600,
+          "sha256": "51a9db1ef827f17dc5b9d6a6a4c603cd79e4051916b4b941450db2ab3f1b363e",
+          "cache_key": "ba7f36c3fe92862f",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.attn_gate.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 19637463328,
+          "length": 10813440,
+          "sha256": "f9d84dab425dc40cfa7200dcb05e5c28144b146f8710e9a61121bd7d1b2f42f3",
+          "cache_key": "176864379c059e34",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.attn_qkv.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 19648276768,
+          "length": 18022400,
+          "sha256": "cfaabc6688c498b59be15589e10e176d19d4c0c3a6e276b87b9a247cb631f8cd",
+          "cache_key": "bf2f72a84ab89ba8",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20138158368,
+          "length": 1740800,
+          "sha256": "39ddadd3fdd10fd58b32f6e8d8433feb987406eb96535445f0c8eb8346ca2c3b",
+          "cache_key": "d912e53944fdd045",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20356167968,
+          "length": 5242880,
+          "sha256": "716e86907b98006efcd8f5fe429a1a534486a2805233f0ed0898a2fe21443e12",
+          "cache_key": "25fc35e3c4dafb47",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20361410848,
+          "length": 10240,
+          "sha256": "e97868f76058d3d1896c0191cf5789ab16b0fad7ff4252ad00872444d9933e7a",
+          "cache_key": "23ca83920356b5bf",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20361421088,
+          "length": 1126400,
+          "sha256": "2ac4c7ade27e1612a928726cd1e19717030665394958ab8cb7340710ad9d3409",
+          "cache_key": "124927848fd9c0cb",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20578816288,
+          "length": 1126400,
+          "sha256": "8c3d43ba6e6c8ed97df054285d78379c42dd3b076e89edd7733537bce7e07aa1",
+          "cache_key": "3f00b2421b3236af",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20579942688,
+          "length": 3481600,
+          "sha256": "0eabf381dd6c0610759968c256b287c21b9303a1c69a8a2f2d668d54d4cb03c9",
+          "cache_key": "001d36cc97219d76",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583424288,
+          "length": 163840,
+          "sha256": "ddc89755d431cedf9fec9eb9b21c93a0d4758956c118e93ab1eaba1eacfa05cc",
+          "cache_key": "6fa3d3f8fde01338",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583588128,
+          "length": 40960,
+          "sha256": "b5a230415a263eb59f903cd823e65cca63c7c423cc829c2f921b59233858e976",
+          "cache_key": "1b9148489fa9661c",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583629088,
+          "length": 3481600,
+          "sha256": "ed6d5b91920ee171cc9401b63aca70ec941c931f6a2f665c02eb5aaf64d14462",
+          "cache_key": "22311d822a269ce1",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20587110688,
+          "length": 3481600,
+          "sha256": "0b1952a2e5534fadf39609870dc0f26d808fd331266f430f9b87866a35d3000f",
+          "cache_key": "cc7c132ec727e012",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590592288,
+          "length": 163840,
+          "sha256": "ac5c78cc702f28b862212b02b06b5fbd927d987c6607cadeb5acb4f182b33fe2",
+          "cache_key": "b3e32cfd97bd1240",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590756128,
+          "length": 40960,
+          "sha256": "bb8c62648f9baacef49f4fd1bbbe10e8c6368fe4598218538df4f93af1d34241",
+          "cache_key": "4f63235c62154e5c",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590797088,
+          "length": 3481600,
+          "sha256": "d17838b3a553269356d7a26e114f97abc8a5bd1fce293625376f48485325f6b6",
+          "cache_key": "157c2597759cae8d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_a",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594278688,
+          "length": 192,
+          "sha256": "6762389d6bad375ec15ee05f60dec0cce38f19e886b484dc3984e085b2cd935a",
+          "cache_key": "451b34cae8a5146a",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_alpha.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594278880,
+          "length": 491520,
+          "sha256": "c5e9b05a4e49a2ab5c96fa7c658a118ced07d09cdb6b4c4db81fc06d69962943",
+          "cache_key": "efd193e49302fd1f",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_beta.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594770400,
+          "length": 491520,
+          "sha256": "7aca7fe54a63ab696433a5edfd3cb767895c5e7c726e2a787e2eefdc2002ebce",
+          "cache_key": "37aef1801e4aa388",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_conv1d.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595261920,
+          "length": 163840,
+          "sha256": "941a8b678441e56e953c9bccdd7ea99f949f664bd5b9f439ce35b58af63f1ebb",
+          "cache_key": "82f6f2a0b4213ae6",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_dt.bias",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595425760,
+          "length": 192,
+          "sha256": "005f36b9443c29a7f2677db048317d4dfd947ca401386b0e6009ba91f1edf0a1",
+          "cache_key": "c6665ffb0f1b0c39",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595425952,
+          "length": 512,
+          "sha256": "952bec8446cfe804b18ab6bc99a951e43be0fd366e67ee40e15053dfd20ff20d",
+          "cache_key": "4df64e48c36e1063",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.45.ssm_out.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595426464,
+          "length": 12902400,
+          "sha256": "d4df13c9842ba1c86da8c7ec1c3c638a3ffa8a3b9fe56676d11b77b53dd5c383",
+          "cache_key": "32acb3b6e11267a8",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.attn_gate.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20608328864,
+          "length": 10813440,
+          "sha256": "ca64cbb344ea39d249a8da100c84eb03e54e5a4dc5894f170246dbdd0ddf0aa0",
+          "cache_key": "b2bc473e4dbdf301",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.attn_qkv.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20619142304,
+          "length": 18022400,
+          "sha256": "652ff0edff16ba6d29deee32d44b8bfef4cce9b297e65cef423ca957c3cbca49",
+          "cache_key": "331a33ac3361e4f4",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21109023904,
+          "length": 1740800,
+          "sha256": "4a0375c3811d552220aa2b55c3c5c5f741c96738fe0259be646404918d034749",
+          "cache_key": "ab2e5cec52e1677d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21327033504,
+          "length": 5242880,
+          "sha256": "6647c66ac7ade9cd0b2997660c35a70c1f7de9ff94060e5686ca9c4decb2064e",
+          "cache_key": "b75db7b9df9d372c",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21332276384,
+          "length": 10240,
+          "sha256": "aa649ff658521daa1478f1141bb2f57f9cb0f2b4d0f099dc2c61aa834ee161c3",
+          "cache_key": "3782601fe623670d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21332286624,
+          "length": 1126400,
+          "sha256": "ec64984fbc73499bfdd1984b0f5331c25117598d34c13286e5b4ab4fa85d95ae",
+          "cache_key": "c435d77e50b894f9",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21549681824,
+          "length": 1126400,
+          "sha256": "ef690a510620b328d7778a53aab3f6aa295e615f2699a6a29adbea057bb6ca48",
+          "cache_key": "ec59c8016f2965f5",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21550808224,
+          "length": 3481600,
+          "sha256": "3c33f861e7a04145ff40a93a8676d9604c4cbdb3b7d10c0249612712947727f4",
+          "cache_key": "72be050b755222bd",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554289824,
+          "length": 163840,
+          "sha256": "c8be826168c2b0bed1f584ae2491d0564b18a43d8202c6d3208375ae862738d4",
+          "cache_key": "e261bee1ba3be043",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554453664,
+          "length": 40960,
+          "sha256": "2e9bd3d33597cb0494f4a7063d0cad341ecd6d82bf27f55c2fdc43eb5e3ae6f9",
+          "cache_key": "e30d437d9d11a6c4",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554494624,
+          "length": 3481600,
+          "sha256": "3f29f772022768b4d85302e225e43de4dbc30832d11e063a8b521d1733ad28e4",
+          "cache_key": "acd1ba047307ceae",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21557976224,
+          "length": 3481600,
+          "sha256": "98e8fd7363642d63775c3d9d191340eb9c9e3324871d3fc8ab6719ff679f126e",
+          "cache_key": "ddb3f1557fe68fbf",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561457824,
+          "length": 163840,
+          "sha256": "e2570ffc654b35fffbbdef959041454c9decca19063d6d895ef9c739f399822f",
+          "cache_key": "5e07f49615e5b641",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561621664,
+          "length": 40960,
+          "sha256": "7d0573ea772fef8fdd86ec06329ae0467a38d36e5676c10ba1a204b06a2b7caf",
+          "cache_key": "1025e4992d9a8215",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561662624,
+          "length": 3481600,
+          "sha256": "6b92a7f7a4d899eb0bf5eb9ea540f7dcb4b55d40ce516057f4dd9109b41f147b",
+          "cache_key": "141154365449dee6",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_a",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565144224,
+          "length": 192,
+          "sha256": "850ce06862054629ae829ad2021c4c69494295fcba1eef32e0b5130d9ca49641",
+          "cache_key": "c57ee3e3d41dbbb3",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_alpha.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565144416,
+          "length": 491520,
+          "sha256": "b6a71c40f9d284d6e01d167487b201de4b48085223593ef4d6314a422469eb7b",
+          "cache_key": "030185e65e73e120",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_beta.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565635936,
+          "length": 491520,
+          "sha256": "180fcc3bf4c3464702d6bdac9f937b8be7f51cde73c69fd2a7d356d0ed110e07",
+          "cache_key": "a8b89d3701ba4b12",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_conv1d.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566127456,
+          "length": 163840,
+          "sha256": "5a517bdff61bb4a5f699565236b4a003bcfb426c8f8ca93679579f9c23edf455",
+          "cache_key": "c8ddaa58316ecd8a",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_dt.bias",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566291296,
+          "length": 192,
+          "sha256": "f688c3ca1e295db7249c64a0da22a1f806566f0e3820c8ddff29764552651d3c",
+          "cache_key": "68df1ce26365b418",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566291488,
+          "length": 512,
+          "sha256": "960a242739b3f442396a29af174c8c53305468fb7eb288a740f5ce14911d3943",
+          "cache_key": "d97f373b422fe7e0",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.46.ssm_out.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566292000,
+          "length": 12902400,
+          "sha256": "12507011d72e299baf07f385880f028c054c1967ab8ba750c31ccf5d3b5f46fe",
+          "cache_key": "d2e1b96a057b7c8d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_k.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21579194400,
+          "length": 901120,
+          "sha256": "32bef307f4df4084870e69621558d3ec1433433836f604709ff73b1c60938ec8",
+          "cache_key": "5803018bf1d0cf16",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_k_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21580095520,
+          "length": 1024,
+          "sha256": "b3e3e72c5b21535b3896cb16fac00e91184323284612226bfe0e767a9a66063a",
+          "cache_key": "e41a205cfa094065",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_output.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21580096544,
+          "length": 10813440,
+          "sha256": "14cb7cfeffa256dba77ca3d1725ee851455f18761a763d07fb954ef399fd5cf6",
+          "cache_key": "d884a05065652e1d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_q.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21590909984,
+          "length": 21626880,
+          "sha256": "ac30d4d510c03990511149ed4d22d676a5c31f753ede31b1212162bda6c9eadc",
+          "cache_key": "1605502f1f402285",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_q_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21612536864,
+          "length": 1024,
+          "sha256": "7ffd31786ea6001972106f568760f90af2585c3f3b36d1cba3869c8fa5227968",
+          "cache_key": "120cf52d40798973",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.attn_v.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21612537888,
+          "length": 901120,
+          "sha256": "e458a01370c369b60cf32cb5dffa51f99953053d89cc7f8ecafdc7d1bdb2fa00",
+          "cache_key": "2399df153a9ec950",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22085298208,
+          "length": 1740800,
+          "sha256": "6195954c077e243a2205cabcd00cef420dbcdab2f684ed0c6d6f04156fc71656",
+          "cache_key": "091ed707fc009f77",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22303307808,
+          "length": 5242880,
+          "sha256": "418104d20e8c36a0ad9f0ac27f922b663e3bedc4c998fe4471547734e8e0d454",
+          "cache_key": "a150a71b145ca190",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22308550688,
+          "length": 10240,
+          "sha256": "59159ff58823cccd76fc9a148d9e6248e163dac5be09d38f64be4d2b832602eb",
+          "cache_key": "b3b769d75d7f24e7",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22308560928,
+          "length": 1126400,
+          "sha256": "1de6b570f87c7ba15b9737ea7224244212e9971d5b1662e98a1e8a4abe95807f",
+          "cache_key": "6242573732614d0d",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22525956128,
+          "length": 1126400,
+          "sha256": "4c54299139a05496b4c2aff7ad05b87ad8985126c03a2e9ab96a97b238592208",
+          "cache_key": "04b791814188163f",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22527082528,
+          "length": 3481600,
+          "sha256": "0ed5839c3a22965ff157154c74d8543fb6f1891a416cdfeaf1e92fafba98a4f1",
+          "cache_key": "63047b94d54ffe18",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530564128,
+          "length": 163840,
+          "sha256": "ff8e7f980c9481cdbc9c27b63ad62a743b3d38129613976a6e4e3dadd3aea5fd",
+          "cache_key": "cf865dc3a7d0f6bb",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530727968,
+          "length": 40960,
+          "sha256": "e6f3f26814fcdbc424166b5d6d1e085856e205125894654944a4e6a6215ec3d3",
+          "cache_key": "0aa56f6eff4deb12",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530768928,
+          "length": 3481600,
+          "sha256": "62df167cd9e4e4f8cb4dd28f796c06e3310a06faef5934635613ef1efe1b27a1",
+          "cache_key": "713b4e2baea5ae76",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22534250528,
+          "length": 3481600,
+          "sha256": "d891bb6dd71adde2f62f1bfc61e4b43e3abe2faf9d957ac9131f0052ea29d992",
+          "cache_key": "9581f67cfee79678",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537732128,
+          "length": 163840,
+          "sha256": "85c61bf15c4c11e306e359b951ec0b95eea4aa3e4fddc2c777ab8529e8c783b0",
+          "cache_key": "e0c1335f94792631",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537895968,
+          "length": 40960,
+          "sha256": "2cc6c797c40a8c26b662d1346181a97630845942b91764951f8a2ca08e9c614f",
+          "cache_key": "bdd739e1d53f4a54",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537936928,
+          "length": 3481600,
+          "sha256": "8fbba7e2ce53642de82de628dfd812ed1a6342b24d2abdf643f4f8efbff89149",
+          "cache_key": "5ede9912568d1f10",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.indexer.k_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22541418528,
+          "length": 512,
+          "sha256": "d28d4cdbb25bddb09ce031e2f77fa65c3c127e18ceaa6f1d8f87e8804aa1a93e",
+          "cache_key": "68969381c5c3973f",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.indexer.k_proj.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22541419040,
+          "length": 655360,
+          "sha256": "bd437eaf0a98276c6cf854f70920bb1b3f3c95dec08f9c6fd427fb29c3185056",
+          "cache_key": "e1a314edfe36922b",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.indexer.q_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22542074400,
+          "length": 512,
+          "sha256": "0c877347ab335799ca2b719da590d89ccd701d267f2c26fdcedd7a137982645c",
+          "cache_key": "284164f640ee50cc",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        },
+        {
+          "state_id": "blk.47.indexer.q_proj.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22542074912,
+          "length": 2621440,
+          "sha256": "0b8a32715e497bf625c291823178e41f8a3f6a79903a046df13f6b9c86432bc3",
+          "cache_key": "b7f6beba00d01d84",
+          "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+          "revision": "accepted-full-member-sha256-set",
+          "representation": "UD-IQ1_S-GGUF-v3",
+          "unit_id": "remote-whole-layers"
+        }
+      ]
+    }
+  ],
+  "strategy_id": "llama.cpp",
+  "placement": [
+    {
+      "unit_id": "client-cpu-prefix",
+      "compute_id": "client-cu",
+      "state_ids": [],
+      "state_ranges": [],
+      "first_layer": 0,
+      "last_layer": 40,
+      "output": false
+    },
+    {
+      "unit_id": "client-gpu-tail",
+      "compute_id": "client-cu",
+      "state_ids": [],
+      "state_ranges": [],
+      "first_layer": 41,
+      "last_layer": 44,
+      "output": false
+    },
+    {
+      "unit_id": "remote-whole-layers",
+      "compute_id": "remote-cu",
+      "state_ids": [
+        "output.weight",
+        "output_hc_down.weight",
+        "output_hc_norm.weight",
+        "output_hc_up.weight",
+        "blk.45.attn_gate.weight",
+        "blk.45.attn_qkv.weight",
+        "blk.45.ffn_down_shexp.weight",
+        "blk.45.ffn_gate_inp.weight",
+        "blk.45.ffn_gate_inp_shexp.weight",
+        "blk.45.ffn_gate_shexp.weight",
+        "blk.45.ffn_up_shexp.weight",
+        "blk.45.hc_attn_down.weight",
+        "blk.45.hc_attn_inject.weight",
+        "blk.45.hc_attn_norm.weight",
+        "blk.45.hc_attn_up.weight",
+        "blk.45.hc_ffn_down.weight",
+        "blk.45.hc_ffn_inject.weight",
+        "blk.45.hc_ffn_norm.weight",
+        "blk.45.hc_ffn_up.weight",
+        "blk.45.ssm_a",
+        "blk.45.ssm_alpha.weight",
+        "blk.45.ssm_beta.weight",
+        "blk.45.ssm_conv1d.weight",
+        "blk.45.ssm_dt.bias",
+        "blk.45.ssm_norm.weight",
+        "blk.45.ssm_out.weight",
+        "blk.46.attn_gate.weight",
+        "blk.46.attn_qkv.weight",
+        "blk.46.ffn_down_shexp.weight",
+        "blk.46.ffn_gate_inp.weight",
+        "blk.46.ffn_gate_inp_shexp.weight",
+        "blk.46.ffn_gate_shexp.weight",
+        "blk.46.ffn_up_shexp.weight",
+        "blk.46.hc_attn_down.weight",
+        "blk.46.hc_attn_inject.weight",
+        "blk.46.hc_attn_norm.weight",
+        "blk.46.hc_attn_up.weight",
+        "blk.46.hc_ffn_down.weight",
+        "blk.46.hc_ffn_inject.weight",
+        "blk.46.hc_ffn_norm.weight",
+        "blk.46.hc_ffn_up.weight",
+        "blk.46.ssm_a",
+        "blk.46.ssm_alpha.weight",
+        "blk.46.ssm_beta.weight",
+        "blk.46.ssm_conv1d.weight",
+        "blk.46.ssm_dt.bias",
+        "blk.46.ssm_norm.weight",
+        "blk.46.ssm_out.weight",
+        "blk.47.attn_k.weight",
+        "blk.47.attn_k_norm.weight",
+        "blk.47.attn_output.weight",
+        "blk.47.attn_q.weight",
+        "blk.47.attn_q_norm.weight",
+        "blk.47.attn_v.weight",
+        "blk.47.ffn_down_shexp.weight",
+        "blk.47.ffn_gate_inp.weight",
+        "blk.47.ffn_gate_inp_shexp.weight",
+        "blk.47.ffn_gate_shexp.weight",
+        "blk.47.ffn_up_shexp.weight",
+        "blk.47.hc_attn_down.weight",
+        "blk.47.hc_attn_inject.weight",
+        "blk.47.hc_attn_norm.weight",
+        "blk.47.hc_attn_up.weight",
+        "blk.47.hc_ffn_down.weight",
+        "blk.47.hc_ffn_inject.weight",
+        "blk.47.hc_ffn_norm.weight",
+        "blk.47.hc_ffn_up.weight",
+        "blk.47.indexer.k_norm.weight",
+        "blk.47.indexer.k_proj.weight",
+        "blk.47.indexer.q_norm.weight",
+        "blk.47.indexer.q_proj.weight"
+      ],
+      "state_ranges": [
+        {
+          "state_id": "output.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 37696,
+          "length": 357580800
+        },
+        {
+          "state_id": "output_hc_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 357618496,
+          "length": 3481600
+        },
+        {
+          "state_id": "output_hc_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 361100096,
+          "length": 40960
+        },
+        {
+          "state_id": "output_hc_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "offset": 361141056,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.45.attn_gate.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 19637463328,
+          "length": 10813440
+        },
+        {
+          "state_id": "blk.45.attn_qkv.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 19648276768,
+          "length": 18022400
+        },
+        {
+          "state_id": "blk.45.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20138158368,
+          "length": 1740800
+        },
+        {
+          "state_id": "blk.45.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20356167968,
+          "length": 5242880
+        },
+        {
+          "state_id": "blk.45.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20361410848,
+          "length": 10240
+        },
+        {
+          "state_id": "blk.45.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20361421088,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.45.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20578816288,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.45.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20579942688,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.45.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583424288,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.45.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583588128,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.45.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20583629088,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.45.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20587110688,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.45.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590592288,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.45.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590756128,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.45.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20590797088,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.45.ssm_a",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594278688,
+          "length": 192
+        },
+        {
+          "state_id": "blk.45.ssm_alpha.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594278880,
+          "length": 491520
+        },
+        {
+          "state_id": "blk.45.ssm_beta.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20594770400,
+          "length": 491520
+        },
+        {
+          "state_id": "blk.45.ssm_conv1d.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595261920,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.45.ssm_dt.bias",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595425760,
+          "length": 192
+        },
+        {
+          "state_id": "blk.45.ssm_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595425952,
+          "length": 512
+        },
+        {
+          "state_id": "blk.45.ssm_out.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20595426464,
+          "length": 12902400
+        },
+        {
+          "state_id": "blk.46.attn_gate.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20608328864,
+          "length": 10813440
+        },
+        {
+          "state_id": "blk.46.attn_qkv.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 20619142304,
+          "length": 18022400
+        },
+        {
+          "state_id": "blk.46.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21109023904,
+          "length": 1740800
+        },
+        {
+          "state_id": "blk.46.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21327033504,
+          "length": 5242880
+        },
+        {
+          "state_id": "blk.46.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21332276384,
+          "length": 10240
+        },
+        {
+          "state_id": "blk.46.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21332286624,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.46.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21549681824,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.46.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21550808224,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.46.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554289824,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.46.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554453664,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.46.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21554494624,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.46.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21557976224,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.46.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561457824,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.46.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561621664,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.46.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21561662624,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.46.ssm_a",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565144224,
+          "length": 192
+        },
+        {
+          "state_id": "blk.46.ssm_alpha.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565144416,
+          "length": 491520
+        },
+        {
+          "state_id": "blk.46.ssm_beta.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21565635936,
+          "length": 491520
+        },
+        {
+          "state_id": "blk.46.ssm_conv1d.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566127456,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.46.ssm_dt.bias",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566291296,
+          "length": 192
+        },
+        {
+          "state_id": "blk.46.ssm_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566291488,
+          "length": 512
+        },
+        {
+          "state_id": "blk.46.ssm_out.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21566292000,
+          "length": 12902400
+        },
+        {
+          "state_id": "blk.47.attn_k.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21579194400,
+          "length": 901120
+        },
+        {
+          "state_id": "blk.47.attn_k_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21580095520,
+          "length": 1024
+        },
+        {
+          "state_id": "blk.47.attn_output.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21580096544,
+          "length": 10813440
+        },
+        {
+          "state_id": "blk.47.attn_q.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21590909984,
+          "length": 21626880
+        },
+        {
+          "state_id": "blk.47.attn_q_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21612536864,
+          "length": 1024
+        },
+        {
+          "state_id": "blk.47.attn_v.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 21612537888,
+          "length": 901120
+        },
+        {
+          "state_id": "blk.47.ffn_down_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22085298208,
+          "length": 1740800
+        },
+        {
+          "state_id": "blk.47.ffn_gate_inp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22303307808,
+          "length": 5242880
+        },
+        {
+          "state_id": "blk.47.ffn_gate_inp_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22308550688,
+          "length": 10240
+        },
+        {
+          "state_id": "blk.47.ffn_gate_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22308560928,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.47.ffn_up_shexp.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22525956128,
+          "length": 1126400
+        },
+        {
+          "state_id": "blk.47.hc_attn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22527082528,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.47.hc_attn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530564128,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.47.hc_attn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530727968,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.47.hc_attn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22530768928,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.47.hc_ffn_down.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22534250528,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.47.hc_ffn_inject.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537732128,
+          "length": 163840
+        },
+        {
+          "state_id": "blk.47.hc_ffn_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537895968,
+          "length": 40960
+        },
+        {
+          "state_id": "blk.47.hc_ffn_up.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22537936928,
+          "length": 3481600
+        },
+        {
+          "state_id": "blk.47.indexer.k_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22541418528,
+          "length": 512
+        },
+        {
+          "state_id": "blk.47.indexer.k_proj.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22541419040,
+          "length": 655360
+        },
+        {
+          "state_id": "blk.47.indexer.q_norm.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22542074400,
+          "length": 512
+        },
+        {
+          "state_id": "blk.47.indexer.q_proj.weight",
+          "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "offset": 22542074912,
+          "length": 2621440
+        }
+      ],
+      "first_layer": 45,
+      "last_layer": 47,
+      "output": true
+    }
+  ],
+  "backend_options": {
+    "hidden_layers": 48,
+    "offload_tail": 8,
+    "cpu_experts": true,
+    "tensor_split": [
+      1,
+      1
+    ],
+    "context": 1024,
+    "slots": 1,
+    "startup_timeout_seconds": 180,
+    "split_mode": "layer",
+    "verbosity": 5,
+    "rpc_physical_device": "CUDA0"
+  },
+  "request": {
+    "prompt": "Explain one benefit of a distributed GPU inference run in one sentence.",
+    "max_tokens": 96,
+    "temperature": 0,
+    "seed": 42
+  }
+}
