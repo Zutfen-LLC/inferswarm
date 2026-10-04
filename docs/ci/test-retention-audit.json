@@ -3293,6 +3293,134 @@
    "replacement": null,
    "test_count_at_audit": 39
   },
+  "test_issue250_amendment008": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.6,
+   "baseline_test_count": 34,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c\u2026, stable AMD row 2187ab8f\u2026, V0n dispatch 4aa0aa0b\u2026, freeze 3fe9e74d\u2026, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_timeout.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the METHODOLOGY-AMENDMENT-008 Arm-A reachability bridge; all fixtures fake/injected, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 34
+  },
+  "test_issue250_amendment008_reducer_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 10.0,
+   "baseline_test_count": 24,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the AMENDMENT-008 reducer-admission correction (path-aware bridge vs historical V0 admission); all fixtures synthetic with real digests, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py"
+   ],
+   "test_count_at_audit": 3
+  },
+  "test_issue250_amendment008_reducer_admission_negative": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 10.0,
+   "baseline_test_count": 24,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Negative mutation matrix for the AMENDMENT-008 reducer-admission correction: every broken-bridge shape (record absent/tampered/malformed, predecessor mounts missing/symlinked, row/freeze/authority/state drift, mixed or missing Arm-A reachability provenance) fails closed without historical fallback, and a valid bridge stop fetches no later-arm authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py"
+   ],
+   "test_count_at_audit": 25
+  },
+  "test_issue250_amendment008_round2": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 7.0,
+   "baseline_test_count": 50,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The corrected AMENDMENT-008 Arm-A bridge law (correction round 2, reviewed head 35f427b) decides Arm-A reachability from an EXACT authenticated predecessor decision, never a historical refusal-message prefix: the rederived V0 state must be AMD_VARIABLE-eligible (historical path) or an adjudicated maintainer stop / bridge-only root (bridge path), and INVALID V0 evidence never opens the bridge; the bridge revalidates BOTH predecessors from retained mount bytes through the FROZEN verifiers and reducers (three-unit repeat law + accepted contrast for V0; full backend/identity/residency/dispatch/argv/env/PID/generation custody + CURRENT_NVIDIA_VARIABLE_STOP for V0n) under byte-exact reconstructed accepted dispatch authorities; original evidence stays immutable behind read-only predecessor-v0//predecessor-v0n/ mounts (symlinks refused); Arm-A receipts persist reachability_source from the frozen vocabulary and later-arm receipts carry none; a completed bridge-path Arm-A population stops the terminal ladder at ARM_A_STOPS_LADDER on every outcome with no Vulkan root cause inferred and no B/C/C1/C2/D reachability granted; fresh exact-head dispatch, clean-head, model, cost, fixture and two-pass launch gates stay preserved; a mutation matrix covers every corrected boundary.",
+   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+    ],
+    "scripts_imported": [
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue250_terminal.py",
+     "scripts/issue250_timeout.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Regression authority for the corrected AMENDMENT-008 bridge law (round 2); all fixtures synthetic with real digests, zero physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue250_diagnostic.py",
+    "scripts/issue250_physical.py",
+    "scripts/issue250_terminal.py",
+    "scripts/issue250_timeout.py"
+   ],
+   "test_count_at_audit": 50
+  },
   "test_issue250_diagnostic": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 0.33,
@@ -3393,7 +3521,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations \u2014 a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) \u2014 the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
    "lineage": "R8-I3B reference runtime-boundary localization (#250)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -3481,38 +3609,774 @@
    ],
    "test_count_at_audit": 56
   },
-  "test_issue250_amendment008": {
+  "test_issue252_arms": {
    "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.6,
-   "baseline_test_count": 34,
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 6,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
-   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
+   "invariant": "Prospective one-factor Vulkan discriminator definitions remain frozen and distinct; exact accepted source/model/request authority is bound without asserting causality from source inspection.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
    "named_by_evidence": [],
    "owned_surfaces": {
     "evidence_read": [
-     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
     ],
     "scripts_imported": [
-     "scripts/issue250_diagnostic.py",
-     "scripts/issue250_physical.py",
-     "scripts/issue250_terminal.py",
-     "scripts/issue250_timeout.py"
+     "scripts/issue252_arms.py"
     ]
    },
    "pinned_by_evidence": [],
-   "rationale": "Regression authority for the METHODOLOGY-AMENDMENT-008 Arm-A reachability bridge; all fixtures fake/injected, zero physical execution.",
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
    "referenced_by_scripts": [],
    "replacement": null,
    "source_modules": [
-    "scripts/issue250_diagnostic.py",
-    "scripts/issue250_physical.py",
-    "scripts/issue250_terminal.py",
-    "scripts/issue250_timeout.py"
+    "scripts/issue252_arms.py"
    ],
-   "test_count_at_audit": 34
+   "test_count_at_audit": 6
+  },
+  "test_issue252_capture": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Retained dispatch authority is retrieval-bound: a capture authenticates only when its immutable GitHub comment is independently re-fetched by exact ID and compared byte-for-byte; locally consistent objects never authorize retained evidence.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_capture.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_capture.py"
+   ],
+   "test_count_at_audit": 15
+  },
+  "test_issue252_mechanism": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 17,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Each frozen arm's bounded mechanism claim requires retained raw Vulkan-side observations (enumeration, async marker, allocation-type/staging lines) proving the named intervention changed the intended runtime path; A1 is non-terminal-capable at this pin.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_mechanism.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_mechanism.py"
+   ],
+   "test_count_at_audit": 17
+  },
+  "test_issue252_phase0": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 10,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Phase-0 source-first Vulkan path reconstruction and ranked hypothesis matrix authenticate pinned source and retained authority without physical execution.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_phase0.py",
+     "scripts/issue252_vulkanpath.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_phase0.py",
+    "scripts/issue252_vulkanpath.py"
+   ],
+   "test_count_at_audit": 10
+  },
+  "test_issue252_physical": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 14,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Physical discriminator tooling fails closed on exact-head dispatch, frozen arm identity, one-factor plan, and append-only evidence custody; tests use fake execution only.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_physical.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_physical.py"
+   ],
+   "test_count_at_audit": 14
+  },
+  "test_issue252_round4": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 26,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Round-4 adversarial contracts: the production reducer/capture API exposes no fetcher or offline-mode flag, A5 staging/allocation pairing is one-to-one and ordered per the pinned source, and A4 is honestly non-terminal-capable at pin b29c606e.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_terminal.py",
+     "scripts/issue252_capture.py",
+     "scripts/issue252_mechanism.py",
+     "scripts/issue252_physical.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Round-4 correction round (review of head 6bc9251); no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_terminal.py",
+    "scripts/issue252_capture.py",
+    "scripts/issue252_mechanism.py"
+   ],
+   "test_count_at_audit": 26
+  },
+  "test_issue252_round5": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 11,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Round-5 adversarial contracts: A5 staging is an ordered buffer state transition per the pinned source (strict-< growth, destroy-current-then-allocate, no-op emission at or below active size); historical staging allocations are never summed.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_mechanism.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Round-5 correction round (review of head 9a18d4a); no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_mechanism.py"
+   ],
+   "test_count_at_audit": 11
+  },
+  "test_issue252_terminal": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 12,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Terminal reduction derives allowed outcomes from retained bytes and frozen discriminators; caller-supplied conclusions cannot grant a terminal.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_terminal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_terminal.py"
+   ],
+   "test_count_at_audit": 12
+  },
+  "test_issue252_vulkanpath": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 5,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Pinned llama.cpp Vulkan execution-path facts remain mechanically tied to the authenticated source tree and source-first evidence.",
+   "lineage": "R8-I3C Vulkan mechanism localization (#252)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue252_vulkanpath.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue252_vulkanpath.py"
+   ],
+   "test_count_at_audit": 5
+  },
+  "test_issue254_producer": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 29,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "#254 live producer custody: the only physical path is the producer's own launched process plus host probes under a freshly re-fetched #254 dispatch (schema /3 capture; producer attestation re-binds every retained byte; atomic unit publication; fail-closed prefix stop law; no caller-supplied observation API).",
+   "lineage": "R8-I3C Phase 1 live producer (#254)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue254_producer.py",
+     "scripts/issue252_physical.py",
+     "scripts/issue252_terminal.py",
+     "scripts/issue252_capture.py",
+     "scripts/issue252_arms.py",
+     "scripts/issue252_constants.py",
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue248_identity.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Phase-A registration only; zero physical-execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue254_producer.py"
+   ],
+   "test_count_at_audit": 29
+  },
+  "test_issue254_round5": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 21,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "#254 round-5 correction (AMENDMENT-005): the exact enum-line requirement is removed for A3 placement/mechanism (the retained stream of this instrument physically carries no ggml_vulkan enumeration banner); A3 requires the exact async-disabled line plus producer-attested Vulkan placement/identity facts; a failed unit's scratch is quarantined under producer-failure-quarantine/ (never reducer-admissible, never promoted to unit.json) and continuation is fail-closed on the same root; A2/A5 enum/memory laws unchanged.",
+   "lineage": "R8-I3C Phase 1 live producer (#254 round 5)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue254_producer.py",
+     "scripts/issue252_mechanism.py",
+     "scripts/issue252_physical.py",
+     "scripts/issue252_terminal.py",
+     "scripts/issue252_arms.py",
+     "scripts/issue252_constants.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Round-5 correction registration; zero physical-execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue254_producer.py",
+    "scripts/issue252_mechanism.py"
+   ],
+   "test_count_at_audit": 21
+  },
+  "test_issue254_round7": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 8,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Round-7 identity-shape correction: ONE canonical producer/receipt identity normalization boundary (normalize_retained_identity) derives the receipt-compatible frozen identity from the authenticated raw #248 observation through the existing _flat_identity/I248 path (no second parser), requires exact HOST_FACTS equality, retains the authenticated raw block for custody, and binds the same object into receipt, producer attestation, and retained identity-pre/post JSON; attestation identity must equal receipt identity; offline fixtures exercise the raw #248 observer shape, never an injected flat dict.",
+   "lineage": "R8-I3C Phase 1 live producer (#254 round 7)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue254_producer.py",
+     "scripts/issue252_physical.py",
+     "scripts/issue252_terminal.py",
+     "scripts/issue252_mechanism.py",
+     "scripts/issue248_identity.py",
+     "scripts/issue252_constants.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Round-7 correction registration (dispatched-head review of d0df403); no physical-execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue254_producer.py"
+   ],
+   "test_count_at_audit": 8
+  },
+  "test_issue255_baseline": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 7,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Single-host CUDA baseline uses the pinned request without RPC; exact lease/PID cleanup and physical readback, plus live CI/planner/retention registration.",
+   "lineage": "Issue #255 product two-host MVP",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/two-host-mvp-255/evidence/task3-baseline/"
+    ],
+    "scripts_imported": [
+     "tools/issue255_mvp/baseline.py",
+     "tools/issue255_mvp/measure.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/two-host-mvp-255/evidence/task3-baseline/MANIFEST.json"
+   ],
+   "rationale": "Current product baseline and operator safety, not a qualification oracle.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 7
+  },
+  "test_issue255_measure": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Retained four-request CUDA/RPC measurement binds request identity, GPU windows, source accounting and owned cleanup.",
+   "lineage": "Issue #255 product two-host MVP",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/two-host-mvp-255/evidence/task2/"
+    ],
+    "scripts_imported": [
+     "tools/issue255_mvp/measure.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/two-host-mvp-255/evidence/task2/MANIFEST.json"
+   ],
+   "rationale": "Current measured product result and request-level provenance.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 15
+  },
+  "test_issue255_mvp": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 5,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Frozen local source staging and nontrivial CUDA/RPC layer placement stay bound to retained startup evidence.",
+   "lineage": "Issue #255 product two-host MVP",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/two-host-mvp-255/evidence/"
+    ],
+    "scripts_imported": [
+     "tools/issue255_mvp/prestage.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/implementation/two-host-mvp-255/evidence/MANIFEST.json"
+   ],
+   "rationale": "Current product physical substrate proof.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 5
+  },
+  "test_issue258_theorem": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 15,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #258 (AMENDMENT-006): terminal capability is mechanically explicit per arm (issue258_theorem); nonterminal/dead arms are never required for terminal completion and never grant terminal authority; the accepted A3-variable + A5-variable state reduces to honest UNRESOLVED; A5 withdrawn from localization per accepted #257 (A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL); NON_LOCALIZED requires terminal-capable hypothesis coverage and fails closed to UNRESOLVED when absent.",
+   "lineage": "R8-I3C prospective arm-set theorem (#258)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
+    ],
+    "scripts_imported": [
+     "scripts/issue258_theorem.py",
+     "scripts/issue252_terminal.py",
+     "scripts/issue252_mechanism.py",
+     "scripts/issue252_constants.py",
+     "scripts/issue252_arms.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective methodology/reducer theorem redesign after accepted A3/A5 findings; zero physical-execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue258_theorem.py"
+   ],
+   "test_count_at_audit": 15
+  },
+  "test_issue260_observation": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 7,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #260 prospective H2/H3 exact-marker grammar, backend/staging identity and memory-type contrast, historical evidence non-transfer, and fail-closed H5 prospective closure.",
+   "lineage": "R8-I3C instrumented source freeze (#260)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue260_instrumentation.py",
+     "scripts/issue258_theorem.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective repository-only tests; no physical-execution authority from instrumentation or CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue260_instrumentation.py"
+   ],
+   "test_count_at_audit": 7
+  },
+  "test_issue260_source_patch": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 4,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #260 exact-pin source patch, deterministic transformed-tree identity, and fail-closed input-drift law.",
+   "lineage": "R8-I3C instrumented source freeze (#260)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue260_source_patch.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective compile/source tests only; no physical-execution authority from instrumentation or CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue260_source_patch.py"
+   ],
+   "test_count_at_audit": 4
+  },
+  "test_issue262_h5": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 16,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #262 H5 route-marker grammar, output-projection dispatch binding (shapes/types/side), capability-enumeration non-masquerade, coopmat2 one-factor eligibility, and paired candidate-transition law.",
+   "lineage": "R8-I3C rapid physical pilot H5 observability (#262)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue262_h5.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective repository-only tests; no physical-execution authority from instrumentation or CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue262_h5.py"
+   ],
+   "test_count_at_audit": 16
+  },
+  "test_issue262_pilot": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 12,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #262 pilot producer offline law: one-factor arm environment, frozen case-3072 launch geometry, comparator-digest and frozen-subject fail-closed gates, screening classification, and #260-parser tree-identity extension.",
+   "lineage": "R8-I3C rapid physical pilot producer (#262)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue262_pilot.py",
+     "scripts/issue262_h5.py",
+     "scripts/issue260_instrumentation.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective repository-only tests; no physical-execution authority from instrumentation or CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue262_pilot.py"
+   ],
+   "test_count_at_audit": 12
+  },
+  "test_issue262_source_patch": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 4,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #262 exact-pin source chain (pinned b29c606e + i260 + H5 route edits + accepted R8-E + comparator/2), deterministic instrumented-tree identity, and fail-closed input-drift law.",
+   "lineage": "R8-I3C rapid physical pilot source identity (#262)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json",
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue262_source_patch.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective compile/source tests only; no physical-execution authority from instrumentation or CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "source_modules": [
+    "scripts/issue262_source_patch.py"
+   ],
+   "test_count_at_audit": 4
+  },
+  "test_issue264_h5": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 8,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #264 H5 selector validation and actual per-process output.weight MMV dispatch evidence: exact marker pairing, frozen route/shape/type identity, and candidate-transition proof.",
+   "lineage": "R8-I3C output-weight MMV observability (#264)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262/evidence/"
+    ],
+    "scripts_imported": [
+     "scripts/issue264_h5.py",
+     "scripts/issue262_h5.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU-only prospective marker/parser contract over retained #262 route samples; CI registration grants no physical-execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 9
+  },
+  "test_issue264_pilot": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 9,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #264 bounded pilot offline law: frozen arms and launch environment, retained-byte/restart integrity, actual dispatch marker validation, repeat-stop screening, and report rejection of unretained roots.",
+   "lineage": "R8-I3C bounded MMV pilot/report (#264)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json",
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-build-identity.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue264_pilot.py",
+     "scripts/issue264_report.py",
+     "scripts/issue264_h5.py",
+     "scripts/issue264_source_patch.py",
+     "scripts/issue260_instrumentation.py",
+     "scripts/issue262_source_patch.py",
+     "scripts/issue262_h5.py",
+     "scripts/issue262_pilot.py",
+     "scripts/issue250_diagnostic.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline contract tests only; no GPU execution or execution authority is granted by CI registration.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 26
+  },
+  "test_issue264_source_patch": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 6,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #264 exact-parent MMV source transformation, deterministic successor-tree identity, and fail-closed source drift checks; v2 publication metadata is initialized once before concurrent compilation becomes visible.",
+   "lineage": "R8-I3C output-weight MMV source patch (#264)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json",
+     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/patches/issue264-mmv-selector-v2.patch"
+    ],
+    "scripts_imported": [
+     "scripts/issue264_source_patch.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current prospective source contract and publication-race regression coverage; CI registration grants no physical-execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 6
+  },
+  "test_issue268_operator_plan": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 5,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Ordinary operator configuration, explicit plan identity, source binding and fixed strategy constraints fail closed without generic hardware policy.",
+   "lineage": "Issue #268 ordinary operator path",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/config.py",
+     "inferswarm/operator/plan.py",
+     "inferswarm/operator/strategy.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current ordinary operator configuration and planning contract.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 5
+  },
+  "test_issue268_operator_runtime": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": null,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Ordinary fixed two-host request authenticates full source/runtime/cache bytes and parsed GGUF assignments, checks loader placement and bounded exact-owned lifecycle including failure cleanup.",
+   "lineage": "Issue #268 ordinary operator path",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/implementation/two-host-mvp-255/evidence/task2/client.log"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/runtime.py",
+     "inferswarm/operator/source.py",
+     "inferswarm/operator/lifecycle.py",
+     "inferswarm/operator/config.py",
+     "inferswarm/operator/strategy.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current CPU-only product path and source/lifecycle fail-closed contract; no physical authority from CI.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 37
+  },
+  "test_issue270_authority": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 55,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #270 R8-I6 V340L comparator/2 authority gate: retained-bytes #243 candidate derivation with double lock, consumed #248/#250 reference/tooling identities, structural namespace/case prohibition (case-4096 and predictive namespaces), self-contained comparator/2 semantics (no import of unmerged PR #242 modules), byte-bound row custody, two-index selector binding, freeze self-digest custody, exact-head OWNER/MEMBER dispatch, and the mechanical terminal reducer that derives no threshold and no calibration.",
+   "lineage": "R8-I6 V340L comparator/2 physical-authority gate (#270)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/retained/evidence/phase1/phase1-census.json",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue270_authority.py",
+     "scripts/issue270_comparator.py",
+     "scripts/issue270_physical.py",
+     "scripts/issue270_terminal.py",
+     "scripts/issue250_diagnostic.py",
+     "scripts/issue250_physical.py",
+     "scripts/issue248_identity.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline contract tests only; no GPU execution or execution authority is granted by CI registration.",
+   "referenced_by_scripts": [
+    "scripts/issue270_authority.py",
+    "scripts/issue270_comparator.py",
+    "scripts/issue270_physical.py"
+   ],
+   "replacement": null,
+   "test_count_at_audit": 55
   },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
@@ -4667,179 +5531,7 @@
    "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
    "retired_in": "PR #247 correction round 1",
    "test_count_at_audit": null
-  },
-  "test_issue250_amendment008_round2": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 7.0,
-   "baseline_test_count": 50,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "The corrected AMENDMENT-008 Arm-A bridge law (correction round 2, reviewed head 35f427b) decides Arm-A reachability from an EXACT authenticated predecessor decision, never a historical refusal-message prefix: the rederived V0 state must be AMD_VARIABLE-eligible (historical path) or an adjudicated maintainer stop / bridge-only root (bridge path), and INVALID V0 evidence never opens the bridge; the bridge revalidates BOTH predecessors from retained mount bytes through the FROZEN verifiers and reducers (three-unit repeat law + accepted contrast for V0; full backend/identity/residency/dispatch/argv/env/PID/generation custody + CURRENT_NVIDIA_VARIABLE_STOP for V0n) under byte-exact reconstructed accepted dispatch authorities; original evidence stays immutable behind read-only predecessor-v0//predecessor-v0n/ mounts (symlinks refused); Arm-A receipts persist reachability_source from the frozen vocabulary and later-arm receipts carry none; a completed bridge-path Arm-A population stops the terminal ladder at ARM_A_STOPS_LADDER on every outcome with no Vulkan root cause inferred and no B/C/C1/C2/D reachability granted; fresh exact-head dispatch, clean-head, model, cost, fixture and two-pass launch gates stay preserved; a mutation matrix covers every corrected boundary.",
-   "lineage": "R8-I3B reference runtime-boundary localization (#250)",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [
-     "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
-    ],
-    "scripts_imported": [
-     "scripts/issue250_diagnostic.py",
-     "scripts/issue250_physical.py",
-     "scripts/issue250_terminal.py",
-     "scripts/issue250_timeout.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "Regression authority for the corrected AMENDMENT-008 bridge law (round 2); all fixtures synthetic with real digests, zero physical execution.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "source_modules": [
-    "scripts/issue250_diagnostic.py",
-    "scripts/issue250_physical.py",
-    "scripts/issue250_terminal.py",
-    "scripts/issue250_timeout.py"
-   ],
-   "test_count_at_audit": 50
-  },
- "test_issue250_amendment008_reducer_admission": {
-  "baseline_group": "r8i-qwen-qualification",
-  "baseline_serial_seconds": 10.0,
-  "baseline_test_count": 24,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
-  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-  "evidence_read": [
-  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
-  ],
-  "scripts_imported": [
-  "scripts/issue250_diagnostic.py",
-  "scripts/issue250_physical.py",
-  "scripts/issue250_terminal.py"
-  ]
-  },
-  "pinned_by_evidence": [],
-  "rationale": "Regression authority for the AMENDMENT-008 reducer-admission correction (path-aware bridge vs historical V0 admission); all fixtures synthetic with real digests, zero physical execution.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "source_modules": [
-  "scripts/issue250_diagnostic.py",
-  "scripts/issue250_physical.py",
-  "scripts/issue250_terminal.py"
-  ],
-  "test_count_at_audit": 3
- },
- "test_issue250_amendment008_reducer_admission_negative": {
-  "baseline_group": "r8i-qwen-qualification",
-  "baseline_serial_seconds": 10.0,
-  "baseline_test_count": 24,
-  "category": "CURRENT_CONTRACT",
-  "disposition": "retain",
-  "group": "r8i-qwen-qualification",
-  "invariant": "The AMENDMENT-008 reducer-admission correction makes derive_terminal V0 admission PATH-AWARE: a campaign root presenting a bridge record is admitted ONLY through the frozen AMENDMENT-008 bridge authority (validate_arm_a_bridge -> revalidating_arm_a_predecessors over read-only predecessor-v0/ + predecessor-v0n/ mounts; symlinks, tampered rows, wrong digests, wrong states, invalid reconstructed dispatch authorities all reject) and NEVER requires a top-level d250-arm-v0-amd/ tree or a same-head V0 dispatch (the completed predecessor dispatch is historical/stale); bridge-artifact presence with failing authentication blocks without falling back to historical V0 admission; the historical top-level-V0 admission path is unchanged (derive_v0_state + current-head historical V0 authority + AMD_VARIABLE eligibility); after admission the current-head d250-arm-a / A-vulkan-necessity dispatch remains mandatory; admission authority selects expected_reachability_source independently of receipts (bridge -> arm-a-bridge, historical AMD_VARIABLE -> historical-v0-amd-variable), and authenticated population provenance must equal it before determinism interpretation, terminal emission, or later-arm authority fetch. Uniform wrong, mixed, missing, and unknown sources fail closed. Dangling bridge-record symlinks are present-invalid with no historical fallback; dangling top-level V0 namespace symlinks are present-invalid, never absent for bridge-only launch admission. Valid bridge Arm A, deterministic or variable, stops at ARM_A_STOPS_LADDER with no B/C/C1/C2/D authority fetched.",
-  "lineage": "R8-I3B reference runtime-boundary localization (#250)",
-  "named_by_evidence": [],
-  "owned_surfaces": {
-  "evidence_read": [
-  "docs/investigations/qwen38-flash-next-r8-i3b-ref-runtime-boundary/"
-  ],
-  "scripts_imported": [
-  "scripts/issue250_diagnostic.py",
-  "scripts/issue250_physical.py",
-  "scripts/issue250_terminal.py"
-  ]
-  },
-  "pinned_by_evidence": [],
-  "rationale": "Negative mutation matrix for the AMENDMENT-008 reducer-admission correction: every broken-bridge shape (record absent/tampered/malformed, predecessor mounts missing/symlinked, row/freeze/authority/state drift, mixed or missing Arm-A reachability provenance) fails closed without historical fallback, and a valid bridge stop fetches no later-arm authority.",
-  "referenced_by_scripts": [],
-  "replacement": null,
-  "source_modules": [
-  "scripts/issue250_diagnostic.py",
-  "scripts/issue250_physical.py",
-  "scripts/issue250_terminal.py"
-  ],
-  "test_count_at_audit": 25
- },
-  "test_issue252_arms": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":6,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Prospective one-factor Vulkan discriminator definitions remain frozen and distinct; exact accepted source/model/request authority is bound without asserting causality from source inspection.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_arms.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_arms.py"],"test_count_at_audit":6},
-  "test_issue252_phase0": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":10,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Phase-0 source-first Vulkan path reconstruction and ranked hypothesis matrix authenticate pinned source and retained authority without physical execution.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_phase0.py","scripts/issue252_vulkanpath.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_phase0.py","scripts/issue252_vulkanpath.py"],"test_count_at_audit":10},
-  "test_issue252_physical": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":14,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Physical discriminator tooling fails closed on exact-head dispatch, frozen arm identity, one-factor plan, and append-only evidence custody; tests use fake execution only.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_physical.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_physical.py"],"test_count_at_audit":14},
-  "test_issue252_terminal": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":12,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Terminal reduction derives allowed outcomes from retained bytes and frozen discriminators; caller-supplied conclusions cannot grant a terminal.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_terminal.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_terminal.py"],"test_count_at_audit":12},
-  "test_issue252_vulkanpath": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":5,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Pinned llama.cpp Vulkan execution-path facts remain mechanically tied to the authenticated source tree and source-first evidence.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_vulkanpath.py"]},"pinned_by_evidence":[],"rationale":"Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_vulkanpath.py"],"test_count_at_audit":5},
-  "test_issue252_round4": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":26,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Round-4 adversarial contracts: the production reducer/capture API exposes no fetcher or offline-mode flag, A5 staging/allocation pairing is one-to-one and ordered per the pinned source, and A4 is honestly non-terminal-capable at pin b29c606e.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_terminal.py","scripts/issue252_capture.py","scripts/issue252_mechanism.py","scripts/issue252_physical.py"]},"pinned_by_evidence":[],"rationale":"Round-4 correction round (review of head 6bc9251); no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_terminal.py","scripts/issue252_capture.py","scripts/issue252_mechanism.py"],"test_count_at_audit":26},
-  "test_issue252_round5": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":11,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Round-5 adversarial contracts: A5 staging is an ordered buffer state transition per the pinned source (strict-< growth, destroy-current-then-allocate, no-op emission at or below active size); historical staging allocations are never summed.","lineage":"R8-I3C Vulkan mechanism localization (#252)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue252_mechanism.py"]},"pinned_by_evidence":[],"rationale":"Round-5 correction round (review of head 9a18d4a); no physical execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue252_mechanism.py"],"test_count_at_audit":11},"test_issue254_producer": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":29,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"#254 live producer custody: the only physical path is the producer's own launched process plus host probes under a freshly re-fetched #254 dispatch (schema /3 capture; producer attestation re-binds every retained byte; atomic unit publication; fail-closed prefix stop law; no caller-supplied observation API).","lineage":"R8-I3C Phase 1 live producer (#254)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue254_producer.py","scripts/issue252_physical.py","scripts/issue252_terminal.py","scripts/issue252_capture.py","scripts/issue252_arms.py","scripts/issue252_constants.py","scripts/issue250_diagnostic.py","scripts/issue250_physical.py","scripts/issue248_identity.py"]},"pinned_by_evidence":[],"rationale":"Phase-A registration only; zero physical-execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue254_producer.py"],"test_count_at_audit":29},"test_issue254_round5": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":21,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"#254 round-5 correction (AMENDMENT-005): the exact enum-line requirement is removed for A3 placement/mechanism (the retained stream of this instrument physically carries no ggml_vulkan enumeration banner); A3 requires the exact async-disabled line plus producer-attested Vulkan placement/identity facts; a failed unit's scratch is quarantined under producer-failure-quarantine/ (never reducer-admissible, never promoted to unit.json) and continuation is fail-closed on the same root; A2/A5 enum/memory laws unchanged.","lineage":"R8-I3C Phase 1 live producer (#254 round 5)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue254_producer.py","scripts/issue252_mechanism.py","scripts/issue252_physical.py","scripts/issue252_terminal.py","scripts/issue252_arms.py","scripts/issue252_constants.py"]},"pinned_by_evidence":[],"rationale":"Round-5 correction registration; zero physical-execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue254_producer.py","scripts/issue252_mechanism.py"],"test_count_at_audit":21},
-  "test_issue254_round7": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":8,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Round-7 identity-shape correction: ONE canonical producer/receipt identity normalization boundary (normalize_retained_identity) derives the receipt-compatible frozen identity from the authenticated raw #248 observation through the existing _flat_identity/I248 path (no second parser), requires exact HOST_FACTS equality, retains the authenticated raw block for custody, and binds the same object into receipt, producer attestation, and retained identity-pre/post JSON; attestation identity must equal receipt identity; offline fixtures exercise the raw #248 observer shape, never an injected flat dict.","lineage":"R8-I3C Phase 1 live producer (#254 round 7)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"],"scripts_imported":["scripts/issue254_producer.py","scripts/issue252_physical.py","scripts/issue252_terminal.py","scripts/issue252_mechanism.py","scripts/issue248_identity.py","scripts/issue252_constants.py"]},"pinned_by_evidence":[],"rationale":"Round-7 correction registration (dispatched-head review of d0df403); no physical-execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue254_producer.py"],"test_count_at_audit":8},
-  "test_issue258_theorem": {"baseline_group": "r8i-qwen-qualification", "baseline_serial_seconds": 0.0, "baseline_test_count": 15, "category": "CURRENT_CONTRACT", "disposition": "retain", "group": "r8i-qwen-qualification", "invariant": "Issue #258 (AMENDMENT-006): terminal capability is mechanically explicit per arm (issue258_theorem); nonterminal/dead arms are never required for terminal completion and never grant terminal authority; the accepted A3-variable + A5-variable state reduces to honest UNRESOLVED; A5 withdrawn from localization per accepted #257 (A5_OBSERVATIONALLY_CAPABLE_NONTERMINAL); NON_LOCALIZED requires terminal-capable hypothesis coverage and fails closed to UNRESOLVED when absent.", "lineage": "R8-I3C prospective arm-set theorem (#258)", "named_by_evidence": [], "owned_surfaces": {"evidence_read": ["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"], "scripts_imported": ["scripts/issue258_theorem.py", "scripts/issue252_terminal.py", "scripts/issue252_mechanism.py", "scripts/issue252_constants.py", "scripts/issue252_arms.py"]}, "pinned_by_evidence": [], "rationale": "Prospective methodology/reducer theorem redesign after accepted A3/A5 findings; zero physical-execution authority is granted by CI registration.", "referenced_by_scripts": [], "replacement": null, "source_modules": ["scripts/issue258_theorem.py"], "test_count_at_audit": 15},
-  "test_issue260_observation": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":7,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #260 prospective H2/H3 exact-marker grammar, backend/staging identity and memory-type contrast, historical evidence non-transfer, and fail-closed H5 prospective closure.","lineage":"R8-I3C instrumented source freeze (#260)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"],"scripts_imported":["scripts/issue260_instrumentation.py","scripts/issue258_theorem.py"]},"pinned_by_evidence":[],"rationale":"Prospective repository-only tests; no physical-execution authority from instrumentation or CI.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue260_instrumentation.py"],"test_count_at_audit":7},
-  "test_issue260_source_patch": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":4,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #260 exact-pin source patch, deterministic transformed-tree identity, and fail-closed input-drift law.","lineage":"R8-I3C instrumented source freeze (#260)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"],"scripts_imported":["scripts/issue260_source_patch.py"]},"pinned_by_evidence":[],"rationale":"Prospective compile/source tests only; no physical-execution authority from instrumentation or CI.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue260_source_patch.py"],"test_count_at_audit":4},
-  "test_issue262_source_patch": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":4,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #262 exact-pin source chain (pinned b29c606e + i260 + H5 route edits + accepted R8-E + comparator/2), deterministic instrumented-tree identity, and fail-closed input-drift law.","lineage":"R8-I3C rapid physical pilot source identity (#262)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json","docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue260-source-identity.json"],"scripts_imported":["scripts/issue262_source_patch.py"]},"pinned_by_evidence":[],"rationale":"Prospective compile/source tests only; no physical-execution authority from instrumentation or CI.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue262_source_patch.py"],"test_count_at_audit":4},
-  "test_issue262_h5": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":16,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #262 H5 route-marker grammar, output-projection dispatch binding (shapes/types/side), capability-enumeration non-masquerade, coopmat2 one-factor eligibility, and paired candidate-transition law.","lineage":"R8-I3C rapid physical pilot H5 observability (#262)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"],"scripts_imported":["scripts/issue262_h5.py"]},"pinned_by_evidence":[],"rationale":"Prospective repository-only tests; no physical-execution authority from instrumentation or CI.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue262_h5.py"],"test_count_at_audit":16},
-  "test_issue262_pilot": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":12,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #262 pilot producer offline law: one-factor arm environment, frozen case-3072 launch geometry, comparator-digest and frozen-subject fail-closed gates, screening classification, and #260-parser tree-identity extension.","lineage":"R8-I3C rapid physical pilot producer (#262)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262-source-identity.json"],"scripts_imported":["scripts/issue262_pilot.py","scripts/issue262_h5.py","scripts/issue260_instrumentation.py"]},"pinned_by_evidence":[],"rationale":"Prospective repository-only tests; no physical-execution authority from instrumentation or CI.","referenced_by_scripts":[],"replacement":null,"source_modules":["scripts/issue262_pilot.py"],"test_count_at_audit":12},
-  "test_issue252_capture": {
-    "baseline_group": "r8i-qwen-qualification",
-    "baseline_serial_seconds": 0.0,
-    "baseline_test_count": 15,
-    "category": "CURRENT_CONTRACT",
-    "disposition": "retain",
-    "group": "r8i-qwen-qualification",
-    "invariant": "Retained dispatch authority is retrieval-bound: a capture authenticates only when its immutable GitHub comment is independently re-fetched by exact ID and compared byte-for-byte; locally consistent objects never authorize retained evidence.",
-    "lineage": "R8-I3C Vulkan mechanism localization (#252)",
-    "named_by_evidence": [],
-    "owned_surfaces": {
-      "evidence_read": [
-        "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
-      ],
-      "scripts_imported": [
-        "scripts/issue252_capture.py"
-      ]
-    },
-    "pinned_by_evidence": [],
-    "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
-    "referenced_by_scripts": [],
-    "replacement": null,
-    "source_modules": [
-      "scripts/issue252_capture.py"
-    ],
-    "test_count_at_audit": 15
-  },
-  "test_issue252_mechanism": {
-    "baseline_group": "r8i-qwen-qualification",
-    "baseline_serial_seconds": 0.0,
-    "baseline_test_count": 17,
-    "category": "CURRENT_CONTRACT",
-    "disposition": "retain",
-    "group": "r8i-qwen-qualification",
-    "invariant": "Each frozen arm's bounded mechanism claim requires retained raw Vulkan-side observations (enumeration, async marker, allocation-type/staging lines) proving the named intervention changed the intended runtime path; A1 is non-terminal-capable at this pin.",
-    "lineage": "R8-I3C Vulkan mechanism localization (#252)",
-    "named_by_evidence": [],
-    "owned_surfaces": {
-      "evidence_read": [
-        "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/"
-      ],
-      "scripts_imported": [
-        "scripts/issue252_mechanism.py"
-      ]
-    },
-    "pinned_by_evidence": [],
-    "rationale": "Current #252 Phase-0 source-first and fail-closed discriminator/terminal contracts; no physical execution authority is granted by CI registration.",
-    "referenced_by_scripts": [],
-    "replacement": null,
-    "source_modules": [
-      "scripts/issue252_mechanism.py"
-    ],
-    "test_count_at_audit": 17
-  },
-
-  "test_issue264_source_patch": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":6,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #264 exact-parent MMV source transformation, deterministic successor-tree identity, and fail-closed source drift checks; v2 publication metadata is initialized once before concurrent compilation becomes visible.","lineage":"R8-I3C output-weight MMV source patch (#264)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json","docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/patches/issue264-mmv-selector-v2.patch"],"scripts_imported":["scripts/issue264_source_patch.py"]},"pinned_by_evidence":[],"rationale":"Current prospective source contract and publication-race regression coverage; CI registration grants no physical-execution authority.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":6},
-  "test_issue264_h5": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":8,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #264 H5 selector validation and actual per-process output.weight MMV dispatch evidence: exact marker pairing, frozen route/shape/type identity, and candidate-transition proof.","lineage":"R8-I3C output-weight MMV observability (#264)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue262/evidence/"],"scripts_imported":["scripts/issue264_h5.py","scripts/issue262_h5.py"]},"pinned_by_evidence":[],"rationale":"CPU-only prospective marker/parser contract over retained #262 route samples; CI registration grants no physical-execution authority.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":9},
-  "test_issue264_pilot": {"baseline_group":"r8i-qwen-qualification","baseline_serial_seconds":0.0,"baseline_test_count":9,"category":"CURRENT_CONTRACT","disposition":"retain","group":"r8i-qwen-qualification","invariant":"Issue #264 bounded pilot offline law: frozen arms and launch environment, retained-byte/restart integrity, actual dispatch marker validation, repeat-stop screening, and report rejection of unretained roots.","lineage":"R8-I3C bounded MMV pilot/report (#264)","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-source-identity-v2.json","docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/issue264-build-identity.json"],"scripts_imported":["scripts/issue264_pilot.py","scripts/issue264_report.py","scripts/issue264_h5.py","scripts/issue264_source_patch.py","scripts/issue260_instrumentation.py","scripts/issue262_source_patch.py","scripts/issue262_h5.py","scripts/issue262_pilot.py","scripts/issue250_diagnostic.py"]},"pinned_by_evidence":[],"rationale":"Offline contract tests only; no GPU execution or execution authority is granted by CI registration.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":26},
-  "test_issue255_baseline": {"baseline_group":"issue-99-103","baseline_serial_seconds":0.0,"baseline_test_count":7,"category":"CURRENT_CONTRACT","disposition":"retain","group":"issue-99-103","invariant":"Single-host CUDA baseline uses the pinned request without RPC; exact lease/PID cleanup and physical readback, plus live CI/planner/retention registration.","lineage":"Issue #255 product two-host MVP","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/implementation/two-host-mvp-255/evidence/task3-baseline/"],"scripts_imported":["tools/issue255_mvp/baseline.py","tools/issue255_mvp/measure.py"]},"pinned_by_evidence":["docs/implementation/two-host-mvp-255/evidence/task3-baseline/MANIFEST.json"],"rationale":"Current product baseline and operator safety, not a qualification oracle.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":7},
-  "test_issue255_measure": {"baseline_group":"issue-99-103","baseline_serial_seconds":0.0,"baseline_test_count":15,"category":"CURRENT_CONTRACT","disposition":"retain","group":"issue-99-103","invariant":"Retained four-request CUDA/RPC measurement binds request identity, GPU windows, source accounting and owned cleanup.","lineage":"Issue #255 product two-host MVP","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/implementation/two-host-mvp-255/evidence/task2/"],"scripts_imported":["tools/issue255_mvp/measure.py"]},"pinned_by_evidence":["docs/implementation/two-host-mvp-255/evidence/task2/MANIFEST.json"],"rationale":"Current measured product result and request-level provenance.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":15},
-  "test_issue268_operator_plan": {"baseline_group":"issue-99-103","baseline_serial_seconds":null,"baseline_test_count":5,"category":"CURRENT_CONTRACT","disposition":"retain","group":"issue-99-103","invariant":"Ordinary operator configuration, explicit plan identity, source binding and fixed strategy constraints fail closed without generic hardware policy.","lineage":"Issue #268 ordinary operator path","named_by_evidence":[],"owned_surfaces":{"evidence_read":[],"scripts_imported":["inferswarm/operator/config.py","inferswarm/operator/plan.py","inferswarm/operator/strategy.py"]},"pinned_by_evidence":[],"rationale":"Current ordinary operator configuration and planning contract.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":5},
-  "test_issue268_operator_runtime": {"baseline_group":"issue-99-103","baseline_serial_seconds":null,"baseline_test_count":null,"category":"CURRENT_CONTRACT","disposition":"retain","group":"issue-99-103","invariant":"Ordinary fixed two-host request authenticates full source/runtime/cache bytes and parsed GGUF assignments, checks loader placement and bounded exact-owned lifecycle including failure cleanup.","lineage":"Issue #268 ordinary operator path","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/implementation/two-host-mvp-255/evidence/task2/client.log"],"scripts_imported":["inferswarm/operator/runtime.py","inferswarm/operator/source.py","inferswarm/operator/lifecycle.py","inferswarm/operator/config.py","inferswarm/operator/strategy.py"]},"pinned_by_evidence":[],"rationale":"Current CPU-only product path and source/lifecycle fail-closed contract; no physical authority from CI.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":37},
-  "test_issue255_mvp": {"baseline_group":"issue-99-103","baseline_serial_seconds":0.0,"baseline_test_count":5,"category":"CURRENT_CONTRACT","disposition":"retain","group":"issue-99-103","invariant":"Frozen local source staging and nontrivial CUDA/RPC layer placement stay bound to retained startup evidence.","lineage":"Issue #255 product two-host MVP","named_by_evidence":[],"owned_surfaces":{"evidence_read":["docs/implementation/two-host-mvp-255/evidence/"],"scripts_imported":["tools/issue255_mvp/prestage.py"]},"pinned_by_evidence":["docs/implementation/two-host-mvp-255/evidence/MANIFEST.json"],"rationale":"Current product physical substrate proof.","referenced_by_scripts":[],"replacement":null,"test_count_at_audit":5}
+  }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
  "schema": "inferswarm.ci.test-retention-audit/1",

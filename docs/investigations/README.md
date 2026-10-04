@@ -44,6 +44,10 @@ An investigation is evidence in, not a decision or doctrine update out.
   — the durable R8-I4 engineering record for the accepted V340L single-die
   practicality characterization on inferswarm05; it is not comparator/2 or
   R8-J execution authority.
+- [qwen38-flash-next-r8-i6-v340-comparator2/](qwen38-flash-next-r8-i6-v340-comparator2/README.md)
+  — the R8-I6 V340L comparator/2 physical-authority gate (repository/CPU-only
+  tooling and tests; no physical execution authority without the exact-head
+  maintainer dispatch).
 - [data/](data/README.md) — the byte-preserved derivation outputs and their
   `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
   placements, and the Phase1R D3/D4/D7 placements. The tools that produce them

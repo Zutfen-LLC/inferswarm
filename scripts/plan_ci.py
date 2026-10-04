@@ -285,6 +285,12 @@ GROUP_TEST_MODULES = {
         "test_issue264_source_patch",
         "test_issue264_h5",
         "test_issue264_pilot",
+        # Issue #270 R8-I6: V340L comparator/2 physical-authority gate —
+        # retained-bytes subject consumption, self-contained comparator/2
+        # semantics re-declaration (PR #242 never merged), two-index
+        # selector binding, freeze custody, and the mechanical terminal
+        # reducer (no threshold, no calibration, no physical execution).
+        "test_issue270_authority",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -416,6 +422,11 @@ PATH_GROUPS = {
     "tests/test_issue264_source_patch.py": ["r8i-qwen-qualification"],
     "tests/test_issue264_h5.py": ["r8i-qwen-qualification"],
     "tests/test_issue264_pilot.py": ["r8i-qwen-qualification"],
+    "tests/test_issue270_authority.py": ["r8i-qwen-qualification"],
+    "scripts/issue270_authority.py": ["r8i-qwen-qualification"],
+    "scripts/issue270_comparator.py": ["r8i-qwen-qualification"],
+    "scripts/issue270_physical.py": ["r8i-qwen-qualification"],
+    "scripts/issue270_terminal.py": ["r8i-qwen-qualification"],
     "scripts/issue264_source_patch.py": ["r8i-qwen-qualification"],
     "scripts/issue264_h5.py": ["r8i-qwen-qualification"],
     "scripts/issue264_pilot.py": ["r8i-qwen-qualification"],
