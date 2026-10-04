@@ -44,6 +44,38 @@ def identity(pid):
     return fields[19]
 
 
+def _owned_listening(pid, bind, port):
+    """Inspect this process's LISTEN socket, without opening an RPC connection."""
+    try:
+        family=socket.AF_INET
+        try: wanted=socket.inet_pton(family,bind)
+        except OSError:
+            family=socket.AF_INET6
+            wanted=socket.inet_pton(family,bind)
+        owned=set()
+        for fd in (Path('/proc')/str(pid)/'fd').iterdir():
+            try: target=os.readlink(fd)
+            except FileNotFoundError: continue  # fd closed while inspecting
+            if target.startswith('socket:[') and target.endswith(']'):
+                owned.add(target[8:-1])
+        table='tcp' if family==socket.AF_INET else 'tcp6'
+        for line in (Path('/proc')/str(pid)/'net'/table).read_text().splitlines()[1:]:
+            fields=line.split()
+            address,hex_port=fields[1].split(':')
+            if fields[3]!='0A' or int(hex_port,16)!=port or fields[9] not in owned:
+                continue
+            raw=bytes.fromhex(address)
+            if family==socket.AF_INET:
+                actual=raw[::-1]
+            else:
+                actual=b''.join(raw[i:i+4][::-1] for i in range(0,16,4))
+            if actual==wanted or actual==bytes(len(wanted)):
+                return True
+    except FileNotFoundError:
+        return False  # process/socket disappeared during inspection
+    return False
+
+
 def _onhost(p):
     root=Path(p['root']); marker=root/'active'; token=p['token']; action=p['action']
     if action=='admit':
@@ -89,7 +121,7 @@ def _onhost(p):
             raise
         _CHILDREN[child.pid]=child
         return row
-    if action in ('alive','log','stop','release'):
+    if action in ('alive','listening','log','stop','release'):
         if action=='log':
             if p['name'] not in ('client','rpc'): raise ValueError('unsupported log')
             return {'text':(root/token/(p['name']+'.log')).read_text(errors='replace')[-2000000:]}
@@ -109,6 +141,9 @@ def _onhost(p):
             raise ValueError('ownership record mismatch')
         current=identity(row['pid'])
         if action=='alive': return {'alive':current==row['start']}
+        if action=='listening':
+            listening=current==row['start'] and _owned_listening(row['pid'],p['bind'],p['port'])
+            return {'listening':listening and identity(row['pid'])==row['start']}
         if current!=row['start']: return {'exit':'absent-or-recycled'}
         # pidfd pins the observed PID; recheck /proc identity after opening fd.
         fd=pidfd(row['pid'])
@@ -166,6 +201,11 @@ class LeaseManager:
     def alive(self,address,name):
         row=self.owned[address][name]
         return self._call(address,'alive',name=name,pid=row['pid'],start=row['start'])['alive']
+
+    def listening(self,address,name,bind,port):
+        row=self.owned[address][name]
+        return self._call(address,'listening',name=name,pid=row['pid'],start=row['start'],
+                          bind=bind,port=port)['listening']
 
     def log(self,address,name): return self._call(address,'log',name=name)['text']
 

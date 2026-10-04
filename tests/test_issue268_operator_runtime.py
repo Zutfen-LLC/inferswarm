@@ -5,13 +5,14 @@ import os
 from pathlib import Path
 import signal
 import shlex
+import socket
 import struct
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from unittest.mock import patch
 from contextlib import redirect_stdout
 import io
@@ -193,6 +194,65 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(mgr.cleanup()['host']['lease'],'released')
         self.assertFalse((Path(path)/'active').exists())
 
+    def test_listening_requires_exact_owned_socket_not_foreign_listener(self):
+        from inferswarm.operator.lifecycle import LeaseManager, LocalTransport
+        with socket.socket() as foreign:
+            foreign.bind(('127.0.0.1', 0)); foreign.listen()
+            port=foreign.getsockname()[1]
+            mgr=LeaseManager(LocalTransport(),'owned-listener')
+            mgr.acquire('host',str(self.root/'host'))
+            try:
+                mgr.spawn('host','rpc',[sys.executable,'-c','import time; time.sleep(30)'])
+                self.assertFalse(mgr.listening('host','rpc','127.0.0.1',port))
+                self.assertEqual(foreign.getsockname()[1],port)
+            finally:
+                self.assertEqual(mgr.cleanup()['host']['lease'],'released')
+
+    def test_listening_detects_real_owned_tcp_socket_and_rejects_other_port(self):
+        from inferswarm.operator.lifecycle import LeaseManager, LocalTransport
+        with socket.socket() as reservation:
+            reservation.bind(('127.0.0.1',0)); port=reservation.getsockname()[1]
+        mgr=LeaseManager(LocalTransport(),'owned-listener')
+        mgr.acquire('host',str(self.root/'host'))
+        try:
+            mgr.spawn('host','rpc',[sys.executable,'-c',
+                'import socket,time; s=socket.socket(); s.bind(("127.0.0.1",'+str(port)+')); s.listen(); print("ready",flush=True); time.sleep(30)'])
+            for _ in range(200):
+                if 'ready' in mgr.log('host','rpc'): break
+                time.sleep(.01)
+            else: self.fail('owned socket fixture did not bind')
+            self.assertTrue(mgr.listening('host','rpc','127.0.0.1',port))
+            self.assertFalse(mgr.listening('host','rpc','127.0.0.1',port+1))
+            self.assertFalse(mgr.listening('host','rpc','127.0.0.2',port))
+        finally:
+            self.assertEqual(mgr.cleanup()['host']['lease'],'released')
+
+    def test_production_ssh_listening_action_runs_offline_against_owned_child(self):
+        from inferswarm.operator.lifecycle import LeaseManager, LocalTransport, SSHTransport
+        with socket.socket() as reservation:
+            reservation.bind(('127.0.0.1',0)); port=reservation.getsockname()[1]
+        mgr=LeaseManager(LocalTransport(),'offline-ssh-listen')
+        mgr.acquire('host',str(self.root/'host'))
+        try:
+            mgr.spawn('host','rpc',[sys.executable,'-c',
+                'import socket,time; s=socket.socket(); s.bind(("127.0.0.1",'+str(port)+')); s.listen(); print("ready",flush=True); time.sleep(30)'])
+            for _ in range(200):
+                if 'ready' in mgr.log('host','rpc'): break
+                time.sleep(.01)
+            else: self.fail('owned socket fixture did not bind')
+            real_run=subprocess.run
+            def offline_ssh(argv,**kwargs):
+                self.assertEqual(argv[0],'ssh')
+                command=shlex.split(argv[-1]); self.assertEqual(command[:2],['python3','-c'])
+                return real_run([sys.executable,'-c',command[2]],**kwargs)
+            row=mgr.owned['host']['rpc']
+            with patch('inferswarm.operator.lifecycle.subprocess.run',side_effect=offline_ssh):
+                result=SSHTransport().call('host',dict(action='listening',root=str(self.root/'host'),
+                     token=mgr.token,name='rpc',pid=row['pid'],start=row['start'],bind='127.0.0.1',port=port))
+            self.assertTrue(result['listening'])
+        finally:
+            self.assertEqual(mgr.cleanup()['host']['lease'],'released')
+
     def test_term_ignoring_child_retains_lease(self):
         from inferswarm.operator.lifecycle import LeaseManager, LocalTransport
         mgr=LeaseManager(LocalTransport(),'ours',stop_timeout=.2); path=str(self.root/'host')
@@ -265,18 +325,26 @@ class RunnerTests(SourceTests):
             r['execution_address']=r['role']; r['lifecycle_dir']=str(self.root/r['role'])
         self.fixture=Path(__file__).resolve().parents[1]/'docs/implementation/two-host-mvp-255/evidence/task2/client.log'
         self.log_text='\n'.join(line for line in self.fixture.read_text().splitlines()[205:254] if 'assigned to device' in line)
+        self.response_counter=0
 
-    def runner(self, mismatch=False, lost=False, occupied=False, request_failure=False):
+    def runner(self, mismatch=False, lost=False, occupied=False, request_failure=False,
+               rpc_ready_after=0, rpc_never_listens=False, rpc_lost_before_listen=False,
+               use_helper=False):
         from inferswarm.operator.runtime import OperatorRunner
-        from inferswarm.operator.source import verify_role
+        from inferswarm.operator.source import compile_fnv, verify_role
         from inferswarm.operator.lifecycle import LeaseManager,LocalTransport
         parent=self
         class Source:
             def verify(self,part,plan,fnv_binary=None):
-                return verify_role(part,plan.model,plan.placement,plan.backend_options)
+                if use_helper and part.role=='remote': compile_fnv(fnv_binary)
+                return verify_role(part,plan.model,plan.placement,plan.backend_options,
+                                   fnv_binary=fnv_binary if use_helper else None)
         class Managed(LeaseManager):
-            def __init__(self): super().__init__(LocalTransport(),'operator-test',stop_timeout=.2)
+            def __init__(self):
+                super().__init__(LocalTransport(),'operator-test',stop_timeout=.2)
+                self.rpc_checks=0; self.client_spawned_at_rpc_check=None
             def spawn(self,address,name,argv,cache=None):
+                if name=='client': self.client_spawned_at_rpc_check=self.rpc_checks
                 row=super().spawn(address,name,[sys.executable,'-c','import time; time.sleep(30)'],cache)
                 if lost and name=='client':
                     os.kill(self.owned['remote']['rpc']['pid'],signal.SIGTERM)
@@ -285,6 +353,15 @@ class RunnerTests(SourceTests):
                         time.sleep(.01)
                     else: raise AssertionError('fixture remote child did not exit')
                 return row
+            def listening(self,address,name,bind,port):
+                self.rpc_checks+=1
+                if rpc_lost_before_listen and self.rpc_checks==1:
+                    os.kill(self.owned['remote']['rpc']['pid'],signal.SIGTERM)
+                    for _ in range(200):
+                        if not self.alive('remote','rpc'): break
+                        time.sleep(.01)
+                    else: raise AssertionError('fixture remote child did not exit')
+                return not rpc_never_listens and self.rpc_checks>rpc_ready_after
             def log(self,address,name):
                 if name=='client':
                     return parent.log_text.replace('layer  45 assigned to device RPC0','layer  45 assigned to device CPU') if mismatch else parent.log_text
@@ -301,7 +378,8 @@ class RunnerTests(SourceTests):
             def get(self,url,timeout): return {'status':'ok'}
             def post(self,url,data,timeout):
                 if request_failure: raise ValueError('request failed')
-                return {'id':'reply-1','choices':[{'message':{'content':'Answer'},'finish_reason':'stop'}], 'usage':{'completion_tokens':1}}
+                parent.response_counter+=1
+                return {'id':f'reply-{parent.response_counter}','choices':[{'message':{'content':'Answer'},'finish_reason':'stop'}], 'usage':{'completion_tokens':1}}
         mgr=Managed(); tunnel=Tunnel()
         return OperatorRunner(Source(),mgr,HTTP(),lambda *args:tunnel,pause=lambda _:None),mgr,tunnel
 
@@ -340,16 +418,49 @@ class RunnerTests(SourceTests):
 
     def test_repeat_same_config_distinct_invocation_tokens_durable_logs(self):
         plan=build_plan(parse_config(self.config))
-        digests=[]
+        digests=[]; response_ids=[]; invocation_dirs=[]; helpers=[]
         for token in ('first-invocation','second-invocation'):
-            runner,mgr,tunnel=self.runner(); mgr.token=token
+            runner,mgr,tunnel=self.runner(use_helper=True); mgr.token=token
             result=runner.run(plan)
             self.assertEqual(result['cleanup']['remote']['lease'],'released')
             digests.append(result['plan_digest'])
+            response_ids.append(result['response_id'])
+            helper=self.root/'remote'/token/'fnv-cache'
+            self.assertTrue(helper.is_file())
+            helpers.append(helper)
             for role in ('remote','client'):
                 name='rpc.log' if role=='remote' else 'client.log'
                 self.assertTrue((self.root/role/token/name).is_file())
+                invocation_dirs.append(self.root/role/token)
         self.assertEqual(digests,[plan.digest,plan.digest])
+        self.assertEqual(len(set(response_ids)),2)
+        self.assertEqual(len(set(invocation_dirs)),4)
+        self.assertEqual(len(set(helpers)),2)
+        self.assertTrue(all(path.is_file() for path in helpers))
+        self.assertTrue(all(path.is_dir() for path in invocation_dirs))
+
+    def test_delayed_rpc_listen_blocks_client_launch_until_exact_ready(self):
+        runner,mgr,tunnel=self.runner(rpc_ready_after=3)
+        result=runner.run(build_plan(parse_config(self.config)))
+        self.assertEqual(mgr.client_spawned_at_rpc_check,4)
+        self.assertEqual(result['cleanup']['remote']['lease'],'released')
+
+    def test_rpc_never_listens_times_out_before_client_launch_and_cleans_up(self):
+        runner,mgr,tunnel=self.runner(rpc_never_listens=True)
+        plan=build_plan(parse_config(self.config))
+        plan=replace(plan,backend_options=replace(plan.backend_options,startup_timeout_seconds=1))
+        runner.pause=lambda _:time.sleep(.02)
+        with self.assertRaisesRegex(TimeoutError,'RPC.*listen.*timeout'):
+            runner.run(plan)
+        self.assertIsNone(mgr.client_spawned_at_rpc_check)
+        self.assertFalse(mgr.leases); self.assertFalse(tunnel.stopped)
+
+    def test_rpc_lost_before_listen_fails_without_client_launch(self):
+        runner,mgr,tunnel=self.runner(rpc_lost_before_listen=True)
+        with self.assertRaisesRegex(RuntimeError,'remote participant lost'):
+            runner.run(build_plan(parse_config(self.config)))
+        self.assertIsNone(mgr.client_spawned_at_rpc_check)
+        self.assertFalse(mgr.leases)
 
     def test_startup_timeout_after_tunnel_reaps_every_owned_process(self):
         runner,mgr,tunnel=self.runner()
@@ -357,7 +468,7 @@ class RunnerTests(SourceTests):
         runner.pause=lambda _: time.sleep(.01)
         from types import SimpleNamespace
         from unittest.mock import Mock
-        clock=SimpleNamespace(monotonic=Mock(side_effect=[0,0,100]),sleep=time.sleep)
+        clock=SimpleNamespace(monotonic=Mock(side_effect=[0,0,0,100]),sleep=time.sleep)
         with patch('inferswarm.operator.runtime.time',clock):
             with self.assertRaisesRegex(TimeoutError,'startup health timeout'):
                 runner.run(build_plan(parse_config(self.config)))

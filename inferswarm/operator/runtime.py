@@ -116,7 +116,16 @@ class OperatorRunner:
             self.leases.spawn(remote.execution_address,'rpc',
                               [remote.runtime_executable,'-H',host,'-p',str(remote.port),
                                '-d',plan.backend_options.rpc_physical_device,'-c'],cache=remote.cache_path)
-            self._live(client,remote,client_started=False)
+            rpc_deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                self._live(client,remote,client_started=False)
+                if self.leases.listening(remote.execution_address,'rpc',host,remote.port):
+                    self._live(client,remote,client_started=False)
+                    if time.monotonic()>rpc_deadline: raise TimeoutError('RPC owned listener startup timeout')
+                    break
+                self._live(client,remote,client_started=False)
+                if time.monotonic()>rpc_deadline: raise TimeoutError('RPC owned listener startup timeout')
+                self.pause(.5)
             self.leases.spawn(client.execution_address,'client',
                               [spec.executable,'-m',client.source_path,*spec.args,
                                '--host','127.0.0.1','--port',str(client.port)])
