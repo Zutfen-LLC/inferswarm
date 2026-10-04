@@ -245,15 +245,16 @@ class Issue184LivingStatusTests(unittest.TestCase):
 
     def test_pending_268_execution_has_distinct_ci_and_final_cpu_gates(self):
         frontier = self.record["frontier"]
-        self.assertIn("in progress; not accepted", frontier["title"])
+        self.assertIn("three physical requests observed; not accepted", frontier["title"])
         e = frontier["execution"]
         self.assertEqual(e["state"], "blocked")
         self.assertEqual(e["reference"], frontier["reference"])
-        self.assertIn("Issue #268 implementation is in progress", e["step"])
+        self.assertIn("three ordinary", e["step"].lower())
         self.assertIn("Living status is informational and grants no execution permission", e["step"])
-        self.assertIn("Physical Stage 4 requires local and hosted CI success", e["step"])
+        self.assertIn("37169789383", e["step"])
         self.assertIn("Final CPU Validation requires maintainer GO", e["step"])
-        self.assertIn("No #268 acceptance or physical execution is asserted here", e["step"])
+        self.assertIn("not accepted", e["step"])
+        self.assertNotIn("No #268 acceptance or physical execution is asserted here", e["step"])
         self.assertIn("This status grants no further execution authority", e["step"])
         self.assertIn("no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority",
                       " ".join(e["constraints"]))

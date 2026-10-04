@@ -1,0 +1,338 @@
+{
+  "acceptance": "NOT_ACCEPTED",
+  "continuation_attempted_indices": [
+    2,
+    3
+  ],
+  "continuation_status": "INCOMPLETE-HUMAN-REVIEW-REQUIRED",
+  "continuation_wrapper_sha256": "5ddd2b6ebf06bbd9abab862c593cc7ca36e71cc8e9c6349e465940ea5c8942eb",
+  "custody_manifest_sha256": "d10847be136f1e90921b809de27665d20ebf3140a1ce3cf0d934adaf454e9f91",
+  "custody_root": "/home/zutfen/custody/inferswarm-268-r8k-478eb5ef",
+  "final_cpu_validation": "REQUIRED_DEFERRED_MAINTAINER_EXACT_HEAD_GO",
+  "measured_product_head": "478eb5efc93476dc2be990ac738c7ddd40e11eab",
+  "nonclaims": [
+    "no fourth request",
+    "no positive remote sampled SM",
+    "no comparative latency, throughput or speedup measurement",
+    "no numerical equivalence",
+    "no mixed-vendor, dynamic scheduling, production readiness or Vulkan authority",
+    "no overall R8-K terminal"
+  ],
+  "observer_sha256": "9a38a94ed9666615e37ebb46912b9bf558aba6e07e041d2466bd859ab6bfb72b",
+  "ordinary_ci": {
+    "conclusion": "success",
+    "head": "478eb5efc93476dc2be990ac738c7ddd40e11eab",
+    "run_id": 37169789383,
+    "source": "prephysical-ci-success.json retained"
+  },
+  "original_observer_status": "INCOMPLETE",
+  "original_physical_json_sha256": "40279d7c82322935e79c59481a692c1da7a32bf633cd46ab8cc86e5d3cbd06a5",
+  "physical_stage_quality": "APPROVED_PHYSICAL_STAGE",
+  "physical_stage_spec": "PASS",
+  "placement": {
+    "client_cuda": [
+      41,
+      44
+    ],
+    "cpu": [
+      0,
+      40
+    ],
+    "output_rpc": 48,
+    "remote_rpc": [
+      45,
+      47
+    ]
+  },
+  "raw_digests": {
+    "invocation-01/client-client.log": "4ce6cd10657169f13c6c42a6b098898eee3d294c6b96cf590f1b471097bed18b",
+    "invocation-01/receipt.json": "3cf83336ef482f643aa7a5bb1a93c18b2bf8627624bee94af402ee81c7b1cad3",
+    "invocation-01/remote-cache-strace.log": "f013d36e07688e2378f7226684bb65165241e2425a54bbbc3580b6900d52ca0a",
+    "invocation-01/remote-rpc.log": "8cc860ade606da920484c25a931dc8d607e15ca8cbce58b9bf2bf67ea07fbd3d",
+    "invocation-02/client-client.log": "ba8a2cd1ae9ae81deb128208d19a315a2ee045e5771192f1dbddc9aed5b35ae7",
+    "invocation-02/receipt.json": "9706646b0e7605a7fef1d8cdcab4f9cb78ca69a78e11854ecbd47deaf5513a34",
+    "invocation-02/remote-cache-strace.log": "bf4a397cd0c473808274c4b2d08425a63de8fd7be3de9808d63ddb1d836ae57a",
+    "invocation-02/remote-rpc.log": "8cc860ade606da920484c25a931dc8d607e15ca8cbce58b9bf2bf67ea07fbd3d",
+    "invocation-03/client-client.log": "04d42562bcfe46ad8353714cd62451e95151b3aa5970824724f7f059c8de3917",
+    "invocation-03/receipt.json": "45e7e0d815eee6ccaa7782b8f2c713373c0a261bca604231f109506d4954f5a5",
+    "invocation-03/remote-cache-strace.log": "ff8c52479f0a0de7b9fecee10f6dc6fc9988885a57a7d20069a4cf58c2efd392",
+    "invocation-03/remote-rpc.log": "8cc860ade606da920484c25a931dc8d607e15ca8cbce58b9bf2bf67ea07fbd3d"
+  },
+  "raw_manifest_sha256": "d4b7466ab91be168ff9c5e110694dd9dc86e9f15bc8933363997810f194213a7",
+  "requests": [
+    {
+      "backing": {
+        "eligible_cache_keys": 9,
+        "full_members_per_role": 3,
+        "owned_remote_startup_cache_opens": 9,
+        "remote_verified_cache_ranges": 71
+      },
+      "cleanup": {
+        "collector_absent": true,
+        "exact_owner_absent": true,
+        "lease_released": true,
+        "listeners_absent": true
+      },
+      "cli_exit": 0,
+      "client": {
+        "gpu": "RTX 3060",
+        "host": "inferswarm01",
+        "in_window_pmon": 43,
+        "pid": 691485,
+        "positive_sm": 8,
+        "start": "83431853"
+      },
+      "completion_tokens": 69,
+      "finish_reason": "stop",
+      "index": 1,
+      "lease_token": "ccb5bd6018f7ed1d2c8db56bbe3fd8b7",
+      "plan_digest": "9962bf360cefffee453904a65ed0d804e9d4e3f29d030adf41d081bcc63a6078",
+      "plan_id": "r8k-accepted-fixed-two-host",
+      "raw_receipt": "invocation-01/receipt.json",
+      "raw_receipt_sha256": "3cf83336ef482f643aa7a5bb1a93c18b2bf8627624bee94af402ee81c7b1cad3",
+      "remote": {
+        "cuda_graph_lines": 4,
+        "gpu": "RTX 3090",
+        "host": "inferswarm04",
+        "in_window_pmon": 64,
+        "log_delta_bytes": [
+          1258,
+          1498
+        ],
+        "pid": 514783,
+        "positive_sm": 0,
+        "snapshot_mono_ns": [
+          [
+            382163956079995,
+            382164145972513
+          ],
+          [
+            382188059333643,
+            382188233837494
+          ]
+        ],
+        "start": "83430125"
+      },
+      "request_mono_ns": [
+        382164433006028,
+        382188059316665
+      ],
+      "response_id": "chatcmpl-GuBRCJgLyah2hQy0GRmHwfq8xwvpIe84"
+    },
+    {
+      "backing": {
+        "eligible_cache_keys": 9,
+        "full_members_per_role": 3,
+        "owned_remote_startup_cache_opens": 9,
+        "remote_verified_cache_ranges": 71
+      },
+      "cleanup": {
+        "collector_absent": true,
+        "exact_owner_absent": true,
+        "lease_released": true,
+        "listeners_absent": true
+      },
+      "cli_exit": 0,
+      "client": {
+        "gpu": "RTX 3060",
+        "host": "inferswarm01",
+        "in_window_pmon": 43,
+        "pid": 744086,
+        "positive_sm": 8,
+        "start": "83876263"
+      },
+      "completion_tokens": 69,
+      "finish_reason": "stop",
+      "index": 2,
+      "lease_token": "1d78fd83ce722f331a896ef502a6c595",
+      "plan_digest": "9962bf360cefffee453904a65ed0d804e9d4e3f29d030adf41d081bcc63a6078",
+      "plan_id": "r8k-accepted-fixed-two-host",
+      "raw_receipt": "invocation-02/receipt.json",
+      "raw_receipt_sha256": "9706646b0e7605a7fef1d8cdcab4f9cb78ca69a78e11854ecbd47deaf5513a34",
+      "remote": {
+        "cuda_graph_lines": 4,
+        "gpu": "RTX 3090",
+        "host": "inferswarm04",
+        "in_window_pmon": 64,
+        "log_delta_bytes": [
+          1258,
+          1498
+        ],
+        "pid": 519627,
+        "positive_sm": 0,
+        "snapshot_mono_ns": [
+          [
+            386608031872110,
+            386608212583330
+          ],
+          [
+            386631703447905,
+            386631892107861
+          ]
+        ],
+        "start": "83874530"
+      },
+      "request_mono_ns": [
+        386608497775158,
+        386631703416706
+      ],
+      "response_id": "chatcmpl-juHPw380XjeAJvWG6ZHvMN2olUHFEb7o"
+    },
+    {
+      "backing": {
+        "eligible_cache_keys": 9,
+        "full_members_per_role": 3,
+        "owned_remote_startup_cache_opens": 9,
+        "remote_verified_cache_ranges": 71
+      },
+      "cleanup": {
+        "collector_absent": true,
+        "exact_owner_absent": true,
+        "lease_released": true,
+        "listeners_absent": true
+      },
+      "cli_exit": 0,
+      "client": {
+        "gpu": "RTX 3060",
+        "host": "inferswarm01",
+        "in_window_pmon": 42,
+        "pid": 752641,
+        "positive_sm": 9,
+        "start": "83940228"
+      },
+      "completion_tokens": 69,
+      "finish_reason": "stop",
+      "index": 3,
+      "lease_token": "651fff254d0e2d5bb956b4c97a04ccc6",
+      "plan_digest": "9962bf360cefffee453904a65ed0d804e9d4e3f29d030adf41d081bcc63a6078",
+      "plan_id": "r8k-accepted-fixed-two-host",
+      "raw_receipt": "invocation-03/receipt.json",
+      "raw_receipt_sha256": "45e7e0d815eee6ccaa7782b8f2c713373c0a261bca604231f109506d4954f5a5",
+      "remote": {
+        "cuda_graph_lines": 4,
+        "gpu": "RTX 3090",
+        "host": "inferswarm04",
+        "in_window_pmon": 62,
+        "log_delta_bytes": [
+          1258,
+          1498
+        ],
+        "pid": 522021,
+        "positive_sm": 0,
+        "snapshot_mono_ns": [
+          [
+            387247768345279,
+            387247968259424
+          ],
+          [
+            387271524702267,
+            387271719296608
+          ]
+        ],
+        "start": "83938496"
+      },
+      "request_mono_ns": [
+        387248267894064,
+        387271524683546
+      ],
+      "response_id": "chatcmpl-n2YNbc9vug2bLWDpJ7ob4YsyFwwXdzKR"
+    }
+  ],
+  "schema": "inferswarm.issue268.physical-observation/1",
+  "source": {
+    "backend_options": {
+      "context": 1024,
+      "cpu_experts": true,
+      "hidden_layers": 48,
+      "offload_tail": 8,
+      "rpc_physical_device": "CUDA0",
+      "slots": 1,
+      "split_mode": "layer",
+      "startup_timeout_seconds": 180,
+      "tensor_split": [
+        1,
+        1
+      ],
+      "verbosity": 5
+    },
+    "model": {
+      "members": [
+        {
+          "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+          "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+          "size_bytes": 10946624
+        },
+        {
+          "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+          "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+          "size_bytes": 49990818368
+        },
+        {
+          "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+          "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+          "size_bytes": 22544696352
+        }
+      ],
+      "representation": "UD-IQ1_S-GGUF-v3",
+      "revision": "accepted-full-member-sha256-set",
+      "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF"
+    },
+    "participants": [
+      {
+        "cache_path": "/home/hermes/inferswarm-operator-268/client-cache",
+        "compute_id": "client-cu",
+        "device": "CUDA0",
+        "execution_address": "inferswarm01",
+        "lifecycle_dir": "/home/hermes/inferswarm-operator-268/acceptance-client-478eb5ef",
+        "node_id": "inferswarm01",
+        "port": 8345,
+        "role": "client",
+        "rpc_endpoint": null,
+        "runtime_executable": "/home/hermes/llama.cpp/build-v041/bin/llama-server",
+        "runtime_sha256": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411",
+        "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+        "source_path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "source_representation": "UD-IQ1_S-GGUF-v3",
+        "source_revision": "accepted-full-member-sha256-set",
+        "transport": "local"
+      },
+      {
+        "cache_path": "/home/hermes/issue255-mvp-retry/cache-layer",
+        "compute_id": "remote-cu",
+        "device": "RPC0",
+        "execution_address": "inferswarm04",
+        "lifecycle_dir": "/home/hermes/inferswarm-operator-268/acceptance-remote-478eb5ef",
+        "node_id": "inferswarm04",
+        "port": 50056,
+        "role": "remote",
+        "rpc_endpoint": "10.0.0.204:50056",
+        "runtime_executable": "/home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server",
+        "runtime_sha256": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9",
+        "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF",
+        "source_path": "/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "source_representation": "UD-IQ1_S-GGUF-v3",
+        "source_revision": "accepted-full-member-sha256-set",
+        "transport": "rpc"
+      }
+    ],
+    "plan_id": "r8k-accepted-fixed-two-host",
+    "remote_cache_range_count": 71,
+    "strategy_id": "llama.cpp"
+  },
+  "source_sha256": {
+    "/home/zutfen/.cache/inferswarm-268/physical-operator-config.json": "5cfe57c3cd4d311dec69c973bff83531140d280a3ab77ccad3e4e6195b28ad9f",
+    "inferswarm/operator/__main__.py": "31f00e735accf776cc78605e34a91aee90b1b1a52b385162b3d082194e9eb583",
+    "inferswarm/operator/config.py": "adc52d65e27958e8a51418537535b1ff837230f54cf2c2473f6ba5af25ed3b2c",
+    "inferswarm/operator/lifecycle.py": "b944c086e6185af9902d9437859bddf5da83bd2d72078da2730f950d7c6c7b84",
+    "inferswarm/operator/plan.py": "0d058bfbdbe5ae0f1e5c1626745e9ad55e5cf64a571fddb7f096de2d9a4517b6",
+    "inferswarm/operator/runtime.py": "a31a1710b77e904e0ca146c3a224109d7d24e9205230da4c7874b9856af85ef2",
+    "inferswarm/operator/source.py": "6db66122db7d2d55c765b8ba17206df4d5064b278955c622921beca3e6dcc129",
+    "inferswarm/operator/strategy.py": "6c4f699cc521e8df7ae855d9a2e259461e7de5437487caca2324892e3294645d"
+  },
+  "trace_contract": {
+    "cache": "owned remote startup O_RDONLY opens for nine eligible configured local keys; pinned ggml-rpc.cpp:927-950,1452-1511; no full-byte-read or request-time-I/O claim",
+    "raw": "custody raw/ matching raw_digests; full receipts contain sampled identity/time pairs and log snapshots",
+    "remote_log": "request-bracketed [1258:1498] newly emitted untimestamped CUDA graph backend lines; source ggml-rpc.cpp:1015-1033,1749-1766 and ggml-cuda.cu:4420-4476,4315-4395; infer bounded remote work, not positive sampled utilization or per-kernel trace",
+    "source_verification": "pinned inferswarm/operator/source.py:130-180 checks full member/range/cache/native key/runtime identity before spawn"
+  }
+}

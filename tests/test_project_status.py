@@ -1,6 +1,7 @@
 """Documentation drift and preservation regressions; no network or runtime work."""
 import contextlib
 import copy
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -180,6 +181,74 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertNotIn('UNACCEPTED CUDA/RPC product observation pending', combined)
         self.assertNotIn('Final CPU Validation must NOT run before explicit maintainer GO', combined)
         self.assertIn('Issue #268', combined)
+
+    def test_268_physical_observed_but_not_accepted_on_all_living_surfaces(self):
+        frontier = self.record['frontier']
+        execution = frontier['execution']
+        self.assertIn('not accepted', frontier['title'])
+        self.assertEqual(execution['state'], 'blocked')
+        self.assertEqual(frontier['prerequisite']['acceptance']['state'], 'accepted')
+        surfaces = {'source': json.dumps(frontier), **sync.render(self.record)}
+        for relative, sections in sync.TARGETS.items():
+            content = (sync.ROOT / relative).read_text()
+            surfaces[relative] = '\n'.join(content.split(
+                f'<!-- project-status:{name}:start -->', 1)[1].split(
+                f'<!-- project-status:{name}:end -->', 1)[0] for name in sections)
+        for name, content in surfaces.items():
+            if name not in ('source', 'frontier') and 'frontier' not in sync.TARGETS.get(name, ()):
+                continue
+            with self.subTest(surface=name):
+                self.assertIn('three ordinary', content.lower())
+                self.assertIn('not accepted', content.lower())
+                self.assertIn('Final CPU Validation', content)
+                self.assertNotIn('No #268 acceptance or physical execution is asserted here', content)
+                self.assertNotIn('R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS', content)
+                self.assertNotIn('Issue #255 is pending', content)
+
+    def test_268_compact_publication_is_digest_bound_and_nonterminal(self):
+        area = sync.ROOT / 'docs/implementation/ordinary-operator-path-268'
+        evidence = area / 'evidence'
+        compact = json.loads((evidence / 'physical-observation.json').read_text())
+        self.assertEqual(compact['measured_product_head'],
+                         '478eb5efc93476dc2be990ac738c7ddd40e11eab')
+        self.assertEqual(compact['acceptance'], 'NOT_ACCEPTED')
+        self.assertIn('DEFERRED', compact['final_cpu_validation'])
+        self.assertEqual(compact['original_observer_status'], 'INCOMPLETE')
+        self.assertEqual(compact['continuation_attempted_indices'], [2, 3])
+        self.assertEqual(len(compact['requests']), 3)
+        self.assertEqual([r['client']['positive_sm'] for r in compact['requests']],
+                         [8, 8, 9])
+        self.assertEqual([r['remote']['positive_sm'] for r in compact['requests']],
+                         [0, 0, 0])
+        self.assertEqual(len({r['response_id'] for r in compact['requests']}), 3)
+        self.assertEqual(len({r['lease_token'] for r in compact['requests']}), 3)
+        raw = {relative:digest for digest, relative in (line.split('  ', 1)
+              for line in (evidence / 'RAW-MANIFEST.sha256').read_text().splitlines())}
+        self.assertEqual(len(raw), 12)
+        for request in compact['requests']:
+            self.assertEqual(request['raw_receipt_sha256'],
+                             raw[request['raw_receipt']])
+            self.assertEqual(request['remote']['cuda_graph_lines'], 4)
+            self.assertEqual(request['remote']['log_delta_bytes'], [1258, 1498])
+            self.assertEqual(request['backing']['owned_remote_startup_cache_opens'], 9)
+            self.assertTrue(request['cleanup']['exact_owner_absent'])
+        covered = {}
+        for row in (evidence / 'MANIFEST.sha256').read_text().splitlines():
+            digest, relative = row.split('  ', 1)
+            self.assertNotIn(relative, covered)
+            self.assertNotEqual(relative,
+                'docs/implementation/ordinary-operator-path-268/evidence/MANIFEST.sha256')
+            covered[relative] = digest
+            self.assertEqual(hashlib.sha256((sync.ROOT / relative).read_bytes()).hexdigest(),
+                             digest)
+        prefix = 'docs/implementation/ordinary-operator-path-268/'
+        self.assertEqual(set(covered), {prefix + path for path in (
+            'product-report.md', 'evidence/RAW-MANIFEST.sha256',
+            'evidence/physical-observation.json',
+            *(f'evidence/retained-producers/{name}' for name in (
+                'acceptance-observer.py', 'continue-ordinary-acceptance.py',
+                'test_acceptance_observer.py', 'test_continue_ordinary_acceptance.py')),
+        )})
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'
