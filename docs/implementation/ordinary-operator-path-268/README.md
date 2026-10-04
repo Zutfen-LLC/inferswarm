@@ -4,7 +4,13 @@
 
 ## Current gap and proposed entrypoint
 
-At the accepted #267 merge base there was no ordinary InferSwarm CLI/runtime package; repository scripts were evidence tooling. The implemented entrypoint is `python -m inferswarm.operator run --config <path>`. Operators do not invoke the #255 measurement harness. Operators should not invoke `tools/issue255_mvp/*.py` as the product entrypoint.
+At the accepted #267 merge base there was no ordinary InferSwarm CLI/runtime package; repository scripts were evidence tooling. The implemented entrypoint is:
+
+```sh
+python -m inferswarm.operator run --config <path>
+```
+
+Operators do not invoke the #255 measurement harness. Operators should not invoke `tools/issue255_mvp/*.py` as the product entrypoint.
 
 Configuration/plan concepts remain model-independent and internal/experimental: opaque model/source identity; client/local and remote participant Node/Compute Unit identities; per-participant backing/source paths; explicit fixed immutable placement; generation/request settings. Proposed seams are config validation → immutable operator-authorized plan → participant source/backing identity verification → bounded runtime adapter for connect/startup/readiness/generation/owned-process cleanup → response and structured plan/source/observed-placement receipt. Do not freeze broad public APIs.
 
@@ -41,7 +47,13 @@ Placement entries explicitly bind opaque `unit_id` and `state_ids` to a `compute
 
 Start from `examples/ordinary-two-host.json`: replace `example-run-CHANGE-ME` lifecycle roots with operator-controlled, writable directories on the **corresponding** hosts; confirm SSH aliases, explicit LAN RPC endpoint/bind port, binary paths/hashes, full three-member model SHA-256/size identities, and remote pre-provisioned read-only `LLAMA_CACHE` (`cache_path/rpc/<native-key>`). The example's 71 remote state descriptors match the retained accepted GGUF metadata index, including ranges below the native cache-read threshold. The client uses its verified full source GGUF, not an invented cache state inventory. Cache availability/verification is not evidence that the runtime read each eligible item; a physical trace is still required. The example records historical expected identities, not a claim that those paths/ports/backing currently exist. Source preparation and provisioning are the operator's responsibility, not a dependency on the #255 harness.
 
-Run `python -m inferswarm.operator run --config examples/ordinary-two-host.json` from a provisioned controller with noninteractive SSH to both explicit `execution_address` aliases, Python 3 and C compiler on the remote host, and a local HTTP tunnel-capable SSH client. One invocation handles exactly one nonstreaming `/v1/chat/completions` request. On success stdout contains one JSON object (`response_id`, `text`, `finish_reason`, completion `tokens`, `plan_id`, `plan_digest`, `verified_backing`, `observed_placement`, `cleanup`); failure emits JSON `error`/`type` to stderr and exits nonzero. Change `request.prompt` for each fresh request; changing the prompt changes the plan digest, while rerunning an identical config uses a fresh random invocation token and distinct durable log/helper directories under each lifecycle root. Logs persist in `<lifecycle_dir>/<token>/`; only `<lifecycle_dir>/active` is released on successful exit. Do not reuse an **active** root concurrently.
+From a provisioned controller with noninteractive SSH to both explicit `execution_address` aliases, Python 3 and C compiler on the remote host, and a local HTTP tunnel-capable SSH client, run:
+
+```sh
+python -m inferswarm.operator run --config examples/ordinary-two-host.json
+```
+
+One invocation handles exactly one nonstreaming `/v1/chat/completions` request. On success stdout contains one JSON object (`response_id`, `text`, `finish_reason`, completion `tokens`, `plan_id`, `plan_digest`, `verified_backing`, `observed_placement`, `cleanup`); failure emits JSON `error`/`type` to stderr and exits nonzero. Change `request.prompt` for each fresh request; changing the prompt changes the plan digest, while rerunning an identical config uses a fresh random invocation token and distinct durable log/helper directories under each lifecycle root. Logs persist in `<lifecycle_dir>/<token>/`; only `<lifecycle_dir>/active` is released on successful exit. Do not reuse an **active** root concurrently.
 
 The strategy fixes CPU prefix 0–40, client CUDA0 41–44, remote RPC0 45–47 and output stage 48, requires `cpu_experts`, and supplies pinned `--rpc`, `--device`, `--split-mode layer`, `--tensor-split 1,1`, `-ngl 8`, `-cmoe`, `-c 1024`, `-np 1`, `--no-warmup`, `-lv 5`. The RPC server receives separately configured physical `CUDA0`, not an inferred mapping from `RPC0`. Pure config/strategy admission precedes filesystem mutation; source verification reads complete member hashes and GGUF metadata on both hosts and each remote range/cache byte identity before launching processes. The remote RPC process is launched first with `LLAMA_CACHE`; before client launch, a bounded readiness barrier on the remote host matches the configured TCP LISTEN address/port to a socket FD of the exact leased RPC PID/start-time identity, without connecting to the RPC protocol. A delayed or absent listener, or a lost participant, fails and enters owned cleanup rather than racing the client. The client server then starts on its host bound to loopback; an owned SSH tunnel exposes only that loopback endpoint to the controller. Loader layer assignments in the client log must match the explicit plan before requesting. A post-request ownership/liveness check prevents treating a completed HTTP reply alone as participant survival.
 
