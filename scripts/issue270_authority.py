@@ -60,7 +60,7 @@ STARTING_MAIN = "4c6df96cd03e50fbb990256507eb859769536aad"
 DISPATCH_PHRASE = "R8I6 PHYSICAL DISPATCH #270"
 # Bound to the real PR immediately after `gh pr create` (the #250
 # precedent: DIAGNOSTIC_PR_NUMBER carried a verified-live comment).
-PR_NUMBER: int | None = None
+PR_NUMBER: int | None = 271
 
 # ---------------------------------------------------------------------------
 # Accepted authority consumed (read-only; verified by committed tests)
