@@ -85,8 +85,79 @@ def validate_namespace_273(namespace: str) -> str:
     return namespace
 
 
+def authenticate_dispatch_273(transport: Any, expected_head: str,
+                              corrective_pr_number: int,
+                              namespace: str = NAMESPACE_273,
+                              repo: str = "Zutfen-LLC/inferswarm"
+                              ) -> dict[str, Any]:
+    """Authenticate dispatch against live GitHub issue/main/merge state.
+
+    ``transport`` is an injectable GET-only callable receiving an API path.
+    It must return decoded JSON. No caller-supplied association, merged flag,
+    or comment body is used as authority.
+    """
+    if not callable(transport):
+        raise ReducerError("GitHub read transport required")
+    if (not isinstance(corrective_pr_number, int)
+            or isinstance(corrective_pr_number, bool)
+            or corrective_pr_number <= 0):
+        raise ReducerError("corrective PR number malformed")
+    base = f"/repos/{repo}"
+    comments = transport(f"{base}/issues/{ISSUE_273}/comments")
+    pull = transport(f"{base}/pulls/{corrective_pr_number}")
+    main = transport(f"{base}/git/ref/heads/main")
+    if not isinstance(comments, list) or not isinstance(pull, dict) \
+            or not isinstance(main, dict):
+        raise ReducerError("GitHub dispatch transport returned malformed data")
+    merge_sha = pull.get("merge_commit_sha")
+    main_sha = ((main.get("object") or {}).get("sha"))
+    if (pull.get("merged") is not True or not pull.get("merged_at")
+            or merge_sha != expected_head or main_sha != expected_head):
+        raise ReducerError(
+            "corrective tooling PR is not merged at the exact current main head")
+    matching = []
+    for comment in comments:
+        if not isinstance(comment, dict):
+            continue
+        body = comment.get("body")
+        if not isinstance(body, str):
+            continue
+        lines = [line.strip() for line in body.splitlines()]
+        if DISPATCH_PHRASE_273 not in lines:
+            continue
+        fields = {line.split("=", 1)[0]: line.split("=", 1)[1]
+                  for line in lines if "=" in line}
+        author = comment.get("user") or {}
+        association = comment.get("author_association")
+        if (fields.get("head") == expected_head
+                and fields.get("namespace") == namespace
+                and association in ("OWNER", "MEMBER")
+                and isinstance(author, dict)
+                and isinstance(author.get("login"), str)
+                and isinstance(comment.get("id"), int)):
+            matching.append((comment, fields, author, association))
+    if len(matching) != 1:
+        raise ReducerError(
+            f"expected exactly one maintainer dispatch for exact head; got {len(matching)}")
+    comment, _, author, association = matching[0]
+    return {
+        "schema": DISPATCH_SCHEMA, "issue": ISSUE_273,
+        "dispatch_phrase": DISPATCH_PHRASE_273,
+        "head_sha": expected_head, "namespace": namespace,
+        "commenter_association": association,
+        "comment_id": comment["id"], "commenter": author["login"],
+        "tooling_merged": True,
+        "merge_commit_sha": merge_sha, "main_sha": main_sha,
+        "corrective_pr_number": corrective_pr_number,
+        "github_authenticated": True,
+    }
+
+
 def validate_dispatch_273(doc: Any, expected_head: str,
-                          namespace: str = NAMESPACE_273) -> dict[str, Any]:
+                          namespace: str = NAMESPACE_273, *,
+                          transport: Any = None,
+                          corrective_pr_number: int | None = None
+                          ) -> dict[str, Any]:
     """Authenticate a #273 corrective dispatch record.
 
     Required exact shape (issue #273 Phase 3):
@@ -98,6 +169,14 @@ def validate_dispatch_273(doc: Any, expected_head: str,
     Stale head, old namespace, non-maintainer (non-OWNER/MEMBER)
     authorization, or the legacy #270 phrase all fail closed.
     """
+    if transport is None or corrective_pr_number is None:
+        raise ReducerError(
+            "caller-authored dispatch fields are not authority; live GitHub transport required")
+    authenticated = authenticate_dispatch_273(
+        transport, expected_head, corrective_pr_number, namespace)
+    if isinstance(doc, dict) and doc.get("comment_id") != authenticated["comment_id"]:
+        raise ReducerError("dispatch comment id differs from the live authenticated comment")
+    doc = authenticated
     if not isinstance(doc, dict) or doc.get("schema") != DISPATCH_SCHEMA:
         raise ReducerError("#273 dispatch authority schema mismatch")
     if doc.get("issue") != ISSUE_273:
@@ -133,6 +212,23 @@ def validate_dispatch_273(doc: Any, expected_head: str,
 
 def derive_terminal_273(admissions: dict[str, dict[str, Any]],
                         determinism: dict[str, dict[str, Any]],
+                        pair_results: dict[str, dict[str, Any]] | None = None
+                        ) -> dict[str, Any]:
+    """Fail closed: in-memory verdict dictionaries are not evidence.
+
+    A retained-byte producer that composes all required verifiers is not
+    yet available. Until it exists, no caller-supplied data can mint any
+    physical terminal (including a claimed nondeterminism classification).
+    """
+    del admissions, determinism, pair_results
+    return _blocked(
+        TERMINAL_RUNTIME_BLOCKED_273,
+        ["retained-byte-to-terminal producer is not implemented; "
+         "in-memory verdicts are non-authoritative"])
+
+
+def _derive_terminal_273_untrusted(admissions: dict[str, dict[str, Any]],
+                        determinism: dict[str, dict[str, Any]],
                         pair_results: dict[str, dict[str, Any]] | None = None,
                         ) -> dict[str, Any]:
     """Derive the single #273 terminal from per-case corrected evidence.
@@ -153,7 +249,13 @@ def derive_terminal_273(admissions: dict[str, dict[str, Any]],
     BLOCKED regardless of candidate state — a candidate comparison can
     never redeem a nondeterministic reference.
     """
-    problems: list[str] = []
+    # This legacy dict API cannot authenticate retained bytes: schema and
+    # case labels are writable. It remains useful for fail-closed diagnostics,
+    # but cannot mint a physical PASS. The evidence-root producer is the only
+    # permitted future authority boundary.
+    problems: list[str] = [
+        "untrusted in-memory admissions/determinism cannot mint physical authority; "
+        "retained-byte producer verification is required"]
     if set(admissions) != set(C.FIXTURE_CASES):
         return _blocked(TERMINAL_RUNTIME_BLOCKED_273,
                         [f"admissions must cover exactly "
@@ -205,15 +307,7 @@ def derive_terminal_273(admissions: dict[str, dict[str, Any]],
                 f"{case}: candidate primary/repeat not deterministic")
     if problems:
         return _blocked(TERMINAL_RUNTIME_BLOCKED_273, problems)
-    record = {
-        "schema": SCHEMA,
-        "namespace": NAMESPACE_273,
-        "terminal": TERMINAL_PASS_273,
-        "cases": sorted(admissions),
-        "pair_diagnostics": pair_results or {},
-        "problems": [],
-    }
-    return record
+    return _blocked(TERMINAL_RUNTIME_BLOCKED_273, problems)
 
 
 def _blocked(terminal: str, problems: list[str]) -> dict[str, Any]:

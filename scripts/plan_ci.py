@@ -299,6 +299,7 @@ GROUP_TEST_MODULES = {
         # observe_v340_host vram_total fold-in, and the c273 corrective
         # dispatch/terminal vocabulary.
         "test_issue273_admission",
+        "test_issue273_round3_trust_boundaries",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).

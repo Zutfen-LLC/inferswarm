@@ -4411,6 +4411,29 @@
    "replacement": null,
    "test_count_at_audit": 55
   },
+  "test_issue273_round3_trust_boundaries": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 3,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #273 round-3 trust boundaries: caller-provided determinism booleans cannot override a primary/repeat digest mismatch; in-memory schema-shaped admission records cannot mint a physical terminal; dispatch authority is read from live GitHub issue/main/merged-PR state through an injectable transport.",
+   "lineage": "R8-I6A corrective requalification (#273), round 3",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue273_admission.py",
+     "scripts/issue273_reducer.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU-only adversarial regression coverage. Physical authority remains fail-closed without a retained-byte-to-terminal producer.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 3
+  },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.17,

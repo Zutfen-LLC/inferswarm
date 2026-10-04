@@ -611,7 +611,7 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertTrue(any("staged-source binding" in p
                             for p in problems))
 
-    def test_candidate_nondeterminism_alone_blocks_pass(self):
+    def test_untrusted_candidate_determinism_claim_fails_closed(self):
         # Kills candidate-det-check-disabled: candidate nondeterminism
         # with a perfect reference must not reach PASS.
         import issue273_reducer as R
@@ -621,9 +621,10 @@ class MutationHoleKillerTests(unittest.TestCase):
         det["case-1024"] = {"reference": True, "candidate": False}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("case-1024" in p for p in rec["problems"]))
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
-    def test_admission_failure_problems_survive_to_runtime_blocked(self):
+    def test_caller_admission_details_are_not_terminal_authority(self):
         # Kills pass-on-problems class: problems list must actually
         # flow into the blocked record (not be silently emptied).
         import issue273_reducer as R
@@ -635,8 +636,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertIn("case-256: reference: ICD mismatch",
-                      rec["problems"])
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 
@@ -758,24 +759,27 @@ class ReviewBlockerTests(unittest.TestCase):
         bare = {c: {"admitted": True} for c in cases}
         rec = R.derive_terminal_273(bare, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
-        # Wrong case binding also rejected.
-        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
-                          "case_id": "case-4096", "problems": []}
-                      for c in cases}
-        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
+        # Schema-shaped forgeries receive the same fail-closed result.
+        schema_forged = {c: {"schema": admission.SCHEMA,
+                             "case_id": "case-4096", "admitted": True,
+                             "problems": []} for c in cases}
+        rec = R.derive_terminal_273(schema_forged, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("does not bind this case" in p
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
                             for p in rec["problems"]))
 
-    def test_reducer_accepts_genuine_admission_records(self):
+    def test_reducer_fails_closed_on_schema_shaped_admission_records(self):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         det = {c: {"reference": True, "candidate": True} for c in cases}
         good = {c: {"schema": admission.SCHEMA, "case_id": c,
                     "admitted": True, "problems": []} for c in cases}
         rec = R.derive_terminal_273(good, det)
-        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 if __name__ == "__main__":
@@ -904,7 +908,7 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertTrue(any("staged-source binding" in p
                             for p in problems))
 
-    def test_candidate_nondeterminism_alone_blocks_pass(self):
+    def test_untrusted_candidate_determinism_claim_fails_closed(self):
         # Kills candidate-det-check-disabled: candidate nondeterminism
         # with a perfect reference must not reach PASS.
         import issue273_reducer as R
@@ -914,9 +918,10 @@ class MutationHoleKillerTests(unittest.TestCase):
         det["case-1024"] = {"reference": True, "candidate": False}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("case-1024" in p for p in rec["problems"]))
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
-    def test_admission_failure_problems_survive_to_runtime_blocked(self):
+    def test_caller_admission_details_are_not_terminal_authority(self):
         # Kills pass-on-problems class: problems list must actually
         # flow into the blocked record (not be silently emptied).
         import issue273_reducer as R
@@ -928,8 +933,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertIn("case-256: reference: ICD mismatch",
-                      rec["problems"])
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 
@@ -1051,24 +1056,27 @@ class ReviewBlockerTests(unittest.TestCase):
         bare = {c: {"admitted": True} for c in cases}
         rec = R.derive_terminal_273(bare, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
-        # Wrong case binding also rejected.
-        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
-                          "case_id": "case-4096", "problems": []}
-                      for c in cases}
-        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
+        # Schema-shaped forgeries receive the same fail-closed result.
+        schema_forged = {c: {"schema": admission.SCHEMA,
+                             "case_id": "case-4096", "admitted": True,
+                             "problems": []} for c in cases}
+        rec = R.derive_terminal_273(schema_forged, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("does not bind this case" in p
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
                             for p in rec["problems"]))
 
-    def test_reducer_accepts_genuine_admission_records(self):
+    def test_reducer_fails_closed_on_schema_shaped_admission_records(self):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         det = {c: {"reference": True, "candidate": True} for c in cases}
         good = {c: {"schema": admission.SCHEMA, "case_id": c,
                     "admitted": True, "problems": []} for c in cases}
         rec = R.derive_terminal_273(good, det)
-        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 if __name__ == "__main__":
@@ -1101,31 +1109,71 @@ class CorrectiveReducerTests(unittest.TestCase):
         doc.update(over)
         return doc
 
+    def _github_transport(self, *, association="OWNER", commenter="ezutfen",
+                          head="a" * 40, namespace=None, merged=True,
+                          main_head="a" * 40):
+        import issue273_reducer as R
+        namespace = namespace or R.NAMESPACE_273
+        body = (f"{R.DISPATCH_PHRASE_273}\nhead={head}\n"
+                f"namespace={namespace}")
+        data = {
+            "/repos/Zutfen-LLC/inferswarm/issues/273/comments": [{
+                "id": 5982882220, "body": body,
+                "author_association": association,
+                "user": {"login": commenter}}],
+            "/repos/Zutfen-LLC/inferswarm/pulls/285": {
+                "merged": merged, "merged_at": "2026-10-04T00:00:00Z"
+                if merged else None, "merge_commit_sha": "a" * 40},
+            "/repos/Zutfen-LLC/inferswarm/git/ref/heads/main": {
+                "object": {"sha": main_head}},
+        }
+        return lambda path: data[path]
+
     def test_dispatch_law(self):
         import issue273_reducer as R
         # Valid.
-        R.validate_dispatch_273(self._dispatch(), "a" * 40)
+        transport = self._github_transport()
+        live = R.validate_dispatch_273(
+            self._dispatch(commenter="spoofed", tooling_merged=False),
+            "a" * 40, transport=transport, corrective_pr_number=285)
+        self.assertEqual(live["commenter"], "ezutfen")
+        self.assertTrue(live["tooling_merged"])
         # Stale head.
         with self.assertRaises(R.ReducerError):
-            R.validate_dispatch_273(self._dispatch(), "b" * 40)
+            R.validate_dispatch_273(
+                self._dispatch(), "b" * 40, transport=transport,
+                corrective_pr_number=285)
         # Old namespace refused.
         with self.assertRaises(R.ReducerError):
             R.validate_dispatch_273(
-                self._dispatch(namespace="c270-v340-comparator2"), "a" * 40)
+                self._dispatch(), "a" * 40,
+                transport=self._github_transport(
+                    namespace="c270-v340-comparator2"),
+                corrective_pr_number=285)
         # Legacy #270 phrase refused.
         with self.assertRaises(R.ReducerError):
             R.validate_dispatch_273(
-                self._dispatch(dispatch_phrase="R8I6 PHYSICAL DISPATCH #270"),
-                "a" * 40)
+                self._dispatch(), "a" * 40,
+                transport=lambda path: (
+                    [{"id": 1, "body": "R8I6 PHYSICAL DISPATCH #270\nhead="
+                      + "a" * 40 + "\nnamespace=" + R.NAMESPACE_273,
+                      "author_association": "OWNER",
+                      "user": {"login": "ezutfen"}}]
+                    if path.endswith("/comments") else
+                    self._github_transport()(path)),
+                corrective_pr_number=285)
         # Non-maintainer.
         with self.assertRaises(R.ReducerError):
             R.validate_dispatch_273(
-                self._dispatch(commenter_association="CONTRIBUTOR"),
-                "a" * 40)
+                self._dispatch(), "a" * 40,
+                transport=self._github_transport(association="CONTRIBUTOR"),
+                corrective_pr_number=285)
         # Unmerged tooling refused.
         with self.assertRaises(R.ReducerError):
             R.validate_dispatch_273(
-                self._dispatch(tooling_merged=False), "a" * 40)
+                self._dispatch(), "a" * 40,
+                transport=self._github_transport(merged=False),
+                corrective_pr_number=285)
 
     def _admitted(self, case):
         return {"schema": "inferswarm.issue273.corrective-admission/1",
@@ -1138,16 +1186,20 @@ class CorrectiveReducerTests(unittest.TestCase):
         adm_ok = {c: self._admitted(c) for c in cases}
         # Clean pass.
         rec = R.derive_terminal_273(adm_ok, det_ok)
-        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
         # Reference nondeterminism on ANY case -> dedicated terminal,
         # even when candidate evidence is perfect and admissions pass.
         det_bad = dict(det_ok)
         det_bad["case-3072"] = {"reference": False, "candidate": True}
         rec = R.derive_terminal_273(adm_ok, det_bad)
         self.assertEqual(
-            rec["terminal"], R.TERMINAL_REFERENCE_NONDETERMINISTIC_273)
-        # The audit's exact finding: case-3072 reference nondeterminism.
-        self.assertTrue(any("case-3072" in p for p in rec["problems"]))
+            rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
+        # The legacy dict API refuses to infer even the nondeterministic
+        # terminal from caller-provided booleans.
         # Admission failure -> RUNTIME_BLOCKED (never PASS).
         adm_bad = dict(adm_ok)
         adm_bad["case-256"] = {"admitted": False,
@@ -1217,7 +1269,7 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertTrue(any("staged-source binding" in p
                             for p in problems))
 
-    def test_candidate_nondeterminism_alone_blocks_pass(self):
+    def test_untrusted_candidate_determinism_claim_fails_closed(self):
         # Kills candidate-det-check-disabled: candidate nondeterminism
         # with a perfect reference must not reach PASS.
         import issue273_reducer as R
@@ -1227,9 +1279,10 @@ class MutationHoleKillerTests(unittest.TestCase):
         det["case-1024"] = {"reference": True, "candidate": False}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("case-1024" in p for p in rec["problems"]))
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
-    def test_admission_failure_problems_survive_to_runtime_blocked(self):
+    def test_caller_admission_details_are_not_terminal_authority(self):
         # Kills pass-on-problems class: problems list must actually
         # flow into the blocked record (not be silently emptied).
         import issue273_reducer as R
@@ -1241,8 +1294,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertIn("case-256: reference: ICD mismatch",
-                      rec["problems"])
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 
@@ -1364,24 +1417,27 @@ class ReviewBlockerTests(unittest.TestCase):
         bare = {c: {"admitted": True} for c in cases}
         rec = R.derive_terminal_273(bare, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
-        # Wrong case binding also rejected.
-        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
-                          "case_id": "case-4096", "problems": []}
-                      for c in cases}
-        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
+        # Schema-shaped forgeries receive the same fail-closed result.
+        schema_forged = {c: {"schema": admission.SCHEMA,
+                             "case_id": "case-4096", "admitted": True,
+                             "problems": []} for c in cases}
+        rec = R.derive_terminal_273(schema_forged, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("does not bind this case" in p
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
                             for p in rec["problems"]))
 
-    def test_reducer_accepts_genuine_admission_records(self):
+    def test_reducer_fails_closed_on_schema_shaped_admission_records(self):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         det = {c: {"reference": True, "candidate": True} for c in cases}
         good = {c: {"schema": admission.SCHEMA, "case_id": c,
                     "admitted": True, "problems": []} for c in cases}
         rec = R.derive_terminal_273(good, det)
-        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 if __name__ == "__main__":
@@ -1557,7 +1613,7 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertTrue(any("staged-source binding" in p
                             for p in problems))
 
-    def test_candidate_nondeterminism_alone_blocks_pass(self):
+    def test_untrusted_candidate_determinism_claim_fails_closed(self):
         # Kills candidate-det-check-disabled: candidate nondeterminism
         # with a perfect reference must not reach PASS.
         import issue273_reducer as R
@@ -1567,9 +1623,10 @@ class MutationHoleKillerTests(unittest.TestCase):
         det["case-1024"] = {"reference": True, "candidate": False}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("case-1024" in p for p in rec["problems"]))
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
-    def test_admission_failure_problems_survive_to_runtime_blocked(self):
+    def test_caller_admission_details_are_not_terminal_authority(self):
         # Kills pass-on-problems class: problems list must actually
         # flow into the blocked record (not be silently emptied).
         import issue273_reducer as R
@@ -1581,8 +1638,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertIn("case-256: reference: ICD mismatch",
-                      rec["problems"])
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 
@@ -1704,24 +1761,27 @@ class ReviewBlockerTests(unittest.TestCase):
         bare = {c: {"admitted": True} for c in cases}
         rec = R.derive_terminal_273(bare, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
-        # Wrong case binding also rejected.
-        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
-                          "case_id": "case-4096", "problems": []}
-                      for c in cases}
-        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
+        # Schema-shaped forgeries receive the same fail-closed result.
+        schema_forged = {c: {"schema": admission.SCHEMA,
+                             "case_id": "case-4096", "admitted": True,
+                             "problems": []} for c in cases}
+        rec = R.derive_terminal_273(schema_forged, det)
         self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
-        self.assertTrue(any("does not bind this case" in p
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
                             for p in rec["problems"]))
 
-    def test_reducer_accepts_genuine_admission_records(self):
+    def test_reducer_fails_closed_on_schema_shaped_admission_records(self):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         det = {c: {"reference": True, "candidate": True} for c in cases}
         good = {c: {"schema": admission.SCHEMA, "case_id": c,
                     "admitted": True, "problems": []} for c in cases}
         rec = R.derive_terminal_273(good, det)
-        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("retained-byte-to-terminal producer" in p
+                            for p in rec["problems"]))
 
 
 if __name__ == "__main__":

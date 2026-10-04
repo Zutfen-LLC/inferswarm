@@ -449,6 +449,32 @@ def admit_pair(reference: dict[str, Any], reference_source: dict[str, Any],
         if rep_src.get("schema") != STAGED_SOURCE_SCHEMA:
             problems.append(
                 f"{label} repeat lacks the staged-source binding")
+        # Repeat admission is per-arm and cannot be represented solely by
+        # a caller's ``*_deterministic=True`` flag. Require the complete
+        # same decision set and compare each primary/repeat digest claim.
+        # Retained-byte authentication of those claims belongs to the
+        # evidence-root producer; the in-memory API is never terminal
+        # authority (the reducer fails closed on it).
+        primary_rows = prim.get("rows") or {}
+        repeat_rows = rep.get("rows") or {}
+        if set(primary_rows) != set(repeat_rows):
+            problems.append(
+                f"{label} primary/repeat row sets differ — determinism "
+                "cannot be claimed")
+        for decision in sorted(set(primary_rows) | set(repeat_rows)):
+            primary_entry = primary_rows.get(decision) or {}
+            repeat_entry = repeat_rows.get(decision) or {}
+            if (not _digest_ok(primary_entry.get("sha256"))
+                    or not _digest_ok(repeat_entry.get("sha256"))
+                    or primary_entry.get("sha256") !=
+                    repeat_entry.get("sha256")):
+                problems.append(
+                    f"{label} primary/repeat decision {decision} digest "
+                    "mismatch — determinism claim rejected")
+        # A repeat must prove the same execution subject independently,
+        # not merely copy primary identity labels.
+        problems += [f"{label} repeat: {p}" for p in
+                     process_attribution_problems(rep, label)]
         # A repeat is a distinct process: pid must differ from primary.
         rep_pid = (rep.get("process_attribution") or {}).get("server_pid")
         prim_pid = (prim.get("process_attribution") or {}).get("server_pid")
