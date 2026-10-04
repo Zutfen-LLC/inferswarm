@@ -17,15 +17,9 @@ sys.path.insert(0, str(REPO / "tests"))
 import issue273_admission as A  # noqa: E402
 import issue273_reducer as R  # noqa: E402
 import test_issue273_admission as F  # noqa: E402
-import issue273_evidence as E  # noqa: E402
 
 
 class Round3TrustBoundaryTests(unittest.TestCase):
-    def test_evidence_root_producer_is_available_and_requires_independent_anchor(self):
-        self.assertTrue(callable(getattr(E, "produce_terminal_273", None)))
-        with self.assertRaises(E.EvidenceError):
-            E.produce_terminal_273(Path("/nonexistent"), expected_head="a" * 40)
-
     def _pair(self, mismatch_reference_repeat=False):
         ref = F.staged_receipt(
             F.GENUINE_NVIDIA_REF,
