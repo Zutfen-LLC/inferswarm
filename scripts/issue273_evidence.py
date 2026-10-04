@@ -17,6 +17,7 @@ import re
 import stat
 import struct
 import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -191,6 +192,13 @@ def authority_contract(repo_root: Path, head: str, dispatch: dict[str, Any]) -> 
     for rel in AUTHORITY_PATHS + PRODUCER_PATHS:
         actual = reader(rel)
         require(actual == _git(repo_root, "show", f"{head}:{rel}"), f"uncommitted producer/authority: {rel}")
+        if rel.startswith("scripts/"):
+            loaded = sys.modules.get(Path(rel).stem)
+            executing_path = (Path(loaded.__file__) if loaded is not None and getattr(loaded, "__file__", None)
+                              else Path(__file__).parent / Path(rel).name)
+            executing_reader = K.custody_row_reader(safe_root(executing_path.parent))
+            require(executing_reader(executing_path.name) == actual,
+                    f"executing verifier bytes != exact-head source closure: {rel}")
         if rel in AUTHORITY_PATHS:
             require(actual == _git(repo_root, "show", f"{PREDECESSOR}:{rel}"), f"frozen predecessor redefined: {rel}")
         closed[rel] = sha(actual)
@@ -304,6 +312,9 @@ def _observation(obs: dict[str, Any], receipt: dict[str, Any], arm: str, freeze:
         identity = C.reference_identity()
         require(obs.get("reference_identity") == identity and receipt.get("subject_identity") == identity,
                 "fresh reference facts != accepted #248 identity")
+        require(receipt.get("selector") == identity["selector"] and
+                device.get("index") == identity["selector"]["GGML_VK_VISIBLE_DEVICES"],
+                "reference observed/process selector != frozen reference identity")
         require(device.get("vendor_id") == "0x10de" and device.get("device_id") == "0x" + identity["pci_id"].split(":")[-1] and
                 device.get("gpu_uuid") == identity["gpu_uuid"] and device.get("vulkan_uuid") == identity["vulkan_device_uuid"] and
                 device.get("bdf") == identity["bdf"], "reference observed PCI/UUID lineage mismatch")
