@@ -529,7 +529,16 @@ class CLITests(unittest.TestCase):
         remote=next(p for p in example['participants'] if p['role']=='remote')
         self.assertEqual(len(remote['cache_ranges']),71)
         index_path=Path('/home/zutfen/.cache/inferswarm-268/accepted-gguf-index.json')
-        if not index_path.is_file(): return  # offline cross-check only on retained-index hosts
+        # #273 portability: on hosts where /home/zutfen is mode-0700 and
+        # owned by another user, stat() raises EACCES for a path that is
+        # not this test's subject — treat it exactly like an absent
+        # retained index (offline cross-check only on retained-index
+        # hosts), never as a suite error.
+        try:
+            retained = index_path.is_file()
+        except OSError:
+            retained = False
+        if not retained: return
         index=json.loads(index_path.read_text())
         expected={name:(member,*tensor[:2]) for member,tensors in index.items()
                   for name,tensor in tensors.items() if
