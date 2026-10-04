@@ -202,8 +202,17 @@ def process_attribution_problems(receipt: dict[str, Any], arm: str,
         problems.append(f"{arm}: server argv missing")
         return problems
     argv_s = [str(a) for a in argv]
-    if not any(str(C.MODEL_DIR) in a for a in argv_s):
-        problems.append(f"{arm}: argv does not bind the frozen model")
+    # Only the effective model option binds a model. An accepted path in
+    # --alias (or a duplicate conflicting --model) is not execution proof.
+    model_values = []
+    for i, token in enumerate(argv_s):
+        if token in ("--model", "-m"):
+            model_values.append(argv_s[i + 1] if i + 1 < len(argv_s) else None)
+        elif token.startswith(("--model=", "-m=")):
+            model_values.append(token.split("=", 1)[1])
+    accepted_model = f"{C.MODEL_DIR}/{C.MODEL_MEMBER_1}"
+    if model_values != [accepted_model]:
+        problems.append(f"{arm}: effective model option does not uniquely bind the frozen model")
     want_ngl = expected_placement(arm)
     if "-ngl" in argv_s:
         i = argv_s.index("-ngl")
