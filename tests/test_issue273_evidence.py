@@ -449,6 +449,19 @@ class SerializedEvidenceTests(unittest.TestCase):
         out = self.reduce()
         self.assertEqual(out['terminal'], R.TERMINAL_REFERENCE_NONDETERMINISTIC_273, out['problems'])
 
+    def test_effective_model_option_cannot_be_hidden_by_frozen_alias(self):
+        source = 'source/case-256/reference/receipt.json'
+        observation = 'source/case-256/reference/observation.json'
+        wrong = ['/srv/bin/llama-server', '--model', '/different/unaccepted-model.gguf',
+                 '--alias', str(C.MODEL_DIR), '-ngl', '8', '--ctx-size', '8192', '--batch-size', '512']
+        self.edit(source, lambda r: r['process_attribution'].update(server_argv=wrong))
+        self.edit(observation, lambda o: o['process_attribution'].update(server_argv=wrong))
+        self.restage('case-256', 'reference')
+        self.refresh()
+        out = self.reduce()
+        self.assertNotEqual(out['terminal'], R.TERMINAL_PASS_273)
+        self.assertTrue(any('model' in p for p in out['problems']), out['problems'])
+
     def test_coherent_reference_selector_drift_cannot_override_frozen_identity(self):
         for tag in ('reference', 'reference-repeat'):
             source = f'source/case-256/{tag}/receipt.json'
