@@ -34,6 +34,7 @@ def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
     client,remote=clients[0],remotes[0]
     if remote.rpc_endpoint is None: raise ValueError("remote RPC endpoint is required")
     opt=plan.backend_options
+    if not opt.cpu_experts: raise ValueError('cpu_experts=false is unsupported by the accepted backend')
     if opt.hidden_layers!=48 or opt.offload_tail<1 or opt.offload_tail>opt.hidden_layers: raise ValueError("unsupported explicit llama.cpp layer dimensions")
     threshold=opt.hidden_layers-opt.offload_tail
     spans=sorted(plan.placement,key=lambda x:x.first_layer); cursor=0; out=0; expected=[]
@@ -81,7 +82,7 @@ def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
                         raise ValueError("required cache state ranges must not overlap")
         if any(item.unit_id not in assigned for item in participant.cache_ranges):
             raise ValueError("required cache state coverage: unrelated cache unit")
-    args=("--rpc",remote.rpc_endpoint,"--device",f"{client.device},{remote.device}","--split-mode",opt.split_mode,"--tensor-split",",".join(format(x,".15g") for x in opt.tensor_split),"-ngl",str(opt.offload_tail),"-cmoe" if opt.cpu_experts else "-no-cmoe","-c",str(opt.context),"-np",str(opt.slots),"--no-warmup","-lv",str(opt.verbosity),"--seed",str(dict(plan.request)["seed"]))
+    args=("--rpc",remote.rpc_endpoint,"--device",f"{client.device},{remote.device}","--split-mode",opt.split_mode,"--tensor-split",",".join(format(x,".15g") for x in opt.tensor_split),"-ngl",str(opt.offload_tail),"-cmoe","-c",str(opt.context),"-np",str(opt.slots),"--no-warmup","-lv",str(opt.verbosity))
     return LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,remote.rpc_endpoint,f"{client.device},{remote.device}",args,tuple(expected),opt.context,opt.slots,opt.startup_timeout_seconds,RuntimeBinding(remote.role,remote.runtime_executable,remote.runtime_sha256))
 
 __all__=["ExpectedPlacement","LaunchSpec","llama_cpp_spec"]

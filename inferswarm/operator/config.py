@@ -1,6 +1,6 @@
 """Strict, side-effect-free operator configuration parsing."""
 from __future__ import annotations
-import json, math
+import json, math, re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -50,6 +50,7 @@ class BackendOptions:
     hidden_layers: int; offload_tail: int; cpu_experts: bool
     tensor_split: tuple[float, ...]; context: int; slots: int
     startup_timeout_seconds: int; split_mode: str; verbosity: int
+    rpc_physical_device: str | None = None
 
 @dataclass(frozen=True)
 class OperatorConfig:
@@ -129,7 +130,9 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
             member=_text(cr["member"],"cache.member"); off=cr["offset"]; length=cr["length"]
             if member not in sizes or type(off)is not int or off<0 or type(length)is not int or length<1 or off+length>sizes[member]: raise ValueError("cache range outside source member bounds")
             if (cr["source_id"],cr["revision"],cr["representation"]) != (model.source_id,model.revision,model.representation): raise ValueError("cache range source identity mismatch")
-            ranges.append(CacheRange(_text(cr["state_id"],"cache.state_id"),member,off,length,_digest(cr["sha256"],"cache.sha256"),_text(cr["cache_key"],"cache_key"),*ident,_text(cr["unit_id"],"unit_id")))
+            key=_text(cr["cache_key"],"cache_key")
+            if not re.fullmatch(r'[0-9a-f]{16}',key): raise ValueError('cache_key must be exact 16-character lowercase hexadecimal')
+            ranges.append(CacheRange(_text(cr["state_id"],"cache.state_id"),member,off,length,_digest(cr["sha256"],"cache.sha256"),key,*ident,_text(cr["unit_id"],"unit_id")))
         if len({x.cache_key for x in ranges})!=len(ranges): raise ValueError("duplicate cache key")
         participants.append(Participant(role,node,cu,transport,_text(r["execution_address"],"execution_address"),endpoint,_text(r["device"],"device"),_path(r["source_path"],"source_path"),_path(r["runtime_executable"],"runtime_executable"),_digest(r["runtime_sha256"],"runtime_sha256"),_path(r["cache_path"],"cache_path"),port,_path(r["lifecycle_dir"],"lifecycle_dir"),*ident,tuple(ranges)))
     if roles!={"client","remote"}: raise ValueError("exactly one client and one remote role required")
@@ -141,7 +144,7 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
         _keys(r,{"unit_id","compute_id","state_ids","state_ranges","first_layer","last_layer","output"},"placement")
         uid=_text(r["unit_id"],"unit_id"); cu=_text(r["compute_id"],"compute_id"); states=r["state_ids"]
         if uid in units or cu not in cus: raise ValueError("duplicate unit or unknown compute id")
-        if not isinstance(states,list) or not states or any(not isinstance(s,str) or not s for s in states) or len(set(states))!=len(states): raise ValueError("invalid state_ids")
+        if not isinstance(states,list) or (not states and cu!=client.compute_id) or any(not isinstance(s,str) or not s for s in states) or len(set(states))!=len(states): raise ValueError("invalid state_ids")
         raw_ranges = r["state_ranges"]
         if not isinstance(raw_ranges, list): raise ValueError("placement state_ranges must be a list")
         state_ranges = []
@@ -157,12 +160,14 @@ def parse_config(data: Mapping[str, Any]) -> OperatorConfig:
             raise ValueError("placement state ranges must describe every state exactly once")
         if type(r["first_layer"]) is not int or type(r["last_layer"]) is not int or type(r["output"]) is not bool: raise ValueError("invalid placement range")
         units.add(uid); placements.append(Placement(uid,cu,tuple(states),tuple(state_ranges),r["first_layer"],r["last_layer"],r["output"]))
-    _keys(data["backend_options"],{"hidden_layers","offload_tail","cpu_experts","tensor_split","context","slots","startup_timeout_seconds","split_mode","verbosity"},"backend_options")
+    required_opts={"hidden_layers","offload_tail","cpu_experts","tensor_split","context","slots","startup_timeout_seconds","split_mode","verbosity"}
+    if not isinstance(data['backend_options'], Mapping) or set(data['backend_options']) not in (required_opts,required_opts|{'rpc_physical_device'}): raise ValueError('unsupported backend option fields')
     b=data["backend_options"]
     if type(b["cpu_experts"]) is not bool or b["split_mode"]!="layer": raise ValueError("unsupported backend option")
     ts=b["tensor_split"]
     if not isinstance(ts,list) or len(ts)!=2 or any(type(v) not in (int,float) or not math.isfinite(v) or v<=0 for v in ts): raise ValueError("tensor_split requires two finite positive values")
-    opts=BackendOptions(_int(b["hidden_layers"],"hidden_layers"),_int(b["offload_tail"],"offload_tail"),b["cpu_experts"],tuple(float(v) for v in ts),_int(b["context"],"context"),_int(b["slots"],"slots"),_int(b["startup_timeout_seconds"],"startup_timeout_seconds",3600),b["split_mode"],_int(b["verbosity"],"verbosity",10))
+    rpc_device = None if 'rpc_physical_device' not in b else _text(b['rpc_physical_device'],'rpc_physical_device')
+    opts=BackendOptions(_int(b["hidden_layers"],"hidden_layers"),_int(b["offload_tail"],"offload_tail"),b["cpu_experts"],tuple(float(v) for v in ts),_int(b["context"],"context"),_int(b["slots"],"slots"),_int(b["startup_timeout_seconds"],"startup_timeout_seconds",3600),b["split_mode"],_int(b["verbosity"],"verbosity",10),rpc_device)
     _keys(data["request"],{"prompt","max_tokens","temperature","seed"},"request"); q=data["request"]
     if not isinstance(q["prompt"],str) or not q["prompt"] or type(q["max_tokens"]) is not int or q["max_tokens"]<1 or type(q["temperature"]) not in (int,float) or not math.isfinite(q["temperature"]) or not 0<=q["temperature"]<=2 or type(q["seed"]) is not int: raise ValueError("invalid request settings")
     bindings = tuple(RuntimeBinding(p.role, p.runtime_executable, p.runtime_sha256) for p in participants)

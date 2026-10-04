@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import unittest
 from dataclasses import FrozenInstanceError
 
@@ -10,7 +11,7 @@ from inferswarm.operator.strategy import llama_cpp_spec
 def sample():
     model={"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","members":[{"name":"member.gguf","sha256":"a"*64,"size_bytes":1000}]}
     def participant(role, node, cu, transport, address, endpoint, device, cache):
-        return {"role":role,"node_id":node,"compute_id":cu,"transport":transport,"execution_address":address,"rpc_endpoint":endpoint,"device":device,"source_path":"/srv/model/member.gguf","runtime_executable":"/usr/bin/llama","runtime_sha256":"b"*64,"cache_path":cache,"port":8080 if role=="client" else 8081,"lifecycle_dir":"/run/operator/"+node,"source_id":"arbitrary-source","source_revision":"release-1","source_representation":"opaque-format","cache_ranges":[{"state_id":"opaque-state-y","member":"member.gguf","offset":0,"length":100,"sha256":"c"*64,"cache_key":"key-"+cu+"-"+unit,"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","unit_id":unit} for unit in (("unit-cpu","unit-compute-x") if role=="client" else ("unit-compute-y",))]}
+        return {"role":role,"node_id":node,"compute_id":cu,"transport":transport,"execution_address":address,"rpc_endpoint":endpoint,"device":device,"source_path":"/srv/model/member.gguf","runtime_executable":"/usr/bin/llama","runtime_sha256":"b"*64,"cache_path":cache,"port":8080 if role=="client" else 8081,"lifecycle_dir":"/run/operator/"+node,"source_id":"arbitrary-source","source_revision":"release-1","source_representation":"opaque-format","cache_ranges":[{"state_id":"opaque-state-y","member":"member.gguf","offset":0,"length":100,"sha256":"c"*64,"cache_key":hashlib.sha256((cu+unit).encode()).hexdigest()[:16],"source_id":"arbitrary-source","revision":"release-1","representation":"opaque-format","unit_id":unit} for unit in (("unit-cpu","unit-compute-x") if role=="client" else ("unit-compute-y",))]}
     return {"schema":"operator-config/2","plan_id":"plan-arbitrary","model":model,"participants":[participant("client","node-x","compute-x","local","127.0.0.1",None,"device-x","/var/cache/client"),participant("remote","node-y","compute-y","rpc","ssh-y","worker.example:5000","device-y","/var/cache/remote")],"strategy_id":"llama.cpp","placement":[{"unit_id":"unit-cpu","compute_id":"compute-x","state_ids":["opaque-cpu-state"],"state_ranges":[{"state_id":"opaque-cpu-state","member":"member.gguf","offset":200,"length":100}],"first_layer":0,"last_layer":40,"output":False},{"unit_id":"unit-compute-x","compute_id":"compute-x","state_ids":["opaque-state-x"],"state_ranges":[{"state_id":"opaque-state-x","member":"member.gguf","offset":300,"length":100}],"first_layer":41,"last_layer":44,"output":False},{"unit_id":"unit-compute-y","compute_id":"compute-y","state_ids":["opaque-state-y"],"state_ranges":[{"state_id":"opaque-state-y","member":"member.gguf","offset":0,"length":100}],"first_layer":45,"last_layer":47,"output":True}],"backend_options":{"hidden_layers":48,"offload_tail":8,"cpu_experts":True,"tensor_split":[1,1],"context":1024,"slots":1,"startup_timeout_seconds":90,"split_mode":"layer","verbosity":5},"request":{"prompt":"hello","max_tokens":8,"temperature":0.0,"seed":42}}
 
 class OperatorPlanTests(unittest.TestCase):
@@ -91,6 +92,24 @@ class OperatorPlanTests(unittest.TestCase):
         config["participants"][1]["cache_ranges"] = []
         with self.assertRaisesRegex(ValueError, "remote cache_ranges must be nonempty"):
             parse_config(config)
+
+    def test_cache_key_traversal_rejected_before_mutation(self):
+        x=sample(); x['participants'][1]['cache_ranges'][0]['cache_key']='../outside'
+        with self.assertRaisesRegex(ValueError,'cache_key'): parse_config(x)
+
+    def test_client_full_source_may_leave_local_state_descriptors_empty(self):
+        x=sample()
+        for row in x['placement'][:2]: row['state_ids']=[]; row['state_ranges']=[]
+        x['participants'][0]['cache_ranges']=[]
+        self.assertEqual(len(llama_cpp_spec(build_plan(parse_config(x))).expected_placement),3)
+
+    def test_backend_refuses_unsupported_cpu_expert_inverse_and_typed_rpc_device(self):
+        x=sample(); x['backend_options']['cpu_experts']=False
+        with self.assertRaisesRegex(ValueError,'cpu_experts'): llama_cpp_spec(build_plan(parse_config(x)))
+        x=sample(); x['backend_options']['rpc_physical_device']='CUDA0'
+        p=build_plan(parse_config(x))
+        self.assertEqual(p.backend_options.rpc_physical_device,'CUDA0')
+        self.assertNotIn('--seed',llama_cpp_spec(p).args)
 
     def test_large_members_and_distinct_role_binaries_are_supported(self):
         x = sample()
