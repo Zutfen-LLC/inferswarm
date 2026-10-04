@@ -415,6 +415,11 @@ def observe_v340_host(sysfs_reader: Callable[[str, str], str] | None = None,
         die_raw["mem_info_vram_used"] = sysfs_reader(
             bdf, "drm/" + cards[0] + "/device/mem_info_vram_used") \
             if False else sysfs_reader(bdf, "mem_info_vram_used")
+        # #272/#273: derive_v340_identity REQUIRES mem_info_vram_total;
+        # capture it in the raw superset (fail-closed: a host whose
+        # sysfs lacks it cannot produce a derivable identity).
+        die_raw["mem_info_vram_total"] = sysfs_reader(
+            bdf, "mem_info_vram_total")
         raw["dies"][bdf] = die_raw
     raw["uname"] = _read_cmd(["uname", "-r"]).strip()
     icd_path = Path(C.RADV_ICD)

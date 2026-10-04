@@ -150,7 +150,8 @@
     "test_issue264_source_patch",
     "test_issue264_h5",
     "test_issue264_pilot",
-    "test_issue270_authority"
+    "test_issue270_authority",
+    "test_issue273_admission"
    ]
   },
   "repo-integrity": {
@@ -1374,6 +1375,12 @@
   "scripts/issue270_terminal.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue273_admission.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue273_reducer.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1699,6 +1706,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue270_authority.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue273_admission.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

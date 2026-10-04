@@ -291,6 +291,14 @@ GROUP_TEST_MODULES = {
         # selector binding, freeze custody, and the mechanical terminal
         # reducer (no threshold, no calibration, no physical execution).
         "test_issue270_authority",
+        # Issue #273 R8-I6A: corrective admission law for the #270
+        # provenance-binding and per-arm-placement defects — RED-first
+        # regression coverage of the accepted substitution failure
+        # modes, staged->source immutable binding, cross-arm
+        # anti-aliasing, per-arm determinism ordering, the #272
+        # observe_v340_host vram_total fold-in, and the c273 corrective
+        # dispatch/terminal vocabulary.
+        "test_issue273_admission",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -423,6 +431,9 @@ PATH_GROUPS = {
     "tests/test_issue264_h5.py": ["r8i-qwen-qualification"],
     "tests/test_issue264_pilot.py": ["r8i-qwen-qualification"],
     "tests/test_issue270_authority.py": ["r8i-qwen-qualification"],
+    "tests/test_issue273_admission.py": ["r8i-qwen-qualification"],
+    "scripts/issue273_admission.py": ["r8i-qwen-qualification"],
+    "scripts/issue273_reducer.py": ["r8i-qwen-qualification"],
     "scripts/issue270_authority.py": ["r8i-qwen-qualification"],
     "scripts/issue270_comparator.py": ["r8i-qwen-qualification"],
     "scripts/issue270_physical.py": ["r8i-qwen-qualification"],

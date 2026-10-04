@@ -4378,6 +4378,39 @@
    "replacement": null,
    "test_count_at_audit": 55
   },
+  "test_issue273_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 29,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #273 R8-I6A corrective admission law: per-arm placement contract (reference ngl=8 / candidate ngl=7), process-attribution-derived arm identity (NVIDIA/RADV mutually exclusive), immutable staged->source receipt binding, cross-arm evidence anti-aliasing, per-arm determinism-before-pair ordering, #272 observe_v340_host vram_total fold-in, and the c273 corrective dispatch/terminal vocabulary with no #270 terminal reuse.",
+   "lineage": "R8-I6A corrective requalification (#273)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/retained/evidence/phase1/phase1-census.json",
+     "docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json"
+    ],
+    "scripts_imported": [
+     "scripts/issue273_admission.py",
+     "scripts/issue273_reducer.py",
+     "scripts/issue270_authority.py",
+     "scripts/issue270_comparator.py",
+     "scripts/issue270_physical.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline contract tests only; no GPU execution or execution authority is granted by CI registration.",
+   "referenced_by_scripts": [
+    "scripts/issue270_authority.py",
+    "scripts/issue270_comparator.py",
+    "scripts/issue270_physical.py"
+   ],
+   "replacement": null,
+   "test_count_at_audit": 55
+  },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.17,
