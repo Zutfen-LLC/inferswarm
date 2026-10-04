@@ -342,6 +342,9 @@
   "docs/investigations/qwen38-flash-next-r8-i4-v340l-z440/": [
    "r8i-qwen-qualification"
   ],
+  "docs/investigations/qwen38-flash-next-r8-i6a-comparator2-corrective/": [
+   "r8i-qwen-qualification"
+  ],
   "docs/investigations/vulkan-v0-a/": [
    "repo-integrity"
   ],

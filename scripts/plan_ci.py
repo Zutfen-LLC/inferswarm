@@ -741,6 +741,10 @@ PATH_GROUPS = {
     # Current R8-I Qwen heterogeneous-Vulkan qualification (#237/#244).
     "docs/qualification/qwen38-vulkan-v1/": ["r8i-qwen-qualification"],
     "docs/investigations/qwen38-flash-next-r8-i3c-vulkan-mechanism/": ["r8i-qwen-qualification"],
+    # Issue #273 R8-I6A: corrective-requalification phase-0 forensic
+    # record (evidence digests, holdout state, GPU census).
+    "docs/investigations/qwen38-flash-next-r8-i6a-comparator2-corrective/":
+        ["r8i-qwen-qualification"],
     "scripts/issue237_build_exclusion_inventory.py":
         ["r8i-qwen-qualification"],
     "scripts/issue237_freeze_tooling.py": ["r8i-qwen-qualification"],
