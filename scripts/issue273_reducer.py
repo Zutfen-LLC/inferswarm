@@ -174,9 +174,25 @@ def derive_terminal_273(admissions: dict[str, dict[str, Any]],
                  f"(verdict {ref_det!r}) — physical qualification "
                  f"stops before candidate comparison"])
     # 2. Admission verdicts per case (includes per-arm determinism
-    #    consumption, provenance, anti-aliasing).
+    #    consumption, provenance, anti-aliasing). The verdict records
+    #    are SCHEMA-VALIDATED, not trusted: a bare {"admitted": true}
+    #    dict with no admission schema/case binding cannot pass.
     for case in C.FIXTURE_CASES:
-        verdict = admissions.get(case) or {}
+        verdict = admissions.get(case)
+        if not isinstance(verdict, dict):
+            problems.append(f"{case}: admission verdict not a record")
+            continue
+        if verdict.get("schema") != admission.SCHEMA:
+            problems.append(
+                f"{case}: admission verdict schema mismatch — only "
+                f"records derived by issue273_admission.admit_pair are "
+                f"consumable")
+            continue
+        if verdict.get("case_id") != case:
+            problems.append(
+                f"{case}: admission verdict case_id {verdict.get('case_id')!r} "
+                f"does not bind this case")
+            continue
         if verdict.get("admitted") is not True:
             problems.extend(
                 f"{case}: {p}" for p in verdict.get("problems") or

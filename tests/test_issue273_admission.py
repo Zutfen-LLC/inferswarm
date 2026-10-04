@@ -130,6 +130,16 @@ def staged_receipt(base: dict, process: dict, rows: dict | None = None,
     return r
 
 
+
+
+def source_digests_of(staged: dict) -> tuple[str, dict]:
+    """Independently 'computed' source digests for a staged fixture
+    (stands in for digests computed from retained source bytes)."""
+    rows = staged.get("rows") or {}
+    return (staged["staged_source"]["receipt_sha256"],
+            {d: rows[d]["sha256"] for d in rows})
+
+
 def as_source(staged: dict) -> dict:
     """Recover a source-shaped receipt from a staged fixture: identity
     fields + rows only (what the pre-staging run receipt carried)."""
@@ -264,10 +274,15 @@ class CorrectedAdmissionTests(unittest.TestCase):
             CANDIDATE,
             make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
                          51002, "inferswarm05"), _rows(b"cand-p"))
-        result = admission.admit_pair(ref, as_source(ref), cand,
-                                      as_source(cand), ref_rep, cand_rep,
-                                      reference_deterministic=True,
-                                      candidate_deterministic=True)
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=rd,
+            reference_source_row_digests=rrows,
+            candidate_source_digest=cd,
+            candidate_source_row_digests=crows)
         self.assertEqual(result["problems"], [])
         self.assertTrue(result["admitted"])
 
@@ -470,10 +485,15 @@ class CorrectedAdmissionTests(unittest.TestCase):
             CANDIDATE,
             make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
                          51002, "inferswarm05"), _rows(b"cand-p"))
-        result = admission.admit_pair(ref, as_source(ref), cand,
-                                      as_source(cand), ref_rep, cand_rep,
-                                      reference_deterministic=True,
-                                      candidate_deterministic=True)
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=rd,
+            reference_source_row_digests=rrows,
+            candidate_source_digest=cd,
+            candidate_source_row_digests=crows)
         self.assertTrue(
             any("fresh process" in p for p in result["problems"]))
 
@@ -609,7 +629,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         adm = {c: {"admitted": True, "problems": []} for c in cases}
-        adm["case-256"] = {"admitted": False,
+        adm["case-256"] = {"schema": admission.SCHEMA,
+                           "case_id": "case-256", "admitted": False,
                            "problems": ["reference: ICD mismatch"]}
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
@@ -617,6 +638,144 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertIn("case-256: reference: ICD mismatch",
                       rec["problems"])
 
+
+
+class ReviewBlockerTests(unittest.TestCase):
+    """Adversarial coverage for the independent-review blockers:
+    digest-chain composition into admit_pair, mandatory process host,
+    BDF arm binding, and reducer schema-authentication of admission
+    records (a bare {"admitted": true} dict cannot reach PASS)."""
+
+    def _full_admit(self, *, ref=None, cand=None, ref_rep=None,
+                    cand_rep=None, ref_digest=None, ref_rows=None,
+                    cand_digest=None, cand_rows=None):
+        ref = ref or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = cand or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = ref_rep or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = cand_rep or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        return admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=ref_digest if ref_digest is not None else rd,
+            reference_source_row_digests=ref_rows if ref_rows is not None else rrows,
+            candidate_source_digest=cand_digest if cand_digest is not None else cd,
+            candidate_source_row_digests=cand_rows if cand_rows is not None else crows)
+
+    def test_wrong_source_digest_blocks_admission(self):
+        # Blocker 1: a WRONG independently-computed source digest must
+        # fail the COMPOSED admission path (not just the isolated
+        # helper).
+        result = self._full_admit(ref_digest="e" * 64)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("reference: " in p and "digest" in p
+                            for p in result["problems"]))
+
+    def test_wrong_source_row_digest_blocks_admission(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        bad_rows = {d: "f" * 64 for d in ref["rows"]}
+        result = self._full_admit(ref=ref, ref_rows=bad_rows)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("row" in p and "reference" in p
+                            for p in result["problems"]))
+
+    def test_missing_digests_fail_closed(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("fails closed" in p for p in result["problems"]))
+
+    def test_missing_process_host_observation_rejected(self):
+        # Blocker 2: INFERSWARM_HOST is now MANDATORY.
+        proc = make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                            41001, None)
+        receipt = staged_receipt(GENUINE_NVIDIA_REF, proc)
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("INFERSWARM_HOST) missing" in p
+                            for p in problems))
+
+    def test_reference_bdf_must_be_accepted_248_placement(self):
+        # Blocker 2: reference BDF bound to the #248 placement.
+        bad = copy.deepcopy(GENUINE_NVIDIA_REF)
+        bad["bdf"] = "0000:99:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                              41001, "inferswarm01"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("#248 reference" in p for p in problems))
+
+    def test_candidate_bdf_must_be_in_die_set(self):
+        bad = copy.deepcopy(CANDIDATE)
+        bad["bdf"] = "00000000:03:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                              51001, "inferswarm05"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "candidate")
+        self.assertTrue(any("frozen V340 die set" in p for p in problems))
+
+    def test_reducer_rejects_unauthenticated_admission_records(self):
+        # Blocker 3: bare {"admitted": true} without the admission
+        # schema cannot reach PASS.
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        bare = {c: {"admitted": True} for c in cases}
+        rec = R.derive_terminal_273(bare, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
+        # Wrong case binding also rejected.
+        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
+                          "case_id": "case-4096", "problems": []}
+                      for c in cases}
+        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("does not bind this case" in p
+                            for p in rec["problems"]))
+
+    def test_reducer_accepts_genuine_admission_records(self):
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        good = {c: {"schema": admission.SCHEMA, "case_id": c,
+                    "admitted": True, "problems": []} for c in cases}
+        rec = R.derive_terminal_273(good, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
 
 
 if __name__ == "__main__":
@@ -763,7 +922,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         adm = {c: {"admitted": True, "problems": []} for c in cases}
-        adm["case-256"] = {"admitted": False,
+        adm["case-256"] = {"schema": admission.SCHEMA,
+                           "case_id": "case-256", "admitted": False,
                            "problems": ["reference: ICD mismatch"]}
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
@@ -771,6 +931,144 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertIn("case-256: reference: ICD mismatch",
                       rec["problems"])
 
+
+
+class ReviewBlockerTests(unittest.TestCase):
+    """Adversarial coverage for the independent-review blockers:
+    digest-chain composition into admit_pair, mandatory process host,
+    BDF arm binding, and reducer schema-authentication of admission
+    records (a bare {"admitted": true} dict cannot reach PASS)."""
+
+    def _full_admit(self, *, ref=None, cand=None, ref_rep=None,
+                    cand_rep=None, ref_digest=None, ref_rows=None,
+                    cand_digest=None, cand_rows=None):
+        ref = ref or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = cand or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = ref_rep or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = cand_rep or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        return admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=ref_digest if ref_digest is not None else rd,
+            reference_source_row_digests=ref_rows if ref_rows is not None else rrows,
+            candidate_source_digest=cand_digest if cand_digest is not None else cd,
+            candidate_source_row_digests=cand_rows if cand_rows is not None else crows)
+
+    def test_wrong_source_digest_blocks_admission(self):
+        # Blocker 1: a WRONG independently-computed source digest must
+        # fail the COMPOSED admission path (not just the isolated
+        # helper).
+        result = self._full_admit(ref_digest="e" * 64)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("reference: " in p and "digest" in p
+                            for p in result["problems"]))
+
+    def test_wrong_source_row_digest_blocks_admission(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        bad_rows = {d: "f" * 64 for d in ref["rows"]}
+        result = self._full_admit(ref=ref, ref_rows=bad_rows)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("row" in p and "reference" in p
+                            for p in result["problems"]))
+
+    def test_missing_digests_fail_closed(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("fails closed" in p for p in result["problems"]))
+
+    def test_missing_process_host_observation_rejected(self):
+        # Blocker 2: INFERSWARM_HOST is now MANDATORY.
+        proc = make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                            41001, None)
+        receipt = staged_receipt(GENUINE_NVIDIA_REF, proc)
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("INFERSWARM_HOST) missing" in p
+                            for p in problems))
+
+    def test_reference_bdf_must_be_accepted_248_placement(self):
+        # Blocker 2: reference BDF bound to the #248 placement.
+        bad = copy.deepcopy(GENUINE_NVIDIA_REF)
+        bad["bdf"] = "0000:99:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                              41001, "inferswarm01"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("#248 reference" in p for p in problems))
+
+    def test_candidate_bdf_must_be_in_die_set(self):
+        bad = copy.deepcopy(CANDIDATE)
+        bad["bdf"] = "00000000:03:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                              51001, "inferswarm05"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "candidate")
+        self.assertTrue(any("frozen V340 die set" in p for p in problems))
+
+    def test_reducer_rejects_unauthenticated_admission_records(self):
+        # Blocker 3: bare {"admitted": true} without the admission
+        # schema cannot reach PASS.
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        bare = {c: {"admitted": True} for c in cases}
+        rec = R.derive_terminal_273(bare, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
+        # Wrong case binding also rejected.
+        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
+                          "case_id": "case-4096", "problems": []}
+                      for c in cases}
+        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("does not bind this case" in p
+                            for p in rec["problems"]))
+
+    def test_reducer_accepts_genuine_admission_records(self):
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        good = {c: {"schema": admission.SCHEMA, "case_id": c,
+                    "admitted": True, "problems": []} for c in cases}
+        rec = R.derive_terminal_273(good, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
 
 
 if __name__ == "__main__":
@@ -937,7 +1235,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         adm = {c: {"admitted": True, "problems": []} for c in cases}
-        adm["case-256"] = {"admitted": False,
+        adm["case-256"] = {"schema": admission.SCHEMA,
+                           "case_id": "case-256", "admitted": False,
                            "problems": ["reference: ICD mismatch"]}
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
@@ -945,6 +1244,144 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertIn("case-256: reference: ICD mismatch",
                       rec["problems"])
 
+
+
+class ReviewBlockerTests(unittest.TestCase):
+    """Adversarial coverage for the independent-review blockers:
+    digest-chain composition into admit_pair, mandatory process host,
+    BDF arm binding, and reducer schema-authentication of admission
+    records (a bare {"admitted": true} dict cannot reach PASS)."""
+
+    def _full_admit(self, *, ref=None, cand=None, ref_rep=None,
+                    cand_rep=None, ref_digest=None, ref_rows=None,
+                    cand_digest=None, cand_rows=None):
+        ref = ref or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = cand or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = ref_rep or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = cand_rep or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        return admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=ref_digest if ref_digest is not None else rd,
+            reference_source_row_digests=ref_rows if ref_rows is not None else rrows,
+            candidate_source_digest=cand_digest if cand_digest is not None else cd,
+            candidate_source_row_digests=cand_rows if cand_rows is not None else crows)
+
+    def test_wrong_source_digest_blocks_admission(self):
+        # Blocker 1: a WRONG independently-computed source digest must
+        # fail the COMPOSED admission path (not just the isolated
+        # helper).
+        result = self._full_admit(ref_digest="e" * 64)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("reference: " in p and "digest" in p
+                            for p in result["problems"]))
+
+    def test_wrong_source_row_digest_blocks_admission(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        bad_rows = {d: "f" * 64 for d in ref["rows"]}
+        result = self._full_admit(ref=ref, ref_rows=bad_rows)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("row" in p and "reference" in p
+                            for p in result["problems"]))
+
+    def test_missing_digests_fail_closed(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("fails closed" in p for p in result["problems"]))
+
+    def test_missing_process_host_observation_rejected(self):
+        # Blocker 2: INFERSWARM_HOST is now MANDATORY.
+        proc = make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                            41001, None)
+        receipt = staged_receipt(GENUINE_NVIDIA_REF, proc)
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("INFERSWARM_HOST) missing" in p
+                            for p in problems))
+
+    def test_reference_bdf_must_be_accepted_248_placement(self):
+        # Blocker 2: reference BDF bound to the #248 placement.
+        bad = copy.deepcopy(GENUINE_NVIDIA_REF)
+        bad["bdf"] = "0000:99:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                              41001, "inferswarm01"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("#248 reference" in p for p in problems))
+
+    def test_candidate_bdf_must_be_in_die_set(self):
+        bad = copy.deepcopy(CANDIDATE)
+        bad["bdf"] = "00000000:03:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                              51001, "inferswarm05"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "candidate")
+        self.assertTrue(any("frozen V340 die set" in p for p in problems))
+
+    def test_reducer_rejects_unauthenticated_admission_records(self):
+        # Blocker 3: bare {"admitted": true} without the admission
+        # schema cannot reach PASS.
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        bare = {c: {"admitted": True} for c in cases}
+        rec = R.derive_terminal_273(bare, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
+        # Wrong case binding also rejected.
+        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
+                          "case_id": "case-4096", "problems": []}
+                      for c in cases}
+        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("does not bind this case" in p
+                            for p in rec["problems"]))
+
+    def test_reducer_accepts_genuine_admission_records(self):
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        good = {c: {"schema": admission.SCHEMA, "case_id": c,
+                    "admitted": True, "problems": []} for c in cases}
+        rec = R.derive_terminal_273(good, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
 
 
 if __name__ == "__main__":
@@ -1138,7 +1575,8 @@ class MutationHoleKillerTests(unittest.TestCase):
         import issue273_reducer as R
         cases = ["case-256", "case-1024", "case-3072"]
         adm = {c: {"admitted": True, "problems": []} for c in cases}
-        adm["case-256"] = {"admitted": False,
+        adm["case-256"] = {"schema": admission.SCHEMA,
+                           "case_id": "case-256", "admitted": False,
                            "problems": ["reference: ICD mismatch"]}
         det = {c: {"reference": True, "candidate": True} for c in cases}
         rec = R.derive_terminal_273(adm, det)
@@ -1146,6 +1584,144 @@ class MutationHoleKillerTests(unittest.TestCase):
         self.assertIn("case-256: reference: ICD mismatch",
                       rec["problems"])
 
+
+
+class ReviewBlockerTests(unittest.TestCase):
+    """Adversarial coverage for the independent-review blockers:
+    digest-chain composition into admit_pair, mandatory process host,
+    BDF arm binding, and reducer schema-authentication of admission
+    records (a bare {"admitted": true} dict cannot reach PASS)."""
+
+    def _full_admit(self, *, ref=None, cand=None, ref_rep=None,
+                    cand_rep=None, ref_digest=None, ref_rows=None,
+                    cand_digest=None, cand_rows=None):
+        ref = ref or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = cand or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = ref_rep or staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = cand_rep or staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        rd, rrows = source_digests_of(ref)
+        cd, crows = source_digests_of(cand)
+        return admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True,
+            reference_source_digest=ref_digest if ref_digest is not None else rd,
+            reference_source_row_digests=ref_rows if ref_rows is not None else rrows,
+            candidate_source_digest=cand_digest if cand_digest is not None else cd,
+            candidate_source_row_digests=cand_rows if cand_rows is not None else crows)
+
+    def test_wrong_source_digest_blocks_admission(self):
+        # Blocker 1: a WRONG independently-computed source digest must
+        # fail the COMPOSED admission path (not just the isolated
+        # helper).
+        result = self._full_admit(ref_digest="e" * 64)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("reference: " in p and "digest" in p
+                            for p in result["problems"]))
+
+    def test_wrong_source_row_digest_blocks_admission(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        bad_rows = {d: "f" * 64 for d in ref["rows"]}
+        result = self._full_admit(ref=ref, ref_rows=bad_rows)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("row" in p and "reference" in p
+                            for p in result["problems"]))
+
+    def test_missing_digests_fail_closed(self):
+        ref = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41001, "inferswarm01"), _rows(b"ref-p"))
+        cand = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51001, "inferswarm05"), _rows(b"cand-p"))
+        ref_rep = staged_receipt(
+            GENUINE_NVIDIA_REF,
+            make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                         41002, "inferswarm01"), _rows(b"ref-p"))
+        cand_rep = staged_receipt(
+            CANDIDATE,
+            make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                         51002, "inferswarm05"), _rows(b"cand-p"))
+        result = admission.admit_pair(
+            ref, as_source(ref), cand, as_source(cand), ref_rep, cand_rep,
+            reference_deterministic=True, candidate_deterministic=True)
+        self.assertFalse(result["admitted"])
+        self.assertTrue(any("fails closed" in p for p in result["problems"]))
+
+    def test_missing_process_host_observation_rejected(self):
+        # Blocker 2: INFERSWARM_HOST is now MANDATORY.
+        proc = make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                            41001, None)
+        receipt = staged_receipt(GENUINE_NVIDIA_REF, proc)
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("INFERSWARM_HOST) missing" in p
+                            for p in problems))
+
+    def test_reference_bdf_must_be_accepted_248_placement(self):
+        # Blocker 2: reference BDF bound to the #248 placement.
+        bad = copy.deepcopy(GENUINE_NVIDIA_REF)
+        bad["bdf"] = "0000:99:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/nvidia_icd.json", 8,
+                              41001, "inferswarm01"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "reference")
+        self.assertTrue(any("#248 reference" in p for p in problems))
+
+    def test_candidate_bdf_must_be_in_die_set(self):
+        bad = copy.deepcopy(CANDIDATE)
+        bad["bdf"] = "00000000:03:00.0"
+        receipt = staged_receipt(
+            bad, make_process("/usr/share/vulkan/icd.d/radeon_icd.json", 7,
+                              51001, "inferswarm05"))
+        problems = admission.process_attribution_problems(receipt,
+                                                          "candidate")
+        self.assertTrue(any("frozen V340 die set" in p for p in problems))
+
+    def test_reducer_rejects_unauthenticated_admission_records(self):
+        # Blocker 3: bare {"admitted": true} without the admission
+        # schema cannot reach PASS.
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        bare = {c: {"admitted": True} for c in cases}
+        rec = R.derive_terminal_273(bare, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("schema mismatch" in p for p in rec["problems"]))
+        # Wrong case binding also rejected.
+        wrong_case = {c: {"schema": admission.SCHEMA, "admitted": True,
+                          "case_id": "case-4096", "problems": []}
+                      for c in cases}
+        rec = R.derive_terminal_273(wrong_case, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("does not bind this case" in p
+                            for p in rec["problems"]))
+
+    def test_reducer_accepts_genuine_admission_records(self):
+        import issue273_reducer as R
+        cases = ["case-256", "case-1024", "case-3072"]
+        det = {c: {"reference": True, "candidate": True} for c in cases}
+        good = {c: {"schema": admission.SCHEMA, "case_id": c,
+                    "admitted": True, "problems": []} for c in cases}
+        rec = R.derive_terminal_273(good, det)
+        self.assertEqual(rec["terminal"], R.TERMINAL_PASS_273)
 
 
 if __name__ == "__main__":

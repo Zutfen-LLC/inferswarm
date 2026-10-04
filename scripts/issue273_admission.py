@@ -173,7 +173,11 @@ def process_attribution_problems(receipt: dict[str, Any], arm: str,
             f"{arm}: GGML_VK_VISIBLE_DEVICES missing/non-numeric in "
             f"process env")
     proc_host = env.get("INFERSWARM_HOST")
-    if proc_host is not None and proc_host != expected_host(arm):
+    if proc_host is None:
+        problems.append(
+            f"{arm}: process host observation (INFERSWARM_HOST) missing "
+            f"— admission requires the executor-recorded host fact")
+    elif proc_host != expected_host(arm):
         problems.append(
             f"{arm}: process host {proc_host!r} != required arm host "
             f"{expected_host(arm)!r}")
@@ -181,6 +185,17 @@ def process_attribution_problems(receipt: dict[str, Any], arm: str,
         problems.append(
             f"{arm}: receipt host label {receipt.get('host')!r} != "
             f"required {expected_host(arm)!r}")
+    bdf = receipt.get("bdf")
+    if arm == "reference":
+        # The accepted #248 reference BDF (domain-wide form).
+        if bdf != "00000000:03:00.0":
+            problems.append(
+                f"reference: bdf {bdf!r} != accepted #248 reference "
+                f"placement 00000000:03:00.0")
+    elif bdf not in C.DIE_BDFS:
+        problems.append(
+            f"candidate: bdf {bdf!r} not in the frozen V340 die set "
+            f"{C.DIE_BDFS}")
     # argv: model binding + arm-specific placement
     argv = pa.get("server_argv")
     if not isinstance(argv, list) or not argv:
@@ -352,12 +367,28 @@ def cross_arm_problems(reference: dict[str, Any],
 
 def admission_problems(staged: dict[str, Any], arm: str,
                        source: dict[str, Any],
+                       source_receipt_digest: str | None = None,
+                       source_row_digests: dict[str, str] | None = None,
                        ) -> list[str]:
-    """All admission checks for one staged arm receipt."""
+    """All admission checks for one staged arm receipt.
+
+    When the independently computed source digests are supplied (they
+    are computed by the caller from RETAINED SOURCE BYTES, never taken
+    from the staged receipt's claims), the staged binding's digest
+    chain is authenticated too; omitting them fails closed.
+    """
     if staged.get("arm") != arm:
         return [f"arm mismatch: {staged.get('arm')!r} != {arm!r}"]
-    return (process_attribution_problems(staged, arm)
-            + staged_source_problems(staged, source))
+    problems = (process_attribution_problems(staged, arm)
+                + staged_source_problems(staged, source))
+    if source_receipt_digest is None or source_row_digests is None:
+        problems.append(
+            f"{arm}: independently computed source digests not supplied "
+            f"— digest-chain authentication fails closed")
+    else:
+        problems += source_digest_problems(
+            staged, source_receipt_digest, source_row_digests)
+    return problems
 
 
 def admit_pair(reference: dict[str, Any], reference_source: dict[str, Any],
@@ -366,6 +397,10 @@ def admit_pair(reference: dict[str, Any], reference_source: dict[str, Any],
                candidate_repeat: dict[str, Any],
                reference_deterministic: bool | None = None,
                candidate_deterministic: bool | None = None,
+               reference_source_digest: str | None = None,
+               reference_source_row_digests: dict[str, str] | None = None,
+               candidate_source_digest: str | None = None,
+               candidate_source_row_digests: dict[str, str] | None = None,
                ) -> dict[str, Any]:
     """Full corrected admission over one case's staged evidence.
 
@@ -388,11 +423,15 @@ def admit_pair(reference: dict[str, Any], reference_source: dict[str, Any],
                 "case_id": reference.get("case_id"),
                 "admitted": False, "problems": problems}
     problems += [f"reference: {p}"
-                 for p in admission_problems(reference, "reference",
-                                             reference_source)]
+                 for p in admission_problems(
+                     reference, "reference", reference_source,
+                     reference_source_digest,
+                     reference_source_row_digests)]
     problems += [f"candidate: {p}"
-                 for p in admission_problems(candidate, "candidate",
-                                             candidate_source)]
+                 for p in admission_problems(
+                     candidate, "candidate", candidate_source,
+                     candidate_source_digest,
+                     candidate_source_row_digests)]
     # Repeats must be the same arm/host/backend as their primary and
     # carry their own staged-source binding.
     for label, prim, rep, src in (
