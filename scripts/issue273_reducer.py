@@ -85,6 +85,62 @@ def validate_namespace_273(namespace: str) -> str:
     return namespace
 
 
+def dispatch_fields_273(lines: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for line in lines:
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key in fields:
+            raise ReducerError(f"duplicate dispatch field {key!r}")
+        fields[key] = value
+    return fields
+
+
+def github_get_273(path: str) -> Any:
+    """Authenticated, GET-only GitHub transport; paginate comment custody.
+
+    Requires GH_TOKEN/GITHUB_TOKEN supplied in the process environment. No
+    token is printed or written. Injected transports are CPU recordings only.
+    """
+    import json
+    import os
+    import urllib.request
+    if not path.startswith("/repos/Zutfen-LLC/inferswarm/") or "?" in path:
+        raise ReducerError("GitHub API path outside corrective repository")
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise ReducerError("authenticated GitHub token required")
+    def get(suffix: str) -> Any:
+        request = urllib.request.Request(
+            "https://api.github.com" + suffix,
+            headers={"Authorization": "Bearer " + token,
+                     "Accept": "application/vnd.github+json",
+                     "X-GitHub-Api-Version": "2022-11-28"})
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.load(response)
+    if not path.endswith("/comments"):
+        return get(path)
+    comments = []
+    for page in range(1, 101):
+        batch = get(f"{path}?per_page=100&page={page}")
+        if not isinstance(batch, list):
+            raise ReducerError("GitHub comment page malformed")
+        comments.extend(batch)
+        if len(batch) < 100:
+            return comments
+    raise ReducerError("GitHub comment pagination exceeded bounded custody")
+
+
+def derive_terminal_from_files_273(evidence_root: Any, repo_root: Any,
+                                   expected_head: str, *,
+                                   transport: Any = None) -> dict[str, Any]:
+    """Public authenticated retained-byte terminal (not a verdict-dict API)."""
+    import issue273_evidence
+    return issue273_evidence.reduce_evidence_273(
+        evidence_root, repo_root, expected_head, transport=transport)
+
+
 def authenticate_dispatch_273(transport: Any, expected_head: str,
                               corrective_pr_number: int,
                               namespace: str = NAMESPACE_273,
@@ -96,6 +152,9 @@ def authenticate_dispatch_273(transport: Any, expected_head: str,
     It must return decoded JSON. No caller-supplied association, merged flag,
     or comment body is used as authority.
     """
+    validate_namespace_273(namespace)
+    if re.fullmatch(r"[0-9a-f]{40}", expected_head or "") is None:
+        raise ReducerError("#273 dispatch head malformed")
     if not callable(transport):
         raise ReducerError("GitHub read transport required")
     if (not isinstance(corrective_pr_number, int)
@@ -125,8 +184,7 @@ def authenticate_dispatch_273(transport: Any, expected_head: str,
         lines = [line.strip() for line in body.splitlines()]
         if DISPATCH_PHRASE_273 not in lines:
             continue
-        fields = {line.split("=", 1)[0]: line.split("=", 1)[1]
-                  for line in lines if "=" in line}
+        fields = dispatch_fields_273(lines)
         author = comment.get("user") or {}
         association = comment.get("author_association")
         if (fields.get("head") == expected_head
@@ -216,14 +274,14 @@ def derive_terminal_273(admissions: dict[str, dict[str, Any]],
                         ) -> dict[str, Any]:
     """Fail closed: in-memory verdict dictionaries are not evidence.
 
-    A retained-byte producer that composes all required verifiers is not
-    yet available. Until it exists, no caller-supplied data can mint any
-    physical terminal (including a claimed nondeterminism classification).
+    The authenticated file-based producer is the only evidence authority
+    boundary. Caller-provided verdicts cannot mint any physical terminal,
+    including a claimed nondeterminism classification.
     """
     del admissions, determinism, pair_results
     return _blocked(
         TERMINAL_RUNTIME_BLOCKED_273,
-        ["retained-byte-to-terminal producer is not implemented; "
+        ["retained-byte-to-terminal producer verification is required; "
          "in-memory verdicts are non-authoritative"])
 
 

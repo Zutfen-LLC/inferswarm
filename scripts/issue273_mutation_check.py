@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Issue #273 Phase 2 — source-level mutation testing."""
+import os
 import subprocess
 import sys
 import tempfile
@@ -27,8 +28,32 @@ MODULES = {
     "scripts/issue273_reducer.py": [
         ("legacy-namespace-allowed", '"c270-",                          # the invalidated #270 namespace', ''),
         ("in-memory-terminal-pass-enabled",
-         '        TERMINAL_RUNTIME_BLOCKED_273,\n        ["retained-byte-to-terminal producer is not implemented; "',
-         '        TERMINAL_PASS_273,\n        ["retained-byte-to-terminal producer is not implemented; "'),
+         '        TERMINAL_RUNTIME_BLOCKED_273,\n        ["retained-byte-to-terminal producer verification is required; "',
+         '        TERMINAL_PASS_273,\n        ["retained-byte-to-terminal producer verification is required; "'),
+    ],
+    "scripts/issue273_evidence.py": [
+        ("capture-seal-byte-pin-removed", 'require(fields.get("manifest_sha256") == sha(manifest),', 'require(True,',
+         "test_bytes_cannot_be_reauthorized_with_self_picked_manifest"),
+        ("independent-authority-removed", 'require(parse(files["authority.json"]) == authority,', 'require(True,',
+         "test_authenticated_mutations_rejected_at_semantic_boundaries"),
+        ("source-repeat-binding-removed", 'require(not binding_problems, "; ".join(binding_problems))', 'require(True, "; ".join(binding_problems))',
+         "test_authenticated_source_binding_claims_do_not_override_bytes"),
+        ("observed-used-device-removed", 'require(obs.get("used_device_uuids") == [device["vulkan_uuid"]],', 'require(True,',
+         "test_authenticated_mutations_rejected_at_semantic_boundaries"),
+        ("observer-inertness-removed", 'require(inert["inert"],', 'require(True,',
+         "test_authenticated_mutations_rejected_at_semantic_boundaries"),
+        ("platform-health-removed", 'if not valid:\n        raise InfrastructureError', 'if False:\n        raise InfrastructureError',
+         "test_authenticated_mutations_rejected_at_semantic_boundaries"),
+        ("source-stage-provenance-reuse-allowed", 'require(value not in seen.setdefault(label, set()),', 'require(True,',
+         "test_coherent_source_stage_observation_session_reuse_is_rejected"),
+        ("canonical-prefix-witness-removed", 'require(meta.get("prefix_tokens") == fx["prompt_token_ids"] + (staged["sampled_winners"][:d] if arm == "reference" else staged["forced_tokens"][:d]),', 'require(True,',
+         "test_coherent_source_stage_prefix_forgery_is_rejected"),
+        ("finite-fp32-law-removed", 'require(len(raw) == C.ROW_BYTES and not K.validate_rows_finite(raw),', 'require(len(raw) == C.ROW_BYTES,',
+         "test_forged_digest_claims_and_authenticated_nonfinite_rows_are_rejected"),
+        ("reference-before-candidate-stop-removed", 'if not verdict["deterministic"]:\n                return _result(R.TERMINAL_REFERENCE_NONDETERMINISTIC_273,', 'if False:\n                return _result(R.TERMINAL_REFERENCE_NONDETERMINISTIC_273,',
+         "test_reference_mismatch_stops_before_candidate_parse"),
+        ("producer-reference-stop-removed", 'if arm == "reference" and any(not v["deterministic"] for v in ref_det.values()):', 'if False:',
+         "test_producer_stops_before_parsing_candidate_on_reference_mismatch"),
     ],
     "scripts/issue270_physical.py": [
         ("vram-total-capture-removed", 'die_raw["mem_info_vram_total"] = sysfs_reader(\n            bdf, "mem_info_vram_total")', 'pass'),
@@ -36,9 +61,10 @@ MODULES = {
 }
 
 
-def run_tests(python: str) -> bool:
-    proc = subprocess.run([python, "-m", "unittest", "tests.test_issue273_admission"],
-                          cwd=ROOT, capture_output=True, text=True, timeout=300)
+def run_tests(python: str, target: str | None = None) -> bool:
+    modules = [target] if target else ["tests.test_issue273_admission", "tests.test_issue273_evidence"]
+    proc = subprocess.run([python, "-m", "unittest", *modules],
+                          cwd=ROOT, capture_output=True, text=True, timeout=600)
     return proc.returncode == 0
 
 
@@ -52,16 +78,29 @@ def main() -> int:
     for rel, mutations in MODULES.items():
         path = ROOT / rel
         original = path.read_text()
-        backup = Path(tempfile.mkstemp(suffix=".bak")[1])
+        backup_fd, backup_name = tempfile.mkstemp(suffix=".bak")
+        os.close(backup_fd)
+        backup = Path(backup_name)
         backup.write_text(original)
         try:
-            for name, old, new in mutations:
+            for mutation in mutations:
+                name, old, new = mutation[:3]
+                target = ("tests.test_issue273_evidence.SerializedEvidenceTests." + mutation[3]
+                          if len(mutation) == 4 else "tests.test_issue273_admission")
                 src = backup.read_text()
-                if src.count(old) == 0:
-                    broken.append((rel, name, "anchor not found"))
+                if src.count(old) != 1:
+                    broken.append((rel, name, "anchor missing/ambiguous"))
                     continue
-                path.write_text(src.replace(old, new, 1))
-                ok = run_tests(python)
+                mutated = src.replace(old, new, 1)
+                try:
+                    compile(mutated, rel, "exec")
+                except SyntaxError as exc:
+                    broken.append((rel, name, str(exc)))
+                    continue
+                path.write_text(mutated)
+                for cache in path.parent.joinpath("__pycache__").glob(path.stem + ".*.pyc"):
+                    cache.unlink()
+                ok = run_tests(python, target)
                 status = "KILLED" if not ok else "SURVIVED"
                 print(f"{status:8s} {rel} :: {name}")
                 (killed if not ok else survived).append((rel, name))
@@ -77,7 +116,7 @@ def main() -> int:
         for item in survived:
             print(" ", item)
         return 1
-    return 0
+    return 1 if broken else 0
 
 
 if __name__ == "__main__":

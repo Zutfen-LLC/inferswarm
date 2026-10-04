@@ -300,6 +300,7 @@ GROUP_TEST_MODULES = {
         # dispatch/terminal vocabulary.
         "test_issue273_admission",
         "test_issue273_round3_trust_boundaries",
+        "test_issue273_evidence",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -433,6 +434,8 @@ PATH_GROUPS = {
     "tests/test_issue264_pilot.py": ["r8i-qwen-qualification"],
     "tests/test_issue270_authority.py": ["r8i-qwen-qualification"],
     "tests/test_issue273_admission.py": ["r8i-qwen-qualification"],
+    "tests/test_issue273_evidence.py": ["r8i-qwen-qualification"],
+    "scripts/issue273_evidence.py": ["r8i-qwen-qualification"],
     "scripts/issue273_admission.py": ["r8i-qwen-qualification"],
     "scripts/issue273_reducer.py": ["r8i-qwen-qualification"],
     "scripts/issue270_authority.py": ["r8i-qwen-qualification"],

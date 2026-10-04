@@ -4411,6 +4411,36 @@
    "replacement": null,
    "test_count_at_audit": 55
   },
+  "test_issue273_evidence": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #273 composed serialized producer-reader-terminal: independently sealed actual source/staged primary/repeat rows, immutable source facts, Git/dispatch/predecessor source closure, fresh observed selector/ICD/BDF/vendor/UUID joins and positive RX580/second-V340 exclusion, per-arm determinism before candidate work, canonical-prefix/FP32/inertness/platform law, and non-authoritative CPU recording mode.",
+   "lineage": "R8-I6A corrective requalification (#273), retained-producer continuation",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue273_evidence.py",
+     "scripts/issue273_reducer.py",
+     "scripts/issue273_admission.py",
+     "scripts/issue270_authority.py",
+     "scripts/issue270_comparator.py",
+     "scripts/issue270_physical.py",
+     "scripts/issue270_terminal.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU-only serialized recording fixtures and public-path byte/semantic mutation controls; no physical execution authority from injected transports.",
+   "referenced_by_scripts": [
+    "scripts/issue273_mutation_check.py"
+   ],
+   "replacement": null,
+   "test_count_at_audit": 19
+  },
   "test_issue273_round3_trust_boundaries": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 0.0,

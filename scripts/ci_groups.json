@@ -152,7 +152,8 @@
     "test_issue264_pilot",
     "test_issue270_authority",
     "test_issue273_admission",
-    "test_issue273_round3_trust_boundaries"
+    "test_issue273_round3_trust_boundaries",
+    "test_issue273_evidence"
    ]
   },
   "repo-integrity": {
@@ -1382,6 +1383,9 @@
   "scripts/issue273_admission.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue273_evidence.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue273_reducer.py": [
    "r8i-qwen-qualification"
   ],
@@ -1713,6 +1717,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue273_admission.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue273_evidence.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
