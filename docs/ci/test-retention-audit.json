@@ -5726,6 +5726,27 @@
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 13
+  },
+  "test_issue278_integration": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 175.0,
+   "baseline_test_count": 9,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #278 integrated exact-head tooling chain: one production entry point composes the #275 collector capture (producer-injected, custody-layout cross-checked, per-unit inventory digest), a no-follow retained-originals census binding the byte population, the #276 verbatim stager and custody-bound byte-deriving reader, the #277 reference-first orchestrator (admission -> determinism -> gated candidate launches -> pair admission), and the #273 public reducer, which must fail closed on the in-memory fixture record; captures outside collector custody fail closed before any staging write, custody tamper between capture and staging fails closed, post-run staged-side or custody-side tamper fails closed at reevaluation, a collector-custody reference row drift blocks reference-first with zero candidate launches, and no caller boolean, verdict dictionary, or callback return can mint physical terminal authority; all evidence is labeled tooling/fixture validation.",
+   "lineage": "Issue #278 integration validation derived from the accepted #275/#276/#277 interfaces",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue278_integration.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive the integrated production chain end to end with recording executor/comparison callbacks and the #276 bundle machinery; the completion status is explicitly tooling/fixture validation and no physical result is claimed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 9
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

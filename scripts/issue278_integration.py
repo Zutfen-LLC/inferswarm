@@ -306,31 +306,8 @@ def compact_stage(stage: dict[str, Any]) -> str:
                        if k not in ("units", "cases")}, sort_keys=True)[:160]
 
 
-if __name__ == "__main__":  # pragma: no cover — manual demonstration
+if __name__ == "__main__":  # pragma: no cover — manual entry point
     import sys
-    import tempfile
-
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from tests.test_issue276_byte_admission import BundleBuilder, fixture_row
-
-    with tempfile.TemporaryDirectory() as td:
-        root = Path(td)
-        source, staged = root / "capture", root / "staged"
-        builder = BundleBuilder(source)
-
-        def producer(case, arm, repeat):
-            return builder.capture(arm, repeat, case=case)
-
-        def executor(case):
-            return {str(d): fixture_row("candidate", str(d))
-                    for d in range(C.DECISIONS)}
-
-        def compare(case, reference, candidate):
-            return {"fixture_comparison": case}
-
-        record = run_integration_278(source, staged, producer,
-                                     executor, compare)
-        print(json.dumps({k: v for k, v in record.items() if k != "stages"},
-                         indent=2, sort_keys=True))
-        for name in STAGES:
-            print(f"stage {name}: {compact_stage(record['stages'][name])}")
+    sys.exit("The #278 first demonstration is owned by "
+             "tests.test_issue278_integration (registered CI suite); "
+             "this module is a library, not a runnable demonstration.")
