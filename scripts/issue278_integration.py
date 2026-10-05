@@ -122,10 +122,53 @@ def _census(root: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
     return rebuilt, problems
 
 
+def _verify_final_population(staged_root: Path, custody_root: Path,
+                             baseline: dict[str, dict[str, Any]]) -> list[str]:
+    """Recheck capture-time custody and real reader admission AFTER callbacks.
+
+    The inventory is integrity-only, not origin authority. The production
+    reader still owns staging/custody equality and semantic byte admission.
+    """
+    problems: list[str] = []
+    try:
+        final, census_problems = _census(custody_root / "source")
+        problems.extend(census_problems)
+        if set(final) != set(baseline):
+            problems.append("final custody census population changed")
+        for key, captured in baseline.items():
+            observed = final.get(key, {})
+            if any(observed.get(field) != captured.get(field)
+                   for field in ("inventory_sha256", "files", "bytes")):
+                problems.append(f"{key}: final custody integrity verification failed")
+            case, tag = key.split("/")
+            repeat = tag.endswith("-repeat")
+            arm = tag[:-7] if repeat else tag
+            verdict = admit_staged_276(staged_root, case, arm, repeat,
+                                       custody_root=custody_root)
+            if verdict.get("admitted") is not True or verdict.get("problems"):
+                problems.extend(f"{key}: final staged/custody admission: {p}"
+                                for p in verdict.get("problems", []))
+                if not verdict.get("problems"):
+                    problems.append(f"{key}: final staged/custody admission rejected")
+    except _EVIDENCE_ERRORS as exc:
+        problems.append(f"final staged/custody verification failed: {exc}")
+    return problems
+
+
 def _blocked(stages: dict[str, Any], problems: list[str],
              orchestration: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Blocked records report execution HONESTLY: the launch count is the
+    orchestration's own observed count (zero only before any execution),
+    and every record — blocked or complete — carries the evidence class."""
+    launches = 0
+    if isinstance(orchestration, dict):
+        try:
+            launches = int(orchestration.get("candidate_launches") or 0)
+        except (TypeError, ValueError):
+            launches = 0
     return {"schema": SCHEMA, "status": "blocked", "stages": stages,
-            "problems": problems, "candidate_launches": 0,
+            "problems": problems, "candidate_launches": launches,
+            "evidence_class": EVIDENCE_CLASS,
             "orchestration": orchestration}
 
 
@@ -215,12 +258,8 @@ def run_integration_278(source_root: Path, staged_root: Path,
     if problems:
         return _blocked(stages, problems)
     # ---- determinism + reference-first orchestration ------------------------
-    launch_probe = _LaunchProbe()
-    orchestration = O.orchestrate_277(
-        staged_root, source_root,
-        lambda case: (launch_probe.record(case), executor(case))[1],
-        pair_comparison)
-    launch_probe.attach(orchestration)
+    orchestration = O.orchestrate_277(staged_root, source_root,
+                                      executor, pair_comparison)
     stages["determinism"] = {
         "status": orchestration.get("status"),
         "terminal": orchestration.get("terminal"),
@@ -231,6 +270,13 @@ def run_integration_278(source_root: Path, staged_root: Path,
                   for case, arms in orchestration.get("cases", {}).items()}}
     if orchestration.get("status") != "candidate gate reached":
         problems.extend(orchestration.get("problems", []))
+        return _blocked(stages, problems, orchestration)
+    # ---- final custody verification ----------------------------------------
+    # Execution and comparison callbacks run AFTER admission: custody mutated
+    # at any later point must invalidate the run instead of leaving a
+    # completed record describing bytes the reader would now reject.
+    problems.extend(_verify_final_population(staged_root, source_root, capture_units))
+    if problems:
         return _blocked(stages, problems, orchestration)
     # ---- reduction: the fixture chain cannot mint physical authority -------
     reduction = R.derive_terminal_273(orchestration, orchestration)
@@ -256,42 +302,37 @@ def evaluate_278(staged_root: Path, custody_root: Path,
     Used by tamper regressions: staged-side or custody-side byte edits
     after a completed integrated run must fail closed here.
     """
-    launch_probe = _LaunchProbe()
-    orchestration = O.orchestrate_277(
-        Path(staged_root), Path(custody_root),
-        lambda case: (launch_probe.record(case), executor(case))[1],
-        pair_comparison)
-    launch_probe.attach(orchestration)
+    staged_root, custody_root = Path(staged_root), Path(custody_root)
+    try:
+        baseline, census_problems = _census(custody_root / "source")
+    except _EVIDENCE_ERRORS as exc:
+        return _blocked({}, [f"custody census failed: {exc}"])
+    if census_problems:
+        return _blocked({}, census_problems)
+    orchestration = O.orchestrate_277(staged_root, custody_root,
+                                      executor, pair_comparison)
     if orchestration.get("status") != "candidate gate reached":
         return _blocked({}, orchestration.get("problems", []), orchestration)
+    final_problems = _verify_final_population(staged_root, custody_root, baseline)
+    if final_problems:
+        return _blocked({}, final_problems, orchestration)
     reduction = R.derive_terminal_273(orchestration, orchestration)
+    if reduction.get("terminal") != R.TERMINAL_RUNTIME_BLOCKED_273:
+        return _blocked(
+            {"reduction": {"terminal": reduction.get("terminal")}},
+            ["integrated fixture record unexpectedly carried "
+             "physical terminal authority"], orchestration)
     return {"schema": SCHEMA,
             "status": INTEGRATION_COMPLETE if not orchestration.get("problems") else "blocked",
             "evidence_class": EVIDENCE_CLASS,
-            "stages": {"reduction": {"terminal": reduction.get("terminal")}},
+            "stages": {"reduction": {"terminal": reduction.get("terminal"),
+                                     "problems": reduction.get("problems", []),
+                                     "note": "in-memory fixture records are not "
+                                             "retained-byte evidence authority"}},
             "problems": orchestration.get("problems", []),
             "candidate_launches": orchestration["candidate_launches"],
             "orchestration": orchestration}
 
-
-class _LaunchProbe:
-    """Observes executor invocations without being evidence."""
-
-    def __init__(self) -> None:
-        self.launches: list[str] = []
-        self._host: dict[str, Any] | None = None
-
-    def record(self, case: str) -> None:
-        self.launches.append(case)
-        if self._host is not None:
-            observed = list(self.launches)
-            actual = list(self._host.get("_executor_launches", []))
-            if observed != actual:
-                self._host["_executor_launches"] = observed
-
-    def attach(self, orchestration: dict[str, Any]) -> None:
-        self._host = orchestration
-        orchestration["_executor_launches"] = list(self.launches)
 
 
 def compact_stage(stage: dict[str, Any]) -> str:

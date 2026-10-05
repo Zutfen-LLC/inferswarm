@@ -27,10 +27,15 @@ single CPU-fixture chain and records every stage:
   and deterministic before any candidate launch), and **reduction** (the
   #273 public `derive_terminal_273` applied to the in-memory fixture record —
   it must fail closed, proving the integrated chain cannot mint physical
-  terminal authority).
+  terminal authority). After execution/comparison callbacks, a final census
+  must equal the capture-time custody inventories and every staged unit is
+  re-admitted by the real #276 custody-bound reader before completion. This
+  detects custody changes after the originals census and staged-side changes
+  after admission; it is a final observation, not a lock against future writes.
 - `evaluate_278(staged_root, custody_root, executor, pair_comparison)` —
   re-runs admission → determinism → reduction over an already-staged
-  population; used by the post-run tamper regressions.
+  population with the same final custody/reader check and reducer assertion;
+  used by the post-run tamper regressions.
 - The producer/executor/comparison callbacks carry no authority: producer
   results are cross-checked against the custody layout, executor returns are
   discarded by the orchestrator, and comparison callbacks receive copies.
@@ -38,8 +43,9 @@ single CPU-fixture chain and records every stage:
 
 ## Evidence
 
-`tests/test_issue278_integration.py` — 9 CPU-fixture tests (RED-first,
-committed failing before the implementation): the matching fixture completes
+`tests/test_issue278_integration.py` — 14 CPU-fixture tests (initial entry-point
+coverage committed before implementation; review-defect controls demonstrated
+RED before their production corrections): the matching fixture completes
 all six stages with every unit admitted (`backend=vulkan`, derived
 `used_bdf`, complete row digests), 3 candidate launches and 3 comparisons,
 and a fail-closed reduction; stage linkage binds retained bytes (per-unit
@@ -55,8 +61,19 @@ signature admits no authored verdict parameters. The first demonstration
 (registered test) prints the compact per-stage linkage for a matching
 fixture and a fail-closed fixture.
 
-All of it is labeled `evidence_class: tooling/fixture validation` — no
-fresh physical authority, no #270 historical edits, no holdout access.
+All records, including blocked fixtures, are labeled
+`evidence_class: tooling/fixture validation` — no fresh physical authority,
+no #270 historical edits, no holdout access. Blocked records preserve the
+actual orchestrator launch count: zero before candidate execution, but
+nonzero for executor failures, candidate admission/determinism defects, or
+late callback tampering. These do not claim a zero-launch guarantee.
+
+The review correction controls also cover executor/comparison mutations of
+custody, mutations of staged bytes after admission, reducer PASS fault
+injection on reevaluation, and truthful reporting of raising executor
+invocations. The linkage test asserts inventory equality (not presence
+alone), and staged bytes are restored before the independent custody-only
+reevaluation tamper probe.
 
 ## Observed boundary
 
