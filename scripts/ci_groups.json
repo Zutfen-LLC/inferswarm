@@ -156,7 +156,8 @@
     "test_issue273_evidence",
     "test_issue275_collector",
     "test_issue275_demo",
-    "test_issue275_provenance"
+    "test_issue275_provenance",
+    "test_issue276_byte_admission"
    ]
   },
   "repo-integrity": {
@@ -1395,6 +1396,9 @@
   "scripts/issue275_collector.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue276_reader.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1735,6 +1739,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue275_provenance.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue276_byte_admission.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

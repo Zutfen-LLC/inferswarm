@@ -180,14 +180,28 @@ class ByteAdmissionTests(unittest.TestCase):
 
     def test_demo_first_demonstration_fixture_only(self):
         """Issue #276 first demonstration (fixture-only): admit one CPU-fixture
-        bundle emitted through the #275 collector path, then show a substituted
-        counterpart is rejected by the same reader/admission entry point."""
+        bundle emitted through the #275 collector path, then show that a
+        substituted counterpart is rejected by the same reader/admission
+        entry point. The substitution rebuilds a SELF-CONSISTENT staged unit
+        (binding digests recomputed over the substituted bytes) claiming the
+        candidate tag while the bytes are a reference-arm capture."""
         self.builder.capture("candidate", False)
         self.stage("candidate", False)
         self.assertTrue(R.admit_staged_276(self.staged, "case-256", "candidate", False)["admitted"])
-        # Substituted counterpart: reference bytes staged under the candidate label.
-        self.builder.capture("reference", False)
-        self.stage("reference", False)
+        # Build the substituted counterpart from a genuine reference capture.
+        subst_base = self.base / "substitute"
+        subst_builder = BundleBuilder(subst_base / "capture")
+        subst_builder.capture("reference", False)
+        R.stage_capture_276(subst_base / "capture", subst_base / "staged", "case-256", "reference", False)
+        import shutil
+        shutil.rmtree(self.staged / "units/case-256/candidate")
+        (self.staged / "units/case-256/candidate.json").unlink()
+        shutil.copytree(subst_base / "staged/units/case-256/reference",
+                        self.staged / "units/case-256/candidate")
+        binding = json.loads((subst_base / "staged/units/case-256/reference.json").read_bytes())
+        binding["arm"] = "candidate"  # relabel the custody claim, keep digests true
+        (self.staged / "units/case-256/candidate.json").write_bytes(
+            json.dumps(binding, sort_keys=True, indent=2).encode())
         verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("candidate" in p for p in verdict["problems"]))
@@ -297,7 +311,14 @@ class ByteAdmissionTests(unittest.TestCase):
                 self.assertFalse(verdict["admitted"])
 
     def test_source_run_reuse_across_arms_rejected(self):
-        """The same source run staged for both arms is cross-arm aliasing."""
+        """The same source run staged for both arms is cross-arm aliasing.
+
+        Staging a copied candidate capture under the reference tag is
+        already refused by the arm law at staging time (fail closed,
+        before any pair comparison) — pinned here. When both units were
+        staged from their own genuine captures, sharing a source would
+        additionally be caught by receipt-digest equality in
+        admit_pair_276."""
         self.builder.capture("candidate", False)
         R.stage_capture_276(self.source, self.staged, "case-256", "candidate", False)
         # Re-stage the SAME source run under the reference tag.
@@ -305,10 +326,28 @@ class ByteAdmissionTests(unittest.TestCase):
         src = self.source / "source/case-256/candidate"
         dst = self.source / "source/case-256/reference"
         shutil.copytree(src, dst)
+        with self.assertRaisesRegex(R.ReaderError, "reference law"):
+            R.stage_capture_276(self.source, self.staged, "case-256", "reference", False)
+        # Remove the copied run; capture genuine reference/repeat units.
+        shutil.rmtree(dst)
+        self.builder.capture("reference", False)
+        self.builder.capture("reference", True)
+        self.builder.capture("candidate", True)
         R.stage_capture_276(self.source, self.staged, "case-256", "reference", False)
+        R.stage_capture_276(self.source, self.staged, "case-256", "reference", True)
+        R.stage_capture_276(self.source, self.staged, "case-256", "candidate", True)
+        # Genuine captures admit cleanly before the attack.
+        self.assertTrue(R.admit_pair_276(self.staged, "case-256")["admitted"])
+        # Attack: re-bind the candidate unit to the reference run's receipt
+        # digest (source reuse at the binding level). Admission must refuse.
+        binding_path = self.staged / "units/case-256/candidate.json"
+        binding = json.loads(binding_path.read_bytes())
+        ref_binding = json.loads((self.staged / "units/case-256/reference.json").read_bytes())
+        binding["files"]["receipt.json"] = ref_binding["files"]["receipt.json"]
+        binding_path.write_bytes(json.dumps(binding, sort_keys=True, indent=2).encode())
         verdict = R.admit_pair_276(self.staged, "case-256")
         self.assertFalse(verdict["admitted"])
-        self.assertTrue(any("alias" in p or "reuse" in p or "same source" in p
+        self.assertTrue(any("integrity" in p or "reuse" in p or "same source" in p
                             for p in verdict["problems"]))
 
     def test_repeat_row_drift_rejected_as_nondeterminism(self):

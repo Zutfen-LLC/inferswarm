@@ -5683,6 +5683,28 @@
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 37
+  },
+  "test_issue276_byte_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.5,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #276 retained-original byte admission: staged units are admitted only from recomputed digests and byte-re-derived identity (selector/ICD/backend/used device, process incarnation, exe/model binding, residency) with authored labels as cross-checks; cross-arm substitution, source reuse, relabeling, byte changes, fabricated self-consistent bundles, and invented seal authority are rejected through the production reader/admission entry point.",
+   "lineage": "Issue #276 RED-first byte-admission path (retained originals -> staging -> reader -> admission)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue276_reader.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests exercise the complete capture-to-admission path through the #275 collector fixture harness without physical execution authority; the first demonstration is a registered CI test labeled fixture-only.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
