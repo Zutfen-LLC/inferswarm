@@ -96,23 +96,33 @@ FIXED (each pinned by a RED-first regression in this round):
    accepted comparator `validate_rows_finite` law); non-f32 payloads
    like `b"reference"` are rejected.
 
-BOUNDARY (documented open observations, not papered over):
-* A FULLY synthetic bundle whose bytes are byte-identical to a genuine
-  collector output admits — because it IS collector-origin bytes. A
-  byte-level reader cannot and should not distinguish a copy from an
-  original; origin rests on the reviewed collector + OS boundary, per
-  the acceptance text ("hashes prove byte integrity within that
-  boundary, not origin by themselves").
-* A BILATERAL swap of ALL row bytes across both arms (with every
-  authored surface repaired) is not detectable at the
-  integrity/derivation level: rows are payload observations with no
-  upstream derivation source. All PARTIAL row attacks (aliasing,
-  drift, unilateral copy) are rejected. Binding rows to arms by an
-  invented seal is explicitly forbidden by the acceptance; in a
-  physical campaign the arm-binding of rows comes from the capture
-  window (contemporaneous incarnation/residency/census over raw
-  probes), which a CPU fixture cannot represent. Reported to the
-  maintainer as a concrete unresolved origin observation.
+BOUNDARY (documented open observations, pinned by canary tests — round 2):
+* A fully self-consistent bundle AUTHORED without the collector admits at
+  the fixture level — not only byte-identical copies of genuine captures
+  (round-1 wording overstated this). Nothing in a CPU fixture can confer
+  collector origin: the collector's probe surface is fixture-supplied and
+  the derivation law is public repository code, so a knowledgeable author
+  can satisfy shape-consistency. Origin rests on the PHYSICAL campaign
+  boundary (reviewed collector code reading a contemporaneous OS the
+  executor does not control), exactly as the acceptance states: hashes
+  prove byte integrity within that boundary, not origin by themselves.
+  Pinned by test_documented_origin_boundary_fully_authored_bundle_admits.
+* ANY bilateral permutation of row bytes across arms — a single decision
+  swapped consistently in primary and repeat, up to the complete set —
+  survives the reader (round-1 wording limited this to the complete
+  permutation; partial bilateral swaps also survive). Per-arm determinism
+  holds, rows still differ across arms (no aliasing signature), and rows
+  have no upstream derivation source to contradict. Unilateral copies
+  and repeat-only drift ARE rejected. Pinned by
+  test_documented_origin_boundary_bilateral_row_permutation_admits.
+  Rows bind to physical arms only through the capture window
+  (contemporaneous incarnation/residency/census over raw probes), which
+  a CPU fixture cannot represent; an invented row-arm seal is forbidden
+  by the acceptance.
+
+Both canaries are falsifiable obligations: invert or delete them
+together with this section when the physical campaign adds
+capture-window row binding or another origin mechanism.
 
 ## First demonstration (fixture-only)
 

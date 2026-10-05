@@ -5686,12 +5686,12 @@
   },
   "test_issue276_byte_admission": {
    "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 28.6,
-   "baseline_test_count": 32,
+   "baseline_serial_seconds": 31.8,
+   "baseline_test_count": 34,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "Issue #276 retained-original byte admission: staged units are admitted only from recomputed digests and byte-re-derived identity (selector/ICD/backend/used device, process incarnation, exe/model binding, residency) with authored labels as cross-checks; cross-arm substitution, source reuse, relabeling, byte changes, fabricated self-consistent bundles, and invented seal authority are rejected through the production reader/admission entry point.",
+   "invariant": "Issue #276 retained-original byte admission: staged units are admitted only from recomputed digests and byte-re-derived identity (selector/ICD/backend/used device, process incarnation, exe/model binding, residency) with authored labels as cross-checks; cross-arm substitution, source reuse, relabeling, byte changes, non-FP32 rows, and invented seal authority are rejected through the production reader/admission entry point; the fixture-level origin boundary (fully authored self-consistent bundles admit; bilateral row permutations across arms admit) is pinned by explicit canary tests documented in the investigation.",
    "lineage": "Issue #276 RED-first byte-admission path (retained originals -> staging -> reader -> admission)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -5704,7 +5704,7 @@
    "rationale": "CPU fixture tests exercise the complete capture-to-admission path through the #275 collector fixture harness without physical execution authority; the first demonstration is a registered CI test labeled fixture-only.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 32
+   "test_count_at_audit": 34
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

@@ -563,27 +563,15 @@ class ByteAdmissionTests(unittest.TestCase):
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("repeat" in p.lower() for p in verdict["problems"]))
 
-    def test_bilateral_row_swap_boundary_is_explicitly_pinned(self):
-        """BOUNDARY PIN (documented limitation, reviewer round 1 gap 3).
-        Rows are payload observations with no upstream derivation source:
-        a bilateral swap of ALL rows across both arms, with every authored
-        surface (bindings, receipts) repaired, is not distinguishable at
-        the byte-integrity/derivation level. The arm-binding of rows in a
-        physical campaign comes from the CAPTURE window (incarnation,
-        residency, census laws over raw probes), which this fixture cannot
-        represent. This test pins that the pair law detects every PARTIAL
-        row attack (aliasing, drift, unilateral copy) and documents that
-        the complete bilateral permutation is outside the byte-admission
-        boundary — it is reported to the maintainer as an open origin
-        observation rather than papered over with an invented row-arm
-        seal (which the #276 acceptance explicitly forbids).
-        Unilateral (one-directional) row copying IS rejected on aliasing."""
+    def test_unilateral_row_copy_rejected_on_aliasing(self):
+        """A one-directional row copy across arms IS detectable and rejected
+        (the bilateral-permutation canary below must not be read as 'all row
+        attacks pass')."""
         for arm in ("reference", "candidate"):
             self.builder.capture(arm, False)
             self.builder.capture(arm, True)
             self.stage(arm, False)
             self.stage(arm, True)
-        # Unilateral copy of one arm's row into the other: rejected.
         target = self.staged / "units/case-256/reference/rows/0.f32"
         donor = (self.staged / "units/case-256/candidate/rows/0.f32").read_bytes()
         target.write_bytes(donor)
@@ -591,6 +579,148 @@ class ByteAdmissionTests(unittest.TestCase):
         verdict = R.admit_pair_276(self.staged, "case-256")
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("aliasing" in p for p in verdict["problems"]))
+
+    def test_documented_origin_boundary_fully_authored_bundle_admits(self):
+        """DOCUMENTED LIMITATION (canary) — open origin observation, round 2.
+
+        A COMPLETE self-consistent bundle authored without the collector
+        (raw bytes + labels + probe inventory all written consistently)
+        admits at the fixture level. Nothing in a CPU fixture can confer
+        collector origin: the collector's probe surface is itself
+        fixture-supplied, and the derivation law is public repository
+        code, so a knowledgeable author can satisfy shape-consistency.
+        Origin rests on the PHYSICAL campaign boundary (reviewed collector
+        code reading a contemporaneous OS the executor does not control),
+        exactly as the #276 acceptance states: hashes prove byte
+        integrity within that boundary, not origin by themselves.
+        This pin makes the limitation falsifiable: when the physical
+        campaign adds capture-window row binding or another origin
+        mechanism, this test must be inverted or deleted alongside the
+        boundary documentation."""
+        base = self.base / "canary-fab"
+        capture = base / "capture"
+        staged = base / "staged"
+        # Hand-author all four runs WITHOUT invoking the collector.
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                tag = arm + ("-repeat" if repeat else "")
+                run = capture / "source/case-256" / tag
+                (run / "raw").mkdir(parents=True)
+                harness = Harness(arm,
+                                  (5000 if arm == "reference" else 6000) + (1 if repeat else 0),
+                                  f"authored-{tag}",
+                                  (700_000 if arm == "reference" else 800_000) + (1 if repeat else 0))
+                # raw probe bytes, authored:
+                (run / "raw/boot_identity.start.bin").write_bytes(harness.boot)
+                (run / "raw/start_ticks.start.bin").write_bytes(harness.ticks)
+                (run / "raw/process_census.start.bin").write_bytes(
+                    canonical({"boot_id": harness.boot_id,
+                               "processes": [{"pid": harness.pid, "start_ticks": harness._ticks,
+                                              "boot_id": harness.boot_id}]}))
+                (run / "raw/process_cmdline.start.bin").write_bytes(harness.cmdline)
+                (run / "raw/exe_identity.start.bin").write_bytes(harness.exe)
+                (run / "raw/open_model_members.start.bin").write_bytes(harness.members)
+                (run / "raw/device_census.start.bin").write_bytes(canonical(harness.devices))
+                (run / "raw/process_environ.start.bin").write_bytes(
+                    f"GGML_VK_VISIBLE_DEVICES=0\0VK_ICD_FILENAMES={harness.env_icd}\0".encode())
+                d0 = harness.devices[0]
+                (run / "raw/used_vulkan_device.start.bin").write_bytes(canonical({
+                    "backend": "vulkan", "icd": d0["icd"], "vulkan_uuid": d0["vulkan_uuid"],
+                    "bdf": d0["bdf"], "index": d0["index"], "driver_id": harness.used_driver_id}))
+                for bdf, samples in harness.residencies.items():
+                    for phase, value in zip(("start", "peak", "end"), samples):
+                        (run / f"raw/residency.{phase}.{bdf}.bin").write_bytes(
+                            canonical({"bytes": value}))
+                (run / "raw/boot_identity.end.bin").write_bytes(harness.boot)
+                (run / "raw/start_ticks.end.bin").write_bytes(harness.ticks)
+                # receipt + rows + collector-shaped observation, authored:
+                (run / "receipt.json").write_bytes(canonical(harness.receipt()))
+                rows = run / "rows"
+                rows.mkdir()
+                digests = {}
+                for d in range(C.DECISIONS):
+                    data = fixture_row(arm, str(d))
+                    (rows / f"{d}.f32").write_bytes(data)
+                    digests[f"rows/{d}.f32"] = hashlib.sha256(data).hexdigest()
+                inventory = {}
+                for p in sorted(run.rglob("*")):
+                    if p.is_file() and p.parent.name == "raw":
+                        rel = "raw/" + p.name
+                        inventory[rel] = {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+                                          "bytes": p.stat().st_size}
+                obs = {"schema": KC.SCHEMA, "captured_at": "2026-10-05T00:00:00+00:00",
+                       "probe_inventory": inventory,
+                       "process": {"pid": harness.pid, "boot_id": harness.boot_id,
+                                   "start_ticks": harness._ticks,
+                                   "cmdline": harness.cmdline.decode().rstrip("\0").split("\0"),
+                                   "exe": {"path": "/srv/llama-server",
+                                           "sha256": C.COMPARATOR_SHA256},
+                                   "effective_model": f"{C.MODEL_DIR}/{C.MODEL_MEMBER_1}",
+                                   "open_model_members": dict(C.MODEL_MEMBER_SHA256),
+                                   "incarnation_close": {"boot_id": harness.boot_id,
+                                                         "start_ticks": harness._ticks,
+                                                         "bound_same_process": True,
+                                                         "derived_from": ["raw/boot_identity.end.bin",
+                                                                          "raw/start_ticks.end.bin"]}},
+                       "devices": [dict(d, **{"selected": d is d0}) for d in harness.devices],
+                       "residency": {bdf: dict(zip(("before", "peak", "after"), s))
+                                     for bdf, s in harness.residencies.items()},
+                       "observed_selection": {
+                           "derived_from": ["raw/process_environ.start.bin",
+                                            "raw/used_vulkan_device.start.bin",
+                                            "raw/device_census.start.bin"],
+                           "selector_env_key": "GGML_VK_VISIBLE_DEVICES", "selector": "0",
+                           "icd_env_key": "VK_ICD_FILENAMES", "icd": harness.env_icd,
+                           "backend": "vulkan", "used_vulkan_uuid": d0["vulkan_uuid"],
+                           "used_bdf": d0["bdf"], "used_index": d0["index"],
+                           "used_driver_id": harness.used_driver_id},
+                       "receipt_claims_checked": []}
+                if arm == "reference":
+                    obs["reference_identity_expected"] = C.reference_identity()
+                (run / "observation.json").write_bytes(canonical(obs))
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                R.stage_capture_276(capture, staged, "case-256", arm, repeat)
+        verdict = R.admit_pair_276(staged, "case-256")
+        # The pinned documented limitation: this ADMITS at the fixture level.
+        self.assertTrue(verdict["admitted"], verdict["problems"])
+
+    def test_documented_origin_boundary_bilateral_row_permutation_admits(self):
+        """DOCUMENTED LIMITATION (canary) — open origin observation, round 2.
+
+        ANY bilateral permutation of row bytes across arms — a single
+        decision swapped consistently in primary and repeat, up to the
+        complete set — survives the reader: per-arm determinism holds
+        (both arms' swaps are internally consistent), rows still differ
+        across arms (no aliasing signature), and rows have no upstream
+        derivation source to contradict. Rows bind to physical arms only
+        through the capture window (contemporaneous incarnation,
+        residency, census over raw probes), which a CPU fixture cannot
+        represent; an invented row-arm seal is forbidden by the #276
+        acceptance. Unilateral copies and repeat-only drift ARE rejected
+        (pinned elsewhere). This canary makes the limitation falsifiable:
+        invert or delete it together with the boundary documentation when
+        the physical campaign binds rows to capture windows."""
+        for arm in ("reference", "candidate"):
+            self.builder.capture(arm, False)
+            self.builder.capture(arm, True)
+            self.stage(arm, False)
+            self.stage(arm, True)
+        self.assertTrue(R.admit_pair_276(self.staged, "case-256")["admitted"])
+        # Partial bilateral permutation: decision 3 only, both arm tiers.
+        for tag_a, tag_b in (("reference", "candidate"),
+                             ("reference-repeat", "candidate-repeat")):
+            a = self.staged / f"units/case-256/{tag_a}/rows/3.f32"
+            b = self.staged / f"units/case-256/{tag_b}/rows/3.f32"
+            tmp = a.read_bytes()
+            a.write_bytes(b.read_bytes())
+            b.write_bytes(tmp)
+        for tag in ("reference", "candidate", "reference-repeat", "candidate-repeat"):
+            self._repair_binding(tag)
+        verdict = R.admit_pair_276(self.staged, "case-256")
+        # The pinned documented limitation: this ADMITS at the fixture level.
+        self.assertTrue(verdict["admitted"], verdict["problems"])
+
 
     def _repair_binding(self, tag="candidate", staged=None):
         """Recompute the binding digest map from the unit's CURRENT bytes
