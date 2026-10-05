@@ -3300,7 +3300,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c\u2026, stable AMD row 2187ab8f\u2026, V0n dispatch 4aa0aa0b\u2026, freeze 3fe9e74d\u2026, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
    "lineage": "R8-I3B reference runtime-boundary localization (#250)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -3521,7 +3521,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations \u2014 a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) \u2014 the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
    "lineage": "R8-I3B reference runtime-boundary localization (#250)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -5617,6 +5617,50 @@
    "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
    "retired_in": "PR #247 correction round 1",
    "test_count_at_audit": null
+  },
+  "test_issue275_collector": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 collector preserves raw probe bytes, validates frozen device/process lineage, derives observations only from bytes, and fails closed on missing or contradictory evidence.",
+   "lineage": "Issue #275 first demonstration and retained-byte collector",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests cover the collector contract without physical execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
+  },
+  "test_issue275_demo": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 1,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 first demonstration exercises the production collector entry point, byte-exact retained probe bundle and receipt, digest inventory, and fail-closed missing observation.",
+   "lineage": "Issue #275 first demonstration and retained-byte collector",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Deterministic CPU recording fixture only; no hardware or network access and no physical authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 1
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
