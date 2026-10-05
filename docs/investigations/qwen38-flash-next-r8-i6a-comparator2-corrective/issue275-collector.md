@@ -9,7 +9,17 @@
 
 ## Trust boundary
 
-The finite `ExecutionProbes` method list in `scripts/issue275_collector.py` is the ONLY trust boundary: `read_boot_identity`, `read_start_ticks`, `read_process_census`, `read_process_cmdline`, `read_exe_identity`, `read_open_model_members`, `read_device_census`, and `read_residency`. The collector retains those returned bytes; every parser, validation, inventory, and derived observation downstream consumes those retained in-memory bytes. No downstream observation is an independent probe.
+The finite `ExecutionProbes` method list in `scripts/issue275_collector.py` is the ONLY trust boundary: `read_boot_identity`, `read_start_ticks`, `read_process_census`, `read_process_cmdline`, `read_exe_identity`, `read_open_model_members`, `read_device_census`, `read_residency`, `read_process_environ`, and `read_used_vulkan_device`. The collector retains those returned bytes; every parser, validation, inventory, and derived observation downstream consumes those retained in-memory bytes. No downstream observation is an independent probe.
+
+Round 3 (selection provenance and incarnation binding) added the last two probes and no others:
+
+- `read_process_environ(pid)` — original contemporaneous process-environment bytes (the `/proc/<pid>/environ` shape). The process-owned `GGML_VK_VISIBLE_DEVICES` selector and `VK_ICD_FILENAMES` ICD are derived ONLY from these bytes.
+- `read_used_vulkan_device(pid)` — collector-side observation of the Vulkan physical device the captured process actually used (backend, ICD, Vulkan device UUID, BDF, index, driver id). The used-device identity is derived ONLY from these bytes and is then resolved against the independently observed device census; it is never inferred from census availability plus environment claims.
+- Closing incarnation binding: `read_boot_identity` and `read_start_ticks` are re-observed AFTER the execution-owned observations. The capture is accepted only when PID + boot identity + start ticks are unchanged across the window (`process.incarnation_close` in `observation.json`; retained as `raw/boot_identity.end.bin` / `raw/start_ticks.end.bin`). A reused/replaced PID or reboot splices the evidence and fails closed.
+
+## Receipt claims are claim-only
+
+`process_attribution.server_env.GGML_VK_VISIBLE_DEVICES`, `process_attribution.server_env.VK_ICD_FILENAMES`, and `subject_identity` labels may be retained and are cross-checked against the observed values (`observed_selection` in `observation.json` names the raw bytes it derives from). They can NEVER establish actual selection, backend, or device identity; disagreement raises a named claim-contradiction error, and a receipt without them succeeds on observed bytes alone.
 
 ## Retained-byte contract
 
@@ -26,9 +36,10 @@ The collector rejects invalid evidence before committing the bundle. Guard and r
 - Invalid arm/repeat/receipt and required nested fields: `unknown arm`, `repeat must be bool`, `receipt must be an object`, `process_attribution must be an object`, `process_attribution.server_env must be an object`, `subject_identity must be an object`.
 - Process identity malformed or inconsistent: `process_attribution.server_pid invalid`, `process identity malformed`, `process census/boot mismatch`, `process not found uniquely in census`, `census/boot mismatch vs start-tick bytes`.
 - Executable/model contradiction: `exe_identity path/sha256 malformed`, `exe_identity.sha256 != expected comparator sha`, `effective --model argument contradicts frozen model member path`, or `open_model_members contradict frozen model members`.
-- Device census/selection ambiguity: `device census empty/malformed`, `census entry missing/malformed <field>`, `census entry malformed bdf: expected PCI BDF`, `ambiguous device census duplicate/missing <field>`, or `selector does not resolve exactly one census device`.
+- Device census/selection ambiguity: `device census empty/malformed`, `census entry missing/malformed <field>`, `census entry malformed bdf: expected PCI BDF`, `ambiguous device census duplicate/missing <field>`, `observed used Vulkan UUID absent/ambiguous in device census`, `used_vulkan_device BDF contradicts census entry for the used UUID`, `observed selector/used-device index disagreement (stale index assumption)`, `observed ICD disagrees between environ and used-device observation`, `unsupported observed backend`, `used_vulkan_device missing/malformed <field>`, `observed environ GGML_VK_VISIBLE_DEVICES must be a digit string`, or `process environ lacks usable <KEY> observation` / `process environ entry malformed` / `process environ is not UTF-8` / `process environ duplicate key`.
 - Frozen lineage drift: `candidate observed vendor/device/ICD drift`, `candidate observed Vulkan UUID drift`, `reference observed PCI/UUID lineage mismatch`, or `positive RX580 excluded census absent`.
-- Receipt contradiction: `receipt claim subject_identity.bdf contradicts derived selected device`, `receipt claim model_members contradicts derived open members`, or `receipt claim exe_sha256 contradicts derived exe sha`.
+- Receipt contradiction: `receipt claim subject_identity.bdf contradicts derived selected device`, `receipt claim model_members contradicts derived open members`, `receipt claim exe_sha256 contradicts derived exe sha`, `receipt claim process_attribution.server_env.GGML_VK_VISIBLE_DEVICES contradicts observed selector`, or `receipt claim process_attribution.server_env.VK_ICD_FILENAMES contradicts observed ICD`.
+- Incarnation binding: `process incarnation changed during capture (boot identity/start ticks mismatch)` or `closing process identity malformed`.
 - Invalid residency: `residency <phase>/<bdf> counter malformed` or `excluded device <bdf> residency delta exceeds noise bound`.
 - Append-only and write failures: `append-only destination exists`, `cannot create destination directory`, and `cannot write destination`; partial files are cleaned on failed writes.
 
@@ -40,5 +51,6 @@ This is CPU recording-fixture evidence only. It performs no physical execution, 
 
 - Reviewed capability head: `d6a4c44` (spec review PASS, round 2; quality review APPROVED, round 2).
 - Demonstration and CI-registration commit: `b1c790e` (tests/test_issue275_demo.py; scripts/ci_groups.json + scripts/plan_ci.py group/path registration; .github/workflows/ci.yml unittest line; docs/ci/test-retention-audit.json audit rows).
+- Round 3 (reviewed head `246063a`): RED regressions committed first (`b52807a`; 6 failures + 2 errors demonstrating the receipt-authored-selection and unbound-incarnation defects), then the fix (`eaac7e2`): observed-selection derivation, claim-only receipt cross-checks, closing incarnation binding, `tests/test_issue275_provenance.py` (25 tests), and CI/retention registration. All 8 RED regressions GREEN; 43 tests across the three #275 modules pass.
 - Test result: 19 collector tests and 1 demonstration test; the requested five-module subset passed 92 tests in 322.717 seconds.
 - Reconciliation pointer: campaign branch `issue-273-r8i6a-comparator2-corrective`, including its current branch state and issue #275 Task 1 collector implementation.
