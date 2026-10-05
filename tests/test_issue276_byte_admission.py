@@ -178,7 +178,8 @@ class ByteAdmissionTests(unittest.TestCase):
         self.stage("candidate", False)
         self.stage("candidate", True)
         for repeat in (False, True):
-            verdict = R.admit_staged_276(self.staged, "case-256", "candidate", repeat)
+            verdict = R.admit_staged_276(self.staged, custody_root=self.source,
+                                         case="case-256", arm="candidate", repeat=repeat)
             self.assertEqual(verdict["problems"], [])
             self.assertTrue(verdict["admitted"])
             self.assertEqual(verdict["derived"]["icd"], C.RADV_ICD)
@@ -191,7 +192,7 @@ class ByteAdmissionTests(unittest.TestCase):
             self.builder.capture(arm, True)
             self.stage(arm, False)
             self.stage(arm, True)
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertEqual(verdict["problems"], [])
         self.assertTrue(verdict["admitted"])
 
@@ -204,7 +205,7 @@ class ByteAdmissionTests(unittest.TestCase):
         candidate tag while the bytes are a reference-arm capture."""
         self.builder.capture("candidate", False)
         self.stage("candidate", False)
-        self.assertTrue(R.admit_staged_276(self.staged, "case-256", "candidate", False)["admitted"])
+        self.assertTrue(R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)["admitted"])
         # Build the substituted counterpart from a genuine reference capture.
         subst_base = self.base / "substitute"
         subst_builder = BundleBuilder(subst_base / "capture")
@@ -219,7 +220,7 @@ class ByteAdmissionTests(unittest.TestCase):
         binding["arm"] = "candidate"  # relabel the custody claim, keep digests true
         (self.staged / "units/case-256/candidate.json").write_bytes(
             json.dumps(binding, sort_keys=True, indent=2).encode())
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("candidate" in p for p in verdict["problems"]))
 
@@ -257,7 +258,7 @@ class ByteAdmissionTests(unittest.TestCase):
         data = bytearray(target.read_bytes())
         data[0] ^= 0x01
         target.write_bytes(bytes(data))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_staged_row_byte_change_rejected(self):
@@ -267,7 +268,7 @@ class ByteAdmissionTests(unittest.TestCase):
         data = bytearray(target.read_bytes())
         data[5] ^= 0xFF
         target.write_bytes(bytes(data))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_forged_integrity_chain_still_fails_on_derivation(self):
@@ -290,7 +291,7 @@ class ByteAdmissionTests(unittest.TestCase):
         obs = json.loads(obs_path.read_bytes())
         obs["probe_inventory"]["raw/process_environ.start.bin"] = {"sha256": digest, "bytes": len(data)}
         obs_path.write_bytes(canonical(obs))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     # -- negative: relabeling / substitution --------------------------------
@@ -303,7 +304,7 @@ class ByteAdmissionTests(unittest.TestCase):
         binding = json.loads(binding_path.read_bytes())
         binding["arm"] = "candidate"
         binding_path.write_bytes(canonical(binding))
-        verdict = R.admit_staged_276(self.staged, "case-256", "reference", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="reference", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_observation_label_rewrite_rejected(self):
@@ -313,7 +314,7 @@ class ByteAdmissionTests(unittest.TestCase):
         obs = json.loads(obs_path.read_bytes())
         obs["observed_selection"]["icd"] = C.NVIDIA_ICD  # authored label flip
         obs_path.write_bytes(canonical(obs))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_cross_arm_substitution_rejected_both_directions(self):
@@ -324,7 +325,8 @@ class ByteAdmissionTests(unittest.TestCase):
                 builder.capture(actual, False)
                 R.stage_capture_276(base / "capture", base / "staged", "case-256", actual, False)
                 # Claim the other arm's staged unit at admission time.
-                verdict = R.admit_staged_276(base / "staged", "case-256", claimed, False)
+                verdict = R.admit_staged_276(base / "staged", custody_root=base / "capture",
+                                             case="case-256", arm=claimed, repeat=False)
                 self.assertFalse(verdict["admitted"])
 
     def test_source_run_reuse_across_arms_rejected(self):
@@ -354,7 +356,7 @@ class ByteAdmissionTests(unittest.TestCase):
         R.stage_capture_276(self.source, self.staged, "case-256", "reference", True)
         R.stage_capture_276(self.source, self.staged, "case-256", "candidate", True)
         # Genuine captures admit cleanly before the attack.
-        self.assertTrue(R.admit_pair_276(self.staged, "case-256")["admitted"])
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")["admitted"])
         # Attack: re-bind the candidate unit to the reference run's receipt
         # digest (source reuse at the binding level). Admission must refuse.
         binding_path = self.staged / "units/case-256/candidate.json"
@@ -362,7 +364,7 @@ class ByteAdmissionTests(unittest.TestCase):
         ref_binding = json.loads((self.staged / "units/case-256/reference.json").read_bytes())
         binding["files"]["receipt.json"] = ref_binding["files"]["receipt.json"]
         binding_path.write_bytes(json.dumps(binding, sort_keys=True, indent=2).encode())
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("integrity" in p or "reuse" in p or "same source" in p
                             for p in verdict["problems"]))
@@ -377,7 +379,7 @@ class ByteAdmissionTests(unittest.TestCase):
         data = bytearray(target.read_bytes())
         data[0] ^= 0x55
         target.write_bytes(bytes(data))
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertFalse(verdict["admitted"])
 
     # -- negative: fabricated bundles ---------------------------------------
@@ -425,14 +427,14 @@ class ByteAdmissionTests(unittest.TestCase):
         self.builder.capture("candidate", False)
         self.stage("candidate", False)
         (self.staged / "units/case-256/candidate/raw/boot_identity.end.bin").unlink()
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_staged_extra_unbound_file_fails_closed(self):
         self.builder.capture("candidate", False)
         self.stage("candidate", False)
         (self.staged / "units/case-256/candidate/raw/extra.bin").write_bytes(b"extra")
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     # -- trust boundary law -------------------------------------------------
@@ -445,7 +447,7 @@ class ByteAdmissionTests(unittest.TestCase):
         binding = json.loads(binding_path.read_bytes())
         binding["CAPTURESEAL"] = hashlib.sha256(b"attacker-seal").hexdigest()
         binding_path.write_bytes(canonical(binding))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     # -- negative: review round 1 gaps ---------------------------------------
@@ -490,7 +492,8 @@ class ByteAdmissionTests(unittest.TestCase):
                 target = base / "staged/units/case-256/candidate" / victim
                 target.unlink()
                 self._repair_binding(tag="candidate", staged=base / "staged")
-                verdict = R.admit_staged_276(base / "staged", "case-256", "candidate", False)
+                verdict = R.admit_staged_276(base / "staged", custody_root=base / "capture",
+                                             case="case-256", arm="candidate", repeat=False)
                 self.assertFalse(verdict["admitted"])
                 self.assertTrue(any("mandatory" in p for p in verdict["problems"]))
 
@@ -501,7 +504,7 @@ class ByteAdmissionTests(unittest.TestCase):
         target = self.staged / "units/case-256/candidate/rows/3.f32"
         target.write_bytes(b"candidate")
         self._repair_binding()
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("FP32" in p or "row" in p for p in verdict["problems"]))
 
@@ -512,7 +515,7 @@ class ByteAdmissionTests(unittest.TestCase):
         binding = json.loads(binding_path.read_bytes())
         binding["campaign"] = "attacker-campaign"
         binding_path.write_bytes(canonical(binding))
-        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("campaign" in p for p in verdict["problems"]))
 
@@ -521,7 +524,7 @@ class ByteAdmissionTests(unittest.TestCase):
         self.builder.capture("candidate", False)
         with self.assertRaisesRegex(R.ReaderError, "unknown arm"):
             self.stage("attacker-arm", False)
-        verdict = R.admit_staged_276(self.staged, "case-256", "attacker-arm", False)
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source, case="case-256", arm="attacker-arm", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def test_duplicate_json_keys_rejected(self):
@@ -559,7 +562,7 @@ class ByteAdmissionTests(unittest.TestCase):
         shutil.copytree(src, dst)
         R.stage_capture_276(self.source, self.staged, "case-256", "candidate", False)
         R.stage_capture_276(self.source, self.staged, "case-256", "candidate", True)
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("repeat" in p.lower() for p in verdict["problems"]))
 
@@ -576,7 +579,7 @@ class ByteAdmissionTests(unittest.TestCase):
         donor = (self.staged / "units/case-256/candidate/rows/0.f32").read_bytes()
         target.write_bytes(donor)
         self._repair_binding("reference")
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("aliasing" in p for p in verdict["problems"]))
 
@@ -681,7 +684,7 @@ class ByteAdmissionTests(unittest.TestCase):
         for arm in ("reference", "candidate"):
             for repeat in (False, True):
                 R.stage_capture_276(capture, staged, "case-256", arm, repeat)
-        verdict = R.admit_pair_276(staged, "case-256")
+        verdict = R.admit_pair_276(staged, custody_root=capture, case="case-256")
         # The pinned documented limitation: this ADMITS at the fixture level.
         self.assertTrue(verdict["admitted"], verdict["problems"])
 
@@ -706,7 +709,7 @@ class ByteAdmissionTests(unittest.TestCase):
             self.builder.capture(arm, True)
             self.stage(arm, False)
             self.stage(arm, True)
-        self.assertTrue(R.admit_pair_276(self.staged, "case-256")["admitted"])
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")["admitted"])
         # Partial bilateral permutation: decision 3 only, both arm tiers.
         for tag_a, tag_b in (("reference", "candidate"),
                              ("reference-repeat", "candidate-repeat")):
@@ -717,7 +720,7 @@ class ByteAdmissionTests(unittest.TestCase):
             b.write_bytes(tmp)
         for tag in ("reference", "candidate", "reference-repeat", "candidate-repeat"):
             self._repair_binding(tag)
-        verdict = R.admit_pair_276(self.staged, "case-256")
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         # The pinned documented limitation: this ADMITS at the fixture level.
         self.assertTrue(verdict["admitted"], verdict["problems"])
 
@@ -733,6 +736,178 @@ class ByteAdmissionTests(unittest.TestCase):
         binding["files"] = {p.relative_to(unit).as_posix(): _h.sha256(p.read_bytes()).hexdigest()
                             for p in sorted(unit.rglob("*")) if p.is_file()}
         binding_path.write_bytes(canonical(binding))
+
+    # -- round 3: realistic same-host/same-boot incarnations -----------------
+    def _capture_at(self, case, arm, repeat, pid, ticks, boot):
+        """Capture one genuine run through the production collector path
+        with an explicit process incarnation (same boot for the whole case
+        when the caller chooses: one host, one boot session)."""
+        harness = Harness(arm, pid, boot, ticks)
+        tag = arm + ("-repeat" if repeat else "")
+        run_root = self.source / "source" / case / tag
+        KC.capture_execution_273(case, arm, repeat, harness.receipt(), harness, self.source)
+        write_rows(run_root, arm)
+        return run_root
+
+    def test_same_host_same_boot_primary_repeat_and_cross_arm_admit(self):
+        """Round-3 RED target (maintainer directive, part 1).
+
+        A REALISTIC single-host campaign: every unit of the case runs on
+        ONE host inside ONE boot session, so all four captures share the
+        boot id and differ ONLY by process incarnation (distinct PIDs and
+        start ticks) and by distinct source captures. Distinctness must be
+        judged on the incarnation (pid, boot, start ticks) as a whole — a
+        shared boot id is not impersonation, it is the normal same-host
+        shape. The fixture does NOT manufacture different boot ids per
+        capture to satisfy the validator."""
+        boot = "b-3f9c1d2e4a5b6c7d-single-host-boot"
+        self._capture_at("case-boot", "reference", False, 8101, 1_200_000, boot)
+        self._capture_at("case-boot", "reference", True, 8102, 1_240_000, boot)
+        self._capture_at("case-boot", "candidate", False, 8144, 1_310_000, boot)
+        self._capture_at("case-boot", "candidate", True, 8147, 1_355_000, boot)
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                R.stage_capture_276(self.source, self.staged, "case-boot", arm, repeat)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-boot")
+        self.assertEqual(verdict["problems"], [])
+        self.assertTrue(verdict["admitted"])
+
+    def test_identical_incarnation_repeat_still_rejected_same_boot(self):
+        """Guard: within the same-boot world, a repeat whose process
+        incarnation is IDENTICAL to the primary's (same pid, boot, and
+        start ticks — a second capture, not a second process) must still
+        fail closed."""
+        boot = "b-3f9c1d2e4a5b6c7d-single-host-boot"
+        self._capture_at("case-boot", "candidate", False, 8201, 2_000_000, boot)
+        self._capture_at("case-boot", "candidate", True, 8201, 2_000_000, boot)
+        self._capture_at("case-boot", "reference", False, 8301, 2_100_000, boot)
+        self._capture_at("case-boot", "reference", True, 8302, 2_140_000, boot)
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                R.stage_capture_276(self.source, self.staged, "case-boot", arm, repeat)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-boot")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("incarn" in p or "impersonat" in p for p in verdict["problems"]))
+
+    def test_source_capture_reuse_still_rejected_same_boot(self):
+        """Guard: within the same-boot world, copying the primary's source
+        capture directory as the repeat's source must still fail closed."""
+        boot = "b-3f9c1d2e4a5b6c7d-single-host-boot"
+        import shutil
+        self._capture_at("case-boot", "candidate", False, 8401, 3_000_000, boot)
+        shutil.copytree(self.source / "source/case-boot/candidate",
+                        self.source / "source/case-boot/candidate-repeat")
+        self._capture_at("case-boot", "reference", False, 8501, 3_100_000, boot)
+        self._capture_at("case-boot", "reference", True, 8502, 3_140_000, boot)
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                R.stage_capture_276(self.source, self.staged, "case-boot", arm, repeat)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-boot")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("incarnation" in p or "source" in p for p in verdict["problems"]))
+
+    # -- round 3: original-to-staged byte binding -----------------------------
+    def _stage_full_case(self, case="case-256"):
+        for arm in ("reference", "candidate"):
+            for repeat in (False, True):
+                self.builder.capture(arm, repeat, case=case)
+                R.stage_capture_276(self.source, self.staged, case, arm, repeat)
+
+    def test_bilateral_staged_row_swap_partial_repaired_digests_rejected(self):
+        """Round-3 RED target (maintainer directive, part 2).
+
+        A PARTIAL bilateral swap of staged row bytes across arms — one
+        decision swapped consistently in primary and repeat tiers — with
+        every attacker-writable staged digest repaired (bindings
+        recomputed over the swapped bytes). Per-arm determinism holds and
+        no aliasing signature exists, yet admission must FAIL: each
+        staged row no longer equals its collector-owned retained
+        original."""
+        self._stage_full_case()
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source,
+                                         case="case-256")["admitted"])
+        for tag_a, tag_b in (("reference", "candidate"),
+                             ("reference-repeat", "candidate-repeat")):
+            a = self.staged / f"units/case-256/{tag_a}/rows/3.f32"
+            b = self.staged / f"units/case-256/{tag_b}/rows/3.f32"
+            tmp = a.read_bytes()
+            a.write_bytes(b.read_bytes())
+            b.write_bytes(tmp)
+        for tag in ("reference", "candidate", "reference-repeat", "candidate-repeat"):
+            self._repair_binding(tag)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p or "original" in p for p in verdict["problems"]))
+
+    def test_bilateral_staged_row_swap_complete_repaired_digests_rejected(self):
+        """The COMPLETE bilateral permutation — every decision's row bytes
+        swapped across arms in both tiers, all staged digests repaired —
+        must fail through the same original-to-staged binding."""
+        self._stage_full_case()
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source,
+                                         case="case-256")["admitted"])
+        for d in range(C.DECISIONS):
+            for tag_a, tag_b in (("reference", "candidate"),
+                                 ("reference-repeat", "candidate-repeat")):
+                a = self.staged / f"units/case-256/{tag_a}/rows/{d}.f32"
+                b = self.staged / f"units/case-256/{tag_b}/rows/{d}.f32"
+                tmp = a.read_bytes()
+                a.write_bytes(b.read_bytes())
+                b.write_bytes(tmp)
+        for tag in ("reference", "candidate", "reference-repeat", "candidate-repeat"):
+            self._repair_binding(tag)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p or "original" in p for p in verdict["problems"]))
+
+    def test_within_arm_decision_permutation_repaired_digests_rejected(self):
+        """A decision-level permutation INSIDE one arm (decisions 1 and 4
+        exchanged consistently in primary and repeat, so per-arm
+        determinism still holds), staged digests repaired, must fail:
+        each decision's row is bound to its own collector-owned
+        original."""
+        self._stage_full_case()
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source,
+                                         case="case-256")["admitted"])
+        for tag in ("reference", "reference-repeat", "candidate", "candidate-repeat"):
+            one = self.staged / f"units/case-256/{tag}/rows/1.f32"
+            four = self.staged / f"units/case-256/{tag}/rows/4.f32"
+            tmp = one.read_bytes()
+            one.write_bytes(four.read_bytes())
+            four.write_bytes(tmp)
+            self._repair_binding(tag)
+        verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p or "original" in p for p in verdict["problems"]))
+
+    def test_missing_custody_originals_fail_closed(self):
+        """Admission binds through the collector-owned retained originals:
+        when the accepted source custody is missing, admission fails
+        closed even though the staged unit is internally perfect."""
+        self.builder.capture("candidate", False)
+        self.stage("candidate", False)
+        import shutil
+        shutil.rmtree(self.source / "source/case-256/candidate")
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source,
+                                     case="case-256", arm="candidate", repeat=False)
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p for p in verdict["problems"]))
+
+    def test_retained_original_tamper_detected_by_admission(self):
+        """The original-to-staged comparison is live in BOTH directions:
+        mutating the retained original (staged unit untouched, binding
+        still true) must fail admission — staged bytes no longer equal
+        the collector-owned original."""
+        self.builder.capture("candidate", False)
+        self.stage("candidate", False)
+        target = self.source / "source/case-256/candidate/rows/2.f32"
+        data = bytearray(target.read_bytes())
+        data[9] ^= 0x33
+        target.write_bytes(bytes(data))
+        verdict = R.admit_staged_276(self.staged, custody_root=self.source,
+                                     case="case-256", arm="candidate", repeat=False)
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p or "original" in p for p in verdict["problems"]))
 
     def test_staging_rejects_source_missing_row_file(self):
         self.builder.capture("candidate", False)
@@ -761,8 +936,8 @@ class ByteAdmissionTests(unittest.TestCase):
         # collector-origin); the boundary is the collector, not the copy.
         R.stage_capture_276(fabricated_root, self.base / "fab-complete/staged",
                             "case-256", "candidate", False)
-        verdict = R.admit_staged_276(self.base / "fab-complete/staged", "case-256",
-                                     "candidate", False)
+        verdict = R.admit_staged_276(self.base / "fab-complete/staged", custody_root=fabricated_root,
+                                     case="case-256", arm="candidate", repeat=False)
         self.assertTrue(verdict["admitted"])
         # But a hand-EDITED inventory (the only non-self-authenticating
         # surface) is refused: its digest no longer matches observation.json.
@@ -774,7 +949,8 @@ class ByteAdmissionTests(unittest.TestCase):
             "sha256": hashlib.sha256(b"x").hexdigest(), "bytes": 1}
         obs_path.write_bytes(canonical(obs))
         self._repair_root_binding(staged2, "candidate")
-        verdict = R.admit_staged_276(staged2, "case-256", "candidate", False)
+        verdict = R.admit_staged_276(staged2, custody_root=fabricated_root, case="case-256",
+                                     arm="candidate", repeat=False)
         self.assertFalse(verdict["admitted"])
 
     def _repair_root_binding(self, staged_root, tag):
