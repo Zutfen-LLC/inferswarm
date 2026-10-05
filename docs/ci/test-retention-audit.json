@@ -3300,7 +3300,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+   "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c\u2026, stable AMD row 2187ab8f\u2026, V0n dispatch 4aa0aa0b\u2026, freeze 3fe9e74d\u2026, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
    "lineage": "R8-I3B reference runtime-boundary localization (#250)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -3521,7 +3521,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+   "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations \u2014 a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) \u2014 the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
    "lineage": "R8-I3B reference runtime-boundary localization (#250)",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -5705,6 +5705,27 @@
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 34
+  },
+  "test_issue277_reference_first": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 110.0,
+   "baseline_test_count": 13,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #277 reference-first orchestration: primary/repeat determinism is derived only from independently admitted #276 row bytes for every frozen required case (case-256, case-1024, case-3072); the candidate executor callback is structurally unreachable until all reference cases are admitted and deterministic, a case-3072 reference mismatch blocks with zero candidate launches, missing/invalid reference evidence fails closed with a terminal distinct from an observed validly-admitted mismatch, candidate nondeterminism blocks pair comparison, and no caller boolean, forged verdict dictionary, mutated case list, or comparison-callback mutation can bypass admission or alter the record.",
+   "lineage": "Issue #277 RED-first reference-first gate derived from the #276 admitted-row interface",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue277_orchestrator.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive the production orchestration entry point with a recording executor and the #276 bundle machinery; success is a fixture candidate gate only and no physical result is claimed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 13
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
