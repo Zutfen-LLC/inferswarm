@@ -18,6 +18,7 @@ import issue273_reducer as R
 from issue276_reader import ReaderError, admit_pair_276, admit_staged_276
 
 SCHEMA = "inferswarm.issue277.reference-first/1"
+_REQUIRED_CASES = ("case-256", "case-1024", "case-3072")
 _EVIDENCE_ERRORS = (ReaderError, OSError, ValueError, TypeError, KeyError, IndexError)
 _ROWS = {str(d) for d in range(C.DECISIONS)}
 
@@ -76,16 +77,28 @@ def orchestrate_277(staged_root: Path, custody_root: Path,
                     ) -> dict[str, Any]:
     """Gate all required cases in two phases: ALL references, THEN candidates.
 
-    The executor is called once per case, in C.FIXTURE_CASES order. Its result
-    is discarded: only independently admitted #276 row bytes can determine
-    the result. Pair comparison (optional, once per case) is reached only
+    The executor is called once per frozen required case, only after a
+    full-set check against C.FIXTURE_CASES. Its result is discarded: only
+    independently admitted #276 row bytes can determine the result.
+    Pair comparison (optional, once per case) is reached only
     after *all* candidate admissions/determinism and #276 pair law pass.
     No callback receives a caller-authored verdict or physical authority.
     """
     staged_root, custody_root = Path(staged_root), Path(custody_root)
     record = {"schema": SCHEMA, "status": "blocked", "terminal": None,
               "problems": [], "candidate_launches": 0, "cases": {}}
-    cases = tuple(C.FIXTURE_CASES)
+    try:
+        live_cases = tuple(C.FIXTURE_CASES)
+    except (TypeError, ValueError):
+        live_cases = ()
+    cases = _REQUIRED_CASES
+    if (len(live_cases) != len(cases)
+            or any(case not in live_cases for case in cases)):
+        record["terminal"] = R.TERMINAL_RUNTIME_BLOCKED_273
+        record["problems"].append(
+            f"required #277 fixture cases {cases!r} do not match live "
+            f"C.FIXTURE_CASES {live_cases!r}")
+        return record
     for case in cases:
         record["cases"][case] = {}
         item, issues, valid = _arm(staged_root, custody_root, case, "reference")
@@ -144,8 +157,10 @@ def orchestrate_277(staged_root: Path, custody_root: Path,
     for case in cases:
         if pair_comparison is not None:
             try:
-                pair_comparison(case, record["cases"][case]["reference"]["primary_row_sha256"],
-                                record["cases"][case]["candidate"]["primary_row_sha256"])
+                pair_comparison(
+                    case,
+                    dict(record["cases"][case]["reference"]["primary_row_sha256"]),
+                    dict(record["cases"][case]["candidate"]["primary_row_sha256"]))
             except Exception as exc:
                 record["problems"].append(f"{case} pair comparison failed: {exc}")
                 record["terminal"] = R.TERMINAL_RUNTIME_BLOCKED_273
