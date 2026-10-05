@@ -568,8 +568,10 @@ class ByteAdmissionTests(unittest.TestCase):
 
     def test_unilateral_row_copy_rejected_on_aliasing(self):
         """A one-directional row copy across arms IS detectable and rejected
-        (the bilateral-permutation canary below must not be read as 'all row
-        attacks pass')."""
+        (the bilateral-permutation history here must not be read as 'all
+        row attacks pass'). With custody binding (round 3) the copy is
+        caught by the original-to-staged comparison first; the cross-arm
+        aliasing signature remains the catch for digest-only callers."""
         for arm in ("reference", "candidate"):
             self.builder.capture(arm, False)
             self.builder.capture(arm, True)
@@ -581,7 +583,13 @@ class ByteAdmissionTests(unittest.TestCase):
         self._repair_binding("reference")
         verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
         self.assertFalse(verdict["admitted"])
-        self.assertTrue(any("aliasing" in p for p in verdict["problems"]))
+        self.assertTrue(any("aliasing" in p or "custody" in p or "original" in p
+                            for p in verdict["problems"]))
+        # Legacy form (no retained custody at hand): the aliasing law
+        # itself still rejects the unilateral copy.
+        verdict_legacy = R.admit_pair_276(self.staged, case="case-256")
+        self.assertFalse(verdict_legacy["admitted"])
+        self.assertTrue(any("aliasing" in p for p in verdict_legacy["problems"]))
 
     def test_documented_origin_boundary_fully_authored_bundle_admits(self):
         """DOCUMENTED LIMITATION (canary) — open origin observation, round 2.
@@ -688,29 +696,25 @@ class ByteAdmissionTests(unittest.TestCase):
         # The pinned documented limitation: this ADMITS at the fixture level.
         self.assertTrue(verdict["admitted"], verdict["problems"])
 
-    def test_documented_origin_boundary_bilateral_row_permutation_admits(self):
-        """DOCUMENTED LIMITATION (canary) — open origin observation, round 2.
+    def test_bilateral_staged_row_permutation_now_rejected_round3(self):
+        """INVERTED round-3 canary (was: documented origin boundary).
 
-        ANY bilateral permutation of row bytes across arms — a single
-        decision swapped consistently in primary and repeat, up to the
-        complete set — survives the reader: per-arm determinism holds
-        (both arms' swaps are internally consistent), rows still differ
-        across arms (no aliasing signature), and rows have no upstream
-        derivation source to contradict. Rows bind to physical arms only
-        through the capture window (contemporaneous incarnation,
-        residency, census over raw probes), which a CPU fixture cannot
-        represent; an invented row-arm seal is forbidden by the #276
-        acceptance. Unilateral copies and repeat-only drift ARE rejected
-        (pinned elsewhere). This canary makes the limitation falsifiable:
-        invert or delete it together with the boundary documentation when
-        the physical campaign binds rows to capture windows."""
+        Round 2 pinned that ANY bilateral permutation of row bytes
+        across arms survived the reader because rows had no upstream
+        derivation source. Round 3 closes exactly that gap: admission
+        binds every staged byte to its collector-owned retained original
+        (plain byte equality against the custody root), so partial and
+        complete bilateral swaps — with every attacker-writable staged
+        digest repaired — fail closed. The detailed variants are pinned
+        by the round-3 tests above; this canary keeps the inversion
+        itself falsifiable at the original fixture shape."""
         for arm in ("reference", "candidate"):
             self.builder.capture(arm, False)
             self.builder.capture(arm, True)
             self.stage(arm, False)
             self.stage(arm, True)
-        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")["admitted"])
-        # Partial bilateral permutation: decision 3 only, both arm tiers.
+        self.assertTrue(R.admit_pair_276(self.staged, custody_root=self.source,
+                                         case="case-256")["admitted"])
         for tag_a, tag_b in (("reference", "candidate"),
                              ("reference-repeat", "candidate-repeat")):
             a = self.staged / f"units/case-256/{tag_a}/rows/3.f32"
@@ -721,8 +725,8 @@ class ByteAdmissionTests(unittest.TestCase):
         for tag in ("reference", "candidate", "reference-repeat", "candidate-repeat"):
             self._repair_binding(tag)
         verdict = R.admit_pair_276(self.staged, custody_root=self.source, case="case-256")
-        # The pinned documented limitation: this ADMITS at the fixture level.
-        self.assertTrue(verdict["admitted"], verdict["problems"])
+        # The round-2 limitation is CLOSED: this must NOT admit.
+        self.assertFalse(verdict["admitted"])
 
 
     def _repair_binding(self, tag="candidate", staged=None):

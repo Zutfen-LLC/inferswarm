@@ -490,7 +490,47 @@ def stage_capture_276(capture_root: Path, staged_root: Path, case: str, arm: str
 # Admission: reader over staged bytes
 # ---------------------------------------------------------------------------
 
-def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> dict[str, Any]:
+def _require_custody_binding(custody_root: Path, binding_path: Path, unit_dir: Path,
+                             case: str, arm: str, repeat: bool,
+                             problems: list[str]) -> None:
+    """Round 3: original-to-staged byte binding.
+
+    Every staged byte must equal its collector-owned retained original
+    under custody_root/source/<case>/<tag>, byte for byte. The retained
+    originals are already-authenticated collector output (validated by
+    the same law at staging); the staged copy may not diverge from them
+    in either direction, and missing accepted source custody fails
+    closed. Plain byte equality only — no digest-only comparison (a
+    staged-side digest can be recomputed by an attacker), no seal.
+    """
+    tag = arm + ("-repeat" if repeat else "")
+    source_run = Path(custody_root) / "source" / case / tag
+    try:
+        originals = _collect_files(source_run)
+    except ReaderError as exc:
+        problems.append(f"accepted source custody missing/unsafe for {tag}: {exc}")
+        return
+    staged = _collect_files(unit_dir)
+    bound = _parse(binding_path.read_bytes(), "staged binding")
+    bound_files = bound.get("files") if isinstance(bound, dict) else None
+    expected = set(originals)
+    if isinstance(bound_files, dict):
+        expected |= set(bound_files)
+    for rel in sorted(expected):
+        if rel not in staged:
+            problems.append(f"staged file absent from unit: {rel}")
+        elif rel not in originals:
+            problems.append(f"no collector-owned retained original for staged file {rel} "
+                            "(staged bytes are not collector output)")
+        elif staged[rel] != originals[rel]:
+            problems.append(f"staged bytes != collector-owned retained original: {rel} "
+                            "(custody binding violation)")
+    for rel in sorted(set(staged) - expected):
+        problems.append(f"staged file has no custody basis: {rel}")
+
+
+def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool,
+                     custody_root: Path | None = None) -> dict[str, Any]:
     """Admit one staged unit from its bytes.
 
     Every digest is recomputed from the staged bytes, every identity
@@ -498,6 +538,17 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
     binding may carry ONLY custody fields and byte digests — any other
     authority-ish field (an invented seal, signature, or manifest
     assertion) is rejected.
+
+    custody_root (round 3) closes the original-to-staged byte-binding
+    gap: the collector-owned retained originals. When provided, every
+    staged byte must equal its retained original exactly — the staging
+    copy is not a second source of truth, and any post-staging edit of
+    EITHER side fails closed. Missing accepted source custody also
+    fails closed. (The parameter is not authority: the originals are
+    already-authenticated collector output, compared by plain byte
+    equality; the default-None legacy form remains self-contained
+    integrity+derivation admission for callers without retained
+    custody.)
     """
     tag = arm + ("-repeat" if repeat else "")
     problems: list[str] = []
@@ -512,6 +563,15 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
         return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
                 "admitted": False,
                 "problems": [f"staged unit missing: {binding_path}"], "derived": {}}
+    # Original-to-staged byte binding (round 3). The retained originals
+    # are already-authenticated collector output (their integrity is
+    # enforced at staging); here every staged byte must EQUAL its
+    # collector-owned original. This is the only original-to-staged
+    # authority: plain byte equality through the production path, never
+    # a digest the staged side can recompute or a seal it can forge.
+    if custody_root is not None:
+        _require_custody_binding(custody_root, binding_path, unit_dir, case,
+                                 arm, repeat, problems)
     binding = _parse(binding_path.read_bytes(), "staged binding")
     if not isinstance(binding, dict):
         return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
@@ -600,19 +660,22 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
             "admitted": not problems, "problems": problems, "derived": derived_out}
 
 
-def admit_pair_276(staged_root: Path, case: str) -> dict[str, Any]:
+def admit_pair_276(staged_root: Path, case: str,
+                   custody_root: Path | None = None) -> dict[str, Any]:
     """Admit one case's full staged bundle: both arms, primary + repeat.
 
     Order follows the corrected #273 law: per-arm admission (primary then
     repeat), per-arm deterministic-repeat equality, then cross-arm
     anti-aliasing. Source-run reuse, row aliasing, and shared process
-    provenance across arms all fail closed.
+    provenance across arms all fail closed. custody_root binds every
+    unit to its collector-owned retained originals (round 3).
     """
     problems: list[str] = []
     units: dict[tuple[str, bool], dict[str, Any]] = {}
     for arm in ("reference", "candidate"):
         for repeat in (False, True):
-            verdict = admit_staged_276(staged_root, case, arm, repeat)
+            verdict = admit_staged_276(staged_root, case, arm, repeat,
+                                       custody_root=custody_root)
             units[(arm, repeat)] = verdict
             problems += [f"{arm}{'+repeat' if repeat else ''}: {p}" for p in verdict["problems"]]
     # Per-arm deterministic repeats: identical row bytes per decision.
@@ -623,13 +686,20 @@ def admit_pair_276(staged_root: Path, case: str) -> dict[str, Any]:
                 if primary["derived"]["row_sha256"][decision] != repeat["derived"]["row_sha256"].get(decision):
                     problems.append(f"{arm} primary/repeat decision {decision} row digest "
                                     "mismatch — determinism claim rejected")
-            # A repeat is a DISTINCT physical execution: it may not reuse the
-            # primary's process incarnation or its retained capture bytes.
-            for label, field in (("process pid", "pid"), ("boot id", "boot_id"),
-                                 ("start ticks", "start_ticks")):
-                if primary["derived"].get(field) == repeat["derived"].get(field):
-                    problems.append(f"{arm} repeat shares the primary's {label} — "
-                                    "one capture cannot impersonate its own repeat")
+            # A repeat is a DISTINCT physical execution: its process
+            # incarnation (pid, boot id, start ticks) as a whole must
+            # differ from the primary's, and it may not reuse the
+            # primary's retained capture bytes. Sharing SOME fields is
+            # the normal same-host shape — two processes of one boot
+            # session share the boot id, sequential PIDs may repeat
+            # across hosts — so distinctness is judged on the complete
+            # incarnation tuple, never per-field.
+            prim_incarn = tuple(primary["derived"].get(f) for f in ("pid", "boot_id", "start_ticks"))
+            rep_incarn = tuple(repeat["derived"].get(f) for f in ("pid", "boot_id", "start_ticks"))
+            if prim_incarn == rep_incarn:
+                problems.append(f"{arm} repeat shares the primary's full process "
+                                "incarnation (pid, boot id, start ticks) — one capture "
+                                "cannot impersonate its own repeat")
             prim_binding = _parse((Path(staged_root) / "units" / case / f"{arm}.json").read_bytes(), "binding")
             rep_binding = _parse((Path(staged_root) / "units" / case / f"{arm}-repeat.json").read_bytes(), "binding")
             if prim_binding.get("files") == rep_binding.get("files"):
@@ -645,9 +715,14 @@ def admit_pair_276(staged_root: Path, case: str) -> dict[str, Any]:
                                 "digest for reference and candidate")
         _require(ref["derived"]["icd"] != cand["derived"]["icd"],
                  "reference/candidate ICDs identical — mutually exclusive backends required", problems)
-        for label, field in (("process pid", "pid"), ("boot id", "boot_id"), ("start ticks", "start_ticks")):
-            if ref["derived"].get(field) == cand["derived"].get(field):
-                problems.append(f"reference/candidate share the same {label} — not distinct executions")
+        # Cross-arm anti-aliasing on the COMPLETE incarnation tuple: the
+        # two arms must be distinct executions (same-host/same-boot is
+        # legal, identical incarnation is not).
+        ref_incarn = tuple(ref["derived"].get(f) for f in ("pid", "boot_id", "start_ticks"))
+        cand_incarn = tuple(cand["derived"].get(f) for f in ("pid", "boot_id", "start_ticks"))
+        _require(ref_incarn != cand_incarn,
+                 "reference/candidate share the same full process incarnation — "
+                 "not distinct executions", problems)
         ref_binding = _parse((Path(staged_root) / "units" / case / "reference.json").read_bytes(), "binding")
         cand_binding = _parse((Path(staged_root) / "units" / case / "candidate.json").read_bytes(), "binding")
         ref_src = ref_binding.get("files", {}).get("receipt.json")
