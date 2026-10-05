@@ -29,10 +29,10 @@ class FixtureExecutionHarness:
         self.exe = f"/srv/llama-server {C.COMPARATOR_SHA256}\n".encode()
         self.members = canonical({name: digest for name, digest in C.MODEL_MEMBER_SHA256.items()})
         self.devices = [
-            {"bdf":"0000:07:00.0", "index":"0", "vendor_id":"0x1002", "device_id":"0x6864",
+            {"bdf":"0000:07:00.0", "index":0, "vendor_id":"0x1002", "device_id":"0x6864",
              "vulkan_uuid":C.EXPECTED_VULKAN_DEVICE_UUIDS["0000:07:00.0"], "icd":C.RADV_ICD,
              "name":"AMD Radeon Pro V340", "physical_type":"DISCRETE_GPU", "selected":True},
-            {"bdf":"0000:0b:00.0", "index":"1", "vendor_id":"0x1002", "device_id":"0x6864",
+            {"bdf":"0000:0b:00.0", "index":1, "vendor_id":"0x1002", "device_id":"0x6864",
              "vulkan_uuid":C.EXPECTED_VULKAN_DEVICE_UUIDS["0000:0b:00.0"], "icd":C.RADV_ICD,
              "name":"AMD Radeon Pro V340", "physical_type":"DISCRETE_GPU", "selected":False},
         ]
@@ -82,7 +82,7 @@ class CollectorTests(unittest.TestCase):
         stem = self.root / "source/case-256/candidate"
         raw = stem / "raw"
         expected = {"boot_identity.start.bin":p.boot, "start_ticks.start.bin":p.ticks,
-                    "process_census.start.bin":p.read_process_census.__self__.read_process_census() if False else canonical({"boot_id":"recorded-boot-id", "processes":[{"pid":4321,"start_ticks":987654,"boot_id":"recorded-boot-id"}]}),
+                    "process_census.start.bin":canonical({"boot_id":"recorded-boot-id", "processes":[{"pid":4321,"start_ticks":987654,"boot_id":"recorded-boot-id"}]}),
                     "process_cmdline.start.bin":p.cmdline, "exe_identity.start.bin":p.exe,
                     "open_model_members.start.bin":p.members, "device_census.start.bin":canonical(p.devices)}
         # Three original samples per device; fake values are supplied in order.
@@ -98,7 +98,7 @@ class CollectorTests(unittest.TestCase):
         for rel, data in expected.items():
             self.assertEqual(obs["probe_inventory"][f"raw/{rel}"], {"sha256":digest(data),"bytes":len(data)})
         self.assertIn("subject_identity.bdf", obs["receipt_claims_checked"])
-        self.assertNotIn("receipt_claims", obs["devices"] and obs)
+        self.assertNotIn("receipt_claims", obs)
 
     def test_executable_and_effective_model_mismatches_fail_closed(self):
         for kind in ("exe", "model"):
@@ -106,7 +106,8 @@ class CollectorTests(unittest.TestCase):
                 p = FixtureExecutionHarness()
                 if kind == "exe": p.exe = f"/srv/other {('0'*64)}\n".encode()
                 else: p.cmdline = b"/srv/llama-server\0--model\0/tmp/wrong.gguf\0"
-                with self.assertRaises(K.CollectorError): self.run_capture(p)
+                with self.assertRaisesRegex(K.CollectorError, "comparator sha" if kind == "exe" else "effective --model"):
+                    self.run_capture(p)
                 self.assertFalse(self.root.exists())
 
     def test_missing_probe_output_is_collector_missing(self):
@@ -118,12 +119,14 @@ class CollectorTests(unittest.TestCase):
         for key in ("bdf", "vulkan_uuid", "index"):
             with self.subTest(key=key):
                 p = FixtureExecutionHarness(); p.devices[1][key] = p.devices[0][key]
-                with self.assertRaises(K.CollectorError): self.run_capture(p)
+                with self.assertRaisesRegex(K.CollectorError, "duplicate/missing"):
+                    self.run_capture(p)
                 self.assertFalse(self.root.exists())
 
     def test_excluded_device_residency_delta_at_noise_limit_rejected(self):
         p = FixtureExecutionHarness(); p.residencies["0000:0b:00.0"] = [0,C.EXCLUDED_NOISE_BYTES,0]
-        with self.assertRaises(K.CollectorError): self.run_capture(p)
+        with self.assertRaisesRegex(K.CollectorError, "exceeds noise bound"):
+            self.run_capture(p)
         self.assertFalse(self.root.exists())
 
     def test_receipt_bdf_claim_contradiction_names_field(self):
@@ -133,14 +136,22 @@ class CollectorTests(unittest.TestCase):
 
     def test_append_only_second_capture_refused(self):
         self.run_capture()
-        with self.assertRaises(K.CollectorError): self.run_capture()
+        before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        with self.assertRaises(K.CollectorError):
+            self.run_capture()
+        after = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        self.assertEqual(after, before)
 
     def test_symlinked_or_traversal_destination_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             outside = Path(td) / "outside"; outside.mkdir()
             self.root.mkdir()
             (self.root / "source").symlink_to(outside, target_is_directory=True)
-            with self.assertRaises(K.CollectorError): self.run_capture()
+            before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        with self.assertRaisesRegex(K.CollectorError, "unsafe destination directory"):
+            self.run_capture()
+        after = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        self.assertEqual(after, before)
         with self.assertRaises(K.CollectorError): self.run_capture(case="../escape")
 
     def test_receipt_claims_are_marked_checked_not_observations(self):

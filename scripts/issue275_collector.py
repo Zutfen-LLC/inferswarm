@@ -149,12 +149,33 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     if model_members != C.MODEL_MEMBER_SHA256: raise CollectorError("open_model_members contradict frozen model members")
     devices = _json(devices_raw, "device_census")
     if not isinstance(devices, list) or not devices: raise CollectorError("device census empty/malformed")
+    required = ("bdf", "vendor_id", "device_id", "vulkan_uuid", "icd", "name", "physical_type")
+    for d in devices:
+        if not isinstance(d, dict): raise CollectorError("census entry malformed: expected object")
+        for key in required:
+            if not isinstance(d.get(key), str) or not d[key].strip(): raise CollectorError(f"census entry missing/malformed {key}")
+        if type(d.get("index")) is not int: raise CollectorError("census entry missing/malformed index")
     for key in ("bdf", "vulkan_uuid", "index"):
         vals = [d.get(key) for d in devices]
         if any(v is None for v in vals) or len(set(vals)) != len(vals): raise CollectorError(f"ambiguous device census duplicate/missing {key}")
     env = receipt.get("process_attribution", {}).get("server_env", {})
     selected = [d for d in devices if str(d.get("index")) == str(env.get("GGML_VK_VISIBLE_DEVICES")) and d.get("icd") == env.get("VK_ICD_FILENAMES")]
     if len(selected) != 1: raise CollectorError("selector does not resolve exactly one census device")
+    if arm == "candidate":
+        for d in devices:
+            if d["vendor_id"] != C.EXPECTED_CANDIDATE["vendor_id"] or d["device_id"] != C.EXPECTED_CANDIDATE["device_id"] or d["icd"] != C.RADV_ICD:
+                raise CollectorError("candidate observed vendor/device/ICD drift")
+            if d["bdf"] not in C.EXPECTED_VULKAN_DEVICE_UUIDS or d["vulkan_uuid"] != C.EXPECTED_VULKAN_DEVICE_UUIDS[d["bdf"]]:
+                raise CollectorError("candidate observed Vulkan UUID drift")
+    else:
+        identity = C.reference_identity()
+        d = selected[0]
+        if (d["vendor_id"] != "0x10de" or d["device_id"] != "0x" + identity["pci_id"].split(":")[-1]
+                or d.get("gpu_uuid") != identity["gpu_uuid"] or d["vulkan_uuid"] != identity["vulkan_device_uuid"]
+                or d["bdf"] != identity["bdf"]): raise CollectorError("reference observed PCI/UUID lineage mismatch")
+        excluded = [x for x in devices if x is not d]
+        if not any(x["vendor_id"] == "0x1002" and x["device_id"] == "0x67df" and "RX 580" in x["name"] and x["icd"] == C.RADV_ICD for x in excluded):
+            raise CollectorError("positive RX580 excluded census absent")
     selected[0]["selected"] = True
     for d in devices:
         if d is not selected[0]: d["selected"] = False
@@ -166,7 +187,7 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     for d in devices:
         bdf = d["bdf"]
         samples = []
-        for phase in ("before", "peak", "after"):
+        for phase in ("start", "peak", "end"):
             raw = _raw(probes, "read_residency", bdf)
             retained[f"raw/residency.{phase}.{bdf}.bin"] = raw
             value = _json(raw, f"residency {phase}/{bdf}")
@@ -185,14 +206,17 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     root = Path(capture_root)
     if root.is_symlink(): raise CollectorError(f"symlink capture root: {root}")
     if not root.exists(): root.mkdir(parents=True)
+    destinations = [root / stem / rel for rel in retained]
+    if any(path.exists() or path.is_symlink() for path in destinations):
+        raise CollectorError(f"append-only destination exists: {next(p for p in destinations if p.exists() or p.is_symlink())}")
+    created: set[Path] = set()
     try:
-        for rel, data in retained.items(): _write_new(root, f"{stem}/{rel}", data)
+        for rel, data in retained.items():
+            path = root / stem / rel
+            _write_new(root, f"{stem}/{rel}", data)
+            created.add(path)
     except Exception:
-        base = root / stem
-        if base.exists() and not base.is_symlink():
-            for path in sorted(base.rglob("*"), reverse=True):
-                if path.is_file() and not path.is_symlink(): path.unlink()
-                elif path.is_dir() and not path.is_symlink(): path.rmdir()
-            base.rmdir()
+        for path in created:
+            if path.is_file() and not path.is_symlink(): path.unlink()
         raise
     return obs
