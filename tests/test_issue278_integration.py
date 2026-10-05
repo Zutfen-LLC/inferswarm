@@ -104,7 +104,11 @@ class IntegrationChainTests(unittest.TestCase):
             self.assertGreater(unit["files"], 0)
             self.assertGreater(unit["bytes"], 0)
             self.assertEqual(unit["files"], originals[key]["files"])
-            self.assertIn("inventory_sha256", originals[key])
+            # Capture-time and originals-stage per-unit inventories must be
+            # EQUAL, not merely present: the census is the drift detector.
+            self.assertEqual(unit["inventory_sha256"],
+                             originals[key]["inventory_sha256"])
+            self.assertEqual(unit["bytes"], originals[key]["bytes"])
         for key, unit in admission.items():
             case, tag = key.split("/")
             self.assertEqual(unit["source_stem"], f"source/{case}/{tag}")
@@ -151,12 +155,19 @@ class IntegrationChainTests(unittest.TestCase):
         self.assertEqual(record["status"],
                          "integration complete (tooling/fixture validation only)")
         # Staged-side tamper after a completed integrated run.
-        (self.staged / "units/case-1024/candidate/rows/7.f32").write_bytes(
-            fixture_row("candidate", "7")[::-1])
+        staged_row = self.staged / "units/case-1024/candidate/rows/7.f32"
+        staged_row.write_bytes(fixture_row("candidate", "7")[::-1])
         reeval = I.evaluate_278(self.staged, self.source, self.executor, self.compare)
         self.assertEqual(reeval["status"], "blocked")
         self.assertEqual(reeval["orchestration"]["terminal"],
                          R.TERMINAL_RUNTIME_BLOCKED_273)
+        # Restore the staged bytes so the custody-side probe is NOT
+        # confounded by the staged-side corruption above.
+        staged_row.write_bytes(fixture_row("candidate", "7"))
+        reeval_clean = I.evaluate_278(self.staged, self.source, self.executor,
+                                      self.compare)
+        self.assertEqual(reeval_clean["status"],
+                         "integration complete (tooling/fixture validation only)")
         # Custody-side tamper after a completed integrated run.
         (self.source / "source/case-256/reference/rows/0.f32").write_bytes(
             fixture_row("reference", "0")[::-1])
@@ -164,6 +175,83 @@ class IntegrationChainTests(unittest.TestCase):
         self.assertEqual(reeval2["status"], "blocked")
         self.assertEqual(reeval2["orchestration"]["terminal"],
                          R.TERMINAL_RUNTIME_BLOCKED_273)
+
+    def test_blocked_record_reports_observed_launches_and_evidence_label(self):
+        # Executor records its invocation then raises: the blocked record
+        # must report the launch that ACTUALLY happened, and every record
+        # (blocked or not) carries the tooling/fixture evidence label.
+        def raising_executor(case):
+            self.launches.append(case)
+            if case == C.FIXTURE_CASES[1]:
+                raise RuntimeError("recording fake failed mid-campaign")
+            return {}
+        record = I.run_integration_278(self.source, self.staged,
+                                       self.produce(), raising_executor,
+                                       self.compare)
+        self.assertEqual(record["status"], "blocked")
+        self.assertEqual(record["candidate_launches"], 1)
+        self.assertEqual(self.launches, [C.FIXTURE_CASES[0]])
+        self.assertEqual(record["evidence_class"], "tooling/fixture validation")
+        # Same honesty on the reevaluation path: a staged-side tamper that
+        # reaches execution reports the launches that occurred.
+        self.launches.clear()
+        ok = self.run_gate()
+        self.assertEqual(ok["status"],
+                         "integration complete (tooling/fixture validation only)")
+        (self.staged / "units/case-1024/candidate/rows/7.f32").write_bytes(
+            fixture_row("candidate", "7")[::-1])
+        reeval = I.evaluate_278(self.staged, self.source, self.executor,
+                                self.compare)
+        self.assertEqual(reeval["status"], "blocked")
+        self.assertEqual(reeval["candidate_launches"], len(self.launches))
+        self.assertEqual(reeval["evidence_class"], "tooling/fixture validation")
+
+    def test_executor_custody_tamper_blocks_at_final_verification(self):
+        # The executor runs AFTER reference admission: custody mutated
+        # there must invalidate the run at a final custody verification,
+        # not survive to completion with a stale record.
+        def tampering_executor(case):
+            self.launches.append(case)
+            if case == C.FIXTURE_CASES[0]:
+                row = self.source / "source/case-256/reference/rows/0.f32"
+                row.write_bytes(fixture_row("reference", "0")[::-1])
+            return {}
+        record = I.run_integration_278(self.source, self.staged,
+                                       self.produce(), tampering_executor,
+                                       self.compare)
+        self.assertEqual(record["status"], "blocked")
+        self.assertTrue(any("custody" in p for p in record["problems"]))
+        self.assertEqual(record["candidate_launches"], 1)
+
+    def test_comparison_callback_custody_tamper_blocks(self):
+        # The LAST callback in the chain: custody mutated after all
+        # admission must still invalidate the completed record.
+        def tampering_compare(case, reference, candidate):
+            self.comparisons.append(case)
+            if case == C.FIXTURE_CASES[-1]:
+                row = self.source / "source/case-3072/candidate/rows/2.f32"
+                row.write_bytes(fixture_row("candidate", "2")[::-1])
+            return {}
+        record = I.run_integration_278(self.source, self.staged,
+                                       self.produce(), self.executor,
+                                       tampering_compare)
+        self.assertEqual(record["status"], "blocked")
+        self.assertTrue(any("custody" in p for p in record["problems"]))
+        self.assertEqual(record["candidate_launches"], len(C.FIXTURE_CASES))
+
+    def test_evaluate_278_asserts_reducer_fail_closed(self):
+        from unittest.mock import patch
+        self.fixture = None  # unused guard
+        ok = self.run_gate()
+        self.assertEqual(ok["status"],
+                         "integration complete (tooling/fixture validation only)")
+        forged_pass = {"terminal": R.TERMINAL_PASS_273, "problems": []}
+        with patch.object(I.R, "derive_terminal_273", return_value=forged_pass):
+            reeval = I.evaluate_278(self.staged, self.source, self.executor,
+                                    self.compare)
+        self.assertEqual(reeval["status"], "blocked")
+        self.assertTrue(any("physical terminal authority" in p
+                            for p in reeval["problems"]))
 
     def test_forged_verdicts_cannot_mint_physical_terminal(self):
         record = self.run_gate()
