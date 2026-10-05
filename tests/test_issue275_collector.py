@@ -107,13 +107,13 @@ class CollectorTests(unittest.TestCase):
         d.update({"bdf":identity["bdf"], "vendor_id":"0x10de", "device_id":"0x"+identity["pci_id"].split(":")[-1], "gpu_uuid":identity["gpu_uuid"], "vulkan_uuid":identity["vulkan_device_uuid"], "icd":identity["icd"], "name":identity["vulkan_device_name"]})
         p.devices[1].update({"vendor_id":"0x1002", "device_id":"0x67df", "name":"AMD RX 580", "icd":C.RADV_ICD})
         p.residencies={d["bdf"]:[0,10,0], p.devices[1]["bdf"]:[0,100,0]}
-        p.env_icd = identity["icd"]; p.used_driver_id = identity["kernel_driver"]
+        p.env_icd = identity["icd"]; p.used_driver_id = K.NVIDIA_VULKAN_DRIVER_ID
         rec=json.loads(canonical(self.receipt)); rec["process_attribution"]["server_env"]["VK_ICD_FILENAMES"]=identity["icd"]; rec["subject_identity"]["bdf"]=identity["bdf"]
         self.run_capture(p, receipt=rec, arm="reference")
         stem=self.root/"source/case-256/reference"
         self.assertEqual((stem/"raw/device_census.start.bin").read_bytes(), canonical(p.devices))
         obs=json.loads((stem/"observation.json").read_bytes())
-        self.assertEqual(obs["reference_identity"], identity)
+        self.assertEqual(obs["reference_identity_expected"], identity)
         self.assertFalse(obs["devices"][1]["selected"])
 
     def test_repeat_capture_uses_repeat_stem(self):
@@ -243,7 +243,7 @@ class CollectorTests(unittest.TestCase):
                              "device_id":"0x1234", "vulkan_uuid":"excluded-device-uuid",
                              "icd":C.RADV_ICD, "name":"Other AMD GPU"})
         p.residencies = {"00000000:03:00.0":[0,6_300_000_000,0], "0000:0b:00.0":[0,100,0]}
-        p.env_icd = identity["icd"]; p.used_driver_id = identity["kernel_driver"]
+        p.env_icd = identity["icd"]; p.used_driver_id = K.NVIDIA_VULKAN_DRIVER_ID
         receipt = json.loads(canonical(self.receipt))
         receipt["process_attribution"]["server_env"] = {
             "GGML_VK_VISIBLE_DEVICES":"0", "VK_ICD_FILENAMES":identity["icd"]}

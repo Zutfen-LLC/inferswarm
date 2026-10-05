@@ -5665,7 +5665,7 @@
   "test_issue275_provenance": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 25,
+   "baseline_test_count": 37,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
@@ -5682,7 +5682,7 @@
    "rationale": "CPU fixture tests cover observed-selection derivation, receipt claim-only semantics, incarnation closing, and the mandatory negative controls without physical execution authority.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 25
+   "test_count_at_audit": 37
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

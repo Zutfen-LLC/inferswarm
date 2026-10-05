@@ -59,6 +59,11 @@ class ExecutionProbes:
 
 _ENV_SELECTOR_KEY = "GGML_VK_VISIBLE_DEVICES"
 _ENV_ICD_KEY = "VK_ICD_FILENAMES"
+# VkDriverId domain: the driver-ID enumeration name for the accepted NVIDIA
+# proprietary reference ICD (scripts/issue270_authority.py is a frozen
+# #273 predecessor file and cannot carry this round-4 constant). Parallel
+# to the #243 census-derived DRIVER_ID_MESA_RADV candidate identity.
+NVIDIA_VULKAN_DRIVER_ID = "DRIVER_ID_NVIDIA_PROPRIETARY"
 
 
 def _parse_environ(raw: bytes) -> dict[str, str]:
@@ -86,13 +91,21 @@ def encode(doc: Any) -> bytes:
 
 
 def _json(raw: bytes, label: str) -> Any:
-    try: return json.loads(raw)
+    def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        seen: set[str] = set()
+        for key, _ in pairs:
+            if key in seen: raise ValueError(f"duplicate key {key!r}")
+            seen.add(key)
+        return dict(pairs)
+    try: return json.loads(raw, object_pairs_hook=_no_duplicates)
     except (ValueError, UnicodeDecodeError) as exc: raise CollectorError(f"{label} malformed: {exc}") from exc
 
 
 def _raw(probes: Any, method: str, *args: Any) -> bytes:
     try: data = getattr(probes, method)(*args)
     except (FileNotFoundError, KeyError) as exc: raise CollectorMissing(f"{method} absent: {exc}") from exc
+    except (AttributeError, NotImplementedError) as exc:
+        raise CollectorMissing(f"{method} unavailable on probe surface: {exc}") from exc
     if not isinstance(data, bytes) or not data: raise CollectorMissing(f"{method} returned missing/empty output")
     return data
 
@@ -190,12 +203,16 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     used_raw = keep("used_vulkan_device", _raw(probes, "read_used_vulkan_device", pid))
     try:
         boot = boot_raw.decode().strip()
+        if not boot: raise CollectorError("boot identity empty")
         ticks = int(ticks_raw.decode().strip())
+        if ticks < 0: raise CollectorError("start ticks negative")
         census = _json(census_raw, "process_census")
         if census.get("boot_id") != boot: raise CollectorError("process census/boot mismatch")
         rows = [r for r in census.get("processes", []) if r.get("pid") == pid]
         if len(rows) != 1: raise CollectorError("process not found uniquely in census")
         if rows[0].get("boot_id") != boot or rows[0].get("start_ticks") != ticks: raise CollectorError("census/boot mismatch vs start-tick bytes")
+    except CollectorError:
+        raise
     except (ValueError, AttributeError, TypeError) as exc: raise CollectorError(f"process identity malformed: {exc}") from exc
     exe_path, exe_sha = _read_exe(exe_raw)
     if exe_sha != C.COMPARATOR_SHA256: raise CollectorError("exe_identity.sha256 != expected comparator sha")
@@ -224,22 +241,25 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     obs_selector = _required_env(proc_env, _ENV_SELECTOR_KEY)
     if not re.fullmatch(r"[0-9]+", obs_selector):
         raise CollectorError(f"observed environ {_ENV_SELECTOR_KEY} must be a digit string")
+    try: obs_selector_index = int(obs_selector)
+    except ValueError as exc: raise CollectorError(f"observed environ {_ENV_SELECTOR_KEY} unparseable: {exc}") from exc
     obs_icd = _required_env(proc_env, _ENV_ICD_KEY)
     used = _json(used_raw, "used_vulkan_device")
     if not isinstance(used, dict): raise CollectorError("used_vulkan_device must be an object")
-    for key in ("backend", "icd", "vulkan_uuid", "bdf"):
+    for key in ("backend", "icd", "vulkan_uuid", "bdf", "driver_id"):
         if not isinstance(used.get(key), str) or not used[key].strip():
             raise CollectorError(f"used_vulkan_device missing/malformed {key}")
     if type(used.get("index")) is not int: raise CollectorError("used_vulkan_device missing/malformed index")
     if used["backend"] != "vulkan":
         raise CollectorError(f"unsupported observed backend: {used['backend']!r}")
+    obs_driver_id = used["driver_id"]
     obs_uuid = used["vulkan_uuid"]
     selected = [d for d in devices if d["vulkan_uuid"] == obs_uuid]
     if len(selected) != 1:
         raise CollectorError("observed used Vulkan UUID absent/ambiguous in device census")
     if selected[0]["bdf"] != used["bdf"]:
         raise CollectorError("used_vulkan_device BDF contradicts census entry for the used UUID")
-    if selected[0]["index"] != used["index"] or selected[0]["index"] != int(obs_selector):
+    if selected[0]["index"] != used["index"] or selected[0]["index"] != obs_selector_index:
         raise CollectorError("observed selector/used-device index disagreement (stale index assumption)")
     if selected[0]["icd"] != obs_icd or used["icd"] != obs_icd:
         raise CollectorError("observed ICD disagrees between environ and used-device observation")
@@ -260,11 +280,18 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
             raise CollectorError("receipt claim process_attribution.server_env.VK_ICD_FILENAMES contradicts observed ICD")
     reference_identity = None
     if arm == "candidate":
+        # The frozen two-die census is REQUIRED in full: an omitted second
+        # die would silently remove its exclusion evidence (fail closed).
+        census_bdfs = {d["bdf"] for d in devices}
+        if census_bdfs != set(C.DIE_BDFS):
+            raise CollectorError("candidate device census does not match the frozen two-die BDF set")
         for d in devices:
             if d["vendor_id"] != C.EXPECTED_CANDIDATE["vendor_id"] or d["device_id"] != C.EXPECTED_CANDIDATE["device_id"] or d["icd"] != C.RADV_ICD:
                 raise CollectorError("candidate observed vendor/device/ICD drift")
             if d["bdf"] not in C.EXPECTED_VULKAN_DEVICE_UUIDS or d["vulkan_uuid"] != C.EXPECTED_VULKAN_DEVICE_UUIDS[d["bdf"]]:
                 raise CollectorError("candidate observed Vulkan UUID drift")
+        if obs_driver_id != C.EXPECTED_CANDIDATE["vulkan_driver_id"]:
+            raise CollectorError("candidate observed Vulkan driver identity drift")
     else:
         identity = C.reference_identity()
         reference_identity = identity
@@ -272,7 +299,7 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
         if (d["vendor_id"] != "0x10de" or d["device_id"] != "0x" + identity["pci_id"].split(":")[-1]
                 or d.get("gpu_uuid") != identity["gpu_uuid"] or d["vulkan_uuid"] != identity["vulkan_device_uuid"]
                 or d["bdf"] != identity["bdf"] or d["icd"] != identity["icd"] or used["icd"] != identity["icd"]
-                or used.get("driver_id") not in (None, identity["kernel_driver"])): raise CollectorError("reference observed PCI/UUID lineage mismatch")
+                or obs_driver_id != NVIDIA_VULKAN_DRIVER_ID): raise CollectorError("reference observed PCI/UUID lineage mismatch")
         excluded = [x for x in devices if x is not d]
         if not any(x["vendor_id"] == "0x1002" and x["device_id"] == "0x67df" and "RX 580" in x["name"] and x["icd"] == C.RADV_ICD for x in excluded):
             raise CollectorError("positive RX580 excluded census absent")
@@ -292,7 +319,7 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
             raw = _raw(probes, "read_residency", bdf)
             retained[f"raw/residency.{phase}.{bdf}.bin"] = raw
             value = _json(raw, f"residency {phase}/{bdf}")
-            if not isinstance(value.get("bytes"), int) or value["bytes"] < 0: raise CollectorError(f"residency {phase}/{bdf} counter malformed")
+            if not isinstance(value, dict) or type(value.get("bytes")) is not int or value["bytes"] < 0: raise CollectorError(f"residency {phase}/{bdf} counter malformed")
             samples.append(value["bytes"])
         residencies[bdf] = dict(zip(("before", "peak", "after"), samples))
         if not d["selected"] and samples[1] - samples[0] >= C.EXCLUDED_NOISE_BYTES: raise CollectorError(f"excluded device {bdf} residency delta exceeds noise bound")
@@ -329,7 +356,11 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
                       "incarnation_close":{"boot_id":close_boot,"start_ticks":close_ticks,"bound_same_process":True,
                                            "derived_from":["raw/boot_identity.end.bin","raw/start_ticks.end.bin"]}},
            "devices":devices,"residency":residencies,"observed_selection":observed_selection,"receipt_claims_checked":checks}
-    if reference_identity is not None: obs["reference_identity"] = reference_identity
+    if reference_identity is not None:
+        # Expected/frozen identity consumed for cross-checks — NOT a
+        # contemporaneous observation. Kept distinguishable from
+        # observed_selection, which derives only from retained raw bytes.
+        obs["reference_identity_expected"] = reference_identity
     retained["receipt.json"] = encode(receipt)
     retained["observation.json"] = encode(obs)
     root = Path(capture_root)

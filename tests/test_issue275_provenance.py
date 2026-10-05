@@ -320,7 +320,7 @@ class ReferenceHostSelectionProof(CaptureTestCase):
         p.used = {"backend": "vulkan", "icd": identity["icd"],
                   "vulkan_uuid": identity["vulkan_device_uuid"],
                   "bdf": identity["bdf"], "index": 0,
-                  "driver_id": identity["kernel_driver"]}
+                  "driver_id": K.NVIDIA_VULKAN_DRIVER_ID}
         p.residencies = {identity["bdf"]: [0, 10, 0], "0000:0b:00.0": [0, 100, 0]}
         receipt = json.loads(canonical(self.receipt))
         receipt["process_attribution"]["server_env"]["VK_ICD_FILENAMES"] = identity["icd"]
@@ -341,7 +341,7 @@ class ReferenceHostSelectionProof(CaptureTestCase):
         rx580 = [d for d in obs["devices"] if d["vendor_id"] == "0x1002"]
         self.assertEqual(rx580[0]["selected"], False)
         self.assertEqual(obs["residency"][rx580[0]["bdf"]]["peak"], 100)
-        self.assertIn("reference_identity", obs)
+        self.assertIn("reference_identity_expected", obs)
 
     def test_receipt_claims_reference_while_observed_backend_is_radv_fails_closed(self):
         # Observed bytes say the process used the RADV/RX 580 path while the
@@ -365,7 +365,8 @@ class ReferenceHostSelectionProof(CaptureTestCase):
         p, identity, receipt = self.reference_harness()
         p.residencies = {identity["bdf"]: [0, 10, 0], "0000:0b:00.0": [0, 100, 0]}
         with self.assertRaisesRegex(
-                K.CollectorError, "candidate observed vendor/device/ICD drift"):
+                K.CollectorError,
+                "candidate observed vendor/device/ICD drift|frozen two-die BDF set"):
             self.run_capture(p, receipt=receipt, case="ref-cand-case")
         self.assertFalse(self.root.exists())
 
@@ -403,15 +404,201 @@ class CandidateHostSelectionProof(CaptureTestCase):
         p.used = {"backend": "vulkan", "icd": identity["icd"],
                   "vulkan_uuid": identity["vulkan_device_uuid"],
                   "bdf": identity["bdf"], "index": 0,
-                  "driver_id": identity["kernel_driver"]}
+                  "driver_id": K.NVIDIA_VULKAN_DRIVER_ID}
         p.residencies = {identity["bdf"]: [0, 10, 0]}
         bad = json.loads(canonical(self.receipt))
         bad["process_attribution"]["server_env"]["VK_ICD_FILENAMES"] = identity["icd"]
         bad["subject_identity"]["bdf"] = identity["bdf"]
         with self.assertRaisesRegex(
-                K.CollectorError, "candidate observed vendor/device/ICD drift"):
+                K.CollectorError,
+                "candidate observed vendor/device/ICD drift|frozen two-die BDF set"):
             self.run_capture(p, receipt=bad, case="cand-case")
         self.assertFalse(self.root.exists())
+
+
+class ReviewRoundBlockingRegressions(CaptureTestCase):
+    """Regressions for the independent-review blocking findings (round 4)."""
+
+    def test_candidate_census_omitting_second_die_fails_closed(self):
+        p = ObservedHarness()
+        p.devices = [p.devices[0]]  # second V340 die omitted entirely
+        p.residencies = {"0000:07:00.0": [0, 6_300_000_000, 0]}
+        with self.assertRaisesRegex(
+                K.CollectorError, "frozen two-die BDF set"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_candidate_census_extra_device_fails_closed(self):
+        p = ObservedHarness()
+        p.devices.append({"bdf": "0000:0f:00.0", "index": 2, "vendor_id": "0x1002",
+                          "device_id": "0x6864", "vulkan_uuid": "extra-uuid",
+                          "icd": C.RADV_ICD, "name": "AMD Radeon Pro V340",
+                          "physical_type": "DISCRETE_GPU"})
+        p.residencies["0000:0f:00.0"] = [0, 100, 0]
+        with self.assertRaisesRegex(
+                K.CollectorError, "frozen two-die BDF set"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_candidate_contradictory_driver_id_fails_closed(self):
+        p = ObservedHarness()
+        p.used = dict(p.used, driver_id="DRIVER_ID_NVIDIA_PROPRIETARY")
+        with self.assertRaisesRegex(
+                K.CollectorError, "Vulkan driver identity drift"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_candidate_missing_driver_id_fails_closed(self):
+        p = ObservedHarness()
+        p.used = {k: v for k, v in p.used.items() if k != "driver_id"}
+        with self.assertRaisesRegex(
+                K.CollectorError, "used_vulkan_device missing/malformed driver_id"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_reference_contradictory_driver_id_fails_closed(self):
+        identity = C.reference_identity()
+        p = ObservedHarness()
+        p.devices = [
+            {"bdf": identity["bdf"], "index": 0, "vendor_id": "0x10de",
+             "device_id": "0x" + identity["pci_id"].split(":")[-1],
+             "gpu_uuid": identity["gpu_uuid"], "vulkan_uuid": identity["vulkan_device_uuid"],
+             "icd": identity["icd"], "name": identity["vulkan_device_name"],
+             "physical_type": "DISCRETE_GPU"},
+            {"bdf": "0000:0b:00.0", "index": 1, "vendor_id": "0x1002", "device_id": "0x67df",
+             "vulkan_uuid": "rx580-excluded-uuid", "icd": C.RADV_ICD,
+             "name": "AMD Radeon RX 580", "physical_type": "DISCRETE_GPU"},
+        ]
+        p.environ = (b"GGML_VK_VISIBLE_DEVICES=0\0VK_ICD_FILENAMES=" +
+                     identity["icd"].encode() + b"\0")
+        p.used = {"backend": "vulkan", "icd": identity["icd"],
+                  "vulkan_uuid": identity["vulkan_device_uuid"],
+                  "bdf": identity["bdf"], "index": 0,
+                  "driver_id": "nvidia"}  # kernel-driver domain, NOT VkDriverId
+        p.residencies = {identity["bdf"]: [0, 10, 0], "0000:0b:00.0": [0, 100, 0]}
+        receipt = json.loads(canonical(self.receipt))
+        receipt["process_attribution"]["server_env"]["VK_ICD_FILENAMES"] = identity["icd"]
+        receipt["subject_identity"]["bdf"] = identity["bdf"]
+        with self.assertRaisesRegex(
+                K.CollectorError, "reference observed PCI/UUID lineage mismatch"):
+            self.run_capture(p, receipt=receipt, arm="reference", case="ref-driver-case")
+        self.assertFalse(self.root.exists())
+
+    def test_duplicate_json_keys_in_used_device_fail_closed(self):
+        p = ObservedHarness()
+        raw = (b'{"backend": "vulkan", "icd": "' + C.RADV_ICD.encode() +
+               b'", "vulkan_uuid": "' + C.EXPECTED_VULKAN_DEVICE_UUIDS["0000:07:00.0"].encode() +
+               b'", "vulkan_uuid": "conflicting-uuid", "bdf": "0000:07:00.0", "index": 0}')
+        class DuplicateKeyUsed(ObservedHarness):
+            def read_used_vulkan_device(self, pid):
+                self.calls.append(("used", pid)); return raw
+        with self.assertRaisesRegex(K.CollectorError, "used_vulkan_device malformed"):
+            self.run_capture(DuplicateKeyUsed())
+        self.assertFalse(self.root.exists())
+
+    def test_whitespace_only_boot_identity_fails_closed(self):
+        p = ObservedHarness()
+        p.boot = b" \n"
+        with self.assertRaisesRegex(K.CollectorError, "boot identity empty"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_negative_start_ticks_fails_closed(self):
+        p = ObservedHarness()
+        p.ticks = b"-1\n"
+        with self.assertRaisesRegex(K.CollectorError, "start ticks negative"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_huge_selector_string_fails_closed_as_error(self):
+        p = ObservedHarness()
+        p.environ = (b"GGML_VK_VISIBLE_DEVICES=" + b"9" * 5000 +
+                     b"\0VK_ICD_FILENAMES=" + C.RADV_ICD.encode() + b"\0")
+        with self.assertRaises(K.CollectorError):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_unimplemented_probe_method_is_collector_missing(self):
+        class IncompleteHarness(ObservedHarness):
+            def read_process_environ(self, pid):
+                raise NotImplementedError
+        with self.assertRaises(K.CollectorMissing):
+            self.run_capture(IncompleteHarness())
+        self.assertFalse(self.root.exists())
+
+    def test_missing_probe_attribute_is_collector_missing(self):
+        class NoEnvironHarness:
+            # Exposes every probe surface EXCEPT read_process_environ.
+            def __init__(self):
+                self.inner = ObservedHarness()
+            def __getattr__(self, name):
+                if name == "read_process_environ":
+                    raise AttributeError(name)
+                return getattr(self.inner, name)
+        with self.assertRaises(K.CollectorMissing):
+            self.run_capture(NoEnvironHarness())
+        self.assertFalse(self.root.exists())
+
+    def test_residency_boolean_bytes_rejected(self):
+        p = ObservedHarness()
+        orig = ObservedHarness.read_residency
+        state = {"n": 0}
+        def read_residency(self, bdf):
+            self.calls.append(("residency", bdf))
+            state["n"] += 1
+            if state["n"] == 2:  # peak sample of first device
+                return canonical({"bytes": True})
+            return orig(self, bdf)
+        p.read_residency = lambda bdf: read_residency(p, bdf)
+        with self.assertRaisesRegex(K.CollectorError, "counter malformed"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_residency_non_object_rejected(self):
+        p = ObservedHarness()
+        orig = ObservedHarness.read_residency
+        state = {"n": 0}
+        def read_residency(self, bdf):
+            state["n"] += 1
+            if state["n"] == 2:
+                return b"[]"
+            return orig(self, bdf)
+        p.read_residency = lambda bdf: read_residency(p, bdf)
+        with self.assertRaisesRegex(K.CollectorError, "counter malformed"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_reference_identity_is_labeled_expected_not_observed(self):
+        self.run_capture(case="label-case", arm="candidate")
+        obs = self.obs(case="label-case")
+        self.assertNotIn("reference_identity", obs)
+        # reference arm emits the frozen identity under an expected-label key
+        identity = C.reference_identity()
+        p = ObservedHarness()
+        p.devices = [
+            {"bdf": identity["bdf"], "index": 0, "vendor_id": "0x10de",
+             "device_id": "0x" + identity["pci_id"].split(":")[-1],
+             "gpu_uuid": identity["gpu_uuid"], "vulkan_uuid": identity["vulkan_device_uuid"],
+             "icd": identity["icd"], "name": identity["vulkan_device_name"],
+             "physical_type": "DISCRETE_GPU"},
+            {"bdf": "0000:0b:00.0", "index": 1, "vendor_id": "0x1002", "device_id": "0x67df",
+             "vulkan_uuid": "rx580-excluded-uuid", "icd": C.RADV_ICD,
+             "name": "AMD Radeon RX 580", "physical_type": "DISCRETE_GPU"},
+        ]
+        p.environ = (b"GGML_VK_VISIBLE_DEVICES=0\0VK_ICD_FILENAMES=" +
+                     identity["icd"].encode() + b"\0")
+        p.used = {"backend": "vulkan", "icd": identity["icd"],
+                  "vulkan_uuid": identity["vulkan_device_uuid"],
+                  "bdf": identity["bdf"], "index": 0,
+                  "driver_id": K.NVIDIA_VULKAN_DRIVER_ID}
+        p.residencies = {identity["bdf"]: [0, 10, 0], "0000:0b:00.0": [0, 100, 0]}
+        receipt = json.loads(canonical(self.receipt))
+        receipt["process_attribution"]["server_env"]["VK_ICD_FILENAMES"] = identity["icd"]
+        receipt["subject_identity"]["bdf"] = identity["bdf"]
+        self.run_capture(p, receipt=receipt, arm="reference", case="label-ref-case")
+        ref_obs = self.obs(case="label-ref-case", arm="reference")
+        self.assertIn("reference_identity_expected", ref_obs)
+        self.assertNotIn("reference_identity", ref_obs)
 
 
 class AppendOnlyPreservation(CaptureTestCase):
