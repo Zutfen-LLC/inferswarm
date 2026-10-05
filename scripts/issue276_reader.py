@@ -540,15 +540,16 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool,
     assertion) is rejected.
 
     custody_root (round 3) closes the original-to-staged byte-binding
-    gap: the collector-owned retained originals. When provided, every
-    staged byte must equal its retained original exactly — the staging
-    copy is not a second source of truth, and any post-staging edit of
-    EITHER side fails closed. Missing accepted source custody also
-    fails closed. (The parameter is not authority: the originals are
-    already-authenticated collector output, compared by plain byte
-    equality; the default-None legacy form remains self-contained
-    integrity+derivation admission for callers without retained
-    custody.)
+    gap and is REQUIRED: the collector-owned retained originals under
+    source/<case>/<tag>. Every staged byte must equal its retained
+    original exactly — the staging copy is not a second source of
+    truth, and any post-staging edit of EITHER side fails closed.
+    Omitting custody_root fails closed too: missing accepted source
+    custody includes the caller failing to supply it, so the weaker
+    self-contained law is never a silent default. (The parameter is
+    not authority: the originals are validated only by the byte-law at
+    staging — integrity plus derivation, which does not prove origin;
+    origin remains the documented physical-campaign boundary.)
     """
     tag = arm + ("-repeat" if repeat else "")
     problems: list[str] = []
@@ -556,6 +557,13 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool,
         return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
                 "admitted": False,
                 "problems": [f"unknown arm {arm!r} — only the frozen arms exist"],
+                "derived": {}}
+    if custody_root is None:
+        return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
+                "admitted": False,
+                "problems": ["accepted source custody not supplied — admission "
+                             "requires the collector-owned retained originals "
+                             "(custody_root); the byte-binding law is not optional"],
                 "derived": {}}
     binding_path = Path(staged_root) / "units" / case / f"{tag}.json"
     unit_dir = Path(staged_root) / "units" / case / tag

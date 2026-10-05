@@ -130,9 +130,11 @@ reconciled with demonstrated behavior.
    repaired binding digests. The round-2 canary is INVERTED
    (test_bilateral_staged_row_permutation_now_rejected_round3) and the
    detailed variants are pinned by the round-3 regression set. The
-   custody_root parameter is not a seal: the originals are
-   already-authenticated collector output, compared by byte equality
-   through the production path; no signing infrastructure exists.
+   custody_root parameter is not a seal and is not optional: admission
+   refuses to run without it (spec-review finding 2), and the originals
+   are validated only by the staging byte-law — integrity plus
+   derivation, which does not prove origin; origin remains the
+   physical-campaign boundary. No signing infrastructure exists.
 2. STILL OPEN (by design) — authored-custody origin. The remaining
    canary keeps pinning that a knowledgeable author can author the
    CUSTODY ROOT ITSELF at the fixture level. Origin remains a

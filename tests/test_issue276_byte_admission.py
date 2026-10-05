@@ -585,11 +585,29 @@ class ByteAdmissionTests(unittest.TestCase):
         self.assertFalse(verdict["admitted"])
         self.assertTrue(any("aliasing" in p or "custody" in p or "original" in p
                             for p in verdict["problems"]))
-        # Legacy form (no retained custody at hand): the aliasing law
-        # itself still rejects the unilateral copy.
+        # Legacy form (custody omitted): admission itself now refuses to
+        # run without the collector-owned custody root — round-3 review
+        # finding 2; the weaker self-contained law is not a silent default.
         verdict_legacy = R.admit_pair_276(self.staged, case="case-256")
         self.assertFalse(verdict_legacy["admitted"])
-        self.assertTrue(any("aliasing" in p for p in verdict_legacy["problems"]))
+        self.assertTrue(any("custody" in p for p in verdict_legacy["problems"]))
+
+    def test_admission_refuses_missing_custody_root_kwarg(self):
+        """Round-3 spec-review finding 2: the original-to-staged byte
+        binding is not optional. Calling the production admission entry
+        points without custody_root fails closed even on an internally
+        perfect staged unit — 'missing accepted source custody' includes
+        the caller failing to supply it, so no future caller can
+        silently fall back to the weaker self-contained law."""
+        self.builder.capture("candidate", False)
+        self.stage("candidate", False)
+        verdict = R.admit_staged_276(self.staged, case="case-256", arm="candidate",
+                                     repeat=False)  # custody_root omitted
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("custody" in p for p in verdict["problems"]))
+        verdict_pair = R.admit_pair_276(self.staged, case="case-256")
+        self.assertFalse(verdict_pair["admitted"])
+        self.assertTrue(all("custody" in p for p in verdict_pair["problems"]))
 
     def test_documented_origin_boundary_fully_authored_bundle_admits(self):
         """DOCUMENTED LIMITATION (canary) — open origin observation, round 2.
