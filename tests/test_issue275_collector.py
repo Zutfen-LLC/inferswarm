@@ -70,9 +70,9 @@ class CollectorTests(unittest.TestCase):
             "model_members":dict(C.MODEL_MEMBER_SHA256), "exe_sha256":C.COMPARATOR_SHA256,
         }
 
-    def run_capture(self, probes=None, case="case-256", receipt=None):
+    def run_capture(self, probes=None, case="case-256", receipt=None, arm="candidate"):
         probes = probes or FixtureExecutionHarness()
-        return K.capture_execution_273(case, "candidate", False, receipt or self.receipt,
+        return K.capture_execution_273(case, arm, False, receipt or self.receipt,
                                        probes, self.root)
 
     def test_positive_capture_retains_raw_bytes_and_derives_observations(self):
@@ -153,6 +153,48 @@ class CollectorTests(unittest.TestCase):
         after = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
         self.assertEqual(after, before)
         with self.assertRaises(K.CollectorError): self.run_capture(case="../escape")
+
+    def test_candidate_unfrozen_vulkan_uuid_fails_closed(self):
+        p = FixtureExecutionHarness()
+        p.devices[0]["vulkan_uuid"] = "unfrozen-vulkan-uuid"
+        with self.assertRaisesRegex(K.CollectorError, "candidate observed Vulkan UUID drift"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_candidate_wrong_vendor_id_fails_closed(self):
+        p = FixtureExecutionHarness()
+        p.devices[0]["vendor_id"] = "0x1234"
+        with self.assertRaisesRegex(K.CollectorError, "candidate observed vendor/device/ICD drift"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
+
+    def test_reference_excluded_non_rx580_fails_closed(self):
+        p = FixtureExecutionHarness()
+        identity = C.reference_identity()
+        p.devices[0].update({
+            "bdf": identity["bdf"], "index": 0, "vendor_id": "0x10de",
+            "device_id": "0x" + identity["pci_id"].split(":")[-1],
+            "vulkan_uuid": identity["vulkan_device_uuid"], "gpu_uuid": identity["gpu_uuid"],
+            "icd": identity["icd"], "name": identity["vulkan_device_name"],
+        })
+        p.devices[1].update({"bdf":"0000:0b:00.0", "index":1, "vendor_id":"0x1002",
+                             "device_id":"0x1234", "vulkan_uuid":"excluded-device-uuid",
+                             "icd":C.RADV_ICD, "name":"Other AMD GPU"})
+        p.residencies = {"00000000:03:00.0":[0,6_300_000_000,0], "0000:0b:00.0":[0,100,0]}
+        receipt = json.loads(canonical(self.receipt))
+        receipt["process_attribution"]["server_env"] = {
+            "GGML_VK_VISIBLE_DEVICES":"0", "VK_ICD_FILENAMES":identity["icd"]}
+        receipt["subject_identity"]["bdf"] = identity["bdf"]
+        with self.assertRaisesRegex(K.CollectorError, "positive RX580 excluded census absent"):
+            self.run_capture(p, receipt=receipt, arm="reference")
+        self.assertFalse(self.root.exists())
+
+    def test_census_entry_missing_required_icd_fails_closed(self):
+        p = FixtureExecutionHarness()
+        p.devices[0].pop("icd")
+        with self.assertRaisesRegex(K.CollectorError, "census entry missing/malformed icd"):
+            self.run_capture(p)
+        self.assertFalse(self.root.exists())
 
     def test_receipt_claims_are_marked_checked_not_observations(self):
         self.run_capture()
