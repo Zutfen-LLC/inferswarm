@@ -96,7 +96,8 @@ FIXED (each pinned by a RED-first regression in this round):
    accepted comparator `validate_rows_finite` law); non-f32 payloads
    like `b"reference"` are rejected.
 
-BOUNDARY (documented open observations, pinned by canary tests — round 2):
+BOUNDARY (documented open observations, pinned by canary tests — round 2;
+round-3 dispositions below):
 * A fully self-consistent bundle AUTHORED without the collector admits at
   the fixture level — not only byte-identical copies of genuine captures
   (round-1 wording overstated this). Nothing in a CPU fixture can confer
@@ -109,20 +110,44 @@ BOUNDARY (documented open observations, pinned by canary tests — round 2):
   Pinned by test_documented_origin_boundary_fully_authored_bundle_admits.
 * ANY bilateral permutation of row bytes across arms — a single decision
   swapped consistently in primary and repeat, up to the complete set —
-  survives the reader (round-1 wording limited this to the complete
-  permutation; partial bilateral swaps also survive). Per-arm determinism
-  holds, rows still differ across arms (no aliasing signature), and rows
-  have no upstream derivation source to contradict. Unilateral copies
-  and repeat-only drift ARE rejected. Pinned by
-  test_documented_origin_boundary_bilateral_row_permutation_admits.
-  Rows bind to physical arms only through the capture window
-  (contemporaneous incarnation/residency/census over raw probes), which
-  a CPU fixture cannot represent; an invented row-arm seal is forbidden
-  by the acceptance.
+  survived the reader (round-1 wording limited this to the complete
+  permutation; partial bilateral swaps also survived). Per-arm determinism
+  held, rows still differed across arms (no aliasing signature), and rows
+  had no upstream derivation source to contradict. Unilateral copies
+  and repeat-only drift WERE rejected.
 
-Both canaries are falsifiable obligations: invert or delete them
-together with this section when the physical campaign adds
-capture-window row binding or another origin mechanism.
+ROUND 3 (maintainer correction, post-2998e1c): both gaps above are
+reconciled with demonstrated behavior.
+
+1. CLOSED — bilateral row permutation. Admission now binds through the
+   collector-owned custody root: admit_staged_276/admit_pair_276 take
+   custody_root and require every staged byte to EQUAL its retained
+   original under source/<case>/<tag> (plain byte equality; a staged-side
+   digest is recomputable by an attacker and is never the binding).
+   Partial and complete bilateral staged-row swaps across arms,
+   within-arm decision permutations, unilateral copies, retained-original
+   tamper, and missing accepted source custody all fail closed with
+   repaired binding digests. The round-2 canary is INVERTED
+   (test_bilateral_staged_row_permutation_now_rejected_round3) and the
+   detailed variants are pinned by the round-3 regression set. The
+   custody_root parameter is not a seal: the originals are
+   already-authenticated collector output, compared by byte equality
+   through the production path; no signing infrastructure exists.
+2. STILL OPEN (by design) — authored-custody origin. The remaining
+   canary keeps pinning that a knowledgeable author can author the
+   CUSTODY ROOT ITSELF at the fixture level. Origin remains a
+   physical-campaign property (the collector reading a contemporaneous
+   OS the executor does not control); resolving it at the fixture level
+   would require exactly the self-asserted authority object the #276
+   acceptance forbids.
+
+Also corrected in round 3: process-incarnation distinctness is judged on
+the COMPLETE incarnation tuple (pid, boot_id, start_ticks) — the round-2
+per-field law wrongly demanded distinct boot ids, which a realistic
+same-host/same-boot campaign (one boot session, distinct PIDs/start
+ticks per capture) cannot satisfy and must not be forced to manufacture.
+Identical-incarnation repeats and source-capture reuse still fail closed
+(regressed in the same round).
 
 ## First demonstration (fixture-only)
 
