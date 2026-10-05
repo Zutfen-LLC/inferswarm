@@ -497,9 +497,10 @@ def _require_custody_binding(custody_root: Path, binding_path: Path, unit_dir: P
 
     Every staged byte must equal its collector-owned retained original
     under custody_root/source/<case>/<tag>, byte for byte. The retained
-    originals are already-authenticated collector output (validated by
-    the same law at staging); the staged copy may not diverge from them
-    in either direction, and missing accepted source custody fails
+    originals are collector-retained output whose integrity and
+    derivation are validated by the same law at staging; this does not
+    authenticate physical origin. The staged copy may not diverge from
+    them in either direction, and missing accepted source custody fails
     closed. Plain byte equality only — no digest-only comparison (a
     staged-side digest can be recomputed by an attacker), no seal.
     """
@@ -572,9 +573,9 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool,
                 "admitted": False,
                 "problems": [f"staged unit missing: {binding_path}"], "derived": {}}
     # Original-to-staged byte binding (round 3). The retained originals
-    # are already-authenticated collector output (their integrity is
-    # enforced at staging); here every staged byte must EQUAL its
-    # collector-owned original. This is the only original-to-staged
+    # are collector-retained bytes whose integrity and derivation are
+    # enforced at staging; this does not authenticate physical origin.
+    # Here every staged byte must EQUAL its collector-owned original. This is the only original-to-staged
     # authority: plain byte equality through the production path, never
     # a digest the staged side can recompute or a seal it can forge.
     if custody_root is not None:
