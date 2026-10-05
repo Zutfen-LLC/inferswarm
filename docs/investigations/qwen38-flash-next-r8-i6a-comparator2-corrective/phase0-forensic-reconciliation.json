@@ -1,0 +1,74 @@
+{
+  "schema": "inferswarm.issue273.phase0-forensic-reconciliation/1",
+  "issue": 273,
+  "derived_at": "2026-10-04T22:30:00Z",
+  "starting_main": "6d594eafd5ee16a640f029f63ebdd2cd96856abb",
+  "main_drift": "none — origin/main == the #270 merge commit exactly",
+  "maintainer_authorization": {
+    "comment_id": 5982882220,
+    "commenter": "ezutfen",
+    "created_at": "2026-10-04T18:06:21Z",
+    "scope": "Phases 0-2 only; NO fresh acceptance-bearing physical execution"
+  },
+  "topology_clarification": {
+    "comment_id": 5982978739,
+    "created_at": "2026-10-04T18:18:09Z",
+    "note": "RX 580 8GB co-resident with RTX 3060 on inferswarm01; both V340 dies present on inferswarm05; fresh enumeration + positive exclusion proof required"
+  },
+  "evidence_preservation": {
+    "remote_root": "inferswarm05:/home/hermes/is270-c270-v340-comparator2/",
+    "manifest": "SHA256SUMS 280/280 OK (re-verified 2026-10-04)",
+    "top_level_records_match_local_archive": [
+      ["TERMINAL.json", "81298de1cd6d7a8858d1f84ffcfedef106975e3de0cb44d7ff1b93e8e4dbbf8a"],
+      ["reduction.json", "fb148b37b6cfe131e9e0365e17ef3a627f8a836c6918f68dfa8a038505f34e3e"],
+      ["issue270-subject-freeze.json", "a8a0cb8f8724f81d87878cefc99ca5409a896563ae352b0b6d5598cd656b7272"],
+      ["phase0-reconciliation.json", "1629216468ab4f8508537a4adac5d6ea49056c971ec8be12d3f58105a648b9bf"],
+      ["phase2-preflight.json", "ee4a05a8498fb8f05edd2d969882b645fadf2771365e874a35e4308d9db945ee"],
+      ["SHA256SUMS", "1844212d5ed1ecf9a555b3e0a383ccbf60dca9d942e65e94710c7f8b75933c80"],
+      ["model-attestation-open.json", "587e4885043a8be439178a9f366f374e8a5ba7aae6b726b152620763de87a0d2"],
+      ["model-attestation-close.json", "dd7ef2704dadc1360fdc4c9a3948de433fd1344a583f003b9c368df1cb7f905e"]
+    ],
+    "genuine_reference_units_01": {
+      "note": "72 files under units/case-{256,1024,3072}-reference-{primary,repeat}-001 on inferswarm01 independently hashed; ledger digest ba061a58c42a33301a4ebae0b89bc01ad4bd61227562b46cac92328fd93bcc12; these genuine ngl=8 NVIDIA-ICD runs were NEVER bound into the accepted reduction (audit finding 4)"
+    }
+  },
+  "holdout_state": {
+    "verified_by": "tests.test_issue237_r8i_methodology HoldoutControlTests+GitPurityTests+CustodyReceiptTests (21 OK)",
+    "state": "SEALED_NOT_CONSUMED",
+    "custody": "INCOMPLETE 0/2 verified custodians",
+    "decrypt_performed": false,
+    "private_material_in_repo": false,
+    "note": "a /tmp seal-time staging leftover (keys + plaintext named holdout-plaintext.json) exists on inferswarm01 with mtime 2026-10-02 19:39 EDT, INSIDE the #237 seal window (2026-10-02) and BEFORE the #270 campaign (2026-10-04); classified as seal-time staging residue, not read, not a post-seal decrypt; maintainer may wish to shred it"
+  },
+  "predictive_execution": {
+    "c237_artifacts_on_inferswarm01": 0,
+    "c237_artifacts_on_inferswarm05": 0,
+    "checked": ["find /home/hermes /tmp /srv -maxdepth 3 -name '*c237*'"]
+  },
+  "gpu_census_2026_10_04": {
+    "inferswarm01": {
+      "rtx3060": {"bdf": "0000:03:00.0", "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55", "driver": "610.57.04", "vulkan": "NVIDIA ICD, device 'NVIDIA GeForce RTX 3060'"},
+      "rx580_bystander": {"bdf": "0000:02:00.0", "chip": "Ellesmere Polaris10", "vulkan": "RADV POLARIS10 under radeon ICD"},
+      "historical_note": "the second RTX 3060 (GPU-1fc28f83, A0) is GONE — reference-host topology changed since #248; the accepted #248 identity binds the REMAINING GPU-d5c05739 at the same BDF 03:00.0"
+    },
+    "inferswarm05": {
+      "v340_dies": [
+        {"bdf": "0000:07:00.0", "vulkan": "AMD Radeon Pro V340 (RADV VEGA10), Mesa 25.0.7, api 1.4.305"},
+        {"bdf": "0000:0b:00.0", "vulkan": "AMD Radeon Pro V340 (RADV VEGA10), Mesa 25.0.7, api 1.4.305"}
+      ],
+      "gtx1060_bystander": {"bdf": "0000:02:00.0", "chip": "GP106", "note": "co-resident NVIDIA GTX 1060 3GB — NOT part of any frozen V340 identity; the candidate-arm exclusion set must be re-derived from fresh enumeration, not from stale DIE_BDFS assumptions, at Phase 3/4 time"}
+    }
+  },
+  "issue272_disposition": {
+    "state": "folded into #273",
+    "fix": "issue270_physical.observe_v340_host now captures mem_info_vram_total per die (RED-first test test_observe_requests_and_captures_vram_total)"
+  },
+  "issue270_tooling_defect_confirmed": {
+    "staged_reference_receipt_case_256": {
+      "labels": "host=inferswarm01, bdf=00000000:03:00.0, subject_identity.icd=nvidia_icd.json",
+      "process_facts": "VK_ICD_FILENAMES=radeon_icd.json, GGML_VK_VISIBLE_DEVICES=0, ngl=7 (V340L candidate backend)",
+      "verdict": "arm identity admitted from writable labels; process attribution never cross-checked against the claimed arm — the accepted substitution"
+    },
+    "shared_ngl_rule": "SELECTED_PLACEMENT_NGL=7 required for BOTH arms plus a cross-arm ngl EQUALITY check; genuine ngl=8 reference receipts can never pass (root cause)"
+  }
+}
