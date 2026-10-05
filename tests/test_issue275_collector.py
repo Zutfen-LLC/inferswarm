@@ -75,6 +75,55 @@ class CollectorTests(unittest.TestCase):
         return K.capture_execution_273(case, arm, False, receipt or self.receipt,
                                        probes, self.root)
 
+    def test_nested_receipt_objects_are_guarded(self):
+        for path, reason in (("process_attribution", "process_attribution"), ("server_env", "process_attribution.server_env"), ("subject_identity", "subject_identity")):
+            bad = json.loads(canonical(self.receipt))
+            if path == "server_env": bad["process_attribution"][path] = None
+            else: bad[path] = None
+            with self.subTest(path=path), self.assertRaisesRegex(K.CollectorError, reason): self.run_capture(receipt=bad)
+
+    def test_traversal_bdf_rejected_during_census_validation(self):
+        p = FixtureExecutionHarness(); p.devices[0]["bdf"] = "../../etc"
+        with self.assertRaisesRegex(K.CollectorError, "census entry malformed bdf"): self.run_capture(p)
+
+    def test_non_string_selector_rejected_without_coercion(self):
+        bad = json.loads(canonical(self.receipt)); bad["process_attribution"]["server_env"]["GGML_VK_VISIBLE_DEVICES"] = 0
+        with self.assertRaisesRegex(K.CollectorError, "GGML_VK_VISIBLE_DEVICES"): self.run_capture(receipt=bad)
+
+    def test_reference_capture_derives_identity_and_retains_bytes(self):
+        p = FixtureExecutionHarness(); identity = C.reference_identity(); d = p.devices[0]
+        d.update({"bdf":identity["bdf"], "vendor_id":"0x10de", "device_id":"0x"+identity["pci_id"].split(":")[-1], "gpu_uuid":identity["gpu_uuid"], "vulkan_uuid":identity["vulkan_device_uuid"], "icd":identity["icd"], "name":identity["vulkan_device_name"]})
+        p.devices[1].update({"vendor_id":"0x1002", "device_id":"0x67df", "name":"AMD RX 580", "icd":C.RADV_ICD})
+        p.residencies={d["bdf"]:[0,10,0], p.devices[1]["bdf"]:[0,100,0]}
+        rec=json.loads(canonical(self.receipt)); rec["process_attribution"]["server_env"]["VK_ICD_FILENAMES"]=identity["icd"]; rec["subject_identity"]["bdf"]=identity["bdf"]
+        self.run_capture(p, receipt=rec, arm="reference")
+        stem=self.root/"source/case-256/reference"
+        self.assertEqual((stem/"raw/device_census.start.bin").read_bytes(), canonical(p.devices))
+        obs=json.loads((stem/"observation.json").read_bytes())
+        self.assertEqual(obs["reference_identity"], identity)
+        self.assertFalse(obs["devices"][1]["selected"])
+
+    def test_repeat_capture_uses_repeat_stem(self):
+        K.capture_execution_273("case-256", "candidate", True, self.receipt, FixtureExecutionHarness(), self.root)
+        self.assertTrue((self.root/"source/case-256/candidate-repeat/observation.json").is_file())
+
+    def test_partial_write_cleanup_allows_retry(self):
+        p = FixtureExecutionHarness(); original = K.os.fdopen; calls = [0]
+        class BrokenStream:
+            def __init__(self, wrapped): self.wrapped = wrapped
+            def __enter__(self): return self
+            def __exit__(self, *args): self.wrapped.close()
+            def write(self, data): self.wrapped.write(data[:1]); raise OSError("injected write failure")
+        def injected(fd, *args, **kwargs):
+            calls[0] += 1
+            return BrokenStream(original(fd, *args, **kwargs)) if calls[0] == 1 else original(fd, *args, **kwargs)
+        K.os.fdopen = injected
+        try:
+            with self.assertRaisesRegex(K.CollectorError, "cannot write destination"): self.run_capture(p)
+        finally: K.os.fdopen = original
+        self.assertFalse(any(path.is_file() for path in self.root.rglob("*")))
+        self.run_capture(FixtureExecutionHarness())
+
     def test_positive_capture_retains_raw_bytes_and_derives_observations(self):
         p = FixtureExecutionHarness()
         receipt_raw = canonical(self.receipt)

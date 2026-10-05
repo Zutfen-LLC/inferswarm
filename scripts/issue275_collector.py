@@ -76,13 +76,21 @@ def _write_new(root: Path, rel: str, data: bytes) -> None:
         dest = dest / part
         if dest.exists() or dest.is_symlink():
             if dest.is_symlink() or not dest.is_dir(): raise CollectorError(f"unsafe destination directory: {dest}")
-        else: dest.mkdir()
+        else:
+            try: dest.mkdir()
+            except FileExistsError as exc: raise CollectorError(f"append-only destination exists: {dest}") from exc
+            except OSError as exc: raise CollectorError(f"cannot create destination directory {dest}: {exc}") from exc
     target = dest / p.parts[-1]
     if target.exists() or target.is_symlink(): raise CollectorError(f"append-only destination exists: {target}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
     try:
         fd = os.open(target, flags, 0o600)
-        with os.fdopen(fd, "wb") as stream: stream.write(data)
+        try:
+            with os.fdopen(fd, "wb") as stream: stream.write(data)
+        except OSError as exc:
+            try: target.unlink()
+            except FileNotFoundError: pass
+            raise CollectorError(f"cannot write destination {target}: {exc}") from exc
     except FileExistsError as exc: raise CollectorError(f"append-only destination exists: {target}") from exc
     except OSError as exc: raise CollectorError(f"cannot write destination {target}: {exc}") from exc
 
@@ -125,7 +133,13 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     retained: dict[str, bytes] = {}
     def keep(name: str, raw: bytes): retained[f"raw/{name}.start.bin"] = raw; return raw
     boot_raw = keep("boot_identity", _raw(probes, "read_boot_identity"))
-    pid = receipt.get("process_attribution", {}).get("server_pid")
+    attribution = receipt.get("process_attribution")
+    if not isinstance(attribution, dict): raise CollectorError("process_attribution must be an object")
+    env = attribution.get("server_env")
+    if not isinstance(env, dict): raise CollectorError("process_attribution.server_env must be an object")
+    subject = receipt.get("subject_identity")
+    if not isinstance(subject, dict): raise CollectorError("subject_identity must be an object")
+    pid = attribution.get("server_pid")
     if type(pid) is not int or pid <= 0: raise CollectorError("process_attribution.server_pid invalid")
     ticks_raw = keep("start_ticks", _raw(probes, "read_start_ticks", pid))
     census_raw = keep("process_census", _raw(probes, "read_process_census"))
@@ -154,13 +168,18 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
         if not isinstance(d, dict): raise CollectorError("census entry malformed: expected object")
         for key in required:
             if not isinstance(d.get(key), str) or not d[key].strip(): raise CollectorError(f"census entry missing/malformed {key}")
+        if not isinstance(d.get("bdf"), str) or not re.fullmatch(r"[0-9a-f]{4,8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]", d["bdf"]):
+            raise CollectorError("census entry malformed bdf: expected PCI BDF")
         if type(d.get("index")) is not int: raise CollectorError("census entry missing/malformed index")
     for key in ("bdf", "vulkan_uuid", "index"):
         vals = [d.get(key) for d in devices]
         if any(v is None for v in vals) or len(set(vals)) != len(vals): raise CollectorError(f"ambiguous device census duplicate/missing {key}")
-    env = receipt.get("process_attribution", {}).get("server_env", {})
-    selected = [d for d in devices if str(d.get("index")) == str(env.get("GGML_VK_VISIBLE_DEVICES")) and d.get("icd") == env.get("VK_ICD_FILENAMES")]
+    selector = env.get("GGML_VK_VISIBLE_DEVICES")
+    if not isinstance(selector, str) or not re.fullmatch(r"[0-9]+", selector):
+        raise CollectorError("process_attribution.server_env.GGML_VK_VISIBLE_DEVICES must be a digit string")
+    selected = [d for d in devices if d.get("index") == int(selector) and d.get("icd") == env.get("VK_ICD_FILENAMES")]
     if len(selected) != 1: raise CollectorError("selector does not resolve exactly one census device")
+    reference_identity = None
     if arm == "candidate":
         for d in devices:
             if d["vendor_id"] != C.EXPECTED_CANDIDATE["vendor_id"] or d["device_id"] != C.EXPECTED_CANDIDATE["device_id"] or d["icd"] != C.RADV_ICD:
@@ -169,6 +188,7 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
                 raise CollectorError("candidate observed Vulkan UUID drift")
     else:
         identity = C.reference_identity()
+        reference_identity = identity
         d = selected[0]
         if (d["vendor_id"] != "0x10de" or d["device_id"] != "0x" + identity["pci_id"].split(":")[-1]
                 or d.get("gpu_uuid") != identity["gpu_uuid"] or d["vulkan_uuid"] != identity["vulkan_device_uuid"]
@@ -179,11 +199,12 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     selected[0]["selected"] = True
     for d in devices:
         if d is not selected[0]: d["selected"] = False
-    if receipt.get("subject_identity", {}).get("bdf") != selected[0].get("bdf"):
+    if subject.get("bdf") != selected[0].get("bdf"):
         raise CollectorError("receipt claim subject_identity.bdf contradicts derived selected device")
     if receipt.get("model_members") != model_members: raise CollectorError("receipt claim model_members contradicts derived open members")
     if receipt.get("exe_sha256") != exe_sha: raise CollectorError("receipt claim exe_sha256 contradicts derived exe sha")
     residencies = {}
+    # Retained filenames use start/end; observation counters use before/after.
     for d in devices:
         bdf = d["bdf"]
         samples = []
@@ -201,11 +222,15 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
            "process":{"pid":pid,"boot_id":boot,"start_ticks":ticks,"cmdline":cmd_raw.decode().rstrip("\0").split("\0"),
                       "exe":{"path":exe_path,"sha256":exe_sha},"effective_model":model_path,"open_model_members":model_members},
            "devices":devices,"residency":residencies,"receipt_claims_checked":checks}
+    if reference_identity is not None: obs["reference_identity"] = reference_identity
     retained["receipt.json"] = encode(receipt)
     retained["observation.json"] = encode(obs)
     root = Path(capture_root)
     if root.is_symlink(): raise CollectorError(f"symlink capture root: {root}")
-    if not root.exists(): root.mkdir(parents=True)
+    if not root.exists():
+        try: root.mkdir(parents=True)
+        except FileExistsError as exc: raise CollectorError(f"append-only destination exists: {root}") from exc
+        except OSError as exc: raise CollectorError(f"cannot create capture root {root}: {exc}") from exc
     destinations = [root / stem / rel for rel in retained]
     if any(path.exists() or path.is_symlink() for path in destinations):
         raise CollectorError(f"append-only destination exists: {next(p for p in destinations if p.exists() or p.is_symlink())}")
