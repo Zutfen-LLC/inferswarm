@@ -5661,6 +5661,28 @@
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 1
+  },
+  "test_issue275_provenance": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 25,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 collector selection provenance: actual selector/ICD/backend/used-device identity derives only from collector-owned contemporaneous bytes (process environ, used-Vulkan-device observation, device census), receipt server_env selector/ICD values are claim-only cross-checks, and one unchanged process incarnation is bound across the capture window.",
+   "lineage": "Issue #275 round-3 provenance correction (RED-first regressions and negative controls)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests cover observed-selection derivation, receipt claim-only semantics, incarnation closing, and the mandatory negative controls without physical execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 25
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

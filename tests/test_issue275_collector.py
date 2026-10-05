@@ -38,6 +38,9 @@ class FixtureExecutionHarness:
         ]
         self.residencies = {"0000:07:00.0": [0, 6_300_000_000, 0],
                             "0000:0b:00.0": [0, 100, 0]}
+        self.env_selector = "0"
+        self.env_icd = C.RADV_ICD
+        self.used_driver_id = "DRIVER_ID_MESA_RADV"
         self.calls = []
 
     def read_boot_identity(self): self.calls.append("boot"); return self.boot
@@ -49,6 +52,15 @@ class FixtureExecutionHarness:
     def read_exe_identity(self, pid): self.calls.append(("exe", pid)); return self.exe
     def read_open_model_members(self, pid): self.calls.append(("members", pid)); return self.members
     def read_device_census(self): self.calls.append("devices"); return canonical(self.devices)
+    def read_process_environ(self, pid):
+        self.calls.append(("environ", pid))
+        return (f"GGML_VK_VISIBLE_DEVICES={self.env_selector}\0"
+                f"VK_ICD_FILENAMES={self.env_icd}\0").encode()
+    def read_used_vulkan_device(self, pid):
+        self.calls.append(("used", pid))
+        d = self.devices[int(self.env_selector)]
+        return canonical({"backend": "vulkan", "icd": d.get("icd"), "vulkan_uuid": d.get("vulkan_uuid"),
+                          "bdf": d.get("bdf"), "index": d.get("index"), "driver_id": self.used_driver_id})
     def read_residency(self, bdf):
         self.calls.append(("residency", bdf))
         return canonical({"bytes": self.residencies[bdf].pop(0)})
@@ -95,6 +107,7 @@ class CollectorTests(unittest.TestCase):
         d.update({"bdf":identity["bdf"], "vendor_id":"0x10de", "device_id":"0x"+identity["pci_id"].split(":")[-1], "gpu_uuid":identity["gpu_uuid"], "vulkan_uuid":identity["vulkan_device_uuid"], "icd":identity["icd"], "name":identity["vulkan_device_name"]})
         p.devices[1].update({"vendor_id":"0x1002", "device_id":"0x67df", "name":"AMD RX 580", "icd":C.RADV_ICD})
         p.residencies={d["bdf"]:[0,10,0], p.devices[1]["bdf"]:[0,100,0]}
+        p.env_icd = identity["icd"]; p.used_driver_id = identity["kernel_driver"]
         rec=json.loads(canonical(self.receipt)); rec["process_attribution"]["server_env"]["VK_ICD_FILENAMES"]=identity["icd"]; rec["subject_identity"]["bdf"]=identity["bdf"]
         self.run_capture(p, receipt=rec, arm="reference")
         stem=self.root/"source/case-256/reference"
@@ -230,6 +243,7 @@ class CollectorTests(unittest.TestCase):
                              "device_id":"0x1234", "vulkan_uuid":"excluded-device-uuid",
                              "icd":C.RADV_ICD, "name":"Other AMD GPU"})
         p.residencies = {"00000000:03:00.0":[0,6_300_000_000,0], "0000:0b:00.0":[0,100,0]}
+        p.env_icd = identity["icd"]; p.used_driver_id = identity["kernel_driver"]
         receipt = json.loads(canonical(self.receipt))
         receipt["process_attribution"]["server_env"] = {
             "GGML_VK_VISIBLE_DEVICES":"0", "VK_ICD_FILENAMES":identity["icd"]}

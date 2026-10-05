@@ -155,7 +155,8 @@
     "test_issue273_round3_trust_boundaries",
     "test_issue273_evidence",
     "test_issue275_collector",
-    "test_issue275_demo"
+    "test_issue275_demo",
+    "test_issue275_provenance"
    ]
   },
   "repo-integrity": {
@@ -1731,6 +1732,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue275_demo.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue275_provenance.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

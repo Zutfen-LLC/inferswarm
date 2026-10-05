@@ -52,6 +52,15 @@ class FixtureExecutionHarness:
     def read_exe_identity(self, pid): self.calls.append(("exe", pid)); return self.exe
     def read_open_model_members(self, pid): self.calls.append(("members", pid)); return self.members
     def read_device_census(self): self.calls.append("devices"); return canonical(self.devices)
+    def read_process_environ(self, pid):
+        self.calls.append(("environ", pid))
+        return (b"GGML_VK_VISIBLE_DEVICES=0\0VK_ICD_FILENAMES=" +
+                C.RADV_ICD.encode() + b"\0")
+    def read_used_vulkan_device(self, pid):
+        self.calls.append(("used", pid))
+        d = self.devices[0]
+        return canonical({"backend": "vulkan", "icd": d["icd"], "vulkan_uuid": d["vulkan_uuid"],
+                          "bdf": d["bdf"], "index": d["index"], "driver_id": "DRIVER_ID_MESA_RADV"})
     def read_residency(self, bdf):
         self.calls.append(("residency", bdf))
         return canonical({"bytes": self.residencies[bdf].pop(0)})

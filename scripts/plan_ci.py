@@ -303,6 +303,7 @@ GROUP_TEST_MODULES = {
         "test_issue273_evidence",
         "test_issue275_collector",
         "test_issue275_demo",
+        "test_issue275_provenance",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -439,6 +440,7 @@ PATH_GROUPS = {
     "tests/test_issue273_evidence.py": ["r8i-qwen-qualification"],
     "tests/test_issue275_collector.py": ["r8i-qwen-qualification"],
     "tests/test_issue275_demo.py": ["r8i-qwen-qualification"],
+    "tests/test_issue275_provenance.py": ["r8i-qwen-qualification"],
     "scripts/issue273_evidence.py": ["r8i-qwen-qualification"],
     "scripts/issue275_collector.py": ["r8i-qwen-qualification"],
     "scripts/issue273_admission.py": ["r8i-qwen-qualification"],

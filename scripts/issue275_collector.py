@@ -31,7 +31,20 @@ class CollectorMissing(CollectorError):
 
 
 class ExecutionProbes:
-    """Probe protocol; concrete hardware implementations are intentionally absent."""
+    """Probe protocol; concrete hardware implementations are intentionally absent.
+
+    Finite trust boundary (documented in
+    docs/investigations/qwen38-flash-next-r8-i6a-comparator2-corrective/issue275-collector.md):
+    every downstream observation is derived ONLY from the bytes these methods
+    return. The two selection-provenance probes were added by #275 round 3:
+
+    * read_process_environ — original /proc/<pid>/environ bytes; the sole
+      source for the process-owned Vulkan selector (GGML_VK_VISIBLE_DEVICES)
+      and ICD (VK_ICD_FILENAMES) actually in effect for the captured process.
+    * read_used_vulkan_device — collector-side observation of the Vulkan
+      physical device actually used by the captured process (UUID/BDF/driver
+      bytes); never derived from the available-device census or the receipt.
+    """
     def read_boot_identity(self) -> bytes: raise NotImplementedError
     def read_start_ticks(self, pid: int) -> bytes: raise NotImplementedError
     def read_process_census(self) -> bytes: raise NotImplementedError
@@ -40,6 +53,32 @@ class ExecutionProbes:
     def read_open_model_members(self, pid: int) -> bytes: raise NotImplementedError
     def read_device_census(self) -> bytes: raise NotImplementedError
     def read_residency(self, bdf: str) -> bytes: raise NotImplementedError
+    def read_process_environ(self, pid: int) -> bytes: raise NotImplementedError
+    def read_used_vulkan_device(self, pid: int) -> bytes: raise NotImplementedError
+
+
+_ENV_SELECTOR_KEY = "GGML_VK_VISIBLE_DEVICES"
+_ENV_ICD_KEY = "VK_ICD_FILENAMES"
+
+
+def _parse_environ(raw: bytes) -> dict[str, str]:
+    """Parse original NUL-separated environ bytes into a str dict (lossless keys)."""
+    try: entries = [e.decode("utf-8") for e in raw.rstrip(b"\x00").split(b"\x00") if e]
+    except UnicodeDecodeError as exc: raise CollectorError("process environ is not UTF-8") from exc
+    env: dict[str, str] = {}
+    for entry in entries:
+        if "=" not in entry: raise CollectorError(f"process environ entry malformed: {entry[:64]!r}")
+        key, value = entry.split("=", 1)
+        if key in env: raise CollectorError(f"process environ duplicate key: {key}")
+        env[key] = value
+    return env
+
+
+def _required_env(env: dict[str, str], key: str) -> str:
+    value = env.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise CollectorMissing(f"process environ lacks usable {key} observation")
+    return value
 
 
 def encode(doc: Any) -> bytes:
@@ -147,6 +186,8 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     exe_raw = keep("exe_identity", _raw(probes, "read_exe_identity", pid))
     members_raw = keep("open_model_members", _raw(probes, "read_open_model_members", pid))
     devices_raw = keep("device_census", _raw(probes, "read_device_census"))
+    environ_raw = keep("process_environ", _raw(probes, "read_process_environ", pid))
+    used_raw = keep("used_vulkan_device", _raw(probes, "read_used_vulkan_device", pid))
     try:
         boot = boot_raw.decode().strip()
         ticks = int(ticks_raw.decode().strip())
@@ -174,11 +215,49 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
     for key in ("bdf", "vulkan_uuid", "index"):
         vals = [d.get(key) for d in devices]
         if any(v is None for v in vals) or len(set(vals)) != len(vals): raise CollectorError(f"ambiguous device census duplicate/missing {key}")
-    selector = env.get("GGML_VK_VISIBLE_DEVICES")
-    if not isinstance(selector, str) or not re.fullmatch(r"[0-9]+", selector):
-        raise CollectorError("process_attribution.server_env.GGML_VK_VISIBLE_DEVICES must be a digit string")
-    selected = [d for d in devices if d.get("index") == int(selector) and d.get("icd") == env.get("VK_ICD_FILENAMES")]
-    if len(selected) != 1: raise CollectorError("selector does not resolve exactly one census device")
+    # --- Observed selection provenance (#275 round 3) -------------------
+    # Selector, ICD, backend, and used-device identity derive ONLY from
+    # collector-owned contemporaneous bytes: the process's own environ and
+    # the used-Vulkan-device observation, resolved against the census.
+    # Receipt server_env values below are claims, never a selection source.
+    proc_env = _parse_environ(environ_raw)
+    obs_selector = _required_env(proc_env, _ENV_SELECTOR_KEY)
+    if not re.fullmatch(r"[0-9]+", obs_selector):
+        raise CollectorError(f"observed environ {_ENV_SELECTOR_KEY} must be a digit string")
+    obs_icd = _required_env(proc_env, _ENV_ICD_KEY)
+    used = _json(used_raw, "used_vulkan_device")
+    if not isinstance(used, dict): raise CollectorError("used_vulkan_device must be an object")
+    for key in ("backend", "icd", "vulkan_uuid", "bdf"):
+        if not isinstance(used.get(key), str) or not used[key].strip():
+            raise CollectorError(f"used_vulkan_device missing/malformed {key}")
+    if type(used.get("index")) is not int: raise CollectorError("used_vulkan_device missing/malformed index")
+    if used["backend"] != "vulkan":
+        raise CollectorError(f"unsupported observed backend: {used['backend']!r}")
+    obs_uuid = used["vulkan_uuid"]
+    selected = [d for d in devices if d["vulkan_uuid"] == obs_uuid]
+    if len(selected) != 1:
+        raise CollectorError("observed used Vulkan UUID absent/ambiguous in device census")
+    if selected[0]["bdf"] != used["bdf"]:
+        raise CollectorError("used_vulkan_device BDF contradicts census entry for the used UUID")
+    if selected[0]["index"] != used["index"] or selected[0]["index"] != int(obs_selector):
+        raise CollectorError("observed selector/used-device index disagreement (stale index assumption)")
+    if selected[0]["icd"] != obs_icd or used["icd"] != obs_icd:
+        raise CollectorError("observed ICD disagrees between environ and used-device observation")
+    # Receipt claim-only cross-checks: server_env selector/ICD may be present
+    # and are compared against the observed values, but can never establish
+    # selection identity.
+    claim_selector = env.get(_ENV_SELECTOR_KEY)
+    if claim_selector is not None:
+        if not isinstance(claim_selector, str) or not re.fullmatch(r"[0-9]+", claim_selector):
+            raise CollectorError(f"process_attribution.server_env.{_ENV_SELECTOR_KEY} must be a digit string")
+        if claim_selector != obs_selector:
+            raise CollectorError(f"receipt claim process_attribution.server_env.{_ENV_SELECTOR_KEY} contradicts observed selector")
+    claim_icd = env.get(_ENV_ICD_KEY)
+    if claim_icd is not None:
+        if not isinstance(claim_icd, str) or not claim_icd.strip():
+            raise CollectorError(f"process_attribution.server_env.{_ENV_ICD_KEY} must be a non-empty string")
+        if claim_icd != obs_icd:
+            raise CollectorError("receipt claim process_attribution.server_env.VK_ICD_FILENAMES contradicts observed ICD")
     reference_identity = None
     if arm == "candidate":
         for d in devices:
@@ -192,7 +271,8 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
         d = selected[0]
         if (d["vendor_id"] != "0x10de" or d["device_id"] != "0x" + identity["pci_id"].split(":")[-1]
                 or d.get("gpu_uuid") != identity["gpu_uuid"] or d["vulkan_uuid"] != identity["vulkan_device_uuid"]
-                or d["bdf"] != identity["bdf"]): raise CollectorError("reference observed PCI/UUID lineage mismatch")
+                or d["bdf"] != identity["bdf"] or d["icd"] != identity["icd"] or used["icd"] != identity["icd"]
+                or used.get("driver_id") not in (None, identity["kernel_driver"])): raise CollectorError("reference observed PCI/UUID lineage mismatch")
         excluded = [x for x in devices if x is not d]
         if not any(x["vendor_id"] == "0x1002" and x["device_id"] == "0x67df" and "RX 580" in x["name"] and x["icd"] == C.RADV_ICD for x in excluded):
             raise CollectorError("positive RX580 excluded census absent")
@@ -216,12 +296,39 @@ def capture_execution_273(case: str, arm: str, repeat: bool, receipt: dict,
             samples.append(value["bytes"])
         residencies[bdf] = dict(zip(("before", "peak", "after"), samples))
         if not d["selected"] and samples[1] - samples[0] >= C.EXCLUDED_NOISE_BYTES: raise CollectorError(f"excluded device {bdf} residency delta exceeds noise bound")
+    # --- Closing process-incarnation binding (#275 round 3) -------------
+    # Re-observe boot identity and start ticks AFTER the execution-owned
+    # observations: the capture window is bound to one unchanged process
+    # incarnation (same PID + boot id + start ticks). A reused/replaced PID
+    # or a reboot splices the evidence and fails closed.
+    retained["raw/boot_identity.end.bin"] = _raw(probes, "read_boot_identity")
+    retained["raw/start_ticks.end.bin"] = _raw(probes, "read_start_ticks", pid)
+    try:
+        close_boot = retained["raw/boot_identity.end.bin"].decode().strip()
+        close_ticks = int(retained["raw/start_ticks.end.bin"].decode().strip())
+    except (ValueError, UnicodeDecodeError) as exc: raise CollectorError(f"closing process identity malformed: {exc}") from exc
+    if close_boot != boot or close_ticks != ticks:
+        raise CollectorError("process incarnation changed during capture (boot identity/start ticks mismatch)")
     checks = ["process_attribution.server_pid", "process_attribution.server_env.GGML_VK_VISIBLE_DEVICES", "process_attribution.server_env.VK_ICD_FILENAMES", "subject_identity.bdf", "model_members", "exe_sha256"]
+    observed_selection = {
+        "derived_from": ["raw/process_environ.start.bin", "raw/used_vulkan_device.start.bin", "raw/device_census.start.bin"],
+        "selector_env_key": _ENV_SELECTOR_KEY,
+        "selector": obs_selector,
+        "icd_env_key": _ENV_ICD_KEY,
+        "icd": obs_icd,
+        "backend": used["backend"],
+        "used_vulkan_uuid": obs_uuid,
+        "used_bdf": selected[0]["bdf"],
+        "used_index": used["index"],
+        "used_driver_id": used.get("driver_id"),
+    }
     inventory = {name:{"sha256":hashlib.sha256(data).hexdigest(),"bytes":len(data)} for name,data in retained.items()}
     obs = {"schema":SCHEMA, "captured_at":dt.datetime.now(dt.timezone.utc).isoformat(), "probe_inventory":inventory,
            "process":{"pid":pid,"boot_id":boot,"start_ticks":ticks,"cmdline":cmd_raw.decode().rstrip("\0").split("\0"),
-                      "exe":{"path":exe_path,"sha256":exe_sha},"effective_model":model_path,"open_model_members":model_members},
-           "devices":devices,"residency":residencies,"receipt_claims_checked":checks}
+                      "exe":{"path":exe_path,"sha256":exe_sha},"effective_model":model_path,"open_model_members":model_members,
+                      "incarnation_close":{"boot_id":close_boot,"start_ticks":close_ticks,"bound_same_process":True,
+                                           "derived_from":["raw/boot_identity.end.bin","raw/start_ticks.end.bin"]}},
+           "devices":devices,"residency":residencies,"observed_selection":observed_selection,"receipt_claims_checked":checks}
     if reference_identity is not None: obs["reference_identity"] = reference_identity
     retained["receipt.json"] = encode(receipt)
     retained["observation.json"] = encode(obs)
