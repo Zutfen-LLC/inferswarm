@@ -5686,8 +5686,8 @@
   },
   "test_issue276_byte_admission": {
    "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.5,
-   "baseline_test_count": 19,
+   "baseline_serial_seconds": 28.6,
+   "baseline_test_count": 32,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
@@ -5704,7 +5704,7 @@
    "rationale": "CPU fixture tests exercise the complete capture-to-admission path through the #275 collector fixture harness without physical execution authority; the first demonstration is a registered CI test labeled fixture-only.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 19
+   "test_count_at_audit": 32
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

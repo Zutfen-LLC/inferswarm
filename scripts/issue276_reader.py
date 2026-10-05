@@ -32,12 +32,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import shutil
 import stat
+import struct
 from pathlib import Path
 from typing import Any
 
 import issue270_authority as C
+import issue270_comparator as CMP
 import issue275_collector as KC
 
 SCHEMA = "inferswarm.issue276.byte-admission/1"
@@ -74,8 +75,16 @@ def _canonical(obj: Any) -> bytes:
 
 
 def _parse(data: bytes, label: str) -> Any:
+    def no_duplicates(pairs):
+        keys = [k for k, _ in pairs]
+        if len(keys) != len(set(keys)):
+            dup = sorted({k for k in keys if keys.count(k) > 1})[0]
+            raise ReaderError(f"{label}: duplicate key {dup!r} — ambiguous identity fails closed")
+        return dict(pairs)
     try:
-        return json.loads(data)
+        return json.loads(data, object_pairs_hook=no_duplicates)
+    except ReaderError:
+        raise
     except ValueError as exc:
         raise ReaderError(f"{label} is not valid JSON: {exc}") from exc
 
@@ -137,6 +146,9 @@ def derive_from_bytes(files: dict[str, bytes], arm: str) -> tuple[dict[str, Any]
     census = _parse(files.get("raw/process_census.start.bin", b""), "process_census")
     if not _require(isinstance(census, dict), "process census malformed", problems):
         return {}, problems
+    # Census/boot law must match the collector: the top-level boot_id and
+    # the matched row's boot_id both equal the boot bytes.
+    _require(census.get("boot_id") == boot, "process census/boot mismatch", problems)
     pid_rows = []
     if isinstance(census.get("processes"), list):
         pid_rows = [r for r in census["processes"] if isinstance(r, dict)]
@@ -146,6 +158,9 @@ def derive_from_bytes(files: dict[str, bytes], arm: str) -> tuple[dict[str, Any]
                    if r.get("boot_id") == boot and r.get("start_ticks") == ticks]
     if not _require(len(incarn_rows) == 1, "process not found uniquely in census", problems):
         return {}, problems
+    _require(incarn_rows[0].get("pid") is not None
+             and [r for r in pid_rows if r.get("pid") == incarn_rows[0].get("pid")] == [incarn_rows[0]],
+             "census/boot mismatch vs start-tick bytes (pid not unique)", problems)
     pid = incarn_rows[0].get("pid")
     _require(type(pid) is int and pid > 0, "census pid malformed", problems)
     # --- executable / model -------------------------------------------------
@@ -280,6 +295,7 @@ def derive_from_bytes(files: dict[str, bytes], arm: str) -> tuple[dict[str, Any]
         "backend": used.get("backend"), "used_vulkan_uuid": used.get("vulkan_uuid"),
         "used_bdf": used.get("bdf"), "used_index": used.get("index"),
         "used_driver_id": used.get("driver_id"),
+        "_cmdline_bytes": files.get("raw/process_cmdline.start.bin"),
     }
     return derived, problems
 
@@ -298,6 +314,11 @@ def _label_problems(receipt: dict, obs: dict, derived: dict[str, Any],
     if not _require(isinstance(attribution, dict), "receipt process_attribution malformed", problems):
         attribution = {}
     env = attribution.get("server_env") or {}
+    claim_pid = attribution.get("server_pid")
+    if claim_pid is not None:
+        _require(claim_pid == derived.get("pid"),
+                 "receipt claim process_attribution.server_pid contradicts byte-derived census pid",
+                 problems)
     claim_selector = env.get(KC._ENV_SELECTOR_KEY) if isinstance(env, dict) else None
     if claim_selector is not None:
         _require(claim_selector == derived.get("selector"),
@@ -336,6 +357,19 @@ def _label_problems(receipt: dict, obs: dict, derived: dict[str, Any],
         if isinstance(exe, dict):
             _require(exe.get("sha256") == derived.get("exe_sha256"),
                      "observation exe label contradicts byte-derived exe sha", problems)
+            _require(exe.get("path") == derived.get("exe_path"),
+                     "observation exe path label contradicts byte-derived exe identity", problems)
+        cmdline_bytes = derived.get("_cmdline_bytes")
+        if cmdline_bytes is not None:
+            _require(process.get("cmdline") == cmdline_bytes.decode().rstrip("\0").split("\0"),
+                     "observation cmdline labels contradict byte-derived cmdline", problems)
+        close = process.get("incarnation_close")
+        if isinstance(close, dict):
+            _require(close.get("boot_id") == derived.get("boot_id")
+                     and close.get("start_ticks") == derived.get("start_ticks")
+                     and close.get("bound_same_process") is True,
+                     "observation closing-incarnation labels contradict byte-derived incarnation",
+                     problems)
         _require(process.get("effective_model") == derived.get("effective_model"),
                  "observation model label contradicts byte-derived effective model", problems)
         _require(process.get("open_model_members") == derived.get("open_model_members"),
@@ -416,6 +450,11 @@ def stage_capture_276(capture_root: Path, staged_root: Path, case: str, arm: str
             problems.append(f"incomplete retained bundle: missing {sorted(missing)[0]}")
     else:
         problems = problems or ["identity derivation failed"]
+    # Complete row set: every decision's row bytes must be retained.
+    for d in range(C.DECISIONS):
+        if f"rows/{d}.f32" not in files:
+            problems.append(f"incomplete retained bundle: missing rows/{d}.f32")
+            break
     sizes = {rel: len(data) for rel, data in files.items() if rel.startswith("raw/")}
     problems += _label_problems(_parse(files["receipt.json"], "receipt.json"), obs, derived, sizes)
     expected = _expected_run_files(obs)
@@ -462,6 +501,11 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
     """
     tag = arm + ("-repeat" if repeat else "")
     problems: list[str] = []
+    if arm not in ("reference", "candidate"):
+        return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
+                "admitted": False,
+                "problems": [f"unknown arm {arm!r} — only the frozen arms exist"],
+                "derived": {}}
     binding_path = Path(staged_root) / "units" / case / f"{tag}.json"
     unit_dir = Path(staged_root) / "units" / case / tag
     if not binding_path.is_file() or not unit_dir.is_dir():
@@ -479,6 +523,10 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
     _require(binding.get("arm") == arm, f"binding arm {binding.get('arm')!r} != requested {arm!r}", problems)
     _require(binding.get("case") == case, "binding case mismatch", problems)
     _require(binding.get("repeat") is repeat, "binding repeat flag mismatch", problems)
+    _require(binding.get("campaign") == CAMPAIGN,
+             "binding campaign is not this byte-admission campaign", problems)
+    _require(binding.get("source_stem") == f"source/{case}/{tag}",
+             "binding source stem does not name this unit's retained run", problems)
     bound_files = binding.get("files")
     if not _require(isinstance(bound_files, dict) and bound_files,
                     "staged binding file digest map missing", problems):
@@ -494,6 +542,9 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
     # Mandatory retained-original shape (inventory-independent floor).
     for rel in _REQUIRED_RAW_START + _REQUIRED_RAW_END:
         _require(rel in files, f"staged bundle missing retained original {rel}", problems)
+    # Metadata is NOT optional: deleting the labels cannot bypass derivation.
+    for rel in ("receipt.json", "observation.json"):
+        _require(rel in files, f"staged bundle missing mandatory metadata {rel}", problems)
     derived: dict[str, Any] = {}
     if "receipt.json" in files and "observation.json" in files:
         receipt = _parse(files["receipt.json"], "receipt.json")
@@ -519,14 +570,32 @@ def admit_staged_276(staged_root: Path, case: str, arm: str, repeat: bool) -> di
             else:
                 _require("reference_identity_expected" not in obs,
                          "candidate bundle carries a reference identity block", problems)
-            # Row bytes: custody at digest level; rows are admission inputs.
-            row_digests = {str(d): _sha(files[f"rows/{d}.f32"]) for d in range(C.DECISIONS)
-                           if f"rows/{d}.f32" in files}
+            # Row bytes: full decision set, full-vocabulary finite FP32 shape
+            # (the accepted comparator row law — arbitrary bytes are not rows).
+            row_digests = {}
+            for d in range(C.DECISIONS):
+                rel = f"rows/{d}.f32"
+                if rel not in files:
+                    continue
+                raw = files[rel]
+                _require(len(raw) == C.ROW_BYTES,
+                         f"row {d} is not full-vocabulary sized ({len(raw)} != {C.ROW_BYTES} bytes)", problems)
+                try:
+                    nonfinite = CMP.validate_rows_finite(raw)
+                except ValueError as exc:
+                    problems.append(f"row {d} is not decodable FP32: {exc}")
+                    continue
+                _require(not nonfinite, f"row {d} contains non-finite FP32 values", problems)
+                row_digests[str(d)] = _sha(raw)
             derived = dict(derived)
             derived["row_sha256"] = row_digests
             _require(set(row_digests) == {str(d) for d in range(C.DECISIONS)},
                      "staged bundle row decision set incomplete", problems)
-    derived_out = {k: v for k, v in derived.items() if k != "_sizes"}
+            # Derived-echo binding: the binding's digest for receipt.json and
+            # observation.json must equal the digests derived FROM those very
+            # bytes (recomputed above), so the binding cannot be rewritten to
+            # bless attacker-authored labels over the derived facts.
+    derived_out = {k: v for k, v in derived.items() if not k.startswith("_")}
     return {"schema": SCHEMA, "case": case, "arm": arm, "repeat": repeat,
             "admitted": not problems, "problems": problems, "derived": derived_out}
 
@@ -554,6 +623,18 @@ def admit_pair_276(staged_root: Path, case: str) -> dict[str, Any]:
                 if primary["derived"]["row_sha256"][decision] != repeat["derived"]["row_sha256"].get(decision):
                     problems.append(f"{arm} primary/repeat decision {decision} row digest "
                                     "mismatch — determinism claim rejected")
+            # A repeat is a DISTINCT physical execution: it may not reuse the
+            # primary's process incarnation or its retained capture bytes.
+            for label, field in (("process pid", "pid"), ("boot id", "boot_id"),
+                                 ("start ticks", "start_ticks")):
+                if primary["derived"].get(field) == repeat["derived"].get(field):
+                    problems.append(f"{arm} repeat shares the primary's {label} — "
+                                    "one capture cannot impersonate its own repeat")
+            prim_binding = _parse((Path(staged_root) / "units" / case / f"{arm}.json").read_bytes(), "binding")
+            rep_binding = _parse((Path(staged_root) / "units" / case / f"{arm}-repeat.json").read_bytes(), "binding")
+            if prim_binding.get("files") == rep_binding.get("files"):
+                problems.append(f"{arm} repeat binds byte-identical source files — "
+                                "the same retained capture cannot serve as its own repeat")
     # Cross-arm anti-aliasing.
     ref, cand = units[("reference", False)], units[("candidate", False)]
     if ref["admitted"] and cand["admitted"]:

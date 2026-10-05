@@ -72,6 +72,48 @@ Rejected by the same reader/admission entry point:
 * invented seal/hash/manifest authority fields,
 * incomplete bundles and unbound extra files.
 
+## Independent review round 1 (gaps fixed and boundary pinned)
+
+An empirical adversarial review returned FAIL with 7 gaps. Disposition:
+
+FIXED (each pinned by a RED-first regression in this round):
+1. Deleted receipt/observation bypassing derivation — metadata is now
+   mandatory at admission; the derivation branch is no longer skippable.
+2. Source missing row files — staging requires the complete decision set.
+3. Receipt `server_pid`, observation exe PATH, observation cmdline, and
+   closing-incarnation labels — all cross-checked against byte-derived
+   values now.
+4. Duplicate JSON keys in any probe document — fail closed, matching the
+   collector's `object_pairs_hook` law.
+5. Census top-level `boot_id` contradiction and pid-row uniqueness —
+   enforced, matching the collector's census/boot law.
+6. Binding `campaign`/`source_stem` custody labels — validated at
+   admission; unknown arms fail closed in both staging and admission.
+7. Repeat impersonation (one capture serving as its own repeat) — the
+   pair law now refuses shared primary/repeat incarnation and
+   byte-identical source bindings.
+8. Row content law — rows must be full-vocabulary finite FP32 (the
+   accepted comparator `validate_rows_finite` law); non-f32 payloads
+   like `b"reference"` are rejected.
+
+BOUNDARY (documented open observations, not papered over):
+* A FULLY synthetic bundle whose bytes are byte-identical to a genuine
+  collector output admits — because it IS collector-origin bytes. A
+  byte-level reader cannot and should not distinguish a copy from an
+  original; origin rests on the reviewed collector + OS boundary, per
+  the acceptance text ("hashes prove byte integrity within that
+  boundary, not origin by themselves").
+* A BILATERAL swap of ALL row bytes across both arms (with every
+  authored surface repaired) is not detectable at the
+  integrity/derivation level: rows are payload observations with no
+  upstream derivation source. All PARTIAL row attacks (aliasing,
+  drift, unilateral copy) are rejected. Binding rows to arms by an
+  invented seal is explicitly forbidden by the acceptance; in a
+  physical campaign the arm-binding of rows comes from the capture
+  window (contemporaneous incarnation/residency/census over raw
+  probes), which a CPU fixture cannot represent. Reported to the
+  maintainer as a concrete unresolved origin observation.
+
 ## First demonstration (fixture-only)
 
 `tests.test_issue276_byte_admission.ByteAdmissionTests.test_demo_first_demonstration_fixture_only`

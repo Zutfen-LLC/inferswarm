@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import struct
 import sys
 import tempfile
 import unittest
@@ -25,14 +27,29 @@ def canonical(obj):
     return (json.dumps(obj, sort_keys=True, indent=2) + "\n").encode()
 
 
-ROW_BYTES = 128
+_ROW_CACHE: dict[tuple[str, str], bytes] = {}
 
 
 def fixture_row(arm: str, decision: str) -> bytes:
-    """Deterministic fixture row bytes: equal across primary/repeat of one
-    arm (determinism), necessarily unequal across arms (cross-vendor)."""
+    """Deterministic fixture row bytes: full-vocabulary finite FP32, equal
+    across primary/repeat of one arm (determinism), necessarily unequal
+    across arms (cross-vendor)."""
+    key = (arm, decision)
+    if key in _ROW_CACHE:
+        return _ROW_CACHE[key]
     seed = hashlib.sha256(f"issue276-fixture-row:{arm}:{decision}".encode()).digest()
-    return seed * 2
+    blocks = []
+    counter = 0
+    while len(blocks) * 32 < C.ROW_BYTES + 4:
+        blocks.append(hashlib.sha256(seed + counter.to_bytes(4, "big")).digest())
+        counter += 1
+    stream = b"".join(blocks)[:C.ROW_BYTES]
+    n = C.ROW_BYTES // 4
+    words = struct.unpack(f"<{n}I", stream)
+    values = [math.ldexp(w % 1_000_000, -20) for w in words]
+    row = struct.pack(f"<{n}f", *values)
+    _ROW_CACHE[key] = row
+    return row
 
 
 def write_rows(run_root: Path, arm: str) -> dict[str, str]:
@@ -430,6 +447,214 @@ class ByteAdmissionTests(unittest.TestCase):
         binding_path.write_bytes(canonical(binding))
         verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
         self.assertFalse(verdict["admitted"])
+
+    # -- negative: review round 1 gaps ---------------------------------------
+    def test_receipt_pid_contradiction_rejected(self):
+        """Receipt server_pid is a claim against the byte-derived census pid."""
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        receipt = json.loads((run / "receipt.json").read_bytes())
+        receipt["process_attribution"]["server_pid"] = 777777
+        (run / "receipt.json").write_bytes(canonical(receipt))
+        with self.assertRaisesRegex(R.ReaderError, "server_pid"):
+            self.stage("candidate", False)
+
+    def test_observation_exe_path_contradiction_rejected(self):
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        obs = json.loads((run / "observation.json").read_bytes())
+        obs["process"]["exe"]["path"] = "/srv/donor-executable"
+        (run / "observation.json").write_bytes(canonical(obs))
+        with self.assertRaisesRegex(R.ReaderError, "exe"):
+            self.stage("candidate", False)
+
+    def test_observation_cmdline_contradiction_rejected(self):
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        obs = json.loads((run / "observation.json").read_bytes())
+        obs["process"]["cmdline"] = ["/srv/other", "--model", "/tmp/wrong.gguf"]
+        (run / "observation.json").write_bytes(canonical(obs))
+        with self.assertRaisesRegex(R.ReaderError, "cmdline"):
+            self.stage("candidate", False)
+
+    def test_missing_metadata_files_rejected_at_admission(self):
+        """Deleting receipt/observation from a staged unit cannot bypass
+        derivation by omitting the labels entirely."""
+        for victim in ("receipt.json", "observation.json"):
+            with self.subTest(victim=victim):
+                base = self.base / f"meta-{victim}"
+                builder = BundleBuilder(base / "capture")
+                builder.capture("candidate", False)
+                R.stage_capture_276(base / "capture", base / "staged", "case-256",
+                                    "candidate", False)
+                target = base / "staged/units/case-256/candidate" / victim
+                target.unlink()
+                self._repair_binding(tag="candidate", staged=base / "staged")
+                verdict = R.admit_staged_276(base / "staged", "case-256", "candidate", False)
+                self.assertFalse(verdict["admitted"])
+                self.assertTrue(any("mandatory" in p for p in verdict["problems"]))
+
+    def test_non_f32_row_content_rejected(self):
+        """Rows must be full-vocabulary finite FP32, not arbitrary strings."""
+        self.builder.capture("candidate", False)
+        self.stage("candidate", False)
+        target = self.staged / "units/case-256/candidate/rows/3.f32"
+        target.write_bytes(b"candidate")
+        self._repair_binding()
+        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("FP32" in p or "row" in p for p in verdict["problems"]))
+
+    def test_binding_campaign_and_source_stem_validated(self):
+        self.builder.capture("candidate", False)
+        self.stage("candidate", False)
+        binding_path = self.staged / "units/case-256/candidate.json"
+        binding = json.loads(binding_path.read_bytes())
+        binding["campaign"] = "attacker-campaign"
+        binding_path.write_bytes(canonical(binding))
+        verdict = R.admit_staged_276(self.staged, "case-256", "candidate", False)
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("campaign" in p for p in verdict["problems"]))
+
+    def test_unknown_arm_fails_closed(self):
+        """Only the two frozen arms exist; any other label is refused."""
+        self.builder.capture("candidate", False)
+        with self.assertRaisesRegex(R.ReaderError, "unknown arm"):
+            self.stage("attacker-arm", False)
+        verdict = R.admit_staged_276(self.staged, "case-256", "attacker-arm", False)
+        self.assertFalse(verdict["admitted"])
+
+    def test_duplicate_json_keys_rejected(self):
+        """Duplicate keys in any probe document fail closed, matching the
+        collector's law (ambiguous identity cannot resolve last-wins)."""
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        raw = (run / "raw/used_vulkan_device.start.bin").read_bytes()
+        # Insert a duplicate "backend" key before the canonical close.
+        marker = b'\n  "backend": "vulkan"'
+        assert marker in raw
+        forged = raw.replace(marker, marker[:-len('"vulkan"')] + b'"cpu",\n  "backend": "vulkan"', 1)
+        (run / "raw/used_vulkan_device.start.bin").write_bytes(forged)
+        with self.assertRaisesRegex(R.ReaderError, "duplicate key"):
+            self.stage("candidate", False)
+
+    def test_census_boot_contradiction_rejected(self):
+        """Top-level census boot_id must agree with the boot bytes, matching
+        the collector's law."""
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        census = json.loads((run / "raw/process_census.start.bin").read_bytes())
+        census["boot_id"] = "other-boot-id"
+        (run / "raw/process_census.start.bin").write_bytes(canonical(census))
+        with self.assertRaisesRegex(R.ReaderError, "census/boot"):
+            self.stage("candidate", False)
+
+    def test_repeat_impersonation_rejected(self):
+        """One capture cannot serve as its own repeat: primary/repeat must
+        differ in process incarnation and source receipt."""
+        self.builder.capture("candidate", False)
+        import shutil
+        src = self.source / "source/case-256/candidate"
+        dst = self.source / "source/case-256/candidate-repeat"
+        shutil.copytree(src, dst)
+        R.stage_capture_276(self.source, self.staged, "case-256", "candidate", False)
+        R.stage_capture_276(self.source, self.staged, "case-256", "candidate", True)
+        verdict = R.admit_pair_276(self.staged, "case-256")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("repeat" in p.lower() for p in verdict["problems"]))
+
+    def test_bilateral_row_swap_boundary_is_explicitly_pinned(self):
+        """BOUNDARY PIN (documented limitation, reviewer round 1 gap 3).
+        Rows are payload observations with no upstream derivation source:
+        a bilateral swap of ALL rows across both arms, with every authored
+        surface (bindings, receipts) repaired, is not distinguishable at
+        the byte-integrity/derivation level. The arm-binding of rows in a
+        physical campaign comes from the CAPTURE window (incarnation,
+        residency, census laws over raw probes), which this fixture cannot
+        represent. This test pins that the pair law detects every PARTIAL
+        row attack (aliasing, drift, unilateral copy) and documents that
+        the complete bilateral permutation is outside the byte-admission
+        boundary — it is reported to the maintainer as an open origin
+        observation rather than papered over with an invented row-arm
+        seal (which the #276 acceptance explicitly forbids).
+        Unilateral (one-directional) row copying IS rejected on aliasing."""
+        for arm in ("reference", "candidate"):
+            self.builder.capture(arm, False)
+            self.builder.capture(arm, True)
+            self.stage(arm, False)
+            self.stage(arm, True)
+        # Unilateral copy of one arm's row into the other: rejected.
+        target = self.staged / "units/case-256/reference/rows/0.f32"
+        donor = (self.staged / "units/case-256/candidate/rows/0.f32").read_bytes()
+        target.write_bytes(donor)
+        self._repair_binding("reference")
+        verdict = R.admit_pair_276(self.staged, "case-256")
+        self.assertFalse(verdict["admitted"])
+        self.assertTrue(any("aliasing" in p for p in verdict["problems"]))
+
+    def _repair_binding(self, tag="candidate", staged=None):
+        """Recompute the binding digest map from the unit's CURRENT bytes
+        (the attacker-consistent forgery primitive)."""
+        import hashlib as _h
+        staged_root = Path(staged) if staged is not None else self.staged
+        binding_path = staged_root / f"units/case-256/{tag}.json"
+        binding = json.loads(binding_path.read_bytes())
+        unit = staged_root / "units/case-256" / tag
+        binding["files"] = {p.relative_to(unit).as_posix(): _h.sha256(p.read_bytes()).hexdigest()
+                            for p in sorted(unit.rglob("*")) if p.is_file()}
+        binding_path.write_bytes(canonical(binding))
+
+    def test_staging_rejects_source_missing_row_file(self):
+        self.builder.capture("candidate", False)
+        (self.source / "source/case-256/candidate/rows/3.f32").unlink()
+        with self.assertRaisesRegex(R.ReaderError, "row"):
+            self.stage("candidate", False)
+
+    def test_fabricated_complete_bundle_via_collector_path_admits_only_through_collector(self):
+        """Gap-1 boundary pin (fixture-only): bytes not emitted by the
+        collector are refused at staging even when internally consistent,
+        because staging authenticates the collector's own retained
+        inventory (observation.json probe inventory, written only by the
+        collector)."""
+        # Authentic capture, then rebuild every file by hand next to it.
+        self.builder.capture("candidate", False)
+        run = self.source / "source/case-256/candidate"
+        files = {p.relative_to(run).as_posix(): p.read_bytes()
+                 for p in sorted(run.rglob("*")) if p.is_file()}
+        fabricated_root = self.base / "fab-complete/capture"
+        fab_run = fabricated_root / "source/case-256/candidate"
+        fab_run.mkdir(parents=True)
+        for rel, data in files.items():
+            (fab_run / rel).parent.mkdir(parents=True, exist_ok=True)
+            (fab_run / rel).write_bytes(data)
+        # Byte-identical copy of a collector-produced bundle admits (it IS
+        # collector-origin); the boundary is the collector, not the copy.
+        R.stage_capture_276(fabricated_root, self.base / "fab-complete/staged",
+                            "case-256", "candidate", False)
+        verdict = R.admit_staged_276(self.base / "fab-complete/staged", "case-256",
+                                     "candidate", False)
+        self.assertTrue(verdict["admitted"])
+        # But a hand-EDITED inventory (the only non-self-authenticating
+        # surface) is refused: its digest no longer matches observation.json.
+        staged2 = self.base / "fab-complete/staged2"
+        R.stage_capture_276(fabricated_root, staged2, "case-256", "candidate", False)
+        obs_path = staged2 / "units/case-256/candidate/observation.json"
+        obs = json.loads(obs_path.read_bytes())
+        obs["probe_inventory"]["raw/extra-entry.bin"] = {
+            "sha256": hashlib.sha256(b"x").hexdigest(), "bytes": 1}
+        obs_path.write_bytes(canonical(obs))
+        self._repair_root_binding(staged2, "candidate")
+        verdict = R.admit_staged_276(staged2, "case-256", "candidate", False)
+        self.assertFalse(verdict["admitted"])
+
+    def _repair_root_binding(self, staged_root, tag):
+        import hashlib as _h
+        binding_path = Path(staged_root) / f"units/case-256/{tag}.json"
+        binding = json.loads(binding_path.read_bytes())
+        unit = Path(staged_root) / "units/case-256" / tag
+        binding["files"] = {p.relative_to(unit).as_posix(): _h.sha256(p.read_bytes()).hexdigest()
+                            for p in sorted(unit.rglob("*")) if p.is_file()}
+        binding_path.write_bytes(canonical(binding))
 
 
 if __name__ == "__main__":
