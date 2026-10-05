@@ -189,22 +189,28 @@ class IntegrationChainTests(unittest.TestCase):
                                        self.produce(), raising_executor,
                                        self.compare)
         self.assertEqual(record["status"], "blocked")
-        self.assertEqual(record["candidate_launches"], 1)
-        self.assertEqual(self.launches, [C.FIXTURE_CASES[0]])
+        # The orchestrator counts the launch that raised, honestly: two.
+        self.assertEqual(record["candidate_launches"], 2)
+        self.assertEqual(self.launches, list(C.FIXTURE_CASES[:2]))
         self.assertEqual(record["evidence_class"], "tooling/fixture validation")
         # Same honesty on the reevaluation path: a staged-side tamper that
         # reaches execution reports the launches that occurred.
-        self.launches.clear()
-        ok = self.run_gate()
-        self.assertEqual(ok["status"],
-                         "integration complete (tooling/fixture validation only)")
-        (self.staged / "units/case-1024/candidate/rows/7.f32").write_bytes(
-            fixture_row("candidate", "7")[::-1])
-        reeval = I.evaluate_278(self.staged, self.source, self.executor,
-                                self.compare)
-        self.assertEqual(reeval["status"], "blocked")
-        self.assertEqual(reeval["candidate_launches"], len(self.launches))
-        self.assertEqual(reeval["evidence_class"], "tooling/fixture validation")
+        with tempfile.TemporaryDirectory() as td:
+            self.source = Path(td) / "capture"
+            self.staged = Path(td) / "staged"
+            self.builder = BundleBuilder(self.source)
+            self.launches.clear()
+            ok = self.run_gate()
+            self.assertEqual(ok["status"],
+                             "integration complete (tooling/fixture validation only)")
+            (self.staged / "units/case-1024/candidate/rows/7.f32").write_bytes(
+                fixture_row("candidate", "7")[::-1])
+            self.launches.clear()
+            reeval = I.evaluate_278(self.staged, self.source, self.executor,
+                                    self.compare)
+            self.assertEqual(reeval["status"], "blocked")
+            self.assertEqual(reeval["candidate_launches"], len(self.launches))
+            self.assertEqual(reeval["evidence_class"], "tooling/fixture validation")
 
     def test_executor_custody_tamper_blocks_at_final_verification(self):
         # The executor runs AFTER reference admission: custody mutated
@@ -221,7 +227,9 @@ class IntegrationChainTests(unittest.TestCase):
                                        self.compare)
         self.assertEqual(record["status"], "blocked")
         self.assertTrue(any("custody" in p for p in record["problems"]))
-        self.assertEqual(record["candidate_launches"], 1)
+        # All three candidates launched before candidate admission ran;
+        # the tamper is caught at final custody verification.
+        self.assertEqual(record["candidate_launches"], len(C.FIXTURE_CASES))
 
     def test_comparison_callback_custody_tamper_blocks(self):
         # The LAST callback in the chain: custody mutated after all
@@ -239,9 +247,35 @@ class IntegrationChainTests(unittest.TestCase):
         self.assertTrue(any("custody" in p for p in record["problems"]))
         self.assertEqual(record["candidate_launches"], len(C.FIXTURE_CASES))
 
+    def test_final_verification_covers_staged_bytes_and_reevaluation_callbacks(self):
+        # Both entry points must reject bytes altered by a comparison
+        # callback after final admission, on either side of custody binding.
+        for mode, side in (("full", "staged"), ("reevaluate", "staged"),
+                           ("reevaluate", "custody")):
+            with self.subTest(mode=mode, side=side), tempfile.TemporaryDirectory() as td:
+                self.source = Path(td) / "capture"
+                self.staged = Path(td) / "staged"
+                self.builder = BundleBuilder(self.source)
+                def tamper(case, reference, candidate):
+                    if case == C.FIXTURE_CASES[-1]:
+                        path = (self.staged / "units" if side == "staged"
+                                else self.source / "source")
+                        path = path / "case-3072/candidate/rows/2.f32"
+                        path.write_bytes(fixture_row("candidate", "2")[::-1])
+                if mode == "full":
+                    record = I.run_integration_278(
+                        self.source, self.staged, self.produce(), self.executor, tamper)
+                else:
+                    self.assertEqual(self.run_gate()["status"], I.INTEGRATION_COMPLETE)
+                    record = I.evaluate_278(self.staged, self.source, self.executor, tamper)
+                self.assertEqual(record["status"], "blocked")
+                self.assertEqual(record["candidate_launches"], len(C.FIXTURE_CASES))
+                self.assertEqual(record["evidence_class"], I.EVIDENCE_CLASS)
+                self.assertTrue(any("custody" in p or "staged" in p
+                                    for p in record["problems"]))
+
     def test_evaluate_278_asserts_reducer_fail_closed(self):
         from unittest.mock import patch
-        self.fixture = None  # unused guard
         ok = self.run_gate()
         self.assertEqual(ok["status"],
                          "integration complete (tooling/fixture validation only)")
