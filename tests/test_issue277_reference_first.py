@@ -17,6 +17,7 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import issue270_authority as C
+import issue273_admission as A
 import issue273_reducer as R
 import issue276_reader as B
 from tests.test_issue276_byte_admission import BundleBuilder, fixture_row
@@ -169,6 +170,74 @@ class ReferenceFirstTests(unittest.TestCase):
         self.assertEqual(record["candidate_launches"], 0)
         self.assertEqual(self.launches, [])
         self.assertEqual(self.comparisons, [])
+
+    def test_frozen_case_set_required_subset_probe_blocked(self):
+        self.fixture()
+        with patch.object(C, "FIXTURE_CASES", ("case-256",)):
+            record = self.run_gate()
+        self.assertEqual(record["status"], "blocked")
+        self.assertEqual(record["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("required" in p.lower() and "case-1024" in p
+                            for p in record["problems"]))
+        self.assertEqual(record["candidate_launches"], 0)
+        self.assertEqual(self.launches, [])
+        self.assertEqual(self.comparisons, [])
+
+    def test_frozen_case_set_required_empty_probe_blocked(self):
+        with patch.object(C, "FIXTURE_CASES", ()):
+            record = self.run_gate()
+        self.assertEqual(record["status"], "blocked")
+        self.assertEqual(record["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+        self.assertTrue(any("required" in p.lower() and "case-3072" in p
+                            for p in record["problems"]))
+        self.assertEqual(record["candidate_launches"], 0)
+        self.assertEqual(self.launches, [])
+        self.assertEqual(self.comparisons, [])
+
+    def test_reducer_entry_point_cannot_mint_physical_terminal(self):
+        self.fixture()
+        record = self.run_gate()
+        self.assertEqual(record["status"], "candidate gate reached")
+        cases = tuple(C.FIXTURE_CASES)
+        forged_admissions = {
+            case: {"admitted": True, "schema": A.SCHEMA, "case_id": case}
+            for case in cases
+        }
+        forged_determinism = {
+            case: {"reference": True, "candidate": True} for case in cases
+        }
+        # Attack the public #273 reducer with the successful gate record,
+        # then with schema- and case-bound forged in-memory verdicts.
+        for admissions, determinism in (
+                (record, record), (forged_admissions, forged_determinism)):
+            with self.subTest(admissions=admissions is record):
+                terminal = R.derive_terminal_273(admissions, determinism)
+                self.assertEqual(terminal["terminal"], R.TERMINAL_RUNTIME_BLOCKED_273)
+                self.assertNotEqual(terminal["terminal"], R.TERMINAL_PASS_273)
+                self.assertTrue(terminal["problems"])
+
+    def test_comparison_callback_cannot_mutate_record(self):
+        self.fixture()
+
+        def mutating_compare(case, reference, candidate):
+            self.comparisons.append(case)
+            reference.clear()
+            candidate.clear()
+            reference["forged"] = "0" * 64
+            candidate["forged"] = "1" * 64
+
+        record = O.orchestrate_277(self.staged, self.source, self.executor,
+                                   mutating_compare)
+        self.assertEqual(record["status"], "candidate gate reached")
+        self.assertIsNone(record["terminal"])
+        self.assertEqual(self.comparisons, list(C.FIXTURE_CASES))
+        self.assertEqual(self.launches, list(C.FIXTURE_CASES))
+        for case in C.FIXTURE_CASES:
+            for arm in ("reference", "candidate"):
+                item = record["cases"][case][arm]
+                self.assertEqual(set(item["primary_row_sha256"]),
+                                 {str(d) for d in range(C.DECISIONS)})
+                self.assertEqual(item["primary_row_sha256"], item["repeat_row_sha256"])
 
     def test_first_demonstration_matching_and_mismatch_fixtures(self):
         self.fixture()
