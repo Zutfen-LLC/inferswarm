@@ -168,7 +168,7 @@
 +        {
 +            static std::map<const void *, int> observed_d2h_legs; // per-(src tensor) leg counter
 +            I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-+                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_d2h_legs[src.get()]++)
++                .n("occ", observed_d2h_legs[src.get()]++)
 +                .s("direction", "device_to_host").n("bytes", size)
 +                .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
 +        }
@@ -177,7 +177,7 @@
 +        {
 +            static std::map<const void *, int> observed_h2d_legs; // per-(dst tensor) leg counter
 +            I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-+                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_h2d_legs[dst.get()]++)
++                .n("occ", observed_h2d_legs[dst.get()]++)
 +                .s("direction", "host_to_device").n("bytes", size)
 +                .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
 +        }

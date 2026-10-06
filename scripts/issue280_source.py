@@ -332,7 +332,7 @@ static const char * issue280_cached_bdf(ggml_backend_t backend) {
         ('        ggml_vk_buffer_copy(src->device->sync_staging, 0, src, src_offset, size);\n', '''        {
             static std::map<const void *, int> observed_d2h_legs; // per-(src tensor) leg counter
             I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_d2h_legs[src.get()]++)
+                .n("occ", observed_d2h_legs[src.get()]++)
                 .s("direction", "device_to_host").n("bytes", size)
                 .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
         }
@@ -340,7 +340,7 @@ static const char * issue280_cached_bdf(ggml_backend_t backend) {
         ('        ggml_vk_buffer_write(dst, dst_offset, src->device->sync_staging->ptr, size);\n', '''        {
             static std::map<const void *, int> observed_h2d_legs; // per-(dst tensor) leg counter
             I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_h2d_legs[dst.get()]++)
+                .n("occ", observed_h2d_legs[dst.get()]++)
                 .s("direction", "host_to_device").n("bytes", size)
                 .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
         }
