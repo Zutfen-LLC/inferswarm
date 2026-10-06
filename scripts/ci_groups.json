@@ -159,7 +159,9 @@
     "test_issue275_provenance",
     "test_issue276_byte_admission",
     "test_issue277_reference_first",
-    "test_issue278_integration"
+    "test_issue278_integration",
+    "test_issue280_observer",
+    "test_issue280_source"
    ]
   },
   "repo-integrity": {
@@ -351,6 +353,9 @@
    "r8i-qwen-qualification"
   ],
   "docs/investigations/qwen38-flash-next-r8-i6a-comparator2-corrective/": [
+   "r8i-qwen-qualification"
+  ],
+  "docs/investigations/vulkan-same-request-280/": [
    "r8i-qwen-qualification"
   ],
   "docs/investigations/vulkan-v0-a/": [
@@ -1407,6 +1412,12 @@
   "scripts/issue278_integration.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue280_observer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue280_source.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1756,6 +1767,12 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue278_integration.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue280_observer.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue280_source.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

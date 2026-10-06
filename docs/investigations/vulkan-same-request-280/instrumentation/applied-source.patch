@@ -1,0 +1,369 @@
+--- a/ggml/src/ggml-backend.cpp
++++ b/ggml/src/ggml-backend.cpp
+@@ -12,6 +12,9 @@
+ #include "ggml-backend-impl.h"
+ #include "ggml-alloc.h"
+ #include "ggml-impl.h"
++
++#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
++#include "issue280_observer.h"
+ 
+ #include <assert.h>
+ #include <limits.h>
+@@ -1643,6 +1646,28 @@
+ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t sched) {
+     GGML_ASSERT(sched);
+     struct ggml_backend_sched_split * splits = sched->splits;
++    // Pre-execution logical ranges. Read scheduler tables without hash insertion.
++    if (issue280::enabled()) {
++        for (int ps = 0; ps < sched->n_splits; ++ps) {
++            auto * planned = &splits[ps];
++            auto * destination = sched->backends[planned->backend_id];
++            for (int pi = 0; pi < planned->n_inputs; ++pi) {
++                auto * input = planned->inputs[pi];
++                const size_t hid = ggml_hash_find(&sched->hash_set, input);
++                auto * source = sched->backends[sched->hv_tensor_backend_ids[hid]];
++                auto * copy = tensor_id_copy(hid, planned->backend_id, sched->cur_copy);
++                if (source == destination || ggml_backend_buffer_is_host(input->buffer) ||
++                        ggml_backend_buffer_is_host(copy->buffer)) { continue; }
++                issue280::event("copy_manifest").s("tensor", input->name)
++                    .s("src", ggml_backend_name(source)).s("dst", ggml_backend_name(destination))
++                    .p("input", input).p("copy", copy).n("bytes", ggml_nbytes(input))
++                    .s("type", ggml_type_name(input->type))
++                    .n("ne0", input->ne[0]).n("ne1", input->ne[1]).n("ne2", input->ne[2]).n("ne3", input->ne[3])
++                    .n("nb0", input->nb[0]).n("nb1", input->nb[1]).n("nb2", input->nb[2]).n("nb3", input->nb[3])
++                    .n("view_offset", input->view_offs).emit();
++            }
++        }
++    }
+ 
+     ggml_tensor * prev_ids_tensor = nullptr;
+     std::vector<int32_t> ids;
+@@ -1670,6 +1695,12 @@
+             ggml_backend_t input_backend = ggml_backend_sched_get_tensor_backend(sched, split->inputs[input_id]);
+             struct ggml_tensor * input = split->inputs[input_id];
+             struct ggml_tensor * input_cpy = tensor_copy(input, split_backend_id, sched->cur_copy);
++            if (issue280::enabled() && input_backend != split_backend &&
++                    !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
++                issue280::event("boundary_begin").s("tensor", input->name)
++                    .s("src", ggml_backend_name(input_backend)).s("dst", ggml_backend_name(split_backend))
++                    .p("input", input).p("copy", input_cpy).n("bytes", ggml_nbytes(input)).emit();
++            }
+ 
+             if (input->flags & GGML_TENSOR_FLAG_INPUT) {
+                 // inputs from the user must be copied immediately to prevent the user overwriting the data before the copy is done
+@@ -1790,6 +1821,10 @@
+                     }
+                 }
+             }
++            if (issue280::enabled() && input_backend != split_backend &&
++                    !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
++                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).emit();
++            }
+         }
+ 
+         if (!sched->callback_eval) {
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -92,6 +92,10 @@
+ 
+ #include "ggml-impl.h"
+ #include "ggml-backend-impl.h"
++
++#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
++#include "issue280_observer.h"
++static const char * issue280_cached_bdf(ggml_backend_t backend);
+ 
+ #include "ggml-vulkan-shaders.hpp"
+ 
+@@ -2856,6 +2860,7 @@
+         }
+     }
+     ctx->device->device.resetFences({ ctx->fence });
++    I280_EVENT("complete").p("ctx", ctx).s("wait", "fence_spin_success").emit();
+ }
+ 
+ static constexpr uint32_t kSpvOpCooperativeMatrixLoadTensorNV = 5367;
+@@ -3391,6 +3396,7 @@
+     if (ctx->seqs.empty()) {
+         if (fence) {
+             ctx->p->q->handle->submit({}, fence);
++            I280_EVENT("fence_marker").p("subctx", ctx.get()).emit();
+         }
+         return;
+     }
+@@ -3460,6 +3466,14 @@
+     }
+ 
+     ctx->p->q->handle->submit(submit_infos, fence);
++    if (issue280::enabled()) {
++        for (const auto & seq : ctx->seqs) {
++            for (const auto & submitted : seq) {
++                issue280::event("submit").p("subctx", ctx.get()).p("cmd", submitted.buffer)
++                    .n("use", submitted.buffer->use_counter).emit();
++            }
++        }
++    }
+ 
+     ctx->seqs.clear();
+ }
+@@ -3559,6 +3573,7 @@
+     vk_context result = std::make_shared<vk_context_struct>();
+     VK_LOG_DEBUG("ggml_vk_create_context(" << result << ")");
+     ctx->gc.contexts.emplace_back(result);
++    I280_EVENT("ctx_create").p("subctx", result.get()).p("ctx", ctx).emit();
+     result->p = &p;
+     return result;
+ }
+@@ -3566,6 +3581,7 @@
+ static vk_context ggml_vk_create_temporary_context(vk_command_pool& p) {
+     vk_context result = std::make_shared<vk_context_struct>();
+     VK_LOG_DEBUG("ggml_vk_create_temporary_context(" << result << ")");
++    I280_EVENT("ctx_create").p("subctx", result.get()).p("ctx", result.get()).emit();
+     result->p = &p;
+     return result;
+ }
+@@ -8478,6 +8494,9 @@
+     {
+         ggml_vk_debug_label dbg(subctx, pipeline->name, wg0, wg1, wg2);
+         subctx->s->buffer->buf.dispatch(wg0, wg1, wg2);
++        I280_EVENT("dispatch").p("ctx", ctx).p("cmd", subctx->s->buffer)
++            .n("use", subctx->s->buffer->use_counter).s("pipeline", pipeline->name)
++            .n("x", wg0).n("y", wg1).n("z", wg2).emit();
+     }
+ }
+ 
+@@ -8821,6 +8840,7 @@
+         ggml_vk_submit(subctx, dst->device->fence);
+         VK_CHECK(dst->device->device.waitForFences({ dst->device->fence }, true, UINT64_MAX), "vk_buffer_write_2d waitForFences", dst->device);
+         dst->device->device.resetFences({ dst->device->fence });
++        I280_EVENT("complete").p("ctx", subctx.get()).s("wait", "write_transfer_fence").emit();
+         ggml_vk_queue_command_pools_cleanup(dst->device);
+     }
+ }
+@@ -8989,6 +9009,7 @@
+         ggml_vk_submit(subctx, src->device->fence);
+         VK_CHECK(src->device->device.waitForFences({ src->device->fence }, true, UINT64_MAX), "vk_buffer_copy waitForFences", src->device);
+         src->device->device.resetFences({ src->device->fence });
++        I280_EVENT("complete").p("ctx", subctx.get()).s("wait", "copy_transfer_fence").emit();
+         ggml_vk_queue_command_pools_cleanup(src->device);
+     } else {
+         VK_LOG_DEBUG("ggml_vk_buffer_copy(MULTI_DEVICE, " << size << ")");
+@@ -8997,8 +9018,14 @@
+ 
+         // Copy to src staging buffer
+         ggml_vk_buffer_copy(src->device->sync_staging, 0, src, src_offset, size);
++        I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
++            .s("direction", "device_to_host").n("bytes", size)
++            .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
+         // Copy to dst buffer
+         ggml_vk_buffer_write(dst, dst_offset, src->device->sync_staging->ptr, size);
++        I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
++            .s("direction", "host_to_device").n("bytes", size)
++            .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
+     }
+ }
+ 
+@@ -16118,6 +16145,25 @@
+         }
+     }
+ 
++    if (issue280::enabled()) {
++        issue280::event("node").p("ctx", ctx).p("cmd", compute_ctx->s->buffer)
++            .n("use", compute_ctx->s->buffer->use_counter).s("tensor", node->name)
++            .s("op", ggml_op_name(node->op)).emit();
++        for (int fi = 0; fi <= ctx->num_additional_fused_ops; ++fi) {
++            const ggml_tensor * member = cgraph->nodes[node_idx + fi];
++            for (int si = 0; si < GGML_MAX_SRC; ++si) {
++                const ggml_tensor * w = member->src[si];
++                if (!w || !w->buffer || !ggml_backend_buffer_is_vk(w->buffer) ||
++                        ggml_backend_buffer_get_usage(w->buffer) != GGML_BACKEND_BUFFER_USAGE_WEIGHTS) { continue; }
++                auto * wb = (ggml_backend_vk_buffer_context *) w->buffer->context;
++                if (wb->dev_buffer->device != ctx->device) { continue; }
++                issue280::event("weight").p("ctx", ctx).p("cmd", compute_ctx->s->buffer)
++                    .n("use", compute_ctx->s->buffer->use_counter).s("tensor", w->name)
++                    .p("buffer", wb->dev_buffer.get()).n("offset", vk_tensor_offset(w) + w->view_offs)
++                    .n("bytes", ggml_nbytes(w)).n("buffer_bytes", wb->dev_buffer->size).emit();
++            }
++        }
++    }
+     // closed explicitly below, and by the destructor on the early returns
+     ggml_vk_debug_label dbg(compute_ctx, cgraph, node_idx, ctx->num_additional_fused_ops);
+ 
+@@ -16819,6 +16865,10 @@
+         vk_buffer src_buf = src_buf_ctx->dev_buffer;
+         vk_buffer dst_buf = dst_buf_ctx->dev_buffer;
+ 
++        if (issue280::enabled() && src_buf->device != dst_buf->device) {
++            issue280::event("copy_path").p("input", src).p("copy", dst)
++                .p("src_buffer", src_buf.get()).p("dst_buffer", dst_buf.get()).emit();
++        }
+         ggml_vk_buffer_copy(dst_buf, vk_tensor_offset(dst) + dst->view_offs, src_buf, vk_tensor_offset(src) + src->view_offs, ggml_nbytes(src));
+ 
+         return true;
+@@ -17209,6 +17259,7 @@
+             ggml_vk_submit(compute_ctx, ctx->fence);
+             VK_CHECK(ctx->device->device.waitForFences({ ctx->fence }, true, UINT64_MAX), "synchronize waitForFences", ctx->device);
+             ctx->device->device.resetFences({ ctx->fence });
++            I280_EVENT("complete").p("ctx", ctx).s("wait", "synchronize_fence").emit();
+         } else {
+             ggml_vk_submit(compute_ctx, {});
+         }
+@@ -17231,9 +17282,11 @@
+             };
+             si.setPNext(&tl_info);
+             ctx->device->compute_queue->handle->submit({ si }, ctx->fence);
++            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "transfer_timeline").emit();
+             ctx->transfer_semaphore_last_submitted = ctx->transfer_semaphore.value;
+         } else {
+             ctx->device->compute_queue->handle->submit({}, ctx->fence);
++            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "empty_queue").emit();
+         }
+         if (!ctx->device->serialize_submissions) {
+             ggml_vk_wait_for_fence(ctx);
+@@ -18004,6 +18057,8 @@
+     VK_LOG_DEBUG("ggml_backend_vk_graph_compute(" << cgraph->n_nodes << " nodes)");
+     ggml_backend_vk_context * ctx = (ggml_backend_vk_context *)backend->context;
+ 
++    I280_EVENT("vk_graph_begin").p("ctx", ctx).s("backend", ggml_backend_name(backend))
++        .s("bdf", issue280_cached_bdf(backend)).emit();
+     ctx->device->diag_cgraph = nullptr;
+     ctx->device->diag_prev_start = -1;
+     ctx->device->diag_prev_end = -1;
+@@ -18116,6 +18171,7 @@
+             ctx->device->device.resetFences({ ctx->fence });
+             ctx->submit_pending = false;
+             ctx->device->diag_cgraph = cgraph;
++            I280_EVENT("complete").p("ctx", ctx).s("wait", "serialized_fence").emit();
+             ctx->device->diag_prev_start = start;
+             ctx->device->diag_prev_end = end;
+         }
+@@ -18490,6 +18546,7 @@
+         ggml_vk_synchronize(ctx);
+     }
+ 
++    I280_EVENT("vk_graph_end").p("ctx", ctx).emit();
+     return GGML_STATUS_SUCCESS;
+ 
+     UNUSED(backend);
+@@ -18912,6 +18969,7 @@
+     ctx->submit_pending = true;
+     vkev->cmd_buffer = cmd_buf;
+     vkev->cmd_buffer_use_counter = cmd_buf->use_counter;
++    I280_EVENT("event_record").p("ctx", ctx).p("sync_event", event).n("value", vkev->tl_semaphore.value).emit();
+     ctx->compute_ctx.reset();
+ }
+ 
+@@ -19084,6 +19142,11 @@
+     std::string pci_bus_id;
+     int op_offload_min_batch_size;
+ };
++
++static const char * issue280_cached_bdf(ggml_backend_t backend) {
++    auto * dev = (ggml_backend_vk_device_context *) backend->device->context;
++    return dev->pci_bus_id.c_str(); // already cached by original device registration
++}
+ 
+ static const char * ggml_backend_vk_device_get_name(ggml_backend_dev_t dev) {
+     ggml_backend_vk_device_context * ctx = (ggml_backend_vk_device_context *)dev->context;
+@@ -19881,6 +19944,7 @@
+         uint64_t val = vkev->tl_semaphore.value;
+         vk::SemaphoreWaitInfo swi{vk::SemaphoreWaitFlags{}, sem, val};
+         VK_CHECK(device->device.waitSemaphores(swi, UINT64_MAX), "event_synchronize", device);
++        I280_EVENT("event_complete").p("sync_event", event).n("value", val).emit();
+ 
+         // Reset and move submitted events
+         for (auto& event : vkev->events_submitted) {
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -19,6 +19,9 @@
+ #include <limits>
+ #include <stdexcept>
+ #include <string>
++
++#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\n", (s).c_str())
++#include "issue280_observer.h"
+ 
+ //
+ // llama_context
+@@ -1393,7 +1396,10 @@
+         //LLAMA_LOG_INFO("graph set inputs time: %.3f ms\n", (ggml_time_us() - t_start_us)/1000.0);
+     }
+ 
++    I280_EVENT("graph_begin").p("graph", res->get_gf()).n("tokens", ubatch.n_tokens)
++        .n("sequences", ubatch.n_seqs).n("seq", ubatch.seq_id_unq[0]).emit();
+     const auto status = graph_compute(res->get_gf(), ubatch.n_tokens > 1);
++    I280_EVENT("graph_end").p("graph", res->get_gf()).n("status", status).emit();
+     if (status != GGML_STATUS_SUCCESS) {
+         LLAMA_LOG_ERROR("%s: failed to compute graph, compute status: %d\n", __func__, status);
+         ret = status;
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -26,6 +26,9 @@
+ #include <random>
+ #include <utility>
+ #include <fstream>
++
++#define I280_LOG(s) LOG_INF("I280 %s\n", (s).c_str())
++#include "issue280_observer.h"
+ 
+ // fix problem with std::min and std::max
+ #if defined(_WIN32)
+@@ -2087,6 +2090,10 @@
+     }
+ 
+     void send_final_response(server_slot & slot) {
++        I280_EVENT("response").n("request", slot.task->id)
++            .n("sampled", slot.stats.n_gen).n("prompt_processed", slot.stats.n_prompt_processed)
++            .n("prompt_cached", slot.stats.n_prompt_cached)
++            .n("eos", slot.stop == STOP_TYPE_EOS ? 1 : 0).emit();
+         auto res = std::make_unique<server_task_result_cmpl_final>();
+ 
+         res->id      = slot.task->id;
+@@ -3679,11 +3686,36 @@
+         // note: the sync is done here too, so that the wait is also covered by the yield
+         int ret = 0;
+         queue_tasks.yield_to_queue([&]() {
++            // Metadata only; preserve the existing worker and decode/sync seam.
++            if (issue280::enabled()) {
++                static bool observed_identity_emitted = false; // logger state only, single worker
++                if (!observed_identity_emitted) {
++                    issue280::event("recording").s("kind", "SOURCE_OBSERVER")
++                        .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4").emit();
++                    observed_identity_emitted = true;
++                }
++                for (auto & observed_slot : slots) {
++                    if (!observed_slot.is_processing()) { continue; }
++                    bool observed_member = false;
++                    for (int ti = 0; ti < batch_view.n_tokens; ++ti) {
++                        for (int si = 0; si < batch_view.n_seq_id[ti]; ++si) {
++                            observed_member |= batch_view.seq_id[ti][si] == observed_slot.id;
++                        }
++                    }
++                    if (observed_member) {
++                        issue280::event("batch_begin").n("request", observed_slot.task->id)
++                            .n("seq", observed_slot.id).n("tokens", batch_view.n_tokens)
++                            .s("phase", observed_slot.stats.n_gen == 0 ? "prefill" : "decode")
++                            .n("speculative", observed_slot.can_speculate() ? 1 : 0).emit();
++                    }
++                }
++            }
+             ret = llama_decode(ctx_tgt, batch_view);
+             if (ret == 0 && has_output) {
+                 llama_synchronize(ctx_tgt);
+             }
+         });
++        I280_EVENT("batch_end").n("status", ret).emit();
+ 
+         if (ret != 0) {
+             {
+@@ -3854,6 +3886,9 @@
+             {
+                 scoped_timer timer(t_sampl, n_sampl);
+                 id = common_sampler_sample(slot.smpl.get(), slot.ctx_tgt, tok_idx);
++                I280_EVENT("sample").n("request", slot.task->id)
++                    .n("position", slot.stats.n_gen).n("token", id)
++                    .n("eos", llama_vocab_is_eog(vocab, id) ? 1 : 0).emit();
+             }
+ 
+             slot.i_batch = -1;

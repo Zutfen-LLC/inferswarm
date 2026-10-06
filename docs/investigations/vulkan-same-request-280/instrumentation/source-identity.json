@@ -1,0 +1,23 @@
+{
+  "base_git_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build",
+  "emitter_sha256": "5f29ab89878451cfad50bfd59c19193a91696a5457978ec6897750071a7315d1",
+  "full_transformed_git_tree": "eb46e8dd1c0d0a6b7192ff4b587477abeb1801eb",
+  "original_sha256": {
+    "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
+    "src/llama-context.cpp": "6429ebec7c926945987e6fe037317af0f99265490bc14b0606d9487a62a76453",
+    "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
+  },
+  "overlay_tree_sha256": "4fefbd611a13e5672452efa822dd8ec0f85a3785503a6c507e92926e4d625430",
+  "patch_sha256": "3931525cf073771954da1427f4b073a75ec5dcc381b8453b92cf57ffe2d4bd0f",
+  "physical_runner": "HELD_UNAVAILABLE",
+  "schema": "issue280-source-overlay/1",
+  "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "transformed_sha256": {
+    "ggml/src/ggml-backend.cpp": "a21bd62d9dc655721779d634287a6620d787021cc59981b784c80d62f0ca8532",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "a015d0ca1ff98ac675d91a3d08f9f27ee9f0d37c8da00d05a6c4e6bb491f640e",
+    "src/llama-context.cpp": "4c90c807ba1f7c5c03abdb8be523689e725210bd2ba70e1c8b005c15072f3ec6",
+    "tools/server/server-context.cpp": "d8af95295d5895e7f7ef8b3e5573f544ec4481161e3fe308f947577af7a25e4c"
+  }
+}
