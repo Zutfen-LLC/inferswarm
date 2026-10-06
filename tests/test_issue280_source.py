@@ -98,3 +98,43 @@ class SourceTransformTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourceCorrectionTests(unittest.TestCase):
+    def test_source_hooks_cover_collector_causality_and_inventory_shapes(self):
+        m = SourceTransformTests().module()
+        source = Path("/home/zutfen/llama.cpp-252")
+        originals = {path: (source / path).read_bytes() for path in m.SOURCE_HASHES}
+        transformed, _ = m.transform(originals)
+        self.assertIn("src/llama-model.cpp", m.SOURCE_HASHES)
+        self.assertIn("src/llama-kv-cache.cpp", m.SOURCE_HASHES)
+        server = transformed["tools/server/server-context.cpp"].decode()
+        model = transformed["src/llama-model.cpp"].decode()
+        kv = transformed["src/llama-kv-cache.cpp"].decode()
+        self.assertIn('.json("token_ids", observed_tokens_json)', server)
+        self.assertIn('.json("positions", observed_positions_json)', server)
+        self.assertIn('.n("pos_present", observed_pos_present ? 1 : 0)', server)
+        self.assertIn('.n("ordinal", ++observed_request_ordinal)', server)
+        self.assertIn('.s("stop_reason", observed_stop_reason)', server)
+        self.assertIn('.n("absolute_position", slot.prompt.tokens.pos_next())', server)
+        self.assertIn('event("weight_inventory")', model)
+        self.assertIn('event("kv_inventory")', kv)
+        for path, original in originals.items():
+            self.assertEqual(m.remove_insertions(path, transformed[path]), original)
+
+    def test_emitter_json_field_preserves_array_type(self):
+        header_dir = ROOT / "docs/investigations/vulkan-same-request-280/instrumentation"
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            (td / "probe.cpp").write_text(
+                '#include <iostream>\n'
+                '#define I280_LOG(s) (std::cout << s << "\\n")\n'
+                '#include "issue280_observer.h"\n'
+                'int main() { setenv("ISSUE280_OBSERVE", "1", 1); '
+                'I280_EVENT("batch_begin").json("token_ids", "[7,8]").emit(); }\n')
+            binary = td / "json-field"
+            subprocess.run(["c++", "-std=c++17", "-I", str(header_dir),
+                            str(td / "probe.cpp"), "-o", str(binary)],
+                           check=True, capture_output=True, text=True)
+            raw = subprocess.run([str(binary)], check=True, capture_output=True, text=True).stdout
+            self.assertIn('"token_ids":[7,8]', raw)

@@ -46,6 +46,10 @@ public:
     event & n(const char * k, long long v) {
         out << ',' << quote(k) << ':' << v; return *this;
     }
+    // Append a pre-serialized JSON value (numeric arrays at this call site).
+    event & json(const char * k, const std::string & v) {
+        out << ',' << quote(k) << ':' << v; return *this;
+    }
     event & p(const char * k, const void * v) {
         std::ostringstream ptr; ptr << v; return s(k, ptr.str());
     }

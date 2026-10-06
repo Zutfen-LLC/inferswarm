@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exact public-SOURCE-only additive Issue #280 transform; no build/launch.
 
-Produces a four-source overlay plus raw emitter, diff, and byte identities.
+Produces a six-source overlay plus raw emitter, diff, and byte identities.
 No synchronization, tensor reads/transfers, dispatches or scheduler decisions
 are added or replaced. Existing callback hooks are NOT reused: R8-G's callback
 breaks graph ranges and adds synchronization, and cannot prove submissions.
@@ -22,40 +22,89 @@ SOURCE_HASHES = {
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
     "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b",
     "src/llama-context.cpp": "6429ebec7c926945987e6fe037317af0f99265490bc14b0606d9487a62a76453",
+    "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
+    "src/llama-kv-cache.cpp": "16b40ff274e5aed3827f0d1c13a04f4f44c4d800c4eecbb5294b04127ab213c3",
 }
 
 # INSERTIONS ONLY. Anchors are pinned verbatim and must occur exactly once.
 INSERTIONS = {
     "tools/server/server-context.cpp": [
         ('#include <fstream>\n', '\n#define I280_LOG(s) LOG_INF("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('            GGML_ASSERT(task);\n', '''            if (issue280::enabled()) {
+                const char * observed_stop_reason = "none";
+                switch (stop) {
+                    case STOP_TYPE_NONE: observed_stop_reason = "none"; break;
+                    case STOP_TYPE_EOS: observed_stop_reason = "eos"; break;
+                    case STOP_TYPE_WORD: observed_stop_reason = "word"; break;
+                    case STOP_TYPE_LIMIT: observed_stop_reason = "limit"; break;
+                }
+                issue280::event("request_end").n("request", task->id).n("seq", id)
+                    .s("stop_reason", observed_stop_reason).n("sampled", stats.n_gen)
+                    .n("prompt_processed", stats.n_prompt_processed)
+                    .n("prompt_cached", stats.n_prompt_cached).emit();
+            }
+''', 'after'),
+        ('        SLT_INF(slot, "processing task, is_child = %d\\n", slot.task->is_child());\n        return true;\n', '''        if (issue280::enabled()) {
+            static long long observed_request_ordinal = 0;
+            issue280::event("request_accept").n("request", slot.task->id)
+                .n("seq", slot.id).n("ordinal", ++observed_request_ordinal).emit();
+        }
+''', 'before'),
         ('            ret = llama_decode(ctx_tgt, batch_view);\n', '''            // Metadata only; preserve the existing worker and decode/sync seam.
             if (issue280::enabled()) {
-                static bool observed_identity_emitted = false; // logger state only, single worker
-                if (!observed_identity_emitted) {
-                    issue280::event("recording").s("kind", "SOURCE_OBSERVER")
-                        .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4").emit();
-                    observed_identity_emitted = true;
-                }
                 for (auto & observed_slot : slots) {
                     if (!observed_slot.is_processing()) { continue; }
+                    // The collector consumes JSON arrays; keep only this slot's members.
+                    std::string observed_tokens_json = "[";
+                    std::string observed_positions_json = "[";
+                    bool observed_first_token = true;
+                    bool observed_first_position = true;
                     bool observed_member = false;
+                    const bool observed_pos_present = batch_view.pos != nullptr;
                     for (int ti = 0; ti < batch_view.n_tokens; ++ti) {
+                        bool slot_member = false;
                         for (int si = 0; si < batch_view.n_seq_id[ti]; ++si) {
-                            observed_member |= batch_view.seq_id[ti][si] == observed_slot.id;
+                            slot_member |= batch_view.seq_id[ti][si] == observed_slot.id;
+                        }
+                        if (!slot_member) { continue; }
+                        observed_member = true;
+                        if (batch_view.token != nullptr) {
+                            if (!observed_first_token) { observed_tokens_json += ","; }
+                            observed_tokens_json += std::to_string(batch_view.token[ti]);
+                            observed_first_token = false;
+                        }
+                        if (observed_pos_present) {
+                            if (!observed_first_position) { observed_positions_json += ","; }
+                            observed_positions_json += std::to_string(batch_view.pos[ti]);
+                            observed_first_position = false;
                         }
                     }
                     if (observed_member) {
-                        issue280::event("batch_begin").n("request", observed_slot.task->id)
-                            .n("seq", observed_slot.id).n("tokens", batch_view.n_tokens)
+                        observed_tokens_json += "]";
+                        observed_positions_json += "]";
+                        issue280::event observed_batch("batch_begin");
+                        observed_batch.n("request", observed_slot.task->id).n("seq", observed_slot.id)
+                            .n("tokens", batch_view.n_tokens)
                             .s("phase", observed_slot.stats.n_gen == 0 ? "prefill" : "decode")
-                            .n("speculative", observed_slot.can_speculate() ? 1 : 0).emit();
+                            .n("speculative", observed_slot.can_speculate() ? 1 : 0);
+                        if (batch_view.token != nullptr) {
+                            observed_batch.json("token_ids", observed_tokens_json);
+                        } else {
+                            observed_batch.n("embd", 1);
+                        }
+                        observed_batch.n("pos_present", observed_pos_present ? 1 : 0);
+                        if (observed_pos_present) {
+                            observed_batch.json("positions", observed_positions_json);
+                        }
+                        observed_batch.emit();
                     }
                 }
             }
 ''', 'before'),
         ('                llama_synchronize(ctx_tgt);\n            }\n        });\n', '        I280_EVENT("batch_end").n("status", ret).emit();\n', 'after'),
         ('                id = common_sampler_sample(slot.smpl.get(), slot.ctx_tgt, tok_idx);\n', '''                I280_EVENT("sample").n("request", slot.task->id)
-                    .n("position", slot.stats.n_gen).n("token", id)
+                    .n("position", slot.stats.n_gen).n("token", id).n("token_id", id)
+                    .n("absolute_position", slot.prompt.tokens.pos_next())
                     .n("eos", llama_vocab_is_eog(vocab, id) ? 1 : 0).emit();
 ''', 'after'),
         ('    void send_final_response(server_slot & slot) {\n', '''        I280_EVENT("response").n("request", slot.task->id)
@@ -70,6 +119,120 @@ INSERTIONS = {
         .n("sequences", ubatch.n_seqs).n("seq", ubatch.seq_id_unq[0]).emit();
 ''', 'before'),
         ('    const auto status = graph_compute(res->get_gf(), ubatch.n_tokens > 1);\n', '    I280_EVENT("graph_end").p("graph", res->get_gf()).n("status", status).emit();\n', 'after'),
+    ],
+    "src/llama-model.cpp": [
+        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('    return true;\n}\n\nggml_tensor * llama_model_base::create_tensor(', '''    if (issue280::enabled()) {
+        static bool observed_recording_emitted = false;
+        if (!observed_recording_emitted) {
+            issue280::event("recording").s("kind", "SOURCE_OBSERVER")
+                .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4").emit();
+            observed_recording_emitted = true;
+        }
+        for (const auto & observed_named_tensor : tensors_by_name) {
+            const ggml_tensor * observed_tensor = observed_named_tensor.second;
+            const char * observed_backend = observed_tensor->buffer
+                ? ggml_backend_buffer_name(observed_tensor->buffer) : "unassigned";
+            const char * observed_bdf = observed_backend;
+            if (observed_tensor->buffer != nullptr) {
+                ggml_backend_buffer_type_t observed_buft = ggml_backend_buffer_get_type(observed_tensor->buffer);
+                ggml_backend_dev_t observed_dev = observed_buft
+                    ? ggml_backend_buft_get_device(observed_buft) : nullptr;
+                if (observed_dev != nullptr) {
+                    ggml_backend_dev_props observed_props{};
+                    ggml_backend_dev_get_props(observed_dev, &observed_props);
+                    if (observed_props.device_id != nullptr && observed_props.device_id[0] != '\\0') {
+                        observed_bdf = observed_props.device_id;
+                    }
+                }
+            }
+            int observed_layer = -1;
+            const char * observed_name = ggml_get_name(observed_tensor);
+            if (std::strncmp(observed_name, "blk.", 4) == 0) {
+                const char * observed_digit = observed_name + 4;
+                int observed_value = 0;
+                bool observed_digits = false;
+                bool observed_valid = true;
+                while (*observed_digit >= '0' && *observed_digit <= '9') {
+                    const int digit = *observed_digit - '0';
+                    observed_digits = true;
+                    if (observed_value > (2147483647 - digit) / 10) {
+                        observed_valid = false;
+                        break;
+                    }
+                    observed_value = observed_value * 10 + digit;
+                    ++observed_digit;
+                }
+                if (observed_valid && observed_digits && *observed_digit == '.') {
+                    observed_layer = observed_value;
+                }
+            }
+            issue280::event("weight_inventory").s("tensor", observed_name)
+                .s("bdf", observed_bdf).n("bytes", static_cast<long long>(ggml_nbytes(observed_tensor)))
+                .n("layer", observed_layer).p("buffer", observed_tensor->buffer)
+                .s("backend", observed_backend).emit();
+        }
+    }
+''', 'before'),
+    ],
+    "src/llama-kv-cache.cpp": [
+        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('    {\n        const size_t memory_size_k = size_k_bytes();', '''    if (issue280::enabled()) {
+        for (const auto & observed_cache : ctxs_bufs) {
+            ggml_context * observed_ctx = observed_cache.first.get();
+            ggml_backend_buffer_t observed_buffer = observed_cache.second.get();
+            const char * observed_backend = ggml_backend_buffer_name(observed_buffer);
+            const char * observed_bdf = observed_backend;
+            ggml_backend_buffer_type_t observed_buft = ggml_backend_buffer_get_type(observed_buffer);
+            ggml_backend_dev_t observed_dev = observed_buft
+                ? ggml_backend_buft_get_device(observed_buft) : nullptr;
+            if (observed_dev != nullptr) {
+                ggml_backend_dev_props observed_props{};
+                ggml_backend_dev_get_props(observed_dev, &observed_props);
+                if (observed_props.device_id != nullptr && observed_props.device_id[0] != '\\0') {
+                    observed_bdf = observed_props.device_id;
+                }
+            }
+            for (ggml_tensor * observed_tensor = ggml_get_first_tensor(observed_ctx);
+                    observed_tensor != nullptr;
+                    observed_tensor = ggml_get_next_tensor(observed_ctx, observed_tensor)) {
+                if (observed_tensor->view_src != nullptr) { continue; }
+                const char * observed_name = ggml_get_name(observed_tensor);
+                const char * observed_k = std::strstr(observed_name, "_k_l");
+                const char * observed_v = std::strstr(observed_name, "_v_l");
+                const char * observed_layer_start = nullptr;
+                const char * observed_kind = "kv";
+                if (observed_k != nullptr && (observed_v == nullptr || observed_k < observed_v)) {
+                    observed_kind = "k";
+                    observed_layer_start = observed_k + 4;
+                } else if (observed_v != nullptr) {
+                    observed_kind = "v";
+                    observed_layer_start = observed_v + 4;
+                }
+                int observed_layer = -1;
+                if (observed_layer_start != nullptr && *observed_layer_start >= '0' && *observed_layer_start <= '9') {
+                    int observed_value = 0;
+                    bool observed_valid = true;
+                    const char * observed_digit = observed_layer_start;
+                    while (*observed_digit >= '0' && *observed_digit <= '9') {
+                        const int digit = *observed_digit - '0';
+                        if (observed_value > (2147483647 - digit) / 10) {
+                            observed_valid = false;
+                            break;
+                        }
+                        observed_value = observed_value * 10 + digit;
+                        ++observed_digit;
+                    }
+                    if (observed_valid) { observed_layer = observed_value; }
+                }
+                issue280::event("kv_inventory").s("tensor", observed_name)
+                    .s("bdf", observed_bdf).n("bytes", static_cast<long long>(ggml_nbytes(observed_tensor)))
+                    .s("kind", observed_kind).n("layer", observed_layer)
+                    .p("buffer", observed_buffer).s("backend", observed_backend).emit();
+            }
+        }
+    }
+''', 'before'),
     ],
     "ggml/src/ggml-backend.cpp": [
         ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
