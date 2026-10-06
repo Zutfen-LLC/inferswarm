@@ -35,13 +35,23 @@ occurrence = number of prior `copy_manifest` rows with the same
 
 `ggml_backend_sched_graph_compute_async` (pinned ggml-backend.cpp:2014,
 anchor `enum ggml_status ggml_backend_sched_graph_compute_async(...) {`,
-unique in the TU). At the pin, `llama_context::graph_compute`
-(src/llama-context.cpp:2513) executes exactly ONE async sched call per
-`graph_begin`/`graph_end` pair the observer emits from
+unique in the TU). On the observed process_ubatch path, `llama_context::
+graph_compute` (src/llama-context.cpp:2513) executes exactly ONE async sched
+call per `graph_begin`/`graph_end` pair the observer emits from
 `src/llama-context.cpp:1396`, so entry into this function is 1:1 with the
-collector's graph scope. Resetting the occurrence state here gives the
+collector's graph scope there. Resetting the occurrence state here gives the
 collector's per-graph reset with no new synchronization: the reset runs on the
 host thread before `ggml_backend_sched_compute_splits` emits any manifest.
+
+Scope limitation (round-9 review finding, disclosed): the mapping is not
+globally bijective at the pin. `llama_kv_cache::update` K-shift calls
+`lctx->graph_compute` (src/llama-kv-cache.cpp:880) without the process_ubatch
+`graph_begin` hook, and the non-async wrapper
+`ggml_backend_sched_graph_compute` (ggml-backend.cpp:2008) also reaches the
+async entry. Both lie outside the frozen no-overflow/no-cache-reuse observed
+workload (a K-shift graph has no observed cross-die input-copy boundaries);
+if a future workload observes K-shift copies, the reset anchor must be
+revisited.
 
 ### Copy-selection point
 
@@ -98,11 +108,21 @@ copy_path and end emit ONE occurrence identity per pair per graph.
    happen for well-formed producer order since the manifest hook precedes
    compute).
 4. `copy_path` (ggml-vulkan.cpp): same registry, keyed by the (src, dst)
-   pair — at the pin `src`/`dst` ARE the planned input and its selected
-   copy (the scheduler copies cross-die inputs by calling
-   `ggml_backend_tensor_copy` on exactly this pair), so the
+   pair — on the scheduler input-copy path `src`/`dst` ARE the planned
+   input and its selected copy (the scheduler copies cross-die inputs by
+   calling `ggml_backend_tensor_copy` on exactly this pair), so the
    (input, copy)-keyed and (src, dst)-keyed views coincide and all four
    sites agree on one occurrence number per pair per graph.
+
+Scope limitation (round-9 review finding, disclosed): the pinned hook site
+(ggml-vulkan.cpp ~16810, the cross-device branch of the Vulkan buffer-copy
+callback) is a GENERIC buffer copy, not scheduler-exclusive — other
+cross-device copies (e.g. `ggml_backend_graph_copy` on Vulkan buffers) can
+flow through it. The reviewer's probe confirmed such an alien copy_path
+row fails closed at the collector (no open boundary → rejected) and does
+not advance any registered begin cursor, so it cannot corrupt in-scope
+occurrence identity; but the design note does not claim scheduler
+exclusivity for the hook site.
 
 Because all four sites share one registry, the manifest is the authoritative
 assignment (it fires first, per planned input, in the pre-compute manifest
@@ -122,21 +142,17 @@ this the smallest change.
 
 ### Harness lifecycle correspondence
 
-The regression cases execute a C++ harness (`fixtures/producer_occurrence.cpp`)
-that calls the REAL shared production helper
-`instrumentation/issue280_occurrence.h` with the exact expressions the
-transform inserts into the production sources, in the pinned lifecycle order:
-`sched entry (reset) → per planned input: assign (manifest) → begin
-(boundary_begin) → current (copy_path, boundary_end)`. `tests/
-test_issue280_source.py::test_harness_executes_production_counter_expressions`
-asserts the harness's `issue280_occurrence::` call expressions equal the
-transform's inserted expressions, and `test_harness_lifecycle_matches_
-production_anchors` asserts the reset is anchored at
-`ggml_backend_sched_graph_compute_async` entry, `assign` in the
-compute_splits manifest loop, and `current(src, dst)` in the Vulkan TU
-copy_path — so harness execution exercises the actual generated hook/counter
-logic, not a hand-written re-enactment. The resulting rows are emitted through
-the standard emitter header and fed into the REAL collector.
+The regression cases execute a C++ harness TEMPLATE
+(`fixtures/producer_occurrence.cpp`) whose five counter expressions are
+placeholders substituted AT TEST TIME with the expressions extracted from
+the transform's production insertions, then compiled and run — the harness
+literally executes the generated counter code. The resulting rows are
+emitted through the standard emitter header and fed into the REAL
+collector. Semantic binding is enforced by mutation tests
+(`test_mutated_transform_is_detected_by_collector_rejection`): four
+deliberately broken transform mutations (assign+1, begin+1, copy_path+1,
+reset disabled) each produce a harness the real collector rejects — a
+transform-regression cannot pass the suite.
 
 ## Tests
 

@@ -150,31 +150,73 @@ INSTR = ROOT / "docs/investigations/vulkan-same-request-280/instrumentation"
 class ProducerOccurrenceTests(unittest.TestCase):
     """R8-A2 (round-9): the producer's emitted occurrence identity must match
     the collector's graph-local, (input, copy)-keyed derivation. The
-    producer_occurrence.cpp fixture executes the ACTUAL counter mechanism
-    (the shared production helper issue280_occurrence.h, called with the
-    exact expressions inserted into ggml-backend.cpp / ggml-vulkan.cpp) in
-    the pinned source's lifecycle order, and the resulting raw stream is
-    fed to the REAL collector."""
+    producer_occurrence.cpp TEMPLATE has its five counter expressions
+    substituted AT TEST TIME with the ACTUAL expressions extracted from the
+    transform's production insertions, so compiling and running the harness
+    executes the real generated counter logic, and its raw stream is fed to
+    the REAL collector. Semantic binding is proven by mutation tests: each
+    of four broken transform mutations must produce a harness the collector
+    rejects (or the tests fail)."""
 
     FIXTURE = FIXTURES / "producer_occurrence.cpp"
 
-    def collect(self, case, contract_boundaries=None):
-        self.assertTrue(self.FIXTURE.is_file(), "producer occurrence harness is missing")
+    @staticmethod
+    def production_expressions(backend_ops=None, vk_ops=None, mutations=None):
+        """Extract the occurrence-counter expressions the transform inserts
+        into the production sources; optionally apply semantic mutations."""
+        m = SourceTransformTests().module()
+        backend_ops = backend_ops if backend_ops is not None else m.INSERTIONS["ggml/src/ggml-backend.cpp"]
+        vk_ops = vk_ops if vk_ops is not None else m.INSERTIONS["ggml/src/ggml-vulkan/ggml-vulkan.cpp"]
+        backend = "\n".join(extra for _, extra, _ in backend_ops)
+        vk = "\n".join(extra for _, extra, _ in vk_ops)
+        mutations = mutations or {}
+        import re
+        def pick(pattern, label):
+            found = re.findall(pattern, backend + "\n" + vk)
+            if len(set(found)) != 1:
+                raise AssertionError(f"{label}: expected one unique expression, found {found}")
+            return mutations.get(label, found[0])
+        reset = pick(r"issue280_occurrence::reset\(\)", "reset")
+        assign = pick(r"issue280_occurrence::assign\(input, copy\)", "assign")
+        begin = pick(r"issue280_occurrence::begin\(input, input_cpy\)", "begin")
+        current_input = pick(r"issue280_occurrence::current\(input, input_cpy\)", "end")
+        path = pick(r"issue280_occurrence::current\(src, dst\)", "path")
+        return {"RESET": reset, "ASSIGN": assign, "BEGIN": begin,
+                "END": current_input, "PATH": path}
+
+    def harness_source(self, expressions):
+        source = self.FIXTURE.read_text()
+        for placeholder, expression in expressions.items():
+            # Replace ALL occurrences: the placeholders also appear in the
+            # fixture's header comments (harmless — the expression text is
+            # valid inside a comment too).
+            source = source.replace("{" + placeholder + "}", expression)
+        return source
+
+    def run_harness(self, case, expressions):
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            source = td / "harness.cpp"
+            source.write_text(self.harness_source(expressions))
+            binary = td / "producer-occurrence"
+            subprocess.run(["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
+                            "-I", str(INSTR), str(source),
+                            "-o", str(binary)], check=True, capture_output=True, text=True)
+            return subprocess.run([str(binary), case], check=True,
+                                  capture_output=True, text=True).stdout
+
+    def collect(self, case, contract_boundaries=None, expressions=None):
+        self.assertTrue(self.FIXTURE.is_file(), "producer occurrence harness template is missing")
         spec = importlib.util.spec_from_file_location("issue280_observer_r9", SCRIPT_OBSERVER)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        with tempfile.TemporaryDirectory() as td:
-            binary = Path(td) / "producer-occurrence"
-            subprocess.run(["c++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
-                            "-I", str(INSTR), str(self.FIXTURE),
-                            "-o", str(binary)], check=True, capture_output=True, text=True)
-            raw = subprocess.run([str(binary), case], check=True,
-                                 capture_output=True, text=True).stdout
-            contract = module.fixture_contract()
-            if contract_boundaries is not None:
-                contract["boundaries"] = contract_boundaries
-            return module.collect(raw, contract), raw
+        exprs = expressions if expressions is not None else self.production_expressions()
+        raw = self.run_harness(case, exprs)
+        contract = module.fixture_contract()
+        if contract_boundaries is not None:
+            contract["boundaries"] = contract_boundaries
+        return module.collect(raw, contract), raw
 
     def boundary_rows(self, count, occurrences=None):
         rows = [{"tensor": "ffn_out-0", "src": "0000:01:00.0",
@@ -244,44 +286,58 @@ class ProducerOccurrenceTests(unittest.TestCase):
                         f"wrong begin occ not rejected: {result['problems']}")
 
     def test_harness_executes_production_counter_expressions(self):
-        # Binding: the harness's issue280_occurrence call expressions must
-        # equal the expressions inserted into the production sources, so
-        # executing the harness executes the actual generated hook/counter
-        # logic (via the shared production helper).
-        m = SourceTransformTests().module()
-        harness = self.FIXTURE.read_text()
-        transformed = []
-        source = Path("/home/zutfen/llama.cpp-252")
-        if source.is_dir():
-            originals = {p: (source / p).read_bytes() for p in m.SOURCE_HASHES}
-            files, _ = m.transform(originals)
-            transformed = [files["ggml/src/ggml-backend.cpp"].decode(),
-                           files["ggml/src/ggml-vulkan/ggml-vulkan.cpp"].decode()]
-        else:
-            # Fall back to the committed transform definition itself when
-            # the pinned checkout is absent (CI shape).
-            for ops in (m.INSERTIONS["ggml/src/ggml-backend.cpp"],
-                        m.INSERTIONS["ggml/src/ggml-vulkan/ggml-vulkan.cpp"]):
-                transformed.append("\n".join(extra for _, extra, _ in ops))
-        production = "\n".join(transformed)
-        harness_calls = {call for call in (
-            "issue280_occurrence::assign(input, copy)",
-            "issue280_occurrence::begin(input, input_cpy)",
-            "issue280_occurrence::current(input, input_cpy)",
-            "issue280_occurrence::current(src, dst)",
-            "issue280_occurrence::reset()",
-        ) if call in harness}
-        self.assertEqual(len(harness_calls), 5, f"harness missing calls: {harness_calls}")
-        for call in harness_calls - {"issue280_occurrence::reset()"}:
-            self.assertIn(call, production,
-                          f"harness expression {call!r} absent from production insertions")
+        # Binding: the harness template's placeholders are substituted with
+        # the expressions extracted from the transform's production
+        # insertions — the harness literally contains the transform's code.
+        expressions = self.production_expressions()
+        source = self.harness_source(expressions)
+        for expression in expressions.values():
+            self.assertIn(expression, source)
+        self.assertNotIn("{RESET}", source)
+        self.assertNotIn("{ASSIGN}", source)
+        self.assertNotIn("{BEGIN}", source)
+        self.assertNotIn("{END}", source)
+        self.assertNotIn("{PATH}", source)
+
+    MUTATIONS = {
+        "assign": "issue280_occurrence::assign(input, copy) + 1",
+        "begin": "issue280_occurrence::begin(input, input_cpy) + 1",
+        "path": "issue280_occurrence::current(src, dst) + 1",
+        "reset": "(void) 0",  # reset disabled: process-lifetime scope returns
+    }
+
+    def test_mutated_transform_is_detected_by_collector_rejection(self):
+        # Semantic binding (round-9 review finding): a transform whose
+        # counter expressions are semantically broken must produce a harness
+        # whose stream the REAL collector rejects. Each mutation below
+        # passed the round-9 pre-correction binding (substring equality) —
+        # that gap is closed by executing the extracted expressions.
+        for label, mutated in self.MUTATIONS.items():
+            with self.subTest(mutation=label):
+                expressions = self.production_expressions(mutations={label: mutated})
+                if label == "reset":
+                    # Without reset, the same pair in the second graph
+                    # emits occ=1 and the collector must reject.
+                    result, _ = self.collect("two-graphs-same-pair",
+                                             self.boundary_rows(1), expressions)
+                    self.assertFalse(result["ok"],
+                                     f"reset-disabled mutation admitted: {result['problems']}")
+                elif label in ("assign", "begin"):
+                    result, _ = self.collect("agree", self.boundary_rows(1), expressions)
+                    self.assertFalse(result["ok"],
+                                     f"{label}+1 mutation admitted: {result['problems']}")
+                else:  # path
+                    result, _ = self.collect("agree", self.boundary_rows(1), expressions)
+                    self.assertFalse(result["ok"],
+                                     f"{label}+1 mutation admitted: {result['problems']}")
 
     def test_harness_lifecycle_matches_production_anchors(self):
         # The harness lifecycle corresponds to the pinned production source:
         # reset anchored at ggml_backend_sched_graph_compute_async entry
-        # (1:1 with the observer graph_begin), assign in the compute_splits
-        # manifest loop, begin/end at the per-split input copy, copy_path in
-        # the Vulkan TU on the (src, dst) pair the scheduler copied.
+        # (1:1 with the observer graph_begin on the process_ubatch path),
+        # assign in the compute_splits manifest loop, begin/end at the
+        # per-split input copy, copy_path in the Vulkan TU on the (src, dst)
+        # pair the scheduler copied.
         m = SourceTransformTests().module()
         ops = m.INSERTIONS["ggml/src/ggml-backend.cpp"]
         self.assertTrue(any("ggml_backend_sched_graph_compute_async" in anchor and

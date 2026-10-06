@@ -1,23 +1,25 @@
-// R8-A2 producer-occurrence CPU harness. Synthetic CPU recording, NEVER a
-// physical GPU observation.
+// R8-A2 producer-occurrence CPU harness TEMPLATE. Synthetic CPU recording,
+// NEVER a physical GPU observation.
 //
-// Executes the SAME issue280_occurrence counter calls the production
-// transform (scripts/issue280_source.py) inserts, in the pinned source's
-// lifecycle order:
+// TEMPLATE, NOT STANDALONE: the five occurrence-counter expressions are
+// placeholders ({RESET}, {ASSIGN}, {BEGIN}, {PATH}, {END}). At test time,
+// tests/test_issue280_source.py extracts the ACTUAL expressions inserted
+// into the production sources by scripts/issue280_source.py and substitutes
+// them before compiling, so executing this harness executes the real
+// generated counter logic (semantic binding: a mutated transform produces a
+// mutated harness, and the real collector rejects its stream).
 //
+// Lifecycle order mirrors the pinned source:
 //   ggml_backend_sched_graph_compute_async entry  -> reset()      (per graph;
-//     1:1 with the observer's graph_begin: llama_context::graph_compute
-//     performs exactly one async sched call per emitted graph)
+//     1:1 with the observer's graph_begin on the process_ubatch path:
+//     llama_context::graph_compute performs exactly one async sched call
+//     per emitted graph)
 //   compute_splits manifest loop, per planned input
 //                                                -> assign(input, copy)
 //   per-split input copy                         -> begin(input, copy) at
 //     boundary_begin; current(input, copy) at boundary_end
 //   ggml-vulkan copy_path (scheduler-initiated cross-die input copy)
 //                                                -> current(src, dst)
-//
-// tests/test_issue280_source.py binds this file to the transformer by
-// asserting the set of issue280_occurrence:: call expressions here equals
-// the set inserted into the production sources.
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -43,15 +45,15 @@ struct PlannedPair { const void * input; const void * copy; };
 // Inserted at ggml_backend_sched_graph_compute_async entry (production
 // anchor in scripts/issue280_source.py INSERTIONS for ggml-backend.cpp).
 static void sched_graph_compute_async_entry() {
-    if (issue280::enabled()) { issue280_occurrence::reset(); }
+    if (issue280::enabled()) { {RESET}; }
 }
 
 // copy_manifest site (compute_splits pre-execution loop): the authoritative
-// occurrence assignment.
+// occurrence assignment. {ASSIGN} is the production expression.
 static void emit_manifest_site(int tokens, const PlannedPair & pair) {
     const void * input = pair.input;
     const void * copy = pair.copy;
-    const int observed_occ = issue280_occurrence::assign(input, copy);
+    const int observed_occ = {ASSIGN};
     issue280::event("copy_manifest").s("tensor", "ffn_out-0").s("src", "Vulkan0")
         .s("dst", "Vulkan1").p("input", input).p("copy", copy).n("occ", observed_occ)
         .n("bytes", tokens * 16).s("type", "f32").n("ne0", 4)
@@ -61,7 +63,8 @@ static void emit_manifest_site(int tokens, const PlannedPair & pair) {
 }
 
 // boundary_begin site (per-split input copy): begins the next copy event
-// for this (input, copy) — a repeated pair advances 0, then 1.
+// for this (input, copy) — a repeated pair advances 0, then 1. {BEGIN} is
+// the production expression.
 static void emit_boundary_begin_site(int tokens, const PlannedPair & pair,
                                      int corrupt = 0) {
     const void * input = pair.input;
@@ -69,28 +72,30 @@ static void emit_boundary_begin_site(int tokens, const PlannedPair & pair,
     issue280::event("boundary_begin").s("tensor", "ffn_out-0")
         .s("src", "Vulkan0").s("dst", "Vulkan1").p("input", input).p("copy", input_cpy)
         .n("bytes", tokens * 16)
-        .n("occ", issue280_occurrence::begin(input, input_cpy) + corrupt).emit();
+        .n("occ", ({BEGIN}) + corrupt).emit();
 }
 
 // copy_path site (ggml-vulkan.cpp, scheduler-initiated cross-die input
 // copy): (src, dst) ARE the planned input and its selected copy; recalls
-// the occurrence of the copy event opened by begin.
+// the occurrence of the copy event opened by begin. {PATH} is the
+// production expression.
 static void emit_copy_path_site(const PlannedPair & pair,
                                 const std::string & src_buffer,
                                 const std::string & dst_buffer, int corrupt = 0) {
     const void * src = pair.input;
     const void * dst = pair.copy;
     issue280::event("copy_path").p("input", src).p("copy", dst)
-        .n("occ", issue280_occurrence::current(src, dst) + corrupt)
+        .n("occ", ({PATH}) + corrupt)
         .s("src_buffer", src_buffer).s("dst_buffer", dst_buffer).emit();
 }
 
 // boundary_end site: the occurrence of the copy event opened by begin.
+// {END} is the production expression.
 static void emit_boundary_end_site(int tokens, const PlannedPair & pair) {
     const void * input = pair.input;
     const void * input_cpy = pair.copy;
     issue280::event("boundary_end").p("input", input).p("copy", input_cpy)
-        .n("occ", issue280_occurrence::current(input, input_cpy))
+        .n("occ", {END})
         .n("bytes", tokens * 16).emit();
 }
 
