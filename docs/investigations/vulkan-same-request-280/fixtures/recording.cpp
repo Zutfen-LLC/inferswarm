@@ -121,16 +121,22 @@ static void emit_manifest(int request, int tokens, int occ, const std::string & 
 
 static void emit_source_shaped_leg(const std::string & direction, int occ,
                                    int bytes, const std::string & src_buffer,
-                                   const std::string & dst_buffer) {
+                                   const std::string & dst_buffer,
+                                   const std::string & partial_input = "",
+                                   const std::string & partial_copy = "") {
     // Pinned-source shape: ggml-vulkan host legs carry NO request and NO
     // logical (input,copy) identity — only concrete buffer identities, the leg
     // direction, and the byte count. `occ` >= 0 models the CURRENT (defective)
     // emitter behavior: a buffer-GLOBAL counter keyed by the vk_buffer, not
     // the logical input/copy occurrence of the enclosing boundary. occ < 0
-    // omits the field entirely (the corrected emitter shape).
+    // omits the field entirely (the corrected emitter shape). The optional
+    // partial_input/partial_copy fields model the R8-A1 adversarial shape:
+    // exactly ONE logical identity field supplied.
     if (issue280::enabled()) {
         issue280::event host("host_leg");
         if (occ >= 0) host.n("occ", occ);
+        if (!partial_input.empty()) host.s("input", partial_input);
+        if (!partial_copy.empty()) host.s("copy", partial_copy);
         host.s("direction", direction).n("bytes", bytes)
             .s("src_buffer", src_buffer).s("dst_buffer", dst_buffer);
         host.emit();
@@ -145,7 +151,9 @@ static void emit_shared_buffer_copy(int request, int tokens, int occ,
                                     int d2h_occ, int h2d_occ,
                                     bool skip_copy_path = false,
                                     const std::string & leg_src = "",
-                                    const std::string & leg_dst = "") {
+                                    const std::string & leg_dst = "",
+                                    const std::string & partial_input = "",
+                                    const std::string & partial_copy = "") {
     // Two logical inputs can legitimately share one underlying vk_buffer pair:
     // at the pinned llama.cpp source multiple tensors occupy offsets in one
     // ggml_backend_vk_buffer_context::dev_buffer, so logical input B (occ=0)
@@ -160,7 +168,8 @@ static void emit_shared_buffer_copy(int request, int tokens, int occ,
     clock_ns += 10;
     emit_source_shaped_leg("device_to_host", d2h_occ, tokens * 16,
                            leg_src.empty() ? src_buffer : leg_src,
-                           leg_dst.empty() ? dst_buffer : leg_dst);
+                           leg_dst.empty() ? dst_buffer : leg_dst,
+                           partial_input, partial_copy);
     clock_ns += 10;
     emit_source_shaped_leg("host_to_device", h2d_occ, tokens * 16,
                            src_buffer, dst_buffer);
@@ -310,12 +319,23 @@ static void emit_request(int request, int ordinal, const std::string & mode,
                     const bool corrected = mode != "shared-buffer-current-emitter";
                     const std::string leg_src = mode == "shared-buffer-wrong-buffers" ? "other-sb" : "";
                     const std::string leg_dst = mode == "shared-buffer-wrong-buffers" ? "other-db" : "";
+                    // R8-A1 adversarial shapes: exactly ONE logical identity
+                    // field on logical B's first leg, with correct concrete
+                    // buffers. Matching and foreign partial values alike must
+                    // be rejected: an explicitly supplied partial identity may
+                    // not silently fall back to buffer scope.
+                    std::string partial_input, partial_copy;
+                    if (mode == "shared-buffer-partial-input") partial_input = "foreign-in";
+                    if (mode == "shared-buffer-partial-input-matching") partial_input = input_b;
+                    if (mode == "shared-buffer-partial-copy") partial_copy = "foreign-out";
+                    if (mode == "shared-buffer-partial-copy-matching") partial_copy = copy_b;
                     emit_shared_buffer_copy(request, graph_tokens, 0, input, copy,
                                             "sb", "db", corrected ? -1 : 0, corrected ? -1 : 0);
                     emit_shared_buffer_copy(request, graph_tokens, 0, input_b, copy_b,
                                             "sb", "db", corrected ? -1 : 1, corrected ? -1 : 1,
                                             mode == "shared-buffer-no-copy-path",
-                                            leg_src, leg_dst);
+                                            leg_src, leg_dst,
+                                            partial_input, partial_copy);
                 } else {
                     for (int occ = 0; occ < copies; ++occ) {
                         emit_copy(request, graph_tokens, occ, mode, input, copy, native);

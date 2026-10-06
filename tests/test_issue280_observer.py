@@ -473,6 +473,31 @@ class CollectorRecordingTests(unittest.TestCase):
                         or "cross-die boundary without concrete buffer path identity" in joined,
                         f"no copy-path rejection in {result['problems']}")
 
+    # R8-A1 (round-9): a host_leg row carrying exactly ONE of input/copy
+    # must never silently downgrade to buffer scope — not for a FOREIGN
+    # partial value and not even for a MATCHING one: an explicitly supplied
+    # logical identity must be complete and match the open boundary.
+
+    def assert_partial_leg_rejects(self, case):
+        result, _ = self.collect(case, self.shared_buffer_contract())
+        self.assertFalse(result["ok"], f"{case} falsely admitted")
+        self.assertIn("host leg partial logical identity must be complete",
+                      "\n".join(result["problems"]))
+
+    def test_partial_input_only_leg_with_foreign_value_rejects(self):
+        self.assert_partial_leg_rejects("shared-buffer-partial-input")
+
+    def test_partial_copy_only_leg_with_foreign_value_rejects(self):
+        self.assert_partial_leg_rejects("shared-buffer-partial-copy")
+
+    def test_partial_input_only_leg_with_matching_value_rejects(self):
+        """Even a CORRECT partial identity is rejected: half an explicit
+        logical key is not an anonymous buffer-scope row."""
+        self.assert_partial_leg_rejects("shared-buffer-partial-input-matching")
+
+    def test_partial_copy_only_leg_with_matching_value_rejects(self):
+        self.assert_partial_leg_rejects("shared-buffer-partial-copy-matching")
+
 
 if __name__ == "__main__":
     unittest.main()
