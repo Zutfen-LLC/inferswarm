@@ -760,6 +760,16 @@ def collect(raw, contract):
                         continue
                     dsize = integer(drow, "bytes", 1)
                     if dev == "weight_inventory":
+                        # Layer-ownership cross-check at eager resolution: a
+                        # blk.N row binding to a die the contract does not
+                        # assign layer N to is off-contract ownership.
+                        dm = re.match(r"blk\.(\d+)\.", drow.get("_tensor", ""))
+                        if dm:
+                            dlayer = int(dm[1])
+                            downing = [d for d in dies if dlayer in layers.get(d, [])]
+                            if len(downing) == 1 and resolved != downing[0]:
+                                fail("placement: layer ownership disagrees with contract "
+                                     f"(layer {dlayer} bound to {resolved}, contract assigns {downing[0]})")
                         placement[resolved]["weights_bytes"] += dsize
                         placement[resolved]["weights_named"] += 1
                         placement[resolved]["buffers"].append({"kind": "weight_inventory",
@@ -968,12 +978,19 @@ def collect(raw, contract):
                 if dst_offset is not None and dst_bound is not None \
                         and dst_offset + law_bytes > dst_bound:
                     fail("range overflow: dst_offset beyond destination buffer")
+                # A declared endpoint offset whose OWN bound is absent is
+                # unprovable for that endpoint (the generic bound cannot speak
+                # for both buffers) — recorded and fail-closed at completion.
+                endpoint_unproven = (src_offset is not None and bounds["src_buffer_bytes"] is None) \
+                    or (dst_offset is not None and bounds["dst_buffer_bytes"] is None)
                 manifest = {
                     "input": input_id, "copy": copy_id, "occ": supplied_occ,
                     "tensor": text(row, "tensor"), "src": text(row, "src"),
                     "dst": text(row, "dst"), "bytes": claimed, "type": tensor_type,
                     "shape": shape, "strides": strides, "view_offset": view_offset,
-                    "bounds": bounds, "bounds_status": "KNOWN" if any(v is not None for v in bounds.values()) else "UNKNOWN",
+                    "bounds": bounds,
+                    "bounds_status": "UNKNOWN" if endpoint_unproven else
+                                     ("KNOWN" if any(v is not None for v in bounds.values()) else "UNKNOWN"),
                     "src_offset": src_offset, "dst_offset": dst_offset,
                     "consumed": False,
                 }
@@ -1034,7 +1051,10 @@ def collect(raw, contract):
                 else:
                     if active_boundary is None:
                         fail("host leg outside its logical boundary occurrence")
-                    integer(row, "occ")
+                    # Buffer-scope legs still name the occurrence they moved
+                    # bytes for; a mismatched occ is a different occurrence.
+                    if integer(row, "occ") != active_boundary["occ"]:
+                        fail("host leg occurrence mismatch")
                 if active_boundary.get("src_buffer") is not None:
                     # A path-bound boundary (copy_path seen) requires every leg
                     # to identify the SAME concrete buffers: unattributed legs
@@ -1257,6 +1277,13 @@ def collect(raw, contract):
                              f"(layer {layer} bound to {resolved}, contract assigns {owning[0]})")
             size = integer(row, "bytes", 1)
             if ev == "weight_inventory":
+                fm = re.match(r"blk\.(\d+)\.", row.get("_tensor", ""))
+                if fm:
+                    flayer = int(fm[1])
+                    fowning = [d for d in dies if flayer in layers.get(d, [])]
+                    if len(fowning) == 1 and resolved != fowning[0]:
+                        fail("placement: layer ownership disagrees with contract "
+                             f"(layer {flayer} bound to {resolved}, contract assigns {fowning[0]})")
                 placement[resolved]["weights_bytes"] += size
                 placement[resolved]["weights_named"] += 1
                 placement[resolved]["buffers"].append({"kind": "weight_inventory",
