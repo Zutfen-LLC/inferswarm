@@ -104,6 +104,8 @@ class SourceCorrectionTests(unittest.TestCase):
     def test_source_hooks_cover_collector_causality_and_inventory_shapes(self):
         m = SourceTransformTests().module()
         source = Path("/home/zutfen/llama.cpp-252")
+        if not source.is_dir():
+            self.skipTest("host-local pinned public source not present")
         originals = {path: (source / path).read_bytes() for path in m.SOURCE_HASHES}
         transformed, _ = m.transform(originals)
         self.assertIn("src/llama-model.cpp", m.SOURCE_HASHES)
