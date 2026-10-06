@@ -45,6 +45,32 @@ static std::vector<int> sequence(int count, int start) {
 
 static void emit_inventory(bool one_die, bool omit) {
     if (omit) return;
+    if (std::getenv("I280_CPU_ONLY_INVENTORY")) {
+        // Emitter-alignment control: mixed placement — both dies carry their
+        // own weight/KV inventory AND the CPU backend reports additional
+        // named state via the backend-name fallback (no BDF). This is the
+        // real llama.cpp mixed shape (e.g. output embeddings kept on CPU).
+        for (int d = 0; d < 2; ++d) {
+            const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
+            I280_EVENT("weight_inventory").s("tensor", "blk." + std::to_string(d) + ".weight")
+                .s("bdf", bdf).n("bytes", 1024).n("layer", d)
+                .s("buffer", "weight-inventory-" + std::to_string(d)).emit();
+            I280_EVENT("kv_inventory").s("tensor", "kv.k." + std::to_string(d))
+                .s("bdf", bdf).n("bytes", 128).s("kind", "k").n("layer", d)
+                .s("buffer", "kv-" + std::to_string(d)).emit();
+            I280_EVENT("kv_inventory").s("tensor", "kv.v." + std::to_string(d))
+                .s("bdf", bdf).n("bytes", 128).s("kind", "v").n("layer", d)
+                .s("buffer", "kv-" + std::to_string(d)).emit();
+        }
+        I280_EVENT("weight_inventory").s("tensor", "output.weight")
+            .s("bdf", "CPU").n("bytes", 300).n("layer", -1)
+            .s("buffer", "cpu-weights").emit();
+        I280_EVENT("kv_inventory").s("tensor", "kv.scratch")
+            .s("bdf", "CPU").n("bytes", 96).s("kind", "kv").n("layer", -1)
+            .s("buffer", "cpu-kv").emit();
+        I280_EVENT("cpu_state").s("kind", "runtime").n("bytes", 64).emit();
+        return;
+    }
     const int count = one_die ? 1 : 2;
     for (int d = 0; d < count; ++d) {
         const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
@@ -289,7 +315,9 @@ static void emit_request(int request, int ordinal, const std::string & mode,
         .n("sampled", mode == "wrong-output" && first_request ? sampled + 1 : sampled)
         .n("prompt_processed", prompt_tokens).n("prompt_cached", 0)
         .n("eos", mode == "limit" ? 0 : 1).emit();
-    request_end(request, mode == "limit" ? "limit" : "eos", prompt_tokens);
+    request_end(request, mode == "word-stop-full-request" ? "word"
+                : mode == "none-stop-after-response" ? "none"
+                : mode == "limit" ? "limit" : "eos", prompt_tokens);
 }
 
 int main(int argc, char ** argv) {

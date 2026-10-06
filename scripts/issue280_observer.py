@@ -26,7 +26,16 @@ EVENTS = {
 }
 BDF = re.compile(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-1][0-9a-f]\.[0-7]\Z")
 TYPE_BYTES = {"f32": 4, "f16": 2, "bf16": 2, "i32": 4, "i16": 2, "i8": 1}
-STOP_REASONS = {"eos", "limit", "abort", "none", "error"}
+STOP_REASONS = {"eos", "limit", "word", "abort", "none", "error"}
+
+
+def layer_of(row, field="layer"):
+    """Inventory layer identity: >=0 = layer index, -1 = none (emitted by the
+    pinned hooks for tensors without a blk.N. prefix, e.g. output.weight)."""
+    value = row.get(field)
+    if type(value) is not int or value < -1:
+        raise ValueError(f"{row['event']}: invalid {field}")
+    return value
 
 
 def fixture_contract():
@@ -178,6 +187,7 @@ def collect(raw, contract):
         placement_open = True
         inventory_rows = 0
         cpu_bytes = 0
+        cpu_weight_bytes = 0
         accepted = []
         request_by_id = {}
         active = None
@@ -417,7 +427,7 @@ def collect(raw, contract):
                 active["prompt_processed"] = prompt_processed
                 active["prompt_cached"] = prompt_cached
                 successful = (active["response"] is not None
-                              and stop_reason in {"eos", "limit", "none"})
+                              and stop_reason in {"eos", "limit", "word", "none"})
                 active["disposition"] = "completed" if successful else "aborted"
                 if active_boundary is not None:
                     incomplete = dict(active_boundary)
@@ -445,11 +455,20 @@ def collect(raw, contract):
                 inventory_rows += 1
                 if ev == "weight_inventory":
                     die = text(row, "bdf")
+                    name, size = text(row, "tensor"), integer(row, "bytes", 1)
+                    layer_of(row)
+                    if die == "CPU":
+                        # CPU-owned intended state: real backend name fallback
+                        # (ggml_backend_buffer_name), not a BDF. Accounted
+                        # separately; never a candidate-die numerator.
+                        if die in placement:
+                            fail("placement: CPU inventory BDF collision")
+                        cpu_weight_bytes += size
+                        result["placement"]["cpu_state"].append(
+                            {"kind": "cpu_weights:" + name, "bytes": size})
+                        continue
                     if die not in placement:
                         fail("placement: unexpected weight inventory BDF")
-                    name, size = text(row, "tensor"), integer(row, "bytes", 1)
-                    if "layer" in row:
-                        integer(row, "layer")
                     placement[die]["weights_bytes"] += size
                     placement[die]["weights_named"] += 1
                     placement[die]["buffers"].append({"kind": "weight_inventory", "tensor": name,
@@ -457,11 +476,20 @@ def collect(raw, contract):
                     result["placement"]["placement_denominator_bytes"] += size
                 elif ev == "kv_inventory":
                     die, kind = text(row, "bdf"), text(row, "kind")
-                    if die not in placement or kind not in {"k", "v"}:
+                    if kind not in {"k", "v", "kv"}:
+                        fail("placement: invalid KV inventory")
+                    if die == "CPU":
+                        # CPU-owned KV/mutable state (backend-name fallback).
+                        size = integer(row, "bytes", 1)
+                        layer_of(row)
+                        cpu_bytes += size
+                        result["placement"]["cpu_state"].append(
+                            {"kind": "cpu_kv:" + text(row, "tensor"), "bytes": size})
+                        continue
+                    if die not in placement:
                         fail("placement: invalid KV inventory")
                     size = integer(row, "bytes", 1)
-                    if "layer" in row:
-                        integer(row, "layer")
+                    layer_of(row)
                     placement[die]["kv_bytes"] += size
                     placement[die]["buffers"].append({"kind": "kv_inventory", "tensor": text(row, "tensor"),
                                                         "buffer": row.get("buffer"), "bytes": size})
@@ -976,9 +1004,10 @@ def collect(raw, contract):
         if len(accepted) == 1 and accepted[0]["disposition"] == "aborted":
             result["disposition"] = "ABORTED"
         result["placement"]["placement_denominator_bytes"] = sum(
-            die["weights_bytes"] for die in placement.values())
+            die["weights_bytes"] for die in placement.values()) + cpu_weight_bytes
         result["placement_denominator_bytes"] = result["placement"]["placement_denominator_bytes"]
         result["placement"]["cpu_bytes"] = cpu_bytes
+        result["placement"]["cpu_weight_bytes"] = cpu_weight_bytes
         for die in dies:
             placement[die]["placement_numerator_bytes"] = placement[die]["weights_bytes"]
             placement[die]["cpu_bytes"] = 0  # cpu_state has process scope, not a BDF
@@ -1072,7 +1101,8 @@ def collect(raw, contract):
         if result["placement"].get("dies"):
             die_rows = result["placement"]["dies"]
             result["placement"]["placement_denominator_bytes"] = sum(
-                data["weights_bytes"] for data in die_rows.values())
+                data["weights_bytes"] for data in die_rows.values()) + \
+                result["placement"].get("cpu_weight_bytes", 0)
             result["placement_denominator_bytes"] = result["placement"]["placement_denominator_bytes"]
             for die_data in die_rows.values():
                 die_data["placement_numerator_bytes"] = die_data["weights_bytes"]

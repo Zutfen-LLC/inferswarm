@@ -329,6 +329,45 @@ class CollectorRecordingTests(unittest.TestCase):
         self.assertEqual(result["repeated_waits"], 6)
         self.assertEqual(len(result["graphs"][0]["completed_compute"]["0000:01:00.0"]), 1)
 
+    def test_word_stop_completed_request_is_accepted(self):
+        """Emitter alignment: STOP_TYPE_WORD terminal is a completed request.
+
+        The pinned release() hook emits stop_reason "word" for STOP_TYPE_WORD;
+        the collector must classify it completed, not abort it.
+        """
+        result, _ = self.collect("word-stop-full-request")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["requests"][0]["stop_reason"], "word")
+        self.assertEqual(result["requests"][0]["disposition"], "completed")
+
+    def test_none_stop_after_response_is_completed(self):
+        """Emitter alignment: response + stop_reason "none" (release() without a
+        set stop_type) is a completed request, not an aborted one."""
+        result, _ = self.collect("none-stop-after-response")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["requests"][0]["stop_reason"], "none")
+        self.assertEqual(result["requests"][0]["disposition"], "completed")
+
+    def test_cpu_named_inventory_is_cpu_owned_not_die_credited(self):
+        """Emitter alignment: the pinned hooks fall back to the backend NAME
+        ("CPU") when a buffer's device exposes no BDF; those rows are CPU-owned
+        state — in the denominator, never in a candidate-die numerator."""
+        contract = {"kind": "CPU_FIXTURE", "dies": ["0000:01:00.0", "0000:02:00.0"],
+                    "layers": {"0000:01:00.0": [0], "0000:02:00.0": [1]},
+                    "boundaries": [{"tensor": "ffn_out-0", "src": "0000:01:00.0",
+                                    "dst": "0000:02:00.0", "bytes_per_token": 16}]}
+        import os
+        os.environ["I280_CPU_ONLY_INVENTORY"] = "1"
+        try:
+            result, _ = self.collect("positive", contract)
+        finally:
+            del os.environ["I280_CPU_ONLY_INVENTORY"]
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["placement"]["cpu_weight_bytes"], 300)
+        self.assertEqual(result["placement_denominator_bytes"], 2348)
+        for die in ("0000:01:00.0", "0000:02:00.0"):
+            self.assertEqual(result["placement"]["dies"][die]["placement_numerator_bytes"], 1024)
+
 
 if __name__ == "__main__":
     unittest.main()
