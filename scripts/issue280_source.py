@@ -273,7 +273,7 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": [
-        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\n', 'after'),
+        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
         ('            ctx->p->q->handle->submit({}, fence);\n', '            I280_EVENT("fence_marker").p("subctx", ctx.get()).emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({ si }, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "transfer_timeline").emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({}, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "empty_queue").emit();\n', 'after'),
