@@ -12,7 +12,7 @@ FIXTURES = ROOT / "docs/investigations/vulkan-same-request-280/fixtures"
 
 
 class CollectorRecordingTests(unittest.TestCase):
-    def collect(self, case):
+    def collect(self, case, contract=None):
         self.assertTrue(SCRIPT.is_file(), "real Issue #280 collector is missing")
         spec = importlib.util.spec_from_file_location("issue280_observer", SCRIPT)
         assert spec is not None and spec.loader is not None
@@ -25,7 +25,7 @@ class CollectorRecordingTests(unittest.TestCase):
                             "-o", str(binary)], check=True, capture_output=True, text=True)
             raw = subprocess.run([str(binary), case], check=True,
                                  capture_output=True, text=True).stdout
-            return module.collect(raw, module.fixture_contract()), raw
+            return module.collect(raw, contract or module.fixture_contract()), raw
 
     def test_prefill_then_decode_eos_recording(self):
         result, raw = self.collect("positive")
@@ -141,6 +141,87 @@ class CollectorRecordingTests(unittest.TestCase):
     def test_disabled_emitter_is_inert(self):
         _, raw = self.collect("disabled")
         self.assertEqual(raw, "")
+
+    def test_native_zero_first_use_is_admitted(self):
+        """Review finding 1: native first-use zero is valid, not invalid use."""
+        result, _ = self.collect("native-zero-first-use")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["graphs"][0]["completed_compute"]["0000:01:00.0"][0]["command"],
+                         ["cmd0", 0])
+
+    def test_repeated_successful_timeline_wait_is_idempotent(self):
+        """Review finding 2: repeat wait preserves the completed command set."""
+        result, _ = self.collect("repeated-successful-timeline-wait")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(len(result["graphs"][0]["completed_compute"]["0000:01:00.0"]), 1)
+
+    def test_unsubmitted_compute_recording_is_rejected(self):
+        """Review finding 3: recorded compute without a submit must be named."""
+        result, _ = self.collect("unsubmitted-compute-recording")
+        self.assertIn("unsubmitted compute", "\n".join(result["problems"]))
+
+    def test_copy_manifest_shape_range_is_recomputed(self):
+        """Review finding 4: bytes must agree with the manifest shape range."""
+        result, _ = self.collect("inconsistent-shape-bytes")
+        self.assertIn("range", "\n".join(result["problems"]))
+
+    def test_decode_consumed_token_must_match_previous_sample(self):
+        """Review finding 5: bind token IDs; target rejection contains 'decode token'."""
+        result, _ = self.collect("decode-token-mismatch")
+        self.assertIn("decode token", "\n".join(result["problems"]))
+
+    def test_decode_absolute_position_must_advance_by_one(self):
+        """Review finding 6: target rejection for a bad absolute position is 'decode position'."""
+        result, _ = self.collect("wrong-absolute-decode-position")
+        self.assertIn("decode position", "\n".join(result["problems"]))
+
+    def test_single_die_completed_compute_is_admitted(self):
+        """Review finding 7 (Arm A): one-BDF compute is a valid baseline."""
+        die = "0000:01:00.0"
+        contract = {"kind": "CPU_FIXTURE", "dies": [die],
+                    "layers": {die: [0]}, "boundaries": []}
+        result, _ = self.collect("single-die-baseline", contract)
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertTrue(result["graphs"][0]["completed_compute"][die])
+
+    def test_two_sequential_requests_have_independent_framing(self):
+        """Review finding 8: request 7 then fresh request 8 are both admitted."""
+        result, _ = self.collect("two-sequential-requests")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual([request["request"] for request in result["requests"]], [7, 8])
+
+    def test_warm_request_attribution_cannot_cross_request_boundary(self):
+        """Review finding 9: target rejection for inherited frame ownership is 'cross-request'."""
+        result, _ = self.collect("warm-request-no-inheritance")
+        self.assertIn("cross-request", "\n".join(result["problems"]))
+
+    def test_abort_preserves_completed_work_and_is_structured(self):
+        """Review finding 10: abort exposes disposition and retains prior work, never success."""
+        result, _ = self.collect("abort-preserves-work")
+        self.assertEqual(result.get("disposition"), "ABORTED",
+                         "abort must expose structured ABORTED disposition")
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["sampled_tokens"], 1)
+        self.assertEqual(result["logical_boundary_bytes"], 16)
+        self.assertTrue(result["graphs"][0]["completed_compute"]["0000:01:00.0"])
+
+    def test_abort_accounts_for_unsubmitted_compute(self):
+        """Review finding 11: abort accounting explicitly lists unsubmitted compute."""
+        result, _ = self.collect("abort-unsubmitted-accounting")
+        accounting = result.get("abort_accounting", {})
+        self.assertTrue(accounting.get("unsubmitted_compute"),
+                        "unsubmitted compute must be explicitly listed in abort accounting")
+
+    def test_missing_declared_placement_category_is_rejected(self):
+        """Review finding 12: unexplained state ownership must fail with 'placement'."""
+        die0, die1 = "0000:01:00.0", "0000:02:00.0"
+        contract = {"kind": "CPU_FIXTURE", "dies": [die0, die1],
+                    "layers": {die0: [0], die1: [1]},
+                    "boundaries": [{"tensor": "ffn_out-0", "src": die0,
+                                    "dst": die1, "bytes_per_token": 16}],
+                    "placement": {"required_categories": ["weights", "kv_cache"]}}
+        result, _ = self.collect("placement-ownership-unexplained", contract)
+        self.assertIn("placement", "\n".join(result["problems"]))
 
 
 if __name__ == "__main__":
