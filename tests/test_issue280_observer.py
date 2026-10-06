@@ -399,6 +399,22 @@ class CollectorRecordingTests(unittest.TestCase):
         joined = "\n".join(result["problems"])
         self.assertIn("without any backing buffer bounds", joined)
 
+    def shared_buffer_contract(self):
+        spec = importlib.util.spec_from_file_location("observer_shared_buffer", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        contract = module.fixture_contract()
+        # Two DISTINCT logical (input, copy) identities sharing one concrete
+        # buffer pair: two contract rows, each with one occurrence.
+        contract["boundaries"] = [
+            {"tensor": "ffn_out-0", "src": "0000:01:00.0",
+             "dst": "0000:02:00.0", "bytes_per_token": 16},
+            {"tensor": "ffn_out-0", "src": "0000:01:00.0",
+             "dst": "0000:02:00.0", "bytes_per_token": 16},
+        ]
+        return contract
+
     def test_two_logical_inputs_sharing_one_buffer_pair_are_admitted(self):
         """Maintainer P1 (round 8): source-shaped host legs carry buffer
         identities, not logical (input,copy,occ) identity. Two distinct
@@ -407,7 +423,8 @@ class CollectorRecordingTests(unittest.TestCase):
         ggml_backend_vk_buffer_context::dev_buffer at the pin). The corrected
         stream (no occ on buffer-scope legs, bound via copy_path) must be
         admitted."""
-        result, _ = self.collect("shared-buffer-corrected-emitter")
+        result, _ = self.collect("shared-buffer-corrected-emitter",
+                                 self.shared_buffer_contract())
         self.assertTrue(result["ok"], result["problems"])
         self.assertEqual(result["logical_boundary_bytes"], 96 * 2)
         self.assertEqual(result["host_leg_bytes"], 192 * 2)
@@ -417,20 +434,44 @@ class CollectorRecordingTests(unittest.TestCase):
         self.assertTrue(all(b["src_buffer"] == "sb" and b["dst_buffer"] == "db"
                             for b in boundaries))
 
-    def test_current_emitter_shared_buffer_stream_is_reproduced_as_the_red_case(self):
-        """RED control: the UNCHANGED reviewed emitter derives host-leg occ
-        from a buffer-GLOBAL counter. Logical input B (occ=0) reusing the
-        shared buffer pair emits buffer-global occ=1, which the reviewed
-        collector rejects as an occurrence mismatch — a valid source-shaped
-        stream falsely rejected. This test documents the defect; the collector
-        correction must NOT weaken the wrong-occurrence law itself (explicit
-        wrong occ still rejects) but must accept this structurally-bound
-        valid stream once the emitter stops inventing logical occ."""
-        result, _ = self.collect("shared-buffer-current-emitter")
-        self.assertTrue(result["ok"], result["problems"])
-        boundaries = result["graphs"][0]["boundaries"]
-        self.assertEqual([(b["input"], b["copy"], b["occ"]) for b in boundaries],
-                         [("in", "out", 0), ("in-b", "out-b", 0)])
+    def test_explicit_wrong_occ_on_buffer_scope_leg_still_rejects(self):
+        """Historical adversarial law preserved: a buffer-scope host_leg row
+        that DOES explicitly supply occ continues to be rejected when it
+        disagrees with the open boundary — even after shared-buffer streams
+        without occ are admitted. The current-emitter fixture emits exactly
+        this (buffer-global occ=1 under logical occ=0)."""
+        result, _ = self.collect("shared-buffer-current-emitter",
+                                 self.shared_buffer_contract())
+        self.assertFalse(result["ok"])
+        self.assertIn("host leg occurrence mismatch", "\n".join(result["problems"]))
+
+    def test_shared_buffer_wrong_concrete_buffers_reject(self):
+        """A buffer-scope leg naming DIFFERENT concrete src/dst buffers than
+        the open boundary's copy_path cannot bind and must reject."""
+        result, _ = self.collect("shared-buffer-wrong-buffers",
+                                 self.shared_buffer_contract())
+        self.assertFalse(result["ok"])
+        self.assertIn("host staging buffer path mismatch", "\n".join(result["problems"]))
+
+    def test_shared_buffer_leg_outside_boundary_rejects(self):
+        """A buffer-scope host leg emitted with NO active boundary must not
+        bind structurally to anything."""
+        result, _ = self.collect("shared-buffer-leg-outside",
+                                 self.shared_buffer_contract())
+        self.assertFalse(result["ok"])
+        joined = "\n".join(result["problems"])
+        self.assertIn("outside its logical boundary occurrence", joined)
+
+    def test_shared_buffer_leg_without_copy_path_rejects(self):
+        """A buffer-scope host leg on a cross-die boundary whose copy_path is
+        missing has no concrete identity to bind through and must reject."""
+        result, _ = self.collect("shared-buffer-no-copy-path",
+                                 self.shared_buffer_contract())
+        self.assertFalse(result["ok"])
+        joined = "\n".join(result["problems"])
+        self.assertTrue("without a bound copy path" in joined
+                        or "cross-die boundary without concrete buffer path identity" in joined,
+                        f"no copy-path rejection in {result['problems']}")
 
 
 if __name__ == "__main__":

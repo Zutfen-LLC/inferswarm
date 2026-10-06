@@ -330,17 +330,18 @@ static const char * issue280_cached_bdf(ggml_backend_t backend) {
         }
 ''', 'before'),
         ('        ggml_vk_buffer_copy(src->device->sync_staging, 0, src, src_offset, size);\n', '''        {
-            static std::map<const void *, int> observed_d2h_legs; // per-(src tensor) leg counter
+            // Buffer-scope host leg: concrete vk_buffer identities only. One
+            // dev_buffer suballocates many tensors, so a buffer-global counter
+            // is NOT the logical (input, copy, occ) occurrence; no occ here.
             I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-                .n("occ", observed_d2h_legs[src.get()]++)
                 .s("direction", "device_to_host").n("bytes", size)
                 .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
         }
 ''', 'after'),
         ('        ggml_vk_buffer_write(dst, dst_offset, src->device->sync_staging->ptr, size);\n', '''        {
-            static std::map<const void *, int> observed_h2d_legs; // per-(dst tensor) leg counter
+            // Buffer-scope host leg: concrete vk_buffer identities only; see
+            // the device_to_host leg above for why no occ is derived.
             I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-                .n("occ", observed_h2d_legs[dst.get()]++)
                 .s("direction", "host_to_device").n("bytes", size)
                 .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
         }

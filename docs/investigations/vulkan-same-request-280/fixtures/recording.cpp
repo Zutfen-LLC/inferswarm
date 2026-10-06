@@ -142,7 +142,10 @@ static void emit_shared_buffer_copy(int request, int tokens, int occ,
                                     const std::string & copy,
                                     const std::string & src_buffer,
                                     const std::string & dst_buffer,
-                                    int d2h_occ, int h2d_occ) {
+                                    int d2h_occ, int h2d_occ,
+                                    bool skip_copy_path = false,
+                                    const std::string & leg_src = "",
+                                    const std::string & leg_dst = "") {
     // Two logical inputs can legitimately share one underlying vk_buffer pair:
     // at the pinned llama.cpp source multiple tensors occupy offsets in one
     // ggml_backend_vk_buffer_context::dev_buffer, so logical input B (occ=0)
@@ -150,11 +153,14 @@ static void emit_shared_buffer_copy(int request, int tokens, int occ,
     I280_EVENT("boundary_begin").n("request", request).s("tensor", "ffn_out-0")
         .s("src", "Vulkan0").s("dst", "Vulkan1").s("input", input)
         .s("copy", copy).n("occ", occ).n("bytes", tokens * 16).emit();
-    I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
-        .n("occ", occ).s("src_buffer", src_buffer).s("dst_buffer", dst_buffer).emit();
+    if (!skip_copy_path) {
+        I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
+            .n("occ", occ).s("src_buffer", src_buffer).s("dst_buffer", dst_buffer).emit();
+    }
     clock_ns += 10;
     emit_source_shaped_leg("device_to_host", d2h_occ, tokens * 16,
-                           src_buffer, dst_buffer);
+                           leg_src.empty() ? src_buffer : leg_src,
+                           leg_dst.empty() ? dst_buffer : leg_dst);
     clock_ns += 10;
     emit_source_shaped_leg("host_to_device", h2d_occ, tokens * 16,
                            src_buffer, dst_buffer);
@@ -214,6 +220,12 @@ static void request_end(int request, const std::string & stop_reason, int prompt
 static void emit_request(int request, int ordinal, const std::string & mode,
                          bool one_die, bool micro, bool first_request) {
     request_accept(request, ordinal);
+    // leg-outside mode: emit the rogue buffer-scope leg BEFORE any boundary
+    // opens (at request scope, after request_accept, no active boundary).
+    if (mode == "shared-buffer-leg-outside") {
+        clock_ns += 10;
+        emit_source_shaped_leg("device_to_host", -1, 64, "sb", "db");
+    }
     const bool native = mode == "native-path" || mode == "timeline-stale"
         || mode == "repeated-successful-timeline-wait" || mode == "repeat-wait"
         || mode == "native-zero-first-use" || mode == "conflicting-wait"
@@ -296,10 +308,14 @@ static void emit_request(int request, int ordinal, const std::string & mode,
                     // d2h counter reads 1 and h2d counter reads 1 while its
                     // LOGICAL occurrence is 0.
                     const bool corrected = mode != "shared-buffer-current-emitter";
+                    const std::string leg_src = mode == "shared-buffer-wrong-buffers" ? "other-sb" : "";
+                    const std::string leg_dst = mode == "shared-buffer-wrong-buffers" ? "other-db" : "";
                     emit_shared_buffer_copy(request, graph_tokens, 0, input, copy,
                                             "sb", "db", corrected ? -1 : 0, corrected ? -1 : 0);
                     emit_shared_buffer_copy(request, graph_tokens, 0, input_b, copy_b,
-                                            "sb", "db", corrected ? -1 : 1, corrected ? -1 : 1);
+                                            "sb", "db", corrected ? -1 : 1, corrected ? -1 : 1,
+                                            mode == "shared-buffer-no-copy-path",
+                                            leg_src, leg_dst);
                 } else {
                     for (int occ = 0; occ < copies; ++occ) {
                         emit_copy(request, graph_tokens, occ, mode, input, copy, native);

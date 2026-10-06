@@ -1045,26 +1045,37 @@ def collect(raw, contract):
                 active_boundary["src_buffer"] = text(row, "src_buffer")
                 active_boundary["dst_buffer"] = text(row, "dst_buffer")
             elif ev == "host_leg":
-                # Identity: the row carries the logical (input, copy, occ) key
-                # (fixture/emitter with tensor scope) OR binds by buffer path to
-                # the open path-bound boundary (pinned vk hooks have buffer
-                # scope, not tensor scope). Both must match the open boundary.
+                # Identity law: the row carries the logical (input, copy, occ)
+                # key (tensor-scoped fixture/emitter rows) OR is buffer-scoped
+                # (pinned vk hooks: concrete src/dst vk_buffer identities only —
+                # one vk_buffer may suballocate MANY tensors, so no logical occ
+                # can be soundly derived from buffer-global counters).
                 if "input" in row and "copy" in row:
                     key = (text(row, "input"), text(row, "copy"), integer(row, "occ"))
                     if active_boundary is None or key != (active_boundary["input"],
                             active_boundary["copy"], active_boundary["occ"]):
                         fail("host leg outside its logical boundary occurrence")
                 else:
+                    # Buffer-scope row: binds ONLY to the single currently-open
+                    # logical boundary, and only through the concrete copy_path
+                    # identities established for it. No structural binding when
+                    # no boundary is open or copy_path has not run yet.
                     if active_boundary is None:
                         fail("host leg outside its logical boundary occurrence")
-                    # Buffer-scope legs still name the occurrence they moved
-                    # bytes for; a mismatched occ is a different occurrence.
-                    if integer(row, "occ") != active_boundary["occ"]:
-                        fail("host leg occurrence mismatch")
+                    if active_boundary.get("src_buffer") is None:
+                        fail("buffer-scope host leg without a bound copy path")
+                    if "occ" in row:
+                        # Explicit logical identity on a buffer-scope row: must
+                        # agree with the open boundary (historical adversarial
+                        # wrong-occurrence law preserved — arbitrary explicit
+                        # identities are never accepted).
+                        if integer(row, "occ") != active_boundary["occ"]:
+                            fail("host leg occurrence mismatch")
                 if active_boundary.get("src_buffer") is not None:
-                    # A path-bound boundary (copy_path seen) requires every leg
-                    # to identify the SAME concrete buffers: unattributed legs
-                    # cannot prove they moved the declared bytes.
+                    # A path-bound boundary (copy_path seen) requires every leg,
+                    # tensor-scoped or buffer-scoped, to identify the SAME
+                    # concrete buffers: unattributed or alien legs cannot prove
+                    # they moved the declared bytes.
                     if "src_buffer" not in row or "dst_buffer" not in row:
                         fail("host leg lacks buffer path identity on a path-bound boundary")
                     if (row.get("src_buffer") != active_boundary.get("src_buffer")
