@@ -73,22 +73,17 @@ TU-local logging design (`test_logging_sinks_are_translation_unit_local`
 continues to hold). At the pin, every counter site runs on the scheduler's
 host thread, so the shared state adds no synchronization.
 
-- scope: per graph — `issue280::graph_scope` guard reset at the
-  `ggml_backend_sched_graph_compute_async` entry hook;
+- scope: per graph — `reset()` at the `ggml_backend_sched_graph_compute_async`
+  entry hook (the design note section above);
 - key: `(input pointer, copy pointer)` pair, not input pointer alone;
-- value: 0-based count of prior same-key emissions this graph.
+- value: `assign()` records the 0-based per-key count at the manifest;
+  `begin()` advances a per-key event cursor (repeated pairs: 0, then 1);
+  `current()` recalls the open event's occurrence (copy_path, boundary_end).
 
-Because `boundary_begin`/`boundary_end`/`copy_manifest` in one graph iterate
-the same planned inputs and emit at most once per (input, copy), while
-`copy_path` (Vulkan TU) fires once per actual cross-die copy of the same
-`(src, dst)` tensor pair, per-TU registries with the same (graph-reset,
-(input,copy)-key) law produce IDENTICAL occurrence numbers at all four sites
-without communicating. This is the same identity law the collector already
-enforces; the four counters become three independent re-derivations of it.
-
-Explicit cross-TU coupling (a shared counter) is rejected: it would require
-exported symbols in ggml-backend.cpp consumed by ggml-vulkan.cpp, coupling
-independent backends in an observation-only patch.
+All four sites share the ONE ODR registry: the manifest is the authoritative
+assignment (it fires first, per planned input, in the pre-compute manifest
+loop); begin/end/copy_path walk it positionally, so manifest, begin,
+copy_path and end emit ONE occurrence identity per pair per graph.
 
 ### Occurrence lifecycle (producer side, after this change)
 
@@ -127,19 +122,21 @@ this the smallest change.
 
 ### Harness lifecycle correspondence
 
-The regression cases execute a C++ harness compiled from the ACTUAL inserted
-hook code paths (not hand-written re-enactments): the new
-`fixtures/producer_occurrence.cpp` includes the real
-`instrumentation/issue280_occurrence.h`, drives the real registry/guard types
-with the same call sequence the pinned source performs —
-`sched_graph_compute_async entry (reset) → per planned input: manifest lookup
-+ begin → (vk TU:) vk_graph_begin reset → copy_path lookup → end` — and emits
-the resulting rows through the standard emitter header into the real
-collector. The mapping to pinned production source is asserted by
-`test_issue280_source.py`, which checks the transformed ggml-backend.cpp /
-ggml-vulkan.cpp contain exactly these counter expressions (same registry
-type, same key expression `(input, copy)` / `(src, dst)`, same reset anchor
-positions) and that the harness uses the shared helper verbatim.
+The regression cases execute a C++ harness (`fixtures/producer_occurrence.cpp`)
+that calls the REAL shared production helper
+`instrumentation/issue280_occurrence.h` with the exact expressions the
+transform inserts into the production sources, in the pinned lifecycle order:
+`sched entry (reset) → per planned input: assign (manifest) → begin
+(boundary_begin) → current (copy_path, boundary_end)`. `tests/
+test_issue280_source.py::test_harness_executes_production_counter_expressions`
+asserts the harness's `issue280_occurrence::` call expressions equal the
+transform's inserted expressions, and `test_harness_lifecycle_matches_
+production_anchors` asserts the reset is anchored at
+`ggml_backend_sched_graph_compute_async` entry, `assign` in the
+compute_splits manifest loop, and `current(src, dst)` in the Vulkan TU
+copy_path — so harness execution exercises the actual generated hook/counter
+logic, not a hand-written re-enactment. The resulting rows are emitted through
+the standard emitter header and fed into the REAL collector.
 
 ## Tests
 
