@@ -119,6 +119,50 @@ static void emit_manifest(int request, int tokens, int occ, const std::string & 
     }
 }
 
+static void emit_source_shaped_leg(const std::string & direction, int occ,
+                                   int bytes, const std::string & src_buffer,
+                                   const std::string & dst_buffer) {
+    // Pinned-source shape: ggml-vulkan host legs carry NO request and NO
+    // logical (input,copy) identity — only concrete buffer identities, the leg
+    // direction, and the byte count. `occ` >= 0 models the CURRENT (defective)
+    // emitter behavior: a buffer-GLOBAL counter keyed by the vk_buffer, not
+    // the logical input/copy occurrence of the enclosing boundary. occ < 0
+    // omits the field entirely (the corrected emitter shape).
+    if (issue280::enabled()) {
+        issue280::event host("host_leg");
+        if (occ >= 0) host.n("occ", occ);
+        host.s("direction", direction).n("bytes", bytes)
+            .s("src_buffer", src_buffer).s("dst_buffer", dst_buffer);
+        host.emit();
+    }
+}
+
+static void emit_shared_buffer_copy(int request, int tokens, int occ,
+                                    const std::string & input,
+                                    const std::string & copy,
+                                    const std::string & src_buffer,
+                                    const std::string & dst_buffer,
+                                    int d2h_occ, int h2d_occ) {
+    // Two logical inputs can legitimately share one underlying vk_buffer pair:
+    // at the pinned llama.cpp source multiple tensors occupy offsets in one
+    // ggml_backend_vk_buffer_context::dev_buffer, so logical input B (occ=0)
+    // reuses the same concrete buffers as logical input A (occ=0).
+    I280_EVENT("boundary_begin").n("request", request).s("tensor", "ffn_out-0")
+        .s("src", "Vulkan0").s("dst", "Vulkan1").s("input", input)
+        .s("copy", copy).n("occ", occ).n("bytes", tokens * 16).emit();
+    I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
+        .n("occ", occ).s("src_buffer", src_buffer).s("dst_buffer", dst_buffer).emit();
+    clock_ns += 10;
+    emit_source_shaped_leg("device_to_host", d2h_occ, tokens * 16,
+                           src_buffer, dst_buffer);
+    clock_ns += 10;
+    emit_source_shaped_leg("host_to_device", h2d_occ, tokens * 16,
+                           src_buffer, dst_buffer);
+    clock_ns += 10;
+    I280_EVENT("boundary_end").n("request", request).s("input", input)
+        .s("copy", copy).n("occ", occ).n("bytes", tokens * 16).emit();
+}
+
 static void emit_copy(int request, int tokens, int occ, const std::string & mode,
                       const std::string & input, const std::string & copy, bool native) {
     const int bytes = mode == "wrong-bytes" ? tokens * 16 - 1 : tokens * 16;
@@ -222,9 +266,19 @@ static void emit_request(int request, int ordinal, const std::string & mode,
         const int copies = repeat_copy ? 2 : 1;
         const std::string input = request == 8 ? "in8" : "in";
         const std::string copy = request == 8 ? "out8" : "out";
+        // Shared-buffer modes: two DISTINCT logical (input, copy) identities,
+        // each legitimately occ=0, sharing ONE concrete src/dst vk_buffer pair
+        // (multiple tensors occupy offsets in one dev_buffer at the pin).
+        const bool shared_buffer = mode.rfind("shared-buffer-", 0) == 0;
+        const std::string input_b = "in-b", copy_b = "out-b";
         if (!one_die && !no_manifest) {
-            for (int occ = 0; occ < copies; ++occ)
-                emit_manifest(request, graph_tokens, occ, mode, input, copy);
+            if (shared_buffer) {
+                emit_manifest(request, graph_tokens, 0, mode, input, copy);
+                emit_manifest(request, graph_tokens, 0, mode, input_b, copy_b);
+            } else {
+                for (int occ = 0; occ < copies; ++occ)
+                    emit_manifest(request, graph_tokens, occ, mode, input, copy);
+            }
         }
 
         for (int d = 0; d < die_count; ++d) {
@@ -236,11 +290,23 @@ static void emit_request(int request, int ordinal, const std::string & mode,
             const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
 
             if (d == 1 && !one_die) {
-                for (int occ = 0; occ < copies; ++occ) {
-                    emit_copy(request, graph_tokens, occ, mode, input, copy, native);
-                    if (mode == "abort-incomplete-copy") {
-                        request_end(request, "abort", 0);
-                        return;
+                if (shared_buffer) {
+                    // Current-emitter shape: buffer-global leg counters. Logical
+                    // A is legs 0/0; logical B reuses the same buffers so its
+                    // d2h counter reads 1 and h2d counter reads 1 while its
+                    // LOGICAL occurrence is 0.
+                    const bool corrected = mode != "shared-buffer-current-emitter";
+                    emit_shared_buffer_copy(request, graph_tokens, 0, input, copy,
+                                            "sb", "db", corrected ? -1 : 0, corrected ? -1 : 0);
+                    emit_shared_buffer_copy(request, graph_tokens, 0, input_b, copy_b,
+                                            "sb", "db", corrected ? -1 : 1, corrected ? -1 : 1);
+                } else {
+                    for (int occ = 0; occ < copies; ++occ) {
+                        emit_copy(request, graph_tokens, occ, mode, input, copy, native);
+                        if (mode == "abort-incomplete-copy") {
+                            request_end(request, "abort", 0);
+                            return;
+                        }
                     }
                 }
             }

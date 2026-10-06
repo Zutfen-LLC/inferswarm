@@ -399,6 +399,39 @@ class CollectorRecordingTests(unittest.TestCase):
         joined = "\n".join(result["problems"])
         self.assertIn("without any backing buffer bounds", joined)
 
+    def test_two_logical_inputs_sharing_one_buffer_pair_are_admitted(self):
+        """Maintainer P1 (round 8): source-shaped host legs carry buffer
+        identities, not logical (input,copy,occ) identity. Two distinct
+        logical inputs — each legitimately occ=0 — may share ONE underlying
+        src/dst vk_buffer pair (multiple tensors occupy offsets in one
+        ggml_backend_vk_buffer_context::dev_buffer at the pin). The corrected
+        stream (no occ on buffer-scope legs, bound via copy_path) must be
+        admitted."""
+        result, _ = self.collect("shared-buffer-corrected-emitter")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["logical_boundary_bytes"], 96 * 2)
+        self.assertEqual(result["host_leg_bytes"], 192 * 2)
+        boundaries = result["graphs"][0]["boundaries"]
+        self.assertEqual([(b["input"], b["copy"], b["occ"]) for b in boundaries],
+                         [("in", "out", 0), ("in-b", "out-b", 0)])
+        self.assertTrue(all(b["src_buffer"] == "sb" and b["dst_buffer"] == "db"
+                            for b in boundaries))
+
+    def test_current_emitter_shared_buffer_stream_is_reproduced_as_the_red_case(self):
+        """RED control: the UNCHANGED reviewed emitter derives host-leg occ
+        from a buffer-GLOBAL counter. Logical input B (occ=0) reusing the
+        shared buffer pair emits buffer-global occ=1, which the reviewed
+        collector rejects as an occurrence mismatch — a valid source-shaped
+        stream falsely rejected. This test documents the defect; the collector
+        correction must NOT weaken the wrong-occurrence law itself (explicit
+        wrong occ still rejects) but must accept this structurally-bound
+        valid stream once the emitter stops inventing logical occ."""
+        result, _ = self.collect("shared-buffer-current-emitter")
+        self.assertTrue(result["ok"], result["problems"])
+        boundaries = result["graphs"][0]["boundaries"]
+        self.assertEqual([(b["input"], b["copy"], b["occ"]) for b in boundaries],
+                         [("in", "out", 0), ("in-b", "out-b", 0)])
+
 
 if __name__ == "__main__":
     unittest.main()
