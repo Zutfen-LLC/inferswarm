@@ -6,12 +6,12 @@
  #include "ggml-impl.h"
 +
 +#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
-+#include <map>
 +#include "issue280_observer.h"
++#include "issue280_occurrence.h"
  
  #include <assert.h>
  #include <limits.h>
-@@ -1643,6 +1647,34 @@
+@@ -1643,6 +1647,33 @@
  static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t sched) {
      GGML_ASSERT(sched);
      struct ggml_backend_sched_split * splits = sched->splits;
@@ -27,8 +27,7 @@
 +                auto * copy = tensor_id_copy(hid, planned->backend_id, sched->cur_copy);
 +                if (source == destination || ggml_backend_buffer_is_host(input->buffer) ||
 +                        ggml_backend_buffer_is_host(copy->buffer)) { continue; }
-+                static std::map<const void *, int> observed_copy_occurrences; // process-lifetime occurrence counter
-+                const int observed_occ = observed_copy_occurrences[input]++;
++                const int observed_occ = issue280_occurrence::assign(input, copy); // graph-local (input, copy)-keyed occurrence; manifest is the authoritative assignment site
 +                issue280::event("copy_manifest").s("tensor", input->name)
 +                    .s("src", ggml_backend_name(source)).s("dst", ggml_backend_name(destination))
 +                    .p("input", input).p("copy", copy).n("occ", observed_occ)
@@ -46,33 +45,39 @@
  
      ggml_tensor * prev_ids_tensor = nullptr;
      std::vector<int32_t> ids;
-@@ -1670,6 +1702,14 @@
+@@ -1670,6 +1701,13 @@
              ggml_backend_t input_backend = ggml_backend_sched_get_tensor_backend(sched, split->inputs[input_id]);
              struct ggml_tensor * input = split->inputs[input_id];
              struct ggml_tensor * input_cpy = tensor_copy(input, split_backend_id, sched->cur_copy);
 +            if (issue280::enabled() && input_backend != split_backend &&
 +                    !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
-+                static std::map<const void *, int> observed_boundary_occurrences; // per-(input) begin counter
 +                issue280::event("boundary_begin").s("tensor", input->name)
 +                    .s("src", ggml_backend_name(input_backend)).s("dst", ggml_backend_name(split_backend))
 +                    .p("input", input).p("copy", input_cpy).n("bytes", ggml_nbytes(input))
-+                    .n("occ", observed_boundary_occurrences[input]++).emit();
++                    .n("occ", issue280_occurrence::begin(input, input_cpy)).emit(); // starts the next copy event for this (input, copy): 0, then 1 for a repeated pair within the graph
 +            }
  
              if (input->flags & GGML_TENSOR_FLAG_INPUT) {
                  // inputs from the user must be copied immediately to prevent the user overwriting the data before the copy is done
-@@ -1790,6 +1830,11 @@
+@@ -1790,6 +1828,10 @@
                      }
                  }
              }
 +            if (issue280::enabled() && input_backend != split_backend &&
 +                    !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
-+                static std::map<const void *, int> observed_boundary_end_occurrences; // per-(input) end counter
-+                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).n("occ", observed_boundary_end_occurrences[input]++).emit();
++                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).n("occ", issue280_occurrence::current(input, input_cpy)).emit(); // same occurrence as the copy event opened by begin
 +            }
          }
  
          if (!sched->callback_eval) {
+@@ -2012,6 +2054,7 @@
+ }
+ 
+ enum ggml_status ggml_backend_sched_graph_compute_async(ggml_backend_sched_t sched, struct ggml_cgraph * graph) {
++    if (issue280::enabled()) { issue280_occurrence::reset(); } // graph-local occurrence scope: this entry is 1:1 with the observer's graph_begin (llama_context::graph_compute -> exactly one async sched call)
+     GGML_ASSERT(sched);
+     if (!sched->is_reset && !sched->is_alloc) {
+         ggml_backend_sched_reset(sched);
 --- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
 +++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
 @@ -92,6 +92,12 @@
@@ -81,8 +86,8 @@
  #include "ggml-backend-impl.h"
 +
 +#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
-+#include <map>
 +#include "issue280_observer.h"
++#include "issue280_occurrence.h"
 +static const char * issue280_cached_bdf(ggml_backend_t backend);
 +static bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration
  
@@ -211,20 +216,24 @@
      // closed explicitly below, and by the destructor on the early returns
      ggml_vk_debug_label dbg(compute_ctx, cgraph, node_idx, ctx->num_additional_fused_ops);
  
-@@ -16819,6 +16876,12 @@
+@@ -16819,6 +16876,16 @@
          vk_buffer src_buf = src_buf_ctx->dev_buffer;
          vk_buffer dst_buf = dst_buf_ctx->dev_buffer;
  
 +        if (issue280::enabled() && src_buf->device != dst_buf->device) {
-+            static std::map<const void *, int> observed_copy_paths; // per-(input) path counter
++            // (src, dst) at this call site ARE the planned input and its
++            // selected copy (scheduler copies cross-die inputs through
++            // ggml_backend_tensor_copy on exactly this pair), so recalling
++            // the manifest-assigned graph-local occurrence keeps manifest,
++            // begin, copy_path and end on ONE identity.
 +            issue280::event("copy_path").p("input", src).p("copy", dst)
-+                .n("occ", observed_copy_paths[src]++)
++                .n("occ", issue280_occurrence::current(src, dst))
 +                .p("src_buffer", src_buf.get()).p("dst_buffer", dst_buf.get()).emit();
 +        }
          ggml_vk_buffer_copy(dst_buf, vk_tensor_offset(dst) + dst->view_offs, src_buf, vk_tensor_offset(src) + src->view_offs, ggml_nbytes(src));
  
          return true;
-@@ -17209,6 +17272,7 @@
+@@ -17209,6 +17276,7 @@
              ggml_vk_submit(compute_ctx, ctx->fence);
              VK_CHECK(ctx->device->device.waitForFences({ ctx->fence }, true, UINT64_MAX), "synchronize waitForFences", ctx->device);
              ctx->device->device.resetFences({ ctx->fence });
@@ -232,7 +241,7 @@
          } else {
              ggml_vk_submit(compute_ctx, {});
          }
-@@ -17231,9 +17295,11 @@
+@@ -17231,9 +17299,11 @@
              };
              si.setPNext(&tl_info);
              ctx->device->compute_queue->handle->submit({ si }, ctx->fence);
@@ -244,7 +253,7 @@
          }
          if (!ctx->device->serialize_submissions) {
              ggml_vk_wait_for_fence(ctx);
-@@ -18004,6 +18070,8 @@
+@@ -18004,6 +18074,8 @@
      VK_LOG_DEBUG("ggml_backend_vk_graph_compute(" << cgraph->n_nodes << " nodes)");
      ggml_backend_vk_context * ctx = (ggml_backend_vk_context *)backend->context;
  
@@ -253,7 +262,7 @@
      ctx->device->diag_cgraph = nullptr;
      ctx->device->diag_prev_start = -1;
      ctx->device->diag_prev_end = -1;
-@@ -18116,6 +18184,7 @@
+@@ -18116,6 +18188,7 @@
              ctx->device->device.resetFences({ ctx->fence });
              ctx->submit_pending = false;
              ctx->device->diag_cgraph = cgraph;
@@ -261,7 +270,7 @@
              ctx->device->diag_prev_start = start;
              ctx->device->diag_prev_end = end;
          }
-@@ -18490,6 +18559,7 @@
+@@ -18490,6 +18563,7 @@
          ggml_vk_synchronize(ctx);
      }
  
@@ -269,7 +278,7 @@
      return GGML_STATUS_SUCCESS;
  
      UNUSED(backend);
-@@ -18912,6 +18982,7 @@
+@@ -18912,6 +18986,7 @@
      ctx->submit_pending = true;
      vkev->cmd_buffer = cmd_buf;
      vkev->cmd_buffer_use_counter = cmd_buf->use_counter;
@@ -277,7 +286,7 @@
      ctx->compute_ctx.reset();
  }
  
-@@ -19084,6 +19155,11 @@
+@@ -19084,6 +19159,11 @@
      std::string pci_bus_id;
      int op_offload_min_batch_size;
  };
@@ -289,7 +298,7 @@
  
  static const char * ggml_backend_vk_device_get_name(ggml_backend_dev_t dev) {
      ggml_backend_vk_device_context * ctx = (ggml_backend_vk_device_context *)dev->context;
-@@ -19881,6 +19957,7 @@
+@@ -19881,6 +19961,7 @@
          uint64_t val = vkev->tl_semaphore.value;
          vk::SemaphoreWaitInfo swi{vk::SemaphoreWaitFlags{}, sem, val};
          VK_CHECK(device->device.waitSemaphores(swi, UINT64_MAX), "event_synchronize", device);
