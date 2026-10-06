@@ -97,10 +97,15 @@ static void emit_manifest(int request, int tokens, int occ, const std::string & 
     int ne0 = 4;
     int view_offset = 0;
     bool bounded = false;
-    int bound = tokens * 16;
     if (mode == "inconsistent-shape-bytes" || mode == "shape-law-violation") ne0 = 5;
     if (mode == "unsupported-type") tensor_type = "q4_0";
     if (mode == "range-overflow") { view_offset = 1; bounded = true; }
+    // The pinned ggml hook reads the containing buffers' contexts, so real
+    // source streams always carry bounds; the fixture declares them too.
+    // range-overflow keeps a bound SMALLER than the payload to prove the
+    // overflow check; missing-bounds omits the field entirely (unprovable).
+    bounded = true;
+    const int buffer_bound = mode == "range-overflow" ? 32 : 65536;
     if (issue280::enabled()) {
         issue280::event event("copy_manifest");
         event.n("request", request).s("tensor", "ffn_out-0").s("src", "Vulkan0")
@@ -109,7 +114,7 @@ static void emit_manifest(int request, int tokens, int occ, const std::string & 
             .n("ne1", tokens).n("ne2", 1).n("ne3", 1).n("nb0", 4)
             .n("nb1", 16).n("nb2", tokens * 16).n("nb3", tokens * 16)
             .n("view_offset", view_offset);
-        if (bounded) event.n("buffer_bytes", bound);
+        if (bounded && mode != "missing-bounds") { event.n("buffer_bytes", buffer_bound); }
         event.emit();
     }
 }
@@ -195,7 +200,10 @@ static void emit_request(int request, int ordinal, const std::string & mode,
                 if ((mode == "decode-token-mismatch" || mode == "decode-wrong-token")
                         && first_request && g == 1) token = 999;
                 token_ids = {token};
-                int position = prompt_tokens + sample_index + 1;
+                // Pinned-source law: sample fires at prompt.tokens.pos_next()=N
+                // and the sampled token is consumed by the next decode AT
+                // position N (handle_last_sampled_token adds it at pos_next).
+                int position = prompt_tokens + sample_index;
                 if ((mode == "wrong-absolute-decode-position" || mode == "decode-wrong-position")
                         && first_request && g == 1) position = 17;
                 positions = {position};
@@ -335,7 +343,37 @@ int main(int argc, char ** argv) {
     I280_EVENT("recording").s("kind", mode == "source-identity" ? "SOURCE_OBSERVER" : "CPU_FIXTURE")
         .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4")
         .n("requests_planned", planned_two ? 2 : 1).emit();
-    emit_inventory(one_die, omit_placement);
+    // placement-swapped-layers must NOT inherit the honest inventory: emit the
+    // swapped rows as the ONLY inventory so the ownership claim is isolated.
+    emit_inventory(one_die, omit_placement || mode == "placement-swapped-layers");
+    if (mode == "placement-swapped-layers") {
+        // E2 adversarial: inventory rows claim the OPPOSITE die owns each
+        // layer; dispatch evidence remains die0=blk.0, die1=blk.1.
+        for (int d = 0; d < 2; ++d) {
+            const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
+            const int other = 1 - d;
+            I280_EVENT("weight_inventory").s("tensor", "blk." + std::to_string(other) + ".weight")
+                .s("bdf", bdf).n("bytes", 1024).n("layer", other)
+                .s("buffer", "swapped-weight-" + std::to_string(d)).emit();
+        }
+        I280_EVENT("cpu_state").s("kind", "runtime").n("bytes", 64).emit();
+        emit_request(7, 1, "positive", false, false, true);
+        return 0;
+    }
+    if (mode == "staging-as-weights") {
+        // E3 adversarial: one buffer identity declared as staging AND weights.
+        I280_EVENT("buffer_decl").s("buffer", "staging-0")
+            .s("bdf", "0000:01:00.0").n("bytes", 256).s("purpose", "staging").emit();
+        I280_EVENT("weight_inventory").s("tensor", "blk.0.staging")
+            .s("bdf", "0000:01:00.0").n("bytes", 999999).n("layer", 0)
+            .s("buffer", "staging-0").emit();
+        I280_EVENT("weight_inventory").s("tensor", "blk.1.weight")
+            .s("bdf", "0000:02:00.0").n("bytes", 1024).n("layer", 1)
+            .s("buffer", "weight-inventory-1").emit();
+        I280_EVENT("cpu_state").s("kind", "runtime").n("bytes", 64).emit();
+        emit_request(7, 1, "positive", false, false, true);
+        return 0;
+    }
     if (mode == "warm-request-no-inheritance") {
         request_accept(7, 1);
         emit_batch(7, 0, 1, "decode", {999}, {0}, "\"frame_request\":8");

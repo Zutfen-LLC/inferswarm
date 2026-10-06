@@ -352,6 +352,51 @@ def collect(raw, contract):
                 add_problem(f"placement: no completed nonempty compute on {die}")
             if any(item["unexplained_bytes"] for item in placement.values()):
                 add_problem("placement: unexplained placement cannot establish ownership")
+            # Coherence law E2: a die's weight inventory must actually cover the
+            # named layers its dispatched compute reads on that die (dispatch
+            # operands observed with blk.N names within the request's graphs).
+            for die in dies:
+                inventory_layers = set()
+                for entry in placement[die]["buffers"]:
+                    if entry.get("kind") != "weight_inventory":
+                        continue
+                    m = re.match(r"blk\.(\d+)\.", entry.get("tensor", ""))
+                    if m:
+                        inventory_layers.add(int(m[1]))
+                for graph in request_record["graphs"]:
+                    dispatched = set()
+                    for command in graph["completed_compute"].get(die, []):
+                        for dispatch in command["dispatches"]:
+                            for weight in dispatch["weights"]:
+                                m = re.match(r"blk\.(\d+)\.", weight["tensor"])
+                                if m:
+                                    dispatched.add(int(m[1]))
+                    if not dispatched.issubset(inventory_layers):
+                        add_problem(
+                            f"placement: die {die} compute reads layers "
+                            f"{sorted(dispatched - inventory_layers)} absent from its weight inventory")
+            # Exclusive-category law E3: one buffer identity cannot be declared
+            # in two placement categories (e.g. staging AND weights).
+            category_of_buffer = {}
+            for die in dies:
+                for entry in placement[die]["buffers"]:
+                    kind = entry.get("kind")
+                    if kind == "weight_inventory":
+                        category = "weights"
+                    elif kind == "kv_inventory":
+                        category = "kv"
+                    elif kind == "buffer_decl":
+                        category = entry.get("purpose")
+                    else:
+                        continue
+                    buffer_id = entry.get("buffer")
+                    if not buffer_id:
+                        continue
+                    if buffer_id in category_of_buffer and category_of_buffer[buffer_id] != category:
+                        add_problem(
+                            f"placement: buffer {buffer_id} declared as both "
+                            f"{category_of_buffer[buffer_id]} and {category}")
+                    category_of_buffer[buffer_id] = category
             requirements = contract.get("placement", {}).get("required_categories", [])
             category_fields = {"weights": "weights_bytes", "kv_cache": "kv_bytes",
                                "staging": "staging_bytes", "compute": "compute_bytes"}
@@ -359,6 +404,15 @@ def collect(raw, contract):
                 field = category_fields.get(category)
                 if field is None or any(placement[d][field] <= 0 for d in dies):
                     add_problem(f"placement: required category {category} is not declared on every die")
+            # Range law B13: a consumed copy occurrence whose containing-buffer
+            # bounds were never supplied is UNPROVABLE; it may not stand inside
+            # a successful request (fail closed, do not guess safety).
+            for graph in request_record["graphs"]:
+                for manifest in graph.get("manifest", []):
+                    if manifest.get("consumed") and manifest.get("bounds_status") == "UNKNOWN":
+                        add_problem(
+                            "range: consumed copy occurrence without any backing buffer bounds "
+                            f"(input={manifest['input']} copy={manifest['copy']} occ={manifest['occ']})")
 
         for row in rows[1:]:
             ev = row["event"]
@@ -453,8 +507,22 @@ def collect(raw, contract):
                 if not placement_open or active is not None:
                     fail("placement: inventory must be emitted once at process load before requests")
                 inventory_rows += 1
+                def resolve_die(raw_name):
+                    """Inventory rows bind to a die either by BDF directly or by
+                    backend NAME (pinned hooks emit ggml_backend_buffer_name).
+                    Backend names resolve via the stream's own vk_graph_begin
+                    bindings; unresolvable names fail closed."""
+                    if raw_name == "CPU" or raw_name == "unassigned":
+                        return raw_name
+                    if raw_name in placement:
+                        return raw_name
+                    for per_request in backends.values():
+                        if per_request.get(raw_name) in placement:
+                            return per_request[raw_name]
+                    fail(f"placement: inventory backend {raw_name!r} is neither a contract die, "
+                         "CPU, nor a stream-bound backend name")
                 if ev == "weight_inventory":
-                    die = text(row, "bdf")
+                    die = resolve_die(text(row, "bdf"))
                     name, size = text(row, "tensor"), integer(row, "bytes", 1)
                     layer_of(row)
                     if die == "CPU":
@@ -475,7 +543,7 @@ def collect(raw, contract):
                                                         "buffer": text(row, "buffer"), "bytes": size})
                     result["placement"]["placement_denominator_bytes"] += size
                 elif ev == "kv_inventory":
-                    die, kind = text(row, "bdf"), text(row, "kind")
+                    die, kind = resolve_die(text(row, "bdf")), text(row, "kind")
                     if kind not in {"k", "v", "kv"}:
                         fail("placement: invalid KV inventory")
                     if die == "CPU":
@@ -494,7 +562,7 @@ def collect(raw, contract):
                     placement[die]["buffers"].append({"kind": "kv_inventory", "tensor": text(row, "tensor"),
                                                         "buffer": row.get("buffer"), "bytes": size})
                 elif ev == "buffer_decl":
-                    die, purpose = text(row, "bdf"), text(row, "purpose")
+                    die, purpose = resolve_die(text(row, "bdf")), text(row, "purpose")
                     if die not in placement or purpose not in {"weights", "kv", "staging", "compute", "unknown"}:
                         fail("placement: invalid buffer declaration")
                     size = integer(row, "bytes", 1)
@@ -509,7 +577,7 @@ def collect(raw, contract):
                     cpu_bytes += size
                     result["placement"]["cpu_state"].append({"kind": kind, "bytes": size})
                 else:
-                    die, size = text(row, "bdf"), integer(row, "bytes", 1)
+                    die, size = resolve_die(text(row, "bdf")), integer(row, "bytes", 1)
                     if die not in placement:
                         fail("placement: unexplained row references unknown BDF")
                     placement[die]["unexplained_bytes"] += size
@@ -561,8 +629,8 @@ def collect(raw, contract):
                     previous = active["samples"][-1]
                     if len(token_ids) != 1 or token_ids[0] != previous["token_id"]:
                         fail("decode token does not match the prior sample")
-                    if len(positions) != 1 or positions[0] != previous["absolute_position"] + 1:
-                        fail("decode position does not advance from the prior sample")
+                    if len(positions) != 1 or positions[0] != previous["absolute_position"]:
+                        fail("decode position does not match the sampled token position")
                     if previous["eos"]:
                         fail("decode after terminal EOS sample")
                 current_batch = {"request": rid, "tokens": ntok, "phase": phase,
@@ -592,8 +660,11 @@ def collect(raw, contract):
                 if current_graph is None:
                     fail("Vulkan graph outside bound graph")
                 ctx, bdf, backend = text(row, "ctx"), text(row, "bdf"), text(row, "backend")
-                if row.get("request") != rid:
+                if "request" in row and row["request"] != rid:
                     fail("cross-request: Vulkan graph request binding mismatch")
+                # The pinned vk hook omits the request field: bind structurally
+                # to the request whose graph is open (a MISMATCHED explicit
+                # request above is still rejected).
                 if bdf not in dies:
                     fail("unexpected/missing die BDF")
                 if ctx in contexts and contexts[ctx].get("active"):
@@ -1008,9 +1079,20 @@ def collect(raw, contract):
         result["placement_denominator_bytes"] = result["placement"]["placement_denominator_bytes"]
         result["placement"]["cpu_bytes"] = cpu_bytes
         result["placement"]["cpu_weight_bytes"] = cpu_weight_bytes
+        # Denominator law E5: make the relation explicit and machine-checkable.
+        # die_numerators_sum + cpu_weight_bytes == denominator ALWAYS (the later
+        # >=25%-per-die criterion reads the denominator; its numerator is a
+        # single die's placement_numerator_bytes; CPU-owned state is never a
+        # candidate-die numerator).
         for die in dies:
             placement[die]["placement_numerator_bytes"] = placement[die]["weights_bytes"]
             placement[die]["cpu_bytes"] = 0  # cpu_state has process scope, not a BDF
+        die_numerators_sum = sum(placement[d]["placement_numerator_bytes"] for d in dies)
+        result["placement"]["die_numerators_sum_bytes"] = die_numerators_sum
+        result["placement"]["denominator_relation"] = (
+            "die_numerators_sum_bytes + cpu_weight_bytes == placement_denominator_bytes"
+            if die_numerators_sum + cpu_weight_bytes ==
+            result["placement"]["placement_denominator_bytes"] else "INCONSISTENT")
         for graph in result["graphs"]:
             graph.pop("_manifest_rows", None)
             graph.pop("manifest_by_key", None)

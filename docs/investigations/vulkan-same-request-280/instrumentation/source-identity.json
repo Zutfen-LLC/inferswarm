@@ -2,7 +2,7 @@
   "base_git_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
   "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build",
   "emitter_sha256": "d537c86b83bef00e4eff7d631830f4ca09ef0d0dcab69ed1f38bef082949475f",
-  "full_transformed_git_tree": "3af076a2b126eb2dfe430c6ec8f40f89bfefb014",
+  "full_transformed_git_tree": "9fbdab3c37a352d53b5103688dba6f506a8b0194",
   "original_sha256": {
     "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
@@ -11,8 +11,8 @@
     "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
     "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
   },
-  "overlay_tree_sha256": "e0355a88430ccca7a70e29473877a3a003fb9c85a8cee61bacee2930074b45a1",
-  "patch_sha256": "a0a04b5d03313ef0e618849d786d46dea59735c8cb49bb09cec55ea2ddec3e5f",
+  "overlay_tree_sha256": "349e927db33ca951692ba6e5940fdd780f348e6c2c1ad7ed8d5de28ea48b7378",
+  "patch_sha256": "0d5c9c458f850bd995bab5b844128228b105be253d01c9c7689b6c0df1df1bf1",
   "physical_runner": "HELD_UNAVAILABLE",
   "schema": "issue280-source-overlay/1",
   "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
@@ -20,8 +20,8 @@
     "ggml/src/ggml-backend.cpp": "a21bd62d9dc655721779d634287a6620d787021cc59981b784c80d62f0ca8532",
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "b31aad0bbe70207167b82a6b1f96aa3d8ca08d4fe3629ad32995e3a32c2db18f",
     "src/llama-context.cpp": "4c90c807ba1f7c5c03abdb8be523689e725210bd2ba70e1c8b005c15072f3ec6",
-    "src/llama-kv-cache.cpp": "525dfee8dbf70ef3a74056b934491a87f8d8c5bdcf92fd7cdbccbc7d8697aeeb",
-    "src/llama-model.cpp": "d893da19d50260b4afea8953b4ace8823d5da051b74fb6595612acbd0ccae5b4",
+    "src/llama-kv-cache.cpp": "8fda4d8cf6330222b8c5d81a035ad5b55c5aa1e72dfbfebf927ea69c211b1f6f",
+    "src/llama-model.cpp": "59981866c698b91710e0c5ff644a1886671b84e9014365d911a16f09b2c2bb27",
     "tools/server/server-context.cpp": "543034344a81ace6ac007f77060673553f5e6ca3417e214086eb52058effdfe9"
   }
 }

@@ -365,8 +365,35 @@ class CollectorRecordingTests(unittest.TestCase):
         self.assertTrue(result["ok"], result["problems"])
         self.assertEqual(result["placement"]["cpu_weight_bytes"], 300)
         self.assertEqual(result["placement_denominator_bytes"], 2348)
+        self.assertEqual(result["placement"]["die_numerators_sum_bytes"], 2048)
+        self.assertEqual(result["placement"]["denominator_relation"],
+                         "die_numerators_sum_bytes + cpu_weight_bytes == placement_denominator_bytes")
         for die in ("0000:01:00.0", "0000:02:00.0"):
             self.assertEqual(result["placement"]["dies"][die]["placement_numerator_bytes"], 1024)
+
+    def test_swapped_inventory_layers_are_rejected(self):
+        """Review finding E2: inventory must cover the layers each die's own
+        dispatched compute reads; swapped ownership cannot pass."""
+        result, _ = self.collect("placement-swapped-layers")
+        self.assertFalse(result["ok"])
+        joined = "\n".join(result["problems"])
+        self.assertIn("absent from its weight inventory", joined)
+
+    def test_staging_buffer_cannot_double_as_weights(self):
+        """Review finding E3: one buffer identity cannot be declared in two
+        placement categories; staging bytes never enter weight numerators."""
+        result, _ = self.collect("staging-as-weights")
+        self.assertFalse(result["ok"])
+        joined = "\n".join(result["problems"])
+        self.assertIn("declared as both", joined)
+
+    def test_unbacked_copy_range_fails_closed_on_success(self):
+        """Review finding B13: a consumed copy occurrence with no declared
+        backing-buffer bounds is unprovable and fails a successful request."""
+        result, _ = self.collect("missing-bounds")
+        self.assertFalse(result["ok"])
+        joined = "\n".join(result["problems"])
+        self.assertIn("without any backing buffer bounds", joined)
 
 
 if __name__ == "__main__":

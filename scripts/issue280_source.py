@@ -134,18 +134,10 @@ INSERTIONS = {
             const char * observed_backend = observed_tensor->buffer
                 ? ggml_backend_buffer_name(observed_tensor->buffer) : "unassigned";
             const char * observed_bdf = observed_backend;
-            if (observed_tensor->buffer != nullptr) {
-                ggml_backend_buffer_type_t observed_buft = ggml_backend_buffer_get_type(observed_tensor->buffer);
-                ggml_backend_dev_t observed_dev = observed_buft
-                    ? ggml_backend_buft_get_device(observed_buft) : nullptr;
-                if (observed_dev != nullptr) {
-                    ggml_backend_dev_props observed_props{};
-                    ggml_backend_dev_get_props(observed_dev, &observed_props);
-                    if (observed_props.device_id != nullptr && observed_props.device_id[0] != '\\0') {
-                        observed_bdf = observed_props.device_id;
-                    }
-                }
-            }
+            // Non-perturbation: no device callback (get_props drives the Vulkan
+            // physical-device enumeration + memory-property query per tensor).
+            // The backend NAME is emitted; the collector binds name->BDF from
+            // the stream's own vk_graph_begin rows.
             int observed_layer = -1;
             const char * observed_name = ggml_get_name(observed_tensor);
             if (std::strncmp(observed_name, "blk.", 4) == 0) {
@@ -183,16 +175,9 @@ INSERTIONS = {
             ggml_backend_buffer_t observed_buffer = observed_cache.second.get();
             const char * observed_backend = ggml_backend_buffer_name(observed_buffer);
             const char * observed_bdf = observed_backend;
-            ggml_backend_buffer_type_t observed_buft = ggml_backend_buffer_get_type(observed_buffer);
-            ggml_backend_dev_t observed_dev = observed_buft
-                ? ggml_backend_buft_get_device(observed_buft) : nullptr;
-            if (observed_dev != nullptr) {
-                ggml_backend_dev_props observed_props{};
-                ggml_backend_dev_get_props(observed_dev, &observed_props);
-                if (observed_props.device_id != nullptr && observed_props.device_id[0] != '\\0') {
-                    observed_bdf = observed_props.device_id;
-                }
-            }
+            // Non-perturbation: no device callback (get_props drives the Vulkan
+            // physical-device enumeration + memory-property query per buffer).
+            // Backend NAME only; collector binds name->BDF from vk_graph_begin.
             for (ggml_tensor * observed_tensor = ggml_get_first_tensor(observed_ctx);
                     observed_tensor != nullptr;
                     observed_tensor = ggml_get_next_tensor(observed_ctx, observed_tensor)) {
