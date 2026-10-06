@@ -44,16 +44,18 @@ struct PlannedPair { const void * input; const void * copy; };
 
 // Inserted at ggml_backend_sched_graph_compute_async entry (production
 // anchor in scripts/issue280_source.py INSERTIONS for ggml-backend.cpp).
+// {RESET} is replaced by the transform's verbatim inserted line.
 static void sched_graph_compute_async_entry() {
-    if (issue280::enabled()) { {RESET}; }
+    {RESET}
 }
 
 // copy_manifest site (compute_splits pre-execution loop): the authoritative
-// occurrence assignment. {ASSIGN} is the production expression.
+// occurrence assignment. {ASSIGN} is the transform's verbatim inserted line
+// (it declares observed_occ).
 static void emit_manifest_site(int tokens, const PlannedPair & pair) {
     const void * input = pair.input;
     const void * copy = pair.copy;
-    const int observed_occ = {ASSIGN};
+    {ASSIGN}
     issue280::event("copy_manifest").s("tensor", "ffn_out-0").s("src", "Vulkan0")
         .s("dst", "Vulkan1").p("input", input).p("copy", copy).n("occ", observed_occ)
         .n("bytes", tokens * 16).s("type", "f32").n("ne0", 4)
@@ -64,39 +66,35 @@ static void emit_manifest_site(int tokens, const PlannedPair & pair) {
 
 // boundary_begin site (per-split input copy): begins the next copy event
 // for this (input, copy) — a repeated pair advances 0, then 1. {BEGIN} is
-// the production expression.
-static void emit_boundary_begin_site(int tokens, const PlannedPair & pair,
-                                     int corrupt = 0) {
+// the transform's verbatim inserted line (it completes this chain).
+static void emit_boundary_begin_site(int tokens, const PlannedPair & pair) {
     const void * input = pair.input;
     const void * input_cpy = pair.copy;
     issue280::event("boundary_begin").s("tensor", "ffn_out-0")
         .s("src", "Vulkan0").s("dst", "Vulkan1").p("input", input).p("copy", input_cpy)
         .n("bytes", tokens * 16)
-        .n("occ", ({BEGIN}) + corrupt).emit();
+        {BEGIN}
 }
 
 // copy_path site (ggml-vulkan.cpp, scheduler-initiated cross-die input
-// copy): (src, dst) ARE the planned input and its selected copy; recalls
-// the occurrence of the copy event opened by begin. {PATH} is the
-// production expression.
+// copy): (src, dst) ARE the planned input and its selected copy. {PATH} is
+// the transform's verbatim inserted line (a chain continuation).
 static void emit_copy_path_site(const PlannedPair & pair,
                                 const std::string & src_buffer,
-                                const std::string & dst_buffer, int corrupt = 0) {
+                                const std::string & dst_buffer) {
     const void * src = pair.input;
     const void * dst = pair.copy;
     issue280::event("copy_path").p("input", src).p("copy", dst)
-        .n("occ", ({PATH}) + corrupt)
+        {PATH}
         .s("src_buffer", src_buffer).s("dst_buffer", dst_buffer).emit();
 }
 
 // boundary_end site: the occurrence of the copy event opened by begin.
-// {END} is the production expression.
-static void emit_boundary_end_site(int tokens, const PlannedPair & pair) {
+// {END} is the transform's verbatim inserted line (a complete statement).
+static void emit_boundary_end_site(const PlannedPair & pair) {
     const void * input = pair.input;
     const void * input_cpy = pair.copy;
-    issue280::event("boundary_end").p("input", input).p("copy", input_cpy)
-        .n("occ", {END})
-        .n("bytes", tokens * 16).emit();
+    {END}
 }
 
 // Buffer-scope host legs (pinned vk hook shape: concrete buffer identities
@@ -133,8 +131,7 @@ static void emit_inventory() {
 static void emit_graph(int request, int graph_index, const std::string & phase,
                        int tokens, const std::vector<int> & token_ids,
                        const std::vector<int> & positions,
-                       const std::vector<PlannedPair> & pairs,
-                       int corrupt_copy_path = -1, int corrupt_begin = -1) {
+                       const std::vector<PlannedPair> & pairs) {
     std::ostringstream row;
     row << "{\"schema\":\"issue280-raw/1\",\"event\":\"batch_begin\",\"ts_ns\":"
         << recording_clock() << ",\"request\":" << request << ",\"seq\":0"
@@ -169,16 +166,14 @@ static void emit_graph(int request, int graph_index, const std::string & phase,
             for (size_t pi = 0; pi < pairs.size(); ++pi) {
                 const std::string sb = "sb" + std::to_string(pi);
                 const std::string db = "db" + std::to_string(pi);
-                emit_boundary_begin_site(tokens, pairs[pi],
-                                         corrupt_begin == (int) pi ? 1 : 0);
-                emit_copy_path_site(pairs[pi], sb, db,
-                                    corrupt_copy_path == (int) pi ? 1 : 0);
+                emit_boundary_begin_site(tokens, pairs[pi]);
+                emit_copy_path_site(pairs[pi], sb, db);
                 clock_ns += 10;
                 emit_host_leg_site("device_to_host", tokens * 16, sb, db);
                 clock_ns += 10;
                 emit_host_leg_site("host_to_device", tokens * 16, sb, db);
                 clock_ns += 10;
-                emit_boundary_end_site(tokens, pairs[pi]);
+                emit_boundary_end_site(pairs[pi]);
             }
         }
         I280_EVENT("vk_graph_begin").n("request", request).s("ctx", ctx)
@@ -249,16 +244,6 @@ int main(int argc, char ** argv) {
         // Case 4 (agreement): manifest, begin, copy_path and end all carry
         // the one assigned occurrence.
         emit_graph(7, 0, "prefill", prompt_tokens, prompt_ids, prompt_pos, { in_c1 });
-        I280_EVENT("sample").n("request", 7).n("position", 0).n("token_id", 40)
-            .n("absolute_position", prompt_tokens + 0).n("eos", 1).emit();
-    } else if (mode == "wrong-copy-path-occ") {
-        emit_graph(7, 0, "prefill", prompt_tokens, prompt_ids, prompt_pos, { in_c1 },
-                   /*corrupt_copy_path=*/0);
-        I280_EVENT("sample").n("request", 7).n("position", 0).n("token_id", 40)
-            .n("absolute_position", prompt_tokens + 0).n("eos", 1).emit();
-    } else if (mode == "wrong-begin-occ") {
-        emit_graph(7, 0, "prefill", prompt_tokens, prompt_ids, prompt_pos, { in_c1 },
-                   /*corrupt_copy_path=*/-1, /*corrupt_begin=*/0);
         I280_EVENT("sample").n("request", 7).n("position", 0).n("token_id", 40)
             .n("absolute_position", prompt_tokens + 0).n("eos", 1).emit();
     } else {

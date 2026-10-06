@@ -162,35 +162,49 @@ class ProducerOccurrenceTests(unittest.TestCase):
 
     @staticmethod
     def production_expressions(backend_ops=None, vk_ops=None, mutations=None):
-        """Extract the occurrence-counter expressions the transform inserts
-        into the production sources; optionally apply semantic mutations."""
+        """Extract the VERBATIM inserted lines carrying the occurrence
+        counters from the transform's production insertions. Whole-line
+        extraction (not sub-expression regex): any semantic change to a
+        counter line — arithmetic suffix, guard change, decoy duplicate —
+        either changes the substituted harness line or trips the strict
+        exactly-one-line assertion. Optionally apply semantic mutations to
+        the extracted lines."""
         m = SourceTransformTests().module()
         backend_ops = backend_ops if backend_ops is not None else m.INSERTIONS["ggml/src/ggml-backend.cpp"]
         vk_ops = vk_ops if vk_ops is not None else m.INSERTIONS["ggml/src/ggml-vulkan/ggml-vulkan.cpp"]
-        backend = "\n".join(extra for _, extra, _ in backend_ops)
-        vk = "\n".join(extra for _, extra, _ in vk_ops)
-        mutations = mutations or {}
-        import re
+        lines = [ln.strip() for ln in
+                 [l for _, extra, _ in backend_ops for l in extra.splitlines()]
+                 + [l for _, extra, _ in vk_ops for l in extra.splitlines()]
+                 if ln]
         def pick(pattern, label):
-            found = re.findall(pattern, backend + "\n" + vk)
-            if len(set(found)) != 1:
-                raise AssertionError(f"{label}: expected one unique expression, found {found}")
-            return mutations.get(label, found[0])
-        reset = pick(r"issue280_occurrence::reset\(\)", "reset")
-        assign = pick(r"issue280_occurrence::assign\(input, copy\)", "assign")
-        begin = pick(r"issue280_occurrence::begin\(input, input_cpy\)", "begin")
-        current_input = pick(r"issue280_occurrence::current\(input, input_cpy\)", "end")
-        path = pick(r"issue280_occurrence::current\(src, dst\)", "path")
-        return {"RESET": reset, "ASSIGN": assign, "BEGIN": begin,
-                "END": current_input, "PATH": path}
+            matches = [ln for ln in lines if pattern in ln]
+            if len(matches) != 1:
+                raise AssertionError(
+                    f"{label}: expected exactly one inserted line containing {pattern!r}, "
+                    f"found {len(matches)}: {matches}")
+            line = matches[0]
+            if mutations and label in mutations:
+                old, new = mutations[label]
+                assert old in line, f"{label}: mutation anchor {old!r} absent from {line!r}"
+                line = line.replace(old, new)
+            return line
+        return {
+            "RESET": pick("issue280_occurrence::reset()", "reset"),
+            "ASSIGN": pick("issue280_occurrence::assign(input, copy)", "assign"),
+            "BEGIN": pick("issue280_occurrence::begin(input, input_cpy)", "begin"),
+            "END": pick("issue280_occurrence::current(input, input_cpy)", "end"),
+            "PATH": pick("issue280_occurrence::current(src, dst)", "path"),
+        }
 
     def harness_source(self, expressions):
         source = self.FIXTURE.read_text()
         for placeholder, expression in expressions.items():
-            # Replace ALL occurrences: the placeholders also appear in the
-            # fixture's header comments (harmless — the expression text is
-            # valid inside a comment too).
-            source = source.replace("{" + placeholder + "}", expression)
+            token = "{" + placeholder + "}"
+            # A removed/renamed placeholder in the template would silently
+            # disable binding — refuse instead.
+            self.assertIn(token, source,
+                          f"harness template lost its {token} placeholder")
+            source = source.replace(token, expression)
         return source
 
     def run_harness(self, case, expressions):
@@ -267,20 +281,29 @@ class ProducerOccurrenceTests(unittest.TestCase):
 
     def test_wrong_copy_path_occurrence_rejects(self):
         # Required case 4 (wrong-occurrence half): a deliberately wrong
-        # occurrence on copy_path must still reject.
-        result, _ = self.collect("wrong-copy-path-occ", self.boundary_rows(1))
+        # occurrence on copy_path must still reject. Expressed as a
+        # production-expression mutation (path + 1) flowing through the
+        # normal binding path.
+        backend, vk = self.mutated_insertions(
+            "path", "issue280_occurrence::current(src, dst)",
+            "issue280_occurrence::current(src, dst) + 1")
+        expressions = self.production_expressions(backend_ops=backend, vk_ops=vk)
+        result, _ = self.collect("agree", self.boundary_rows(1), expressions)
         self.assertFalse(result["ok"])
         self.assertIn("copy path outside logical boundary occurrence",
                       "\n".join(result["problems"]))
 
     def test_wrong_begin_occurrence_rejects(self):
         # Required case 4 (wrong-occurrence half): a deliberately wrong
-        # occurrence on boundary_begin must still reject.
-        result, _ = self.collect("wrong-begin-occ", self.boundary_rows(1))
+        # occurrence on boundary_begin must still reject (begin + 1 makes
+        # the begin key disagree with its manifest).
+        backend, vk = self.mutated_insertions(
+            "begin", "issue280_occurrence::begin(input, input_cpy)",
+            "issue280_occurrence::begin(input, input_cpy) + 1")
+        expressions = self.production_expressions(backend_ops=backend, vk_ops=vk)
+        result, _ = self.collect("agree", self.boundary_rows(1), expressions)
         self.assertFalse(result["ok"])
         joined = "\n".join(result["problems"])
-        # A begin occ that disagrees with its manifest key is rejected
-        # regardless of which exact law fires first.
         self.assertTrue("missing or consumed preexecution boundary manifest" in joined
                         or "unmatched boundary end" in joined,
                         f"wrong begin occ not rejected: {result['problems']}")
@@ -299,37 +322,84 @@ class ProducerOccurrenceTests(unittest.TestCase):
         self.assertNotIn("{END}", source)
         self.assertNotIn("{PATH}", source)
 
-    MUTATIONS = {
-        "assign": "issue280_occurrence::assign(input, copy) + 1",
-        "begin": "issue280_occurrence::begin(input, input_cpy) + 1",
-        "path": "issue280_occurrence::current(src, dst) + 1",
-        "reset": "(void) 0",  # reset disabled: process-lifetime scope returns
+    # End-to-end mutations applied to the transform's inserted text itself
+    # (the same shape a real transform regression would take), then
+    # extracted and executed through the normal binding path.
+    TRANSFORM_MUTATIONS = {
+        "assign": ("issue280_occurrence::assign(input, copy)",
+                   "issue280_occurrence::assign(input, copy) + 1"),
+        "begin": ("issue280_occurrence::begin(input, input_cpy)",
+                  "issue280_occurrence::begin(input, input_cpy) + 1"),
+        "path": ("issue280_occurrence::current(src, dst)",
+                 "issue280_occurrence::current(src, dst) + 1"),
+        "reset": ("issue280::enabled()", "false"),
     }
 
+    @staticmethod
+    def mutated_insertions(label, old, new):
+        """Return (backend_ops, vk_ops) copies of the transform's INSERTIONS
+        with one counter line semantically mutated, mimicking a transform
+        regression."""
+        m = SourceTransformTests().module()
+        # The reset mutation's anchor (the enabled() guard) appears in every
+        # hook; restrict it to the reset line so the rejection provably
+        # comes from the lost graph-local reset, not from silenced hooks.
+        scope = "issue280_occurrence::reset()" if label == "reset" else None
+
+        def mutate(ops):
+            mutated = []
+            hit = 0
+            for anchor, extra, where in ops:
+                if old in extra and (scope is None or scope in extra):
+                    extra = extra.replace(old, new)
+                    hit += 1
+                mutated.append((anchor, extra, where))
+            return mutated, hit
+
+        backend, b_hit = mutate(m.INSERTIONS["ggml/src/ggml-backend.cpp"])
+        vk, v_hit = mutate(m.INSERTIONS["ggml/src/ggml-vulkan/ggml-vulkan.cpp"])
+        total = b_hit + v_hit
+        assert total == 1, f"{label}: mutation anchor found {total} times (expected exactly 1)"
+        return backend, vk
+
     def test_mutated_transform_is_detected_by_collector_rejection(self):
-        # Semantic binding (round-9 review finding): a transform whose
-        # counter expressions are semantically broken must produce a harness
-        # whose stream the REAL collector rejects. Each mutation below
-        # passed the round-9 pre-correction binding (substring equality) —
-        # that gap is closed by executing the extracted expressions.
-        for label, mutated in self.MUTATIONS.items():
+        # Semantic binding (round-9 review findings): a transform whose
+        # inserted counter line is semantically broken must produce a
+        # harness whose stream the REAL collector rejects. The mutations
+        # are applied to the transform's insertion text itself and flow
+        # through the SAME extraction path as the unmutated transform —
+        # arithmetic suffixes, guard disabling, decoy duplicates and
+        # removed placeholders cannot pass (extraction asserts exactly one
+        # matching line; the template refuses missing placeholders).
+        for label, (old, new) in self.TRANSFORM_MUTATIONS.items():
             with self.subTest(mutation=label):
-                expressions = self.production_expressions(mutations={label: mutated})
-                if label == "reset":
-                    # Without reset, the same pair in the second graph
-                    # emits occ=1 and the collector must reject.
-                    result, _ = self.collect("two-graphs-same-pair",
-                                             self.boundary_rows(1), expressions)
-                    self.assertFalse(result["ok"],
-                                     f"reset-disabled mutation admitted: {result['problems']}")
-                elif label in ("assign", "begin"):
-                    result, _ = self.collect("agree", self.boundary_rows(1), expressions)
-                    self.assertFalse(result["ok"],
-                                     f"{label}+1 mutation admitted: {result['problems']}")
-                else:  # path
-                    result, _ = self.collect("agree", self.boundary_rows(1), expressions)
-                    self.assertFalse(result["ok"],
-                                     f"{label}+1 mutation admitted: {result['problems']}")
+                backend, vk = self.mutated_insertions(label, old, new)
+                expressions = self.production_expressions(backend_ops=backend, vk_ops=vk)
+                case = "two-graphs-same-pair" if label == "reset" else "agree"
+                result, _ = self.collect(case, self.boundary_rows(1), expressions)
+                self.assertFalse(result["ok"],
+                                 f"{label} mutation admitted: {result['problems']}")
+
+    def test_extraction_rejects_duplicate_or_missing_counter_lines(self):
+        # Evasion guards: a decoy duplicate counter line in the insertions
+        # and a removed placeholder in the template both fail loudly.
+        m = SourceTransformTests().module()
+        backend = list(m.INSERTIONS["ggml/src/ggml-backend.cpp"])
+        decoy = ("", "// decoy: issue280_occurrence::assign(input, copy)\n", "after")
+        backend.append(decoy)
+        with self.assertRaises(AssertionError):
+            self.production_expressions(backend_ops=backend)
+        template = self.FIXTURE.read_text().replace("{END}", "")
+        with tempfile.TemporaryDirectory() as td:
+            removed = Path(td) / "template.cpp"
+            removed.write_text(template)
+            original_fixture = self.FIXTURE.read_text()
+            try:
+                self.FIXTURE.write_text(template)
+                with self.assertRaises(AssertionError):
+                    self.harness_source(self.production_expressions())
+            finally:
+                self.FIXTURE.write_text(original_fixture)
 
     def test_harness_lifecycle_matches_production_anchors(self):
         # The harness lifecycle corresponds to the pinned production source:

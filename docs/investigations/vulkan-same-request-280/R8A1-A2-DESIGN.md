@@ -143,16 +143,19 @@ this the smallest change.
 ### Harness lifecycle correspondence
 
 The regression cases execute a C++ harness TEMPLATE
-(`fixtures/producer_occurrence.cpp`) whose five counter expressions are
-placeholders substituted AT TEST TIME with the expressions extracted from
-the transform's production insertions, then compiled and run — the harness
-literally executes the generated counter code. The resulting rows are
-emitted through the standard emitter header and fed into the REAL
+(`fixtures/producer_occurrence.cpp`) whose five counter sites are
+placeholders substituted AT TEST TIME with the VERBATIM inserted lines
+extracted from the transform's production insertions (whole-line
+extraction with a strict exactly-one-line assertion per counter; the
+template refuses a missing placeholder), then compiled and run — the
+harness literally executes the generated counter code. The resulting rows
+are emitted through the standard emitter header and fed into the REAL
 collector. Semantic binding is enforced by mutation tests
-(`test_mutated_transform_is_detected_by_collector_rejection`): four
-deliberately broken transform mutations (assign+1, begin+1, copy_path+1,
-reset disabled) each produce a harness the real collector rejects — a
-transform-regression cannot pass the suite.
+(`test_mutated_transform_is_detected_by_collector_rejection`): mutations
+are applied to the transform's insertion text itself and flow through the
+SAME extraction path — assign+1, begin+1, copy_path+1 and a reset-guard
+disable each produce a stream the real collector rejects, and decoy
+duplicate lines or removed placeholders fail extraction loudly.
 
 ## Tests
 
