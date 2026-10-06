@@ -176,8 +176,13 @@ class ProducerOccurrenceTests(unittest.TestCase):
                  [l for _, extra, _ in backend_ops for l in extra.splitlines()]
                  + [l for _, extra, _ in vk_ops for l in extra.splitlines()]
                  if ln]
+        normalize = lambda text: "".join(text.split())
         def pick(pattern, label):
-            matches = [ln for ln in lines if pattern in ln]
+            # Whitespace-normalized whole-line matching: a duplicate counter
+            # call with ANY spacing (e.g. begin(input,input_cpy)) also
+            # matches and trips the exactly-one assertion.
+            needle = normalize(pattern)
+            matches = [ln for ln in lines if needle in normalize(ln)]
             if len(matches) != 1:
                 raise AssertionError(
                     f"{label}: expected exactly one inserted line containing {pattern!r}, "
@@ -200,10 +205,12 @@ class ProducerOccurrenceTests(unittest.TestCase):
         source = self.FIXTURE.read_text()
         for placeholder, expression in expressions.items():
             token = "{" + placeholder + "}"
-            # A removed/renamed placeholder in the template would silently
-            # disable binding — refuse instead.
-            self.assertIn(token, source,
-                          f"harness template lost its {token} placeholder")
+            # The placeholder must exist in EXECUTABLE position: a token
+            # kept only in a comment would silently disable binding.
+            executable = [ln for ln in source.splitlines()
+                          if not ln.lstrip().startswith(("//", "/*", "*", "*/"))]
+            self.assertTrue(any(token in ln for ln in executable),
+                            f"harness template lost its executable {token} placeholder")
             source = source.replace(token, expression)
         return source
 
@@ -389,17 +396,25 @@ class ProducerOccurrenceTests(unittest.TestCase):
         backend.append(decoy)
         with self.assertRaises(AssertionError):
             self.production_expressions(backend_ops=backend)
-        template = self.FIXTURE.read_text().replace("{END}", "")
-        with tempfile.TemporaryDirectory() as td:
-            removed = Path(td) / "template.cpp"
-            removed.write_text(template)
-            original_fixture = self.FIXTURE.read_text()
-            try:
-                self.FIXTURE.write_text(template)
-                with self.assertRaises(AssertionError):
-                    self.harness_source(self.production_expressions())
-            finally:
-                self.FIXTURE.write_text(original_fixture)
+        # Whitespace-variant duplicate (delta2 review finding P1): a second
+        # begin call with different spacing must also trip uniqueness.
+        vk = list(m.INSERTIONS["ggml/src/ggml-vulkan/ggml-vulkan.cpp"])
+        vk.append(("", "issue280_occurrence::begin(input,input_cpy);\n", "after"))
+        with self.assertRaises(AssertionError):
+            self.production_expressions(vk_ops=vk)
+        # Comment-only placeholder (delta2 review finding P2): a placeholder
+        # present ONLY in a comment must fail the executable-position check.
+        template = self.FIXTURE.read_text()
+        hidden = "\n".join(
+            ("// {END}" if ln.strip() == "{END}" else ln)
+            for ln in template.splitlines())
+        original_fixture = self.FIXTURE.read_text()
+        try:
+            self.FIXTURE.write_text(hidden)
+            with self.assertRaises(AssertionError):
+                self.harness_source(self.production_expressions())
+        finally:
+            self.FIXTURE.write_text(original_fixture)
 
     def test_harness_lifecycle_matches_production_anchors(self):
         # The harness lifecycle corresponds to the pinned production source:

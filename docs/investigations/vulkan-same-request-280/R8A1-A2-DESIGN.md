@@ -157,6 +157,18 @@ SAME extraction path — assign+1, begin+1, copy_path+1 and a reset-guard
 disable each produce a stream the real collector rejects, and decoy
 duplicate lines or removed placeholders fail extraction loudly.
 
+Residual limitation (delta2 review finding, disclosed): text-level binding
+cannot detect a transform regression that wraps a counter line in DEAD
+CODE (an outer `if (false) { ... }` or a multiline comment) while leaving
+the line text intact — extraction still finds the line, and the harness
+still executes the live semantics. The authoritative guard against any
+committed transform change is the identity pin: applied-source.patch and
+source-identity.json are byte-pinned (patch_sha256 / fixed-point test),
+so a regression requires deliberately regenerating the pinned identities,
+which diff review of that regeneration exposes. A semantic CPU-TU compile
+of the transformed scheduler sources would close this class but is a
+build-shaped step outside this round's authority.
+
 ## Tests
 
 R8-A1 (observer, fixture-driven): input-only and copy-only host_leg rows with
