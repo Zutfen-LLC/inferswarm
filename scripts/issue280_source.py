@@ -17,6 +17,7 @@ from pathlib import Path
 PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 ROOT = Path(__file__).resolve().parents[1]
 HEADER = ROOT / "docs/investigations/vulkan-same-request-280/instrumentation/issue280_observer.h"
+OCCURRENCE_HEADER = ROOT / "docs/investigations/vulkan-same-request-280/instrumentation/issue280_occurrence.h"
 SOURCE_HASHES = {
     "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
@@ -220,7 +221,9 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "ggml/src/ggml-backend.cpp": [
-        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include <map>\n#include "issue280_observer.h"\n', 'after'),
+        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\n', 'after'),
+        ('enum ggml_status ggml_backend_sched_graph_compute_async(ggml_backend_sched_t sched, struct ggml_cgraph * graph) {\n', '''    if (issue280::enabled()) { issue280_occurrence::reset(); } // graph-local occurrence scope: this entry is 1:1 with the observer's graph_begin (llama_context::graph_compute -> exactly one async sched call)
+''', 'after'),
         ('    struct ggml_backend_sched_split * splits = sched->splits;\n', '''    // Pre-execution logical ranges. Read scheduler tables without hash insertion.
     if (issue280::enabled()) {
         for (int ps = 0; ps < sched->n_splits; ++ps) {
@@ -233,8 +236,7 @@ INSERTIONS = {
                 auto * copy = tensor_id_copy(hid, planned->backend_id, sched->cur_copy);
                 if (source == destination || ggml_backend_buffer_is_host(input->buffer) ||
                         ggml_backend_buffer_is_host(copy->buffer)) { continue; }
-                static std::map<const void *, int> observed_copy_occurrences; // process-lifetime occurrence counter
-                const int observed_occ = observed_copy_occurrences[input]++;
+                const int observed_occ = issue280_occurrence::assign(input, copy); // graph-local (input, copy)-keyed occurrence; manifest is the authoritative assignment site
                 issue280::event("copy_manifest").s("tensor", input->name)
                     .s("src", ggml_backend_name(source)).s("dst", ggml_backend_name(destination))
                     .p("input", input).p("copy", copy).n("occ", observed_occ)
@@ -252,22 +254,20 @@ INSERTIONS = {
 ''', 'after'),
         ('            struct ggml_tensor * input_cpy = tensor_copy(input, split_backend_id, sched->cur_copy);\n', '''            if (issue280::enabled() && input_backend != split_backend &&
                     !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
-                static std::map<const void *, int> observed_boundary_occurrences; // per-(input) begin counter
                 issue280::event("boundary_begin").s("tensor", input->name)
                     .s("src", ggml_backend_name(input_backend)).s("dst", ggml_backend_name(split_backend))
                     .p("input", input).p("copy", input_cpy).n("bytes", ggml_nbytes(input))
-                    .n("occ", observed_boundary_occurrences[input]++).emit();
+                    .n("occ", issue280_occurrence::begin(input, input_cpy)).emit(); // starts the next copy event for this (input, copy): 0, then 1 for a repeated pair within the graph
             }
 ''', 'after'),
         ('        }\n\n        if (!sched->callback_eval) {\n', '''            if (issue280::enabled() && input_backend != split_backend &&
                     !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
-                static std::map<const void *, int> observed_boundary_end_occurrences; // per-(input) end counter
-                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).n("occ", observed_boundary_end_occurrences[input]++).emit();
+                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).n("occ", issue280_occurrence::current(input, input_cpy)).emit(); // same occurrence as the copy event opened by begin
             }
 ''', 'before'),
     ],
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": [
-        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include <map>\n#include "issue280_observer.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
+        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
         ('            ctx->p->q->handle->submit({}, fence);\n', '            I280_EVENT("fence_marker").p("subctx", ctx.get()).emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({ si }, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "transfer_timeline").emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({}, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "empty_queue").emit();\n', 'after'),
@@ -323,9 +323,13 @@ static const char * issue280_cached_bdf(ggml_backend_t backend) {
 }
 ''', 'after'),
         ('        ggml_vk_buffer_copy(dst_buf, vk_tensor_offset(dst) + dst->view_offs, src_buf, vk_tensor_offset(src) + src->view_offs, ggml_nbytes(src));\n', '''        if (issue280::enabled() && src_buf->device != dst_buf->device) {
-            static std::map<const void *, int> observed_copy_paths; // per-(input) path counter
+            // (src, dst) at this call site ARE the planned input and its
+            // selected copy (scheduler copies cross-die inputs through
+            // ggml_backend_tensor_copy on exactly this pair), so recalling
+            // the manifest-assigned graph-local occurrence keeps manifest,
+            // begin, copy_path and end on ONE identity.
             issue280::event("copy_path").p("input", src).p("copy", dst)
-                .n("occ", observed_copy_paths[src]++)
+                .n("occ", issue280_occurrence::current(src, dst))
                 .p("src_buffer", src_buf.get()).p("dst_buffer", dst_buf.get()).emit();
         }
 ''', 'before'),
@@ -377,12 +381,16 @@ def transform(originals):
                                                   transformed[p].decode().splitlines(True),
                                                   fromfile="a/"+p, tofile="b/"+p)) for p in sorted(originals))
     header = HEADER.read_bytes()
+    occurrence_header = OCCURRENCE_HEADER.read_bytes()
     identity = {"schema": "issue280-source-overlay/1", "source_pin": PIN,
                 "physical_runner": "HELD_UNAVAILABLE", "original_sha256": SOURCE_HASHES,
                 "transformed_sha256": {p: sha(v) for p, v in transformed.items()},
-                "emitter_sha256": sha(header), "patch_sha256": sha(patch.encode()),
+                "emitter_sha256": sha(header),
+                "occurrence_helper_sha256": sha(occurrence_header),
+                "patch_sha256": sha(patch.encode()),
                 "overlay_tree_sha256": sha(json.dumps({**{p: sha(v) for p, v in transformed.items()},
-                                                       "issue280_observer.h": sha(header)}, sort_keys=True).encode()),
+                                                       "issue280_observer.h": sha(header),
+                                                       "issue280_occurrence.h": sha(occurrence_header)}, sort_keys=True).encode()),
                 "patch": patch,
                 "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build"}
     return transformed, identity
@@ -441,6 +449,8 @@ def full_tree_identity(source, files):
         members[path] = ("100644", object_hash("blob", data))
         header_path = str(Path(path).parent / "issue280_observer.h")
         members[header_path] = ("100644", object_hash("blob", HEADER.read_bytes()))
+        occurrence_path = str(Path(path).parent / "issue280_occurrence.h")
+        members[occurrence_path] = ("100644", object_hash("blob", OCCURRENCE_HEADER.read_bytes()))
     return {"base_git_tree": original_tree, "full_transformed_git_tree": tree_hash(members)}
 
 
@@ -459,6 +469,7 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
         (target.parent / "issue280_observer.h").write_bytes(HEADER.read_bytes())
+        (target.parent / "issue280_occurrence.h").write_bytes(OCCURRENCE_HEADER.read_bytes())
     (args.output / "applied-source.patch").write_text(identity.pop("patch"))
     (args.output / "source-identity.json").write_text(json.dumps(identity, sort_keys=True, indent=2)+"\n")
     print(json.dumps(identity, sort_keys=True, indent=2))

@@ -1045,12 +1045,18 @@ def collect(raw, contract):
                 active_boundary["src_buffer"] = text(row, "src_buffer")
                 active_boundary["dst_buffer"] = text(row, "dst_buffer")
             elif ev == "host_leg":
-                # Identity law: the row carries the logical (input, copy, occ)
-                # key (tensor-scoped fixture/emitter rows) OR is buffer-scoped
-                # (pinned vk hooks: concrete src/dst vk_buffer identities only —
-                # one vk_buffer may suballocate MANY tensors, so no logical occ
-                # can be soundly derived from buffer-global counters).
-                if "input" in row and "copy" in row:
+                # Identity law: the row carries the COMPLETE logical
+                # (input, copy, occ) key (tensor-scoped fixture/emitter rows)
+                # or NEITHER logical field (buffer-scoped pinned vk hooks:
+                # concrete src/dst vk_buffer identities only — one vk_buffer
+                # may suballocate MANY tensors, so no logical occ can be
+                # soundly derived from buffer-global counters). A PARTIAL
+                # logical key (exactly one of input/copy) is never silently
+                # downgraded to buffer scope: an explicitly supplied
+                # identity must be complete and match the open boundary.
+                if "input" in row or "copy" in row:
+                    if not ("input" in row and "copy" in row):
+                        fail("host leg partial logical identity must be complete")
                     key = (text(row, "input"), text(row, "copy"), integer(row, "occ"))
                     if active_boundary is None or key != (active_boundary["input"],
                             active_boundary["copy"], active_boundary["occ"]):
