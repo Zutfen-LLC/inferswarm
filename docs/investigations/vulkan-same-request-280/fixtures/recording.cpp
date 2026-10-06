@@ -126,9 +126,9 @@ static void emit_copy(int request, int tokens, int occ, const std::string & mode
         .s("src", "Vulkan0").s("dst", "Vulkan1").s("input", input)
         .s("copy", copy).n("occ", occ).n("bytes", bytes).emit();
     if (mode == "abort-incomplete-copy") return;
+    I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
+        .n("occ", occ).s("src_buffer", "sb").s("dst_buffer", "db").emit();
     if (native) {
-        I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
-            .n("occ", occ).s("src_buffer", "sb").s("dst_buffer", "db").emit();
         I280_EVENT("ctx_create").n("request", request).s("subctx", "temp")
             .s("ctx", "temp").emit();
         I280_EVENT("submit").n("request", request).s("subctx", "temp")
@@ -142,7 +142,7 @@ static void emit_copy(int request, int tokens, int occ, const std::string & mode
         issue280::event host("host_leg");
         host.n("request", request).s("input", input).s("copy", copy).n("occ", occ)
             .s("direction", "device_to_host").n("bytes", tokens * 16);
-        if (native) host.s("src_buffer", "sb").s("dst_buffer", "db");
+        host.s("src_buffer", "sb").s("dst_buffer", "db");
         host.emit();
     }
     clock_ns += 10;
@@ -150,7 +150,7 @@ static void emit_copy(int request, int tokens, int occ, const std::string & mode
         issue280::event host("host_leg");
         host.n("request", request).s("input", input).s("copy", copy).n("occ", occ)
             .s("direction", "host_to_device").n("bytes", tokens * 16);
-        if (native) host.s("src_buffer", "sb").s("dst_buffer", "db");
+        host.s("src_buffer", "sb").s("dst_buffer", "db");
         host.emit();
     }
     clock_ns += 10;
@@ -343,9 +343,11 @@ int main(int argc, char ** argv) {
     I280_EVENT("recording").s("kind", mode == "source-identity" ? "SOURCE_OBSERVER" : "CPU_FIXTURE")
         .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4")
         .n("requests_planned", planned_two ? 2 : 1).emit();
-    // placement-swapped-layers must NOT inherit the honest inventory: emit the
-    // swapped rows as the ONLY inventory so the ownership claim is isolated.
-    emit_inventory(one_die, omit_placement || mode == "placement-swapped-layers");
+    // Adversarial placement modes must NOT inherit the honest inventory: emit
+    // their tailored rows as the ONLY inventory so each claim is isolated.
+    const bool adversarial_placement = omit_placement || mode == "placement-swapped-layers"
+        || mode == "staging-as-weights";
+    emit_inventory(one_die, adversarial_placement);
     if (mode == "placement-swapped-layers") {
         // E2 adversarial: inventory rows claim the OPPOSITE die owns each
         // layer; dispatch evidence remains die0=blk.0, die1=blk.1.

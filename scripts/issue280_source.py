@@ -220,7 +220,7 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "ggml/src/ggml-backend.cpp": [
-        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include <map>\n#include "issue280_observer.h"\n', 'after'),
         ('    struct ggml_backend_sched_split * splits = sched->splits;\n', '''    // Pre-execution logical ranges. Read scheduler tables without hash insertion.
     if (issue280::enabled()) {
         for (int ps = 0; ps < sched->n_splits; ++ps) {
@@ -233,32 +233,41 @@ INSERTIONS = {
                 auto * copy = tensor_id_copy(hid, planned->backend_id, sched->cur_copy);
                 if (source == destination || ggml_backend_buffer_is_host(input->buffer) ||
                         ggml_backend_buffer_is_host(copy->buffer)) { continue; }
+                static std::map<const void *, int> observed_copy_occurrences; // process-lifetime occurrence counter
+                const int observed_occ = observed_copy_occurrences[input]++;
                 issue280::event("copy_manifest").s("tensor", input->name)
                     .s("src", ggml_backend_name(source)).s("dst", ggml_backend_name(destination))
-                    .p("input", input).p("copy", copy).n("bytes", ggml_nbytes(input))
+                    .p("input", input).p("copy", copy).n("occ", observed_occ)
+                    .n("bytes", ggml_nbytes(input))
                     .s("type", ggml_type_name(input->type))
                     .n("ne0", input->ne[0]).n("ne1", input->ne[1]).n("ne2", input->ne[2]).n("ne3", input->ne[3])
                     .n("nb0", input->nb[0]).n("nb1", input->nb[1]).n("nb2", input->nb[2]).n("nb3", input->nb[3])
-                    .n("view_offset", input->view_offs).emit();
+                    .n("view_offset", input->view_offs)
+                    .n("buffer_bytes", static_cast<long long>(ggml_backend_buffer_get_size(input->buffer)))
+                    .n("src_offset", input->view_offs)
+                    .n("dst_offset", copy->view_offs).emit();
             }
         }
     }
 ''', 'after'),
         ('            struct ggml_tensor * input_cpy = tensor_copy(input, split_backend_id, sched->cur_copy);\n', '''            if (issue280::enabled() && input_backend != split_backend &&
                     !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
+                static std::map<const void *, int> observed_boundary_occurrences; // per-(input) begin counter
                 issue280::event("boundary_begin").s("tensor", input->name)
                     .s("src", ggml_backend_name(input_backend)).s("dst", ggml_backend_name(split_backend))
-                    .p("input", input).p("copy", input_cpy).n("bytes", ggml_nbytes(input)).emit();
+                    .p("input", input).p("copy", input_cpy).n("bytes", ggml_nbytes(input))
+                    .n("occ", observed_boundary_occurrences[input]++).emit();
             }
 ''', 'after'),
         ('        }\n\n        if (!sched->callback_eval) {\n', '''            if (issue280::enabled() && input_backend != split_backend &&
                     !ggml_backend_buffer_is_host(input->buffer) && !ggml_backend_buffer_is_host(input_cpy->buffer)) {
-                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).emit();
+                static std::map<const void *, int> observed_boundary_end_occurrences; // per-(input) end counter
+                issue280::event("boundary_end").p("input", input).p("copy", input_cpy).n("occ", observed_boundary_end_occurrences[input]++).emit();
             }
 ''', 'before'),
     ],
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": [
-        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
+        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include <map>\n#include "issue280_observer.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
         ('            ctx->p->q->handle->submit({}, fence);\n', '            I280_EVENT("fence_marker").p("subctx", ctx.get()).emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({ si }, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "transfer_timeline").emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({}, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "empty_queue").emit();\n', 'after'),
@@ -314,17 +323,27 @@ static const char * issue280_cached_bdf(ggml_backend_t backend) {
 }
 ''', 'after'),
         ('        ggml_vk_buffer_copy(dst_buf, vk_tensor_offset(dst) + dst->view_offs, src_buf, vk_tensor_offset(src) + src->view_offs, ggml_nbytes(src));\n', '''        if (issue280::enabled() && src_buf->device != dst_buf->device) {
+            static std::map<const void *, int> observed_copy_paths; // per-(input) path counter
             issue280::event("copy_path").p("input", src).p("copy", dst)
+                .n("occ", observed_copy_paths[src]++)
                 .p("src_buffer", src_buf.get()).p("dst_buffer", dst_buf.get()).emit();
         }
 ''', 'before'),
-        ('        ggml_vk_buffer_copy(src->device->sync_staging, 0, src, src_offset, size);\n', '''        I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-            .s("direction", "device_to_host").n("bytes", size)
-            .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
+        ('        ggml_vk_buffer_copy(src->device->sync_staging, 0, src, src_offset, size);\n', '''        {
+            static std::map<const void *, int> observed_d2h_legs; // per-(src tensor) leg counter
+            I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
+                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_d2h_legs[src.get()]++)
+                .s("direction", "device_to_host").n("bytes", size)
+                .s("mechanism", "source device copy to mapped sync_staging; existing fence complete").emit();
+        }
 ''', 'after'),
-        ('        ggml_vk_buffer_write(dst, dst_offset, src->device->sync_staging->ptr, size);\n', '''        I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
-            .s("direction", "host_to_device").n("bytes", size)
-            .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
+        ('        ggml_vk_buffer_write(dst, dst_offset, src->device->sync_staging->ptr, size);\n', '''        {
+            static std::map<const void *, int> observed_h2d_legs; // per-(dst tensor) leg counter
+            I280_EVENT("host_leg").p("src_buffer", src.get()).p("dst_buffer", dst.get())
+                .p("input", src.get()).p("copy", dst.get()).n("occ", observed_h2d_legs[dst.get()]++)
+                .s("direction", "host_to_device").n("bytes", size)
+                .s("mechanism", "buffer_write from mapped source staging; original blocking path complete").emit();
+        }
 ''', 'after'),
         ('    vkev->cmd_buffer_use_counter = cmd_buf->use_counter;\n', '    I280_EVENT("event_record").p("ctx", ctx).p("sync_event", event).n("value", vkev->tl_semaphore.value).emit();\n', 'after'),
         ('        VK_CHECK(device->device.waitSemaphores(swi, UINT64_MAX), "event_synchronize", device);\n', '        I280_EVENT("event_complete").p("sync_event", event).n("value", val).emit();\n', 'after'),

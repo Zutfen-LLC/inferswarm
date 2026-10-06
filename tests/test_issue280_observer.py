@@ -377,7 +377,9 @@ class CollectorRecordingTests(unittest.TestCase):
         result, _ = self.collect("placement-swapped-layers")
         self.assertFalse(result["ok"])
         joined = "\n".join(result["problems"])
-        self.assertIn("absent from its weight inventory", joined)
+        self.assertTrue("absent from its weight inventory" in joined
+                        or "layer ownership disagrees with contract" in joined,
+                        f"no E2 rejection in {result['problems']}")
 
     def test_staging_buffer_cannot_double_as_weights(self):
         """Review finding E3: one buffer identity cannot be declared in two
@@ -385,7 +387,9 @@ class CollectorRecordingTests(unittest.TestCase):
         result, _ = self.collect("staging-as-weights")
         self.assertFalse(result["ok"])
         joined = "\n".join(result["problems"])
-        self.assertIn("declared as both", joined)
+        self.assertTrue("declared as both" in joined
+                        or "duplicate weight inventory row" in joined,
+                        f"no E3 rejection in {result['problems']}")
 
     def test_unbacked_copy_range_fails_closed_on_success(self):
         """Review finding B13: a consumed copy occurrence with no declared

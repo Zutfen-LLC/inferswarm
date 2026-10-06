@@ -2,7 +2,7 @@
   "base_git_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
   "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build",
   "emitter_sha256": "d537c86b83bef00e4eff7d631830f4ca09ef0d0dcab69ed1f38bef082949475f",
-  "full_transformed_git_tree": "9fbdab3c37a352d53b5103688dba6f506a8b0194",
+  "full_transformed_git_tree": "d55920a956e4da48483b9326708b054e9f411fd0",
   "original_sha256": {
     "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
@@ -11,14 +11,14 @@
     "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
     "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
   },
-  "overlay_tree_sha256": "349e927db33ca951692ba6e5940fdd780f348e6c2c1ad7ed8d5de28ea48b7378",
-  "patch_sha256": "0d5c9c458f850bd995bab5b844128228b105be253d01c9c7689b6c0df1df1bf1",
+  "overlay_tree_sha256": "2af510fb72e23c47eba57deb3d839202cc51dda2b08f357d7803360710b5f5e1",
+  "patch_sha256": "d16ff94140d7ab2ca5fa837476c1af99d85d7219d9d4667ebca099ebc1c92f12",
   "physical_runner": "HELD_UNAVAILABLE",
   "schema": "issue280-source-overlay/1",
   "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
   "transformed_sha256": {
-    "ggml/src/ggml-backend.cpp": "a21bd62d9dc655721779d634287a6620d787021cc59981b784c80d62f0ca8532",
-    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "b31aad0bbe70207167b82a6b1f96aa3d8ca08d4fe3629ad32995e3a32c2db18f",
+    "ggml/src/ggml-backend.cpp": "4aa3960364a82add6da27e194adcd13352f1bd6c2b5eaf03aebbb6a146580e89",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "3bd7b38e4f29369bf498b2c4625a3505291c583196c2409b1cd57f1fbcf130bb",
     "src/llama-context.cpp": "4c90c807ba1f7c5c03abdb8be523689e725210bd2ba70e1c8b005c15072f3ec6",
     "src/llama-kv-cache.cpp": "8fda4d8cf6330222b8c5d81a035ad5b55c5aa1e72dfbfebf927ea69c211b1f6f",
     "src/llama-model.cpp": "59981866c698b91710e0c5ff644a1886671b84e9014365d911a16f09b2c2bb27",

@@ -186,6 +186,8 @@ def collect(raw, contract):
                                "placement_denominator_bytes": 0}
         placement_open = True
         inventory_rows = 0
+        deferred_inventory = []
+        inventory_seen = set()
         cpu_bytes = 0
         cpu_weight_bytes = 0
         accepted = []
@@ -510,8 +512,11 @@ def collect(raw, contract):
                 def resolve_die(raw_name):
                     """Inventory rows bind to a die either by BDF directly or by
                     backend NAME (pinned hooks emit ggml_backend_buffer_name).
-                    Backend names resolve via the stream's own vk_graph_begin
-                    bindings; unresolvable names fail closed."""
+                    The pinned producer emits inventory at model load, BEFORE any
+                    vk_graph_begin row exists: an unresolved backend name is
+                    therefore DEFERRED, not rejected — every deferred row is
+                    re-resolved at finalization and fails closed if its name
+                    never bound to a contract die in the stream."""
                     if raw_name == "CPU" or raw_name == "unassigned":
                         return raw_name
                     if raw_name in placement:
@@ -519,52 +524,102 @@ def collect(raw, contract):
                     for per_request in backends.values():
                         if per_request.get(raw_name) in placement:
                             return per_request[raw_name]
-                    fail(f"placement: inventory backend {raw_name!r} is neither a contract die, "
-                         "CPU, nor a stream-bound backend name")
+                    deferred_inventory.append((raw_name, ev, row))
+                    return None
+                def place(die, ev, row, size):
+                    if die is None:
+                        return  # deferred; resolved at finalization
+                    if ev == "weight_inventory":
+                        placement[die]["weights_bytes"] += size
+                        placement[die]["weights_named"] += 1
+                        placement[die]["buffers"].append({"kind": "weight_inventory", "tensor": row["_tensor"],
+                                                            "buffer": row["_buffer"], "bytes": size})
+                        result["placement"]["placement_denominator_bytes"] += size
+                    elif ev == "kv_inventory":
+                        placement[die]["kv_bytes"] += size
+                        placement[die]["buffers"].append({"kind": "kv_inventory", "tensor": row["_tensor"],
+                                                            "buffer": row["_buffer"], "bytes": size})
                 if ev == "weight_inventory":
-                    die = resolve_die(text(row, "bdf"))
                     name, size = text(row, "tensor"), integer(row, "bytes", 1)
-                    layer_of(row)
+                    row_layer = layer_of(row)
+                    buffer_id = text(row, "buffer")
+                    # R3-3 dedupe: the exact same (tensor, buffer, bytes, layer)
+                    # row twice is one retracted/duplicated emission, not two
+                    # tensors — the denominator counts real model bytes once.
+                    dedupe_key = ("weight_inventory", name, buffer_id, size, row_layer)
+                    if dedupe_key in inventory_seen:
+                        fail("placement: duplicate weight inventory row "
+                             f"(tensor={name} buffer={buffer_id})")
+                    inventory_seen.add(dedupe_key)
+                    # R3-2: a blk.N-weight row must be owned by the die the
+                    # contract assigns layer N to (off-contract ownership is
+                    # exactly the false-positive channel the review found).
+                    m = re.match(r"blk\.(\d+)\.", name)
+                    if m:
+                        layer = int(m[1])
+                        owning = [d for d in dies if layer in layers.get(d, [])]
+                        if len(owning) == 1:
+                            die = owning[0]
+                            raw_die = resolve_die(text(row, "bdf"))
+                            if raw_die is None:
+                                # Deferred inside the layer-ownership branch:
+                                # remove the spurious deferral entry — this row
+                                # is already placed on its contract-owning die.
+                                deferred_inventory.pop()
+                            elif raw_die not in ("CPU", "unassigned") and raw_die != die:
+                                fail("placement: layer ownership disagrees with contract "
+                                     f"(layer {layer} claimed by {raw_die}, contract assigns {die})")
+                        else:
+                            die = resolve_die(text(row, "bdf"))
+                    else:
+                        die = resolve_die(text(row, "bdf"))
                     if die == "CPU":
                         # CPU-owned intended state: real backend name fallback
                         # (ggml_backend_buffer_name), not a BDF. Accounted
                         # separately; never a candidate-die numerator.
-                        if die in placement:
-                            fail("placement: CPU inventory BDF collision")
                         cpu_weight_bytes += size
                         result["placement"]["cpu_state"].append(
                             {"kind": "cpu_weights:" + name, "bytes": size})
                         continue
-                    if die not in placement:
-                        fail("placement: unexpected weight inventory BDF")
+                    if die is None:
+                        row["_tensor"], row["_buffer"] = name, buffer_id
+                        continue  # deferred; placed at finalization
                     placement[die]["weights_bytes"] += size
                     placement[die]["weights_named"] += 1
                     placement[die]["buffers"].append({"kind": "weight_inventory", "tensor": name,
-                                                        "buffer": text(row, "buffer"), "bytes": size})
+                                                        "buffer": buffer_id, "bytes": size})
                     result["placement"]["placement_denominator_bytes"] += size
                 elif ev == "kv_inventory":
-                    die, kind = resolve_die(text(row, "bdf")), text(row, "kind")
+                    kind = text(row, "kind")
                     if kind not in {"k", "v", "kv"}:
                         fail("placement: invalid KV inventory")
+                    size = integer(row, "bytes", 1)
+                    layer_of(row)
+                    dedupe_key = ("kv_inventory", text(row, "tensor"), row.get("buffer"), size, row.get("layer"))
+                    if dedupe_key in inventory_seen:
+                        fail("placement: duplicate KV inventory row "
+                             f"(tensor={text(row, 'tensor')})")
+                    inventory_seen.add(dedupe_key)
+                    die = resolve_die(text(row, "bdf"))
                     if die == "CPU":
                         # CPU-owned KV/mutable state (backend-name fallback).
-                        size = integer(row, "bytes", 1)
-                        layer_of(row)
                         cpu_bytes += size
                         result["placement"]["cpu_state"].append(
                             {"kind": "cpu_kv:" + text(row, "tensor"), "bytes": size})
                         continue
-                    if die not in placement:
-                        fail("placement: invalid KV inventory")
-                    size = integer(row, "bytes", 1)
-                    layer_of(row)
+                    if die is None:
+                        row["_tensor"], row["_buffer"] = text(row, "tensor"), row.get("buffer")
+                        continue  # deferred; placed at finalization
                     placement[die]["kv_bytes"] += size
                     placement[die]["buffers"].append({"kind": "kv_inventory", "tensor": text(row, "tensor"),
                                                         "buffer": row.get("buffer"), "bytes": size})
                 elif ev == "buffer_decl":
                     die, purpose = resolve_die(text(row, "bdf")), text(row, "purpose")
-                    if die not in placement or purpose not in {"weights", "kv", "staging", "compute", "unknown"}:
+                    if purpose not in {"weights", "kv", "staging", "compute", "unknown"}:
                         fail("placement: invalid buffer declaration")
+                    if die is None:
+                        row["_tensor"], row["_buffer"] = text(row, "buffer"), text(row, "buffer")
+                        continue  # deferred
                     size = integer(row, "bytes", 1)
                     if purpose == "staging":
                         placement[die]["staging_bytes"] += size
@@ -578,8 +633,9 @@ def collect(raw, contract):
                     result["placement"]["cpu_state"].append({"kind": kind, "bytes": size})
                 else:
                     die, size = resolve_die(text(row, "bdf")), integer(row, "bytes", 1)
-                    if die not in placement:
-                        fail("placement: unexplained row references unknown BDF")
+                    if die is None:
+                        row["_tensor"], row["_buffer"] = "unexplained", "unexplained"
+                        continue  # deferred
                     placement[die]["unexplained_bytes"] += size
                     placement[die]["buffers"].append({"kind": "unexplained", "bytes": size,
                                                         "note": row.get("note", "")})
@@ -837,15 +893,23 @@ def collect(raw, contract):
                             fail("range overflow")
                     else:
                         bounds[field] = None
-                for field in ("src_offset", "dst_offset"):
-                    if field in row:
-                        integer(row, field)
+                src_offset = integer(row, "src_offset") if "src_offset" in row else None
+                dst_offset = integer(row, "dst_offset") if "dst_offset" in row else None
+                # R3-1: endpoint offsets are positions INSIDE their buffers and
+                # must respect the same law as the view itself, not merely parse.
+                if src_offset is not None and bounds["src_buffer_bytes"] is not None \
+                        and src_offset + law_bytes > bounds["src_buffer_bytes"]:
+                    fail("range overflow: src_offset beyond source buffer")
+                if dst_offset is not None and bounds["dst_buffer_bytes"] is not None \
+                        and dst_offset + law_bytes > bounds["dst_buffer_bytes"]:
+                    fail("range overflow: dst_offset beyond destination buffer")
                 manifest = {
                     "input": input_id, "copy": copy_id, "occ": supplied_occ,
                     "tensor": text(row, "tensor"), "src": text(row, "src"),
                     "dst": text(row, "dst"), "bytes": claimed, "type": tensor_type,
                     "shape": shape, "strides": strides, "view_offset": view_offset,
                     "bounds": bounds, "bounds_status": "KNOWN" if any(v is not None for v in bounds.values()) else "UNKNOWN",
+                    "src_offset": src_offset, "dst_offset": dst_offset,
                     "consumed": False,
                 }
                 key = (input_id, copy_id, supplied_occ)
@@ -897,7 +961,12 @@ def collect(raw, contract):
                 if active_boundary is None or key != (active_boundary["input"],
                         active_boundary["copy"], active_boundary["occ"]):
                     fail("host leg outside its logical boundary occurrence")
-                if "src_buffer" in row:
+                if active_boundary.get("src_buffer") is not None:
+                    # A path-bound boundary (copy_path seen) requires every leg
+                    # to identify the SAME concrete buffers: unattributed legs
+                    # cannot prove they moved the declared bytes.
+                    if "src_buffer" not in row or "dst_buffer" not in row:
+                        fail("host leg lacks buffer path identity on a path-bound boundary")
                     if (row.get("src_buffer") != active_boundary.get("src_buffer")
                             or row.get("dst_buffer") != active_boundary.get("dst_buffer")):
                         fail("host staging buffer path mismatch")
@@ -910,6 +979,11 @@ def collect(raw, contract):
                     fail("unmatched boundary end")
                 if "bytes" in row and integer(row, "bytes", 1) != active_boundary["bytes"]:
                     fail("boundary end bytes disagree with manifest")
+                b_src = backends.get(rid, {}).get(active_boundary.get("src"))
+                b_dst = backends.get(rid, {}).get(active_boundary.get("dst"))
+                if (b_src in dies and b_dst in dies
+                        and active_boundary.get("src_buffer") is None):
+                    fail("cross-die boundary without concrete buffer path identity")
                 elapsed = row["ts_ns"] - active_boundary["begin_ns"]
                 if elapsed <= 0:
                     fail("nonpositive synchronized boundary elapsed")
@@ -1084,6 +1158,42 @@ def collect(raw, contract):
         # >=25%-per-die criterion reads the denominator; its numerator is a
         # single die's placement_numerator_bytes; CPU-owned state is never a
         # candidate-die numerator).
+        # Deferred inventory (pinned producer order: model load emits rows
+        # before any vk_graph_begin binding exists). Re-resolve now that the
+        # stream is complete; an unresolvable name is a fail-closed defect.
+        for raw_name, ev, row in deferred_inventory:
+            resolved = None
+            for per_request in backends.values():
+                if per_request.get(raw_name) in placement:
+                    resolved = per_request[raw_name]
+                    break
+            if resolved is None:
+                fail(f"placement: inventory backend {raw_name!r} never bound to a contract die")
+            size = integer(row, "bytes", 1)
+            if ev == "weight_inventory":
+                placement[resolved]["weights_bytes"] += size
+                placement[resolved]["weights_named"] += 1
+                placement[resolved]["buffers"].append({"kind": "weight_inventory",
+                                                        "tensor": row["_tensor"], "buffer": row["_buffer"],
+                                                        "bytes": size})
+                result["placement"]["placement_denominator_bytes"] += size
+            elif ev == "kv_inventory":
+                placement[resolved]["kv_bytes"] += size
+                placement[resolved]["buffers"].append({"kind": "kv_inventory",
+                                                        "tensor": row["_tensor"], "buffer": row["_buffer"],
+                                                        "bytes": size})
+            elif ev == "buffer_decl":
+                purpose = text(row, "purpose")
+                if purpose == "staging":
+                    placement[resolved]["staging_bytes"] += size
+                elif purpose == "compute":
+                    placement[resolved]["compute_bytes"] += size
+                placement[resolved]["buffers"].append({"kind": "buffer_decl", "buffer": row["_buffer"],
+                                                        "purpose": purpose, "bytes": size})
+            else:
+                placement[resolved]["unexplained_bytes"] += size
+                placement[resolved]["buffers"].append({"kind": "unexplained", "bytes": size,
+                                                        "note": row.get("note", "")})
         for die in dies:
             placement[die]["placement_numerator_bytes"] = placement[die]["weights_bytes"]
             placement[die]["cpu_bytes"] = 0  # cpu_state has process scope, not a BDF
