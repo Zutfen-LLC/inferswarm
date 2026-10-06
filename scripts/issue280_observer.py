@@ -981,8 +981,14 @@ def collect(raw, contract):
                 # A declared endpoint offset whose OWN bound is absent is
                 # unprovable for that endpoint (the generic bound cannot speak
                 # for both buffers) — recorded and fail-closed at completion.
-                endpoint_unproven = (src_offset is not None and bounds["src_buffer_bytes"] is None) \
-                    or (dst_offset is not None and bounds["dst_buffer_bytes"] is None)
+                # A declared endpoint offset is provable when ANY usable bound
+                # exists: endpoint-specific bound if present, else the generic
+                # containing-buffer bound (the pinned producer's row shape —
+                # offsets index into that same declared allocation). The range
+                # is unprovable only when a bound is absent ENTIRELY (the
+                # existing UNKNOWN law fails such consumed occurrences).
+                endpoint_unproven = (src_offset is not None and src_bound is None) \
+                    or (dst_offset is not None and dst_bound is None)
                 manifest = {
                     "input": input_id, "copy": copy_id, "occ": supplied_occ,
                     "tensor": text(row, "tensor"), "src": text(row, "src"),
