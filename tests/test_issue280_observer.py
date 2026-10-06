@@ -223,6 +223,112 @@ class CollectorRecordingTests(unittest.TestCase):
         result, _ = self.collect("placement-ownership-unexplained", contract)
         self.assertIn("placement", "\n".join(result["problems"]))
 
+    def test_repeat_copy_occurrences_are_distinct_and_reconciled(self):
+        spec = importlib.util.spec_from_file_location("observer_repeat_copy", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        contract = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(contract)
+        expected = contract.fixture_contract()
+        expected["boundaries"][0]["occurrences"] = 2
+        result, _ = self.collect("repeat-copy", expected)
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual([copy["occ"] for copy in result["graphs"][0]["boundaries"]], [0, 1])
+        self.assertEqual(result["logical_boundary_bytes"], 192)
+        self.assertEqual(result["host_leg_bytes"], 384)
+
+    def test_conflicting_open_timeline_identity_fails_closed(self):
+        result, _ = self.collect("conflicting-wait")
+        self.assertFalse(result["ok"])
+        self.assertIn("timeline record", "\n".join(result["problems"]))
+
+    def test_abort_preserves_incomplete_copy_as_unknown(self):
+        result, _ = self.collect("abort-incomplete-copy")
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["requests"][0]["incomplete_copies"], 1)
+        self.assertEqual(result["requests"][0]["incomplete_copy_intervals"][0]["interval_status"], "UNKNOWN")
+        self.assertEqual(result["incomplete_boundary"]["elapsed_ns"], None)
+
+    def test_abort_completed_copy_aggregates_are_request_scoped(self):
+        result, _ = self.collect("abort-preserves-work")
+        self.assertEqual(result["requests"][0]["logical_boundary_bytes"], 16)
+        self.assertEqual(result["requests"][0]["host_leg_bytes"], 32)
+        self.assertEqual(result["requests"][0]["boundary_elapsed_ns"], 30)
+        self.assertEqual(result["requests"][0]["completed_copies"][0]["bytes"], 16)
+
+    def test_planned_unaccepted_request_is_not_attempted(self):
+        spec = importlib.util.spec_from_file_location("observer_planned", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        contract = module.fixture_contract()
+        contract["requests"] = {"planned": 2}
+        result, _ = self.collect("abort-second-not-attempted", contract)
+        self.assertEqual([request["disposition"] for request in result["requests"]],
+                         ["aborted", "not_attempted"])
+        self.assertEqual(result["requests"][1]["ordinal"], 2)
+        self.assertFalse(result["ok"])
+
+    def test_cross_request_evidence_alias_is_rejected(self):
+        spec = importlib.util.spec_from_file_location("observer_alias", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        contract = module.fixture_contract()
+        contract["requests"] = {"planned": 2}
+        result, _ = self.collect("cross-request-alias", contract)
+        self.assertIn("cross-request", "\n".join(result["problems"]))
+
+    def test_copy_type_and_range_checks_fail_closed(self):
+        for mode, expected in (("unsupported-type", "unsupported tensor type"),
+                               ("range-overflow", "range overflow")):
+            with self.subTest(mode=mode):
+                result, _ = self.collect(mode)
+                self.assertFalse(result["ok"])
+                self.assertIn(expected, "\n".join(result["problems"]))
+
+    def test_two_requests_reuse_timeline_identity_in_independent_namespaces(self):
+        spec = importlib.util.spec_from_file_location("observer_namespaces", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        contract = module.fixture_contract()
+        contract["requests"] = {"planned": 2}
+        result, _ = self.collect("two-requests", contract)
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual([request["request"] for request in result["requests"]], [7, 8])
+        self.assertEqual(len(result["requests"][0]["completed_submissions"]),
+                         len(result["requests"][1]["completed_submissions"]))
+
+    def test_request_accept_and_end_framing_is_mandatory(self):
+        result, raw = self.collect("positive")
+        self.assertTrue(result["ok"], result["problems"])
+        spec = importlib.util.spec_from_file_location("observer_framing", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        without_accept = "\n".join(line for line in raw.splitlines()
+                                     if '"event":"request_accept"' not in line)
+        missing_accept = module.collect(without_accept, module.fixture_contract())
+        self.assertIn("request framing", "\n".join(missing_accept["problems"]))
+        without_end = "\n".join(line for line in raw.splitlines()
+                                  if '"event":"request_end"' not in line)
+        missing_end = module.collect(without_end, module.fixture_contract())
+        self.assertIn("request framing", "\n".join(missing_end["problems"]))
+
+    def test_placement_inventory_is_separate_from_dispatch_operands(self):
+        result, _ = self.collect("positive")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["placement_denominator_bytes"], 2048)
+        self.assertEqual(result["placement"]["placement_denominator_bytes"], 2048)
+        self.assertEqual(result["placement"]["dies"]["0000:01:00.0"]["placement_numerator_bytes"], 1024)
+        self.assertEqual(result["placement"]["dies"]["0000:02:00.0"]["placement_numerator_bytes"], 1024)
+
+    def test_repeated_wait_is_counted_without_duplicate_compute(self):
+        result, _ = self.collect("repeat-wait")
+        self.assertTrue(result["ok"], result["problems"])
+        self.assertEqual(result["repeated_waits"], 6)
+        self.assertEqual(len(result["graphs"][0]["completed_compute"]["0000:01:00.0"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

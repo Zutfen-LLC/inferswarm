@@ -1,216 +1,329 @@
 // Synthetic CPU recording, NEVER a physical GPU observation.
-// Calls the identical raw emitter used by the pinned-source hooks; the parser
-// consumes the resulting log, not preassembled proof/reducer dictionaries.
+// Emits the same I280 raw JSON row stream consumed by the source-log collector.
+#include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
+
 static long long clock_ns = 0;
 static long long recording_clock() { return clock_ns; }
 #define I280_CLOCK recording_clock
 #define I280_LOG(s) (std::cout << "I280 " << s << '\n')
 #include "issue280_observer.h"
 
+static void emit_batch(int request, int seq, int tokens, const std::string & phase,
+                       const std::vector<int> & token_ids,
+                       const std::vector<int> & positions,
+                       const std::string & extra = "") {
+    if (!issue280::enabled()) return;
+    std::ostringstream row;
+    row << "{\"schema\":\"issue280-raw/1\",\"event\":\"batch_begin\",\"ts_ns\":"
+        << recording_clock() << ",\"request\":" << request << ",\"seq\":" << seq
+        << ",\"tokens\":" << tokens << ",\"phase\":\"" << phase
+        << "\",\"speculative\":0,\"token_ids\":[";
+    for (size_t i = 0; i < token_ids.size(); ++i) {
+        if (i) row << ',';
+        row << token_ids[i];
+    }
+    row << "],\"positions\":[";
+    for (size_t i = 0; i < positions.size(); ++i) {
+        if (i) row << ',';
+        row << positions[i];
+    }
+    row << ']';
+    if (!extra.empty()) row << ',' << extra;
+    row << '}';
+    I280_LOG(row.str());
+}
+
+static std::vector<int> sequence(int count, int start) {
+    std::vector<int> values;
+    for (int i = 0; i < count; ++i) values.push_back(start + i);
+    return values;
+}
+
+static void emit_inventory(bool one_die, bool omit) {
+    if (omit) return;
+    const int count = one_die ? 1 : 2;
+    for (int d = 0; d < count; ++d) {
+        const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
+        I280_EVENT("weight_inventory").s("tensor", "blk." + std::to_string(d) + ".weight")
+            .s("bdf", bdf).n("bytes", 1024).n("layer", d)
+            .s("buffer", "weight-inventory-" + std::to_string(d)).emit();
+        I280_EVENT("kv_inventory").s("tensor", "kv.k." + std::to_string(d))
+            .s("bdf", bdf).n("bytes", 128).s("kind", "k").n("layer", d)
+            .s("buffer", "kv-" + std::to_string(d)).emit();
+        I280_EVENT("kv_inventory").s("tensor", "kv.v." + std::to_string(d))
+            .s("bdf", bdf).n("bytes", 128).s("kind", "v").n("layer", d)
+            .s("buffer", "kv-" + std::to_string(d)).emit();
+        I280_EVENT("buffer_decl").s("buffer", "staging-" + std::to_string(d))
+            .s("bdf", bdf).n("bytes", 256).s("purpose", "staging").emit();
+        I280_EVENT("buffer_decl").s("buffer", "compute-" + std::to_string(d))
+            .s("bdf", bdf).n("bytes", 512).s("purpose", "compute").emit();
+    }
+    I280_EVENT("cpu_state").s("kind", "runtime").n("bytes", 64).emit();
+}
+
+static void emit_manifest(int request, int tokens, int occ, const std::string & mode,
+                          const std::string & input, const std::string & copy) {
+    std::string tensor_type = "f32";
+    int ne0 = 4;
+    int view_offset = 0;
+    bool bounded = false;
+    int bound = tokens * 16;
+    if (mode == "inconsistent-shape-bytes" || mode == "shape-law-violation") ne0 = 5;
+    if (mode == "unsupported-type") tensor_type = "q4_0";
+    if (mode == "range-overflow") { view_offset = 1; bounded = true; }
+    if (issue280::enabled()) {
+        issue280::event event("copy_manifest");
+        event.n("request", request).s("tensor", "ffn_out-0").s("src", "Vulkan0")
+            .s("dst", "Vulkan1").s("input", input).s("copy", copy).n("occ", occ)
+            .n("bytes", tokens * 16).s("type", tensor_type).n("ne0", ne0)
+            .n("ne1", tokens).n("ne2", 1).n("ne3", 1).n("nb0", 4)
+            .n("nb1", 16).n("nb2", tokens * 16).n("nb3", tokens * 16)
+            .n("view_offset", view_offset);
+        if (bounded) event.n("buffer_bytes", bound);
+        event.emit();
+    }
+}
+
+static void emit_copy(int request, int tokens, int occ, const std::string & mode,
+                      const std::string & input, const std::string & copy, bool native) {
+    const int bytes = mode == "wrong-bytes" ? tokens * 16 - 1 : tokens * 16;
+    I280_EVENT("boundary_begin").n("request", request).s("tensor", "ffn_out-0")
+        .s("src", "Vulkan0").s("dst", "Vulkan1").s("input", input)
+        .s("copy", copy).n("occ", occ).n("bytes", bytes).emit();
+    if (mode == "abort-incomplete-copy") return;
+    if (native) {
+        I280_EVENT("copy_path").n("request", request).s("input", input).s("copy", copy)
+            .n("occ", occ).s("src_buffer", "sb").s("dst_buffer", "db").emit();
+        I280_EVENT("ctx_create").n("request", request).s("subctx", "temp")
+            .s("ctx", "temp").emit();
+        I280_EVENT("submit").n("request", request).s("subctx", "temp")
+            .s("cmd", "temp-cmd").n("use", static_cast<int>(clock_ns)).emit();
+        I280_EVENT("fence_marker").n("request", request).s("subctx", "temp").emit();
+        I280_EVENT("complete").n("request", request).s("ctx", "temp")
+            .s("wait", "transfer_fence").emit();
+    }
+    clock_ns += 10;
+    if (issue280::enabled()) {
+        issue280::event host("host_leg");
+        host.n("request", request).s("input", input).s("copy", copy).n("occ", occ)
+            .s("direction", "device_to_host").n("bytes", tokens * 16);
+        if (native) host.s("src_buffer", "sb").s("dst_buffer", "db");
+        host.emit();
+    }
+    clock_ns += 10;
+    if (mode != "missing-host-leg" && issue280::enabled()) {
+        issue280::event host("host_leg");
+        host.n("request", request).s("input", input).s("copy", copy).n("occ", occ)
+            .s("direction", "host_to_device").n("bytes", tokens * 16);
+        if (native) host.s("src_buffer", "sb").s("dst_buffer", "db");
+        host.emit();
+    }
+    clock_ns += 10;
+    I280_EVENT("boundary_end").n("request", request).s("input", input)
+        .s("copy", copy).n("occ", occ).n("bytes", tokens * 16).emit();
+}
+
+static void request_accept(int request, int ordinal) {
+    I280_EVENT("request_accept").n("request", request).n("ordinal", ordinal).emit();
+}
+
+static void request_end(int request, const std::string & stop_reason, int prompt_tokens) {
+    I280_EVENT("request_end").n("request", request).s("stop_reason", stop_reason)
+        .n("prompt_processed", prompt_tokens).n("prompt_cached", 0).emit();
+}
+
+static void emit_request(int request, int ordinal, const std::string & mode,
+                         bool one_die, bool micro, bool first_request) {
+    request_accept(request, ordinal);
+    const bool native = mode == "native-path" || mode == "timeline-stale"
+        || mode == "repeated-successful-timeline-wait" || mode == "repeat-wait"
+        || mode == "native-zero-first-use" || mode == "conflicting-wait"
+        || mode == "two-requests" || mode == "two-sequential-requests";
+    const bool repeat_copy = mode == "repeat-copy";
+    const int graph_count = mode == "eos-first" ? 1 : micro ? 4 : 3;
+    const int die_count = one_die ? 1 : 2;
+    const int prompt_tokens = mode == "abort-preserves-work" ? 1 : micro ? 4 : 4;
+    const int request_token_base = request == 8 ? 80 : 40;
+    const int stop_after = (mode == "abort-preserves-work" || mode == "abort-second-not-attempted") ? 0
+        : mode == "abort-unsubmitted-accounting" ? 1 : -1;
+
+    for (int g = 0; g < graph_count; ++g) {
+        clock_ns += 100;
+        const bool prefill = micro ? g < 2 : g == 0;
+        const int graph_tokens = prefill ? (micro ? 2 : prompt_tokens) : 1;
+        int ntok = graph_tokens;
+        if (!(micro && g == 1)) {
+            std::vector<int> token_ids, positions;
+            std::string phase = prefill ? "prefill" : "decode";
+            if (prefill) {
+                token_ids = sequence(micro ? 4 : ntok, 1);
+                positions = sequence(micro ? 4 : ntok, 0);
+                ntok = micro ? 4 : ntok;
+            } else {
+                const int sample_index = micro ? g - 2 : g - 1;
+                int token = request_token_base + sample_index;
+                if ((mode == "decode-token-mismatch" || mode == "decode-wrong-token")
+                        && first_request && g == 1) token = 999;
+                token_ids = {token};
+                int position = prompt_tokens + sample_index + 1;
+                if ((mode == "wrong-absolute-decode-position" || mode == "decode-wrong-position")
+                        && first_request && g == 1) position = 17;
+                positions = {position};
+            }
+            std::string extra;
+            if (mode == "warm-request-no-inheritance" && g == 1)
+                extra = "\"frame_request\":8";
+            emit_batch(request, 0, ntok, phase, token_ids, positions, extra);
+        }
+
+        const std::string graph_id = request == 8 ? "g8-" + std::to_string(g) : "g";
+        I280_EVENT("graph_begin").n("request", request).s("graph", graph_id)
+            .n("tokens", graph_tokens).n("seq", 0).n("sequences", 1).emit();
+
+        const bool no_manifest = mode == "missing-manifest";
+        const int copies = repeat_copy ? 2 : 1;
+        const std::string input = request == 8 ? "in8" : "in";
+        const std::string copy = request == 8 ? "out8" : "out";
+        if (!one_die && !no_manifest) {
+            for (int occ = 0; occ < copies; ++occ)
+                emit_manifest(request, graph_tokens, occ, mode, input, copy);
+        }
+
+        for (int d = 0; d < die_count; ++d) {
+            clock_ns += 1;
+            const std::string ctx = (request == 8 ? "ctx8" : "ctx") + std::to_string(d);
+            const std::string cmd = (request == 8 ? "cmd8" : "cmd") + std::to_string(d);
+            const std::string subctx = (request == 8 ? "sub8" : "sub") + std::to_string(d);
+            const int use = mode == "native-zero-first-use" && g == 0 && d == 0 ? 0 : g + 1;
+            const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
+
+            if (d == 1 && !one_die) {
+                for (int occ = 0; occ < copies; ++occ) {
+                    emit_copy(request, graph_tokens, occ, mode, input, copy, native);
+                    if (mode == "abort-incomplete-copy") {
+                        request_end(request, "abort", 0);
+                        return;
+                    }
+                }
+            }
+            I280_EVENT("vk_graph_begin").n("request", request).s("ctx", ctx)
+                .s("backend", "Vulkan" + std::to_string(d)).s("bdf", bdf).emit();
+            I280_EVENT("ctx_create").n("request", request).s("subctx", subctx)
+                .s("ctx", ctx).emit();
+            I280_EVENT("node").n("request", request).s("ctx", ctx).s("cmd", cmd)
+                .n("use", use).s("tensor", "ffn_out-" + std::to_string(d))
+                .s("op", "MUL_MAT").emit();
+            I280_EVENT("weight").n("request", request).s("ctx", ctx).s("cmd", cmd)
+                .n("use", use).s("tensor", "blk." + std::to_string(d) + ".ffn_gate.weight")
+                .s("buffer", "weights" + std::to_string(d)).n("offset", 16)
+                .n("bytes", 128).n("buffer_bytes", 4096).emit();
+            if (mode != "empty-submit" || d != 1) {
+                I280_EVENT("dispatch").n("request", request).s("ctx", ctx).s("cmd", cmd)
+                    .n("use", use).s("pipeline", "mul_mat_f32").n("x", 1)
+                    .n("y", 1).n("z", 1).emit();
+            }
+            const bool orphan = (mode == "unsubmitted-compute-recording" || mode == "unsubmitted-compute")
+                    ? (g == 0 && d == 0)
+                    : mode == "abort-unsubmitted-accounting" && g == 1 && d == 0;
+            if (orphan) {
+                I280_EVENT("node").n("request", request).s("ctx", ctx)
+                    .s("cmd", "orphan-cmd").n("use", 91).s("tensor", "orphan.compute")
+                    .s("op", "MUL_MAT").emit();
+                I280_EVENT("dispatch").n("request", request).s("ctx", ctx)
+                    .s("cmd", "orphan-cmd").n("use", 91).s("pipeline", "mul_mat_f32")
+                    .n("x", 1).n("y", 1).n("z", 1).emit();
+            }
+            if (mode == "early-completion")
+                I280_EVENT("complete").n("request", request).s("ctx", ctx)
+                    .s("wait", "fence").emit();
+            I280_EVENT("submit").n("request", request).s("subctx", subctx)
+                .s("cmd", cmd).n("use", use).emit();
+            if (mode == "abort" && g == 0 && d == 0) {
+                request_end(request, "abort", 0);
+                return;
+            }
+            if (native) {
+                const int value = g + 1;
+                I280_EVENT("event_record").n("request", request).s("ctx", ctx)
+                    .s("sync_event", "ev" + std::to_string(d)).n("value", value).emit();
+                if (mode == "conflicting-wait" && g == 0 && d == 0) {
+                    I280_EVENT("event_record").n("request", request).s("ctx", ctx)
+                        .s("sync_event", "ev" + std::to_string(d)).n("value", value).emit();
+                }
+                I280_EVENT("event_complete").n("request", request)
+                    .s("sync_event", "ev" + std::to_string(d))
+                    .n("value", mode == "timeline-stale" && g == 0 ? value + 1 : value).emit();
+                if (mode == "repeated-successful-timeline-wait" || mode == "repeat-wait")
+                    I280_EVENT("event_complete").n("request", request)
+                        .s("sync_event", "ev" + std::to_string(d)).n("value", value).emit();
+            } else if (mode != "missing-completion") {
+                I280_EVENT("complete").n("request", request).s("ctx", ctx)
+                    .s("wait", "fence").emit();
+            }
+            I280_EVENT("vk_graph_end").n("request", request).s("ctx", ctx).emit();
+        }
+        I280_EVENT("graph_end").n("request", request).s("graph", graph_id).n("status", 0).emit();
+        if (!(micro && g == 0)) {
+            I280_EVENT("batch_end").n("request", request).n("status", 0).emit();
+            const int sample_index = micro ? g - 1 : g;
+            int sample_request = mode == "wrong-request" && first_request ? request + 1 : request;
+            const bool terminal = g == graph_count - 1 && mode != "limit";
+            int sample_position = micro ? g - 1 : g;
+            const int absolute_position = prompt_tokens + sample_index;
+            I280_EVENT("sample").n("request", sample_request).n("position", sample_position)
+                .n("token_id", request_token_base + sample_index)
+                .n("absolute_position", absolute_position).n("eos", terminal ? 1 : 0).emit();
+        }
+        if (g == stop_after) {
+            request_end(request, "abort", prompt_tokens);
+            return;
+        }
+    }
+
+    const int sampled = micro ? graph_count - 1 : graph_count;
+    I280_EVENT("response").n("request", request)
+        .n("sampled", mode == "wrong-output" && first_request ? sampled + 1 : sampled)
+        .n("prompt_processed", prompt_tokens).n("prompt_cached", 0)
+        .n("eos", mode == "limit" ? 0 : 1).emit();
+    request_end(request, mode == "limit" ? "limit" : "eos", prompt_tokens);
+}
+
 int main(int argc, char ** argv) {
     if (argc != 2) return 2;
     setenv("ISSUE280_OBSERVE", "1", 1);
     const std::string mode(argv[1]);
     if (mode == "disabled") unsetenv("ISSUE280_OBSERVE");
-    const bool native = mode == "native-path" || mode == "timeline-stale" ||
-        mode == "repeated-successful-timeline-wait" || mode == "native-zero-first-use";
+    const bool one_die = mode == "single-die-baseline" || mode == "single-die";
     const bool micro = mode == "microbatch";
-    const bool single_die = mode == "single-die-baseline";
-    I280_EVENT("recording").s("kind", mode == "source-identity" ? "SOURCE_OBSERVER" : "CPU_FIXTURE").s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4").emit();
-    const int graphs = mode == "eos-first" ? 1 : micro ? 4 : 3;
-    for (int g = 0; g < graphs; ++g) {
-        clock_ns = 100 + g * 100;
-        const bool prefill = g < (micro ? 2 : 1);
-        const int ntok = prefill ? (micro ? 2 : 4) : 1;
-        if (!(micro && g == 1)) {
-            if (mode == "decode-token-mismatch" && !prefill) {
-                I280_EVENT("batch_begin").n("request", 7).n("seq", 0).n("tokens", ntok)
-                    .s("phase", "decode").n("speculative", 0)
-                    .n("consumed_token_id", g == 1 ? 999 : 40 + g - 1).emit();
-            } else if (mode == "two-sequential-requests" && !prefill) {
-                I280_EVENT("batch_begin").n("request", 7).n("seq", 0).n("tokens", ntok)
-                    .s("phase", "decode").n("speculative", 0).n("consumed_token_id", 60 + g - 1)
-                    .n("absolute_position", g).emit();
-            } else if (mode == "wrong-absolute-decode-position") {
-                I280_EVENT("batch_begin").n("request", 7).n("seq", 0).n("tokens", ntok)
-                    .s("phase", prefill ? "prefill" : "decode").n("speculative", 0)
-                    .n("absolute_position", g == 1 ? 17 : g).emit();
-            } else if (mode == "warm-request-no-inheritance" && g == 1) {
-                I280_EVENT("batch_begin").n("request", 7).n("seq", 0).n("tokens", ntok)
-                    .s("phase", "decode").n("speculative", 0)
-                    .n("frame_request", 8).n("frame_position", 0).emit();
-            } else {
-                I280_EVENT("batch_begin").n("request", 7).n("seq", 0).n("tokens", micro && g == 0 ? 4 : ntok)
-                    .s("phase", prefill ? "prefill" : "decode").n("speculative", 0).emit();
-            }
-        }
-        if (mode == "warm-request-no-inheritance" && g == 1) {
-            I280_EVENT("graph_begin").s("graph", "g").n("tokens", ntok).n("seq", 0)
-                .n("sequences", 1).n("frame_request", 8).n("frame_position", 0).emit();
-        } else {
-            I280_EVENT("graph_begin").s("graph", "g").n("tokens", ntok).n("seq", 0).n("sequences", 1).emit();
-        }
-        if (mode != "missing-manifest" && !single_die) {
-            I280_EVENT("copy_manifest").s("tensor", "ffn_out-0").s("src", "Vulkan0").s("dst", "Vulkan1")
-                .s("input", "in").s("copy", "out").n("bytes", ntok*16).s("type", "f32")
-                .n("ne0", mode == "inconsistent-shape-bytes" ? 5 : 4).n("ne1", ntok).n("ne2", 1).n("ne3", 1)
-                .n("nb0", 4).n("nb1", 16).n("nb2", ntok*16).n("nb3", ntok*16).n("view_offset", 0).emit();
-        }
-        for (int d = 0; d < (single_die ? 1 : 2); ++d) {
-            clock_ns += 1;
-            const std::string ctx = "ctx" + std::to_string(d);
-            const std::string cmd = "cmd" + std::to_string(d);
-            const int use = mode == "native-zero-first-use" && g == 0 ? 0 : g+1;
-            const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
-            if (d == 1) {
-                I280_EVENT("boundary_begin").s("tensor", "ffn_out-0").s("src", "Vulkan0").s("dst", "Vulkan1")
-                    .s("input", "in").s("copy", "out").n("bytes", mode == "wrong-bytes" ? ntok*16-1 : ntok*16).emit();
-                if (native) {
-                    I280_EVENT("copy_path").s("input", "in").s("copy", "out")
-                        .s("src_buffer", "sb").s("dst_buffer", "db").emit();
-                    I280_EVENT("ctx_create").s("subctx", "temp").s("ctx", "temp").emit();
-                    I280_EVENT("submit").s("subctx", "temp").s("cmd", "temp-cmd").n("use", g+1).emit();
-                    I280_EVENT("fence_marker").s("subctx", "temp").emit();
-                    I280_EVENT("complete").s("ctx", "temp").s("wait", "transfer_fence").emit();
-                }
-                clock_ns += 10;
-                if (native) {
-                    I280_EVENT("host_leg").s("src_buffer", "sb").s("dst_buffer", "db").s("direction", "device_to_host").n("bytes", ntok*16).emit();
-                } else {
-                    I280_EVENT("host_leg").s("input", "in").s("copy", "out").s("direction", "device_to_host").n("bytes", ntok*16).emit();
-                }
-                clock_ns += 10;
-                if (native) {
-                    I280_EVENT("host_leg").s("src_buffer", "sb").s("dst_buffer", "db").s("direction", "host_to_device").n("bytes", ntok*16).emit();
-                } else if (mode != "missing-host-leg") {
-                    I280_EVENT("host_leg").s("input", "in").s("copy", "out").s("direction", "host_to_device").n("bytes", ntok*16).emit();
-                }
-                clock_ns += 10;
-                I280_EVENT("boundary_end").s("input", "in").s("copy", "out").emit();
-            }
-            I280_EVENT("vk_graph_begin").s("ctx", ctx).s("backend", "Vulkan" + std::to_string(d)).s("bdf", bdf).emit();
-            I280_EVENT("ctx_create").s("subctx", "sub" + std::to_string(d)).s("ctx", ctx).emit();
-            I280_EVENT("node").s("ctx", ctx).s("cmd", cmd).n("use", use)
-                .s("tensor", "ffn_out-" + std::to_string(d)).s("op", "MUL_MAT").emit();
-            if (mode == "placement-ownership-unexplained") {
-                I280_EVENT("weight").s("ctx", ctx).s("cmd", cmd).n("use", use)
-                    .s("tensor", "blk." + std::to_string(d) + ".ffn_gate.weight")
-                    .s("buffer", "weights" + std::to_string(d)).n("offset", 16).n("bytes", 128)
-                    .n("buffer_bytes", 4096).s("placement_category", "weights").emit();
-            } else {
-                I280_EVENT("weight").s("ctx", ctx).s("cmd", cmd).n("use", use)
-                    .s("tensor", "blk." + std::to_string(d) + ".ffn_gate.weight")
-                    .s("buffer", "weights" + std::to_string(d)).n("offset", 16).n("bytes", 128)
-                    .n("buffer_bytes", 4096).emit();
-            }
-            if (mode != "empty-submit" || d != 1) {
-                I280_EVENT("dispatch").s("ctx", ctx).s("cmd", cmd).n("use", use)
-                    .s("pipeline", "mul_mat_f32").n("x", 1).n("y", 1).n("z", 1).emit();
-            }
-            if ((mode == "unsubmitted-compute-recording" && g == 0 && d == 0) ||
-                (mode == "abort-unsubmitted-accounting" && g == 1 && d == 0)) {
-                I280_EVENT("node").s("ctx", ctx).s("cmd", "orphan-cmd").n("use", 91)
-                    .s("tensor", "orphan.compute").s("op", "MUL_MAT").emit();
-                I280_EVENT("dispatch").s("ctx", ctx).s("cmd", "orphan-cmd").n("use", 91)
-                    .s("pipeline", "mul_mat_f32").n("x", 1).n("y", 1).n("z", 1).emit();
-            }
-            if (mode == "early-completion") I280_EVENT("complete").s("ctx", ctx).s("wait", "fence").emit();
-            I280_EVENT("submit").s("subctx", "sub" + std::to_string(d)).s("cmd", cmd).n("use", use).emit();
-            if (mode == "abort") return 0; // raw partial recording, not success
-            if (native) {
-                I280_EVENT("event_record").s("ctx", ctx).s("sync_event", "ev" + std::to_string(d)).n("value", g+1).emit();
-                I280_EVENT("event_complete").s("sync_event", "ev" + std::to_string(d)).n("value", mode == "timeline-stale" ? g+2 : g+1).emit();
-                if (mode == "repeated-successful-timeline-wait") {
-                    I280_EVENT("event_complete").s("sync_event", "ev" + std::to_string(d)).n("value", g+1).emit();
-                }
-            } else if (mode != "missing-completion") I280_EVENT("complete").s("ctx", ctx).s("wait", "fence").emit();
-            I280_EVENT("vk_graph_end").s("ctx", ctx).emit();
-        }
-        I280_EVENT("graph_end").s("graph", "g").n("status", 0).emit();
-        if (!(micro && g == 0)) {
-            I280_EVENT("batch_end").n("status", 0).emit();
-            if (mode == "decode-token-mismatch") {
-                I280_EVENT("sample").n("request", 7).n("position", g)
-                    .n("eos", g == graphs-1 ? 1 : 0).n("token_id", 40 + g).emit();
-            } else if (mode == "two-sequential-requests") {
-                I280_EVENT("sample").n("request", 7).n("position", g)
-                    .n("absolute_position", g).n("token_id", 60 + g)
-                    .n("eos", g == graphs-1 ? 1 : 0).emit();
-            } else if (mode == "wrong-absolute-decode-position") {
-                I280_EVENT("sample").n("request", 7).n("position", g)
-                    .n("absolute_position", g).n("eos", g == graphs-1 ? 1 : 0).emit();
-            } else if (mode == "warm-request-no-inheritance" && g == 1) {
-                I280_EVENT("sample").n("request", 7).n("position", g).n("eos", 0)
-                    .n("frame_request", 8).n("frame_position", 0).emit();
-            } else {
-                I280_EVENT("sample").n("request", mode == "wrong-request" ? 8 : 7).n("position", micro ? g-1 : g)
-                    .n("eos", g == graphs-1 && mode != "limit" ? 1 : 0).emit();
-            }
-        }
-        if (mode == "abort-preserves-work" && g == 0) return 0;
-        if (mode == "abort-unsubmitted-accounting" && g == 1) return 0;
+    const bool omit_placement = mode == "placement-missing"
+        || mode == "placement-ownership-unexplained";
+    const bool two_requests = mode == "two-sequential-requests" || mode == "two-requests";
+    const bool planned_two = two_requests || mode == "abort-second-not-attempted"
+        || mode == "cross-request-alias";
+    I280_EVENT("recording").s("kind", mode == "source-identity" ? "SOURCE_OBSERVER" : "CPU_FIXTURE")
+        .s("source_pin", "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4")
+        .n("requests_planned", planned_two ? 2 : 1).emit();
+    emit_inventory(one_die, omit_placement);
+    if (mode == "warm-request-no-inheritance") {
+        request_accept(7, 1);
+        emit_batch(7, 0, 1, "decode", {999}, {0}, "\"frame_request\":8");
+        return 0;
     }
-    I280_EVENT("response").n("request", 7).n("sampled", mode == "wrong-output" ? graphs+1 : micro ? graphs-1 : graphs)
-        .n("prompt_processed", 4).n("prompt_cached", 0).n("eos", mode == "limit" ? 0 : 1).emit();
-    if (mode == "two-sequential-requests") {
-        for (int g = 0; g < 3; ++g) {
-            clock_ns += 100;
-            const bool prefill = g == 0;
-            const int ntok = prefill ? 4 : 1;
-            if (prefill) {
-                I280_EVENT("batch_begin").n("request", 8).n("seq", 0).n("tokens", ntok)
-                    .s("phase", "prefill").n("speculative", 0).n("absolute_position", 0).emit();
-            } else {
-                I280_EVENT("batch_begin").n("request", 8).n("seq", 0).n("tokens", ntok)
-                    .s("phase", "decode").n("speculative", 0).n("consumed_token_id", 80 + g - 1)
-                    .n("absolute_position", g).emit();
-            }
-            const std::string graph = "g8-" + std::to_string(g);
-            I280_EVENT("graph_begin").s("graph", graph).n("tokens", ntok).n("seq", 0).n("sequences", 1).emit();
-            I280_EVENT("copy_manifest").s("tensor", "ffn_out-0").s("src", "Vulkan0").s("dst", "Vulkan1")
-                .s("input", "in8").s("copy", "out8").n("bytes", ntok*16).s("type", "f32")
-                .n("ne0", 4).n("ne1", ntok).n("ne2", 1).n("ne3", 1)
-                .n("nb0", 4).n("nb1", 16).n("nb2", ntok*16).n("nb3", ntok*16).n("view_offset", 0).emit();
-            for (int d = 0; d < 2; ++d) {
-                clock_ns += 1;
-                const std::string ctx = "ctx8-" + std::to_string(d);
-                const std::string cmd = "cmd8-" + std::to_string(d);
-                const std::string subctx = "sub8-" + std::to_string(d);
-                const std::string bdf = d == 0 ? "0000:01:00.0" : "0000:02:00.0";
-                if (d == 1) {
-                    I280_EVENT("boundary_begin").s("tensor", "ffn_out-0").s("src", "Vulkan0").s("dst", "Vulkan1")
-                        .s("input", "in8").s("copy", "out8").n("bytes", ntok*16).emit();
-                    clock_ns += 10;
-                    I280_EVENT("host_leg").s("input", "in8").s("copy", "out8")
-                        .s("direction", "device_to_host").n("bytes", ntok*16).emit();
-                    clock_ns += 10;
-                    I280_EVENT("host_leg").s("input", "in8").s("copy", "out8")
-                        .s("direction", "host_to_device").n("bytes", ntok*16).emit();
-                    clock_ns += 10;
-                    I280_EVENT("boundary_end").s("input", "in8").s("copy", "out8").emit();
-                }
-                I280_EVENT("vk_graph_begin").s("ctx", ctx).s("backend", "Vulkan" + std::to_string(d)).s("bdf", bdf).emit();
-                I280_EVENT("ctx_create").s("subctx", subctx).s("ctx", ctx).emit();
-                I280_EVENT("node").s("ctx", ctx).s("cmd", cmd).n("use", g+1)
-                    .s("tensor", "ffn_out-" + std::to_string(d)).s("op", "MUL_MAT").emit();
-                I280_EVENT("weight").s("ctx", ctx).s("cmd", cmd).n("use", g+1)
-                    .s("tensor", "blk." + std::to_string(d) + ".ffn_gate.weight")
-                    .s("buffer", "weights" + std::to_string(d)).n("offset", 16).n("bytes", 128)
-                    .n("buffer_bytes", 4096).emit();
-                I280_EVENT("dispatch").s("ctx", ctx).s("cmd", cmd).n("use", g+1)
-                    .s("pipeline", "mul_mat_f32").n("x", 1).n("y", 1).n("z", 1).emit();
-                I280_EVENT("submit").s("subctx", subctx).s("cmd", cmd).n("use", g+1).emit();
-                I280_EVENT("complete").s("ctx", ctx).s("wait", "fence").emit();
-                I280_EVENT("vk_graph_end").s("ctx", ctx).emit();
-            }
-            I280_EVENT("graph_end").s("graph", graph).n("status", 0).emit();
-            I280_EVENT("batch_end").n("status", 0).emit();
-            I280_EVENT("sample").n("request", 8).n("position", g).n("absolute_position", g)
-                .n("token_id", 80 + g).n("eos", g == 2 ? 1 : 0).emit();
-        }
-        I280_EVENT("response").n("request", 8).n("sampled", 3).n("prompt_processed", 4)
-            .n("prompt_cached", 0).n("eos", 1).emit();
+    emit_request(7, 1, mode, one_die, micro, true);
+    if (two_requests) {
+        clock_ns += 100;
+        emit_request(8, 2, mode, false, false, false);
+    } else if (mode == "cross-request-alias") {
+        request_accept(8, 2);
+        emit_batch(8, 0, 4, "prefill", {1, 2, 3, 4}, {0, 1, 2, 3});
+        I280_EVENT("graph_begin").n("request", 8).s("graph", "g8")
+            .n("tokens", 4).n("seq", 0).n("sequences", 1).emit();
+        I280_EVENT("vk_graph_begin").n("request", 7).s("ctx", "ctx0")
+            .s("backend", "Vulkan0").s("bdf", "0000:01:00.0").emit();
     }
+    return 0;
 }
