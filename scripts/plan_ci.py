@@ -317,6 +317,9 @@ GROUP_TEST_MODULES = {
         # Issue #284 round 2: observer admission over retained raw bytes
         # under the frozen physical #280 contract (mechanical, not names).
         "test_issue280_admission",
+        # Exact physical producer/model bytes are the compatibility authority.
+        "test_issue280_real_compat",
+        "test_issue280_source_compat",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -460,6 +463,10 @@ PATH_GROUPS = {
     "scripts/issue278_integration.py": ["r8i-qwen-qualification"],
     "scripts/issue280_observer.py": ["r8i-qwen-qualification"],
     "scripts/issue280_source.py": ["r8i-qwen-qualification"],
+    "scripts/issue280_source_compat.py": ["r8i-qwen-qualification"],
+    "scripts/issue280_compatibility.py": ["r8i-qwen-qualification"],
+    "tests/test_issue280_real_compat.py": ["r8i-qwen-qualification"],
+    "tests/test_issue280_source_compat.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_observer.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_source.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_runner.py": ["r8i-qwen-qualification"],
