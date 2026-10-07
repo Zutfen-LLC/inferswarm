@@ -40,6 +40,24 @@ temporary internal structure.
    [pull request template](.github/pull_request_template.md).
 5. Respond to review feedback.
 
+## Authorized campaign execution
+
+For maintainers and agents running an explicitly authorized bounded campaign,
+the authorization remains in force until the campaign terminates, a stated
+expiry is reached, or a material anomaly makes the frozen authority
+inapplicable.
+
+Do not ask the maintainer to reconfirm unchanged environmental facts as routine
+preflight. Verify objective drift mechanically where possible and continue
+within the approved subject, methodology, budget, and stop conditions.
+Escalation is for real anomalies or new decisions: safety/integrity concerns,
+material identity/topology/runtime drift, scope or budget expansion,
+spending/purchases, hardware/configuration changes, destructive actions, or
+ambiguous authority.
+
+See [campaign gate ordering](docs/campaign-gate-ordering.md) and `AGENTS.md`
+for the normative rule.
+
 ## Running the checks locally
 
 The repository is documentation plus CPU-only evidence tooling. Nothing here
