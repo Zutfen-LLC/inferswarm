@@ -110,36 +110,69 @@ SEMANTIC_HASHES = {
 
 
 class _LegacyCompatibilityAuthority:
-    """Single-use compatibility-only legacy sequence authority (PR #286 R2).
+    """Single-use compatibility-only legacy sequence authority (PR #286 R2/R3).
 
-    Instantiable ONLY inside this module, with the exact retained
-    historical R1 bytes authenticated byte-for-byte (RAW_SHA256 over the
-    decompressed custody archive). The authority is consumed exactly once,
-    by the collector replaying THOSE bytes under the compatibility gate;
-    it never applies to any other stream. Production admission never
-    constructs it: a different stream that merely shares the historical
-    request/batch/graph projection cannot borrow it.
+    The mechanical invariant (PR #286 round 3): this class carries no
+    authority of its own. Authority exists ONLY while
+    ``consume_legacy_authority`` — a plain function in THIS module —
+    re-validates, without any virtual dispatch, that (a) the object is of
+    the EXACT class defined by THIS module instance (``type(x) is
+    _LegacyCompatibilityAuthority``, never isinstance: a Python subclass
+    overriding ``__init__``/``sequence_known`` is a different type and is
+    refused), (b) the caller-supplied stream's SHA-256 equals the frozen
+    retained-capture RAW_SHA256, and (c) the single-use slot has not been
+    spent. Constructor restrictions remain only as defense-in-depth;
+    correctness never depends on ``_legacy_authority_arming`` being
+    inaccessible or on instances being unfabricable (``object.__new__``
+    can always fabricate one), because consumption itself re-derives every
+    fact non-virtually from the class object and the bytes. Production
+    runner admission never constructs or forwards this object: the exact
+    historical R1 replay through ``check_compatibility()`` is the sole
+    intended compatibility path.
     """
 
     __slots__ = ("_used",)
 
     def __init__(self):
-        # Compatibility-gate arming only (check_compatibility). A boolean or
-        # string parameter elsewhere must never enable legacy inference.
+        # Defense-in-depth only (compatibility-gate arming); the authority
+        # is actually granted at consumption time by this module's
+        # consume_legacy_authority, which does not rely on this constructor
+        # having run.
         if not _legacy_authority_arming:
             raise TypeError(
                 "legacy sequence authority is compatibility-gate only; "
                 "production admission requires successor direct sequence metadata")
         self._used = False
 
-    def sequence_known(self, raw):
-        if self._used or sha(raw.encode()) != RAW_SHA256:
-            return False
-        self._used = True
-        return True
-
 
 _legacy_authority_arming = False
+
+
+def consume_legacy_authority(authority, raw):
+    """Non-polymorphic authority consumption (PR #286 round 3).
+
+    Returns True ONLY when every fact is re-derived here, inside this
+    module, with no virtual dispatch through any caller-supplied method:
+    exact type identity with this module instance's authority class,
+    independent SHA-256 equality of the supplied bytes with the frozen
+    retained capture, and an unspent single-use slot. Returns False for
+    every other object (subclass, duck type, foreign-module instance,
+    fabricated instance on changed bytes) and every other stream. The
+    consumed slot is spent on the sole success path, so a genuine
+    authority can never grant legacy sequence inference twice.
+    """
+    if type(authority) is not _LegacyCompatibilityAuthority:
+        return False
+    if not isinstance(raw, str) or sha(raw.encode()) != RAW_SHA256:
+        return False
+    try:
+        used = authority._used
+    except AttributeError:
+        return False
+    if used is not False:
+        return False
+    authority._used = True
+    return True
 
 
 def arm_legacy_authority(raw):
@@ -201,9 +234,11 @@ def check_compatibility(bundle=BUNDLE):
             raise ValueError("compatibility successor CPU source probe failure")
         observer = load_script("issue280_observer")
         # Arm through the observer's own compatibility module instance: the
-        # collector type-checks the authority against that exact instance's
-        # class, so an authority object forged in any other module (or a
-        # duck-typed fake) is never accepted.
+        # collector consumes the authority only through that exact
+        # instance's non-polymorphic consume_legacy_authority (exact type
+        # identity with its class plus an in-module SHA-256 re-check), so
+        # an authority object forged in any other module, any subclass, or
+        # a duck-typed fake is never accepted.
         result["replay"] = observer.validate_admission(
             raw, observer.physical_280_contracts()["A"],
             legacy_authority=observer._compat.arm_legacy_authority(raw))

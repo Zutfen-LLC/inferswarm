@@ -174,14 +174,20 @@ def collect(raw, contract, legacy_authority=None):
     """Replay bounded raw records through request, work, range and placement laws.
 
     ``legacy_authority`` is an internal compatibility-gate seam (PR #286
-    review round 2): a single-use authority object that may discharge the
-    sequence-exclusivity law ONLY for the exact retained historical R1
-    bytes it was armed against. It is deliberately NOT a boolean/string
-    flag: ordinary admission (validate_admission, the runner) passes
-    nothing and every physical stream must prove sequence identity with
-    the successor direct metadata (n_seqs_unq, seq_ids_unq,
-    n_seq_tokens). Test harnesses use it to exercise the retained
-    capture's substantive D2/D3 laws through the historical shape.
+    review rounds 2-3): the exact single-use authority class from this
+    collector's own compatibility module instance, consumed ONLY through
+    that module's non-polymorphic consume_legacy_authority (exact type
+    identity, independent retained-byte SHA-256 re-check, single use), may
+    discharge the sequence-exclusivity law for the exact retained
+    historical R1 bytes. No subclass, duck type, foreign-module instance
+    or fabricated object may supply legacy sequence truth, and the
+    collector never dispatches through caller-supplied methods. It is
+    deliberately NOT a boolean/string flag: ordinary admission
+    (validate_admission, the runner) passes nothing and every physical
+    stream must prove sequence identity with the successor direct metadata
+    (n_seqs_unq, seq_ids_unq, n_seq_tokens). Test harnesses use it to
+    exercise the retained capture's substantive D2/D3 laws through the
+    historical shape.
     """
     result = {
         "schema": "issue280-cpu-replay/1", "ok": False, "problems": [],
@@ -288,12 +294,22 @@ def collect(raw, contract, legacy_authority=None):
                                              ("architecture", output_role["architecture"])):
                 if field in rows[0] and rows[0][field] != expected_identity:
                     fail("output role: explicit model identity conflict")
-        if legacy_authority is not None and not isinstance(
-                legacy_authority, _compat._LegacyCompatibilityAuthority):
-            fail("legacy sequence authority must be the compatibility-gate "
-                 "authority object, never an enable flag")
-        legacy_sequence = bool(legacy_authority is not None
-                               and legacy_authority.sequence_known(raw))
+        if legacy_authority is not None:
+            # PR #286 round 3: non-polymorphic consumption. The collector
+            # performs NO isinstance check and NEVER dispatches through
+            # caller-supplied methods: the compatibility module's
+            # consume_legacy_authority re-derives every fact itself (exact
+            # type identity with the observer's own _compat instance class,
+            # independent SHA-256 equality with the frozen retained capture,
+            # single-use slot). Subclasses, duck types, foreign-module
+            # authorities, fabricated instances and non-identical streams
+            # all get False.
+            if not _compat.consume_legacy_authority(legacy_authority, raw):
+                fail("legacy sequence authority must be the exact "
+                     "compatibility-gate authority class presented with the "
+                     "exact retained historical R1 bytes; never an enable "
+                     "flag, subclass, duck type or fabricated object")
+        legacy_sequence = legacy_authority is not None
         result["sequence_evidence"] = ("AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE"
                                        if legacy_sequence else "DIRECT_UNIQUE_IDS")
         planned_row = rows[0].get("requests_planned", 1)
