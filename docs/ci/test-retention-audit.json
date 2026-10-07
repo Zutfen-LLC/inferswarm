@@ -5759,7 +5759,9 @@
    "lineage": "Issue #280 CPU-only same-request observer",
    "owned_surfaces": {
     "evidence_read": [],
-    "scripts_imported": ["scripts/issue280_observer.py"]
+    "scripts_imported": [
+     "scripts/issue280_observer.py"
+    ]
    },
    "pinned_by_evidence": [],
    "rationale": "Compiles a synthetic CPU recording producer using the identical raw emitter as source hooks, then exercises the real collector/parser. No GPU or model bytes are accessed.",
@@ -5778,13 +5780,43 @@
    "lineage": "Issue #280 pinned-source observation hooks",
    "owned_surfaces": {
     "evidence_read": [],
-    "scripts_imported": ["scripts/issue280_source.py", "scripts/plan_ci.py"]
+    "scripts_imported": [
+     "scripts/issue280_source.py",
+     "scripts/plan_ci.py"
+    ]
    },
    "pinned_by_evidence": [],
    "rationale": "Public-source-only transform tests are host-local when the pin is present; CPU logging sink and registration tests are portable. No Vulkan runtime is invoked and no physical evidence is claimed.",
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 6
+  },
+  "test_issue280_runner": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 corrected campaign gate engine evaluates every frozen per-request acceptance/STOP condition synchronously before any subsequent launch: semantic task correctness, per-arm required observer evidence, peak-RSS retention, available health inputs; aborted slots are consumed with no automatic replacement; the matrix is the minimal 2-launch/4-request rerun contract. Fail-closed gate law, no physical execution."
+  },
+  "test_issue280_task_check": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 frozen deterministic semantic task checker: exactly one three-field JSON object with exactly the frozen expected values per prompt; accepts Markdown fences and brief introductory prose; rejects wrong values (including P2 service=search), missing/extra fields, multiple objects, non-string values. Tolerance frozen before any rerun."
+  },
+  "test_issue280_retention_fix": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines."
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
