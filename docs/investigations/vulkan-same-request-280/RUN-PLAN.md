@@ -1,5 +1,13 @@
 # Issue #280 prospective run plan — PHYSICAL HOLD
 
+> **Operational authority update — 2026-10-07:** The plan below is retained as the
+> frozen #280 methodology. Its fresh operator cooling-confirmation prerequisite
+> was satisfied by maintainer comment `6030829366`, which also authorized direct
+> resume after the zero-launch pre-inference stop. Under the repository's
+> authorized-campaign autonomy rule, that established physical fact does not
+> require repeated human reconfirmation absent a material anomaly. The frozen
+> thermal/health stop thresholds remain binding.
+
 Current implementation disposition: NO-GO; see [specific observation gaps](README.md).
 The requirements below are prospective and NOT implemented/qualified in full.
 No physical run is ready or authorized.
