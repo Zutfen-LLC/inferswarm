@@ -2,7 +2,7 @@
   "base_git_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
   "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build",
   "emitter_sha256": "d537c86b83bef00e4eff7d631830f4ca09ef0d0dcab69ed1f38bef082949475f",
-  "full_transformed_git_tree": "d93fea670d246afa23e304c8f9e4110384a1d747",
+  "full_transformed_git_tree": "b070e4ace586d44d9abc30665176e54bb8564749",
   "occurrence_helper_sha256": "253dc2eeb5020075a6bd52824ac73c14ae88ab3a6744f8f4ac070cea7aced68d",
   "original_sha256": {
     "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
@@ -12,17 +12,17 @@
     "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
     "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
   },
-  "overlay_tree_sha256": "5d52144ca6a904553c87b4802a01b2ecdcac9ab9c1a734449f7ce45144d9fc5c",
-  "patch_sha256": "27011b4884e0778d4e5790e8572f37f354afb7df97e075bb6fcd861367fde500",
+  "overlay_tree_sha256": "543ed89d8a0043d872bf9b4d6933a85d8632bba71942c1ca77216f8ec565a565",
+  "patch_sha256": "5d4dc2cef0ca8cfaaac9935628ff455913035ad3f1ec5d8ee535733240e92c00",
   "physical_runner": "HELD_UNAVAILABLE",
   "schema": "issue280-source-overlay/1",
   "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
   "transformed_sha256": {
-    "ggml/src/ggml-backend.cpp": "7bc30a2861bdbf641edc308c68f7735a17a57e9c7a4699730088ab145405e42f",
-    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "7517c30b03e37940f5453d11083cdf75c4ca07a08d596e7eeb8172ccd1f05fe6",
-    "src/llama-context.cpp": "4c90c807ba1f7c5c03abdb8be523689e725210bd2ba70e1c8b005c15072f3ec6",
-    "src/llama-kv-cache.cpp": "8fda4d8cf6330222b8c5d81a035ad5b55c5aa1e72dfbfebf927ea69c211b1f6f",
-    "src/llama-model.cpp": "59981866c698b91710e0c5ff644a1886671b84e9014365d911a16f09b2c2bb27",
+    "ggml/src/ggml-backend.cpp": "bb1c55e9efe4f0a86070d709d51b01f5b94e6a8751738ce7b72b1620bd29f321",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "4936e79288e292e018ad0fc330d6c2040044ac43ad1a6cc845e0aaccab0d453c",
+    "src/llama-context.cpp": "4c983e94f9f1c7d3950a8664482c3cd5a7e1a0a09ca95d69510e6d963319dc4c",
+    "src/llama-kv-cache.cpp": "2121aaf367cda14fc0365e36cdc9817cbfccfcb7ec9267b4d4a4d1e7d94d48a6",
+    "src/llama-model.cpp": "442182ac9328e74c4761384709c390ccd037bdb8ac7bcf765509858b4dadc3c3",
     "tools/server/server-context.cpp": "543034344a81ace6ac007f77060673553f5e6ca3417e214086eb52058effdfe9"
   }
 }

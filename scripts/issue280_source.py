@@ -115,14 +115,14 @@ INSERTIONS = {
 ''', 'after'),
     ],
     "src/llama-context.cpp": [
-        ('#include <string>\n', '\n#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('#include <string>\n', '\n#define I280_LOG(s) LLAMA_LOG("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
         ('    const auto status = graph_compute(res->get_gf(), ubatch.n_tokens > 1);\n', '''    I280_EVENT("graph_begin").p("graph", res->get_gf()).n("tokens", ubatch.n_tokens)
         .n("sequences", ubatch.n_seqs).n("seq", ubatch.seq_id_unq[0]).emit();
 ''', 'before'),
         ('    const auto status = graph_compute(res->get_gf(), ubatch.n_tokens > 1);\n', '    I280_EVENT("graph_end").p("graph", res->get_gf()).n("status", status).emit();\n', 'after'),
     ],
     "src/llama-model.cpp": [
-        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
         ('    return true;\n}\n\nggml_tensor * llama_model_base::create_tensor(', '''    if (issue280::enabled()) {
         static bool observed_recording_emitted = false;
         if (!observed_recording_emitted) {
@@ -169,7 +169,7 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "src/llama-kv-cache.cpp": [
-        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
+        ('#include "llama-impl.h"\n', '\n#define I280_LOG(s) LLAMA_LOG("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n', 'after'),
         ('    {\n        const size_t memory_size_k = size_k_bytes();', '''    if (issue280::enabled()) {
         for (const auto & observed_cache : ctxs_bufs) {
             ggml_context * observed_ctx = observed_cache.first.get();
@@ -221,7 +221,7 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "ggml/src/ggml-backend.cpp": [
-        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\n', 'after'),
+        ('#include "ggml-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\n', 'after'),
         ('enum ggml_status ggml_backend_sched_graph_compute_async(ggml_backend_sched_t sched, struct ggml_cgraph * graph) {\n', '''    if (issue280::enabled()) { issue280_occurrence::reset(); } // graph-local occurrence scope: this entry is 1:1 with the observer's graph_begin (llama_context::graph_compute -> exactly one async sched call)
 ''', 'after'),
         ('    struct ggml_backend_sched_split * splits = sched->splits;\n', '''    // Pre-execution logical ranges. Read scheduler tables without hash insertion.
@@ -267,7 +267,7 @@ INSERTIONS = {
 ''', 'before'),
     ],
     "ggml/src/ggml-vulkan/ggml-vulkan.cpp": [
-        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG_INFO("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
+        ('#include "ggml-backend-impl.h"\n', '\n#define I280_LOG(s) GGML_LOG("I280 %s\\n", (s).c_str())\n#include "issue280_observer.h"\n#include "issue280_occurrence.h"\nstatic const char * issue280_cached_bdf(ggml_backend_t backend);\nstatic bool ggml_backend_buffer_is_vk(ggml_backend_buffer_t buffer); // defined later in this TU (pin ~L16718); hook below needs the declaration\n', 'after'),
         ('            ctx->p->q->handle->submit({}, fence);\n', '            I280_EVENT("fence_marker").p("subctx", ctx.get()).emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({ si }, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "transfer_timeline").emit();\n', 'after'),
         ('            ctx->device->compute_queue->handle->submit({}, ctx->fence);\n', '            I280_EVENT("fence_marker").p("ctx", ctx).s("path", "empty_queue").emit();\n', 'after'),

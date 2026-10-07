@@ -5,7 +5,7 @@
  #include "ggml-alloc.h"
  #include "ggml-impl.h"
 +
-+#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
++#define I280_LOG(s) GGML_LOG("I280 %s\n", (s).c_str())
 +#include "issue280_observer.h"
 +#include "issue280_occurrence.h"
  
@@ -85,7 +85,7 @@
  #include "ggml-impl.h"
  #include "ggml-backend-impl.h"
 +
-+#define I280_LOG(s) GGML_LOG_INFO("I280 %s\n", (s).c_str())
++#define I280_LOG(s) GGML_LOG("I280 %s\n", (s).c_str())
 +#include "issue280_observer.h"
 +#include "issue280_occurrence.h"
 +static const char * issue280_cached_bdf(ggml_backend_t backend);
@@ -313,7 +313,7 @@
  #include <stdexcept>
  #include <string>
 +
-+#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\n", (s).c_str())
++#define I280_LOG(s) LLAMA_LOG("I280 %s\n", (s).c_str())
 +#include "issue280_observer.h"
  
  //
@@ -336,7 +336,7 @@
  
  #include "llama-impl.h"
 +
-+#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\n", (s).c_str())
++#define I280_LOG(s) LLAMA_LOG("I280 %s\n", (s).c_str())
 +#include "issue280_observer.h"
  #include "llama-io.h"
  #include "llama-model.h"
@@ -403,7 +403,7 @@
  #include "llama-hparams.h"
  #include "llama-impl.h"
 +
-+#define I280_LOG(s) LLAMA_LOG_INFO("I280 %s\n", (s).c_str())
++#define I280_LOG(s) LLAMA_LOG("I280 %s\n", (s).c_str())
 +#include "issue280_observer.h"
  #include "llama-mmap.h"
  #include "llama-cparams.h"
