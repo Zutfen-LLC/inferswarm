@@ -152,6 +152,29 @@ be slow but correct. Evidence of untrustworthy computation/state/transport is a
 correctness problem governed by quarantine semantics, not a performance-score
 penalty.
 
+## Execution continuity and preflight
+
+Once a bounded benchmark or physical campaign has explicit execution authority,
+preflight should verify the conditions that materially affect safety,
+correctness, or applicability. It must not become a second approval system.
+
+Previously established operator/environment facts remain valid unless there is
+evidence of drift. Missing fresh human confirmation, by itself, is not evidence
+of drift and does not invalidate a measurement campaign. Prefer current
+machine-observable evidence such as device identity, topology, runtime/model
+hashes, fault logs, temperatures, memory/resource headroom, and retained
+artifact verification.
+
+Stop and escalate when a material anomaly appears or proceeding would require
+changing the approved experiment, hardware/configuration, budget, spending, or
+other authority. Do not stop merely because an unchanged physical fact was not
+reconfirmed by a human.
+
+If a run stops before completion, preserve the partial result. When the blocker
+is resolved without changing the frozen methodology or identities, resume the
+same campaign and remaining budget; do not automatically rebuild, restage,
+re-freeze, or repeat already valid preparation.
+
 ## Storing results
 
 Result conventions and the machine-readable layout live in
