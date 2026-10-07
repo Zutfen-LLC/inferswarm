@@ -9,9 +9,30 @@ closed; peak RSS is retained or its absence blocks admission.
 """
 from pathlib import Path
 import importlib.util
+import json
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/issue280_runner.py"
+ADMISSION = Path(__file__).resolve().parents[1] / "tests/test_issue280_admission.py"
+
+
+def load_admission_builder():
+    spec = importlib.util.spec_from_file_location("i280_admission_builder", ADMISSION)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_admission = load_admission_builder()
+
+
+def events_of(raw):
+    names = set()
+    for line in raw.splitlines():
+        if "I280 " in line:
+            names.add(json.loads(line.split("I280 ", 1)[1])["event"])
+    return names
 
 
 def load():
@@ -30,7 +51,9 @@ class RunnerHarness(unittest.TestCase):
 
     def fake_executor(self, outcomes):
         """outcomes: list (one per planned request) of dicts:
-        {text, observer_events (set), peak_rss_bytes, launch_error}"""
+        {text, observer_raw (retained bytes; default: a valid stream for the
+         request's arm), observer_events (diagnostic names), peak_rss_bytes,
+         launch_error}"""
         m = self.m
 
         def launch(matrix_row):
@@ -42,7 +65,14 @@ class RunnerHarness(unittest.TestCase):
                 if len(self.requests) > len(outcomes):
                     raise AssertionError("executor asked for a request beyond planned budget")
                 outcome = outcomes[len(self.requests) - 1]
-                launch_state["observer_events"] = set(outcome.get("observer_events", ()))
+                raw = outcome.get("observer_raw")
+                if raw is None and "observer_events" not in outcome:
+                    # default: a mechanically valid retained stream for the arm
+                    raw = _admission.build_stream(
+                        single_die=matrix_row["arm"] == "A")
+                launch_state["observer_raw"] = raw
+                launch_state["observer_events"] = set(outcome.get(
+                    "observer_events", events_of(raw) if raw else ()))
                 launch_state["peak_rss_bytes"] = outcome.get("peak_rss_bytes")
                 record = {
                     "launch": matrix_row["label"], "arm": matrix_row["arm"],
@@ -94,26 +124,34 @@ class ImmediateStopTests(RunnerHarness):
     def test_correct_semantics_but_missing_inventory_stops_closed(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        no_inventory = self.full_evidence() - {"weight_inventory", "kv_inventory"}
-        outcomes = [{"text": good, "observer_events": no_inventory, "peak_rss_bytes": 1}] * 4
+        # name-diagnostics can no longer carry authority: a stream whose
+        # event-name set merely lacks inventory names fails mechanically.
+        valid = _admission.build_stream(single_die=True)
+        stripped = "\n".join(l for l in valid.splitlines()
+                             if '"weight_inventory"' not in l
+                             and '"kv_inventory"' not in l) + "\n"
+        outcomes = [{"text": good, "observer_raw": stripped, "peak_rss_bytes": 1}] * 4
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         self.assertEqual(summary["terminal"], "STOP")
-        self.assertIn("weight_inventory", summary["stop_reason"])
+        self.assertIn("observer admission failure", summary["stop_reason"])
         self.assertEqual(len(self.requests), 1)
 
     def test_missing_compute_events_stop_closed(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        no_compute = self.full_evidence() - {"dispatch", "submit", "complete"}
-        outcomes = [{"text": good, "observer_events": no_compute, "peak_rss_bytes": 1}] * 4
+        # streams with no completed compute on the only die fail mechanically
+        no_compute = "\n".join(l for l in _admission.build_stream(single_die=True)
+                               .splitlines()
+                               if '"dispatch"' not in l) + "\n"
+        outcomes = [{"text": good, "observer_raw": no_compute, "peak_rss_bytes": 1}] * 4
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         self.assertEqual(summary["terminal"], "STOP")
-        self.assertIn("compute", summary["stop_reason"])
+        self.assertIn("observer admission failure", summary["stop_reason"])
 
     def test_missing_peak_rss_blocks_admission(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        outcomes = [{"text": good, "observer_events": self.full_evidence(), "peak_rss_bytes": None}] * 4
+        outcomes = [{"text": good, "peak_rss_bytes": None}] * 4
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         self.assertEqual(summary["terminal"], "STOP")
         self.assertIn("peak_rss", summary["stop_reason"])
@@ -122,13 +160,13 @@ class ImmediateStopTests(RunnerHarness):
     def test_missing_boundary_events_on_candidate_stop_remaining_matrix(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        ok_baseline = {"text": good, "observer_events": self.full_evidence(), "peak_rss_bytes": 1}
-        candidate_no_boundary = {
-            "text": good,
-            "observer_events": self.full_evidence(),  # no boundary_* / host_leg / copy_manifest
-            "peak_rss_bytes": 1,
-        }
-        outcomes = [ok_baseline, ok_baseline, candidate_no_boundary, candidate_no_boundary]
+        # mechanically: no completed cross-die boundary in any candidate graph
+        candidate_no_boundary = _admission.build_stream(omit_boundary=True)
+        outcomes = [{"text": good, "peak_rss_bytes": 1},
+                    {"text": good, "peak_rss_bytes": 1},
+                    {"text": good, "observer_raw": candidate_no_boundary,
+                     "peak_rss_bytes": 1},
+                    {"text": good, "peak_rss_bytes": 1}]
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         self.assertEqual(summary["terminal"], "STOP")
         self.assertIn("boundary", summary["stop_reason"])
@@ -142,9 +180,8 @@ class PassThroughTests(RunnerHarness):
     def test_fully_successful_minimal_rerun_admits_all_four(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        base = {"text": good, "observer_events": self.full_evidence(), "peak_rss_bytes": 1}
-        cand = {"text": good, "observer_events": self.candidate_evidence(), "peak_rss_bytes": 1}
-        outcomes = [base, base, cand, cand]
+        # default retained bytes: a mechanically valid stream per arm
+        outcomes = [{"text": good, "peak_rss_bytes": 1}] * 4
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         self.assertEqual(summary["terminal"], "COMPLETE")
         self.assertIsNone(summary["stop_reason"])
@@ -191,12 +228,11 @@ class HealthGateTests(RunnerHarness):
     def test_available_health_stop_input_evaluated_before_next_launch(self):
         m = self.m
         good = '{"service":"payments","severity":"high","status":"resolved"}'
-        base = {"text": good, "observer_events": self.full_evidence(), "peak_rss_bytes": 1}
-        outcomes = [base, base,
-                    {"text": good, "observer_events": self.candidate_evidence(),
-                     "peak_rss_bytes": 1, "health_stop": "edge_temp_over_limit"},
-                    {"text": good, "observer_events": self.candidate_evidence(),
-                     "peak_rss_bytes": 1}]
+        outcomes = [{"text": good, "peak_rss_bytes": 1},
+                    {"text": good, "peak_rss_bytes": 1},
+                    {"text": good, "peak_rss_bytes": 1,
+                     "health_stop": "edge_temp_over_limit"},
+                    {"text": good, "peak_rss_bytes": 1}]
         summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, self.fake_executor(outcomes))
         # health stop arrives with request 3's completion: request 4 must not launch
         self.assertEqual(len(self.requests), 3)
