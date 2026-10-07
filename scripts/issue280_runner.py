@@ -121,6 +121,10 @@ def _missing_evidence(row, events):
     return [name for name in required if name not in events]
 
 
+def _compatibility_gate():
+    return _observer._compat.check_compatibility()
+
+
 def run_campaign(matrix, launch):
     """Run the gated loop. ``launch`` maps a matrix row to a callable that
     performs ONE request of a given kind ("cold"/"warm") and returns
@@ -135,6 +139,14 @@ def run_campaign(matrix, launch):
     here, synchronously, before the next launch/request is requested.
     """
     requests = []
+    compatibility = _compatibility_gate()
+    if not compatibility.get("ok", False):
+        for ordinal in range(1, sum(len(r["requests"]) for r in matrix) + 1):
+            requests.append({"launch": None, "ordinal": ordinal, "disposition": "not_attempted"})
+        summary = _summary(requests, matrix, stopped=True,
+                           reason="prelaunch compatibility failure: " + "; ".join(compatibility.get("problems", [])))
+        summary["compatibility_verdict"] = compatibility
+        return summary
 
     def admit(row, kind, record, state):
         entry = {

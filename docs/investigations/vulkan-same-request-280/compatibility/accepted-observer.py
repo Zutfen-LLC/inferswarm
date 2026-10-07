@@ -16,7 +16,6 @@ execution and grants no execution authority.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 from pathlib import Path
@@ -50,13 +49,6 @@ PHYSICAL_280_LAYERS = {"0000:07:00.0": list(range(0, 19)),
 PHYSICAL_280_BASELINE_LAYERS = list(range(0, 36))
 PHYSICAL_280_OUTPUT_TENSOR = "output.weight"
 
-_compat_spec = importlib.util.spec_from_file_location(
-    "issue280_observer_compatibility", Path(__file__).with_name("issue280_compatibility.py"))
-assert _compat_spec is not None and _compat_spec.loader is not None
-_compat = importlib.util.module_from_spec(_compat_spec)
-_compat_spec.loader.exec_module(_compat)
-HOST_BUFFERS = _compat.HOST_BUFFERS
-
 
 def layer_of(row, field="layer"):
     """Inventory layer identity: >=0 = layer index, -1 = none (emitted by the
@@ -83,14 +75,14 @@ def physical_280_contracts():
     """Frozen physical #280 admission contracts for replaying retained bytes.
 
     Arm B (candidate): both retained V340L dies under the frozen 0-18 / 19-35
-    layer split, with the logical output role required on die B. Arm A
+    layer split, with the frozen output tensor required on die B. Arm A
     (baseline): die A only under the FULL single-die placement — every model
-    block layer 0-35 on that die plus the logical output role — no boundary
+    block layer 0-35 on that die plus the frozen output tensor — no boundary
     expectation. These freeze what the runner mechanically admits; they
     assert nothing about executed runs and authorize no execution.
     """
     dies = list(PHYSICAL_280_DIES)
-
+    output_owner = {PHYSICAL_280_OUTPUT_TENSOR: dies[1]}
     # Issue #284: admitted real-run evidence includes KV/mutable-state
     # inventory/ownership where applicable. Frozen #280 authority: every
     # participating die owns its declared layers/KV. This activates the
@@ -108,11 +100,10 @@ def physical_280_contracts():
             "arm": "B",
             "dies": dies,
             "layers": {d: list(PHYSICAL_280_LAYERS[d]) for d in dies},
-            # Frozen logical output ownership: distinct output.weight or the
-            # authenticated pinned Qwen2 duplicated embedding fallback, with
-            # matching actual completed output computation; never die A/CPU.
-            "output_role": {"owner": dies[1], "architecture": "qwen2",
-                            "model_sha256": _compat.MODEL_SHA256},
+            # Frozen output-layer ownership: the required output tensor must
+            # be admissibly owned by die B (named inventory binding or the
+            # collector's exact existing evidence seam), never die A/CPU.
+            "required_tensors": dict(output_owner),
             # KV/mutable-state ownership on BOTH frozen candidate dies.
             "placement": dict(kv_ownership),
             # The physical pinned producer emits only the actual logical
@@ -129,8 +120,7 @@ def physical_280_contracts():
             "layers": {dies[0]: list(PHYSICAL_280_BASELINE_LAYERS)},
             # Full intended single-die offload: the output tensor is frozen
             # on die A for the baseline arm.
-            "output_role": {"owner": dies[0], "architecture": "qwen2",
-                            "model_sha256": _compat.MODEL_SHA256},
+            "required_tensors": {PHYSICAL_280_OUTPUT_TENSOR: dies[0]},
             # KV/mutable-state ownership on the sole baseline die.
             "placement": dict(kv_ownership),
             "boundaries": [],
@@ -267,19 +257,6 @@ def collect(raw, contract):
             fail("missing explicit recording/source identity")
         if rows[0]["kind"] == "SOURCE_OBSERVER":
             result["claim"] = "SOURCE_LOG_REPLAY_ONLY_NOT_PHYSICAL_PROOF"
-        output_role = contract.get("output_role")
-        if physical and output_role != {
-                "owner": dies[0] if arm == "A" else dies[1],
-                "architecture": "qwen2", "model_sha256": _compat.MODEL_SHA256}:
-            fail("output role: invalid frozen model/owner contract")
-        if output_role:
-            for field, expected_identity in (("model_sha256", output_role["model_sha256"]),
-                                             ("architecture", output_role["architecture"])):
-                if field in rows[0] and rows[0][field] != expected_identity:
-                    fail("output role: explicit model identity conflict")
-        legacy_sequence = physical and _compat.legacy_sequence_witness(rows)
-        result["sequence_evidence"] = ("AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE"
-                                       if legacy_sequence else "DIRECT_UNIQUE_IDS")
         planned_row = rows[0].get("requests_planned", 1)
         if type(planned_row) is not int or planned_row < 1:
             fail("recording: invalid requests_planned")
@@ -323,9 +300,6 @@ def collect(raw, contract):
             if active is None:
                 fail("request framing: event outside an accepted request")
             rid = active["request"]
-            if "seq" in row and active.get("seq") is not None:
-                if type(row["seq"]) is not int or row["seq"] != active["seq"]:
-                    fail("explicit sequence/request mismatch")
             if "request" in row and row["request"] != rid:
                 if row.get("frame_request") is not None or row["event"] in {"graph_begin", "vk_graph_begin"}:
                     fail(f"cross-request: {row['event']} is attributed to another request")
@@ -579,7 +553,6 @@ def collect(raw, contract):
                     fail("request framing: accepted requests exceed planned count")
                 record = {
                     "request": rid, "ordinal": ordinal, "accepted_ts_ns": row["ts_ns"],
-                    "seq": integer(row, "seq") if physical or "seq" in row else None,
                     "batches": [], "graphs": [], "samples": [], "response": None,
                     "end": None, "stop_reason": None, "prompt_processed": None,
                     "prompt_cached": None, "completed_submissions": [],
@@ -650,21 +623,6 @@ def collect(raw, contract):
                 if not placement_open or active is not None:
                     fail("placement: inventory must be emitted once at process load before requests")
                 inventory_rows += 1
-                if "bdf" in row:
-                    owner_name = text(row, "bdf")
-                    backend_name = text(row, "backend") if "backend" in row else None
-                    if owner_name == "unassigned" or backend_name == "unassigned":
-                        fail("placement: unassigned null buffer has UNKNOWN ownership")
-                    if backend_name is not None:
-                        if ((owner_name in HOST_BUFFERS or backend_name in HOST_BUFFERS)
-                                and owner_name != backend_name):
-                            fail("placement: conflicting explicit bdf/backend strings")
-                        if not BDF.fullmatch(owner_name) and owner_name != backend_name:
-                            fail("placement: conflicting explicit bdf/backend strings")
-                        if BDF.fullmatch(owner_name) and backend_name not in {owner_name, "Vulkan0", "Vulkan1"}:
-                            fail("placement: conflicting explicit bdf/backend strings")
-                        if BDF.fullmatch(owner_name) and backend_name != owner_name:
-                            deferred_inventory.append((backend_name, "binding_check", dict(row)))
                 def resolve_die(raw_name):
                     """Inventory rows bind to a die either by BDF directly or by
                     backend NAME (pinned hooks emit ggml_backend_buffer_name).
@@ -673,7 +631,7 @@ def collect(raw, contract):
                     therefore DEFERRED, not rejected — every deferred row is
                     re-resolved at finalization and fails closed if its name
                     never bound to a contract die in the stream."""
-                    if raw_name in HOST_BUFFERS:
+                    if raw_name == "CPU" or raw_name == "unassigned":
                         return raw_name
                     if raw_name in placement:
                         return raw_name
@@ -725,7 +683,7 @@ def collect(raw, contract):
                             if raw_die is None:
                                 die = None  # stays deferred; finalizer must
                                 # resolve it and will cross-check ownership.
-                            elif raw_die in HOST_BUFFERS:
+                            elif raw_die in ("CPU", "unassigned"):
                                 die = raw_die
                             elif raw_die in dies:
                                 if raw_die != owning[0]:
@@ -739,14 +697,13 @@ def collect(raw, contract):
                             die = resolve_die(text(row, "bdf"))
                     else:
                         die = resolve_die(text(row, "bdf"))
-                    if die in HOST_BUFFERS:
+                    if die == "CPU":
                         # CPU-owned intended state: real backend name fallback
                         # (ggml_backend_buffer_name), not a BDF. Accounted
                         # separately; never a candidate-die numerator.
                         cpu_weight_bytes += size
                         result["placement"]["cpu_state"].append(
-                            {"kind": "cpu_weights:" + name, "tensor": name,
-                             "buffer": buffer_id, "bytes": size, "backend": die})
+                            {"kind": "cpu_weights:" + name, "bytes": size})
                         continue
                     if die is None:
                         row["_tensor"], row["_buffer"] = name, buffer_id
@@ -768,11 +725,11 @@ def collect(raw, contract):
                              f"(tensor={text(row, 'tensor')})")
                     inventory_seen.add(dedupe_key)
                     die = resolve_die(text(row, "bdf"))
-                    if die in HOST_BUFFERS:
+                    if die == "CPU":
                         # CPU-owned KV/mutable state (backend-name fallback).
                         cpu_bytes += size
                         result["placement"]["cpu_state"].append(
-                            {"kind": "cpu_kv:" + text(row, "tensor"), "bytes": size, "backend": die})
+                            {"kind": "cpu_kv:" + text(row, "tensor"), "bytes": size})
                         continue
                     if die is None:
                         row["_tensor"], row["_buffer"] = text(row, "tensor"), row.get("buffer")
@@ -789,21 +746,9 @@ def collect(raw, contract):
                         continue  # deferred
                     size = integer(row, "bytes", 1)
                     if purpose == "staging":
-                        if die in HOST_BUFFERS:
-                            cpu_bytes += size
-                            result["placement"]["cpu_state"].append(
-                                {"kind": purpose, "bytes": size, "backend": die})
-                            continue
                         placement[die]["staging_bytes"] += size
                     elif purpose == "compute":
-                        if die in HOST_BUFFERS:
-                            cpu_bytes += size
-                            result["placement"]["cpu_state"].append(
-                                {"kind": purpose, "bytes": size, "backend": die})
-                            continue
                         placement[die]["compute_bytes"] += size
-                    elif die in HOST_BUFFERS:
-                        fail("placement: unsupported host buffer declaration")
                     placement[die]["buffers"].append({"kind": "buffer_decl", "buffer": text(row, "buffer"),
                                                         "purpose": purpose, "bytes": size})
                 elif ev == "cpu_state":
@@ -812,8 +757,6 @@ def collect(raw, contract):
                     result["placement"]["cpu_state"].append({"kind": kind, "bytes": size})
                 else:
                     die, size = resolve_die(text(row, "bdf")), integer(row, "bytes", 1)
-                    if die in HOST_BUFFERS:
-                        fail("placement: unexplained host ownership")
                     if die is None:
                         row["_tensor"], row["_buffer"] = "unexplained", "unexplained"
                         continue  # deferred
@@ -852,8 +795,6 @@ def collect(raw, contract):
                 if phase not in {"prefill", "decode"} or integer(row, "speculative") != 0:
                     fail("unsupported phase/speculative request")
                 ntok = integer(row, "tokens", 1)
-                if active["seq"] is not None and integer(row, "seq") != active["seq"]:
-                    fail("batch sequence/request mismatch")
                 token_ids = int_array(row, "token_ids")
                 positions = int_array(row, "positions")
                 if phase == "prefill":
@@ -884,25 +825,7 @@ def collect(raw, contract):
                     fail("unbound/interleaved graph")
                 if "request" in row and row["request"] != rid:
                     fail("cross-request: graph belongs to another request")
-                sequence_sets = integer(row, "sequences", 1)
-                if integer(row, "seq") != current_batch["seq"]:
-                    fail("graph sequence/request mismatch")
-                direct_present = any(field in row for field in _compat.DIRECT_FIELDS)
-                if physical or direct_present:
-                    if direct_present:
-                        ids = int_array(row, "seq_ids_unq")
-                        count = integer(row, "n_seqs_unq", 1)
-                        per_set = integer(row, "n_seq_tokens", 1)
-                        if (len(ids) != count or ids != sorted(set(ids)) or any(s < 0 for s in ids)
-                                or count != 1 or ids != [current_batch["seq"]]
-                                or per_set * sequence_sets != integer(row, "tokens", 1)):
-                            fail("graph sequence uniqueness/layout/request mismatch")
-                        if "b_equal_seqs" in row and (type(row["b_equal_seqs"]) is not int
-                                                       or row["b_equal_seqs"] not in (0, 1)):
-                            fail("graph sequence layout flag invalid")
-                    elif not legacy_sequence:
-                        fail("graph sequence exclusivity UNKNOWN: missing direct unique IDs and authenticated legacy witness")
-                elif sequence_sets != 1:
+                if integer(row, "sequences", 1) != 1 or integer(row, "seq") != current_batch["seq"]:
                     fail("graph sequence/request mismatch")
                 graph_index = len(result["graphs"])
                 current_graph = {
@@ -927,8 +850,6 @@ def collect(raw, contract):
                 # request above is still rejected).
                 if bdf not in dies:
                     fail("unexpected/missing die BDF")
-                if backend in HOST_BUFFERS or backend not in {"Vulkan0", "Vulkan1"}:
-                    fail("placement: unknown accelerator backend")
                 if ctx in contexts and contexts[ctx].get("active"):
                     fail("interleaved Vulkan graph")
                 prior_bdf = backends[rid].get(backend)
@@ -950,10 +871,6 @@ def collect(raw, contract):
                             break
                     if resolved is None:
                         still_deferred.append((raw_name, dev, drow))
-                        continue
-                    if dev == "binding_check":
-                        if drow["bdf"] != resolved:
-                            fail("placement: conflicting explicit bdf/backend binding")
                         continue
                     dsize = integer(drow, "bytes", 1)
                     if dev == "weight_inventory":
@@ -1485,10 +1402,6 @@ def collect(raw, contract):
                     break
             if resolved is None:
                 fail(f"placement: inventory backend {raw_name!r} never bound to a contract die")
-            if ev == "binding_check":
-                if row["bdf"] != resolved:
-                    fail("placement: conflicting explicit bdf/backend binding")
-                continue
             # Layer-ownership cross-check now that the name is bound: a blk.N
             # row deferred at emission must land on the contract-assigned die.
             if ev == "weight_inventory":
@@ -1547,50 +1460,6 @@ def collect(raw, contract):
             if owner not in inventory_tensor_owners.get(tensor, ()):
                 add_problem(f"placement: required tensor {tensor} is not admissibly "
                             f"owned by contract die {owner}")
-        if output_role:
-            owner = output_role["owner"]
-            gpu_weights = [(die, entry) for die in dies for entry in placement[die]["buffers"]
-                           if entry.get("kind") == "weight_inventory"]
-            hosts = result["placement"]["cpu_state"]
-            distinct = any(entry["tensor"] == "output.weight" for _, entry in gpu_weights) or any(
-                entry.get("tensor") == "output.weight" for entry in hosts)
-            operand_name = "output.weight" if distinct else "token_embd.weight"
-            copies = [(die, entry) for die, entry in gpu_weights if entry["tensor"] == operand_name]
-            valid_inventory = len(copies) == 1 and copies[0][0] == owner
-            expected_bytes = copies[0][1]["bytes"] if valid_inventory else None
-            if not valid_inventory:
-                add_problem("output role: missing, wrong-die or ambiguous GPU-owned output allocation")
-            if not distinct:
-                # This role policy is frozen to the authenticated Qwen2 model
-                # contract/source, not to a request's old sequence witness.
-                # New producer streams need only the new D1 metadata; we do
-                # not invent a model-pointer alias row or require a new D3 hook.
-                # Replay remains a source/model-policy inference, never proof
-                # that an arbitrary new executable loaded those model bytes.
-                model_policy_authenticated = False
-                try:
-                    _compat.authenticate()
-                    model_policy_authenticated = True
-                except (OSError, ValueError, KeyError, EOFError):
-                    pass
-                backing = [entry for entry in hosts if entry.get("tensor") == operand_name]
-                if (not model_policy_authenticated or len(backing) != 1
-                        or backing[0]["bytes"] != expected_bytes or expected_bytes != 255252480):
-                    add_problem("output role: tied Qwen2 identity/CPU backing absent or corrupted")
-            for graph in result["graphs"]:
-                output_dispatches = [dispatch for command in graph["completed_compute"].get(owner, [])
-                                     for dispatch in command["dispatches"]
-                                     if dispatch["node"] == {"tensor": "result_output", "op": "MUL_MAT"}
-                                     and len(dispatch["weights"]) == 1
-                                     and dispatch["weights"][0]["tensor"] == operand_name
-                                     and dispatch["weights"][0]["bytes"] == expected_bytes]
-                if not output_dispatches:
-                    add_problem(f"output role: graph {graph['index']} lacks completed result_output/MUL_MAT with matching actual operand on {owner}")
-            result["output_role_evidence"] = {
-                "kind": "DISTINCT_OUTPUT" if distinct else "PINNED_QWEN2_TIED_ROLE_INFERENCE",
-                "owner": owner, "operand": operand_name, "bytes": expected_bytes,
-                "model_binding": "FROZEN_AUTHENTICATED_MODEL_POLICY_NOT_NEW_RUNTIME_MODEL_HASH",
-                "pointer_equality": "NOT_ASSERTED: ggml buffer vs underlying Vulkan buffer"}
         for die in dies:
             inventory_layers = set()
             for entry in placement[die]["buffers"]:
@@ -1738,8 +1607,6 @@ def validate_admission(raw, contract):
         "logical_boundary_bytes": result.get("logical_boundary_bytes", 0),
         "host_leg_bytes": result.get("host_leg_bytes", 0),
         "physical_execution": "NONE",
-        "sequence_evidence": result.get("sequence_evidence"),
-        "output_role_evidence": result.get("output_role_evidence"),
     }
     # Pin the mechanical facts admission relied on, per die.
     placement = result.get("placement", {}).get("dies", {})

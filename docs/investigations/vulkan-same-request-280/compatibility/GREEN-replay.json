@@ -1,0 +1,92 @@
+{
+  "authorization": "NONE",
+  "ok": true,
+  "physical_execution": "NONE",
+  "problems": [],
+  "replay": {
+    "claim": "SOURCE_LOG_REPLAY_ONLY_NOT_PHYSICAL_PROOF",
+    "contract_dies": [
+      "0000:07:00.0"
+    ],
+    "contract_kind": "PHYSICAL_280",
+    "graph_count": 40,
+    "host_leg_bytes": 0,
+    "logical_boundary_bytes": 0,
+    "ok": true,
+    "output_role_evidence": {
+      "bytes": 255252480,
+      "kind": "PINNED_QWEN2_TIED_ROLE_INFERENCE",
+      "model_binding": "FROZEN_AUTHENTICATED_MODEL_POLICY_NOT_NEW_RUNTIME_MODEL_HASH",
+      "operand": "token_embd.weight",
+      "owner": "0000:07:00.0",
+      "pointer_equality": "NOT_ASSERTED: ggml buffer vs underlying Vulkan buffer"
+    },
+    "per_die": {
+      "0000:07:00.0": {
+        "completed_compute_commands": 457,
+        "kv_bytes": 150994944,
+        "weights_bytes": 1923946496
+      }
+    },
+    "physical_execution": "NONE",
+    "problems": [],
+    "schema": "issue280-observer-admission/1",
+    "sequence_evidence": "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE"
+  },
+  "schema": "issue280-compatibility-gate/1",
+  "source_probe": {
+    "claim": "INSERTED_BLOCK_CPU_SYNTAX_AND_METADATA_ONLY_NOT_VULKAN_BUILD",
+    "full_transformed_git_tree": "f3cd359feada1ba883955582cecf13dc75f1dcb8",
+    "ok": true,
+    "overlay_tree_sha256": "6e73ce72b8c6f5a06ead05dc2db64fb2274cf90a51a1d2a2936e100fd3ab7f8b",
+    "physical_execution": "NONE",
+    "rows": [
+      {
+        "b_equal_seqs": 0,
+        "event": "graph_begin",
+        "graph": "0x7ffc0cdd2dce",
+        "n_seq_tokens": 1,
+        "n_seqs_unq": 1,
+        "schema": "issue280-raw/1",
+        "seq": 0,
+        "seq_ids_unq": [
+          0
+        ],
+        "sequences": 31,
+        "tokens": 31,
+        "ts_ns": 699279932880046
+      },
+      {
+        "b_equal_seqs": 1,
+        "event": "graph_begin",
+        "graph": "0x7ffc0cdd2dce",
+        "n_seq_tokens": 2,
+        "n_seqs_unq": 2,
+        "schema": "issue280-raw/1",
+        "seq": 0,
+        "seq_ids_unq": [
+          0,
+          1
+        ],
+        "sequences": 2,
+        "tokens": 4,
+        "ts_ns": 699279932921205
+      },
+      {
+        "b_equal_seqs": 1,
+        "event": "graph_begin",
+        "graph": "0x7ffc0cdd2dce",
+        "n_seq_tokens": 4,
+        "n_seqs_unq": 1,
+        "schema": "issue280-raw/1",
+        "seq": 7,
+        "seq_ids_unq": [
+          7
+        ],
+        "sequences": 1,
+        "tokens": 4,
+        "ts_ns": 699279932928450
+      }
+    ]
+  }
+}

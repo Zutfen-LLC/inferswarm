@@ -1,0 +1,28 @@
+test_accepted_sequence_must_match_batch (test_issue280_real_compat.DirectSequenceAndRoleTests.test_accepted_sequence_must_match_batch) ... ok
+test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) ... ok
+test_distinct_output_requires_output_compute (test_issue280_real_compat.DirectSequenceAndRoleTests.test_distinct_output_requires_output_compute) ... ok
+test_exact_host_names_count_only_in_denominator (test_issue280_real_compat.DirectSequenceAndRoleTests.test_exact_host_names_count_only_in_denominator) ... ok
+test_missing_unique_metadata_unrelated_stream_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_missing_unique_metadata_unrelated_stream_rejected) ... ok
+test_prelaunch_compatibility_failure_prevents_executor (test_issue280_real_compat.DirectSequenceAndRoleTests.test_prelaunch_compatibility_failure_prevents_executor) ... ok
+test_sequence_sets_are_not_unique_sequence_count (test_issue280_real_compat.DirectSequenceAndRoleTests.test_sequence_sets_are_not_unique_sequence_count) ... ok
+test_ambiguous_gpu_alias_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_ambiguous_gpu_alias_rejected) ... ok
+test_direct_conflicts_are_not_ignored_by_legacy_witness (test_issue280_real_compat.RealCaptureCompatibilityTests.test_direct_conflicts_are_not_ignored_by_legacy_witness) ... ok
+test_exact_real_capture_is_compatible (test_issue280_real_compat.RealCaptureCompatibilityTests.test_exact_real_capture_is_compatible) ... ok
+test_explicit_backend_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_backend_conflict_rejected) ... ok
+test_host_lookalikes_and_unassigned_fail_closed (test_issue280_real_compat.RealCaptureCompatibilityTests.test_host_lookalikes_and_unassigned_fail_closed) ... ok
+test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps (test_issue280_real_compat.RealCaptureCompatibilityTests.test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps) ... ok
+test_missing_completed_compute (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_completed_compute) ... ok
+test_missing_kv (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_kv) ... ok
+test_missing_upper_blocks (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_upper_blocks) ... ok
+test_output_bytes_match_inventory (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_bytes_match_inventory) ... ok
+test_output_op_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_op_required) ... ok
+test_output_operand_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_operand_required) ... ok
+test_request_mismatch_preserved (test_issue280_real_compat.RealCaptureCompatibilityTests.test_request_mismatch_preserved) ... ok
+test_tied_cpu_backing_bytes_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_bytes_required) ... ok
+test_tied_cpu_backing_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_required) ... ok
+test_wrong_bdf (test_issue280_real_compat.RealCaptureCompatibilityTests.test_wrong_bdf) ... ok
+
+----------------------------------------------------------------------
+Ran 23 tests in 33.690s
+
+OK

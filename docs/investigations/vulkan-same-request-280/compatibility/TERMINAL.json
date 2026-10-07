@@ -1,0 +1,143 @@
+{
+  "authority": {
+    "correction_pr": 285,
+    "drift": "none",
+    "execution_contract_comment": 6042248254,
+    "main_final": "832a9f4adcba2bebfa66f0ed5f1e004cba7fb16d",
+    "observer_sha256": "17021e0fb8e9fe10db1b363142bf8e73e56a616d5e61833475cf90129b036d5a",
+    "prompt_main_start": "832a9f4adcba2bebfa66f0ed5f1e004cba7fb16d",
+    "reviewed_head": "be7027a66166390aaa49dde760c27233766a98c1",
+    "runner_sha256": "6a8c0ac48dec6a70eeb57ab61dcae2cfd013f74057cda93a50c9add81834e17b",
+    "task_check_sha256": "2b31eabf3bbb13aa5dba39a92d192fbbe95adf23978ec93c784c40259328f048"
+  },
+  "build": {
+    "build_host": "inferswarm01 (distro cmake/gcc14.2/Release/Vulkan-only)",
+    "full_transformed_git_tree": "b070e4ace586d44d9abc30665176e54bb8564749",
+    "llama_server_sha256": "9b40bada3da3123fffb3b66288a5437e60f18bf473eb6944b26fce79e8493fb0",
+    "overlay_tree_sha256": "543ed89d8a0043d872bf9b4d6933a85d8632bba71942c1ca77216f8ec565a565",
+    "patch_sha256": "5d4dc2cef0ca8cfaaac9935628ff455913035ad3f1ec5d8ee535733240e92c00",
+    "runtime_libs": "build/SHA256SUMS-bin retained",
+    "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
+  },
+  "evidence_manifest": {
+    "build/SHA256SUMS-bin": {
+      "bytes": 1516,
+      "sha256": "2551f3c128bb1889ff19ec1fde5ae61fedf57b7014af96a071f350fe291c2e02"
+    },
+    "health/health-R1.json": {
+      "bytes": 2090,
+      "sha256": "705531231048f23f1ceb5535d9371d1e879992c3681aa1fd68cd75815f36f0a0"
+    },
+    "runs/observer-R1-cold.i280.raw": {
+      "bytes": 13264272,
+      "sha256": "b1fa13966a715d2009efdde4fa602a5a6f0b70d93c3884ceef0d14426bfcc796"
+    },
+    "runs/req-R1-cold.json": {
+      "bytes": 953,
+      "sha256": "c9fa5f6d7b9af55e56471eafba526004b5070e97f1165c89aa8fcff76d9025dc"
+    },
+    "runs/runner-summary.json": {
+      "bytes": 1424,
+      "sha256": "42ff6d9a73a7b1555332e7ea12e5ae14c9f1b2f8b8ff8d02caabd155ade27fd0"
+    },
+    "runs/server-R1.log": {
+      "bytes": 13670081,
+      "sha256": "2dc0d51bb11113536b6993123510bf2ddfc088bd58db97ad91a3806d66cb82ff"
+    }
+  },
+  "execution": {
+    "budget": "2 launches / 4 requests max",
+    "campaign_wall_s": 3.83,
+    "launches_consumed": 1,
+    "order": [
+      "R1-cold executed REJECTED (observer admission)",
+      "R1-warm not_attempted",
+      "R2-cold not_attempted",
+      "R2-warm not_attempted"
+    ],
+    "physical_phase_utc": "17:28:58-17:29:02Z",
+    "requests_consumed": 1
+  },
+  "forbidden": {
+    "cuda": false,
+    "fifth_request": false,
+    "holdouts": false,
+    "issue_239_R8J": false,
+    "issue_281": false,
+    "mixed_vendor": false,
+    "purchases": false,
+    "successor_implementation": false,
+    "tuning_or_rerun": false
+  },
+  "model": {
+    "reused_staged": true,
+    "sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "size": 1929903264
+  },
+  "next_maintainer_decision": "Decide whether to correct the observer contract/hooks (a #284-style follow-up issue: sequences law vs ubatch.n_seqs, CPU backend-name aliasing, required-tensor rename to token_embd or explicit tied-output ownership) before any further physical authorization.",
+  "observer_admission": {
+    "R1-cold": {
+      "diagnostic_reduction_from_retained_bytes": [
+        "D1 pinned graph_begin hook emits ubatch.n_seqs (physical 2/31/1...); frozen collector law requires sequences==1 -> first graph row fails framing",
+        "D2 backend name CPU_Mapped (mmap CPU state) never binds to a contract die and is not treated as CPU-owned -> unresolvable inventory",
+        "D3 physical model has NO output.weight tensor (Qwen2.5-3B-Instruct ties output to token_embd.weight; inventory: token_embd + output_norm only) -> frozen required_tensors output.weight is unmeetable on any die"
+      ],
+      "ok": false,
+      "per_die_after_diagnostics": {
+        "0000:07:00.0": {
+          "completed_compute_commands": 457,
+          "kv_bytes": 150994944,
+          "weights_bytes": 1923946496
+        }
+      },
+      "problems": [
+        "graph sequence/request mismatch"
+      ]
+    }
+  },
+  "preflight": {
+    "dies": {
+      "0000:07:00.0": "unique_id 0216bf8341b210e4 card1",
+      "0000:0b:00.0": "unique_id 0216bf8b473010a4 card2"
+    },
+    "gpu_procs": "none",
+    "host": "inferswarm05",
+    "journal_24h_gpu_aer_oom": 0,
+    "kernel": "6.12.107+deb13-amd64",
+    "link": "8 GT/s x16 both dies",
+    "machine_id": "39ac8e342ef845c2a0a90c7c7a407243",
+    "memavailable_b": 132617838592,
+    "port_8791": "free",
+    "swapfree_b": 6608908288,
+    "temps_mC_idle": {
+      "A": [
+        28000,
+        31000,
+        28000
+      ],
+      "B": [
+        35000,
+        36000,
+        35000
+      ]
+    },
+    "vram_per_die_b": 8573157376
+  },
+  "resources": {
+    "peak_rss_bytes_R1_cold": 2068496384,
+    "request_wall_s": 0.797,
+    "startup_s": 1.273,
+    "temps": "monitored; no threshold fired (see health/)",
+    "ttft_s": 0.1456
+  },
+  "schema": "issue280r2-terminal/1",
+  "semantic_check": {
+    "R1-cold": {
+      "ok": true,
+      "reason": "payments/high/resolved; prose+fences accepted by merged checker"
+    }
+  },
+  "terminal": "STOP",
+  "terminal_reason": "OBSERVER_ADMISSION_FAILURE_AT_R1_COLD: three frozen-authority-vs-pinned-producer seams (graph sequences law, CPU_Mapped backend naming, nonexistent output.weight required tensor) prevent any request from ever being admitted; authority and instrumentation disagree. No tuning/rerun; 3 requests not_attempted; remaining budget unconsumed.",
+  "utc": "2026-10-07T17:31:00Z"
+}
