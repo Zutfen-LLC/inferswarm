@@ -147,6 +147,69 @@ class RealCaptureCompatibilityTests(unittest.TestCase):
     def test_missing_completed_compute(self):
         self.reject(rewrite(self.raw, "complete", lambda r: None), "completed")
 
+class LegacyAuthorityTransferRegressionTests(unittest.TestCase):
+    """Round-2 trust-boundary regression (PR #286 review).
+
+    The historical legacy sequence inference must not transfer to any
+    stream that is not byte-identical to the exact retained historical R1
+    capture — not even when its request/batch/graph projection matches the
+    historical projection exactly and the stream is otherwise
+    collector-valid. A production run_campaign() admission must likewise
+    never consume legacy sequence authority for a stream lacking the
+    successor direct sequence metadata.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        data = gzip.decompress((BUNDLE / "observer-R1-cold.i280.raw.gz").read_bytes())
+        assert hashlib.sha256(data).hexdigest() == CAPTURE_SHA256
+        cls.raw = data.decode()
+        cls.m = observer()
+
+    def attack_stream(self):
+        """NOT byte-identical to the retained capture: exactly one legal,
+        otherwise collector-valid cpu_state row. Same historical projection;
+        still no successor direct sequence metadata."""
+        lines = self.raw.splitlines()
+        first_accept = next(i for i, line in enumerate(lines) if '"request_accept"' in line)
+        ts = json.loads(lines[first_accept].split("I280 ", 1)[1])["ts_ns"]
+        row = {"schema": "issue280-raw/1", "event": "cpu_state", "ts_ns": ts,
+               "kind": "host_scratch", "bytes": 4096}
+        lines.insert(first_accept, "I280 " + json.dumps(row, separators=(",", ":")))
+        attack = "\n".join(lines) + "\n"
+        assert hashlib.sha256(attack.encode()).hexdigest() != CAPTURE_SHA256
+        return attack
+
+    def test_non_identical_same_projection_stream_cannot_borrow_legacy_sequence_authority(self):
+        attack = self.attack_stream()
+        self.assertEqual(self.m._compat.sequence_projection(self.m.parse(attack)),
+                         self.m._compat.sequence_projection(self.m.parse(self.raw)))
+        v = self.m.validate_admission(attack, self.m.physical_280_contracts()["A"])
+        self.assertFalse(v["ok"], v)
+        self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
+        self.assertNotEqual(v["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_production_runner_rejects_old_instrumentation_stream_without_direct_metadata(self):
+        runner = load("runner")
+        good = '{"service":"payments","severity":"high","status":"resolved"}'
+        executed = []
+
+        def launch(row):
+            def request(kind):
+                executed.append((row["label"], kind))
+                return ({"launch": row["label"], "arm": row["arm"], "prompt": row["prompt"],
+                         "kind": kind, "text": good, "transport_ok": True, "health_stop": None},
+                        {"observer_raw": self.attack_stream(), "peak_rss_bytes": 1,
+                         "observer_events": set()})
+            return request
+
+        summary = runner.run_campaign(runner.MINIMAL_RERUN_MATRIX, launch)
+        self.assertEqual(len(executed), 1, "request 2 must never launch")
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertIn("observer admission failure", summary["stop_reason"])
+        self.assertIn("sequence", summary["stop_reason"])
+
+
 class DirectSequenceAndRoleTests(unittest.TestCase):
     def setUp(self):
         self.m = observer()
