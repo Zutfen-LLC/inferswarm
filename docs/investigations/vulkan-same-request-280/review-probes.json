@@ -1,0 +1,32 @@
+{
+  "scope": "CPU_SYNTHETIC_REVIEW_PROBES_NOT_PHYSICAL",
+  "verdict": "NO_GO",
+  "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "patch_sha256": "3931525cf073771954da1427f4b073a75ec5dcc381b8453b92cf57ffe2d4bd0f",
+  "probes": [
+    {
+      "name": "native-zero-first-use",
+      "current_collector_ok": false,
+      "problems": [
+        "node: invalid use"
+      ]
+    },
+    {
+      "name": "inconsistent-shape-bytes",
+      "current_collector_ok": true,
+      "problems": []
+    },
+    {
+      "name": "repeated-successful-timeline-wait",
+      "current_collector_ok": false,
+      "problems": [
+        "timeline completion identity does not match recorded event/value"
+      ]
+    },
+    {
+      "name": "unsubmitted-compute-recording",
+      "current_collector_ok": true,
+      "problems": []
+    }
+  ]
+}

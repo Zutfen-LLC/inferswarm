@@ -1,0 +1,111 @@
+{
+  "scope": "prospective text only; no requests executed",
+  "prompts": {
+    "P1": {
+      "text": "Extract the incident fields as JSON only. Incident: service=payments; severity=high; status=resolved. Required keys: service, severity, status.",
+      "utf8_sha256": "726fd522508fd0a0a89184017d30dd808c8538cbce850c3c04d8b07c31f371de",
+      "settings": {
+        "n_predict": 128,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "repeat_penalty": 1,
+        "cache_prompt": false,
+        "samplers": [
+          "greedy"
+        ],
+        "stream": true
+      }
+    },
+    "P2": {
+      "text": "Reference notes:\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nRoutine maintenance completed without customer impact.\nIncident: service=search; severity=low; status=open.\nExtract only the incident fields as JSON. Required keys: service, severity, status.",
+      "utf8_sha256": "e695d91063bb7e9f60ee38b39106018c038bd644ffa66e76abb3094f2b91a189",
+      "settings": {
+        "n_predict": 128,
+        "temperature": 0,
+        "top_k": 1,
+        "seed": 42,
+        "repeat_penalty": 1,
+        "cache_prompt": false,
+        "samplers": [
+          "greedy"
+        ],
+        "stream": true
+      }
+    }
+  },
+  "launches": [
+    {
+      "prompt": "P1",
+      "repetition": 1,
+      "arm": "A",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P1",
+      "repetition": 1,
+      "arm": "B",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P1",
+      "repetition": 2,
+      "arm": "B",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P1",
+      "repetition": 2,
+      "arm": "A",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P2",
+      "repetition": 1,
+      "arm": "A",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P2",
+      "repetition": 1,
+      "arm": "B",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P2",
+      "repetition": 2,
+      "arm": "B",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    },
+    {
+      "prompt": "P2",
+      "repetition": 2,
+      "arm": "A",
+      "requests": [
+        "process-cold",
+        "warm-no-prefix-reuse"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "metadata_url": "https://huggingface.co/api/models/bartowski/Qwen2.5-3B-Instruct-GGUF?blobs=true",
+  "revision": "f302c64a2269a69fb27b2f9473b362f5bb8e78d8",
+  "member": {
+    "rfilename": "Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "blobId": "9e7fe763eea0fe3e7aae297710b4bb9ccc551639",
+    "size": 1929903264,
+    "lfs": {
+      "sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+      "size": 1929903264,
+      "pointerSize": 135
+    }
+  },
+  "operation": "metadata-only; no model member fetched"
+}

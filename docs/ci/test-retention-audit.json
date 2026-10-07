@@ -5747,6 +5747,44 @@
    "referenced_by_scripts": [],
    "replacement": null,
    "test_count_at_audit": 14
+  },
+  "test_issue280_observer": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #280 bounded raw-log collector correlates request/graph, dispatched named weights, two BDFs, nonempty command submissions and existing-wait completion; reconciles preexecution logical-byte manifests, host staging, nonoverlapping boundary timing, prefill microbatches and actual sampled/EOS lengths; incomplete, malformed or unbound observations fail closed and CPU replay never grants physical authority.",
+   "lineage": "Issue #280 CPU-only same-request observer",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": ["scripts/issue280_observer.py"]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Compiles a synthetic CPU recording producer using the identical raw emitter as source hooks, then exercises the real collector/parser. No GPU or model bytes are accessed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
+  },
+  "test_issue280_source": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 6,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #280 exact-source additive overlay refuses pin/hash drift, preserves every original computation/transfer/wait byte, binds overlay and reconstructed full Git tree identities, keeps logging sinks translation-unit local, and registers CPU coverage without a physical launcher.",
+   "lineage": "Issue #280 pinned-source observation hooks",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": ["scripts/issue280_source.py", "scripts/plan_ci.py"]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Public-source-only transform tests are host-local when the pin is present; CPU logging sink and registration tests are portable. No Vulkan runtime is invoked and no physical evidence is claimed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 6
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
