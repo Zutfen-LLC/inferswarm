@@ -39,6 +39,36 @@ def rewrite(raw, event, change, predicate=lambda r: True, first=False):
 def update(**fields):
     return lambda r: {**r, **fields}
 
+
+def inject_direct_metadata(raw):
+    """Direct-successor-metadata version of a real-stream-derived fixture.
+
+    Adds the successor D1 fields (n_seqs_unq=1, seq_ids_unq=[batch seq],
+    n_seq_tokens) to every graph_begin row, exactly as the pinned successor
+    producer emits them. Used for adversarial D2/D3 mutation testing of
+    real-stream-derived streams: PR #286 round 2 keeps the historical legacy
+    sequence authority bound to the exact retained capture, so mutations
+    must carry the direct metadata to reach their target substantive laws
+    rather than failing on the sequence-exclusivity law alone.
+    """
+    out = []
+    batch_seq = 0
+    for line in raw.splitlines():
+        if "I280 " not in line:
+            out.append(line)
+            continue
+        row = json.loads(line.split("I280 ", 1)[1])
+        if row.get("event") == "batch_begin":
+            batch_seq = row.get("seq", 0)
+        if row.get("event") == "graph_begin" and not any(
+                field in row for field in ("n_seqs_unq", "seq_ids_unq", "n_seq_tokens")):
+            row["n_seqs_unq"] = 1
+            row["seq_ids_unq"] = [batch_seq]
+            row["n_seq_tokens"] = row["tokens"] // row["sequences"]
+        out.append("I280 " + json.dumps(row, separators=(",", ":")))
+    return "\n".join(out) + "\n"
+
+
 class RealCaptureCompatibilityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -46,6 +76,12 @@ class RealCaptureCompatibilityTests(unittest.TestCase):
         assert hashlib.sha256(data).hexdigest() == CAPTURE_SHA256
         cls.raw = data.decode()
         cls.m = observer()
+        # Direct-successor-metadata version of the real capture (PR #286
+        # round 2): the historical legacy sequence authority is bound to the
+        # exact retained bytes only, so real-stream-derived adversarial
+        # mutations carry the successor D1 metadata and exercise their
+        # target D2/D3 substantive laws rather than the sequence law.
+        cls.mut = inject_direct_metadata(cls.raw)
 
     def verdict(self, raw):
         return self.m.validate_admission(raw, self.m.physical_280_contracts()["A"])
@@ -56,78 +92,108 @@ class RealCaptureCompatibilityTests(unittest.TestCase):
         self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
         return v
 
-    def test_exact_real_capture_is_compatible(self):
-        v = self.verdict(self.raw)
+    def test_direct_metadata_real_stream_baseline_passes(self):
+        v = self.verdict(inject_direct_metadata(self.raw))
         self.assertTrue(v["ok"], v["problems"])
+        self.assertEqual(v["sequence_evidence"], "DIRECT_UNIQUE_IDS")
         self.assertEqual(v["graph_count"], 40)
-        self.assertEqual(v["per_die"]["0000:07:00.0"]["completed_compute_commands"], 457)
+
+    def test_exact_real_capture_is_compatible(self):
+        # The exact retained capture now replays ONLY through the dedicated
+        # compatibility gate, which arms the narrow legacy authority against
+        # these exact bytes (PR #286 round 2). Ordinary admission of the
+        # same bytes without that authority fails closed on sequence law.
+        gate = load("compatibility").check_compatibility()
+        self.assertTrue(gate["ok"], gate["problems"])
+        self.assertEqual(gate["replay"]["graph_count"], 40)
+        self.assertEqual(gate["replay"]["per_die"]["0000:07:00.0"]["completed_compute_commands"], 457)
+        self.assertEqual(gate["replay"]["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+        # and ordinary (unarmed) admission of the same bytes fails closed:
+        v = self.verdict(self.raw)
+        self.assertFalse(v["ok"])
+        self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
 
     def test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps(self):
+        # Old-shaped mutations: even a one-field change breaks byte-identity
+        # with the retained capture, so no legacy authority exists and the
+        # mutated old-shaped stream fails closed (no projection borrowing).
         for field, value in (("ts_ns", 1208002000000000), ("token_ids", [0] * 31)):
             raw = rewrite(self.raw, "batch_begin", update(**{field: value}), first=True)
             # A timestamp change may fail ordering first, never admit.
             self.assertFalse(self.verdict(raw)["ok"])
+        # Ordering violations fail with direct metadata too.
+        raw = rewrite(self.mut, "batch_begin", update(ts_ns=1208002000000000), first=True)
+        self.assertFalse(self.verdict(raw)["ok"])
+        # A different-token stream with correct direct metadata is legitimately
+        # admitted: new streams prove sequence identity via the successor
+        # metadata, not by matching the historical capture's token content.
+        raw = rewrite(self.mut, "batch_begin", update(token_ids=[0] * 31), first=True)
+        v = self.verdict(raw)
+        self.assertTrue(v["ok"], v["problems"])
+        self.assertEqual(v["sequence_evidence"], "DIRECT_UNIQUE_IDS")
 
     def test_direct_conflicts_are_not_ignored_by_legacy_witness(self):
+        # Direct-metadata conflicts on the direct-metadata real stream: the
+        # D1 direct laws themselves must reject wrong/duplicate identities.
         for fields in ({"n_seqs_unq": 2, "seq_ids_unq": [0, 1], "n_seq_tokens": 1},
                        {"n_seqs_unq": 1, "seq_ids_unq": [1], "n_seq_tokens": 1}):
-            self.reject(rewrite(self.raw, "graph_begin", update(**fields), first=True), "sequence")
+            self.reject(rewrite(self.mut, "graph_begin", update(**fields), first=True), "sequence")
 
     def test_request_mismatch_preserved(self):
-        self.reject(rewrite(self.raw, "graph_begin", update(request=99), first=True), "cross-request")
+        self.reject(rewrite(self.mut, "graph_begin", update(request=99), first=True), "cross-request")
 
     def test_explicit_terminal_sequence_conflict_rejected(self):
-        self.reject(rewrite(self.raw, "request_end", update(seq=1)), "sequence")
+        self.reject(rewrite(self.mut, "request_end", update(seq=1)), "sequence")
 
     def test_host_lookalikes_and_unassigned_fail_closed(self):
         for name in ("CPU_Mapped_FAKE", "VulkanCPU_Mapped", "CPUfoo", "unknown_accelerator", "unassigned"):
-            raw = rewrite(self.raw, "weight_inventory", update(bdf=name, backend=name),
+            raw = rewrite(self.mut, "weight_inventory", update(bdf=name, backend=name),
                           lambda r: r["bdf"] == "CPU_Mapped")
             self.reject(raw, "placement")
 
     def test_explicit_backend_conflict_rejected(self):
-        self.reject(rewrite(self.raw, "weight_inventory", update(backend="Vulkan0"),
+        self.reject(rewrite(self.mut, "weight_inventory", update(backend="Vulkan0"),
                             lambda r: r["bdf"] == "CPU_Mapped"), "conflicting")
 
     def test_output_operand_required(self):
-        self.reject(rewrite(self.raw, "weight", lambda r: None,
+        self.reject(rewrite(self.mut, "weight", lambda r: None,
                             lambda r: r["tensor"] == "token_embd.weight"), "output role")
 
     def test_output_op_required(self):
-        self.reject(rewrite(self.raw, "node", update(op="ADD"),
+        self.reject(rewrite(self.mut, "node", update(op="ADD"),
                             lambda r: r["tensor"] == "result_output"), "output role")
 
     def test_output_bytes_match_inventory(self):
-        self.reject(rewrite(self.raw, "weight", update(bytes=128),
+        self.reject(rewrite(self.mut, "weight", update(bytes=128),
                             lambda r: r["tensor"] == "token_embd.weight"), "output role")
 
     def test_tied_cpu_backing_required(self):
-        self.reject(rewrite(self.raw, "weight_inventory", lambda r: None,
+        self.reject(rewrite(self.mut, "weight_inventory", lambda r: None,
                             lambda r: r["tensor"] == "token_embd.weight" and r["bdf"] == "CPU_Mapped"), "output role")
 
     def test_tied_cpu_backing_bytes_required(self):
-        self.reject(rewrite(self.raw, "weight_inventory", update(bytes=128),
+        self.reject(rewrite(self.mut, "weight_inventory", update(bytes=128),
                             lambda r: r["tensor"] == "token_embd.weight" and r["bdf"] == "CPU_Mapped"), "output role")
 
     def test_ambiguous_gpu_alias_rejected(self):
         self.check_ambiguous_gpu_alias()
 
     def test_corrupted_matching_tied_sizes_still_fail_model_identity(self):
-        raw = rewrite(self.raw, "weight_inventory", update(bytes=128),
+        raw = rewrite(self.mut, "weight_inventory", update(bytes=128),
                       lambda r: r["tensor"] == "token_embd.weight")
         raw = rewrite(raw, "weight", update(bytes=128), lambda r: r["tensor"] == "token_embd.weight")
         self.reject(raw, "output role")
 
     def test_explicit_model_identity_conflict(self):
-        self.reject(rewrite(self.raw, "recording", update(model_sha256="wrong-model")), "output role")
+        self.reject(rewrite(self.mut, "recording", update(model_sha256="wrong-model")), "output role")
 
     def test_distinct_inventory_prevents_silent_tied_fallback(self):
-        raw = rewrite(self.raw, "weight_inventory", update(tensor="output.weight"),
+        raw = rewrite(self.mut, "weight_inventory", update(tensor="output.weight"),
                       lambda r: r["tensor"] == "output_norm.weight")
         self.reject(raw, "output role")
 
     def check_ambiguous_gpu_alias(self):
-        lines = self.raw.splitlines()
+        lines = self.mut.splitlines()
         row = json.loads(lines[3].split("I280 ", 1)[1])
         self.assertEqual(row["tensor"], "token_embd.weight")
         row["buffer"] = "ambiguous-copy"
@@ -135,17 +201,17 @@ class RealCaptureCompatibilityTests(unittest.TestCase):
         self.reject("\n".join(lines) + "\n", "output role")
 
     def test_wrong_bdf(self):
-        self.reject(rewrite(self.raw, "vk_graph_begin", update(bdf="0000:0b:00.0")), "BDF")
+        self.reject(rewrite(self.mut, "vk_graph_begin", update(bdf="0000:0b:00.0")), "BDF")
 
     def test_missing_upper_blocks(self):
-        self.reject(rewrite(self.raw, "weight_inventory", lambda r: None,
+        self.reject(rewrite(self.mut, "weight_inventory", lambda r: None,
                             lambda r: r["tensor"].startswith("blk.35.")), "inventory")
 
     def test_missing_kv(self):
-        self.reject(rewrite(self.raw, "kv_inventory", lambda r: None), "kv_cache")
+        self.reject(rewrite(self.mut, "kv_inventory", lambda r: None), "kv_cache")
 
     def test_missing_completed_compute(self):
-        self.reject(rewrite(self.raw, "complete", lambda r: None), "completed")
+        self.reject(rewrite(self.mut, "complete", lambda r: None), "completed")
 
 class LegacyAuthorityTransferRegressionTests(unittest.TestCase):
     """Round-2 trust-boundary regression (PR #286 review).

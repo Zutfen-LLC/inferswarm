@@ -109,14 +109,85 @@ SEMANTIC_HASHES = {
 }
 
 
-def legacy_sequence_witness(rows):
-    if sequence_projection(rows) != PROJECTION_SHA256:
-        return False
+class _LegacyCompatibilityAuthority:
+    """Single-use compatibility-only legacy sequence authority (PR #286 R2).
+
+    Instantiable ONLY inside this module, with the exact retained
+    historical R1 bytes authenticated byte-for-byte (RAW_SHA256 over the
+    decompressed custody archive). The authority is consumed exactly once,
+    by the collector replaying THOSE bytes under the compatibility gate;
+    it never applies to any other stream. Production admission never
+    constructs it: a different stream that merely shares the historical
+    request/batch/graph projection cannot borrow it.
+    """
+
+    __slots__ = ("_used",)
+
+    def __init__(self):
+        # Compatibility-gate arming only (check_compatibility). A boolean or
+        # string parameter elsewhere must never enable legacy inference.
+        if not _legacy_authority_arming:
+            raise TypeError(
+                "legacy sequence authority is compatibility-gate only; "
+                "production admission requires successor direct sequence metadata")
+        self._used = False
+
+    def sequence_known(self, raw):
+        if self._used or sha(raw.encode()) != RAW_SHA256:
+            return False
+        self._used = True
+        return True
+
+
+_legacy_authority_arming = False
+
+
+def arm_legacy_authority(raw):
+    """Compatibility-gate-only constructor (never called by the runner).
+
+    Binds the narrow legacy inference to the exact retained historical
+    capture: the decompressed bytes must equal the authenticated raw
+    custody stream byte-for-byte (RAW_SHA256). Any other stream — even
+    with an identical request/batch/graph projection — gets no legacy
+    sequence inference.
+    """
+    global _legacy_authority_arming
+    if sha(raw.encode()) != RAW_SHA256:
+        raise ValueError(
+            "legacy compatibility authority requires the exact retained "
+            "historical R1 capture bytes")
+    _legacy_authority_arming = True
+    try:
+        return _LegacyCompatibilityAuthority()
+    finally:
+        _legacy_authority_arming = False
+
+
+def legacy_sequence_witness():
+    """Historical R1 custody diagnostic (arity-0, projection-blind).
+
+    Reports whether the retained compatibility bundle authenticates. It
+    takes NO rows argument on purpose: the historical legacy inference is
+    a property of the exact retained bytes under the compatibility gate,
+    never of a caller-supplied stream. Not consulted by production
+    admission.
+    """
     try:
         authenticate()
         return True
     except (OSError, ValueError, KeyError, EOFError):
         return False
+
+
+
+def legacy_sequence_witness_rows(rows):
+    """Test-only projection probe: does ``rows`` carry the historical shape?
+
+    Exposed for adversarial mutation testing of the retained capture's
+    derived stream only; never consulted by production admission.
+    """
+    return sequence_projection(rows) == PROJECTION_SHA256
+
 
 
 def check_compatibility(bundle=BUNDLE):
@@ -129,7 +200,9 @@ def check_compatibility(bundle=BUNDLE):
         if not result["source_probe"]["ok"]:
             raise ValueError("compatibility successor CPU source probe failure")
         observer = load_script("issue280_observer")
-        result["replay"] = observer.validate_admission(raw, observer.physical_280_contracts()["A"])
+        result["replay"] = observer.validate_admission(
+            raw, observer.physical_280_contracts()["A"],
+            legacy_authority=arm_legacy_authority(raw))
         if not result["replay"]["ok"]:
             raise ValueError("compatibility collector failure: " + "; ".join(result["replay"]["problems"]))
         result["ok"] = True

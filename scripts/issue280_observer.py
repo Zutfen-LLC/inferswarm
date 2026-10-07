@@ -170,8 +170,19 @@ def parse(raw):
     return rows
 
 
-def collect(raw, contract):
-    """Replay bounded raw records through request, work, range and placement laws."""
+def collect(raw, contract, legacy_authority=None):
+    """Replay bounded raw records through request, work, range and placement laws.
+
+    ``legacy_authority`` is an internal compatibility-gate seam (PR #286
+    review round 2): a single-use authority object that may discharge the
+    sequence-exclusivity law ONLY for the exact retained historical R1
+    bytes it was armed against. It is deliberately NOT a boolean/string
+    flag: ordinary admission (validate_admission, the runner) passes
+    nothing and every physical stream must prove sequence identity with
+    the successor direct metadata (n_seqs_unq, seq_ids_unq,
+    n_seq_tokens). Test harnesses use it to exercise the retained
+    capture's substantive D2/D3 laws through the historical shape.
+    """
     result = {
         "schema": "issue280-cpu-replay/1", "ok": False, "problems": [],
         "claim": "CPU_RECORDING_REPLAY_ONLY", "physical_runner": "HELD_UNAVAILABLE",
@@ -277,7 +288,11 @@ def collect(raw, contract):
                                              ("architecture", output_role["architecture"])):
                 if field in rows[0] and rows[0][field] != expected_identity:
                     fail("output role: explicit model identity conflict")
-        legacy_sequence = physical and _compat.legacy_sequence_witness(rows)
+        if legacy_authority is not None and isinstance(legacy_authority, (bool, str, int, float, dict, list)):
+            fail("legacy sequence authority must be the compatibility-gate "
+                 "authority object, never an enable flag")
+        legacy_sequence = bool(legacy_authority is not None
+                               and legacy_authority.sequence_known(raw))
         result["sequence_evidence"] = ("AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE"
                                        if legacy_sequence else "DIRECT_UNIQUE_IDS")
         planned_row = rows[0].get("requests_planned", 1)
@@ -1716,7 +1731,7 @@ def collect(raw, contract):
     return result
 
 
-def validate_admission(raw, contract):
+def validate_admission(raw, contract, legacy_authority=None):
     """Structured PASS/FAIL observer admission verdict for the runner.
 
     Replays the retained raw request bytes through the collector's substantive
@@ -1724,8 +1739,13 @@ def validate_admission(raw, contract):
     returns ``{"ok": bool, "problems": [...], "claim": str}`` plus the pinned
     facts #280 admission needs. Pure CPU replay of retained bytes: never a
     physical execution and never an execution authorization.
+
+    ``legacy_authority`` is the compatibility-gate-only seam (see collect):
+    the exact retained historical R1 replay may pass the armed authority;
+    the runner and every ordinary caller omit it, so any stream lacking
+    the successor direct sequence metadata fails closed.
     """
-    result = collect(raw, contract)
+    result = collect(raw, contract, legacy_authority=legacy_authority)
     contract_dies = list(contract.get("dies", ()))
     verdict = {
         "schema": "issue280-observer-admission/1",
