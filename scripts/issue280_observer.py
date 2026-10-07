@@ -83,6 +83,17 @@ def physical_280_contracts():
     """
     dies = list(PHYSICAL_280_DIES)
     output_owner = {PHYSICAL_280_OUTPUT_TENSOR: dies[1]}
+    # Issue #284: admitted real-run evidence includes KV/mutable-state
+    # inventory/ownership where applicable. Frozen #280 authority: every
+    # participating die owns its declared layers/KV. This activates the
+    # collector's EXISTING per-die placement law (placement[die]["kv_bytes"]
+    # under contract["placement"]["required_categories"]) for the physical
+    # arms — the same single validator, not a second one. Review round 4:
+    # without this declaration a candidate carrying kv_inventory on die A
+    # only (event name still present) PASSED without proven die-B KV
+    # ownership. The CPU_FIXTURE contract declares no required categories
+    # and is unchanged.
+    kv_ownership = {"required_categories": ["kv_cache"]}
     return {
         "B": {
             "kind": "PHYSICAL_280",
@@ -93,6 +104,8 @@ def physical_280_contracts():
             # be admissibly owned by die B (named inventory binding or the
             # collector's exact existing evidence seam), never die A/CPU.
             "required_tensors": dict(output_owner),
+            # KV/mutable-state ownership on BOTH frozen candidate dies.
+            "placement": dict(kv_ownership),
             # The physical pinned producer emits only the actual logical
             # payload byte count per copy; per-token multiples are a fixture
             # shorthand. Boundary identity here is src/dst + occurrence +
@@ -108,6 +121,8 @@ def physical_280_contracts():
             # Full intended single-die offload: the output tensor is frozen
             # on die A for the baseline arm.
             "required_tensors": {PHYSICAL_280_OUTPUT_TENSOR: dies[0]},
+            # KV/mutable-state ownership on the sole baseline die.
+            "placement": dict(kv_ownership),
             "boundaries": [],
         },
     }

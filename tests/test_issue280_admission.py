@@ -46,18 +46,21 @@ def load_runner():
 def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
                  boundary_src="Vulkan0", boundary_dst="Vulkan1",
                  omit_boundary=False, single_die=False,
-                 output_bdf=None, omit_output=False, baseline_upper=35):
+                 output_bdf=None, omit_output=False, baseline_upper=35,
+                 kv_dies=None):
     """A mechanically valid candidate (or single-die baseline) raw stream.
 
     Mutations map exactly to the maintainer's false-positive channels:
     ``die_b_bdf`` (wrong BDF), ``drop_die_b_compute`` (missing real work on
-    one die), ``boundary_bytes``/``boundary_src``/``boundary_dst``/``omit_
+    one die), ``boundary_bytes``/``boundary_src``/``boundary_dst``/``omit_\
     boundary`` (invalid boundary proof), ``output_bdf``/``omit_output``
     (frozen output-tensor ownership, round 3), ``baseline_upper`` (silently
-    reduced baseline block placement, round 3). Defaults model the exact
-    frozen #280 arms: baseline = ALL blocks 0-35 plus the output tensor on
-    die A (full single-die block/output offload); candidate = blocks 0-18 on
-    die A, blocks 19-35 plus output on die B.
+    reduced baseline block placement, round 3), ``kv_dies`` (per-die
+    KV/mutable-state ownership, round 4 — which dies carry kv_inventory
+    rows; None keeps the valid default: every participating die). Defaults
+    model the exact frozen #280 arms: baseline = ALL blocks 0-35 plus the
+    output tensor on die A (full single-die block/output offload);
+    candidate = blocks 0-18 on die A, blocks 19-35 plus output on die B.
     """
     ts = [0]
 
@@ -87,9 +90,12 @@ def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
     if not omit_output:
         out.append(ev("weight_inventory", tensor="output.weight",
                       bdf=output_die, bytes=512, layer=-1, buffer="wout"))
-    out.append(ev("kv_inventory", tensor="blk.0.k", bdf=DIE_A, bytes=128,
-                  kind="k", layer=0, buffer="kva"))
-    if not single_die:
+    participating = [DIE_A] if single_die else [DIE_A, die_b_bdf]
+    kv_targets = set(participating) if kv_dies is None else set(kv_dies)
+    if DIE_A in kv_targets:
+        out.append(ev("kv_inventory", tensor="blk.0.k", bdf=DIE_A, bytes=128,
+                      kind="k", layer=0, buffer="kva"))
+    if not single_die and die_b_bdf in kv_targets:
         out.append(ev("kv_inventory", tensor="blk.19.k", bdf=die_b_bdf,
                       bytes=128, kind="k", layer=19, buffer="kvb"))
     out.append(ev("request_accept", request=1, ordinal=1))
@@ -460,6 +466,134 @@ class FrozenPlacementRunnerTests(AdmissionHarness):
         self.assertEqual(len(self.requests), 1, "request 2 must never launch")
         self.assertEqual(summary["requests"][0]["disposition"], "rejected")
         self.assertIn("observer admission failure", summary["stop_reason"])
+
+
+class KVOwnershipTests(unittest.TestCase):
+    """Round 4 (PR #285 maintainer finding): PHYSICAL_280 admission must
+    mechanically require per-die KV/mutable-state ownership on every
+    participating die (Issue #284: admitted real-run evidence includes
+    KV/mutable-state inventory/ownership where applicable).
+
+    The collector already carried the law — per-die ``kv_bytes`` placement
+    and the ``placement.required_categories`` fail-closed check — but
+    ``physical_280_contracts()`` never declared the category, so admission
+    never activated it. A candidate could carry ``kv_inventory`` on die A
+    only (event name still present) and PASS without proven candidate-die-B
+    KV ownership. The correction activates the existing single-validator
+    law in the frozen contracts; no second validator exists.
+    """
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location(
+            "issue280_observer_kv",
+            ROOT / "scripts" / "issue280_observer.py")
+        assert spec is not None and spec.loader is not None
+        self.observer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.observer)
+        self.contracts = self.observer.physical_280_contracts()
+
+    def test_contracts_declare_kv_ownership_requirement(self):
+        """Both frozen arms must require the kv_cache placement category on
+        every participating die through the existing required_categories
+        mechanism (no second validator)."""
+        for arm, dies in (("A", (DIE_A,)), ("B", (DIE_A, DIE_B))):
+            with self.subTest(arm=arm):
+                contract = self.contracts[arm]
+                self.assertEqual(
+                    contract["placement"]["required_categories"], ["kv_cache"])
+                self.assertEqual(contract["dies"], list(dies))
+
+    def test_candidate_kv_only_on_die_a_rejected(self):
+        """FP1: KV inventory bound to die A only; die B (blocks 19-35 plus
+        output) has zero declared KV ownership. Must fail closed."""
+        verdict = self.observer.validate_admission(
+            build_stream(kv_dies=[DIE_A]), self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+        self.assertTrue(any("kv_cache" in p for p in verdict["problems"]),
+                        verdict["problems"])
+
+    def test_candidate_kv_only_on_die_b_rejected(self):
+        verdict = self.observer.validate_admission(
+            build_stream(kv_dies=[DIE_B]), self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+        self.assertTrue(any("kv_cache" in p for p in verdict["problems"]),
+                        verdict["problems"])
+
+    def test_candidate_no_kv_rejected(self):
+        verdict = self.observer.validate_admission(
+            build_stream(kv_dies=[]), self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+        self.assertTrue(any("kv_cache" in p for p in verdict["problems"]),
+                        verdict["problems"])
+
+    def test_candidate_kv_on_both_dies_passes(self):
+        verdict = self.observer.validate_admission(
+            build_stream(kv_dies=[DIE_A, DIE_B]), self.contracts["B"])
+        self.assertTrue(verdict["ok"], verdict["problems"])
+        for die in (DIE_A, DIE_B):
+            self.assertGreater(verdict["per_die"][die]["kv_bytes"], 0)
+
+    def test_baseline_no_kv_rejected(self):
+        verdict = self.observer.validate_admission(
+            build_stream(single_die=True, kv_dies=[]), self.contracts["A"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+        self.assertTrue(any("kv_cache" in p for p in verdict["problems"]),
+                        verdict["problems"])
+
+    def test_baseline_kv_on_die_a_passes(self):
+        verdict = self.observer.validate_admission(
+            build_stream(single_die=True, kv_dies=[DIE_A]), self.contracts["A"])
+        self.assertTrue(verdict["ok"], verdict["problems"])
+        self.assertGreater(verdict["per_die"][DIE_A]["kv_bytes"], 0)
+
+    def test_event_name_presence_cannot_override_kv_ownership(self):
+        """The kv_inventory EVENT NAME present in observer_events metadata
+        must not substitute for die-B KV ownership: the stream with KV on
+        die A only still fails, and its name set contains kv_inventory."""
+        raw = build_stream(kv_dies=[DIE_A])
+        names = events_of(raw)
+        self.assertIn("kv_inventory", names)
+        verdict = self.observer.validate_admission(raw, self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_candidate_warm_unreachable_after_kv_admission_failure(self):
+        """Runner-level pin: a candidate-cold KV-ownership failure STOPs the
+        campaign before candidate warm executes."""
+        m = load_runner()
+        launches = []
+        requests = []
+
+        def launch(matrix_row):
+            launches.append(matrix_row)
+
+            def request(kind):
+                requests.append((matrix_row["label"], kind))
+                single = matrix_row["arm"] == "A"
+                raw = build_stream(single_die=single, kv_dies=[DIE_A])
+                record = {"launch": matrix_row["label"], "arm": matrix_row["arm"],
+                          "prompt": matrix_row["prompt"], "kind": kind,
+                          "text": GOOD_TEXT, "transport_ok": True}
+                state = {"observer_raw": raw, "observer_events": events_of(raw),
+                         "peak_rss_bytes": 1}
+                return record, state
+
+            return request
+
+        summary = m.run_campaign(m.MINIMAL_RERUN_MATRIX, launch)
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertEqual(
+            [r["disposition"] for r in summary["requests"]],
+            ["accepted", "accepted", "rejected", "not_attempted"])
+        self.assertNotIn(("R2", "warm"), requests)
+        self.assertIn("observer admission failure", summary["stop_reason"])
+        self.assertIn("kv_cache", summary["stop_reason"])
+
+    def test_cpu_fixture_contract_unchanged(self):
+        """CPU_FIXTURE semantics unchanged: the synthetic fixture contract
+        declares no required placement categories, so its behavior does not
+        change (round-4 law is keyed on contract-declared requirements)."""
+        contract = self.observer.fixture_contract()
+        self.assertNotIn("placement", contract)
 
 
 class DirectValidatorTests(unittest.TestCase):
