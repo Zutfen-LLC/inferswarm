@@ -38,12 +38,16 @@ STOP_REASONS = {"eos", "limit", "word", "abort", "none", "error"}
 
 # Frozen physical #280 identities (RUN-PLAN "Subject and source": the two
 # retained V340L / Vega10 dies on inferswarm05, historical bindings — never
-# re-enumerated here) and the frozen equal-cumulative layer split (blocks
-# 0-18 on A, 19-35 plus output on B). These are admission IDENTITIES for
-# replaying retained bytes, not a claim that any run occurred.
+# re-enumerated here) and the frozen arm placements. Baseline A = ONE die
+# with no split and FULL intended block/output offload (blocks 0-35 plus the
+# output tensor on A). Candidate B = the frozen equal-cumulative split:
+# blocks 0-18 on A, 19-35 plus output on B. These are admission IDENTITIES
+# for replaying retained bytes, not a claim that any run occurred.
 PHYSICAL_280_DIES = ("0000:07:00.0", "0000:0b:00.0")
 PHYSICAL_280_LAYERS = {"0000:07:00.0": list(range(0, 19)),
                        "0000:0b:00.0": list(range(19, 36))}
+PHYSICAL_280_BASELINE_LAYERS = list(range(0, 36))
+PHYSICAL_280_OUTPUT_TENSOR = "output.weight"
 
 
 def layer_of(row, field="layer"):
@@ -71,17 +75,24 @@ def physical_280_contracts():
     """Frozen physical #280 admission contracts for replaying retained bytes.
 
     Arm B (candidate): both retained V340L dies under the frozen 0-18 / 19-35
-    layer split. Arm A (baseline): die A only under the same split, no
-    boundary expectation. These freeze what the runner mechanically admits;
-    they assert nothing about executed runs and authorize no execution.
+    layer split, with the frozen output tensor required on die B. Arm A
+    (baseline): die A only under the FULL single-die placement — every model
+    block layer 0-35 on that die plus the frozen output tensor — no boundary
+    expectation. These freeze what the runner mechanically admits; they
+    assert nothing about executed runs and authorize no execution.
     """
     dies = list(PHYSICAL_280_DIES)
+    output_owner = {PHYSICAL_280_OUTPUT_TENSOR: dies[1]}
     return {
         "B": {
             "kind": "PHYSICAL_280",
             "arm": "B",
             "dies": dies,
             "layers": {d: list(PHYSICAL_280_LAYERS[d]) for d in dies},
+            # Frozen output-layer ownership: the required output tensor must
+            # be admissibly owned by die B (named inventory binding or the
+            # collector's exact existing evidence seam), never die A/CPU.
+            "required_tensors": dict(output_owner),
             # The physical pinned producer emits only the actual logical
             # payload byte count per copy; per-token multiples are a fixture
             # shorthand. Boundary identity here is src/dst + occurrence +
@@ -93,7 +104,10 @@ def physical_280_contracts():
             "kind": "PHYSICAL_280",
             "arm": "A",
             "dies": [dies[0]],
-            "layers": {dies[0]: list(PHYSICAL_280_LAYERS[dies[0]])},
+            "layers": {dies[0]: list(PHYSICAL_280_BASELINE_LAYERS)},
+            # Full intended single-die offload: the output tensor is frozen
+            # on die A for the baseline arm.
+            "required_tensors": {PHYSICAL_280_OUTPUT_TENSOR: dies[0]},
             "boundaries": [],
         },
     }
@@ -209,6 +223,11 @@ def collect(raw, contract):
                     or type(entry.get("occurrences", 1)) is not int
                     or entry.get("occurrences", 1) <= 0):
                 fail("invalid expected logical boundary contract")
+        required_tensors = contract.get("required_tensors", {})
+        if not isinstance(required_tensors, dict) or any(
+                not isinstance(tensor, str) or not tensor or owner not in dies
+                for tensor, owner in required_tensors.items()):
+            fail("invalid required tensor placement contract")
         request_contract = contract.get("requests", {})
         if not isinstance(request_contract, dict):
             fail("invalid requests contract")
@@ -1410,6 +1429,35 @@ def collect(raw, contract):
                 placement[resolved]["unexplained_bytes"] += size
                 placement[resolved]["buffers"].append({"kind": "unexplained", "bytes": size,
                                                         "note": row.get("note", "")})
+        # Frozen placement completeness (review round 3): every contract
+        # block layer and every required tensor must be represented by
+        # admissible NAMED weight inventory on exactly its contract die.
+        # Runs after deferred inventory resolution so backend-name-bound rows
+        # count. A missing element is a silent placement reduction; a required
+        # tensor owned by another die (or CPU, or an unbound alien backend —
+        # rejected above) is wrong frozen ownership. Both fail closed.
+        inventory_tensor_owners = {}
+        for die in dies:
+            for entry in placement[die]["buffers"]:
+                if entry.get("kind") == "weight_inventory":
+                    inventory_tensor_owners.setdefault(entry.get("tensor"), set()).add(die)
+        for tensor, owner in required_tensors.items():
+            if owner not in inventory_tensor_owners.get(tensor, ()):
+                add_problem(f"placement: required tensor {tensor} is not admissibly "
+                            f"owned by contract die {owner}")
+        for die in dies:
+            inventory_layers = set()
+            for entry in placement[die]["buffers"]:
+                if entry.get("kind") != "weight_inventory":
+                    continue
+                m = re.match(r"blk\.(\d+)\.", entry.get("tensor", ""))
+                if m:
+                    inventory_layers.add(int(m[1]))
+            missing_layers = sorted(set(layers[die]) - inventory_layers)
+            if missing_layers:
+                add_problem(f"placement: frozen block layers {missing_layers} on {die} "
+                            "are not represented by named weight inventory "
+                            "(silent placement reduction)")
         for die in dies:
             placement[die]["placement_numerator_bytes"] = placement[die]["weights_bytes"]
             placement[die]["cpu_bytes"] = 0  # cpu_state has process scope, not a BDF

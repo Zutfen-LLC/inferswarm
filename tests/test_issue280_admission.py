@@ -45,13 +45,19 @@ def load_runner():
 
 def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
                  boundary_src="Vulkan0", boundary_dst="Vulkan1",
-                 omit_boundary=False, single_die=False):
+                 omit_boundary=False, single_die=False,
+                 output_bdf=None, omit_output=False, baseline_upper=35):
     """A mechanically valid candidate (or single-die baseline) raw stream.
 
     Mutations map exactly to the maintainer's false-positive channels:
     ``die_b_bdf`` (wrong BDF), ``drop_die_b_compute`` (missing real work on
     one die), ``boundary_bytes``/``boundary_src``/``boundary_dst``/``omit_
-    boundary`` (invalid boundary proof). Everything else is law-conformant.
+    boundary`` (invalid boundary proof), ``output_bdf``/``omit_output``
+    (frozen output-tensor ownership, round 3), ``baseline_upper`` (silently
+    reduced baseline block placement, round 3). Defaults model the exact
+    frozen #280 arms: baseline = ALL blocks 0-35 plus the output tensor on
+    die A (full single-die block/output offload); candidate = blocks 0-18 on
+    die A, blocks 19-35 plus output on die B.
     """
     ts = [0]
 
@@ -62,7 +68,9 @@ def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
         return "I280 " + json.dumps(row)
 
     out = [ev("recording", kind="SOURCE_OBSERVER", source_pin=PIN, requests_planned=1)]
-    layers_a = range(0, 19)
+    layers_a = range(0, 36) if single_die else range(0, 19)
+    if single_die and baseline_upper != 35:
+        layers_a = range(0, baseline_upper + 1)
     layers_b = [] if single_die else range(19, 36)
     for n in layers_a:
         out.append(ev("weight_inventory", tensor=f"blk.{n}.ffn_gate.weight",
@@ -70,6 +78,15 @@ def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
     for n in layers_b:
         out.append(ev("weight_inventory", tensor=f"blk.{n}.ffn_gate.weight",
                       bdf=die_b_bdf, bytes=1024, layer=n, buffer=f"wb{n}"))
+    # Frozen output-layer ownership (RUN-PLAN: baseline = output on A;
+    # candidate = output on B). ``output_bdf`` re-binds it (e.g. to die A in
+    # a candidate stream, or an alien backend); ``omit_output`` drops it.
+    output_die = DIE_A if single_die else DIE_B
+    if output_bdf is not None:
+        output_die = output_bdf
+    if not omit_output:
+        out.append(ev("weight_inventory", tensor="output.weight",
+                      bdf=output_die, bytes=512, layer=-1, buffer="wout"))
     out.append(ev("kv_inventory", tensor="blk.0.k", bdf=DIE_A, bytes=128,
                   kind="k", layer=0, buffer="kva"))
     if not single_die:
@@ -336,6 +353,113 @@ class ValidTwoDieTests(AdmissionHarness):
         self.assertEqual(summary["terminal"], "STOP")
         self.assertNotIn(("R2", "warm"), requests)
         self.assertIn("no retained observer bytes", summary["stop_reason"])
+
+
+class FrozenPlacementTests(unittest.TestCase):
+    """Round 3 (PR #285 maintainer finding): the PHYSICAL_280 placement
+    contract must encode the FULL frozen arm placement, not a prefix.
+
+    Frozen #280 authority (RUN-PLAN "Subject and source"): Baseline A = one
+    V340L die, no split, FULL intended block/output offload (blocks 0-35 plus
+    the output tensor on die A). Candidate B = blocks 0-18 on die A, blocks
+    19-35 PLUS the output tensor on die B. A silently reduced baseline
+    (blocks 0-18 only) or a candidate without proven output ownership must
+    NOT pass observer admission.
+    """
+
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location(
+            "issue280_observer_placement",
+            ROOT / "scripts/issue280_observer.py")
+        assert spec is not None and spec.loader is not None
+        self.observer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.observer)
+        self.contracts = self.observer.physical_280_contracts()
+
+    def test_contract_encodes_full_frozen_placement(self):
+        """The contract itself must carry the frozen identities."""
+        a, b = self.contracts["A"], self.contracts["B"]
+        self.assertEqual(a["dies"], ["0000:07:00.0"])
+        self.assertEqual(a["layers"]["0000:07:00.0"], list(range(0, 36)))
+        self.assertEqual(a["required_tensors"], {"output.weight": "0000:07:00.0"})
+        self.assertEqual(b["dies"], ["0000:07:00.0", "0000:0b:00.0"])
+        self.assertEqual(b["layers"]["0000:07:00.0"], list(range(0, 19)))
+        self.assertEqual(b["layers"]["0000:0b:00.0"], list(range(19, 36)))
+        self.assertEqual(b["required_tensors"], {"output.weight": "0000:0b:00.0"})
+
+    def test_reduced_baseline_blocks_rejected(self):
+        """FP1: baseline carrying only blocks 0-k for any k < 35 is a silent
+        placement reduction and must be rejected."""
+        for upper in range(18, 35):
+            with self.subTest(upper=upper):
+                verdict = self.observer.validate_admission(
+                    build_stream(single_die=True, baseline_upper=upper),
+                    self.contracts["A"])
+                self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_baseline_missing_output_rejected(self):
+        verdict = self.observer.validate_admission(
+            build_stream(single_die=True, omit_output=True),
+            self.contracts["A"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_baseline_output_on_alien_backend_rejected(self):
+        for alien in ("0000:0c:00.0", "CPU"):
+            with self.subTest(alien=alien):
+                verdict = self.observer.validate_admission(
+                    build_stream(single_die=True, output_bdf=alien),
+                    self.contracts["A"])
+                self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_candidate_missing_output_rejected(self):
+        """FP2: blocks 0-35 present but no frozen output-layer ownership."""
+        raw = build_stream(omit_output=True)
+        self.assertEqual(
+            [n for n in load_runner().CANDIDATE_EVIDENCE if n not in events_of(raw)], [],
+            "old name-gate sees a complete name set")
+        verdict = self.observer.validate_admission(raw, self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_candidate_output_on_die_a_rejected(self):
+        verdict = self.observer.validate_admission(
+            build_stream(output_bdf=DIE_A), self.contracts["B"])
+        self.assertFalse(verdict["ok"], verdict["problems"])
+
+    def test_correct_baseline_full_placement_passes(self):
+        verdict = self.observer.validate_admission(
+            build_stream(single_die=True), self.contracts["A"])
+        self.assertTrue(verdict["ok"], verdict["problems"])
+        self.assertEqual(verdict["contract_dies"], ["0000:07:00.0"])
+
+    def test_correct_candidate_frozen_split_with_output_passes(self):
+        verdict = self.observer.validate_admission(
+            build_stream(), self.contracts["B"])
+        self.assertTrue(verdict["ok"], verdict["problems"])
+
+
+class FrozenPlacementRunnerTests(AdmissionHarness):
+    """Runner-level pin: a placement/admission failure cannot be followed by
+    candidate warm."""
+
+    def test_candidate_missing_output_stops_before_candidate_warm(self):
+        reduced = build_stream(omit_output=True)
+        raws = [build_stream(single_die=True), build_stream(single_die=True),
+                reduced, build_stream()]
+        summary = self.m.run_campaign(self.m.MINIMAL_RERUN_MATRIX, self.executor(raws))
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertEqual([r["disposition"] for r in summary["requests"]],
+                         ["accepted", "accepted", "rejected", "not_attempted"])
+        self.assertNotIn(("R2", "warm"), self.requests)
+        self.assertIn("observer admission failure", summary["stop_reason"])
+
+    def test_reduced_baseline_blocks_stop_the_campaign(self):
+        reduced = build_stream(single_die=True, baseline_upper=18)
+        raws = [reduced, build_stream(single_die=True), build_stream(), build_stream()]
+        summary = self.m.run_campaign(self.m.MINIMAL_RERUN_MATRIX, self.executor(raws))
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertEqual(len(self.requests), 1, "request 2 must never launch")
+        self.assertEqual(summary["requests"][0]["disposition"], "rejected")
+        self.assertIn("observer admission failure", summary["stop_reason"])
 
 
 class DirectValidatorTests(unittest.TestCase):
