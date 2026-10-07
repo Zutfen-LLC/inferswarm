@@ -133,3 +133,48 @@ checker, retention fix, source identities, aborted-slot consumption,
 No GPU/model execution occurred; the physical rerun remains separately
 authorized. Health/resource gating was NOT broadened (round-2 scope was the
 observer admission defect only).
+
+## Review round 3 (PR #285: PHYSICAL_280 placement contract incomplete)
+
+The round-2 placement contract admitted silently reduced placements.
+`physical_280_contracts()["A"]` assigned only blocks 0–18 to baseline die A,
+and no arm required the frozen output-layer ownership: a baseline stream
+carrying only blocks 0–18 (missing 19–35 and the output tensor) PASSED
+observer admission, and a candidate stream with blocks 0–35 but no proven
+output ownership also PASSED. Both false positives were reproduced RED at
+reviewed head `4de6581` before any production edit.
+
+Correction (additive, same single validator):
+
+- `physical_280_contracts()` now encodes the exact frozen #280 arm
+  placements from the run plan: **Baseline A** = die `0000:07:00.0` owning
+  ALL model block layers 0–35 plus the required output tensor (`output.
+  weight`) — the full intended single-die block/output offload, no split;
+  **Candidate B** = die `0000:07:00.0` owning blocks 0–18, die
+  `0000:0b:00.0` owning blocks 19–35 plus the required output tensor.
+- `collect()` (the same substantive law, not a second validator) now
+  requires every frozen block-layer ownership element and every
+  `required_tensors` element to be represented by admissible named weight
+  inventory on exactly its contract die, evaluated after deferred
+  backend-name resolution. Missing elements ("silent placement reduction")
+  and elements bound to the wrong contract die, CPU, or an alien backend all
+  fail closed. CPU_FIXTURE semantics are unchanged (the law is keyed on
+  contract-declared required placement; the synthetic fixture contract
+  declares none beyond its layers, which its two-die fixtures already
+  carry).
+- The synthetic fixtures model the real frozen placement: the baseline
+  fixture emits blocks 0–35 plus the output tensor on die A; the candidate
+  fixture emits 0–18 on A and 19–35 plus output on B. The contract was NOT
+  reduced to the old fixtures.
+- Adversarial additions: baseline missing any upper block (0–k, k < 35)
+  rejected; baseline output missing / on an alien backend (`0000:0c:00.0`,
+  `CPU`) rejected; candidate output missing / owned by die A rejected;
+  correct full baseline and complete candidate split (with candidate warm
+  still permitted) PASS; all round-2 wrong-BDF, request-mismatch,
+  missing-die-compute, wrong-boundary-src/dst, wrong-byte-law,
+  missing-boundary and no-retained-bytes cases remain fail-closed.
+
+Blocks 0–18 on die A alone is the CANDIDATE half-split, never the baseline
+placement; no statement to that effect remains in this correction's law or
+status text.
+
