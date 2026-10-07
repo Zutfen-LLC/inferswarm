@@ -200,9 +200,13 @@ def check_compatibility(bundle=BUNDLE):
         if not result["source_probe"]["ok"]:
             raise ValueError("compatibility successor CPU source probe failure")
         observer = load_script("issue280_observer")
+        # Arm through the observer's own compatibility module instance: the
+        # collector type-checks the authority against that exact instance's
+        # class, so an authority object forged in any other module (or a
+        # duck-typed fake) is never accepted.
         result["replay"] = observer.validate_admission(
             raw, observer.physical_280_contracts()["A"],
-            legacy_authority=arm_legacy_authority(raw))
+            legacy_authority=observer._compat.arm_legacy_authority(raw))
         if not result["replay"]["ok"]:
             raise ValueError("compatibility collector failure: " + "; ".join(result["replay"]["problems"]))
         result["ok"] = True

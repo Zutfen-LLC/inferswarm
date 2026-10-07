@@ -288,7 +288,8 @@ def collect(raw, contract, legacy_authority=None):
                                              ("architecture", output_role["architecture"])):
                 if field in rows[0] and rows[0][field] != expected_identity:
                     fail("output role: explicit model identity conflict")
-        if legacy_authority is not None and isinstance(legacy_authority, (bool, str, int, float, dict, list)):
+        if legacy_authority is not None and not isinstance(
+                legacy_authority, _compat._LegacyCompatibilityAuthority):
             fail("legacy sequence authority must be the compatibility-gate "
                  "authority object, never an enable flag")
         legacy_sequence = bool(legacy_authority is not None
