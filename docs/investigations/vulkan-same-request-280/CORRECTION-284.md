@@ -94,3 +94,42 @@ P2, the wrong `service` value). The rubric conflated formatting with content.
   Vulkan build identity remains NOT_BUILT until the separately authorized
   rerun rebuilds.
 - Retained historical evidence untouched byte-for-byte.
+
+## Review round 2 (PR #285 comment 6035951310, P1)
+
+The runner's mechanism admission was presence-only: `observer_events`
+name-subset membership decided candidate acceptance. A stream carrying every
+expected event name could still be causally or physically wrong (wrong BDF,
+request/graph mismatch, no per-die completed compute, invalid boundary
+attribution).
+
+Correction (additive, no second validator):
+
+- `scripts/issue280_observer.py` gains a `PHYSICAL_280` contract kind and
+  `physical_280_contracts()` (frozen two-die candidate / single-die baseline
+  identities from the run plan) plus `validate_admission()`, a structured
+  PASS/FAIL verdict wrapper over the SAME `collect()` substantive laws:
+  two distinct bound BDFs, request/graph correlation, declared layer/weight
+  ownership (R3-2 cross-check), completed nonempty compute on both dies,
+  boundary pre-execution manifest identity, shape/stride logical-byte law,
+  occurrence multiplicity, cross-die src/dst binding, and host-staging leg
+  reconciliation. CPU fixture behavior and tests are unchanged.
+- `scripts/issue280_runner.py` admission now consumes that verdict from the
+  retained raw request bytes (`observer_raw`); missing bytes fail closed.
+  Event-name presence is diagnostic metadata only. Candidate cold must PASS
+  observer admission before candidate warm executes; any failure is terminal
+  STOP with candidate warm `not_attempted`, no replacement, no rerun.
+- `tests/test_issue280_admission.py` (focused adversarial cases):
+  A presence-only false positive (wrong BDF; also request-identity mismatch),
+  B missing per-die completed compute, C invalid boundary proof (non-cross-die
+  src/dst, wrong logical bytes, absent boundary chain) — all STOP before
+  candidate warm — and D a valid two-die stream that passes and permits
+  candidate warm. `tests/test_issue280_runner.py` fixtures now drive real
+  retained-byte streams instead of name sets.
+
+No already-accepted surface was reopened: fail-fast ordering, semantic
+checker, retention fix, source identities, aborted-slot consumption,
+2-launch/4-request matrix, peak-RSS gate, and health handling are unchanged.
+No GPU/model execution occurred; the physical rerun remains separately
+authorized. Health/resource gating was NOT broadened (round-2 scope was the
+observer admission defect only).

@@ -164,7 +164,8 @@
     "test_issue280_source",
     "test_issue280_runner",
     "test_issue280_task_check",
-    "test_issue280_retention_fix"
+    "test_issue280_retention_fix",
+    "test_issue280_admission"
    ]
   },
   "repo-integrity": {
@@ -1776,6 +1777,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue278_integration.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue280_admission.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_issue280_observer.py": [

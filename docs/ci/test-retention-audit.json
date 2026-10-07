@@ -5791,6 +5791,17 @@
    "replacement": null,
    "test_count_at_audit": 6
   },
+  "test_issue280_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "lineage": "Issue #284 round 2 observer admission gate",
+   "invariant": "Runner admission consumes a structured PASS/FAIL observer verdict mechanically validated from retained raw request bytes under the frozen physical #280 contract (the collector's existing substantive laws, reused; no second validator). Candidate cold must PASS before candidate warm executes; event-name presence alone never admits; absent retained bytes fail closed; wrong BDF/request binding, missing per-die completed compute, and invalid boundary attribution all STOP before candidate warm.",
+   "rationale": "Pure CPU replay of synthetic retained-byte streams through the existing collector; no GPU, model, device, or network access."
+  },
   "test_issue280_runner": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 0.0,
