@@ -1,0 +1,96 @@
+# Issue #284 correction — runner STOP law, observer retention, semantic gate
+
+Parent: #280 (first completed physical campaign), #284 (this correction).
+Status: repository implementation + CPU-only validation. **No GPU/model
+execution is authorized or performed by this correction.** The prospective
+minimal physical rerun (2 launches / 4 requests maximum) requires separate
+maintainer authorization after this PR is reviewed and merged.
+
+## Mechanically established root causes
+
+All three were established from retained bytes (staged binaries, retained
+server logs, and the pinned public llama.cpp source at `b29c606e`), not from
+hypothesis.
+
+### 1. Runner STOP enforcement was acceptance-blind
+
+The recovered #280 runner (session-built `/tmp/i280-campaign.py`, never a
+repository artifact) recorded `OK` per request on HTTP completion only. It
+never evaluated the frozen task rubric or observer-evidence requirements
+between requests, so the campaign ran all 8 launches / 16 requests after the
+first baseline response already failed correctness.
+
+### 2. Observer retention: library-TU I280 events were dropped by log-level routing
+
+The staged binaries DO contain every hook (verified: event-name literals
+present in the `.o` files, split across MOV immediates; `weight_inventory`,
+`graph_begin`, `copy_manifest`, `kv_inventory` all compiled in). The hooks
+fired. Their output was silently discarded:
+
+- `common_init()` (common/common.cpp at the pin) installs
+  `common_log_default_callback` for BOTH llama and ggml logging
+  (`llama_log_set` forwards to `ggml_log_set`).
+- That callback maps library `INFO` → `LOG_LEVEL_TRACE` (4)
+  (common/log.cpp) and displays only when
+  `verbosity <= common_log_verbosity_thold`, default
+  `LOG_DEFAULT_LLAMA = LOG_LEVEL_INFO` (3). 4 ≤ 3 is false: dropped.
+- The five library producer TUs routed `I280_LOG` through
+  `LLAMA_LOG_INFO`/`GGML_LOG_INFO` → all their events were dropped.
+- The server TU used `LOG_INF`, which calls `common_log_add` directly at
+  INFO — bypassing the callback — so request/batch/sample/response survived.
+  This exactly matches the retained logs (only those six event types).
+
+Correction: library TUs now emit at log level NONE
+(`LLAMA_LOG`/`GGML_LOG`), which the pinned callback maps to
+`LOG_LEVEL_OUTPUT` (0) — always displayed. The server TU is unchanged.
+No hooks, synchronization, or semantics were altered; only the five
+`#define I280_LOG` sink lines changed.
+
+### 3. Task rubric was formatting-sensitive
+
+The frozen rubric demanded exact JSON-only output. The model returned correct
+semantic content wrapped in introductory prose and Markdown fences (and, for
+P2, the wrong `service` value). The rubric conflated formatting with content.
+
+## Corrections
+
+1. `scripts/issue280_runner.py` — pure gate engine over an injected executor.
+   Every frozen per-request acceptance/STOP condition is evaluated BEFORE any
+   subsequent launch/request: semantic task correctness, required observer
+   evidence (per arm), peak-RSS retention, available health/resource stop
+   inputs. Aborted/failed requests consume their slot; no automatic
+   replacement. The matrix is the minimal-rerun contract (R1 baseline A,
+   R2 candidate B; cold+warm each; 2 launches / 4 requests).
+2. `scripts/issue280_task_check.py` — frozen deterministic semantic checker:
+   exactly one three-field JSON object, exactly the frozen expected values
+   per prompt (P1 payments/high/resolved, P2 search/low/open); accepts
+   fences/prose; rejects wrong values (including P2 `service=search`),
+   missing/extra fields, multiple objects, non-string values. Tolerance was
+   frozen before any rerun; never tuned from candidate observations.
+3. `scripts/issue280_source.py` + `instrumentation/` — the five library-TU
+   `I280_LOG` sinks switched from filtered INFO to level-NONE logging.
+   Identities re-pinned (patch SHA256, per-TU transformed hashes, full
+   transformed Git tree) in `instrumentation/source-identity.json`.
+4. Early mechanism-admission gates (issue §4) are enforced by the runner:
+   the first baseline request must carry all baseline evidence or the run
+   STOPs; the first candidate request must additionally carry the boundary
+   transfer records or the remaining matrix is never launched.
+
+## CPU validation performed
+
+- New suites: `test_issue280_runner` (10 tests: immediate STOP after first
+  failing baseline; no subsequent launch/request; missing inventory/compute/
+  boundary rejection; peak-RSS fail-closed; health stop before next launch;
+  aborted-slot consumption; minimal matrix shape),
+  `test_issue280_task_check` (14 positive/negative/determinism fixtures,
+  including the two verbatim retained physical responses),
+  `test_issue280_retention_fix` (pins the corrected sink law AND proves the
+  dropped-INFO mechanism from the pinned source bytes).
+- Existing `test_issue280_observer` (503-line collector suite) and
+  `test_issue280_source` remain green on the corrected transform.
+- All six corrected TUs passed `-fsyntax-only` against the pinned source
+  (the Vulkan TU against the generated shader header on inferswarm01,
+  read-only; the server TU likewise). A syntax check is not a build:
+  Vulkan build identity remains NOT_BUILT until the separately authorized
+  rerun rebuilds.
+- Retained historical evidence untouched byte-for-byte.

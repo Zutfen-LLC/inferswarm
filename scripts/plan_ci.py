@@ -309,6 +309,11 @@ GROUP_TEST_MODULES = {
         "test_issue278_integration",
         "test_issue280_observer",
         "test_issue280_source",
+        # Issue #284 correction suite: synchronous STOP runner gates, frozen
+        # semantic task checker, and the library-log-level retention fix.
+        "test_issue280_runner",
+        "test_issue280_task_check",
+        "test_issue280_retention_fix",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -454,6 +459,11 @@ PATH_GROUPS = {
     "scripts/issue280_source.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_observer.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_source.py": ["r8i-qwen-qualification"],
+    "tests/test_issue280_runner.py": ["r8i-qwen-qualification"],
+    "tests/test_issue280_task_check.py": ["r8i-qwen-qualification"],
+    "tests/test_issue280_retention_fix.py": ["r8i-qwen-qualification"],
+    "scripts/issue280_runner.py": ["r8i-qwen-qualification"],
+    "scripts/issue280_task_check.py": ["r8i-qwen-qualification"],
     "docs/investigations/vulkan-same-request-280/": ["r8i-qwen-qualification"],
     "scripts/issue277_orchestrator.py": ["r8i-qwen-qualification"],
     "scripts/issue273_evidence.py": ["r8i-qwen-qualification"],

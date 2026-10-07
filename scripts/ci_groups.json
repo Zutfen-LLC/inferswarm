@@ -161,7 +161,10 @@
     "test_issue277_reference_first",
     "test_issue278_integration",
     "test_issue280_observer",
-    "test_issue280_source"
+    "test_issue280_source",
+    "test_issue280_runner",
+    "test_issue280_task_check",
+    "test_issue280_retention_fix"
    ]
   },
   "repo-integrity": {
@@ -1415,7 +1418,13 @@
   "scripts/issue280_observer.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue280_runner.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue280_source.py": [
+   "r8i-qwen-qualification"
+  ],
+  "scripts/issue280_task_check.py": [
    "r8i-qwen-qualification"
   ],
   "scripts/issue35_coarse_concurrent.py": [
@@ -1772,7 +1781,16 @@
   "tests/test_issue280_observer.py": [
    "r8i-qwen-qualification"
   ],
+  "tests/test_issue280_retention_fix.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue280_runner.py": [
+   "r8i-qwen-qualification"
+  ],
   "tests/test_issue280_source.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue280_task_check.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [
