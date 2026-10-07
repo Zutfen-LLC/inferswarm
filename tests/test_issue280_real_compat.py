@@ -276,6 +276,202 @@ class LegacyAuthorityTransferRegressionTests(unittest.TestCase):
         self.assertIn("sequence", summary["stop_reason"])
 
 
+class ExactTypeAuthorityBoundaryTests(unittest.TestCase):
+    """Round-3 trust-boundary regression (PR #286 review round 3).
+
+    Python ``isinstance`` accepts subclasses, and Python object fabrication
+    (subclassing, ``object.__new__``) makes constructor restrictions
+    defense-in-depth only. An adversarial subclass of the observer's own
+    ``_compat._LegacyCompatibilityAuthority`` that bypasses
+    ``_legacy_authority_arming`` in ``__init__`` and overrides
+    ``sequence_known`` to return True currently confers
+    AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE on the known
+    non-byte-identical same-projection attack stream (RED at reviewed head
+    1eda0811932d49f27f8b0ea0070febf830ce81ae).
+
+    The corrected invariant: no subclass or polymorphic object may supply
+    legacy sequence truth; the compatibility module non-virtually re-checks
+    sha256(raw) == RAW_SHA256 at consumption time; the exact authority class
+    (type identity, never isinstance) is required; single use is enforced;
+    production runner admission never supplies the capability.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        data = gzip.decompress((BUNDLE / "observer-R1-cold.i280.raw.gz").read_bytes())
+        assert hashlib.sha256(data).hexdigest() == CAPTURE_SHA256
+        cls.raw = data.decode()
+        cls.m = observer()
+        cls.contract = cls.m.physical_280_contracts()["A"]
+        cls.attack = cls._build_attack()
+
+    @classmethod
+    def _build_attack(cls):
+        """NOT byte-identical to the retained capture: exactly one legal,
+        otherwise collector-valid cpu_state row. Same historical projection;
+        still no successor direct sequence metadata."""
+        lines = cls.raw.splitlines()
+        first_accept = next(i for i, line in enumerate(lines) if '"request_accept"' in line)
+        ts = json.loads(lines[first_accept].split("I280 ", 1)[1])["ts_ns"]
+        row = {"schema": "issue280-raw/1", "event": "cpu_state", "ts_ns": ts,
+               "kind": "host_scratch", "bytes": 4096}
+        lines.insert(first_accept, "I280 " + json.dumps(row, separators=(",", ":")))
+        attack = "\n".join(lines) + "\n"
+        assert hashlib.sha256(attack.encode()).hexdigest() != CAPTURE_SHA256
+        return attack
+
+    def forged_subclass(self, calls):
+        """Adversarial subclass of the observer's OWN compatibility-module
+        authority class: __init__ bypasses _legacy_authority_arming;
+        sequence_known overrides to True and records every dispatch."""
+        base = self.m._compat._LegacyCompatibilityAuthority
+
+        class ForgedAuthority(base):
+            def __init__(self):
+                self._used = False  # bypasses the arming gate entirely
+
+            def sequence_known(self, raw):
+                calls.append(raw)
+                return True
+
+        return ForgedAuthority()
+
+    def test_same_module_adversarial_subclass_is_rejected(self):
+        # RED at reviewed head: the forged subclass currently admits the
+        # non-identical same-projection attack stream with full legacy
+        # sequence authority (ok=True, 457 completed compute commands).
+        calls = []
+        v = self.m.validate_admission(self.attack, self.contract,
+                                      legacy_authority=self.forged_subclass(calls))
+        self.assertFalse(v["ok"], v)
+        self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
+        self.assertNotEqual(v["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_subclass_sequence_known_override_is_never_dispatched(self):
+        # The collector must not invoke attacker-overridable
+        # legacy_authority.sequence_known(...): zero dispatches, and the
+        # override's True return value cannot confer authority even on the
+        # exact historical bytes presented through a subclass instance.
+        calls = []
+        v = self.m.validate_admission(self.attack, self.contract,
+                                      legacy_authority=self.forged_subclass(calls))
+        self.assertEqual(calls, [], "collector dispatched a caller-supplied method")
+        self.assertFalse(v["ok"], v)
+        calls2 = []
+        exact = self.m.validate_admission(self.raw, self.contract,
+                                          legacy_authority=self.forged_subclass(calls2))
+        self.assertFalse(exact["ok"], exact)
+        self.assertTrue(any("sequence" in p for p in exact["problems"]), exact["problems"])
+
+    def test_ordinary_duck_type_authority_is_rejected(self):
+        class Duck:
+            def sequence_known(self, raw):
+                return True
+        for raw in (self.attack, self.raw):
+            v = self.m.validate_admission(raw, self.contract, legacy_authority=Duck())
+            self.assertFalse(v["ok"], v)
+            self.assertNotEqual(v["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_foreign_compatibility_module_authority_is_rejected(self):
+        # A genuine authority armed inside a DIFFERENT compatibility-module
+        # instance (same file, separately loaded) is not the observer's own
+        # module instance: module-instance identity is part of the boundary.
+        spec = importlib.util.spec_from_file_location(
+            "i280_r3_foreign_compat", ROOT / "scripts/issue280_compatibility.py")
+        assert spec is not None and spec.loader is not None
+        foreign = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foreign)
+        foreign_auth = foreign.arm_legacy_authority(self.raw)
+        self.assertIsNot(type(foreign_auth), type(None))
+        for raw in (self.raw, self.attack):
+            v = self.m.validate_admission(raw, self.contract, legacy_authority=foreign_auth)
+            self.assertFalse(v["ok"], v)
+            self.assertNotEqual(v["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_fabricated_exact_class_instance_cannot_confer_authority_on_changed_bytes(self):
+        # object.__new__ fabrication with writable slot state: constructor
+        # restrictions are bypassed by construction, so correctness must not
+        # depend on them. Changed (non-identical) bytes get no authority.
+        fabricated = object.__new__(self.m._compat._LegacyCompatibilityAuthority)
+        fabricated._used = False
+        v = self.m.validate_admission(self.attack, self.contract, legacy_authority=fabricated)
+        self.assertFalse(v["ok"], v)
+        self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
+
+    def test_changed_same_projection_stream_fails_with_every_forged_authority(self):
+        calls = []
+        duck_calls = []
+        spec = importlib.util.spec_from_file_location(
+            "i280_r3_foreign_compat_sweep", ROOT / "scripts/issue280_compatibility.py")
+        assert spec is not None and spec.loader is not None
+        foreign = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foreign)
+        forgeries = [
+            self.forged_subclass(calls),
+            type("Duck", (), {"sequence_known": staticmethod(lambda raw: True)})(),
+            foreign.arm_legacy_authority(self.raw),
+            object.__new__(self.m._compat._LegacyCompatibilityAuthority),
+        ]
+        forgeries[-1]._used = False
+        for authority in forgeries:
+            with self.subTest(authority=type(authority).__name__):
+                v = self.m.validate_admission(self.attack, self.contract,
+                                              legacy_authority=authority)
+                self.assertFalse(v["ok"], v)
+                self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
+                self.assertNotEqual(v["sequence_evidence"],
+                                    "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_genuine_authority_with_exact_historical_bytes_passes_once(self):
+        # The sole intended compatibility path: the exact retained R1 bytes
+        # through the compatibility-gate authority, consumed once.
+        genuine = self.m._compat.arm_legacy_authority(self.raw)
+        v = self.m.validate_admission(self.raw, self.contract, legacy_authority=genuine)
+        self.assertTrue(v["ok"], v["problems"])
+        self.assertEqual(v["sequence_evidence"], "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+        self.assertEqual(v["graph_count"], 40)
+
+    def test_genuine_authority_second_consumption_fails(self):
+        genuine = self.m._compat.arm_legacy_authority(self.raw)
+        first = self.m.validate_admission(self.raw, self.contract, legacy_authority=genuine)
+        self.assertTrue(first["ok"], first["problems"])
+        second = self.m.validate_admission(self.raw, self.contract, legacy_authority=genuine)
+        self.assertFalse(second["ok"], second)
+        self.assertTrue(any("sequence" in p for p in second["problems"]), second["problems"])
+        self.assertNotEqual(second["sequence_evidence"],
+                            "AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE")
+
+    def test_genuine_authority_with_modified_bytes_fails(self):
+        genuine = self.m._compat.arm_legacy_authority(self.raw)
+        v = self.m.validate_admission(self.attack, self.contract, legacy_authority=genuine)
+        self.assertFalse(v["ok"], v)
+        self.assertTrue(any("sequence" in p for p in v["problems"]), v["problems"])
+
+    def test_production_runner_never_receives_legacy_authority(self):
+        # The ordinary production runner, given the old-instrumentation
+        # attack stream, STOPs after exactly one executed request, and the
+        # campaign output nowhere carries the legacy sequence evidence.
+        runner = load("runner")
+        good = '{"service":"payments","severity":"high","status":"resolved"}'
+        executed = []
+
+        def launch(row):
+            def request(kind):
+                executed.append((row["label"], kind))
+                return ({"launch": row["label"], "arm": row["arm"], "prompt": row["prompt"],
+                         "kind": kind, "text": good, "transport_ok": True, "health_stop": None},
+                        {"observer_raw": self.attack, "peak_rss_bytes": 1,
+                         "observer_events": set()})
+            return request
+
+        summary = runner.run_campaign(runner.MINIMAL_RERUN_MATRIX, launch)
+        self.assertEqual(len(executed), 1, "request 2 must never launch")
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertIn("observer admission failure", summary["stop_reason"])
+        self.assertIn("sequence", summary["stop_reason"])
+        self.assertNotIn("AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE", json.dumps(summary))
+
+
 class DirectSequenceAndRoleTests(unittest.TestCase):
     def setUp(self):
         self.m = observer()
