@@ -178,3 +178,46 @@ Blocks 0–18 on die A alone is the CANDIDATE half-split, never the baseline
 placement; no statement to that effect remains in this correction's law or
 status text.
 
+
+## Review round 4 (PR #285: KV/mutable-state ownership not mechanically required)
+
+Issue #284 requires admitted real-run evidence to include KV/mutable-state
+inventory/ownership where applicable, and frozen #280 authority requires each
+candidate die to own its declared layers/KV. The collector already supported
+this law — per-die `placement[die]["kv_bytes"]` under
+`contract["placement"]["required_categories"]` with the existing
+`required category kv_cache is not declared on every die` fail-closed check —
+but `physical_280_contracts()` declared no placement requirement, so
+PHYSICAL_280 admission never activated it.
+
+Reproduced RED at reviewed head `8365965` before any production edit:
+
+- a candidate B stream with valid full block/output placement, valid both-die
+  compute and boundary proof, but `kv_inventory` bound to die A only
+  (per-die KV bytes: A=128, B=0) PASSED with the `kv_inventory` event name
+  still present — no proven candidate-die-B KV ownership was required;
+- a candidate with no KV inventory at all PASSED;
+- a baseline A stream with no KV inventory also PASSED (pinned separately).
+
+Correction (additive, smallest, same single validator):
+
+- `physical_280_contracts()` now declares
+  `placement.required_categories = ["kv_cache"]` on both arms. This activates
+  the collector's existing per-die placement law for the physical contracts:
+  **Candidate B** requires nonzero admissible KV inventory on BOTH frozen
+  V340L dies; **Baseline A** requires it on its sole die.
+- No second validator was added; the declaration reuses the exact existing
+  `required_categories` mechanism (`collect()`, unchanged).
+- CPU_FIXTURE behavior is unchanged: the synthetic fixture contract declares
+  no required placement categories, exactly as before.
+
+Adversarial additions (`tests/test_issue280_admission.py::KVOwnershipTests`):
+candidate KV only on die A fails; only on die B fails; absent entirely fails;
+correct KV ownership on both candidate dies passes; baseline without KV
+fails; correct baseline KV on die A passes; `kv_inventory` event-name
+completeness cannot override missing per-die KV ownership (the name stays
+present while ownership is absent and the verdict still fails); candidate
+warm remains unreachable after a KV-admission failure (runner STOPs with
+`observer admission failure` naming `kv_cache`, candidate warm
+`not_attempted`). All round-2 and round-3 adversarial cases remain
+fail-closed and unchanged.
