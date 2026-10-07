@@ -2,3 +2,4 @@
 /instrumentation/applied-source.patch whitespace=-blank-at-eol
 /RED-real.txt whitespace=-blank-at-eol
 /RED-real-corrected-harness.txt whitespace=-blank-at-eol
+/advisory-corrections-RED.log whitespace=-blank-at-eol

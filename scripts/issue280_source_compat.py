@@ -10,7 +10,6 @@ import difflib
 import hashlib
 import importlib.util
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -123,8 +122,7 @@ int main() {
     probe({true,4,4,1,1,other});
 }
 '''
-        scratch = os.environ.get("TMPDIR", str(Path.home() / ".hermes/cache/scratch"))
-        with tempfile.TemporaryDirectory(prefix="i280-d1-probe-", dir=scratch) as td:
+        with tempfile.TemporaryDirectory(prefix="i280-d1-probe-") as td:
             td = Path(td)
             (td / "probe.cpp").write_text(includes + GRAPH_HOOK + main)
             subprocess.run(["c++", "-std=c++17", "-Werror", "-Wall", "-Wextra", "-I", str(old.HEADER.parent),

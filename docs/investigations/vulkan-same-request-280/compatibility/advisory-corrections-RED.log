@@ -1,0 +1,81 @@
+test_portable_probe_without_tmpdir_or_hermes_home (tests.test_issue280_source_compat.SuccessorSourceTests.test_portable_probe_without_tmpdir_or_hermes_home) ... FAIL
+test_malformed_deflate_is_structured_false_for_either_archive (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_is_structured_false_for_either_archive) ... 
+  test_malformed_deflate_is_structured_false_for_either_archive (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_is_structured_false_for_either_archive) (archive='observer-R1-cold.i280.raw.gz') ... ERROR
+  test_malformed_deflate_is_structured_false_for_either_archive (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_is_structured_false_for_either_archive) (archive='server-R1.log.gz') ... ERROR
+test_malformed_deflate_runner_stops_before_any_executor_call (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_runner_stops_before_any_executor_call) ... ERROR
+
+======================================================================
+ERROR: test_malformed_deflate_is_structured_false_for_either_archive (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_is_structured_false_for_either_archive) (archive='observer-R1-cold.i280.raw.gz')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 150, in test_malformed_deflate_is_structured_false_for_either_archive
+    result = m.check_compatibility(td)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 118, in check_compatibility
+    raw = authenticate(bundle, relationship=True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 50, in authenticate
+    raw = gzip.decompress((bundle / "observer-R1-cold.i280.raw.gz").read_bytes())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/gzip.py", line 649, in decompress
+    decompressed = do.decompress(data[fp.tell():])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+zlib.error: Error -3 while decompressing data: invalid block type
+
+======================================================================
+ERROR: test_malformed_deflate_is_structured_false_for_either_archive (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_is_structured_false_for_either_archive) (archive='server-R1.log.gz')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 150, in test_malformed_deflate_is_structured_false_for_either_archive
+    result = m.check_compatibility(td)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 118, in check_compatibility
+    raw = authenticate(bundle, relationship=True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 51, in authenticate
+    server = gzip.decompress((bundle / "server-R1.log.gz").read_bytes())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/gzip.py", line 649, in decompress
+    decompressed = do.decompress(data[fp.tell():])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+zlib.error: Error -3 while decompressing data: invalid block type
+
+======================================================================
+ERROR: test_malformed_deflate_runner_stops_before_any_executor_call (tests.test_issue280_source_compat.PermanentGateTests.test_malformed_deflate_runner_stops_before_any_executor_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 164, in test_malformed_deflate_runner_stops_before_any_executor_call
+    summary = runner.run_campaign(runner.MINIMAL_RERUN_MATRIX,
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_runner.py", line 142, in run_campaign
+    compatibility = _compatibility_gate()
+                    ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_runner.py", line 125, in _compatibility_gate
+    return _observer._compat.check_compatibility()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 162, in <lambda>
+    runner._observer._compat.check_compatibility = lambda: m.check_compatibility(td)
+                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 118, in check_compatibility
+    raw = authenticate(bundle, relationship=True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/scripts/issue280_compatibility.py", line 50, in authenticate
+    raw = gzip.decompress((bundle / "observer-R1-cold.i280.raw.gz").read_bytes())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/gzip.py", line 649, in decompress
+    decompressed = do.decompress(data[fp.tell():])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+zlib.error: Error -3 while decompressing data: invalid block type
+
+======================================================================
+FAIL: test_portable_probe_without_tmpdir_or_hermes_home (tests.test_issue280_source_compat.SuccessorSourceTests.test_portable_probe_without_tmpdir_or_hermes_home)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 79, in test_portable_probe_without_tmpdir_or_hermes_home
+    self.assertTrue(probe["ok"], probe)
+AssertionError: False is not true : {'ok': False, 'rows': [], 'physical_execution': 'NONE', 'problem': "[Errno 2] No such file or directory: '/home/zutfen/.hermes/cache/scratch/tmpehzepwwp/ordinary-home/.hermes/cache/scratch/i280-d1-probe-1176sxno'"}
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.415s
+
+FAILED (failures=1, errors=3)

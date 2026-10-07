@@ -63,6 +63,24 @@ class SuccessorSourceTests(unittest.TestCase):
         self.assertEqual(v["rows"][1]["seq_ids_unq"], [0, 1])
         self.assertEqual(v["rows"][2]["seq_ids_unq"], [7])
 
+    def test_portable_probe_without_tmpdir_or_hermes_home(self):
+        import os
+        from unittest.mock import patch
+        # Honor this test host's configured scratch root via tempfile's standard
+        # cache while independently simulating an ordinary non-Hermes HOME.
+        portable_root = tempfile.gettempdir()
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td) / "ordinary-home"
+            home.mkdir()
+            with patch.dict(os.environ, {"HOME": str(home)}), \
+                    patch.object(tempfile, "tempdir", portable_root):
+                os.environ.pop("TMPDIR", None)
+                probe = self.successor().cpu_probe()
+                self.assertTrue(probe["ok"], probe)
+                gate = load("issue280_compatibility").check_compatibility()
+                self.assertTrue(gate["ok"], gate)
+            self.assertFalse((home / ".hermes").exists())
+
     def test_unpinned_transform_rejected(self):
         m = self.successor()
         with self.assertRaisesRegex(ValueError, "pinned source identity"):
@@ -118,6 +136,39 @@ class PermanentGateTests(unittest.TestCase):
             p = td / "observer-R1-cold.i280.raw.gz"
             p.write_bytes(gzip.compress(b"drift", mtime=0))
             self.assertFalse(m.check_compatibility(td)["ok"])
+
+    def test_malformed_deflate_is_structured_false_for_either_archive(self):
+        m = self.gate()
+        bad = bytes.fromhex("1f8b0800000000000003070000000000000000")
+        for name in ("observer-R1-cold.i280.raw.gz", "server-R1.log.gz"):
+            with self.subTest(archive=name), tempfile.TemporaryDirectory() as td:
+                td = Path(td)
+                for p in BUNDLE.iterdir():
+                    if p.is_file():
+                        (td / p.name).write_bytes(p.read_bytes())
+                (td / name).write_bytes(bad)
+                result = m.check_compatibility(td)
+                self.assertFalse(result["ok"])
+                self.assertIn("compatibility gzip custody", result["problems"][0])
+                self.assertIn(name, result["problems"][0])
+
+    def test_malformed_deflate_runner_stops_before_any_executor_call(self):
+        m = self.gate()
+        runner = load("issue280_runner")
+        bad = bytes.fromhex("1f8b0800000000000003070000000000000000")
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            (td / "observer-R1-cold.i280.raw.gz").write_bytes(bad)
+            runner._observer._compat.check_compatibility = lambda: m.check_compatibility(td)
+            calls = []
+            summary = runner.run_campaign(runner.MINIMAL_RERUN_MATRIX,
+                                          lambda row: calls.append(row))
+            self.assertEqual(calls, [])
+            self.assertEqual(summary["terminal"], "STOP")
+            self.assertEqual(len(summary["requests"]), 4)
+            self.assertEqual([r["disposition"] for r in summary["requests"]],
+                             ["not_attempted"] * 4)
+            self.assertIn("compatibility", summary["stop_reason"])
 
     def test_model_or_producer_drift_fail_without_cached_result(self):
         m = self.gate()

@@ -11,6 +11,7 @@ import gzip
 import hashlib
 import importlib.util
 import json
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,11 +45,18 @@ def sequence_projection(rows):
     return sha(json.dumps(projection, sort_keys=True, separators=(",", ":")).encode())
 
 
+def _read_gzip(path):
+    try:
+        return gzip.decompress(path.read_bytes())
+    except zlib.error as exc:
+        raise ValueError("compatibility gzip custody: " + path.name + ": " + str(exc)) from exc
+
+
 def authenticate(bundle=BUNDLE, relationship=False):
     """Re-read actual bytes on every call; never cache custody on mutable files."""
     bundle = Path(bundle)
-    raw = gzip.decompress((bundle / "observer-R1-cold.i280.raw.gz").read_bytes())
-    server = gzip.decompress((bundle / "server-R1.log.gz").read_bytes())
+    raw = _read_gzip(bundle / "observer-R1-cold.i280.raw.gz")
+    server = _read_gzip(bundle / "server-R1.log.gz")
     terminal = (bundle / "TERMINAL.json").read_bytes()
     for name, data, expected in (("raw", raw, RAW_SHA256), ("server", server, SERVER_SHA256),
                                  ("terminal", terminal, TERMINAL_SHA256),

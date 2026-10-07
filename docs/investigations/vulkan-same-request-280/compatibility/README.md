@@ -186,7 +186,16 @@ SHA-bound pinned source archive instead; hosted CI needs no local llama.cpp clon
 A RED-first ninth source-compatibility test checks the bundle-local deterministic
 manifest emitter. Together with the original handback this extends focused
 coverage from 173 to 174 tests; prior RED/GREEN logs remain unmodified historical
-verification receipts.
+verification receipts. The advisory review then reproduced two additional
+failures: an agent-specific temporary-directory fallback, and uncaught malformed
+DEFLATE in either retained gzip archive. Three RED-first regressions cover the
+portable no-TMPDIR/non-Hermes-HOME gate, both compressed-custody seams, and the
+runner's STOP/not_attempted/zero-executor response. The probe now uses standard
+`TemporaryDirectory` selection (honoring TMPDIR); invalid DEFLATE is translated
+at the custody boundary into structured rejection. Source-compatibility coverage
+is now 12 tests and total focused coverage is 177. The original advisory NO-GO
+and exact RED/GREEN correction logs are retained as historical review receipts;
+these fixes do not alter producer overlay identities or grant execution authority.
 
 After bundle, collector and test bytes are final, from the repository root run:
 
