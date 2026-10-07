@@ -11,9 +11,14 @@ any GPU/model execution:
 - all frozen per-request acceptance/STOP conditions are evaluated BEFORE any
   subsequent launch or request (synchronous STOP enforcement);
 - task-correctness failure stops immediately;
-- required observer evidence missing for an admitted request stops immediately;
-- candidate requests additionally require boundary/transfer evidence
-  (mechanism-admission gate) before any further candidate work;
+- every admitted request requires a PASS observer-admission verdict derived
+  mechanically from its retained raw observer bytes under the frozen physical
+  #280 contract (the existing collector's substantive laws, reused — no
+  second validator). Event-name presence alone is diagnostic metadata and
+  never admits a request;
+- candidate requests additionally require completed cross-die boundary /
+  transfer evidence under the two-die frozen contract before any further
+  candidate work;
 - health/resource STOP inputs available at request completion are evaluated
   before the next launch;
 - an aborted/failed request consumes its budget slot — no automatic
@@ -69,7 +74,49 @@ CANDIDATE_EVIDENCE = BASELINE_EVIDENCE + (
 )
 
 
+def _load_observer():
+    path = Path(__file__).resolve().parent / "issue280_observer.py"
+    spec = importlib.util.spec_from_file_location("issue280_observer", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_observer = _load_observer()
+
+# Frozen physical #280 admission contracts (two retained V340L dies / frozen
+# layer split for the candidate arm; single-die baseline arm), consumed by the
+# structured observer validator. Replay of retained bytes only.
+OBSERVER_CONTRACTS = _observer.physical_280_contracts()
+
+
+def _observer_verdict(arm, state):
+    """Mechanically validate retained observer bytes for a request.
+
+    ``state`` must carry the raw retained observer bytes for the request
+    (``observer_raw``) under the frozen contract for its arm. Returns the
+    structured verdict from the collector's substantive laws. When no raw
+    bytes were retained the verdict fails closed (problems name the gap).
+    """
+    raw = state.get("observer_raw")
+    contract = OBSERVER_CONTRACTS["B" if arm == "B" else "A"]
+    if raw is None:
+        return {
+            "schema": "issue280-observer-admission/1", "ok": False,
+            "problems": ["no retained observer bytes for the request"],
+            "claim": "FAIL_CLOSED_NO_BYTES", "contract_kind": contract["kind"],
+            "contract_dies": list(contract["dies"]), "per_die": {},
+            "graph_count": 0, "logical_boundary_bytes": 0, "host_leg_bytes": 0,
+            "physical_execution": "NONE",
+        }
+    return _observer.validate_admission(raw, contract)
+
+
 def _missing_evidence(row, events):
+    """Diagnostic only (issue #284 round 2): event-name presence is metadata,
+    never admission authority. Kept to surface WHICH expected names are absent
+    in failure diagnostics."""
     required = CANDIDATE_EVIDENCE if row["arm"] == "B" else BASELINE_EVIDENCE
     return [name for name in required if name not in events]
 
@@ -79,8 +126,9 @@ def run_campaign(matrix, launch):
     performs ONE request of a given kind ("cold"/"warm") and returns
     ``(record, launch_state)`` where record has keys label/arm/prompt/kind/
     text/transport_ok (and optional health_stop) and launch_state carries
-    ``observer_events`` (set of event names retained for the request) and
-    ``peak_rss_bytes``.
+    ``observer_raw`` (the raw retained observer bytes for the request) and
+    ``peak_rss_bytes``. ``observer_events`` is optional diagnostic metadata
+    only and never determines acceptance.
 
     Returns a summary dict; never raises on request outcomes (fail-closed
     instead). Pure with respect to the executor: all STOP decisions are made
@@ -105,11 +153,21 @@ def run_campaign(matrix, launch):
             entry["disposition"] = "rejected"
             entry["reason"] = f"task correctness failure: {reason}"
             return entry, "stop"
-        # observer evidence fail-closed
-        missing = _missing_evidence(row, state.get("observer_events", ()))
-        if missing:
+        # observer admission: mechanically validated retained bytes under the
+        # frozen physical #280 contract (issue #284 round 2). Event-name
+        # presence is diagnostic metadata only and never admits a request.
+        verdict = _observer_verdict(row["arm"], state)
+        entry["observer_verdict"] = {
+            "ok": verdict["ok"], "problems": verdict["problems"],
+            "contract_kind": verdict["contract_kind"],
+        }
+        if not verdict["ok"]:
             entry["disposition"] = "rejected"
-            entry["reason"] = f"required compute evidence missing: {missing}"
+            missing = _missing_evidence(row, state.get("observer_events", ()))
+            detail = "; ".join(verdict["problems"][:5]) or "observer validation failed"
+            if missing:
+                detail += f" (diagnostic missing names: {missing})"
+            entry["reason"] = f"observer admission failure: {detail}"
             return entry, "stop"
         # peak RSS retention fail-closed
         if state.get("peak_rss_bytes") is None:

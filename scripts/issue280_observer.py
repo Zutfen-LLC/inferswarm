@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""Issue #280 bounded, CPU-only raw-log collector. Physical runner is HELD.
+"""Issue #280 bounded, CPU-only raw-log collector + admission validator.
 
 The collector replays request-scoped source/fixture rows. It does not make a
 physical-performance or acceptance claim: logical payload bytes are not PCIe
 wire bytes, and nested host legs are reconciled as bytes, not elapsed time.
+
+Physical EXECUTION remains held. Issue #284 review round 2: candidate
+admission in the runner needed the substantive laws of this collector applied
+to retained raw request bytes under the frozen physical #280 contract. The
+``PHYSICAL_280`` contract kind admits exactly that replay through the same
+laws (no second validator); ``validate_admission`` returns the structured
+verdict the runner consumes. Replaying retained bytes is not physical
+execution and grants no execution authority.
 """
 from __future__ import annotations
 
@@ -28,6 +36,15 @@ BDF = re.compile(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-1][0-9a-f]\.[0-7]\Z")
 TYPE_BYTES = {"f32": 4, "f16": 2, "bf16": 2, "i32": 4, "i16": 2, "i8": 1}
 STOP_REASONS = {"eos", "limit", "word", "abort", "none", "error"}
 
+# Frozen physical #280 identities (RUN-PLAN "Subject and source": the two
+# retained V340L / Vega10 dies on inferswarm05, historical bindings — never
+# re-enumerated here) and the frozen equal-cumulative layer split (blocks
+# 0-18 on A, 19-35 plus output on B). These are admission IDENTITIES for
+# replaying retained bytes, not a claim that any run occurred.
+PHYSICAL_280_DIES = ("0000:07:00.0", "0000:0b:00.0")
+PHYSICAL_280_LAYERS = {"0000:07:00.0": list(range(0, 19)),
+                       "0000:0b:00.0": list(range(19, 36))}
+
 
 def layer_of(row, field="layer"):
     """Inventory layer identity: >=0 = layer index, -1 = none (emitted by the
@@ -47,6 +64,38 @@ def fixture_contract():
         "layers": {"0000:01:00.0": [0], "0000:02:00.0": [1]},
         "boundaries": [{"tensor": "ffn_out-0", "src": "0000:01:00.0",
                         "dst": "0000:02:00.0", "bytes_per_token": 16}],
+    }
+
+
+def physical_280_contracts():
+    """Frozen physical #280 admission contracts for replaying retained bytes.
+
+    Arm B (candidate): both retained V340L dies under the frozen 0-18 / 19-35
+    layer split. Arm A (baseline): die A only under the same split, no
+    boundary expectation. These freeze what the runner mechanically admits;
+    they assert nothing about executed runs and authorize no execution.
+    """
+    dies = list(PHYSICAL_280_DIES)
+    return {
+        "B": {
+            "kind": "PHYSICAL_280",
+            "arm": "B",
+            "dies": dies,
+            "layers": {d: list(PHYSICAL_280_LAYERS[d]) for d in dies},
+            # The physical pinned producer emits only the actual logical
+            # payload byte count per copy; per-token multiples are a fixture
+            # shorthand. Boundary identity here is src/dst + occurrence +
+            # exact logical bytes + staging reconciliation, all still enforced
+            # by the same laws below.
+            "boundaries": [],
+        },
+        "A": {
+            "kind": "PHYSICAL_280",
+            "arm": "A",
+            "dies": [dies[0]],
+            "layers": {dies[0]: list(PHYSICAL_280_LAYERS[dies[0]])},
+            "boundaries": [],
+        },
     }
 
 
@@ -123,7 +172,12 @@ def collect(raw, contract):
         return value
 
     try:
-        if contract.get("kind") != "CPU_FIXTURE":
+        physical = contract.get("kind") == "PHYSICAL_280"
+        if physical:
+            result["schema"] = "issue280-physical-admission/1"
+            result["claim"] = ("RETAINED_BYTE_REPLAY_UNDER_FROZEN_CONTRACT_"
+                               "NOT_PHYSICAL_EXECUTION_EVIDENCE")
+        if contract.get("kind") not in {"CPU_FIXTURE", "PHYSICAL_280"}:
             fail("physical replay/runner unavailable; only CPU_FIXTURE contract admitted")
         dies = contract.get("dies")
         # Legacy single-die fixture contracts predate the arm field; their explicit
@@ -144,7 +198,7 @@ def collect(raw, contract):
                        for d in dies)):
             fail("contract requires named layer placement on every die")
         expected = contract.get("boundaries", [])
-        if not isinstance(expected, list) or (arm == "B" and not expected):
+        if not isinstance(expected, list) or (arm == "B" and not physical and not expected):
             fail("invalid expected logical boundary contract")
         for entry in expected:
             if (not isinstance(entry, dict) or not isinstance(entry.get("tensor"), str)
@@ -283,7 +337,33 @@ def collect(raw, contract):
         def validate_graph(graph, request_record):
             rid = request_record["request"]
             per_expected = [0] * len(expected)
+            if physical:
+                # PHYSICAL_280: no per-token boundary shorthand is declared.
+                # Identity is proven by the same laws differently: every
+                # boundary must have a pre-execution manifest in this graph
+                # (enforced at boundary_begin), logical bytes must satisfy
+                # the manifest shape/stride law (enforced at copy_manifest),
+                # occurrence identities are unique and fully consumed
+                # (enforced at graph_end), and completed boundaries must be
+                # cross-die with exactly reconciled host staging legs.
+                for boundary in graph["boundaries"]:
+                    source = backends.get(rid, {}).get(boundary["src"])
+                    destination = backends.get(rid, {}).get(boundary["dst"])
+                    boundary["src_bdf"], boundary["dst_bdf"] = source, destination
+                    if source is None or destination is None:
+                        add_problem(f"graph {graph['index']}: boundary endpoint backend never bound to a die")
+                    elif source == destination:
+                        add_problem(f"graph {graph['index']}: boundary is not cross-die")
+                    if boundary["legs"] != [
+                        {"direction": "device_to_host", "bytes": boundary["bytes"]},
+                        {"direction": "host_to_device", "bytes": boundary["bytes"]},
+                    ]:
+                        add_problem(f"graph {graph['index']}: host staging legs do not reconcile")
+                if arm == "B" and not graph["boundaries"]:
+                    add_problem(f"graph {graph['index']}: candidate graph has no completed cross-die boundary")
             for boundary in graph["boundaries"]:
+                if physical:
+                    break  # matched above by the physical identity law
                 match_index = expected_for_boundary(boundary, graph, per_expected)
                 if match_index is None:
                     continue
@@ -1440,6 +1520,46 @@ def collect(raw, contract):
         result["ok"] = not problems and not any(
             req.get("disposition") == "aborted" for req in result.get("requests", []))
     return result
+
+
+def validate_admission(raw, contract):
+    """Structured PASS/FAIL observer admission verdict for the runner.
+
+    Replays the retained raw request bytes through the collector's substantive
+    laws under the given frozen contract (CPU fixture or PHYSICAL_280) and
+    returns ``{"ok": bool, "problems": [...], "claim": str}`` plus the pinned
+    facts #280 admission needs. Pure CPU replay of retained bytes: never a
+    physical execution and never an execution authorization.
+    """
+    result = collect(raw, contract)
+    contract_dies = list(contract.get("dies", ()))
+    verdict = {
+        "schema": "issue280-observer-admission/1",
+        "ok": bool(result["ok"]),
+        "problems": list(result["problems"]),
+        "claim": result["claim"],
+        "contract_kind": contract.get("kind"),
+        "contract_dies": contract_dies,
+        "graph_count": len(result.get("graphs", [])),
+        "logical_boundary_bytes": result.get("logical_boundary_bytes", 0),
+        "host_leg_bytes": result.get("host_leg_bytes", 0),
+        "physical_execution": "NONE",
+    }
+    # Pin the mechanical facts admission relied on, per die.
+    placement = result.get("placement", {}).get("dies", {})
+    per_die = {}
+    for die in contract_dies:
+        row = placement.get(die, {})
+        completed = sum(
+            len(graph.get("completed_compute", {}).get(die, ()))
+            for graph in result.get("graphs", []))
+        per_die[die] = {
+            "weights_bytes": row.get("weights_bytes", 0),
+            "kv_bytes": row.get("kv_bytes", 0),
+            "completed_compute_commands": completed,
+        }
+    verdict["per_die"] = per_die
+    return verdict
 
 
 def main():
