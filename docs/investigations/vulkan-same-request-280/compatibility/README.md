@@ -52,16 +52,20 @@ is essential: unified KV instead permits LLAMA_MAX_SEQ. This is corroborated
 local artifact custody plus pinned initialization-path semantics, not an
 independent attestation of the historical runtime executable.
 
-The witness is bound to SHA-256 of the **canonical complete original
-request_accept, batch_begin and graph_begin row projection** (all original
-fields, including schema, timestamps, request IDs, sequences, graph IDs,
-token IDs/positions and layout). Only newly added direct graph metadata fields
-are excluded from that projection, and they are independently validated when
-present. Arbitrary requests/tokens/timestamps cannot reuse a contract constant.
-This deliberately lets inventory/compute/KV mutations traverse the same
-validator and fail at D2/D3 rather than being masked by a whole-mutated-raw
-hash refusal. Unrelated old-shaped streams without direct metadata fail closed.
-Explicit terminal sequence conflicts are also rejected.
+The witness is bound to the **exact retained bytes**: the legacy inference is
+granted only by the compatibility module's single-use authority, which is
+accepted exclusively at consumption time through non-virtual re-validation
+(exact authority-class type identity, an in-module SHA-256 equality check of
+the supplied stream against the retained capture, single-use slot — PR #286
+round 3). A stream that merely shares the historical request/batch/graph
+projection is NOT byte-identical and obtains nothing: subclasses, duck types,
+foreign-module instances, fabricated `object.__new__` instances and any
+non-identical stream all fail closed. This deliberately lets
+inventory/compute/KV mutations traverse the same validator and fail at D2/D3
+rather than being masked by a whole-mutated-raw hash refusal (the projection
+digest remains a test-only probe, never an admission input). Unrelated
+old-shaped streams without direct metadata fail closed. Explicit terminal
+sequence conflicts are also rejected.
 
 ## D2: exact host vocabulary and byte accounting
 
@@ -217,7 +221,7 @@ It is a CPU-only custody tool, not a campaign executor or authorization grant.
 | Historical failure | accepted observer on full raw is RED | exact graph sequence/request mismatch |
 | Corrected real replay | 40 graphs, 457 completed compute commands | no problems |
 | D1 simple layout | 31 sequence sets, one unique ID | multi-ID/wrong-ID/layout mismatch: sequence |
-| D1 arbitrary legacy stream | only exact bound row projection can use witness | changed token/sequence/timestamp/unrelated stream: sequence or ordering |
+| D1 arbitrary legacy stream | only the exact retained bytes through the compatibility module's non-virtual single-use authority | changed token/sequence/timestamp/unrelated stream: sequence or ordering |
 | D1 explicit attribution | accepted/batch/graph/end seq consistent | wrong request: cross-request; wrong end seq: sequence |
 | D2 host names | all three literal names, preserved backend, host-only denominator | lookalikes/unknown: placement; conflicting fields: conflicting |
 | D2 null allocation | no host/GPU credit | unassigned: UNKNOWN ownership |
@@ -264,17 +268,19 @@ python3 -m unittest discover -s tests -p 'test_issue280_*.py' -v
 |---|---:|
 | test_issue280_admission | 31 |
 | test_issue280_observer | 57 |
-| test_issue280_real_compat | 30 |
+| test_issue280_real_compat | 43 |
 | test_issue280_retention_fix | 5 |
 | test_issue280_runner | 10 |
 | test_issue280_source | 18 |
-| test_issue280_source_compat | 8 |
+| test_issue280_source_compat | 12 |
 | test_issue280_task_check | 14 |
-| **Total** | **173** |
+| **Total** | **190** |
 
-Final result: `Ran 173 tests in 197.858s`, `OK`. No skips/failures/errors. This
-was every Issue280 module, not the full canonical CPU suite. The parent owns
-canonical/hosted gates and finalization.
+Final result (PR #286 round 3): `Ran 190 tests`, `OK`. No skips/failures/errors.
+This was every Issue280 module, not the full canonical CPU suite. The parent
+owns canonical/hosted gates and finalization. (Round-1 closing receipt was 173
+tests in 197.858s; rounds 2-3 added the authority-boundary and exact-type
+regressions retained below.)
 
 Reproduction commands (offline, CPU-only):
 
@@ -292,6 +298,50 @@ Exact structured corrected replay is retained in `GREEN-replay.json`: baseline
 A / 40 graphs; weights 1923946496 bytes; KV 150994944 bytes; completed commands
 457; logical boundary and host-leg bytes 0; tied output operand token_embd.weight
 255252480 bytes on die A; physical_execution NONE; ok true; problems empty.
+
+## Round-3 exact-type authority boundary (PR #286)
+
+The round-2 authority boundary used `isinstance`, which Python subclasses
+satisfy, and consumption dispatched virtually through
+`authority.sequence_known(raw)`. A same-module adversarial subclass
+overriding `__init__` (bypassing `_legacy_authority_arming`) and
+`sequence_known` to return True therefore conferred
+AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE on the known non-byte-identical
+same-projection attack stream (reproduced RED at reviewed head 1eda081:
+ok=true, 40 graphs, 457 completed compute commands). The corrected invariant
+is mechanical, not a claim about object fabrication:
+
+- The authority object carries no authority of its own; `sequence_known()`
+  is removed. Authority exists only while the compatibility module's
+  `consume_legacy_authority(authority, raw)` re-derives every fact
+  non-virtually inside that module: exact class identity
+  (`type(x) is _LegacyCompatibilityAuthority`, never isinstance — an
+  override-bearing subclass is a different type), an independent SHA-256
+  equality check of the supplied bytes against the retained capture
+  (RAW_SHA256), and an unspent single-use slot spent on the sole success
+  path.
+- The collector performs no authority type check and never dispatches
+  caller-supplied methods; it forwards both the object and the raw bytes
+  to its own `_compat` instance and fails closed on False.
+- Constructor arming remains defense-in-depth only: correctness does not
+  depend on `_legacy_authority_arming` being inaccessible or on instances
+  being unfabricable — `object.__new__` fabrication is refused at
+  consumption, not construction.
+- Production `run_campaign()` admission never constructs or forwards the
+  authority; the exact historical R1 replay through `check_compatibility()`
+  remains the sole intended compatibility path, and direct successor
+  metadata admission is unchanged.
+
+Ten focused regressions pin the boundary (same-module adversarial subclass;
+no virtual dispatch of `sequence_known`; duck type; foreign
+compatibility-module instance; fabricated exact-class instance on changed
+bytes; the changed same-projection stream under every forged/fabricated
+authority; genuine authority + exact bytes once; second consumption;
+genuine authority + modified bytes; production runner STOP with no legacy
+evidence in campaign output). No overclaim of unforgability is made
+anywhere: Python object fabrication always allows constructing the exact
+class; the invariant is the non-virtual consumption-time revalidation
+itself.
 
 ## Ownership handback / remaining limits
 
