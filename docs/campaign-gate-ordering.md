@@ -110,6 +110,59 @@ Invariants:
    Any resulting mutation creates a new final head and legitimately
    re-triggers final validation.
 
+## Authorized execution continuity
+
+The review/handoff gates above establish authority; they are not a requirement
+to repeatedly ask for permission while an already authorized bounded campaign
+is running.
+
+After a maintainer authorizes a physical/research campaign, the default is
+**continue within the frozen envelope until the campaign reaches its terminal
+result or a material anomaly occurs**. A new agent session, wall-clock delay,
+pre-inference pause, or missing fresh human acknowledgement does not expire that
+authority unless the authorization itself contains an explicit expiry.
+
+Preflight after authorization has one purpose: detect material drift or a
+condition that the frozen stop rules say makes execution unsafe or invalid.
+It should mechanically check the facts that can actually change and matter,
+such as exact subject identity, topology, runtime/model/artifact hashes,
+resource headroom, temperatures, and relevant health/fault state.
+
+The following are not independent approval gates when already established by
+the authorized campaign and no contrary evidence exists:
+
+- unchanged cooling/airflow arrangement;
+- unchanged cabling, card placement, or host placement;
+- already staged and hash-verified artifacts;
+- already frozen prompts, thresholds, run order, or budgets;
+- facts carried from the immediately preceding attempt when that attempt
+  stopped before consuming them and retained evidence still verifies them.
+
+Human escalation is required only when a **newly observed material anomaly**
+cannot be resolved by the existing frozen rules, or when proceeding would
+expand authority. Examples include:
+
+- material subject/runtime/model/topology drift;
+- health, thermal, integrity, attribution, or safety evidence outside the
+  approved envelope;
+- a required hardware/configuration modification;
+- spending, purchase, destructive/irreversible action, or scope expansion;
+- a methodology/implementation defect requiring a changed experiment; or
+- genuinely conflicting or ambiguous authority.
+
+A campaign-specific plan must not add boilerplate "fresh maintainer/operator
+confirmation" requirements for unchanged facts. If a human observation is
+truly necessary because a concrete anomaly cannot be measured adequately by
+the available instrumentation, state the anomaly and the decision it blocks.
+Maintainer silence is never itself an anomaly.
+
+An early STOP does not create a new campaign by default. If zero or only a
+prefix of the authorized execution was consumed, the retained inputs still
+verify, and the sole blocker is resolved without changing the experiment,
+resume the same frozen campaign with its remaining budget. Do not rebuild,
+re-freeze, re-review, or repeat completed preparation merely to recreate
+ceremony.
+
 ## Review authority (Issue #224)
 
 ### Default required review
