@@ -5798,7 +5798,9 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "Issue #284 corrected campaign gate engine evaluates every frozen per-request acceptance/STOP condition synchronously before any subsequent launch: semantic task correctness, per-arm required observer evidence, peak-RSS retention, available health inputs; aborted slots are consumed with no automatic replacement; the matrix is the minimal 2-launch/4-request rerun contract. Fail-closed gate law, no physical execution."
+   "lineage": "Issue #284 corrected campaign runner gates",
+   "invariant": "Issue #284 corrected campaign gate engine evaluates every frozen per-request acceptance/STOP condition synchronously before any subsequent launch: semantic task correctness, per-arm required observer evidence, peak-RSS retention, available health inputs; aborted slots are consumed with no automatic replacement; the matrix is the minimal 2-launch/4-request rerun contract. Fail-closed gate law, no physical execution.",
+   "rationale": "Pure gate engine over an injected executor; no GPU, model, device, or network access. CPU-only unit tests drive fake executors through the STOP laws."
   },
   "test_issue280_task_check": {
    "baseline_group": "r8i-qwen-qualification",
@@ -5807,7 +5809,9 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "Issue #284 frozen deterministic semantic task checker: exactly one three-field JSON object with exactly the frozen expected values per prompt; accepts Markdown fences and brief introductory prose; rejects wrong values (including P2 service=search), missing/extra fields, multiple objects, non-string values. Tolerance frozen before any rerun."
+   "lineage": "Issue #284 frozen semantic task checker",
+   "invariant": "Issue #284 frozen deterministic semantic task checker: exactly one three-field JSON object with exactly the frozen expected values per prompt; accepts Markdown fences and brief introductory prose; rejects wrong values (including P2 service=search), missing/extra fields, multiple objects, non-string values. Tolerance frozen before any rerun.",
+   "rationale": "Pure string/JSON checker with frozen fixtures including two verbatim retained physical responses used as diagnostic observations only. No runtime or device access."
   },
   "test_issue280_retention_fix": {
    "baseline_group": "r8i-qwen-qualification",
@@ -5816,7 +5820,9 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "r8i-qwen-qualification",
-   "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines."
+   "lineage": "Issue #284 observer retention correction law",
+   "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
+   "rationale": "Reads the pinned public llama.cpp source bytes and the transform module; compiles nothing. Host-local pinned-source assertions skip when the pin is absent."
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",
