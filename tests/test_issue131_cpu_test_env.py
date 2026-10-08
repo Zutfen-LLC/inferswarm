@@ -905,5 +905,199 @@ class EnvironmentPurityTests(unittest.TestCase):
         self.assertEqual(findings, [], [str(f) for f in findings])
 
 
+# ---------------------------------------------------------------------------
+# Issue #292 — dependency-cache trust contract.
+#
+# Hosted validation does NOT cache dependencies today (see
+# docs/investigations/issue292-ci-dependency-cache.md: the measurable saving
+# is ~3 s of a ~22 s bootstrap and ~0.3% of the Final CPU Validation critical
+# path).  These controls make any FUTURE enablement prove, offline and
+# mechanically, that the cache is only an untrusted download hint: keyed on
+# the complete requirement closure, never holding the venv or validation
+# outputs, and never able to bypass the canonical bootstrap and doctor.
+# ---------------------------------------------------------------------------
+
+FINAL_WORKFLOW = ROOT / ".github" / "workflows" / "final-cpu-validation.yml"
+NESTED_FROZEN_REQUIREMENTS = (
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/"
+    "arm-c-retry/frozen-tokenizer/requirements.txt")
+
+# Paths whose caching would turn a performance hint into validation state.
+FORBIDDEN_CACHE_PATH_MARKERS = (".venv", "tests", "/tmp", "receipt", "suite-result")
+
+
+def requirement_closure(root_file: Path, repo: Path) -> set[str]:
+    """Repo-relative POSIX paths of a requirements file and every ``-r``
+    file it reaches (pip semantics: a nested path is relative to the file
+    that includes it).  Cycle-safe."""
+    closure: set[str] = set()
+    pending = [root_file.resolve()]
+    while pending:
+        current = pending.pop()
+        relative = current.relative_to(repo.resolve()).as_posix()
+        if relative in closure:
+            continue
+        closure.add(relative)
+        for raw in current.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"\s*(?:-r|--requirement)[\s=]+(\S+)", raw)
+            if match:
+                pending.append((current.parent / match.group(1)).resolve())
+    return closure
+
+
+def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
+    """Findings for a parsed workflow's dependency-cache usage.
+
+    Rules: ``setup-python`` caching must be ``pip`` and enumerate EVERY
+    closure file literally in ``cache-dependency-path`` (the default glob
+    would hash only ``**/requirements.txt`` and miss
+    ``requirements-test.txt``); ``actions/cache`` must not store the venv,
+    tests, or validation outputs; the bootstrap and doctor steps must stay
+    unconditional in every job that uses either."""
+    findings: list[str] = []
+    for job_name, job in (workflow.get("jobs") or {}).items():
+        steps = job.get("steps") or []
+        uses_cache = False
+        for step in steps:
+            uses = str(step.get("uses", ""))
+            options = step.get("with") or {}
+            if uses.startswith("actions/setup-python@") and options.get("cache"):
+                uses_cache = True
+                if options["cache"] != "pip":
+                    findings.append(
+                        f"{job_name}: setup-python cache must be 'pip', got "
+                        f"{options['cache']!r}")
+                listed = {line.strip() for line in str(
+                    options.get("cache-dependency-path", "")).splitlines()
+                    if line.strip()}
+                missing = sorted(closure - listed)
+                if missing:
+                    findings.append(
+                        f"{job_name}: cache-dependency-path does not list the "
+                        "full requirement closure: " + ", ".join(missing))
+            if uses.startswith("actions/cache"):
+                uses_cache = True
+                for line in str(options.get("path", "")).splitlines():
+                    if any(marker in line for marker in FORBIDDEN_CACHE_PATH_MARKERS) \
+                            or line.strip() in {".", "./", "~"}:
+                        findings.append(
+                            f"{job_name}: actions/cache path {line.strip()!r} "
+                            "would cache environment/validation state")
+        if uses_cache:
+            for needle in ("scripts/bootstrap_test_env.py",
+                           "scripts/check_test_env.py"):
+                guarded = [s for s in steps
+                           if needle in str(s.get("run", ""))]
+                if not guarded:
+                    findings.append(f"{job_name}: missing canonical {needle}")
+                for step in guarded:
+                    if "if" in step:
+                        findings.append(
+                            f"{job_name}: {needle} step is conditional; it "
+                            "must run on every cache state")
+    return findings
+
+
+class DependencyCacheContractTests(unittest.TestCase):
+    """Issue #292 — a dependency cache is an untrusted performance hint."""
+
+    @classmethod
+    def setUpClass(cls):
+        import yaml
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+        cls.workflows = {
+            path.name: yaml.safe_load(path.read_text(encoding="utf-8"))
+            for path in (CI_WORKFLOW, FINAL_WORKFLOW)}
+
+    def test_closure_is_root_plus_nested_frozen_requirements(self):
+        self.assertEqual(
+            self.closure, {"requirements-test.txt", NESTED_FROZEN_REQUIREMENTS})
+
+    def test_real_workflows_satisfy_the_cache_policy(self):
+        for name, workflow in self.workflows.items():
+            self.assertEqual(
+                cache_policy_findings(workflow, self.closure), [], name)
+
+    def test_real_workflows_keep_bootstrap_and_doctor_unconditional(self):
+        for name, workflow in self.workflows.items():
+            for job_name, job in workflow["jobs"].items():
+                runs = [str(s.get("run", "")) for s in job.get("steps", [])]
+                if not any("bootstrap_test_env.py" in r for r in runs):
+                    continue  # not an environment-bearing job
+                self.assertTrue(any("check_test_env.py" in r for r in runs),
+                                f"{name}:{job_name} bootstraps without the doctor")
+                for step in job["steps"]:
+                    run = str(step.get("run", ""))
+                    if "bootstrap_test_env.py" in run or "check_test_env.py" in run:
+                        self.assertNotIn(
+                            "if", step, f"{name}:{job_name}: conditional env step")
+
+    def _workflow_with(self, **setup_python_with):
+        return {"jobs": {"j": {"steps": [
+            {"uses": "actions/setup-python@x",
+             "with": {"python-version": "3.12", **setup_python_with}},
+            {"run": "python3 scripts/bootstrap_test_env.py"},
+            {"run": ".venv/bin/python scripts/check_test_env.py"}]}}}
+
+    def test_negative_control_default_dependency_path_is_rejected(self):
+        # setup-python's default glob (**/requirements.txt) would miss the
+        # root requirements-test.txt: stale-cache reuse on a root change.
+        findings = cache_policy_findings(
+            self._workflow_with(cache="pip"), self.closure)
+        self.assertTrue(any("full requirement closure" in f for f in findings),
+                        findings)
+
+    def test_negative_control_root_only_dependency_path_is_rejected(self):
+        findings = cache_policy_findings(self._workflow_with(
+            cache="pip", **{"cache-dependency-path": "requirements-test.txt"}),
+            self.closure)
+        self.assertTrue(any(NESTED_FROZEN_REQUIREMENTS in f for f in findings),
+                        findings)
+
+    def test_full_closure_dependency_path_is_accepted(self):
+        listed = "\n".join(sorted(self.closure))
+        self.assertEqual(cache_policy_findings(self._workflow_with(
+            cache="pip", **{"cache-dependency-path": listed}), self.closure), [])
+
+    def test_negative_control_unlisted_transitive_requirements_file(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            write(repo / "root.txt", "pkg-a\n-r sub/mid.txt\n")
+            write(repo / "sub" / "mid.txt", "pkg-b\n-r ../deep/leaf.txt\n")
+            write(repo / "deep" / "leaf.txt", "pkg-c==1\n")
+            closure = requirement_closure(repo / "root.txt", repo)
+            self.assertEqual(
+                closure, {"root.txt", "sub/mid.txt", "deep/leaf.txt"})
+            findings = cache_policy_findings(self._workflow_with(
+                cache="pip", **{"cache-dependency-path": "root.txt\nsub/mid.txt"}),
+                closure)
+            self.assertTrue(any("deep/leaf.txt" in f for f in findings), findings)
+
+    def test_negative_control_caching_the_venv_or_outputs_is_rejected(self):
+        for path in (".venv", "~/work/inferswarm/.venv", "tests/__pycache__",
+                     "/tmp/final-validation-receipt.json", "."):
+            workflow = {"jobs": {"j": {"steps": [
+                {"uses": "actions/cache@x", "with": {"path": path, "key": "k"}},
+                {"run": "python3 scripts/bootstrap_test_env.py"},
+                {"run": ".venv/bin/python scripts/check_test_env.py"}]}}}
+            self.assertTrue(
+                any("environment/validation state" in f
+                    for f in cache_policy_findings(workflow, self.closure)),
+                path)
+
+    def test_negative_control_conditional_bootstrap_or_doctor_is_rejected(self):
+        workflow = self._workflow_with(
+            cache="pip",
+            **{"cache-dependency-path": "\n".join(sorted(self.closure))})
+        workflow["jobs"]["j"]["steps"][1]["if"] = (
+            "steps.setup.outputs.cache-hit != 'true'")
+        findings = cache_policy_findings(workflow, self.closure)
+        self.assertTrue(any("conditional" in f for f in findings), findings)
+        workflow["jobs"]["j"]["steps"][1].pop("if")
+        workflow["jobs"]["j"]["steps"].pop()  # drop the doctor step
+        findings = cache_policy_findings(workflow, self.closure)
+        self.assertTrue(any("check_test_env.py" in f for f in findings), findings)
+
+
 if __name__ == "__main__":
     unittest.main()
