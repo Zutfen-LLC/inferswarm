@@ -1051,32 +1051,100 @@ def environment_job_findings(job_name: str, job: dict) -> list[str]:
 
 
 def _literal_repo_path_findings(where: str, entry: str) -> list[str]:
-    if "${{" in entry or entry.startswith(("/", "~", "$")) or ".." in entry \
+    # '!' negates a pattern in hashFiles/cache-dependency-path, which could
+    # cancel a closure file that is otherwise listed literally.
+    if "${{" in entry or entry.startswith(("/", "~", "$", "!")) or ".." in entry \
             .split("/") or GLOB_CHARS & set(entry):
         return [f"{where}: {entry!r} is not a literal repo-relative path"]
     return []
 
 
+_EXPR_RE = re.compile(r"\$\{\{(.*?)\}\}", re.DOTALL)
+_PYTHON_REF_RE = re.compile(
+    r"steps\.([A-Za-z0-9_-]+)\.outputs\.python-version")
+_HASH_ARGS_RE = re.compile(r"\s*'[^']*'(?:\s*,\s*'[^']*')*\s*")
+
+
+def parse_cache_key(key: str) -> tuple[list[tuple], list[str]]:
+    """Split a cache key into literal text and REAL ``${{ }}`` expressions.
+
+    Only four reviewed expression shapes are understood, each matched as the
+    WHOLE expression (never as a substring, so words inside static text,
+    string literals, ``format()`` or operator-combined expressions confer
+    nothing): ``runner.os``, ``runner.arch``,
+    ``steps.<id>.outputs.python-version`` and ``hashFiles('<literal>', ...)``.
+    Anything else -- including an unbalanced ``${{`` / ``}}`` in the text --
+    is reported as a problem.  Returns ``(segments, problems)`` where a
+    segment is ``("text", s)``, ``("os",)``, ``("arch",)``,
+    ``("python", step_id)`` or ``("hash", [literal, ...])``."""
+    segments: list[tuple] = []
+    problems: list[str] = []
+    position = 0
+    for match in _EXPR_RE.finditer(key):
+        text = key[position:match.start()]
+        if "${{" in text or "}}" in text:
+            problems.append("unbalanced expression delimiter in key text")
+        segments.append(("text", text))
+        expression = match.group(1).strip()
+        python_ref = _PYTHON_REF_RE.fullmatch(expression)
+        hash_call = re.fullmatch(r"hashFiles\((.*)\)", expression, re.DOTALL)
+        if expression == "runner.os":
+            segments.append(("os",))
+        elif expression == "runner.arch":
+            segments.append(("arch",))
+        elif python_ref:
+            segments.append(("python", python_ref.group(1)))
+        elif hash_call and _HASH_ARGS_RE.fullmatch(hash_call.group(1)):
+            segments.append(("hash", re.findall(r"'([^']*)'", hash_call.group(1))))
+        else:
+            problems.append(f"unsupported key expression {expression!r}")
+        position = match.end()
+    tail = key[position:]
+    if "${{" in tail or "}}" in tail:
+        problems.append("unbalanced expression delimiter in key text")
+    segments.append(("text", tail))
+    return segments, problems
+
+
 def _cache_key_findings(where: str, key: str, closure: set[str],
-                        steps: list[dict]) -> list[str]:
-    """The key must invalidate on OS, architecture, exact Python version and
-    every requirement-closure file (literal ``hashFiles`` arguments)."""
-    findings = []
-    for needle, label in (("runner.os", "runner OS"),
-                          ("runner.arch", "runner architecture")):
-        if needle not in key:
-            findings.append(f"{where}: cache key lacks the {label}")
-    match = re.search(r"steps\.([A-Za-z0-9_-]+)\.outputs\.python-version", key)
-    declared = {s.get("id") for s in steps
-                if str(s.get("uses", "")).startswith("actions/setup-python@")}
-    if not match or match.group(1) not in declared:
+                        steps: list[dict], index: int) -> list[str]:
+    """The key must be built from REAL evaluated expressions that invalidate
+    on runner OS, architecture, exact Python version (from a setup-python
+    step that runs BEFORE this cache step) and every closure file."""
+    segments, problems = parse_cache_key(key)
+    findings = [f"{where}: {problem}" for problem in problems]
+    kinds = [segment[0] for segment in segments]
+    for kind, label in (("os", "runner OS"), ("arch", "runner architecture")):
+        if kind not in kinds:
+            findings.append(
+                f"{where}: cache key has no evaluated ${{{{ runner.{kind} }}}} "
+                f"expression for the {label}")
+    references = [segment[1] for segment in segments if segment[0] == "python"]
+    if not references:
         findings.append(
-            f"{where}: cache key lacks the exact Python version of a "
-            "setup-python step in this job")
-    hashed = {lit for args in re.findall(r"hashFiles\(([^)]*)\)", key)
-              for lit in re.findall(r"['\"]([^'\"]+)['\"]", args)}
-    for entry in sorted(hashed):
-        findings += _literal_repo_path_findings(where + " hashFiles", entry)
+            f"{where}: cache key has no evaluated "
+            "steps.<id>.outputs.python-version expression")
+    for step_id in references:
+        # The referenced step must ALWAYS run and must not soft-fail: a
+        # skipped step yields an empty output and a static key.
+        earlier = [s for s in steps[:index]
+                   if s.get("id") == step_id and str(
+                       s.get("uses", "")).startswith("actions/setup-python@")
+                   and "if" not in s
+                   and not ("continue-on-error" in s
+                            and _truthy(s["continue-on-error"]))]
+        if not earlier:
+            findings.append(
+                f"{where}: python-version reference {step_id!r} is not an "
+                "unconditional actions/setup-python step that runs before "
+                "this cache step")
+    hashed: set[str] = set()
+    for segment in segments:
+        if segment[0] == "hash":
+            for entry in segment[1]:
+                hashed.add(entry)
+                findings += _literal_repo_path_findings(
+                    where + " hashFiles", entry)
     missing = sorted(closure - hashed)
     if missing:
         findings.append(
@@ -1120,12 +1188,22 @@ def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
         env_findings(job_name, job.get("env"))
         defaults_findings(job_name, job.get("defaults"))
         for step in steps:
+            roles = step_roles(step)
             for line in _script_lines(step.get("run", "")):
-                if "GITHUB_ENV" in line:
+                if "GITHUB_ENV" in line or "::set-env" in line:
                     findings.append(
                         f"{job_name}: step writes GITHUB_ENV, which can "
                         "redirect later canonical commands")
-        for step in steps:
+                if "GITHUB_PATH" in line or "::add-path" in line:
+                    # Only the reviewed canonical .venv export, inside the
+                    # provably canonical bootstrap step, may touch PATH.
+                    if not (line == CANONICAL_PATH_EXPORT_LINE
+                            and "bootstrap" in roles):
+                        findings.append(
+                            f"{job_name}: step writes GITHUB_PATH outside "
+                            "the canonical bootstrap export, which can "
+                            "redirect later canonical commands")
+        for index, step in enumerate(steps):
             env_findings(job_name, step.get("env"))
             uses = str(step.get("uses", ""))
             options = step.get("with") or {}
@@ -1168,7 +1246,7 @@ def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
                             "cached)")
                 findings += _cache_key_findings(
                     f"{job_name}: actions/cache", str(options.get("key", "")),
-                    closure, steps)
+                    closure, steps, index)
                 if str(options.get("restore-keys", "")).strip():
                     findings.append(
                         f"{job_name}: restore-keys permit stale partial "
@@ -1508,25 +1586,37 @@ class CacheContractBypassTests(unittest.TestCase):
 
 def simulate_cache_key(key: str, repo: Path, os_name: str, arch: str,
                        python_version: str) -> str:
-    """Deterministically evaluate a validated cache-key expression offline.
+    """Deterministically evaluate a cache key offline, like Actions would.
 
-    Mirrors the Actions semantics that matter for invalidation: runner OS,
-    runner architecture, the exact setup-python version output, and
-    ``hashFiles`` over the literal files named (content-addressed)."""
+    Only real ``${{ }}`` expressions of the reviewed shapes evaluate; static
+    text stays static.  An expression it cannot evaluate raises, so an
+    unevaluable key can never masquerade as an invalidating one.  Like
+    ``hashFiles``, files that do not exist contribute nothing (an empty hash
+    when none match)."""
     import hashlib
 
-    def hash_files(match: re.Match) -> str:
-        digest = hashlib.sha256()
-        for name in re.findall(r"['\"]([^'\"]+)['\"]", match.group(1)):
-            digest.update(name.encode() + b"\0")
-            digest.update((repo / name).read_bytes())
-        return digest.hexdigest()
-
-    key = re.sub(r"\$\{\{\s*hashFiles\(([^)]*)\)\s*\}\}", hash_files, key)
-    for token, value in (("runner.os", os_name), ("runner.arch", arch),
-                         ("steps.py.outputs.python-version", python_version)):
-        key = re.sub(r"\$\{\{\s*" + re.escape(token) + r"\s*\}\}", value, key)
-    return key
+    segments, problems = parse_cache_key(key)
+    if problems:
+        raise ValueError("; ".join(problems))
+    parts = []
+    for segment in segments:
+        if segment[0] == "text":
+            parts.append(segment[1])
+        elif segment[0] == "os":
+            parts.append(os_name)
+        elif segment[0] == "arch":
+            parts.append(arch)
+        elif segment[0] == "python":
+            parts.append(python_version)
+        else:
+            digest, matched = hashlib.sha256(), False
+            for name in segment[1]:
+                path = repo / name
+                if path.is_file():
+                    matched = True
+                    digest.update(name.encode() + b"\0" + path.read_bytes())
+            parts.append(digest.hexdigest() if matched else "")
+    return "".join(parts)
 
 
 VALID_CACHE_KEY = (
@@ -1830,7 +1920,8 @@ class CacheKeyExpressionBypassTests(unittest.TestCase):
     def test_red_python_reference_must_be_an_earlier_setup_python_step(self):
         real = VALID_CACHE_KEY
         cases = {
-            "setup-python after the cache step": dict(after=(_B1_PY_STEP,)),
+            "setup-python only after the cache step": dict(
+                before=(), after=(_B1_PY_STEP,)),
             "id belongs to a non-setup-python step": dict(before=(
                 {"id": "py", "run": "echo hi"},)),
             "no step with that id": dict(before=()),
@@ -1843,6 +1934,36 @@ class CacheKeyExpressionBypassTests(unittest.TestCase):
 
     def test_valid_key_after_an_earlier_setup_python_is_accepted(self):
         self.assertEqual(self.findings(VALID_CACHE_KEY), [])
+
+    def test_red_negated_hashfiles_entry_cannot_cancel_a_closure_file(self):
+        # GitHub excludes '!'-patterns: listing the root file literally AND
+        # negating it would leave the key blind to root requirement changes.
+        key = ("${{ runner.os }}-${{ runner.arch }}-"
+               "py${{ steps.py.outputs.python-version }}-"
+               "${{ hashFiles('requirements-test.txt', "
+               "'!requirements-test.txt', '%s') }}" % _B1_NESTED)
+        self.assertTrue(self.findings(key))
+        self.assertTrue(cache_policy_findings(_job_workflow([
+            {"uses": "actions/setup-python@x", "with": {
+                "cache": "pip", "cache-dependency-path":
+                    "requirements-test.txt\n!requirements-test.txt\n"
+                    + _B1_NESTED}},
+            *_canonical_steps(), _step("python3 -m unittest tests.test_x")]),
+            self.closure))
+
+    def test_red_conditional_or_soft_failing_python_step_is_rejected(self):
+        # A skipped setup-python step yields an EMPTY python-version output,
+        # silently making that part of the key static.
+        for label, extra in {
+            "if": {"if": "github.event_name == 'push'"},
+            "continue-on-error": {"continue-on-error": True},
+            "dynamic continue-on-error": {
+                "continue-on-error": "${{ inputs.soft }}"},
+        }.items():
+            with self.subTest(label):
+                self.assertTrue(self.findings(
+                    VALID_CACHE_KEY, before=({**_B1_PY_STEP, **extra},)),
+                    f"accepted: {label}")
 
 
 class GithubPathWriteBypassTests(unittest.TestCase):

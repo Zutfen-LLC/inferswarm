@@ -111,9 +111,10 @@ records the fail-closed correction of the first version. In summary:
   literal repo-relative path (default path, root-only list, unlisted transitive
   file, glob, absolute or dynamic entries are each rejected);
 - `actions/cache` may store only an allowlisted pip download-cache directory,
-  keyed on runner OS, architecture, exact Python version and a literal
-  `hashFiles` over the whole closure, with no `restore-keys`, cross-OS archive
-  or `fail-on-cache-miss`;
+  keyed on REAL evaluated expressions (`runner.os`, `runner.arch`,
+  `steps.<id>.outputs.python-version` from an unconditional setup-python step
+  that runs earlier, and a literal `hashFiles` over the whole closure), with no
+  `restore-keys`, cross-OS archive or `fail-on-cache-miss`;
 - every environment-bearing job must run the canonical bootstrap, then the
   canonical doctor, unconditionally, before using the environment;
 - the real `ci.yml` and `final-cpu-validation.yml` satisfy the policy today
@@ -199,6 +200,43 @@ exact key `actions/setup-python` computes (documented OS/architecture/Python/
 hash composition); a hosted cold-versus-warm elapsed-time measurement; restore
 behaviour for fork pull requests and cross-branch scoping; poisoned-wheel
 behaviour (see the limitation in section 5).
+
+## 8. Correction round 2 (maintainer re-review of `cd6fd13`)
+
+Re-review verdict: NO-GO on two remaining fail-open defects (reviewed head
+`cd6fd13af45eb0850184b2b932e28af91e0c27ac`, main unchanged at
+`57adca1ffac11fe70a914d5862910100690f9947`). Both reproduced before any change;
+RED controls are commit `44f095f` (29 failing subtests across 6 of 8 new
+tests).
+
+| Defect | Why the round-1 validator accepted it | Correction |
+| --- | --- | --- |
+| **B1** static look-alike cache key | `runner.os`, `hashFiles(...)` etc. were matched as arbitrary substrings, so static text spelling them passed although nothing is evaluated and the key never changes | the key is parsed into literal text and REAL `${{ }}` expressions; only four whole-expression shapes are understood (`runner.os`, `runner.arch`, `steps.<id>.outputs.python-version`, `hashFiles('<literal>', ...)`); words in static text, string literals, `format()`, operator-combined or unbalanced expressions confer nothing |
+| **B1** reference ordering | the python-version reference only needed a setup-python step anywhere in the job | the referenced step must be an `actions/setup-python` step that runs BEFORE the cache step |
+| **B2** arbitrary `GITHUB_PATH` write | only `GITHUB_ENV` was screened | every `run` line mentioning `GITHUB_PATH` (or legacy `::add-path`/`::set-env`) is rejected unless it is exactly the reviewed canonical `.venv/bin` export inside a provably canonical bootstrap step |
+
+Found in my own adversarial pass of the new parser (each RED first, then
+fixed): a `'!requirements-test.txt'` negation in `hashFiles` or
+`cache-dependency-path` could cancel a closure file that is listed literally,
+and a conditional or soft-failing setup-python step yields an empty
+python-version output (a static key). Both are now rejected.
+
+The contract is now behavioural as well as structural: for every crafted key
+the validator ACCEPTS, a strict offline evaluator (`simulate_cache_key`, which
+raises on any expression it cannot evaluate, and treats a missing `hashFiles`
+file as an empty hash, like Actions) must produce a different key for a changed
+OS, architecture, Python version, root requirements and nested requirements.
+Round-1 fixture note: one ordering fixture in `44f095f` also put a valid
+setup-python step before the cache step, masking the case it meant to test; it
+is corrected in the fix commit, and the prior validator was re-run on the
+corrected arrangement and accepts it (RED).
+
+Remaining limitation: the checks read the workflow statically. Obfuscated shell
+(for example assembling the name `GITHUB_PATH` from pieces, or `eval`) is not
+statically decidable and is outside this contract; maintainer review of any
+future cache-enabling change remains the backstop. Likewise a job that uses
+the environment only through a `uses:` composite action is not recognised as
+environment-bearing.
 
 ## Preserved, not changed
 
