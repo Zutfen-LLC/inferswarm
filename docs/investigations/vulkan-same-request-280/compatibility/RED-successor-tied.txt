@@ -1,0 +1,15 @@
+test_new_direct_stream_tied_role_needs_no_new_d3_producer_fields (test_issue280_real_compat.DirectSequenceAndRoleTests.test_new_direct_stream_tied_role_needs_no_new_d3_producer_fields) ... FAIL
+
+======================================================================
+FAIL: test_new_direct_stream_tied_role_needs_no_new_d3_producer_fields (test_issue280_real_compat.DirectSequenceAndRoleTests.test_new_direct_stream_tied_role_needs_no_new_d3_producer_fields)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 203, in test_new_direct_stream_tied_role_needs_no_new_d3_producer_fields
+    self.assertTrue(v["ok"], v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['output role: tied Qwen2 identity/CPU backing absent or corrupted']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.036s
+
+FAILED (failures=1)

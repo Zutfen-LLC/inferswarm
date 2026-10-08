@@ -1,0 +1,45 @@
+test_accepted_sequence_must_match_batch (test_issue280_real_compat.DirectSequenceAndRoleTests.test_accepted_sequence_must_match_batch) ... ok
+test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) ... ok
+test_distinct_output_requires_output_compute (test_issue280_real_compat.DirectSequenceAndRoleTests.test_distinct_output_requires_output_compute) ... ok
+test_exact_host_names_count_only_in_denominator (test_issue280_real_compat.DirectSequenceAndRoleTests.test_exact_host_names_count_only_in_denominator) ... ok
+test_missing_unique_metadata_unrelated_stream_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_missing_unique_metadata_unrelated_stream_rejected) ... ok
+test_prelaunch_compatibility_failure_prevents_executor (test_issue280_real_compat.DirectSequenceAndRoleTests.test_prelaunch_compatibility_failure_prevents_executor) ... ok
+test_sequence_sets_are_not_unique_sequence_count (test_issue280_real_compat.DirectSequenceAndRoleTests.test_sequence_sets_are_not_unique_sequence_count) ... ok
+test_uncompleted_output_is_not_compute_evidence (test_issue280_real_compat.DirectSequenceAndRoleTests.test_uncompleted_output_is_not_compute_evidence) ... ok
+test_wrong_output_die_remains_output_role_failure (test_issue280_real_compat.DirectSequenceAndRoleTests.test_wrong_output_die_remains_output_role_failure) ... ok
+test_ambiguous_gpu_alias_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_ambiguous_gpu_alias_rejected) ... ok
+test_corrupted_matching_tied_sizes_still_fail_model_identity (test_issue280_real_compat.RealCaptureCompatibilityTests.test_corrupted_matching_tied_sizes_still_fail_model_identity) ... FAIL
+test_direct_conflicts_are_not_ignored_by_legacy_witness (test_issue280_real_compat.RealCaptureCompatibilityTests.test_direct_conflicts_are_not_ignored_by_legacy_witness) ... ok
+test_distinct_inventory_prevents_silent_tied_fallback (test_issue280_real_compat.RealCaptureCompatibilityTests.test_distinct_inventory_prevents_silent_tied_fallback) ... ok
+test_exact_real_capture_is_compatible (test_issue280_real_compat.RealCaptureCompatibilityTests.test_exact_real_capture_is_compatible) ... ok
+test_explicit_backend_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_backend_conflict_rejected) ... ok
+test_explicit_model_identity_conflict (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_model_identity_conflict) ... ok
+test_host_lookalikes_and_unassigned_fail_closed (test_issue280_real_compat.RealCaptureCompatibilityTests.test_host_lookalikes_and_unassigned_fail_closed) ... ok
+test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps (test_issue280_real_compat.RealCaptureCompatibilityTests.test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps) ... ok
+test_missing_completed_compute (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_completed_compute) ... ok
+test_missing_kv (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_kv) ... ok
+test_missing_upper_blocks (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_upper_blocks) ... ok
+test_output_bytes_match_inventory (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_bytes_match_inventory) ... ok
+test_output_op_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_op_required) ... ok
+test_output_operand_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_operand_required) ... ok
+test_request_mismatch_preserved (test_issue280_real_compat.RealCaptureCompatibilityTests.test_request_mismatch_preserved) ... ok
+test_tied_cpu_backing_bytes_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_bytes_required) ... ok
+test_tied_cpu_backing_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_required) ... ok
+test_wrong_bdf (test_issue280_real_compat.RealCaptureCompatibilityTests.test_wrong_bdf) ... ok
+
+======================================================================
+FAIL: test_corrupted_matching_tied_sizes_still_fail_model_identity (test_issue280_real_compat.RealCaptureCompatibilityTests.test_corrupted_matching_tied_sizes_still_fail_model_identity)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 116, in test_corrupted_matching_tied_sizes_still_fail_model_identity
+    self.reject(raw, "output role")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 55, in reject
+    self.assertFalse(v["ok"], v)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: True is not false : {'schema': 'issue280-observer-admission/1', 'ok': True, 'problems': [], 'claim': 'SOURCE_LOG_REPLAY_ONLY_NOT_PHYSICAL_PROOF', 'contract_kind': 'PHYSICAL_280', 'contract_dies': ['0000:07:00.0'], 'graph_count': 40, 'logical_boundary_bytes': 0, 'host_leg_bytes': 0, 'physical_execution': 'NONE', 'sequence_evidence': 'AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE', 'output_role_evidence': {'kind': 'PINNED_QWEN2_TIED_ROLE_INFERENCE', 'owner': '0000:07:00.0', 'operand': 'token_embd.weight', 'bytes': 128, 'pointer_equality': 'NOT_ASSERTED: ggml buffer vs underlying Vulkan buffer'}, 'per_die': {'0000:07:00.0': {'weights_bytes': 1668694144, 'kv_bytes': 150994944, 'completed_compute_commands': 457}}}
+
+----------------------------------------------------------------------
+Ran 28 tests in 37.938s
+
+FAILED (failures=1)

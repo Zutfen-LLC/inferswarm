@@ -1,0 +1,14 @@
+{
+  "common/common.cpp": "e6eccdf376a80a3f534fc71ad7775fcac52eb6089367f1592ce1d293b147db66",
+  "ggml/include/ggml-vulkan.h": "7eae5dad2cc7bb4d3eca828539f441816d5fd59fdc7b224d49aa229fc7b7248c",
+  "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
+  "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
+  "src/llama-batch.cpp": "484607d92fb08d510727e0c4b01139e27a40137ef03e74e1dbea4aac3965e328",
+  "src/llama-batch.h": "7000dfd8750e06c544642dd7b84c882191702ad46ced1a4d6ad109462d1a1013",
+  "src/llama-context.cpp": "6429ebec7c926945987e6fe037317af0f99265490bc14b0606d9487a62a76453",
+  "src/llama-kv-cache.cpp": "16b40ff274e5aed3827f0d1c13a04f4f44c4d800c4eecbb5294b04127ab213c3",
+  "src/llama-model-loader.cpp": "5ef07476310d4678df18a61a6ec0a1ebcbb58c7534ac3c624b9fe0f315a4ab01",
+  "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
+  "src/models/qwen2.cpp": "0da43ff61f449be3a3da8ca2e7cc0eee119b4b8e07c8accce0041998241824e8",
+  "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
+}

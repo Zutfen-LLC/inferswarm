@@ -1,0 +1,310 @@
+test_accepted_sequence_must_match_batch (test_issue280_real_compat.DirectSequenceAndRoleTests.test_accepted_sequence_must_match_batch) ... FAIL
+test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) ... 
+  test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seqs_unq': 2, 'seq_ids_unq': [0, 1]}) ... FAIL
+  test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'seq_ids_unq': [1]}) ... FAIL
+  test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'seq_ids_unq': [0, 0]}) ... FAIL
+  test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seqs_unq': True}) ... FAIL
+  test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seq_tokens': 1}) ... FAIL
+test_distinct_output_requires_output_compute (test_issue280_real_compat.DirectSequenceAndRoleTests.test_distinct_output_requires_output_compute) ... FAIL
+test_exact_host_names_count_only_in_denominator (test_issue280_real_compat.DirectSequenceAndRoleTests.test_exact_host_names_count_only_in_denominator) ... FAIL
+test_missing_unique_metadata_unrelated_stream_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_missing_unique_metadata_unrelated_stream_rejected) ... FAIL
+test_prelaunch_compatibility_failure_prevents_executor (test_issue280_real_compat.DirectSequenceAndRoleTests.test_prelaunch_compatibility_failure_prevents_executor) ... FAIL
+test_sequence_sets_are_not_unique_sequence_count (test_issue280_real_compat.DirectSequenceAndRoleTests.test_sequence_sets_are_not_unique_sequence_count) ... FAIL
+test_ambiguous_gpu_alias_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_ambiguous_gpu_alias_rejected) ... FAIL
+test_direct_conflicts_are_not_ignored_by_legacy_witness (test_issue280_real_compat.RealCaptureCompatibilityTests.test_direct_conflicts_are_not_ignored_by_legacy_witness) ... ok
+test_exact_real_capture_is_compatible (test_issue280_real_compat.RealCaptureCompatibilityTests.test_exact_real_capture_is_compatible) ... FAIL
+test_explicit_backend_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_backend_conflict_rejected) ... FAIL
+test_host_lookalikes_and_unassigned_fail_closed (test_issue280_real_compat.RealCaptureCompatibilityTests.test_host_lookalikes_and_unassigned_fail_closed) ... FAIL
+test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps (test_issue280_real_compat.RealCaptureCompatibilityTests.test_legacy_witness_cannot_transfer_to_changed_tokens_or_timestamps) ... ok
+test_missing_completed_compute (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_completed_compute) ... FAIL
+test_missing_kv (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_kv) ... FAIL
+test_missing_upper_blocks (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_upper_blocks) ... FAIL
+test_output_bytes_match_inventory (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_bytes_match_inventory) ... FAIL
+test_output_op_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_op_required) ... FAIL
+test_output_operand_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_operand_required) ... FAIL
+test_request_mismatch_preserved (test_issue280_real_compat.RealCaptureCompatibilityTests.test_request_mismatch_preserved) ... ok
+test_tied_cpu_backing_bytes_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_bytes_required) ... FAIL
+test_tied_cpu_backing_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_required) ... FAIL
+test_wrong_bdf (test_issue280_real_compat.RealCaptureCompatibilityTests.test_wrong_bdf) ... FAIL
+
+======================================================================
+FAIL: test_accepted_sequence_must_match_batch (test_issue280_real_compat.DirectSequenceAndRoleTests.test_accepted_sequence_must_match_batch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 155, in test_accepted_sequence_must_match_batch
+    self.assertFalse(self.v(rewrite(self.raw, "request_accept", update(seq=1)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seqs_unq': 2, 'seq_ids_unq': [0, 1]})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 152, in test_bad_direct_uniqueness_rejected
+    self.assertFalse(self.v(rewrite(self.raw, "graph_begin", update(**fields)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'seq_ids_unq': [1]})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 152, in test_bad_direct_uniqueness_rejected
+    self.assertFalse(self.v(rewrite(self.raw, "graph_begin", update(**fields)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'seq_ids_unq': [0, 0]})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 152, in test_bad_direct_uniqueness_rejected
+    self.assertFalse(self.v(rewrite(self.raw, "graph_begin", update(**fields)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seqs_unq': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 152, in test_bad_direct_uniqueness_rejected
+    self.assertFalse(self.v(rewrite(self.raw, "graph_begin", update(**fields)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_bad_direct_uniqueness_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_bad_direct_uniqueness_rejected) (fields={'n_seq_tokens': 1})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 152, in test_bad_direct_uniqueness_rejected
+    self.assertFalse(self.v(rewrite(self.raw, "graph_begin", update(**fields)))["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_distinct_output_requires_output_compute (test_issue280_real_compat.DirectSequenceAndRoleTests.test_distinct_output_requires_output_compute)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 159, in test_distinct_output_requires_output_compute
+    self.assertFalse(self.v(raw)["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_exact_host_names_count_only_in_denominator (test_issue280_real_compat.DirectSequenceAndRoleTests.test_exact_host_names_count_only_in_denominator)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 172, in test_exact_host_names_count_only_in_denominator
+    self.assertEqual(result["placement"]["cpu_state"][0].get("backend"), name)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'CPU'
+
+======================================================================
+FAIL: test_missing_unique_metadata_unrelated_stream_rejected (test_issue280_real_compat.DirectSequenceAndRoleTests.test_missing_unique_metadata_unrelated_stream_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 145, in test_missing_unique_metadata_unrelated_stream_rejected
+    self.assertFalse(self.v(raw)["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_prelaunch_compatibility_failure_prevents_executor (test_issue280_real_compat.DirectSequenceAndRoleTests.test_prelaunch_compatibility_failure_prevents_executor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 182, in test_prelaunch_compatibility_failure_prevents_executor
+    self.assertEqual(launches, [])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: Lists differ: [{'label': 'R1', 'prompt': 'P1', 'rep': 1,[38 chars]m')}] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+{'label': 'R1', 'prompt': 'P1', 'rep': 1, 'arm': 'A', 'requests': ('cold', 'warm')}
+
++ []
+- [{'arm': 'A',
+-   'label': 'R1',
+-   'prompt': 'P1',
+-   'rep': 1,
+-   'requests': ('cold', 'warm')}]
+
+======================================================================
+FAIL: test_sequence_sets_are_not_unique_sequence_count (test_issue280_real_compat.DirectSequenceAndRoleTests.test_sequence_sets_are_not_unique_sequence_count)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 140, in test_sequence_sets_are_not_unique_sequence_count
+    self.assertTrue(self.v(raw)["ok"], self.v(raw)["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_ambiguous_gpu_alias_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_ambiguous_gpu_alias_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 115, in test_ambiguous_gpu_alias_rejected
+    self.reject("\n".join(lines) + "\n", "output role")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_exact_real_capture_is_compatible (test_issue280_real_compat.RealCaptureCompatibilityTests.test_exact_real_capture_is_compatible)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 61, in test_exact_real_capture_is_compatible
+    self.assertTrue(v["ok"], v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_explicit_backend_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_backend_conflict_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 86, in test_explicit_backend_conflict_rejected
+    self.reject(rewrite(self.raw, "weight_inventory", update(backend="Vulkan0"),
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["bdf"] == "CPU_Mapped"), "conflicting")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_host_lookalikes_and_unassigned_fail_closed (test_issue280_real_compat.RealCaptureCompatibilityTests.test_host_lookalikes_and_unassigned_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 83, in test_host_lookalikes_and_unassigned_fail_closed
+    self.reject(raw, "placement")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_missing_completed_compute (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_completed_compute)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 128, in test_missing_completed_compute
+    self.reject(rewrite(self.raw, "complete", lambda r: None), "completed")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_missing_kv (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_kv)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 125, in test_missing_kv
+    self.reject(rewrite(self.raw, "kv_inventory", lambda r: None), "kv_cache")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_missing_upper_blocks (test_issue280_real_compat.RealCaptureCompatibilityTests.test_missing_upper_blocks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 121, in test_missing_upper_blocks
+    self.reject(rewrite(self.raw, "weight_inventory", lambda r: None,
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"].startswith("blk.35.")), "inventory")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_output_bytes_match_inventory (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_bytes_match_inventory)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 98, in test_output_bytes_match_inventory
+    self.reject(rewrite(self.raw, "weight", update(bytes=128),
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"] == "token_embd.weight"), "output role")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_output_op_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_op_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 94, in test_output_op_required
+    self.reject(rewrite(self.raw, "node", update(op="ADD"),
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"] == "result_output"), "output role")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_output_operand_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_output_operand_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 90, in test_output_operand_required
+    self.reject(rewrite(self.raw, "weight", lambda r: None,
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"] == "token_embd.weight"), "output role")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_tied_cpu_backing_bytes_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_bytes_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 106, in test_tied_cpu_backing_bytes_required
+    self.reject(rewrite(self.raw, "weight_inventory", update(bytes=128),
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"] == "token_embd.weight" and r["bdf"] == "CPU_Mapped"), "output role")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_tied_cpu_backing_required (test_issue280_real_compat.RealCaptureCompatibilityTests.test_tied_cpu_backing_required)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 102, in test_tied_cpu_backing_required
+    self.reject(rewrite(self.raw, "weight_inventory", lambda r: None,
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        lambda r: r["tensor"] == "token_embd.weight" and r["bdf"] == "CPU_Mapped"), "output role")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+======================================================================
+FAIL: test_wrong_bdf (test_issue280_real_compat.RealCaptureCompatibilityTests.test_wrong_bdf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 118, in test_wrong_bdf
+    self.reject(rewrite(self.raw, "vk_graph_begin", update(bdf="0000:0b:00.0")), "BDF")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 56, in reject
+    self.assertTrue(any(reason in p for p in v["problems"]), v["problems"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : ['graph sequence/request mismatch']
+
+----------------------------------------------------------------------
+Ran 23 tests in 20.298s
+
+FAILED (failures=24)

@@ -1,0 +1,21 @@
+test_bound_fixture_and_source_probe_pass (test_issue280_source_compat.PermanentGateTests.test_bound_fixture_and_source_probe_pass) ... ok
+test_missing_or_drifted_fixture_provenance_fail (test_issue280_source_compat.PermanentGateTests.test_missing_or_drifted_fixture_provenance_fail) ... ok
+test_model_or_producer_drift_fail_without_cached_result (test_issue280_source_compat.PermanentGateTests.test_model_or_producer_drift_fail_without_cached_result) ... ok
+test_additive_successor_preserves_other_five_files (test_issue280_source_compat.SuccessorSourceTests.test_additive_successor_preserves_other_five_files) ... ok
+test_full_tree_identity_drift_rejected (test_issue280_source_compat.SuccessorSourceTests.test_full_tree_identity_drift_rejected) ... FAIL
+test_inserted_cpu_probe_executes_complete_ids (test_issue280_source_compat.SuccessorSourceTests.test_inserted_cpu_probe_executes_complete_ids) ... ok
+test_unpinned_transform_rejected (test_issue280_source_compat.SuccessorSourceTests.test_unpinned_transform_rejected) ... ok
+
+======================================================================
+FAIL: test_full_tree_identity_drift_rejected (test_issue280_source_compat.SuccessorSourceTests.test_full_tree_identity_drift_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 64, in test_full_tree_identity_drift_rejected
+    self.assertFalse(m.cpu_probe()["ok"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 7 tests in 6.705s
+
+FAILED (failures=1)

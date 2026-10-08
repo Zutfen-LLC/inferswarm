@@ -98,10 +98,11 @@ def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
     if not single_die and die_b_bdf in kv_targets:
         out.append(ev("kv_inventory", tensor="blk.19.k", bdf=die_b_bdf,
                       bytes=128, kind="k", layer=19, buffer="kvb"))
-    out.append(ev("request_accept", request=1, ordinal=1))
+    out.append(ev("request_accept", request=1, ordinal=1, seq=0))
     out.append(ev("batch_begin", request=1, seq=0, tokens=4, phase="prefill",
                   speculative=0, token_ids=[1, 2, 3, 4], positions=[0, 1, 2, 3]))
-    out.append(ev("graph_begin", request=1, graph="g", tokens=4, seq=0, sequences=1))
+    out.append(ev("graph_begin", request=1, graph="g", tokens=4, seq=0, sequences=1,
+                  n_seqs_unq=1, seq_ids_unq=[0], n_seq_tokens=4))
     if not single_die:
         out.append(ev("copy_manifest", request=1, tensor="ffn_out-0",
                       src=boundary_src, dst=boundary_dst,
@@ -122,6 +123,14 @@ def build_stream(die_b_bdf=DIE_B, drop_die_b_compute=False, boundary_bytes=None,
                           offset=0, bytes=128, buffer_bytes=4096))
         out.append(ev("dispatch", request=1, ctx=ctx, cmd=cmd, use=1,
                       pipeline="mul_mat_f32", x=1, y=1, z=1))
+        if bdf == (DIE_A if single_die else die_b_bdf):
+            out.append(ev("node", request=1, ctx=ctx, cmd=cmd, use=1,
+                          tensor="result_output", op="MUL_MAT"))
+            out.append(ev("weight", request=1, ctx=ctx, cmd=cmd, use=1,
+                          tensor="output.weight", buffer="vk-output-underlying",
+                          offset=0, bytes=512, buffer_bytes=4096))
+            out.append(ev("dispatch", request=1, ctx=ctx, cmd=cmd, use=1,
+                          pipeline="mul_mat_f32", x=1, y=1, z=1))
         out.append(ev("submit", request=1, subctx=sub, cmd=cmd, use=1))
         out.append(ev("complete", request=1, ctx=ctx, wait="fence"))
         out.append(ev("vk_graph_end", request=1, ctx=ctx))
@@ -387,11 +396,13 @@ class FrozenPlacementTests(unittest.TestCase):
         a, b = self.contracts["A"], self.contracts["B"]
         self.assertEqual(a["dies"], ["0000:07:00.0"])
         self.assertEqual(a["layers"]["0000:07:00.0"], list(range(0, 36)))
-        self.assertEqual(a["required_tensors"], {"output.weight": "0000:07:00.0"})
+        self.assertEqual(a["output_role"]["owner"], "0000:07:00.0")
+        self.assertEqual(a["output_role"]["architecture"], "qwen2")
         self.assertEqual(b["dies"], ["0000:07:00.0", "0000:0b:00.0"])
         self.assertEqual(b["layers"]["0000:07:00.0"], list(range(0, 19)))
         self.assertEqual(b["layers"]["0000:0b:00.0"], list(range(19, 36)))
-        self.assertEqual(b["required_tensors"], {"output.weight": "0000:0b:00.0"})
+        self.assertEqual(b["output_role"]["owner"], "0000:0b:00.0")
+        self.assertEqual(b["output_role"]["model_sha256"], a["output_role"]["model_sha256"])
 
     def test_reduced_baseline_blocks_rejected(self):
         """FP1: baseline carrying only blocks 0-k for any k < 35 is a silent

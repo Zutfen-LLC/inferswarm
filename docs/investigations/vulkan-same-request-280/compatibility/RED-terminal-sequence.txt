@@ -1,0 +1,18 @@
+test_explicit_terminal_sequence_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_terminal_sequence_conflict_rejected) ... FAIL
+
+======================================================================
+FAIL: test_explicit_terminal_sequence_conflict_rejected (test_issue280_real_compat.RealCaptureCompatibilityTests.test_explicit_terminal_sequence_conflict_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 80, in test_explicit_terminal_sequence_conflict_rejected
+    self.reject(rewrite(self.raw, "request_end", update(seq=1)), "sequence")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_real_compat.py", line 55, in reject
+    self.assertFalse(v["ok"], v)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: True is not false : {'schema': 'issue280-observer-admission/1', 'ok': True, 'problems': [], 'claim': 'SOURCE_LOG_REPLAY_ONLY_NOT_PHYSICAL_PROOF', 'contract_kind': 'PHYSICAL_280', 'contract_dies': ['0000:07:00.0'], 'graph_count': 40, 'logical_boundary_bytes': 0, 'host_leg_bytes': 0, 'physical_execution': 'NONE', 'sequence_evidence': 'AUTHENTICATED_R1_ONE_SLOT_SOURCE_INFERENCE', 'output_role_evidence': {'kind': 'PINNED_QWEN2_TIED_ROLE_INFERENCE', 'owner': '0000:07:00.0', 'operand': 'token_embd.weight', 'bytes': 255252480, 'model_binding': 'FROZEN_AUTHENTICATED_MODEL_POLICY_NOT_NEW_RUNTIME_MODEL_HASH', 'pointer_equality': 'NOT_ASSERTED: ggml buffer vs underlying Vulkan buffer'}, 'per_die': {'0000:07:00.0': {'weights_bytes': 1923946496, 'kv_bytes': 150994944, 'completed_compute_commands': 457}}}
+
+----------------------------------------------------------------------
+Ran 1 test in 2.236s
+
+FAILED (failures=1)

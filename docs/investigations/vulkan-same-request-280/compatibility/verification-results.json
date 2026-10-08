@@ -1,0 +1,87 @@
+{
+  "archives": {
+    "TERMINAL.json": {
+      "stored_bytes": 5499,
+      "stored_sha256": "c7bccbc3e613ee537aef012d02076b5d861d27d1c02974956a981c0497deaa66"
+    },
+    "accepted-observer.py": {
+      "stored_bytes": 97324,
+      "stored_sha256": "17021e0fb8e9fe10db1b363142bf8e73e56a616d5e61833475cf90129b036d5a"
+    },
+    "observer-R1-cold.i280.raw.gz": {
+      "stored_bytes": 762447,
+      "stored_sha256": "963e82740b26d7d094e53f8640c44d1738e151df05543454d880b51b816663a4"
+    },
+    "server-R1.log.gz": {
+      "stored_bytes": 785987,
+      "stored_sha256": "4a3ec3a21d746413b330da865a08ef1bac0b6399563ecb6c62b835b72e56aecd"
+    }
+  },
+  "green": {
+    "per_module": {
+      "test_issue280_admission": 31,
+      "test_issue280_observer": 57,
+      "test_issue280_real_compat": 30,
+      "test_issue280_retention_fix": 5,
+      "test_issue280_runner": 10,
+      "test_issue280_source": 18,
+      "test_issue280_source_compat": 8,
+      "test_issue280_task_check": 14
+    },
+    "result": "OK",
+    "seconds": 197.858,
+    "tests": 173
+  },
+  "mutation_count": 27,
+  "patch_apply_check_exit": 0,
+  "raw_i280_records": 69053,
+  "raw_total_lines": 69058,
+  "red": {
+    "RED-followup-real.txt": {
+      "result": "failures=1",
+      "seconds": 37.938,
+      "tests": 28
+    },
+    "RED-followup-source.txt": {
+      "result": "failures=1",
+      "seconds": 6.705,
+      "tests": 7
+    },
+    "RED-producer-module.txt": {
+      "result": "failures=1",
+      "seconds": 1.826,
+      "tests": 1
+    },
+    "RED-real-corrected-harness.txt": {
+      "result": "failures=24",
+      "seconds": 20.298,
+      "tests": 23
+    },
+    "RED-real.txt": {
+      "result": "failures=12, errors=15",
+      "seconds": 2.025,
+      "tests": 23
+    },
+    "RED-source.txt": {
+      "result": "failures=6",
+      "seconds": 0.003,
+      "tests": 6
+    },
+    "RED-successor-tied.txt": {
+      "result": "failures=1",
+      "seconds": 0.036,
+      "tests": 1
+    },
+    "RED-terminal-sequence.txt": {
+      "result": "failures=1",
+      "seconds": 2.236,
+      "tests": 1
+    }
+  },
+  "server_i280_records": 71223,
+  "server_total_lines": 71243,
+  "whole_context_syntax": {
+    "diagnostic_bytes": 0,
+    "exit_code": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "base_git_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "build_identity": "NOT_BUILT; CPU syntax/recording is not a Vulkan build",
+  "emitter_sha256": "d537c86b83bef00e4eff7d631830f4ca09ef0d0dcab69ed1f38bef082949475f",
+  "full_transformed_git_tree": "f3cd359feada1ba883955582cecf13dc75f1dcb8",
+  "graph_hook_sha256": "91bb9bdf71072d35be7887dc51a1b9cae9fbb4c13c7cdf58c4d381b72eba2594",
+  "occurrence_helper_sha256": "253dc2eeb5020075a6bd52824ac73c14ae88ab3a6744f8f4ac070cea7aced68d",
+  "original_sha256": {
+    "ggml/src/ggml-backend.cpp": "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "c84f67465dfa0a24e034663f510d8b92310e3be7a7fbca231760be234b7c9f9d",
+    "src/llama-context.cpp": "6429ebec7c926945987e6fe037317af0f99265490bc14b0606d9487a62a76453",
+    "src/llama-kv-cache.cpp": "16b40ff274e5aed3827f0d1c13a04f4f44c4d800c4eecbb5294b04127ab213c3",
+    "src/llama-model.cpp": "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
+    "tools/server/server-context.cpp": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b"
+  },
+  "overlay_tree_sha256": "6e73ce72b8c6f5a06ead05dc2db64fb2274cf90a51a1d2a2936e100fd3ab7f8b",
+  "patch_sha256": "48e3882a0a8ec03c875cc7b5a91ed912f4dfef54fe87339dcff3b3c8367980c5",
+  "physical_runner": "HELD_UNAVAILABLE",
+  "predecessor_overlay_tree_sha256": "543ed89d8a0043d872bf9b4d6933a85d8632bba71942c1ca77216f8ec565a565",
+  "predecessor_patch_sha256": "5d4dc2cef0ca8cfaaac9935628ff455913035ad3f1ec5d8ee535733240e92c00",
+  "predecessor_transformed_sha256": {
+    "ggml/src/ggml-backend.cpp": "bb1c55e9efe4f0a86070d709d51b01f5b94e6a8751738ce7b72b1620bd29f321",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "4936e79288e292e018ad0fc330d6c2040044ac43ad1a6cc845e0aaccab0d453c",
+    "src/llama-context.cpp": "4c983e94f9f1c7d3950a8664482c3cd5a7e1a0a09ca95d69510e6d963319dc4c",
+    "src/llama-kv-cache.cpp": "2121aaf367cda14fc0365e36cdc9817cbfccfcb7ec9267b4d4a4d1e7d94d48a6",
+    "src/llama-model.cpp": "442182ac9328e74c4761384709c390ccd037bdb8ac7bcf765509858b4dadc3c3",
+    "tools/server/server-context.cpp": "543034344a81ace6ac007f77060673553f5e6ca3417e214086eb52058effdfe9"
+  },
+  "purpose": "D1 complete unique-sequence metadata only; D3 producer unchanged",
+  "schema": "issue280-source-compat-overlay/1",
+  "source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "transformed_sha256": {
+    "ggml/src/ggml-backend.cpp": "bb1c55e9efe4f0a86070d709d51b01f5b94e6a8751738ce7b72b1620bd29f321",
+    "ggml/src/ggml-vulkan/ggml-vulkan.cpp": "4936e79288e292e018ad0fc330d6c2040044ac43ad1a6cc845e0aaccab0d453c",
+    "src/llama-context.cpp": "43ccf1ba0b543bfcdbd9f17b43fd1231fbcc7001ae165ca150a6650077e5daa7",
+    "src/llama-kv-cache.cpp": "2121aaf367cda14fc0365e36cdc9817cbfccfcb7ec9267b4d4a4d1e7d94d48a6",
+    "src/llama-model.cpp": "442182ac9328e74c4761384709c390ccd037bdb8ac7bcf765509858b4dadc3c3",
+    "tools/server/server-context.cpp": "543034344a81ace6ac007f77060673553f5e6ca3417e214086eb52058effdfe9"
+  }
+}

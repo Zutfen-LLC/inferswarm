@@ -1,0 +1,78 @@
+test_bound_fixture_and_source_probe_pass (test_issue280_source_compat.PermanentGateTests.test_bound_fixture_and_source_probe_pass) ... FAIL
+test_missing_or_drifted_fixture_provenance_fail (test_issue280_source_compat.PermanentGateTests.test_missing_or_drifted_fixture_provenance_fail) ... FAIL
+test_model_or_producer_drift_fail_without_cached_result (test_issue280_source_compat.PermanentGateTests.test_model_or_producer_drift_fail_without_cached_result) ... FAIL
+test_additive_successor_preserves_other_five_files (test_issue280_source_compat.SuccessorSourceTests.test_additive_successor_preserves_other_five_files) ... FAIL
+test_inserted_cpu_probe_executes_complete_ids (test_issue280_source_compat.SuccessorSourceTests.test_inserted_cpu_probe_executes_complete_ids) ... FAIL
+test_unpinned_transform_rejected (test_issue280_source_compat.SuccessorSourceTests.test_unpinned_transform_rejected) ... FAIL
+
+======================================================================
+FAIL: test_bound_fixture_and_source_probe_pass (test_issue280_source_compat.PermanentGateTests.test_bound_fixture_and_source_probe_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 59, in test_bound_fixture_and_source_probe_pass
+    v = self.gate().check_compatibility()
+        ~~~~~~~~~^^
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 55, in gate
+    self.assertTrue((ROOT / "scripts/issue280_compatibility.py").exists(), "permanent compatibility gate absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : permanent compatibility gate absent
+
+======================================================================
+FAIL: test_missing_or_drifted_fixture_provenance_fail (test_issue280_source_compat.PermanentGateTests.test_missing_or_drifted_fixture_provenance_fail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 65, in test_missing_or_drifted_fixture_provenance_fail
+    m = self.gate()
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 55, in gate
+    self.assertTrue((ROOT / "scripts/issue280_compatibility.py").exists(), "permanent compatibility gate absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : permanent compatibility gate absent
+
+======================================================================
+FAIL: test_model_or_producer_drift_fail_without_cached_result (test_issue280_source_compat.PermanentGateTests.test_model_or_producer_drift_fail_without_cached_result)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 77, in test_model_or_producer_drift_fail_without_cached_result
+    m = self.gate()
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 55, in gate
+    self.assertTrue((ROOT / "scripts/issue280_compatibility.py").exists(), "permanent compatibility gate absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : permanent compatibility gate absent
+
+======================================================================
+FAIL: test_additive_successor_preserves_other_five_files (test_issue280_source_compat.SuccessorSourceTests.test_additive_successor_preserves_other_five_files)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 27, in test_additive_successor_preserves_other_five_files
+    m = self.successor()
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 23, in successor
+    self.assertTrue(path.exists(), "successor transform absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : successor transform absent
+
+======================================================================
+FAIL: test_inserted_cpu_probe_executes_complete_ids (test_issue280_source_compat.SuccessorSourceTests.test_inserted_cpu_probe_executes_complete_ids)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 40, in test_inserted_cpu_probe_executes_complete_ids
+    m = self.successor()
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 23, in successor
+    self.assertTrue(path.exists(), "successor transform absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : successor transform absent
+
+======================================================================
+FAIL: test_unpinned_transform_rejected (test_issue280_source_compat.SuccessorSourceTests.test_unpinned_transform_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 49, in test_unpinned_transform_rejected
+    m = self.successor()
+  File "/home/zutfen/code/is280-compat/tests/test_issue280_source_compat.py", line 23, in successor
+    self.assertTrue(path.exists(), "successor transform absent")
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : successor transform absent
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.003s
+
+FAILED (failures=6)

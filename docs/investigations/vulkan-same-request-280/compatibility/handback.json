@@ -1,0 +1,35 @@
+{
+  "mutations": 27,
+  "owned_file_sha256": {
+    "scripts/issue280_compatibility.py": "484eca974e9496fc54fb53ea1c697d59abb5b1723a3b67fa8cd718132312b60f",
+    "scripts/issue280_observer.py": "5552f50cd9238f14040586aaa227cdc9eded063d4c3f3494e031421be3cb79b2",
+    "scripts/issue280_runner.py": "276023adb405986f70dbccb43b16010f8752b56116d31abc0b6ec175610d13e2",
+    "scripts/issue280_source_compat.py": "d0790c98d2b054806e4df67fbd23d97e87ad9c1e47dc9151193fb84e5dd889c3",
+    "tests/test_issue280_admission.py": "415f298e712e12935e25d763df6477509b65068fcad08c6b7602df323a3f301f",
+    "tests/test_issue280_real_compat.py": "58b64254c1f4bfefb3720e9d8ed4f0cb93a5e325d539a0e9e7e5e1f2e41e6ce1",
+    "tests/test_issue280_source_compat.py": "5514d62e543f51b84b171e3b1110d68fc5a28b03fabcf8b56705c0d7fe351bc7"
+  },
+  "owned_subtree": "docs/investigations/vulkan-same-request-280/compatibility/",
+  "ownership": "HANDED_BACK_TO_PARENT_NO_COMMIT",
+  "preserved_old_paths_verified": [
+    "scripts/issue280_source.py",
+    "docs/investigations/vulkan-same-request-280/instrumentation/issue280_observer.h",
+    "docs/investigations/vulkan-same-request-280/instrumentation/issue280_occurrence.h",
+    "docs/investigations/vulkan-same-request-280/instrumentation/source-identity.json"
+  ],
+  "tests": {
+    "per_module": {
+      "test_issue280_admission": 31,
+      "test_issue280_observer": 57,
+      "test_issue280_real_compat": 30,
+      "test_issue280_retention_fix": 5,
+      "test_issue280_runner": 10,
+      "test_issue280_source": 18,
+      "test_issue280_source_compat": 8,
+      "test_issue280_task_check": 14
+    },
+    "result": "OK",
+    "seconds": 197.858,
+    "tests": 173
+  }
+}
