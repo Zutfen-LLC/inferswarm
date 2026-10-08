@@ -25,6 +25,7 @@ observable lifecycle surface of the physical #280 llama-server:
 No model, no GPU, no Vulkan — pure stdlib CPU process.
 """
 import argparse
+import hashlib
 import json
 import os
 import signal
@@ -37,7 +38,8 @@ IDENTITY_HEADER = "X-I280-LAUNCH-IDENTITY"
 GOOD_TEXT = '{"service":"payments","severity":"high","status":"resolved"}'
 
 ARGS = argparse.Namespace(log=None, arm="?", stale_completion_id=None,
-                          foreign_health_id=None)
+                          foreign_health_id=None, env_report=None,
+                          env_keys=(), record_requests=None)
 STARTED_NS = time.monotonic_ns()
 REQUESTS_SERVED = 0
 PREFIX_ROWS = []
@@ -102,6 +104,14 @@ class Handler(BaseHTTPRequestHandler):
                                   "arm": ARGS.arm, "pid": os.getpid()},
                             identity=self._health_identity())
             return
+        if self.path == "/__test__/env":
+            # Test-only loopback reporting of NONSECRET sentinel values
+            # (names supplied by --env-keys) — proves which environment
+            # values the spawned child actually received.
+            report = {k: os.environ.get(k) for k in ARGS.env_keys}
+            report[IDENTITY_ENV] = os.environ.get(IDENTITY_ENV)
+            self._send_json(200, report)
+            return
         self._send_json(404, {"error": "not found"})
 
     def do_POST(self):
@@ -110,9 +120,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(404, {"error": "not found"})
             return
         length = int(self.headers.get("Content-Length", "0"))
-        self.rfile.read(length)
+        raw = self.rfile.read(length)
         REQUESTS_SERVED += 1
         ordinal = REQUESTS_SERVED
+        if ARGS.record_requests:
+            # Test-only loopback recording: the EXACT request bytes this
+            # server received, plus nonsecret env sentinels, appended to
+            # the caller-named file (diag log; never the observer log).
+            try:
+                body_txt = raw.decode("utf-8", "replace")
+                rec = {"ordinal": ordinal, "path": "/completion",
+                       "body": body_txt,
+                       "body_sha256": hashlib.sha256(raw).hexdigest(),
+                       "prompt_bytes": len(raw)}
+                for k in ARGS.env_keys:
+                    rec[f"env::{k}"] = os.environ.get(k)
+                rec[f"env::{IDENTITY_ENV}"] = (
+                    "present" if os.environ.get(IDENTITY_ENV) else "absent")
+                with open(ARGS.record_requests, "a",
+                          encoding="utf-8") as fh:
+                    fh.write(json.dumps(rec) + "\n")
+            except OSError:
+                pass
         ident = self._identity()
         completion_ident = ARGS.stale_completion_id or ident
         chunks = [
@@ -145,7 +174,14 @@ def main():
     p.add_argument("--foreign-health-id", dest="foreign_health_id",
                    default=None)
     p.add_argument("--refuse-stop", action="store_true")
+    p.add_argument("--env-keys", dest="env_keys", default="",
+                   help="comma-separated NONSECRET env names reported by "
+                        "/__test__/env and request recording (tests only)")
+    p.add_argument("--record-requests", dest="record_requests", default=None,
+                   help="append exact received /completion request bytes "
+                        "to this file (tests only)")
     ARGS = p.parse_args()
+    ARGS.env_keys = tuple(k for k in ARGS.env_keys.split(",") if k)
     if ARGS.stream:
         PREFIX_ROWS, REQUEST_ROWS = load_stream_rows(ARGS.stream)
     if ARGS.refuse_stop:

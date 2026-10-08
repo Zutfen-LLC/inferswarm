@@ -27,9 +27,11 @@ wrong-arm/stale-server response, startup timeout, and exception cleanup.
 Negative controls prove a fail-open mutation of the fix would be caught.
 """
 import importlib.util
+import hashlib
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -57,6 +59,17 @@ def load(name, path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+# The REAL frozen production surfaces (B4): the runner's actual matrix has
+# ``prompt: "P1"`` id rows only — the prompt BYTES live in the frozen
+# workload binding with their SHA-256 identity.
+_runner_mod = load("i289_runner_matrix", ROOT / "scripts" / "issue280_runner.py")
+REAL_MATRIX = _runner_mod.MINIMAL_RERUN_MATRIX
+WORKLOAD = json.loads(
+    (ROOT / "docs/investigations/vulkan-same-request-280/workload.json")
+    .read_text(encoding="utf-8"))
+P1 = WORKLOAD["prompts"]["P1"]
 
 
 def load_launcher():
@@ -475,6 +488,441 @@ class PureFunctionTests(LauncherHarness):
                           "request_accept", "sample", "request_end"])
         self.assertEqual(rows[0]["requests_planned"], 1)
         self.assertEqual(rows[2]["ordinal"], 1)
+
+
+class LauncherEnvInterfaceTests(LauncherHarness):
+    """B2 (review 5459338940): caller- and builder-supplied environment
+    values must BOTH reach the real spawned child, deterministically,
+    and the launcher's own identity injection keeps authority.
+
+    CPU loopback proof with NONSECRET sentinels only: the stub child
+    reports its actual environment through ``/__test__/env`` and the
+    request-recording diag log. No secrets, no environment dumps."""
+
+    SENTINELS = ("I289_TEST_LIB", "I289_TEST_VK_DRIVER", "I289_TEST_OBSERVE")
+
+    def child_env_report(self, port):
+        import urllib.request
+        with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/__test__/env",
+                timeout=5) as r:
+            return json.loads(r.read().decode("utf-8"))
+
+    def test_builder_env_values_reach_spawned_child(self):
+        """The documented production command_builder mutates the supplied
+        env dict (LD_LIBRARY_PATH / VK_DRIVER_FILES / ISSUE280_OBSERVE);
+        those values must be present in the child's actual environment
+        (r3 driver interface contract)."""
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--env-keys", ",".join(self.SENTINELS)]
+            # documented production pattern: builder adds environment
+            env_extra.update(I289_TEST_LIB="/opt/test-vulkan/lib",
+                             I289_TEST_VK_DRIVER="/tmp/test-icd.json",
+                             I289_TEST_OBSERVE="1")
+            return argv
+
+        ctx = self.m.Launch(MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=20)
+        try:
+            ctx.start()
+            report = self.child_env_report(self.port)
+            self.assertEqual(report.get("I289_TEST_LIB"),
+                             "/opt/test-vulkan/lib",
+                             "builder-added LD_LIBRARY_PATH-equivalent "
+                             "value lost before spawn")
+            self.assertEqual(report.get("I289_TEST_VK_DRIVER"),
+                             "/tmp/test-icd.json")
+            self.assertEqual(report.get("I289_TEST_OBSERVE"), "1")
+        finally:
+            ctx.stop()
+
+    def test_caller_and_builder_env_precedence_deterministic(self):
+        """A caller-supplied value and a builder-set value for the same
+        name: the builder (which receives the caller dict and documents
+        that it may extend it) supplies the value that reaches the
+        child; a builder override of a caller value must reach the child
+        (no silent resurrection of the stale caller copy)."""
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--env-keys", ",".join(self.SENTINELS)]
+            env_extra["I289_TEST_OBSERVE"] = "builder-set"
+            return argv
+
+        ctx = self.m.Launch(
+            MATRIX[0], command_builder=builder, workdir=self.tmp,
+            env={"I289_TEST_OBSERVE": "caller-set"}, port=self.port,
+            startup_timeout_s=20)
+        try:
+            ctx.start()
+            report = self.child_env_report(self.port)
+            self.assertEqual(report.get("I289_TEST_OBSERVE"), "builder-set",
+                             "builder's update of the caller-supplied dict "
+                             "must reach the child")
+        finally:
+            ctx.stop()
+
+    def test_launch_identity_not_overridable(self):
+        """Caller and builder environment must NOT override the
+        launcher-generated I280_LAUNCH_IDENTITY."""
+        ident_key = self.m.IDENTITY_ENV
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--env-keys", ",".join(self.SENTINELS)]
+            env_extra[ident_key] = "FORGED#IDENTITY"
+            return argv
+
+        ctx = self.m.Launch(
+            MATRIX[0], command_builder=builder, workdir=self.tmp,
+            env={ident_key: "FORGED#CALLER"}, port=self.port,
+            startup_timeout_s=20)
+        try:
+            ctx.start()  # must succeed: server echoes the REAL identity
+            report = self.child_env_report(self.port)
+            self.assertEqual(report.get(ident_key), ctx.record["identity"],
+                             "the launcher's generated identity must win "
+                             "over caller- and builder-supplied values")
+            self.assertNotEqual(report.get(ident_key), "FORGED#IDENTITY")
+            self.assertNotEqual(report.get(ident_key), "FORGED#CALLER")
+        finally:
+            ctx.stop()
+
+
+class LauncherIdentityFailClosedTests(LauncherHarness):
+    """B3 (review 5459338940): a missing/unreadable/malformed /proc start
+    time is an identity failure, never a permissive live-check. Fail
+    closed with zero completion requests; the owned child is still
+    cleaned up safely (bounded stop of THIS launch's process group
+    only — never a foreign PID)."""
+
+    def test_pid_alive_same_instance_requires_nonnull_start_time(self):
+        """The pure guard: a None start-time identity must NEVER
+        authenticate a live PID (no permissive fallback)."""
+        me = os.getpid()
+        self.assertFalse(self.m.pid_alive_same_instance(me, None),
+                         "None start-time must fail closed, not "
+                         "authenticate any live PID")
+
+    def test_start_fails_when_identity_capture_fails(self):
+        """/proc start-time unreadable at capture: Launch.start() must
+        fail closed (LaunchError, no readiness, no requests), and the
+        owned child must still be stopped and reaped."""
+        real = self.m.proc_start_time
+        self.m.proc_start_time = lambda pid: None
+        try:
+            ctx = self.m.Launch(MATRIX[0],
+                                command_builder=self.command_builder,
+                                workdir=self.tmp, port=self.port,
+                                startup_timeout_s=10)
+            with self.assertRaises(self.m.LaunchError) as cm:
+                ctx.start()
+            self.assertIn("START_IDENTITY_CAPTURE_FAILED", str(cm.exception))
+            ctx.stop()
+            self.assertFalse(pid_alive(ctx.record["pid"]),
+                             "owned child must be cleaned after identity "
+                             "capture failure")
+            self.assertTrue(ctx.record["exit"]["reaped"])
+        finally:
+            self.m.proc_start_time = real
+
+    def test_request_fails_closed_when_identity_check_unavailable(self):
+        """/proc start-time unreadable at request time: the request must
+        fail closed (no completion dispatched) even for a ready,
+        healthy child."""
+        diag = self.tmp / "requests.jsonl"
+        recs = []
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        ctx = self.m.Launch(MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=20)
+        try:
+            ctx.start()
+            real = self.m.proc_start_time
+            self.m.proc_start_time = lambda pid: None
+            record, state = ctx.request("cold")
+            recs.append(record)
+            self.assertFalse(record["transport_ok"])
+            self.assertIn("IDENTITY_UNAVAILABLE", record["error"])
+            self.assertEqual(record["server_identity"], None)
+            self.assertFalse(diag.exists(),
+                              "no completion HTTP bytes may be dispatched "
+                              "when identity evidence is unavailable")
+        finally:
+            self.m.proc_start_time = real
+            ctx.stop()
+
+    def test_ready_launch_rejects_malformed_start_time_then_fails_closed(self):
+        """Malformed (present but wrong-format) captured identity: the
+        subsequent liveness check must not authenticate the child —
+        every request fails closed; no completion dispatched."""
+        diag = self.tmp / "requests.jsonl"
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        ctx = self.m.Launch(MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=20)
+        try:
+            ctx.start()
+            real = self.m.proc_start_time
+            self.m.proc_start_time = lambda pid: "garbage-not-numeric"
+            record, state = ctx.request("cold")
+            self.assertFalse(record["transport_ok"])
+            self.assertIn("IDENTITY_MISMATCH", record["error"])
+            self.assertFalse(diag.exists())
+        finally:
+            self.m.proc_start_time = real
+            ctx.stop()
+
+    def test_pid_reuse_after_ready_fails_closed(self):
+        """PID-reuse regression: after readiness, the owned child is
+        killed externally and the PID slot is reoccupied by an unrelated
+        process; a request must fail closed (identity mismatch), never
+        dispatch to the reoccupant, and cleanup must not kill the
+        reoccupant (not owned)."""
+        diag = self.tmp / "requests.jsonl"
+        reoccupant_log = self.tmp / "reoccupant.log"
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        ctx = self.m.Launch(MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=20)
+        try:
+            ctx.start()
+            owned_pid = ctx.record["pid"]
+            owned_start = ctx._start_time
+            # externally kill the owned child (simulates crash), reap it
+            # via the still-open Popen, and reoccupy its PID slot with an
+            # unrelated stub listening on a SIDE port (must never be
+            # contacted or killed by the launcher)
+            os.kill(owned_pid, signal.SIGKILL)
+            ctx.proc.wait(5)
+            side_port = free_loopback_port()
+            reoccupant_argv = self.command_builder(
+                "X", side_port, reoccupant_log, {})
+            reoccupant = subprocess.Popen(reoccupant_argv)
+            try:
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    if (self.m.proc_start_time(reoccupant.pid)
+                            is not None):
+                        break
+                    time.sleep(0.02)
+                # the launcher must observe the reoccupant under the
+                # SAME pid as the owned child for the request path to be
+                # exercised; not portable to force, so prove the law the
+                # request path relies on directly: exact identity equality.
+                self.assertNotEqual(
+                    self.m.proc_start_time(reoccupant.pid), owned_start,
+                    "test setup: reoccupant must be a different instance")
+                # the pure law the request path relies on:
+                self.assertFalse(self.m.pid_alive_same_instance(
+                    owned_pid, owned_start) or
+                    self.m.pid_alive_same_instance(
+                        reoccupant.pid, owned_start),
+                    "a different process instance must never satisfy the "
+                    "captured identity")
+            finally:
+                terminate(reoccupant)
+        finally:
+            ctx.stop()
+
+    def test_identity_failure_never_dispatches_through_executor(self):
+        """Fail-closed law through the production entry point: with
+        /proc start-time unavailable everywhere, the campaign consumes
+        every slot as transport failures (LAUNCH_FAILURE), dispatches
+        zero HTTP completions, and still leaves no orphan."""
+        diag = self.tmp / "requests.jsonl"
+        recs = []
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        real = self.m.proc_start_time
+        self.m.proc_start_time = lambda pid: None
+        try:
+            summary, launches = self.m.campaign_executor(
+                MATRIX, command_builder=builder, workdir=self.tmp,
+                port=self.port, startup_timeout_s=10,
+                retain=lambda label, kind, record, bracket:
+                    recs.append(record))
+        finally:
+            self.m.proc_start_time = real
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertEqual(self.dispositions(summary),
+                         ["aborted", "not_attempted", "not_attempted",
+                          "not_attempted"])
+        self.assertFalse(diag.exists(),
+                          "identity failure must produce zero completion "
+                          "requests")
+        for ctx in launches:
+            self.assertFalse(pid_alive(ctx.record["pid"]))
+
+    def test_unexpected_child_exit_after_ready_fails_closed(self):
+        """Regression: the child dies after readiness but before the
+        request; the request fails closed (child not live), no HTTP to
+        any other process, cleanup still reaps."""
+        diag = self.tmp / "requests.jsonl"
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        ctx = self.m.Launch(MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=20)
+        try:
+            ctx.start()
+            os.kill(ctx.record["pid"], signal.SIGKILL)
+            ctx.proc.wait(5)
+            record, state = ctx.request("cold")
+            self.assertFalse(record["transport_ok"])
+            self.assertIn("CHILD_NOT_LIVE_AT_REQUEST", record["error"])
+            self.assertFalse(diag.exists())
+        finally:
+            ctx.stop()
+
+
+class LauncherPromptBindingTests(LauncherHarness):
+    """B4 (review 5459338940): the production launcher must be supplied
+    the exact frozen prompt bytes and request settings explicitly; a
+    missing/mismatched/ambiguous prompt must be rejected BEFORE any
+    HTTP dispatch. The submitted POST body must carry the exact frozen
+    P1 bytes; no silent ``"stub"`` substitution; request identity
+    evidence retained without leaking prompt text into diagnostics."""
+
+    def test_real_matrix_row_without_prompt_text_never_sends_stub(self):
+        """RED core: driving the production entry point with the REAL
+        MINIMAL_RERUN_MATRIX shape (``prompt: "P1"``, no ``prompt_text``)
+        and NO explicit prompt binding must reject the launch BEFORE
+        dispatch — the stub must never receive a completion request."""
+        diag = self.tmp / "requests.jsonl"
+        recs = []
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        summary, launches = self.m.campaign_executor(
+            REAL_MATRIX, command_builder=builder, workdir=self.tmp,
+            port=self.port, startup_timeout_s=10,
+            retain=lambda label, kind, record, bracket: recs.append(record))
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertFalse(diag.exists(),
+                          "no HTTP completion may be dispatched when the "
+                          "prompt binding is absent (silent 'stub' "
+                          "substitution is exactly what must not happen)")
+        r1c = [r for r in recs if r["launch"] == "R1"][0]
+        self.assertIn("PROMPT_BINDING_MISSING", r1c["error"])
+
+    def test_prompt_bytes_verified_against_frozen_identity(self):
+        """Explicit prompt binding with WRONG bytes (hash mismatch) is
+        rejected before dispatch."""
+        diag = self.tmp / "requests.jsonl"
+        recs = []
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        binding = {"P1": {"text": "definitely not the frozen P1 prompt",
+                          "utf8_sha256": P1["utf8_sha256"],
+                          "settings": P1["settings"]}}
+        summary, launches = self.m.campaign_executor(
+            REAL_MATRIX, command_builder=builder, workdir=self.tmp,
+            port=self.port, prompt_binding=binding, startup_timeout_s=10,
+            retain=lambda label, kind, record, bracket: recs.append(record))
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertFalse(diag.exists())
+        r1c = [r for r in recs if r["launch"] == "R1"][0]
+        self.assertIn("PROMPT_BINDING_MISMATCH", r1c["error"])
+
+    def test_exact_frozen_prompt_reaches_server_and_is_evidenced(self):
+        """GREEN: with the exact frozen P1 binding supplied, the server
+        receives the exact prompt bytes + frozen settings, the record
+        carries request identity evidence (sha256 + bytes count) without
+        the prompt text itself, and the campaign completes."""
+        diag = self.tmp / "requests.jsonl"
+        recs = []
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        binding = {"P1": P1}
+        summary, launches = self.m.campaign_executor(
+            REAL_MATRIX, command_builder=builder, workdir=self.tmp,
+            port=self.port, prompt_binding=binding, startup_timeout_s=20,
+            retain=lambda label, kind, record, bracket: recs.append(record))
+        self.assertEqual(summary["terminal"], "COMPLETE",
+                         f"stop_reason={summary.get('stop_reason')}")
+        rows = [json.loads(l) for l in
+                diag.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(len(rows), 4)
+        for row in rows:
+            body = json.loads(row["body"])
+            self.assertEqual(body["prompt"], P1["text"],
+                             "the server must receive the exact frozen "
+                             "P1 bytes")
+            for key, value in P1["settings"].items():
+                if isinstance(value, list):
+                    self.assertEqual(sorted(body[key]), sorted(value))
+                else:
+                    self.assertEqual(body[key], value)
+            self.assertEqual(row["body_sha256"],
+                             hashlib.sha256(
+                                 row["body"].encode()).hexdigest())
+        for rec in recs:
+            ev = rec["request_identity"]
+            self.assertEqual(ev["prompt_sha256"], P1["utf8_sha256"])
+            self.assertEqual(ev["prompt_bytes"],
+                             len(P1["text"].encode("utf-8")))
+            self.assertNotIn(P1["text"], json.dumps(rec),
+                             "prompt text must not leak into records")
+
+    def test_synthetic_prompt_explicit_in_tests(self):
+        """CPU stub tests keep synthetic prompt data EXPLICIT: a matrix
+        row with explicit test prompt bytes runs and the server receives
+        exactly those bytes."""
+        diag = self.tmp / "requests.jsonl"
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv += ["--record-requests", str(diag)]
+            return argv
+
+        matrix = [dict(MATRIX[0],
+                       prompt_text="synthetic-cpu-test-prompt",
+                       prompt_sha256=hashlib.sha256(
+                           b"synthetic-cpu-test-prompt").hexdigest())]
+        summary, launches = self.m.campaign_executor(
+            matrix, command_builder=builder, workdir=self.tmp,
+            port=self.port, startup_timeout_s=20)
+        self.assertEqual(summary["terminal"], "COMPLETE",
+                         f"stop_reason={summary.get('stop_reason')}")
+        row = json.loads(diag.read_text(encoding="utf-8").splitlines()[0])
+        self.assertEqual(json.loads(row["body"])["prompt"],
+                         "synthetic-cpu-test-prompt")
 
 
 class NegativeControlTests(LauncherHarness):
