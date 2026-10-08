@@ -11,11 +11,11 @@ executable identity of a group is the multiset of unittest IDs its
 workflow commands expand to (via the same ``unittest`` loader the
 commands use), and it must equal the discovered population of the
 group's registered modules exactly - no omissions, no duplicates, no
-unregistered extras.  ``--identity-proof`` emits that accounting as
+unregistered extras.  The CLI emits that accounting as
 deterministic machine-readable JSON so a before/after equality proof can
-be produced for any checkout::
+be produced for any checkout (the CLI prints the proof, exit 1 on drift)::
 
-    python3 scripts/ci_workflow_parity.py --identity-proof
+    python3 scripts/ci_workflow_parity.py
     python3 scripts/ci_workflow_parity.py --root /path/to/other/checkout \
         --group r8i-qwen-qualification
 
@@ -59,20 +59,16 @@ _UNITTEST_RE = re.compile(
 SHARD_JOB_RE = re.compile(r"^(?P<group>[a-z0-9-]+)-s(?P<shard>\d+)$")
 
 
+def job_group_id(job_id):
+    """Group a workflow job reports under (shard jobs map to their group)."""
+    m = SHARD_JOB_RE.match(job_id)
+    return m.group("group") if m else job_id
+
+
 def parse_workflow(doc):
     """Return {job_id: set(test_module)} for every unittest-executing step."""
-    jobs = {}
-    for job_id, job in doc.get("jobs", {}).items():
-        modules = set()
-        for step in job.get("steps", []):
-            run = step.get("run") or ""
-            for match in _UNITTEST_RE.finditer(run):
-                modules.update(
-                    token.split(".")[1]
-                    for token in match.group(1).split())
-        if modules:
-            jobs[job_id] = modules
-    return jobs
+    return {job: {token.split(".")[0] for token in tokens}
+            for job, tokens in parse_workflow_tokens(doc).items()}
 
 
 def group_execution_map(doc):
@@ -80,9 +76,7 @@ def group_execution_map(doc):
     per_job = parse_workflow(doc)
     groups = {}
     for job_id, modules in per_job.items():
-        m = SHARD_JOB_RE.match(job_id)
-        group = m.group("group") if m else job_id
-        groups.setdefault(group, set()).update(modules)
+        groups.setdefault(job_group_id(job_id), set()).update(modules)
     return groups
 
 
@@ -183,8 +177,7 @@ def group_executed_ids(doc, root=None):
     """{group_id: [unittest id, ...]} merging shard jobs into their group."""
     groups = {}
     for job_id, ids in job_executed_ids(doc, root).items():
-        m = SHARD_JOB_RE.match(job_id)
-        groups.setdefault(m.group("group") if m else job_id, []).extend(ids)
+        groups.setdefault(job_group_id(job_id), []).extend(ids)
     return groups
 
 
@@ -243,16 +236,16 @@ def identity_proof(doc, registry=None, groups=None, root=None):
         registry = registry_modules()
     accounting = _identity_accounting(doc, registry, root)
     per_job = job_executed_ids(doc, root)
+    tokens = parse_workflow_tokens(doc)
     proof = {"schema": "inferswarm.ci.identity-proof/1", "groups": {}}
     for group, acc in accounting.items():
         if groups and group not in groups:
             continue
         jobs = {}
         for job, ids in sorted(per_job.items()):
-            m = SHARD_JOB_RE.match(job)
-            if (m.group("group") if m else job) != group:
+            if job_group_id(job) != group:
                 continue
-            jobs[job] = {"tokens": parse_workflow_tokens(doc)[job],
+            jobs[job] = {"tokens": tokens[job],
                          "count": len(ids), "ids_sha256": _digest(ids)}
         proof["groups"][group] = {
             "registered_modules": len(registry[group]),
@@ -354,8 +347,6 @@ def _registry_from_json(root):
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Workflow-vs-registry test-identity proof (Issue #287)")
-    ap.add_argument("--identity-proof", action="store_true",
-                    help="print the identity accounting as JSON (default)")
     ap.add_argument("--root", default=str(REPO_ROOT),
                     help="checkout whose workflow/registry/tests to analyze")
     ap.add_argument("--group", action="append",
