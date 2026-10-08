@@ -1153,5 +1153,203 @@ class R3FaithfulnessTests(NegativeControlTests):
         return load("issue289_launcher_r3", p)
 
 
+class ReadinessTupleRegressionTests(LauncherHarness):
+    """N1: real owned child; valid token cannot excuse identity failure."""
+
+    def exercise_failure(self, mode):
+        from unittest.mock import patch
+        diag = self.tmp / "n1-requests.jsonl"
+        real_start = self.m.proc_start_time
+        real_await = self.m.Launch._await_ready
+        observed = []
+
+        def builder(arm, port, log_path, env_extra):
+            return self.command_builder(arm, port, log_path, env_extra) + [
+                "--record-requests", str(diag)]
+
+        def read_start(pid):
+            observed.append(pid)
+            # First capture succeeds, only the first readiness check fails.
+            # Later identity checks succeed: the old bug dispatches requests.
+            if len(observed) == 2:
+                return None if mode == "unreadable" else "changed-instance"
+            return real_start(pid)
+
+        def await_ready(ctx):
+            wait_listening(ctx.port)
+            # Real listener is available and echoes exactly this launch token.
+            self.assertEqual(ctx._probe_identity(), ctx._identity)
+            if mode == "exited":
+                ctx.proc.kill()
+                ctx.proc.wait(5)
+                # A listener's expected token (cached/racing response) is
+                # still no substitute for the owned child's live identity.
+                ctx._probe_identity = lambda: ctx._identity
+            return real_await(ctx)
+
+        t0 = time.monotonic()
+        with patch.object(self.m, "proc_start_time", read_start), \
+                patch.object(self.m.Launch, "_await_ready", await_ready):
+            summary, launches = self.run_matrix(command_builder=builder,
+                                                startup_timeout_s=3)
+        ctx = launches[0]
+        reason = {"unreadable": "IDENTITY_UNAVAILABLE",
+                  "changed": "IDENTITY_MISMATCH",
+                  "exited": "CHILD_EXITED_BEFORE_READY"}[mode]
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertIsNone(ctx.record["ready_utc"])
+        self.assertIn(reason, ctx.record["failure"] or "")
+        self.assertEqual(self.dispositions(summary),
+                         ["aborted", "not_attempted", "not_attempted",
+                          "not_attempted"])
+        self.assertFalse(diag.exists(), "no completion bytes after failed readiness")
+        self.assertTrue(ctx.record["exit"]["reaped"])
+        self.assertFalse(pid_alive(ctx.record["pid"]))
+        self.assertFalse(self.m.port_occupied("127.0.0.1", self.port))
+        self.assertLess(time.monotonic() - t0, 8)
+
+    def test_start_time_unreadable_between_capture_and_ready(self):
+        self.exercise_failure("unreadable")
+
+    def test_start_time_changed_between_capture_and_ready(self):
+        self.exercise_failure("changed")
+
+    def test_owned_child_exits_before_ready_despite_expected_token(self):
+        self.exercise_failure("exited")
+
+    def test_tuple_truthiness_mutation_is_killed(self):
+        # Retain the exact reviewed method as a targeted in-memory mutation.
+        from unittest.mock import patch
+        namespace = {}
+        exec('def broken(self):\n'
+             '    if not self._child_alive():\n'
+             '        raise RuntimeError("dead")\n'
+             '    self._probe_identity()\n'
+             '    self.startup_s = 0.0\n', namespace)
+        with patch.object(self.m.Launch, "_await_ready", namespace["broken"]):
+            with self.assertRaises(AssertionError):
+                self.exercise_failure("unreadable")
+
+
+class FrozenRequestAuthorityRegressionTests(LauncherHarness):
+    """N2: record actual POST bytes with the existing real CPU stub."""
+
+    def dispatch(self, binding, row=None):
+        diag = self.tmp / "n2-requests.jsonl"
+
+        def builder(arm, port, log_path, env_extra):
+            return self.command_builder(arm, port, log_path, env_extra) + [
+                "--record-requests", str(diag)]
+
+        ctx = self.m.Launch(row or MATRIX[0], command_builder=builder,
+                            workdir=self.tmp, port=self.port,
+                            startup_timeout_s=5, prompt_binding=binding)
+        try:
+            ctx.start()
+            record, _ = ctx.request("cold")
+        finally:
+            ctx.stop()
+        self.assertFalse(pid_alive(ctx.record["pid"]))
+        rows = ([json.loads(line) for line in diag.read_text().splitlines()]
+                if diag.exists() else [])
+        if diag.exists():
+            diag.unlink()
+        return record, rows
+
+    def reject(self, binding, row=None, reason="BINDING"):
+        record, rows = self.dispatch(binding, row)
+        self.assertFalse(record["transport_ok"], "unapproved request dispatched")
+        self.assertIn(reason, record["error"])
+        self.assertEqual(rows, [], "authority failure must send zero completion bytes")
+        self.assertIsNone(record["request_identity"])
+        self.assertNotIn(P1["text"], json.dumps(record))
+
+    def entry(self):
+        return json.loads(json.dumps(P1))
+
+    def test_self_consistent_wrong_prompt_hash_cannot_impersonate_p1(self):
+        entry = self.entry()
+        entry["text"] = "self-consistent but not frozen P1"
+        entry["utf8_sha256"] = hashlib.sha256(entry["text"].encode()).hexdigest()
+        self.reject({"P1": entry})
+
+    def test_in_row_synthetic_override_cannot_replace_production_binding(self):
+        text = "in-row override"
+        row = dict(MATRIX[0], prompt_text=text,
+                   prompt_sha256=hashlib.sha256(text.encode()).hexdigest())
+        self.reject({"P1": self.entry()}, row)
+
+    def test_synthetic_row_without_explicit_cpu_binding_is_rejected(self):
+        text = "unauthenticated synthetic row"
+        self.reject(None, dict(MATRIX[0], prompt_text=text,
+                              prompt_sha256=hashlib.sha256(text.encode()).hexdigest()))
+
+    def test_reserved_prompt_setting_never_replaces_outgoing_prompt(self):
+        entry = self.entry()
+        entry["settings"]["prompt"] = "overwritten POST prompt"
+        self.reject({"P1": entry}, reason="REQUEST_SETTINGS")
+
+    def test_missing_settings_fail_closed(self):
+        for settings in (None, {}, {"seed": 42}):
+            with self.subTest(settings=settings):
+                entry = self.entry()
+                entry["settings"] = settings
+                self.reject({"P1": entry}, reason="REQUEST_SETTINGS")
+
+    def test_unknown_settings_fail_closed(self):
+        entry = self.entry()
+        entry["settings"]["unapproved_option"] = True
+        self.reject({"P1": entry}, reason="REQUEST_SETTINGS")
+
+    def test_conflicting_frozen_settings_fail_closed(self):
+        for key, value in (("seed", 43), ("n_predict", 129),
+                           ("cache_prompt", True), ("stream", False),
+                           ("samplers", ["temperature"]),
+                           ("timings_per_token", False)):
+            with self.subTest(key=key):
+                entry = self.entry()
+                entry["settings"][key] = value
+                self.reject({"P1": entry}, reason="REQUEST_SETTINGS")
+
+    def test_ambiguous_settings_types_fail_closed(self):
+        for key, value in (("seed", "42"), ("top_k", True),
+                           ("cache_prompt", 0), ("temperature", False)):
+            with self.subTest(key=key):
+                entry = self.entry()
+                entry["settings"][key] = value
+                self.reject({"P1": entry}, reason="REQUEST_SETTINGS")
+
+    def test_unknown_prompt_id_fails_closed(self):
+        self.reject({"P9": self.entry()}, dict(MATRIX[0], prompt="P9"))
+
+    def test_accepted_greedy_normalization_reaches_actual_wire(self):
+        record, rows = self.dispatch({"P1": self.entry()})
+        self.assertTrue(record["transport_ok"], record["error"])
+        self.assertEqual(len(rows), 1)
+        payload = json.loads(rows[0]["body"])
+        self.assertEqual(payload["samplers"], ["top_k"])
+        self.assertEqual(payload["prompt"], P1["text"])
+        self.assertEqual(payload["temperature"], 0)
+        self.assertEqual(payload["top_k"], 1)
+        self.assertEqual(payload["seed"], 42)
+
+    def test_evidence_derived_from_actual_transmitted_bytes(self):
+        record, rows = self.dispatch({"P1": self.entry()})
+        self.assertTrue(record["transport_ok"], record["error"])
+        self.assertEqual(len(rows), 1)
+        raw = rows[0]["body"].encode("utf-8")
+        payload = json.loads(raw)
+        evidence = record["request_identity"]
+        self.assertEqual(evidence.get("body_sha256"),
+                         hashlib.sha256(raw).hexdigest())
+        self.assertEqual(evidence.get("body_bytes"), len(raw))
+        self.assertEqual(evidence["prompt_sha256"],
+                         hashlib.sha256(payload["prompt"].encode()).hexdigest())
+        self.assertEqual(evidence["prompt_bytes"], len(payload["prompt"].encode()))
+        self.assertEqual(evidence["request_settings"],
+                         {k: v for k, v in payload.items() if k != "prompt"})
+        self.assertNotIn(P1["text"], json.dumps(record))
+
+
 if __name__ == "__main__":
     unittest.main()
