@@ -1,62 +1,152 @@
 #!/usr/bin/env python3
-"""Issue #289 RED baseline: the r3 physical driver lifecycle, tracked.
+"""Issue #289: physical launcher server lifecycle for the #280 campaign driver.
 
-This is a faithful tracked port of the issue #280 r3 physical driver's
-launch lifecycle (``inferswarm05:~/is280r3-physical/driver.py``, sha256
-2cc001b521cbefd56a5fedb29c7ff2e774e5154851fdb1dd2fdce633237f8e39) reduced
-to its minimal lifecycle component, with the SAME interface the corrected
-module will keep (``campaign_executor``, ``Launch``). It preserves the
-defect this issue exists to fix, so the committed RED tests reproduce it
-on CPU with loopback stub servers:
+DEFECT BEING FIXED (issue #280 r3, retained evidence ~/is280r3-evidence on
+the controller): the r3 physical driver's ``launch()`` executor never
+stopped the previous launch — stop ran only in a post-campaign ``finally``
+— and its readiness probe was a plain HTTP ``/health`` poll against a fixed
+port. The R1 baseline server therefore answered the R2 readiness probe, R2
+was declared "ready" while its own process had already exited on bind
+failure (``couldn't bind HTTP server socket ... port 8791``), and the
+R2-cold request was served by the still-running R1 baseline server. The
+pure gate engine (``scripts/issue280_runner.run_campaign``) correctly
+failed closed on the missing retained R2 observer bytes; the defect was
+entirely in the untracked session-local physical executor.
 
-- ``launch()`` never stops the previous launch: stop runs only in a
-  post-campaign ``finally`` (the r3 driver's finally loop after
-  ``run_campaign``), so the R1 baseline server is still alive when the R2
-  candidate server starts;
-- readiness is a plain HTTP ``/health`` poll returning 200 with ``"ok"``:
-  the still-running R1 server answers the R2 readiness probe, so R2 is
-  declared "ready" while its own process already exited on bind failure
-  (retained server-R2.log: ``couldn't bind HTTP server socket ... port
-  8791``, exit in 39 ms);
-- requests are dispatched to whichever process answers the fixed port:
-  the R2-cold request was served by the R1 baseline server (three
-  request_accept rows in server-R1.log), and only the missing retained R2
-  observer bytes made the pure gate engine fail closed.
+This module extracts the minimal launcher/lifecycle component into a
+tracked repository module with a deterministic production entry point
+(:func:`campaign_executor`) that the next physical operator drives exactly
+like the r3 driver: the unchanged gate engine over one
+``launch(matrix_row) -> request(kind)`` executor per matrix row. Lifecycle
+laws fixed here:
 
+- **Ownership.** A launch owns exactly the child process (and its process
+  group) that it spawned, identified by PID plus the non-inherited /proc
+  start time (PID-reuse guard). Nothing is ever killed by port or by a
+  generic process name.
+- **Sequencing.** The previous owned launch is always stopped and reaped —
+  graceful SIGTERM, bounded wait, SIGKILL escalation restricted to the
+  owned process group — BEFORE the next launch begins, and the port is
+  verified released. A prior launch that fails to stop cleanly is a hard
+  pre-request STOP, never a reason to retry or dispatch to a stale server.
+- **Port ownership.** Before spawning, the port must be free. If it is
+  occupied by a foreign process the launch fails closed and the foreign
+  listener is never sent an HTTP request.
+- **Live identity.** Readiness requires (a) the owned child alive under
+  the same process identity the launcher spawned, and (b) the server
+  reporting THIS launch's identity token. A bare HTTP 200, an open port,
+  or a cached health response is never readiness. The token is unique per
+  launch (``<label>#<launcher-pid>#<monotonic-nonce>``), injected into the
+  child environment as ``I280_LAUNCH_IDENTITY``, and echoed on ``/health``
+  and in every completion response, so an HTTP request can never be
+  routed to — or admitted from — a previous launch/arm, including across
+  a bind collision, early exit, or PID reuse.
+- **Traceability.** Every request record carries launch label, arm, server
+  PID, and both identity tokens alongside the response bytes; a response
+  whose server identity does not match the current launch is recorded as
+  an identity-mismatch transport failure and never treated as an
+  observation of this arm.
+- **Fail-closed launch failures.** A launch that cannot start (foreign
+  port, bind failure/early death, startup timeout, wrong-identity
+  readiness) still consumes its request slots through the unchanged gate
+  engine as transport-failed requests — no HTTP request is dispatched to
+  any server that is not this launch's live, identity-verified child.
+- **Cleanup.** Deterministic stop/reap of every owned child on success,
+  gate-engine STOP, launch failure, and executor exception: no orphan
+  process survives :func:`campaign_executor` returning.
+
+CPU-only: no model loading, no GPU/Vulkan/device access, no physical
+execution. The server command is supplied by the caller (the physical
+``llama-server`` in production; a stdlib ``http.server`` stub in tests).
+Observer-bracket slicing is the r3 driver's law, retained verbatim as
+:func:`slice_request_bracket`; health sampling stays an injected callable.
 The frozen admission/STOP law stays in ``scripts/issue280_runner.py``,
-unchanged. CPU-only: no model loading, no GPU/Vulkan, no physical
-execution; the server command is caller-supplied (stub servers in tests).
+which this module does not modify.
 """
 from __future__ import annotations
 
 import json
 import os
+import signal
+import socket
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Bounded lifecycle constants (seconds).
+GRACEFUL_STOP_S = 10.0
+ESCALATED_STOP_S = 5.0
 STARTUP_TIMEOUT_S = 60.0
 READY_POLL_INTERVAL_S = 0.25
+STARTUP_PROBE_TIMEOUT_S = 1.0
 LOG_FLUSH_WAIT_S = 5.0
 LOG_FLUSH_POLL_S = 0.2
+PORT_PROBE_TIMEOUT_S = 0.5
 
+IDENTITY_ENV = "I280_LAUNCH_IDENTITY"
+IDENTITY_HEADER = "X-I280-LAUNCH-IDENTITY"
+
+# Events kept in the per-request observer bracket prefix (the r3 driver's
+# slice law: recording + model-load inventory rows preceding the request).
 BRACKET_PREFIX_EVENTS = ("recording", "weight_inventory", "kv_inventory",
                          "buffer_decl", "cpu_state", "unexplained_placement")
 
 
 class LaunchError(RuntimeError):
-    """Launch lifecycle failure (interface parity with the corrected
-    module; the r3 law raises it only for early exit / startup timeout)."""
+    """Launch lifecycle failure. Always fail-closed: the executor turns
+    this into a consumed request slot and a campaign STOP, never a retry."""
 
 
 def utcnow() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def proc_start_time(pid: int) -> str | None:
+    """Non-inherited process start time (field 22 of /proc/<pid>/stat).
+    Together with the PID this identifies the exact process instance,
+    defeating PID-reuse misattribution."""
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as fh:
+            stat = fh.read().decode("utf-8", "replace")
+        fields = stat[stat.rindex(")") + 2:].split()
+        return fields[19]
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def pid_alive_same_instance(pid: int, start_time: str | None) -> bool:
+    """The PID is alive AND is the same process instance the launcher
+    spawned (same /proc start time)."""
+    if pid is None or pid <= 0:
+        return False
+    observed = proc_start_time(pid)
+    if observed is None:
+        return False
+    return start_time is None or observed == start_time
+
+
+def port_occupied(host: str, port: int) -> bool:
+    """True if some process is listening on host:port. Detection is a raw
+    TCP connect that sends no bytes — an occupied port is NEVER probed
+    with HTTP (the foreign listener is not contacted for service)."""
+    try:
+        with socket.create_connection((host, port),
+                                      timeout=PORT_PROBE_TIMEOUT_S):
+            return True
+    except OSError:
+        return False
+
+
 def slice_request_bracket(log_text: str, ordinal: int) -> str | None:
-    """Per-request observer bracket sliced from the append-only server log
-    (r3 driver law, byte-identical semantics)."""
+    """Derive the per-request observer bracket from the append-only server
+    log (r3 driver law, byte-identical semantics): the ``recording`` +
+    model-load inventory rows preceding the request, plus the
+    ``request_accept``..``request_end`` rows for this ordinal, with the
+    ordinal rewritten to 1 and ``requests_planned`` rewritten to 1. The
+    raw retained log itself is preserved separately; the bracket is a
+    derived evidence view."""
     lines = log_text.splitlines()
     accept_idx = end_idx = None
     rid = None
@@ -99,10 +189,15 @@ def slice_request_bracket(log_text: str, ordinal: int) -> str | None:
 
 
 class Launch:
-    """One server launch under the r3 lifecycle law (THE DEFECT).
+    """One owned server launch: spawn, identity-checked readiness, requests
+    through the owned child only, and bounded stop/reap.
 
-    Same constructor surface as the corrected module so one test suite
-    drives both: ``command_builder(arm, port, log_path, env_extra)``.
+    ``command_builder(arm, port, log_path, env_extra)`` returns the exact
+    server argv (the launcher injects ``I280_LAUNCH_IDENTITY`` into the
+    child environment itself). ``slice_observer`` defaults to
+    :func:`slice_request_bracket`; ``retain(label, kind, record, bracket)``
+    and ``health() -> (sample, stop_or_None)`` are optional injected
+    callables matching the r3 driver's seams.
     """
 
     def __init__(self, row, *, command_builder, workdir, env=None,
@@ -121,62 +216,144 @@ class Launch:
         self.health = health
         self.startup_timeout_s = startup_timeout_s
         self.log_path = self.workdir / f"server-{self.label}.log"
-        self.proc = None
+        self.proc: subprocess.Popen | None = None
         self.log_file = None
-        self.startup_s = None
+        self._start_time: str | None = None
+        self._identity: str | None = None
+        self._t0: float | None = None
+        self.startup_s: float | None = None
         self.ordinal = 0
-        self.record = {
+        # traceable lifecycle record (request-to-server/arm binding)
+        self.record: dict = {
             "label": self.label, "arm": self.arm, "pid": None,
             "identity": None, "host": host, "port": port,
             "started_utc": None, "ready_utc": None, "exit": None,
             "failure": None,
         }
 
+    # -- lifecycle ---------------------------------------------------------
+
     def start(self):
-        """r3 law: no port preflight, no owned-process identity; readiness
-        is ANY 200 with "ok" on the fixed port — including the previous
-        launch's still-running server."""
+        """Spawn the owned child and block until THIS launch is ready.
+
+        Raises :class:`LaunchError` on foreign port occupation, early
+        child exit, startup timeout, or a readiness response carrying a
+        foreign identity. On any post-spawn failure the child remains
+        owned and must be :meth:`stop`ped by the caller (the production
+        entry point does this deterministically)."""
+        if port_occupied(self.host, self.port):
+            raise LaunchError(
+                f"PORT_OCCUPIED_BEFORE_START {self.host}:{self.port} by a "
+                f"foreign process; launch {self.label} refuses to start "
+                f"and will not contact the foreign listener")
         cmd = self.command_builder(self.arm, self.port, self.log_path,
                                    dict(self.env_extra))
         env = dict(os.environ)
         env.update(self.env_extra)
+        self._identity = f"{self.label}#{os.getpid()}#{time.monotonic_ns():x}"
+        env[IDENTITY_ENV] = self._identity
+        self.record["identity"] = self._identity
         self.record["started_utc"] = utcnow()
         self.log_file = open(self.log_path, "wb")
-        t0 = time.monotonic()
-        self.proc = subprocess.Popen(cmd, stdout=self.log_file,
-                                     stderr=self.log_file, env=env)
-        self.record["pid"] = self.proc.pid
-        while time.monotonic() - t0 < self.startup_timeout_s:
-            if self.proc.poll() is not None:
-                raise LaunchError(
-                    f"PROCESS_EXIT launch={self.label} "
-                    f"code={self.proc.returncode}")
+        self._t0 = time.monotonic()
+        try:
+            self.proc = subprocess.Popen(cmd, stdout=self.log_file,
+                                         stderr=self.log_file, env=env,
+                                         start_new_session=True)
+        except OSError as e:
             try:
-                r = urllib.request.urlopen(
-                    f"http://{self.host}:{self.port}/health", timeout=1)
-                if b'"ok"' in r.read():
+                self.log_file.close()
+            except OSError:
+                pass
+            self.log_file = None
+            self.record["failure"] = f"SPAWN_FAILED {e}"
+            raise LaunchError(
+                f"SPAWN_FAILED launch={self.label} cmd={cmd[0]}: {e}")
+        self.record["pid"] = self.proc.pid
+        self._start_time = proc_start_time(self.proc.pid)
+        self._await_ready()
+        self.record["ready_utc"] = utcnow()
+
+    def _child_alive(self) -> bool:
+        if self.proc is None or self.proc.poll() is not None:
+            return False
+        return pid_alive_same_instance(self.proc.pid, self._start_time)
+
+    def _await_ready(self):
+        deadline = time.monotonic() + self.startup_timeout_s
+        t0 = self._t0 or time.monotonic()
+        last_observed = None
+        while time.monotonic() < deadline:
+            if not self._child_alive():
+                code = self.proc.returncode if self.proc else None
+                raise LaunchError(
+                    f"CHILD_EXITED_BEFORE_READY launch={self.label} "
+                    f"pid={self.record['pid']} code={code}")
+            ident = self._probe_identity()
+            if ident is not None:
+                last_observed = ident
+                if ident == self._identity:
                     self.startup_s = time.monotonic() - t0
-                    self.record["ready_utc"] = utcnow()
                     return
-            except Exception:
-                time.sleep(READY_POLL_INTERVAL_S)
-        raise LaunchError(f"STARTUP_TIMEOUT launch={self.label}")
+                raise LaunchError(
+                    f"FOREIGN_SERVER_IDENTITY launch={self.label} "
+                    f"expected={self._identity} observed={ident}; a live "
+                    f"listener answering for a different launch is never "
+                    f"readiness for this one")
+            time.sleep(READY_POLL_INTERVAL_S)
+        raise LaunchError(
+            f"STARTUP_TIMEOUT launch={self.label} pid={self.record['pid']} "
+            f"last_observed_identity={last_observed}")
+
+    def _probe_identity(self) -> str | None:
+        """GET /health; return the identity token the serving process
+        reports, or None. A 200 without this launch's identity is not
+        readiness (and is never accepted silently)."""
+        url = f"http://{self.host}:{self.port}/health"
+        try:
+            with urllib.request.urlopen(url,
+                                        timeout=STARTUP_PROBE_TIMEOUT_S) as r:
+                if r.status != 200:
+                    return None
+                token = r.headers.get(IDENTITY_HEADER)
+                if token:
+                    return token
+                body = r.read(65536).decode("utf-8", "replace")
+                try:
+                    data = json.loads(body)
+                except ValueError:
+                    return None
+                return data.get(IDENTITY_ENV) or data.get("identity")
+        except (urllib.error.URLError, OSError, ValueError):
+            return None
 
     def stop(self):
-        """r3 law: terminate/kill the child only; called from the
-        post-campaign finally, NEVER between launches."""
+        """Bounded graceful stop (SIGTERM to the owned process group),
+        SIGKILL escalation restricted to the owned process group, always
+        reap, verify exit. Returns the exit record (the FIRST stop's
+        record is authoritative — later calls never rewrite it). Raises
+        :class:`LaunchError` only if the owned child cannot be stopped."""
         if self.proc is None:
             return self.record["exit"]
+        already = self.record["exit"]
+        if already is not None and already.get("reaped"):
+            return already
         try:
             if self.proc.poll() is None:
-                self.proc.terminate()
+                self._signal_group(signal.SIGTERM)
                 try:
-                    self.proc.wait(10)
-                except Exception:
-                    self.proc.kill()
-                    self.proc.wait()
+                    self.proc.wait(GRACEFUL_STOP_S)
+                except subprocess.TimeoutExpired:
+                    self._signal_group(signal.SIGKILL)
+                    try:
+                        self.proc.wait(ESCALATED_STOP_S)
+                    except subprocess.TimeoutExpired:
+                        raise LaunchError(
+                            f"UNSTOPPABLE_CHILD launch={self.label} "
+                            f"pid={self.proc.pid}")
             self.record["exit"] = {"returncode": self.proc.returncode,
-                                   "reaped": True, "stopped_utc": utcnow()}
+                                   "reaped": True,
+                                   "stopped_utc": utcnow()}
             return self.record["exit"]
         finally:
             if self.log_file is not None:
@@ -186,7 +363,28 @@ class Launch:
                     pass
                 self.log_file = None
 
+    def _signal_group(self, sig):
+        """Signal ONLY the owned child's process group (the launcher made
+        it a session leader via start_new_session); fall back to the child
+        PID itself if the group is already gone."""
+        proc = self.proc
+        if proc is None:
+            return
+        try:
+            os.killpg(proc.pid, sig)
+        except (ProcessLookupError, PermissionError):
+            if proc.poll() is None:
+                try:
+                    proc.send_signal(sig)
+                except (ProcessLookupError, OSError):
+                    pass
+
+    # -- requests ----------------------------------------------------------
+
     def build_request(self, kind):
+        """(url, body_bytes, headers) for one completion request. The
+        default body is the frozen r3 request shape; ``prompts`` rows may
+        be supplied by the production caller through ``row['prompt']``."""
         body = json.dumps({
             "prompt": self.row.get("prompt_text", "stub"),
             "n_predict": 128, "temperature": 0.0, "top_k": 1, "seed": 42,
@@ -198,8 +396,16 @@ class Launch:
                 {"Content-Type": "application/json"})
 
     def request(self, kind):
-        """r3 law: dispatch to whichever process answers the port; no
-        server-identity verification of any kind."""
+        """One request, served by THIS launch only. The response must echo
+        this launch's identity token (header or SSE field); anything else
+        — stale server, foreign listener, PID-reused process — is recorded
+        as an identity-mismatch transport failure and is never admitted as
+        an observation of this arm."""
+        if not self._child_alive():
+            code = self.proc.returncode if self.proc else None
+            return self._failed_request(
+                kind, f"CHILD_NOT_LIVE_AT_REQUEST launch={self.label} "
+                      f"pid={self.record['pid']} code={code}")
         self.ordinal += 1
         ordinal = self.ordinal
         url, data, headers = self.build_request(kind)
@@ -209,9 +415,11 @@ class Launch:
         final = None
         transport_ok = True
         err = None
+        server_identity = None
         try:
             req = urllib.request.Request(url, data=data, headers=headers)
             with urllib.request.urlopen(req, timeout=30) as r:
+                server_identity = r.headers.get(IDENTITY_HEADER)
                 for line in r:
                     if not line.startswith(b"data: "):
                         continue
@@ -219,6 +427,8 @@ class Launch:
                         c = json.loads(line[6:].decode("utf-8", "replace"))
                     except ValueError:
                         continue
+                    if server_identity is None and c.get("identity"):
+                        server_identity = c["identity"]
                     if c.get("content"):
                         if ttft is None:
                             ttft = time.monotonic() - t0
@@ -228,16 +438,25 @@ class Launch:
                         final = c
                         if not c.get("content"):
                             break
-        except Exception as e:
+        except Exception as e:  # any transport failure
             transport_ok = False
             err = f"{type(e).__name__}: {e}"
         wall = time.monotonic() - t0
+        mismatch = False
+        if transport_ok and server_identity != self._identity:
+            mismatch = True
+            transport_ok = False
+            err = (f"SERVER_IDENTITY_MISMATCH launch={self.label} "
+                   f"expected={self._identity} observed={server_identity}; "
+                   f"response not attributable to this launch/arm")
         record = {
             "launch": self.label, "arm": self.arm,
             "prompt": self.row.get("prompt"), "kind": kind,
-            "ordinal": ordinal, "server_pid": self.record["pid"],
-            "server_identity": None, "launch_identity": None,
-            "identity_mismatch": False,
+            "ordinal": ordinal,
+            "server_pid": self.record["pid"],
+            "server_identity": server_identity,
+            "launch_identity": self._identity,
+            "identity_mismatch": mismatch,
             "text": "".join(chunks), "transport_ok": transport_ok,
             "error": err, "ttft_s": ttft, "wall_s": wall,
             "startup_s": self.startup_s,
@@ -245,6 +464,8 @@ class Launch:
                        ("stop_type", "tokens_predicted", "tokens_evaluated",
                         "timings")} if final else None),
         }
+        # bounded wait for the owned server log to flush request_end, then
+        # derive the observer bracket through the r3 slice law
         bracket = None
         if transport_ok:
             deadline = time.monotonic() + LOG_FLUSH_WAIT_S
@@ -253,7 +474,7 @@ class Launch:
                 if bracket is not None:
                     break
                 time.sleep(LOG_FLUSH_POLL_S)
-        health_sample, health_stop = None, None
+        health_sample, health_stop = (None, None)
         if self.health is not None:
             health_sample, health_stop = self.health()
         record["health_stop"] = health_stop
@@ -264,6 +485,23 @@ class Launch:
         if self.retain is not None:
             self.retain(self.label, kind, record, bracket)
         return record, state
+
+    def _failed_request(self, kind, error):
+        """A request slot consumed without dispatching any HTTP bytes
+        (launch not live / not ready). Fail-closed through the unchanged
+        gate engine: transport failed -> slot consumed -> STOP."""
+        record = {
+            "launch": self.label, "arm": self.arm,
+            "prompt": self.row.get("prompt"), "kind": kind,
+            "server_pid": self.record["pid"],
+            "server_identity": None, "launch_identity": self._identity,
+            "identity_mismatch": False, "text": "", "transport_ok": False,
+            "error": error, "ttft_s": None, "wall_s": 0.0,
+            "startup_s": self.startup_s, "final": None, "health_stop": None,
+        }
+        if self.retain is not None:
+            self.retain(self.label, kind, record, None)
+        return record, {"observer_raw": None, "peak_rss_bytes": None}
 
     def _read_log(self) -> str:
         try:
@@ -286,9 +524,16 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
                       host="127.0.0.1", port=8791, slice_observer=None,
                       retain=None, health=None, on_launch_record=None,
                       startup_timeout_s=STARTUP_TIMEOUT_S):
-    """r3 law (THE DEFECT): launches accumulate; the previous launch is
-    never stopped before the next one; every owned child is stopped only
-    after the whole campaign, in the finally."""
+    """Deterministic production entry point: run the whole matrix through
+    the UNCHANGED pure gate engine (``issue280_runner.run_campaign``) with
+    the corrected launch lifecycle. Returns ``(summary, launches)``.
+
+    Every owned child is stopped and reaped before control returns — on
+    COMPLETE, on gate-engine STOP, on launch failure, and on exception.
+    A launch lifecycle failure is carried into the engine as a
+    transport-failed request (slot consumed, synchronous STOP); it never
+    raises out of the engine loop and never dispatches HTTP to a server
+    that is not the launch's own live, identity-verified child."""
     import importlib.util
 
     runner_path = Path(__file__).resolve().parent / "issue280_runner.py"
@@ -301,18 +546,57 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     launches: list[Launch] = []
+    stopped = set()
+
+    def stop_owned(ctx: Launch, *, phase: str):
+        if ctx.label not in stopped:
+            ctx.stop()
+            stopped.add(ctx.label)
+        if port_occupied(host, port):
+            raise LaunchError(
+                f"PORT_NOT_RELEASED_AFTER_STOP launch={ctx.label} "
+                f"phase={phase} {host}:{port}; refusing to start the next "
+                f"launch against an unverified port")
 
     def launch(row):
-        # r3 defect: the previous launch is NOT stopped here
+        # LAW: stop and reap every prior owned launch BEFORE the next one
+        # begins, and verify the port is released.
+        launch_failure = None
+        for prior in launches:
+            try:
+                stop_owned(prior, phase="pre-launch")
+            except LaunchError as e:
+                launch_failure = f"prior launch failed to stop: {e}"
         ctx = Launch(row, command_builder=command_builder, workdir=workdir,
                      env=env, host=host, port=port,
                      slice_observer=slice_observer, retain=retain,
                      health=health, startup_timeout_s=startup_timeout_s)
-        ctx.start()
+        if launch_failure is None:
+            try:
+                ctx.start()
+            except LaunchError as e:
+                ctx.record["failure"] = str(e)
+                launch_failure = str(e)
+                # deterministic cleanup of the failed-but-owned child
+                try:
+                    ctx.stop()
+                    stopped.add(ctx.label)
+                except LaunchError:
+                    pass
+        else:
+            ctx.record["failure"] = launch_failure
         launches.append(ctx)
         if on_launch_record is not None:
             on_launch_record(dict(ctx.record))
-        return ctx.request
+
+        def request(kind):
+            if launch_failure is not None or not ctx.record.get("ready_utc"):
+                return ctx._failed_request(
+                    kind, f"LAUNCH_FAILURE launch={ctx.label}: "
+                          f"{launch_failure or ctx.record.get('failure')}")
+            return ctx.request(kind)
+
+        return request
 
     try:
         summary = runner.run_campaign(matrix, launch)
@@ -320,6 +604,8 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
         for ctx in launches:
             try:
                 ctx.stop()
-            except Exception:
+            except LaunchError:
+                # already reported through the launch record; never mask
+                # an in-flight exception with a cleanup error
                 pass
     return summary, launches
