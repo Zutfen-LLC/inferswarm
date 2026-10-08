@@ -323,6 +323,9 @@ GROUP_TEST_MODULES = {
         # Exact physical producer/model bytes are the compatibility authority.
         "test_issue280_real_compat",
         "test_issue280_source_compat",
+        # Issue #289: physical launcher server lifecycle (stop/reap prior
+        # launch, port preflight, identity-verified readiness/responses).
+        "test_issue289_launcher",
     ],
     # R8-A/B Qwen static lineage (R8-A is the living frontier reference;
     # R8-B fixtures feed R8-I).
@@ -470,6 +473,8 @@ PATH_GROUPS = {
     "scripts/issue280_compatibility.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_real_compat.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_source_compat.py": ["r8i-qwen-qualification"],
+    "scripts/issue289_launcher.py": ["r8i-qwen-qualification"],
+    "tests/test_issue289_launcher.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_observer.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_source.py": ["r8i-qwen-qualification"],
     "tests/test_issue280_runner.py": ["r8i-qwen-qualification"],

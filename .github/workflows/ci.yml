@@ -552,7 +552,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 1
-        run: python3 -m unittest tests.test_issue248_diagnostic tests.test_issue250_terminal tests.test_issue250_amendment008 tests.test_issue250_pass6_corrections tests.test_issue254_producer tests.test_issue260_source_patch tests.test_issue262_source_patch tests.test_issue264_pilot tests.test_issue280_observer tests.test_issue280_source -v
+        run: python3 -m unittest tests.test_issue248_diagnostic tests.test_issue250_terminal tests.test_issue289_launcher tests.test_issue250_amendment008 tests.test_issue250_pass6_corrections tests.test_issue254_producer tests.test_issue260_source_patch tests.test_issue262_source_patch tests.test_issue264_pilot tests.test_issue280_observer tests.test_issue280_source -v
 
   r8i-qwen-qualification-s2:
     name: Group r8i-qwen-qualification shard 2
