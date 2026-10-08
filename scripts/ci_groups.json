@@ -167,7 +167,8 @@
     "test_issue280_retention_fix",
     "test_issue280_admission",
     "test_issue280_real_compat",
-    "test_issue280_source_compat"
+    "test_issue280_source_compat",
+    "test_issue289_launcher"
    ]
   },
   "repo-integrity": {
@@ -1436,6 +1437,9 @@
   "scripts/issue280_task_check.py": [
    "r8i-qwen-qualification"
   ],
+  "scripts/issue289_launcher.py": [
+   "r8i-qwen-qualification"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "repo-integrity"
   ],
@@ -1809,6 +1813,9 @@
    "r8i-qwen-qualification"
   ],
   "tests/test_issue280_task_check.py": [
+   "r8i-qwen-qualification"
+  ],
+  "tests/test_issue289_launcher.py": [
    "r8i-qwen-qualification"
   ],
   "tests/test_project_status.py": [

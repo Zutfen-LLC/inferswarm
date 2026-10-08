@@ -201,17 +201,97 @@ class SchedulingPlanTests(unittest.TestCase):
 
 class ExecutionTests(unittest.TestCase):
     def test_parallel_execution_exactly_matches_discovery_and_keeps_module_fixtures(self):
+        # Final CPU Validation run 37842539353 exposed the ordered-comparison
+        # defect, corrected across two review rounds: executed_ids is
+        # receipt-append (worker completion) order, which no parallel runner
+        # may promise.  The runner's authority (validate_receipts) checks the
+        # identity MULTISET and the sorted digest.  The parallel contract
+        # therefore asserts the exact discovered identities, identity multiset
+        # equality, and matching sorted identity digests, permitting either
+        # legal completion order; serial execution separately retains strict
+        # discovery ordering.
         root, tests = fixture(self, {
             "test_exec_alpha.py": "import unittest\nEVENTS=[]\ndef setUpModule(): EVENTS.append('setup')\ndef tearDownModule(): EVENTS.append('teardown')\nclass A(unittest.TestCase):\n def test_one(self): self.assertEqual(EVENTS,['setup'])\n def test_two(self): self.assertEqual(EVENTS,['setup'])\n",
             "test_exec_beta.py": "import unittest\nclass B(unittest.TestCase):\n def test_three(self): pass\n",
         })
+        alpha_first = ["test_exec_alpha.A.test_one",
+                       "test_exec_alpha.A.test_two",
+                       "test_exec_beta.B.test_three"]
+        beta_first = ["test_exec_beta.B.test_three",
+                      "test_exec_alpha.A.test_one",
+                      "test_exec_alpha.A.test_two"]
         result = runner.run_suite(root, tests, jobs=2, timeout=60)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["serial_ids"], result["executed_ids"])
-        self.assertEqual(result["serial_digest"], result["executed_digest"])
+        # Exact discovered identities (alpha's module fixtures intact: its
+        # setUpModule ran before both of its tests).
+        self.assertEqual(result["serial_ids"], alpha_first)
+        # Either completion order is legal; both carry the exact identities.
+        self.assertIn(result["executed_ids"], (alpha_first, beta_first))
+        # The exact identity multiset is preserved regardless of order.
+        self.assertEqual(sorted(result["executed_ids"]), sorted(result["serial_ids"]))
+        self.assertEqual(result["executed_digest"], result["serial_digest"])
         single = runner.run_suite(root, tests, jobs=1, timeout=60)
         self.assertTrue(single["ok"], single)
+        # Serial execution keeps strict discovery order.
         self.assertEqual(single["serial_ids"], single["executed_ids"])
+        self.assertEqual(single["serial_ids"], alpha_first)
+
+    def test_validate_receipts_accepts_either_completion_order(self):
+        # Deterministic synthetic receipt coverage: with correct identities
+        # and digests, validate_receipts must accept beta-first AND
+        # alpha-first receipt orderings, returning the executed identities in
+        # receipt order and the identical sorted identity digest for both.
+        alpha_ids = ["test_exec_alpha.A.test_one", "test_exec_alpha.A.test_two"]
+        beta_ids = ["test_exec_beta.B.test_three"]
+        serial = alpha_ids + beta_ids
+        expected_digest = runner.identity_digest(sorted(serial))
+
+        def receipt(ids):
+            return {"schema": runner.SCHEMA, "ok": True,
+                    "started_ids": ids, "expected_ids": ids}
+
+        for receipts, expected_order in (
+            # beta's worker receipt arrived first
+            ([receipt(beta_ids), receipt(alpha_ids)], beta_ids + alpha_ids),
+            # alpha's worker receipt arrived first
+            ([receipt(alpha_ids), receipt(beta_ids)], alpha_ids + beta_ids),
+        ):
+            with self.subTest(order=expected_order):
+                executed, digest = runner.validate_receipts(receipts, serial)
+                self.assertEqual(executed, expected_order)
+                self.assertEqual(digest, expected_digest)
+
+    def test_parallel_identity_multiset_adversarial_controls(self):
+        # Adversarial controls for the corrected multiset contract.  A
+        # MISSING, DUPLICATED, or SUBSTITUTED executed identity must fail
+        # BOTH the order-independent equality the corrected parallel test
+        # asserts AND the runner's own fail-closed receipt authority.
+        serial = ["test_exec_alpha.A.test_one",
+                  "test_exec_alpha.A.test_two",
+                  "test_exec_beta.B.test_three"]
+
+        def receipt(ids):
+            return {"schema": runner.SCHEMA, "ok": True,
+                    "started_ids": ids, "expected_ids": ids}
+
+        for executed, label in (
+            # missing: beta's worker receipt never arrived
+            (["test_exec_alpha.A.test_one", "test_exec_alpha.A.test_two"], "missing"),
+            # duplicate: alpha's identity reported by two workers
+            (["test_exec_alpha.A.test_one", "test_exec_alpha.A.test_two",
+              "test_exec_beta.B.test_three", "test_exec_alpha.A.test_one"], "duplicate"),
+            # substituted: a foreign identity replaced beta's
+            (["test_exec_alpha.A.test_one", "test_exec_alpha.A.test_two",
+              "test_other.O.test_four"], "substituted"),
+        ):
+            with self.subTest(control=label):
+                self.assertNotEqual(
+                    sorted(executed), sorted(serial),
+                    f"{label} identity passed as an exact multiset match")
+                with self.assertRaises(runner.SuiteError):
+                    runner.validate_receipts(
+                        [receipt(executed[i:i + 1]) for i in range(len(executed))],
+                        serial)
 
     def test_identity_coverage_is_exact_across_phases(self):
         # Synthetic declaration names (injected into the runner's frozensets)
