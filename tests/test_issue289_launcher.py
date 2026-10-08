@@ -894,7 +894,11 @@ class LauncherPromptBindingTests(LauncherHarness):
                              "the server must receive the exact frozen "
                              "P1 bytes")
             for key, value in P1["settings"].items():
-                if isinstance(value, list):
+                if key == "samplers":
+                    # #280 comment 6030829366 accepts top_k, not the
+                    # retained workload's invalid historical greedy spelling.
+                    self.assertEqual(body[key], ["top_k"])
+                elif isinstance(value, list):
                     self.assertEqual(sorted(body[key]), sorted(value))
                 else:
                     self.assertEqual(body[key], value)
@@ -920,13 +924,19 @@ class LauncherPromptBindingTests(LauncherHarness):
             argv += ["--record-requests", str(diag)]
             return argv
 
-        matrix = [dict(MATRIX[0],
-                       prompt_text="synthetic-cpu-test-prompt",
-                       prompt_sha256=hashlib.sha256(
-                           b"synthetic-cpu-test-prompt").hexdigest())]
-        summary, launches = self.m.campaign_executor(
-            matrix, command_builder=builder, workdir=self.tmp,
-            port=self.port, startup_timeout_s=20)
+        # Explicit CPU-only authority binding lives in the TEST harness.
+        # No permissive test-mode switch or in-row override in production.
+        from unittest.mock import patch
+        entry = {"text": "synthetic-cpu-test-prompt",
+                 "utf8_sha256": hashlib.sha256(
+                     b"synthetic-cpu-test-prompt").hexdigest(),
+                 "settings": dict(P1["settings"])}
+        binding = {"P1": entry}
+        matrix = [dict(MATRIX[0])]  # preserve the real gate engine's P1 task
+        with patch.object(self.m, "frozen_prompts", return_value=binding):
+            summary, launches = self.m.campaign_executor(
+                matrix, command_builder=builder, workdir=self.tmp,
+                prompt_binding=binding, port=self.port, startup_timeout_s=20)
         self.assertEqual(summary["terminal"], "COMPLETE",
                          f"stop_reason={summary.get('stop_reason')}")
         row = json.loads(diag.read_text(encoding="utf-8").splitlines()[0])
@@ -1218,17 +1228,26 @@ class ReadinessTupleRegressionTests(LauncherHarness):
         self.exercise_failure("exited")
 
     def test_tuple_truthiness_mutation_is_killed(self):
-        # Retain the exact reviewed method as a targeted in-memory mutation.
+        # Mutate ONLY tuple consumption in the actual production method.
+        import inspect
+        import textwrap
         from unittest.mock import patch
-        namespace = {}
-        exec('def broken(self):\n'
-             '    if not self._child_alive():\n'
-             '        raise RuntimeError("dead")\n'
-             '    self._probe_identity()\n'
-             '    self.startup_s = 0.0\n', namespace)
-        with patch.object(self.m.Launch, "_await_ready", namespace["broken"]):
-            with self.assertRaises(AssertionError):
-                self.exercise_failure("unreadable")
+        source = textwrap.dedent(inspect.getsource(self.m.Launch._await_ready))
+        corrected = ("        alive, identity_error = self._child_alive()\n"
+                     "        if not alive:")
+        reviewed = ("        identity_error = None\n"
+                    "        if not self._child_alive():")
+        # Both RED (already broken) and GREEN use the same regression.
+        if corrected in source:
+            source = source.replace(corrected, reviewed, 1)
+        else:
+            self.assertIn("if not self._child_alive():", source)
+        namespace = dict(self.m.__dict__)
+        exec(source, namespace)
+        with patch.object(self.m.Launch, "_await_ready", namespace["_await_ready"]):
+            for mode in ("unreadable", "changed", "exited"):
+                with self.subTest(mode=mode), self.assertRaises(AssertionError):
+                    self.exercise_failure(mode)
 
 
 class FrozenRequestAuthorityRegressionTests(LauncherHarness):
@@ -1332,6 +1351,30 @@ class FrozenRequestAuthorityRegressionTests(LauncherHarness):
         self.assertEqual(payload["temperature"], 0)
         self.assertEqual(payload["top_k"], 1)
         self.assertEqual(payload["seed"], 42)
+
+    def test_retained_authority_missing_sends_zero_completion_bytes(self):
+        from unittest.mock import patch
+        with patch.object(self.m, "WORKLOAD_PATH", self.tmp / "missing.json",
+                          create=True):
+            self.reject({"P1": self.entry()}, reason="AUTHORITY_MISSING")
+
+    def test_retained_authority_self_consistent_drift_is_rejected(self):
+        from unittest.mock import patch
+        altered = json.loads(json.dumps(WORKLOAD))
+        entry = altered["prompts"]["P1"]
+        entry["text"] = "changed retained bytes and changed caller bytes"
+        entry["utf8_sha256"] = hashlib.sha256(entry["text"].encode()).hexdigest()
+        authority_path = self.tmp / "altered-workload.json"
+        authority_path.write_text(json.dumps(altered))
+        with patch.object(self.m, "WORKLOAD_PATH", authority_path, create=True):
+            self.reject({"P1": entry}, reason="AUTHORITY_MISMATCH")
+
+    def test_approved_effective_sampler_spelling_is_accepted(self):
+        entry = self.entry()
+        entry["settings"]["samplers"] = ["top_k"]
+        record, rows = self.dispatch({"P1": entry})
+        self.assertTrue(record["transport_ok"], record["error"])
+        self.assertEqual(json.loads(rows[0]["body"])["samplers"], ["top_k"])
 
     def test_evidence_derived_from_actual_transmitted_bytes(self):
         record, rows = self.dispatch({"P1": self.entry()})

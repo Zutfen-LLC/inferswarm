@@ -89,6 +89,66 @@ PORT_PROBE_TIMEOUT_S = 0.5
 IDENTITY_ENV = "I280_LAUNCH_IDENTITY"
 IDENTITY_HEADER = "X-I280-LAUNCH-IDENTITY"
 
+# Independently pinned retained #280 workload, NOT a caller-supplied hash.
+# These bytes are unchanged at reviewed head 3b499400 and accepted main
+# 57adca1f. Only the already accepted sampler normalization below is applied.
+WORKLOAD_PATH = (Path(__file__).resolve().parents[1] /
+                 "docs/investigations/vulkan-same-request-280/workload.json")
+WORKLOAD_SHA256 = "d49f7083fd78e244caf64b401cb35bc0a0392d5e0a545d8322ede5a9257050b9"
+P1_SHA256 = "726fd522508fd0a0a89184017d30dd808c8538cbce850c3c04d8b07c31f371de"
+SAMPLER_AUTHORITY = "https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6030829366"
+
+
+def frozen_prompts():
+    """Read authenticated repository authority; never authenticate caller claims."""
+    try:
+        raw = WORKLOAD_PATH.read_bytes()
+    except OSError as e:
+        raise LaunchError("PROMPT_BINDING_AUTHORITY_MISSING retained workload") from e
+    if hashlib.sha256(raw).hexdigest() != WORKLOAD_SHA256:
+        raise LaunchError("PROMPT_BINDING_AUTHORITY_MISMATCH retained workload sha256")
+    prompts = json.loads(raw)["prompts"]
+    if prompts["P1"]["utf8_sha256"] != P1_SHA256:
+        raise LaunchError("PROMPT_BINDING_AUTHORITY_MISMATCH frozen P1 sha256")
+    return prompts
+
+
+def effective_settings(settings, frozen_settings):
+    """Strict frozen request contract, with only #280's accepted normalization.
+
+    All eight workload settings are required. timings_per_token=True is the
+    existing launcher transport instrumentation, not a sampling default or
+    new configurable policy. If explicitly supplied it must remain True.
+    """
+    if not isinstance(settings, dict) or not isinstance(frozen_settings, dict):
+        raise LaunchError("REQUEST_SETTINGS_MISSING complete frozen settings required")
+    required = set(frozen_settings)
+    if (not required.issubset(settings)
+            or set(settings) - required - {"timings_per_token"}):
+        raise LaunchError("REQUEST_SETTINGS_MISMATCH missing or unapproved fields")
+    if "timings_per_token" in settings and settings["timings_per_token"] is not True:
+        raise LaunchError("REQUEST_SETTINGS_MISMATCH timings_per_token")
+    effective = {}
+    for key, expected in frozen_settings.items():
+        value = settings[key]
+        if key == "samplers":
+            # Accepted pre-execution identity, comment 6030829366: greedy
+            # is historical notation, top_k is the ONLY valid execution name.
+            if type(value) is not list or value not in (["greedy"], ["top_k"]):
+                raise LaunchError("REQUEST_SETTINGS_MISMATCH samplers")
+            value = ["top_k"]
+            expected = ["top_k"]
+        elif key in ("temperature", "repeat_penalty"):
+            if type(value) not in (int, float):
+                raise LaunchError("REQUEST_SETTINGS_MISMATCH numeric type")
+        elif type(value) is not type(expected):
+            raise LaunchError("REQUEST_SETTINGS_MISMATCH field type")
+        if value != expected:
+            raise LaunchError("REQUEST_SETTINGS_MISMATCH frozen value")
+        effective[key] = value
+    effective["timings_per_token"] = True
+    return effective
+
 # Events kept in the per-request observer bracket prefix (the r3 driver's
 # slice law: recording + model-load inventory rows preceding the request).
 BRACKET_PREFIX_EVENTS = ("recording", "weight_inventory", "kv_inventory",
@@ -220,11 +280,9 @@ class Launch:
         self.retain = retain
         self.health = health
         self.startup_timeout_s = startup_timeout_s
-        # B4 (review 5459338940): the exact prompt bytes + request
-        # settings the production caller must supply explicitly, keyed
-        # by prompt id. There is NO default prompt text: a row without a
-        # binding (or an explicit in-row synthetic prompt for CPU tests)
-        # is rejected before any HTTP dispatch.
+        # Explicit caller binding is checked against independently pinned
+        # repository workload authority (N2). No in-row prompt overrides,
+        # silent settings defaults, or production synthetic-test bypass.
         self.prompt_binding = prompt_binding
         self.log_path = self.workdir / f"server-{self.label}.log"
         self.proc: subprocess.Popen | None = None
@@ -320,9 +378,13 @@ class Launch:
         t0 = self._t0 or time.monotonic()
         last_observed = None
         while time.monotonic() < deadline:
-            if not self._child_alive():
+            alive, identity_error = self._child_alive()
+            if not alive:
                 code = self.proc.returncode if self.proc else None
                 raise LaunchError(
+                    f"CHILD_IDENTITY_{identity_error} launch={self.label} "
+                    f"pid={self.record['pid']}"
+                    if identity_error else
                     f"CHILD_EXITED_BEFORE_READY launch={self.label} "
                     f"pid={self.record['pid']} code={code}")
             ident = self._probe_identity()
@@ -418,77 +480,57 @@ class Launch:
     # -- requests ----------------------------------------------------------
 
     def _resolve_prompt(self):
-        """B4 (review 5459338940): resolve the EXACT prompt text and
-        request settings for this launch's row, or return a rejection
-        reason. No default text exists in production: the bytes come
-        only from (in priority order) an explicit in-row synthetic test
-        prompt (``prompt_text`` + ``prompt_sha256`` — CPU tests only) or
-        the explicitly supplied frozen ``prompt_binding`` keyed by the
-        row's prompt id. The resolved bytes are verified against their
-        SHA-256 identity when one is supplied; a missing hash on a
-        binding is a mismatch (ambiguity fails closed)."""
+        """Authenticate caller bytes against independent retained authority.
+
+        Production never accepts in-row synthetic overrides. CPU fixtures
+        patch frozen_prompts with explicit test bindings, inside the test
+        harness only; there is no production test-mode/bypass argument.
+        """
         prompt_id = self.row.get("prompt")
-        if "prompt_text" in self.row:
-            text = self.row["prompt_text"]
-            expect = self.row.get("prompt_sha256")
-            if not isinstance(text, str) or not text:
-                return None, None, "PROMPT_BINDING_MISMATCH synthetic prompt_text empty"
-            got = hashlib.sha256(text.encode("utf-8")).hexdigest()
-            if expect is not None and got != expect:
-                return (None, None,
-                        f"PROMPT_BINDING_MISMATCH prompt_sha256 {got[:12]}… "
-                        f"!= bound {expect[:12]}…")
-            settings = self.row.get("request_settings")
-            return text, settings, None
-        entry = (self.prompt_binding or {}).get(prompt_id)
-        if entry is None:
-            return (None, None,
-                    f"PROMPT_BINDING_MISSING no prompt bytes bound for "
-                    f"prompt id {prompt_id!r} (launch {self.label}); the "
-                    f"production launcher refuses to substitute default "
-                    f"prompt text")
+        if any(key in self.row for key in
+               ("prompt_text", "prompt_sha256", "request_settings")):
+            raise LaunchError("PROMPT_BINDING_MISMATCH in-row override forbidden")
+        if not isinstance(self.prompt_binding, dict):
+            raise LaunchError("PROMPT_BINDING_MISSING explicit binding required")
+        entry = self.prompt_binding.get(prompt_id)
+        if not isinstance(entry, dict):
+            raise LaunchError("PROMPT_BINDING_MISSING prompt entry required")
+        authority = frozen_prompts().get(prompt_id)
+        if authority is None:
+            raise LaunchError("PROMPT_BINDING_MISMATCH unknown frozen prompt id")
         text = entry.get("text")
         expect = entry.get("utf8_sha256")
-        if not isinstance(text, str) or not text:
-            return (None, None,
-                    f"PROMPT_BINDING_MISMATCH bound prompt {prompt_id!r} "
-                    f"has empty/non-string text")
-        if not isinstance(expect, str) or len(expect) != 64:
-            return (None, None,
-                    f"PROMPT_BINDING_MISMATCH bound prompt {prompt_id!r} "
-                    f"lacks a valid utf8_sha256 identity; ambiguity fails "
-                    f"closed")
-        got = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        if got != expect:
-            return (None, None,
-                    f"PROMPT_BINDING_MISMATCH prompt {prompt_id!r} bytes "
-                    f"sha256 {got[:12]}… != frozen {expect[:12]}…")
-        return text, entry.get("settings"), None
+        if (not isinstance(text, str) or not text
+                or expect != authority["utf8_sha256"]
+                or hashlib.sha256(text.encode("utf-8")).hexdigest() != expect
+                or text != authority["text"]):
+            raise LaunchError("PROMPT_BINDING_MISMATCH frozen prompt bytes/hash")
+        settings = effective_settings(entry.get("settings"), authority["settings"])
+        return text, settings
 
     def build_request(self, kind):
-        """(url, body_bytes, headers, request_identity) for one
-        completion request. B4: the prompt bytes and request settings
-        are the explicitly supplied, hash-verified frozen values; a
-        missing/mismatched binding raises LaunchError BEFORE any HTTP
-        dispatch. The returned identity evidence (sha256 + byte count)
-        never contains the prompt text itself."""
-        text, settings, rejection = self._resolve_prompt()
-        if rejection is not None:
-            raise LaunchError(rejection)
-        body_settings = {"n_predict": 128, "temperature": 0.0,
-                         "top_k": 1, "seed": 42, "repeat_penalty": 1.0,
-                         "cache_prompt": False, "samplers": ["top_k"],
-                         "stream": True,
-                         "timings_per_token": True}
-        if settings:
-            body_settings.update(settings)
-        prompt_bytes = text.encode("utf-8")
-        body = json.dumps({"prompt": text, **body_settings}).encode()
+        """Validate final POST payload; derive evidence from those exact bytes.
+
+        No prompt plaintext is retained in diagnostics. Missing authority or
+        incomplete/conflicting settings raises before completion dispatch.
+        """
+        text, settings = self._resolve_prompt()
+        payload = dict(settings)
+        payload["prompt"] = text
+        body = json.dumps(payload).encode("utf-8")
+        # Validate the effective serialized object rather than attest to a
+        # separately constructed intended prompt/settings pair.
+        transmitted = json.loads(body)
+        if transmitted != payload:
+            raise LaunchError("REQUEST_SETTINGS_MISMATCH serialized request")
+        prompt_bytes = transmitted.pop("prompt").encode("utf-8")
         identity = {
             "prompt_id": self.row.get("prompt"),
             "prompt_sha256": hashlib.sha256(prompt_bytes).hexdigest(),
             "prompt_bytes": len(prompt_bytes),
-            "request_settings": dict(body_settings),
+            "request_settings": transmitted,
+            "body_sha256": hashlib.sha256(body).hexdigest(),
+            "body_bytes": len(body),
         }
         return (f"http://{self.host}:{self.port}/completion", body,
                 {"Content-Type": "application/json"}, identity)
@@ -642,10 +684,13 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
     B4 (review 5459338940): ``prompt_binding`` maps prompt id -> frozen
     entry ``{"text", "utf8_sha256", "settings"}`` (e.g. the accepted
     ``docs/investigations/vulkan-same-request-280/workload.json`` prompts).
-    It is REQUIRED for production matrices whose rows carry only a
-    prompt id: a row without bound, hash-verified prompt bytes is
-    rejected before any HTTP dispatch (no silent default text). CPU
-    tests use explicit in-row ``prompt_text``/``prompt_sha256`` instead.
+    It is REQUIRED and compared to independently authenticated retained
+    workload bytes, not merely to the caller's own hash. In-row overrides
+    are forbidden. CPU synthetic bindings are isolated in the test harness
+    by patching frozen_prompts; there is no production test-mode argument.
+    The eight frozen settings are mandatory, with only the previously
+    accepted greedy -> top_k normalization and existing per-token timing
+    instrumentation. No context/output/sampling defaults are substituted.
 
     Every owned child is stopped and reaped before control returns — on
     COMPLETE, on gate-engine STOP, on launch failure, and on exception.

@@ -157,9 +157,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header(IDENTITY_HEADER, completion_ident)
         self.end_headers()
-        self.wfile.write(body)
+        # Finish the synthetic observer bracket before delivering the SSE
+        # body. The client must never race a partially appended JSON row.
         for line in renumber(REQUEST_ROWS, ordinal):
             log_line(line)
+        self.wfile.write(body)
 
 
 def main():
