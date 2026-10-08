@@ -1,0 +1,84 @@
+{
+ "after": {
+  "discovered_count": 1884,
+  "discovered_sha256": "f7d23d23ef43a7ce595595699e16bb57a23be5e94d61ed16e87a9605a70b65eb",
+  "duplicate_ids": [],
+  "executed_count": 1884,
+  "executed_sha256": "f7d23d23ef43a7ce595595699e16bb57a23be5e94d61ed16e87a9605a70b65eb",
+  "jobs": {
+   "r8i-qwen-qualification-s1": {
+    "ids_sha256": "a50bf2e1b2cd5f175e77f162af20a5dcfad06b4a74512544ccd5b671e3454215",
+    "tests": 667
+   },
+   "r8i-qwen-qualification-s2": {
+    "ids_sha256": "a058dd1db8c2a6563cc87d10a476721e4f98427e6826db77d46a3ff40374434a",
+    "tests": 259
+   },
+   "r8i-qwen-qualification-s3": {
+    "ids_sha256": "3a398bfc8e5cfad75efd9a5c24287f21a2964990916cdf9d7e7e27e72ab32434",
+    "tests": 222
+   },
+   "r8i-qwen-qualification-s4": {
+    "ids_sha256": "c6fc67ea6e4c50b9c3f7a47f46da60f02bac0b6aa6f95c421176086612f94770",
+    "tests": 322
+   },
+   "r8i-qwen-qualification-s5": {
+    "ids_sha256": "4b227e6cb5535114816b2d35254352a17c50ee7b54ae8ea3065c7d30e34bcfb3",
+    "tests": 414
+   }
+  },
+  "missing_ids": [],
+  "unregistered_ids": []
+ },
+ "base_head": "4502098357e73cef239ce207a1fffbbefb2b19cd",
+ "before": {
+  "discovered_count": 1884,
+  "discovered_sha256": "f7d23d23ef43a7ce595595699e16bb57a23be5e94d61ed16e87a9605a70b65eb",
+  "duplicate_ids": [],
+  "executed_count": 1884,
+  "executed_sha256": "f7d23d23ef43a7ce595595699e16bb57a23be5e94d61ed16e87a9605a70b65eb",
+  "jobs": {
+   "r8i-qwen-qualification": {
+    "ids_sha256": "f7d23d23ef43a7ce595595699e16bb57a23be5e94d61ed16e87a9605a70b65eb",
+    "tests": 1884
+   }
+  },
+  "missing_ids": [],
+  "unregistered_ids": []
+ },
+ "executed_run_skips": 22,
+ "group": "r8i-qwen-qualification",
+ "hosted_baseline_probe": {
+  "errors": 0,
+  "failures": 0,
+  "per_module_seconds_top": {
+   "test_issue237_r8i_methodology": 157.79,
+   "test_issue248_diagnostic": 151.9,
+   "test_issue250_terminal": 101.54,
+   "test_issue270_authority": 85.3,
+   "test_issue273_evidence": 254.04,
+   "test_issue277_reference_first": 93.33,
+   "test_issue278_integration": 479.42,
+   "test_issue280_real_compat": 56.12
+  },
+  "probe_head": "9820764c70e89cbdeb34d2e46c3be67a38447ace",
+  "run": "https://github.com/Zutfen-LLC/inferswarm/actions/runs/37769145966",
+  "runner": "ubuntu-latest: 4 vCPU AMD EPYC 7763, 16 GB, image ubuntu24 20261004.327.1",
+  "skipped": 22,
+  "sum_test_seconds": 1651.7,
+  "tests": 1884
+ },
+ "identity_sets_equal": true,
+ "issue": 287,
+ "note": "Point-in-time record. Digests are SHA-256 over the sorted unittest identities (one per line, trailing newline), so they are independent of any PR head: they hold for every checkout whose R8-I test population is unchanged. This file is not an evidence manifest and grants no execution authority.",
+ "registered_modules": 52,
+ "reproduce": [
+  "git worktree add <dir> 4502098357e73cef239ce207a1fffbbefb2b19cd",
+  "python3 scripts/ci_workflow_parity.py --root <dir> --group r8i-qwen-qualification   # before",
+  "python3 scripts/ci_workflow_parity.py --group r8i-qwen-qualification                 # after"
+ ],
+ "schema": "inferswarm.ci.r8i-shard-identity-record/1",
+ "split_modules": [
+  "test_issue278_integration"
+ ]
+}
