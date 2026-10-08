@@ -1714,5 +1714,203 @@ class CacheKeyAndMissContractTests(unittest.TestCase):
             self.assertNotIn(forbidden, source, forbidden)
 
 
+# ---------------------------------------------------------------------------
+# Issue #292 correction round 2 (maintainer re-review of cd6fd13).
+#
+# B1: the first key validator looked for ``runner.os``/``hashFiles(...)`` as
+#     arbitrary SUBSTRINGS, so a fully static key that merely spells those
+#     words passed although GitHub evaluates nothing and the key never
+#     changes.  Keys must be built from real, evaluated ``${{ }}`` expressions
+#     that reference an earlier setup-python step.
+# B2: only GITHUB_ENV was screened; an arbitrary GITHUB_PATH write before the
+#     canonical bootstrap redirects every later canonical ``python3``.
+# ---------------------------------------------------------------------------
+
+_B1_NESTED = NESTED_FROZEN_REQUIREMENTS
+_B1_HASH = "${{ hashFiles('requirements-test.txt', '%s') }}" % _B1_NESTED
+_B1_PY_STEP = {"uses": "actions/setup-python@x", "id": "py",
+               "with": {"python-version": "3.12"}}
+
+
+class CacheKeyExpressionBypassTests(unittest.TestCase):
+    """B1 -- the key must be real evaluated expressions, not look-alikes."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    def workflow(self, key: str, *, before=(), after=()) -> dict:
+        return _job_workflow([
+            *before, _actions_cache(PIP_CACHE_PATH, key), *after,
+            *_canonical_steps(), _step("python3 -m unittest tests.test_x")])
+
+    def findings(self, key: str, **kw) -> list[str]:
+        kw.setdefault("before", (_B1_PY_STEP,))
+        return cache_policy_findings(self.workflow(key, **kw), self.closure)
+
+    def crafted_keys(self) -> dict[str, str]:
+        os_, arch = "${{ runner.os }}", "${{ runner.arch }}"
+        py = "${{ steps.py.outputs.python-version }}"
+        return {
+            # the exact maintainer reproduction: needles as static text
+            "fully static look-alike": (
+                "runner.os-runner.arch-steps.py.outputs.python-version-"
+                "hashFiles('requirements-test.txt', '%s')" % _B1_NESTED),
+            "static text, no expressions at all": "pip-linux-x64-py312",
+            "os is text, rest real": f"runner.os-{arch}-py{py}-{_B1_HASH}",
+            "arch is text, rest real": f"{os_}-runner.arch-py{py}-{_B1_HASH}",
+            "python is text, rest real": (
+                f"{os_}-{arch}-steps.py.outputs.python-version-{_B1_HASH}"),
+            "hash is text, rest real": (
+                f"{os_}-{arch}-py{py}-hashFiles('requirements-test.txt', "
+                f"'{_B1_NESTED}')"),
+            "needle only inside a string literal": (
+                "${{ 'runner.os' }}-${{ 'runner.arch' }}-"
+                "${{ 'steps.py.outputs.python-version' }}-"
+                "${{ 'hashFiles(requirements-test.txt)' }}"),
+            "needle hidden in format()": (
+                "${{ format('{0}', 'runner.os runner.arch "
+                "steps.py.outputs.python-version') }}-" + _B1_HASH),
+            "operator-combined expression": (
+                f"${{{{ runner.os && runner.arch }}}}-py{py}-{_B1_HASH}"),
+            "unbalanced expression": (
+                f"${{{{ runner.os -{arch}-py{py}-{_B1_HASH}"),
+            "hash of a different (constant) file set": (
+                f"{os_}-{arch}-py{py}-${{{{ hashFiles('README.md') }}}}"),
+            "hash expression with nested file omitted": (
+                f"{os_}-{arch}-py{py}-${{{{ hashFiles("
+                f"'requirements-test.txt') }}}}"),
+        }
+
+    # -- the key must be rejected, and must never be accepted-yet-static ----
+    def test_red_look_alike_and_static_keys_are_rejected(self):
+        for label, key in self.crafted_keys().items():
+            with self.subTest(label):
+                self.assertTrue(self.findings(key), f"accepted: {label}")
+
+    def test_red_any_accepted_key_changes_on_every_authority_input(self):
+        """Contract: a key the validator ACCEPTS must evaluate differently
+        for OS, architecture, Python version, root and nested requirements."""
+        candidates = dict(self.crafted_keys())
+        candidates["valid"] = VALID_CACHE_KEY
+        for label, key in candidates.items():
+            if self.findings(key):
+                continue  # rejected: fine
+            with self.subTest(label):
+                with tempfile.TemporaryDirectory() as raw:
+                    repo = Path(raw)
+                    write(repo / "requirements-test.txt", "numpy>=1.26,<3\n")
+                    write(repo / _B1_NESTED, "transformers==5.17.0\n")
+                    base_args = dict(os_name="Linux", arch="X64",
+                                     python_version="3.12.15")
+
+                    def evaluate(**override):
+                        return simulate_cache_key(
+                            key, repo, **{**base_args, **override})
+
+                    base = evaluate()
+                    for name, override in (
+                            ("OS", {"os_name": "macOS"}),
+                            ("architecture", {"arch": "ARM64"}),
+                            ("Python version", {"python_version": "3.13.0"})):
+                        self.assertNotEqual(
+                            base, evaluate(**override),
+                            f"accepted key does not change with {name}")
+                    write(repo / "requirements-test.txt", "numpy>=1.26,<4\n")
+                    changed = evaluate()
+                    self.assertNotEqual(
+                        base, changed,
+                        "accepted key does not change with root requirements")
+                    write(repo / _B1_NESTED, "transformers==5.18.0\n")
+                    self.assertNotEqual(
+                        changed, evaluate(),
+                        "accepted key does not change with nested requirements")
+
+    # -- references must be to a PRECEDING setup-python step ----------------
+    def test_red_python_reference_must_be_an_earlier_setup_python_step(self):
+        real = VALID_CACHE_KEY
+        cases = {
+            "setup-python after the cache step": dict(after=(_B1_PY_STEP,)),
+            "id belongs to a non-setup-python step": dict(before=(
+                {"id": "py", "run": "echo hi"},)),
+            "no step with that id": dict(before=()),
+            "id on a different action": dict(before=(
+                {"uses": "actions/checkout@x", "id": "py"},)),
+        }
+        for label, kw in cases.items():
+            with self.subTest(label):
+                self.assertTrue(self.findings(real, **kw), f"accepted: {label}")
+
+    def test_valid_key_after_an_earlier_setup_python_is_accepted(self):
+        self.assertEqual(self.findings(VALID_CACHE_KEY), [])
+
+
+class GithubPathWriteBypassTests(unittest.TestCase):
+    """B2 -- only the reviewed canonical export may write GITHUB_PATH."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    def findings(self, steps) -> list[str]:
+        return cache_policy_findings(_job_workflow(steps), self.closure)
+
+    def tail(self):
+        return [_step("python3 -m unittest tests.test_x")]
+
+    def test_red_arbitrary_github_path_write_before_bootstrap_is_rejected(self):
+        for label, script in {
+            "attacker dir": 'echo /tmp/attacker/bin >> "$GITHUB_PATH"',
+            "unquoted var": "echo /tmp/attacker/bin >> $GITHUB_PATH",
+            "braced var": 'echo /tmp/attacker/bin >> "${GITHUB_PATH}"',
+            "tee": 'echo /tmp/attacker/bin | tee -a "$GITHUB_PATH"',
+            "printf": 'printf "%s\\n" /tmp/attacker/bin >> "$GITHUB_PATH"',
+            "canonical text outside bootstrap step":
+                'echo "$PWD/.venv/bin" >> "$GITHUB_PATH"',
+            "repo-relative bin": 'echo "$PWD/bin" >> "$GITHUB_PATH"',
+        }.items():
+            with self.subTest(label):
+                self.assertTrue(self.findings(
+                    [_step(script), *_canonical_steps(), *self.tail()]),
+                    f"accepted: {label}")
+
+    def test_red_github_path_write_in_any_other_position_is_rejected(self):
+        evil = 'echo /tmp/attacker/bin >> "$GITHUB_PATH"'
+        for label, steps in {
+            "between bootstrap and doctor": [
+                _step(BOOTSTRAP_CMD), _step(evil), _step(DOCTOR_CMD),
+                *self.tail()],
+            "after doctor": [*_canonical_steps(), _step(evil), *self.tail()],
+            "in the test step": [*_canonical_steps(), _step(
+                evil + "\npython3 -m unittest tests.test_x")],
+            "mixed into the bootstrap step": [
+                _step(BOOTSTRAP_CMD + "\n" + evil), _step(DOCTOR_CMD),
+                *self.tail()],
+        }.items():
+            with self.subTest(label):
+                self.assertTrue(self.findings(steps), f"accepted: {label}")
+
+    def test_canonical_export_inside_the_exact_bootstrap_step_is_accepted(self):
+        self.assertEqual(self.findings([
+            _step(BOOTSTRAP_CMD + '\necho "$PWD/.venv/bin" >> "$GITHUB_PATH"'),
+            _step(DOCTOR_CMD), *self.tail()]), [])
+
+    def test_red_real_workflows_reject_an_injected_github_path_write(self):
+        import yaml
+        evil = ('      - name: evil\n        run: |\n'
+                '          echo /tmp/attacker/bin >> "$GITHUB_PATH"\n')
+        anchor = ("      - name: Bootstrap canonical CPU test environment "
+                  "(Issue #131)\n")
+        for path in (CI_WORKFLOW, FINAL_WORKFLOW):
+            original = path.read_text(encoding="utf-8")
+            mutated = original.replace(anchor, evil + anchor, 1)
+            with self.subTest(path.name):
+                self.assertNotEqual(mutated, original, "mutation no-op")
+                self.assertEqual(cache_policy_findings(
+                    yaml.safe_load(original), self.closure), [])
+                self.assertTrue(cache_policy_findings(
+                    yaml.safe_load(mutated), self.closure))
+
+
 if __name__ == "__main__":
     unittest.main()
