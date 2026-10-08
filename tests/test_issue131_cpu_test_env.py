@@ -2439,5 +2439,208 @@ class RequirementClosureAuthorityTests(unittest.TestCase):
                             findings)
 
 
+# ---------------------------------------------------------------------------
+# Issue #292 correction round 4: interpreter / dynamic-loader / resolver env
+# controls outside the PIP_/UV_ families, and job-level failure tolerance.
+# ---------------------------------------------------------------------------
+
+def _env_workflow(scope: str, env: object) -> dict:
+    """A canonical, otherwise-accepted job with ``env`` at one scope."""
+    steps = [_B1_PY_STEP,
+             _actions_cache(PIP_CACHE_PATH, VALID_CACHE_KEY),
+             *_canonical_steps(),
+             _step("python3 -m unittest tests.test_x")]
+    workflow = _job_workflow(steps)
+    if scope == "workflow":
+        workflow["env"] = env
+    elif scope == "job":
+        workflow["jobs"]["j"]["env"] = env
+    else:  # a non-canonical step, so the step-role rule cannot mask it
+        steps[-1]["env"] = env
+    return workflow
+
+
+class InterpreterLoaderEnvTests(unittest.TestCase):
+    """R4-B1 -- interpreter, dynamic-loader, shell and resolver controls are
+    rejected by reviewed prefix/name rules, in any case and with any value."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    MATERIAL = (
+        # the maintainer's reproductions
+        "LD_AUDIT", "PYTHONOPTIMIZE",
+        # glibc dynamic loader (every LD_* is honoured by ld.so) and libc
+        "LD_BIND_NOW", "LD_BIND_NOT", "LD_DEBUG", "LD_DEBUG_OUTPUT",
+        "LD_PROFILE", "LD_DYNAMIC_WEAK", "LD_HWCAP_MASK", "LD_ASSUME_KERNEL",
+        "LD_ORIGIN_PATH", "LD_USE_LOAD_BIAS", "DYLD_INSERT_LIBRARIES",
+        "DYLD_LIBRARY_PATH", "GLIBC_TUNABLES", "MALLOC_PERTURB_",
+        "MALLOC_CHECK_", "GCONV_PATH", "LOCPATH", "NLSPATH",
+        # CPython interpreter controls (every PYTHON* / _PYTHON* name)
+        "PYTHONWARNINGS", "PYTHONHASHSEED", "PYTHONSAFEPATH",
+        "PYTHONNOUSERSITE", "PYTHONDONTWRITEBYTECODE", "PYTHONINSPECT",
+        "PYTHONIOENCODING", "PYTHONUTF8", "PYTHONDEVMODE", "PYTHONMALLOC",
+        "PYTHONPLATLIBDIR", "PYTHONPYCACHEPREFIX", "PYTHONBREAKPOINT",
+        "PYTHONEXECUTABLE", "PYTHONCASEOK", "PYTHONINTMAXSTRDIGITS",
+        "PYTHONWARNDEFAULTENCODING", "PYTHON_GIL", "PYTHON_CPU_COUNT",
+        "PYTHON_FROZEN_MODULES", "_PYTHON_HOST_PLATFORM",
+        "_PYTHON_SYSCONFIGDATA_NAME", "_PYTHON_PROJECT_BASE",
+        # packaging / test-runner / TLS-library controls the canonical
+        # commands would honour
+        "VIRTUALENV_OVERRIDE_APP_DATA", "SETUPTOOLS_USE_DISTUTILS",
+        "DISTUTILS_DEBUG", "PYTEST_ADDOPTS", "PYTEST_PLUGINS",
+        "COVERAGE_PROCESS_START", "OPENSSL_CONF", "OPENSSL_MODULES",
+        # shell controls that redefine or re-interpret canonical commands
+        "BASH_FUNC_python3%%", "SHELLOPTS", "BASHOPTS", "IFS", "CDPATH",
+        # name-resolution controls that can redirect package downloads
+        "HOSTALIASES", "RES_OPTIONS", "LOCALDOMAIN")
+
+    CASE_VARIANTS = ("ld_audit", "Ld_Audit", "pythonoptimize",
+                     "PythonOptimize", "_python_host_platform",
+                     "glibc_tunables", " LD_AUDIT", "PYTHONOPTIMIZE ")
+
+    VALUES = ("2", "/tmp/evil.so", "", "${{ inputs.x }}",
+              "${{ secrets.X }}", "${{ fromJSON(inputs.level) }}")
+
+    def test_red_interpreter_and_loader_env_is_rejected_at_every_level(self):
+        for scope in ("workflow", "job", "step"):
+            for name in self.MATERIAL + self.CASE_VARIANTS:
+                for value in self.VALUES:
+                    with self.subTest(scope=scope, var=name, value=value):
+                        self.assertTrue(cache_policy_findings(
+                            _env_workflow(scope, {name: value}),
+                            self.closure), "accepted")
+
+    def test_red_dynamic_env_name_is_rejected(self):
+        # An expression-valued KEY is not a reviewed name: whatever it
+        # evaluates to (LD_AUDIT, PYTHONOPTIMIZE, ...) cannot be known here.
+        for scope in ("workflow", "job", "step"):
+            for name in ("${{ inputs.name }}", "${{ matrix.var }}",
+                         "X_${{ inputs.suffix }}"):
+                with self.subTest(scope=scope, var=name):
+                    self.assertTrue(cache_policy_findings(
+                        _env_workflow(scope, {name: "1"}),
+                        self.closure), "accepted")
+
+    def test_reviewed_and_benign_env_remains_accepted(self):
+        # The documented reviewed input, plus names that merely CONTAIN a
+        # controlled family name (the rules are anchored prefixes).
+        for scope in ("workflow", "job", "step"):
+            for name in ("PIP_DISABLE_PIP_VERSION_CHECK", "CI", "TZ",
+                         "MY_FLAG", "FORCE_COLOR", "TERM",
+                         "MY_PYTHON_LABEL", "BUILD_LD_NOTE",
+                         "GITHUB_TOKEN_UNUSED"):
+                for value in ("1", "${{ inputs.x }}"):
+                    with self.subTest(scope=scope, var=name, value=value):
+                        self.assertEqual(cache_policy_findings(
+                            _env_workflow(scope, {name: value}),
+                            self.closure), [])
+
+    def test_real_workflows_reject_injected_interpreter_and_loader_env(self):
+        import copy
+        import yaml
+        for path in (CI_WORKFLOW, FINAL_WORKFLOW):
+            real = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                cache_policy_findings(real, self.closure), [], path.name)
+            for name in ("LD_AUDIT", "PYTHONOPTIMIZE", "ld_audit"):
+                for level in ("workflow", "every job", "every step"):
+                    mutated = copy.deepcopy(real)
+                    if level == "workflow":
+                        mutated.setdefault("env", {})[name] = "1"
+                    for job in mutated["jobs"].values():
+                        if level == "every job":
+                            job.setdefault("env", {})[name] = "1"
+                        elif level == "every step":
+                            for step in job["steps"]:
+                                step.setdefault("env", {})[name] = "1"
+                    with self.subTest(path.name, var=name, level=level):
+                        self.assertTrue(
+                            cache_policy_findings(mutated, self.closure))
+
+
+class JobFailureToleranceTests(unittest.TestCase):
+    """R4-B2 -- an environment-bearing job must not tolerate its own failure:
+    a job-level ``continue-on-error`` makes a failed bootstrap, doctor or
+    suite report success to ``needs`` and to the CI gate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    TOLERANT = (True, "true", "TRUE", " true ", 1, "${{ true }}",
+                "${{ matrix.experimental }}", "${{ inputs.tolerate }}",
+                "${{ github.event_name == 'push' }}",
+                "${{ contains(github.ref, 'main') || true }}")
+
+    def workflow(self, continue_on_error, steps=None) -> dict:
+        workflow = _env_workflow("job", None)
+        del workflow["jobs"]["j"]["env"]
+        if steps is not None:
+            workflow["jobs"]["j"]["steps"] = steps
+        workflow["jobs"]["j"]["continue-on-error"] = continue_on_error
+        return workflow
+
+    def test_red_job_level_failure_tolerance_is_rejected(self):
+        for value in self.TOLERANT:
+            with self.subTest(value=value):
+                self.assertTrue(cache_policy_findings(
+                    self.workflow(value), self.closure), "accepted")
+
+    def test_red_tolerance_is_rejected_for_every_environment_bearing_shape(self):
+        # Environment-bearing by venv use, by declared bootstrap only, or by
+        # declared doctor only -- all three must be refused tolerance.
+        shapes = {
+            "canonical": [*_canonical_steps(), _step(".venv/bin/python -V")],
+            "bootstrap-only": [_step(BOOTSTRAP_CMD)],
+            "doctor-only": [_step(DOCTOR_CMD)],
+        }
+        for label, steps in shapes.items():
+            with self.subTest(label):
+                findings = cache_policy_findings(
+                    self.workflow(True, steps), self.closure)
+                self.assertTrue(
+                    any("continue-on-error" in f for f in findings), findings)
+
+    def test_literal_false_remains_accepted(self):
+        for value in (False, "false", "False"):
+            with self.subTest(value=value):
+                self.assertEqual(cache_policy_findings(
+                    self.workflow(value), self.closure), [])
+
+    def test_non_environment_job_may_still_tolerate_failure(self):
+        workflow = self.workflow(True, [_step("echo report")])
+        self.assertEqual(cache_policy_findings(workflow, self.closure), [])
+
+    def test_job_level_if_selection_remains_accepted(self):
+        # Normal CI job selection (the planner's ``if:``) is not tolerance.
+        workflow = self.workflow(False)
+        workflow["jobs"]["j"]["if"] = (
+            "needs.plan.outputs.full_regression == 'true' || "
+            "contains(fromJSON(needs.plan.outputs.groups), 'j')")
+        self.assertEqual(cache_policy_findings(workflow, self.closure), [])
+
+    def test_real_workflows_reject_tolerance_on_exactly_the_env_jobs(self):
+        import copy
+        import yaml
+        expected_counts = {CI_WORKFLOW: 17, FINAL_WORKFLOW: 1}
+        for path, count in expected_counts.items():
+            real = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                cache_policy_findings(real, self.closure), [], path.name)
+            env_jobs = {name for name, job in real["jobs"].items()
+                        if any(step_roles(s) for s in job["steps"])}
+            self.assertEqual(len(env_jobs), count, path.name)
+            for value in (True, "${{ inputs.tolerate }}"):
+                mutated = copy.deepcopy(real)
+                for job in mutated["jobs"].values():
+                    job["continue-on-error"] = value
+                flagged = {f.split(":", 1)[0] for f in cache_policy_findings(
+                    mutated, self.closure) if "continue-on-error" in f}
+                with self.subTest(path.name, value=value):
+                    self.assertEqual(flagged, env_jobs)
+
+
 if __name__ == "__main__":
     unittest.main()
