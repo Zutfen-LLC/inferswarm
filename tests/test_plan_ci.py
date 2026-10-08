@@ -522,16 +522,24 @@ class TestWorkflowContract(unittest.TestCase):
             self.assertIn(f'"{group}"', text,
                           f"group {group} absent from workflow gate mapping")
         # The substring check above is not enough: a group can appear in the
-        # reported `results` dict yet be missing from `job_for_group`, which
+        # reported `results` dict yet be missing from `jobs_for_group`, which
         # makes the fail-closed gate fail a green run
-        # ("selected group X has no job mapping"). Assert membership in the
-        # actual mapping the gate consults.
-        marker = "job_for_group = {"
+        # ("selected group X has no job mapping").  Assert membership in the
+        # actual mapping literal the gate consults, and that every job the
+        # workflow defines is mapped to exactly one group.
+        import ast
+        marker = "jobs_for_group = {"
         self.assertIn(marker, text)
-        block = text.split(marker, 1)[1].split("}", 1)[0]
-        mapped = set(re.findall(r'"([a-z0-9-]+)":', block))
-        self.assertEqual(mapped, set(plan_ci.GROUP_TEST_MODULES),
-                         "gate job_for_group must map every registered group")
+        block = "{" + text.split(marker, 1)[1].split("\n          }\n", 1)[0] + "\n}"
+        mapping = ast.literal_eval(" ".join(block.split()))
+        self.assertEqual(set(mapping), set(plan_ci.GROUP_TEST_MODULES),
+                         "gate jobs_for_group must map every registered group")
+        mapped_jobs = [j for jobs in mapping.values() for j in jobs]
+        self.assertEqual(len(mapped_jobs), len(set(mapped_jobs)),
+                         "a job must belong to exactly one group")
+        self.assertEqual(set(mapped_jobs),
+                         set(self.jobs) - {"plan", "ci-gate"},
+                         "gate must map every workflow job")
 
     def test_push_to_main_selects_full(self):
         # the Plan (push) step hardcodes --mode full
@@ -589,7 +597,7 @@ class TestWorkflowRegistryParity(unittest.TestCase):
                          "registry/workflow parity drift:\n  "
                          + "\n  ".join(problems))
 
-    def test_r8i_job_executes_every_r8i_registered_module(self):
+    def test_r8i_shards_execute_every_r8i_registered_module(self):
         exec_map = self.parity.group_execution_map(self.doc)
         self.assertEqual(exec_map["r8i-qwen-qualification"],
                          self.registry["r8i-qwen-qualification"])
@@ -607,19 +615,25 @@ class TestWorkflowRegistryParity(unittest.TestCase):
                          self.registry["issue-117-133"])
 
     def test_group_jobs_execute_each_registered_module_exactly_once(self):
+        # Selector-aware (Issue #287): a module split across shards at test
+        # granularity still executes every identity exactly once, and no
+        # module runs both whole and by selector.
         from collections import Counter
-        counts = Counter()
-        for job_id, job in self.doc["jobs"].items():
-            for step in job.get("steps", []):
-                run = step.get("run") or ""
-                for match in self.parity._UNITTEST_RE.finditer(run):
-                    counts.update(token.split(".", 1)[1]
-                                  for token in match.group(1).split())
-        duplicated = {m: c for m, c in counts.items() if c != 1}
-        self.assertEqual(duplicated, {},
-                         "workflow commands must execute every registered "
-                         "module exactly once")
-        self.assertEqual(set(counts),
+        whole = Counter()
+        for tokens in self.parity.parse_workflow_tokens(self.doc).values():
+            whole.update(t for t in tokens if "." not in t)
+        selector_modules = {
+            t.split(".")[0]
+            for tokens in self.parity.parse_workflow_tokens(self.doc).values()
+            for t in tokens if "." in t}
+        self.assertEqual(
+            {m: c for m, c in whole.items() if c != 1}, {},
+            "a whole module must be executed by exactly one command")
+        self.assertEqual(set(whole) & selector_modules, set(),
+                         "a module is either whole or split, never both")
+        self.assertEqual(self.parity.identity_problems(self.doc,
+                                                       self.registry), [])
+        self.assertEqual(set(whole) | selector_modules,
                          set().union(*self.registry.values()))
 
     # -- negative controls (scratch representations) ----------------------
@@ -632,12 +646,20 @@ class TestWorkflowRegistryParity(unittest.TestCase):
             any(needle in p for p in problems),
             f"expected failure mentioning {needle!r}, got: {problems}")
 
+    def _step_running(self, doc, module):
+        """The unittest step of whichever (shard) job runs `module`."""
+        for job_id, job in doc["jobs"].items():
+            for step in job.get("steps", []):
+                run = step.get("run") or ""
+                if "unittest" in run and f"tests.{module}" in run:
+                    return step
+        raise AssertionError(f"no workflow step runs {module}")
+
     def test_control_registered_r8i_module_removed_from_workflow(self):
         # (1) an R8-I module stays registered but the workflow command
         # no longer executes it.
         doc = self._copy_doc()
-        step = [s for s in doc["jobs"]["r8i-qwen-qualification"]["steps"]
-                if "unittest" in (s.get("run") or "")][0]
+        step = self._step_running(doc, "test_issue244_r8i5_v340l_import")
         step["run"] = step["run"].replace(
             " tests.test_issue244_r8i5_v340l_import", "")
         self._assert_problems(doc, self.registry,
@@ -669,8 +691,7 @@ class TestWorkflowRegistryParity(unittest.TestCase):
         # not know.
         doc = self._copy_doc()
         registry = self._copy_registry()
-        step = [s for s in doc["jobs"]["r8i-qwen-qualification"]["steps"]
-                if "unittest" in (s.get("run") or "")][0]
+        step = self._step_running(doc, "test_issue237_r8i_methodology")
         step["run"] = step["run"].replace(
             "tests.test_issue237_r8i_methodology",
             "tests.test_issue237_r8i_methodology tests.test_ghost_module")
@@ -1100,6 +1121,592 @@ class TestStdinMalformedInput(unittest.TestCase):
         p = json.loads(r.stdout)
         self.assertFalse(p["full_regression"])
         self.assertEqual(p["groups"], ["repo-integrity"])
+
+
+# ---------------------------------------------------------------------------
+# Issue #287: real-workflow gate execution, job-selection evaluation, and
+# sharded-group contract.  Everything below drives the REAL
+# .github/workflows/ci.yml (never a Python mirror of its intent).
+# ---------------------------------------------------------------------------
+
+CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+SELECTION_RE = re.compile(
+    r"needs\.plan\.outputs\.full_regression == 'true' \|\| "
+    r"contains\(fromJSON\(needs\.plan\.outputs\.groups\), "
+    r"'(?P<group>[a-z0-9-]+)'\)")
+GATE_REF_RE = re.compile(
+    r"\$\{\{\s*needs\.(?P<job>[A-Za-z0-9_-]+)\."
+    r"(?P<field>result|outputs\.[A-Za-z0-9_]+)\s*\}\}")
+GATE_HEREDOC_RE = re.compile(r"\Apython3 - <<'EOF'\n(?P<body>.*)\nEOF\s*\Z",
+                             re.DOTALL)
+# Groups whose workflow jobs are bounded shards of ONE registered group.
+SHARDED_GROUPS = {"r8i-qwen-qualification"}
+# Modules deliberately split across shards at test granularity.  Splitting is
+# an explicit, measured decision (Issue #287: #278 is the single hosted
+# bottleneck module, 14 fully independent per-test-fixture tests); a module
+# not listed here must run whole, in exactly one shard.
+SPLIT_MODULES = {"test_issue278_integration"}
+MAX_SHARDS = 6
+SHARD_TIMEOUT_MAX_MINUTES = 30
+
+
+def _load_ci_workflow():
+    import yaml
+    with open(CI_WORKFLOW, encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def job_group(doc):
+    """{job_id: group_id} for every group-executing job of the real workflow.
+
+    ``repo-integrity`` has no selection condition; every other group job
+    carries the single planner-selection expression, which must be exactly
+    one of the supported forms (anything else is a contract violation).
+    """
+    mapping = {}
+    for job_id, job in doc["jobs"].items():
+        if job_id in ("plan", "ci-gate"):
+            continue
+        cond = job.get("if")
+        if cond is None:
+            mapping[job_id] = job_id
+            continue
+        m = SELECTION_RE.fullmatch(cond.strip())
+        if m is None:
+            raise AssertionError(
+                f"job {job_id}: unsupported selection expression {cond!r}")
+        mapping[job_id] = m.group("group")
+    return mapping
+
+
+def job_would_run(job, plan):
+    """Mechanically evaluate a job's real ``if:`` against a planner plan."""
+    cond = job.get("if")
+    if cond is None:
+        return True
+    m = SELECTION_RE.fullmatch(cond.strip())
+    if m is None:
+        raise AssertionError(f"unsupported selection expression {cond!r}")
+    return bool(plan["full_regression"]) or m.group("group") in plan["groups"]
+
+
+def run_real_gate(doc, *, plan_mode, plan_full, plan_groups_json, results,
+                  planner_result="success"):
+    """Execute the gate step's ACTUAL script with a synthetic needs context.
+
+    ``results`` maps job id -> result string; a job absent from ``results``
+    renders as an empty string, exactly like a result GitHub never supplied.
+    """
+    steps = doc["jobs"]["ci-gate"]["steps"]
+    if len(steps) != 1:
+        raise AssertionError("the CI Gate must be exactly one aggregate step")
+    outputs = {"mode": plan_mode, "full_regression": plan_full,
+               "groups": plan_groups_json}
+
+    def render(match):
+        job, field = match.group("job"), match.group("field")
+        if job == "plan":
+            if field == "result":
+                return planner_result
+            return outputs[field.split(".", 1)[1]]
+        return results.get(job, "")
+
+    script = GATE_REF_RE.sub(render, steps[0]["run"].strip())
+    heredoc = GATE_HEREDOC_RE.match(script)
+    if heredoc is None:
+        raise AssertionError("gate step is not a python3 heredoc")
+    return subprocess.run([sys.executable, "-c", heredoc.group("body")],
+                          capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL, cwd=REPO_ROOT)
+
+
+class TestRealGateScript(unittest.TestCase):
+    """Run the REAL CI Gate script against synthetic job results.
+
+    Adversarial controls: a selected job (every individual job, including
+    each shard) that fails, is cancelled, is skipped, or reports nothing
+    makes the gate fail; planner failure and malformed plan output fail
+    closed; only a legitimately unselected group may be skipped.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = _load_ci_workflow()
+        cls.group_of = job_group(cls.doc)
+        cls.gate_jobs = [j for j in cls.doc["jobs"]["ci-gate"]["needs"]
+                         if j != "plan"]
+
+    def gate(self, plan, overrides=None, **kwargs):
+        results = {job: ("success" if self.group_of[job] in plan["groups"]
+                         else "skipped") for job in self.gate_jobs}
+        results.update(overrides or {})
+        return run_real_gate(
+            self.doc,
+            plan_mode=kwargs.pop("plan_mode", plan["mode"]),
+            plan_full=kwargs.pop("plan_full",
+                                 json.dumps(plan["full_regression"])),
+            plan_groups_json=kwargs.pop("plan_groups_json",
+                                        json.dumps(plan["groups"])),
+            results=results, **kwargs)
+
+    def full_plan(self):
+        return make_plan([], mode="full")
+
+    def r8i_plan(self):
+        return make_plan(["scripts/issue278_integration.py"])
+
+    def test_every_gate_dependency_maps_to_a_registered_group(self):
+        self.assertEqual(set(self.group_of), set(self.gate_jobs))
+        self.assertEqual(set(self.group_of.values()),
+                         set(plan_ci.GROUP_TEST_MODULES))
+
+    def test_full_regression_all_success_passes(self):
+        r = self.gate(self.full_plan())
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_targeted_selected_success_and_unselected_skipped_passes(self):
+        plan = self.r8i_plan()
+        self.assertFalse(plan["full_regression"])
+        r = self.gate(plan)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_any_selected_job_without_success_fails_the_gate(self):
+        """Every job of a full plan, one at a time, with every bad result."""
+        plan = self.full_plan()
+        for job in self.gate_jobs:
+            for bad in ("failure", "cancelled", "skipped", ""):
+                with self.subTest(job=job, result=bad):
+                    r = self.gate(plan, {job: bad})
+                    self.assertNotEqual(
+                        r.returncode, 0,
+                        f"gate passed with {job} result {bad!r}")
+
+    def test_selected_group_with_any_bad_job_fails_in_targeted_plan(self):
+        plan = self.r8i_plan()
+        for job, group in self.group_of.items():
+            if group not in plan["groups"]:
+                continue
+            for bad in ("failure", "cancelled", "skipped", ""):
+                with self.subTest(job=job, result=bad):
+                    self.assertNotEqual(
+                        self.gate(plan, {job: bad}).returncode, 0)
+
+    def test_failed_or_cancelled_unselected_job_still_fails(self):
+        plan = self.r8i_plan()
+        for job, group in self.group_of.items():
+            if group in plan["groups"]:
+                continue
+            for bad in ("failure", "cancelled"):
+                with self.subTest(job=job, result=bad):
+                    self.assertNotEqual(
+                        self.gate(plan, {job: bad}).returncode, 0)
+
+    def test_missing_or_malformed_result_fails_even_when_unselected(self):
+        plan = self.r8i_plan()
+        for job, group in self.group_of.items():
+            if group in plan["groups"]:
+                continue
+            for bad in ("", "weird"):
+                with self.subTest(job=job, result=bad):
+                    self.assertNotEqual(
+                        self.gate(plan, {job: bad}).returncode, 0)
+
+    def test_planner_failure_fails_the_gate(self):
+        for planner_result in ("failure", "cancelled", "skipped", ""):
+            with self.subTest(planner_result=planner_result):
+                r = self.gate(self.full_plan(), planner_result=planner_result)
+                self.assertNotEqual(r.returncode, 0)
+
+    def test_malformed_plan_output_fails_closed(self):
+        plan = self.full_plan()
+        cases = {
+            "mode": {"plan_mode": "bogus"},
+            "mode-empty": {"plan_mode": ""},
+            "full-flag": {"plan_full": "maybe"},
+            "groups-empty-list": {"plan_groups_json": "[]"},
+            "groups-null": {"plan_groups_json": "null"},
+            "groups-object": {"plan_groups_json": "{}"},
+        }
+        for name, kwargs in cases.items():
+            with self.subTest(case=name):
+                self.assertNotEqual(self.gate(plan, **kwargs).returncode, 0)
+
+    def test_selected_group_unknown_to_the_gate_fails(self):
+        plan = self.r8i_plan()
+        groups = json.dumps(plan["groups"] + ["ghost-group"])
+        self.assertNotEqual(
+            self.gate(plan, plan_groups_json=groups).returncode, 0)
+
+
+class TestJobSelectionEvaluation(unittest.TestCase):
+    """Each real job's ``if:`` evaluated against real planner output."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = _load_ci_workflow()
+        cls.group_of = job_group(cls.doc)
+        cls.r8i = "r8i-qwen-qualification"
+
+    def running(self, paths, mode="pr"):
+        plan = make_plan(paths, mode=mode)
+        return plan, {job for job, spec in self.doc["jobs"].items()
+                      if job not in ("plan", "ci-gate")
+                      and job_would_run(spec, plan)}
+
+    def r8i_jobs(self):
+        return {j for j, g in self.group_of.items() if g == self.r8i}
+
+    def test_r8i_source_test_and_evidence_changes_select_every_r8i_job(self):
+        r8i_evidence = next(
+            pattern for pattern, groups in plan_ci.PATH_GROUPS.items()
+            if groups == [self.r8i] and pattern.endswith("/"))
+        for path in ("scripts/issue278_integration.py",
+                     "scripts/issue273_evidence.py",
+                     "tests/test_issue278_integration.py",
+                     "tests/test_issue273_evidence.py",
+                     r8i_evidence + "any-evidence-file.json"):
+            with self.subTest(path=path):
+                plan, jobs = self.running([path])
+                if plan["full_regression"]:
+                    continue  # unknown evidence path escalates to everything
+                self.assertTrue(self.r8i_jobs() <= jobs, path)
+
+    def test_transitive_import_change_selects_every_r8i_job(self):
+        # issue270_comparator is imported (transitively) by #273/#276/#278
+        plan, jobs = self.running(["scripts/issue270_comparator.py"])
+        self.assertIn(self.r8i, plan["groups"])
+        self.assertTrue(self.r8i_jobs() <= jobs)
+
+    def test_docs_only_change_runs_no_r8i_job(self):
+        plan, jobs = self.running(["docs/README.md"])
+        self.assertFalse(plan["full_regression"])
+        self.assertEqual(jobs & self.r8i_jobs(), set())
+        self.assertIn("repo-integrity", jobs)
+
+    def test_unrelated_family_change_runs_no_r8i_job(self):
+        plan, jobs = self.running(["tests/test_issue74_methodology.py"])
+        self.assertFalse(plan["full_regression"])
+        self.assertEqual(jobs & self.r8i_jobs(), set())
+
+    def test_full_main_manual_and_authority_changes_run_every_job(self):
+        everything = set(self.group_of)
+        cases = {
+            "main/manual": ([], "full"),
+            "workflow": ([".github/workflows/ci.yml"], "pr"),
+            "planner": (["scripts/plan_ci.py"], "pr"),
+            "registry": (["scripts/ci_groups.json"], "pr"),
+            "planner-tests": (["tests/test_plan_ci.py"], "pr"),
+            "unknown-path": (["totally/unknown/path.bin"], "pr"),
+            "malformed": (["docs/README.md", "docs/README.md"], "pr"),
+        }
+        for name, (paths, mode) in cases.items():
+            with self.subTest(case=name):
+                plan, jobs = self.running(paths, mode=mode)
+                self.assertTrue(plan["full_regression"])
+                self.assertEqual(jobs, everything)
+
+
+class TestShardedGroupWorkflow(unittest.TestCase):
+    """Sharded groups: bounded, disjoint, exhaustive, individually gated."""
+
+    @classmethod
+    def setUpClass(cls):
+        import ci_workflow_parity
+        cls.parity = ci_workflow_parity
+        cls.doc = _load_ci_workflow()
+        cls.group_of = job_group(cls.doc)
+        cls.registry = cls.parity.registry_modules()
+
+    def shard_jobs(self, group):
+        return sorted((j for j, g in self.group_of.items() if g == group),
+                      key=lambda j: int(j.rsplit("-s", 1)[1]))
+
+    def shard_modules(self, job):
+        return self.parity.parse_workflow(self.doc)[job]
+
+    def test_sharded_groups_have_bounded_numbered_shard_jobs(self):
+        for group in SHARDED_GROUPS:
+            jobs = self.shard_jobs(group)
+            self.assertGreaterEqual(len(jobs), 2, group)
+            self.assertLessEqual(len(jobs), MAX_SHARDS, group)
+            self.assertEqual(
+                jobs, [f"{group}-s{i}" for i in range(1, len(jobs) + 1)])
+            self.assertNotIn(group, self.doc["jobs"],
+                             "a sharded group has no unsharded job")
+
+    def test_shards_are_disjoint_nonempty_and_exhaustive(self):
+        for group in SHARDED_GROUPS:
+            owner = {}
+            for job in self.shard_jobs(group):
+                ids = self.parity.job_executed_ids(self.doc)[job]
+                self.assertTrue(ids, f"{job} runs no tests")
+                for test_id in ids:
+                    self.assertNotIn(test_id, owner,
+                                     f"{test_id} runs in {owner.get(test_id)} "
+                                     f"and {job}")
+                    owner[test_id] = job
+            discovered = {i for m in self.registry[group]
+                          for i in self.parity.module_test_ids(m)}
+            self.assertEqual(set(owner), discovered)
+
+    def test_only_declared_modules_are_split_across_shards(self):
+        for group in SHARDED_GROUPS:
+            homes = {}
+            for job in self.shard_jobs(group):
+                for module in self.shard_modules(job):
+                    homes.setdefault(module, set()).add(job)
+            split = {m for m, jobs in homes.items() if len(jobs) > 1}
+            self.assertEqual(split, SPLIT_MODULES & set(homes))
+            for module in SPLIT_MODULES & set(homes):
+                self.assertGreaterEqual(len(homes[module]), 2, module)
+
+    def test_each_shard_is_one_verbose_unittest_step_with_a_timeout(self):
+        for group in SHARDED_GROUPS:
+            for job in self.shard_jobs(group):
+                spec = self.doc["jobs"][job]
+                runs = [s["run"] for s in spec["steps"]
+                        if "unittest" in (s.get("run") or "")]
+                self.assertEqual(len(runs), 1, job)
+                self.assertTrue(runs[0].strip().endswith("-v"), job)
+                minutes = spec.get("timeout-minutes")
+                self.assertIsInstance(minutes, int, f"{job} needs a timeout")
+                self.assertLessEqual(minutes, SHARD_TIMEOUT_MAX_MINUTES, job)
+
+    def test_every_shard_bootstraps_and_doctors_the_canonical_env(self):
+        for group in SHARDED_GROUPS:
+            for job in self.shard_jobs(group):
+                text = json.dumps(self.doc["jobs"][job]["steps"])
+                self.assertIn("scripts/bootstrap_test_env.py", text, job)
+                self.assertIn("scripts/check_test_env.py", text, job)
+
+    def test_shards_share_one_selection_expression(self):
+        for group in SHARDED_GROUPS:
+            conds = {self.doc["jobs"][j]["if"]
+                     for j in self.shard_jobs(group)}
+            self.assertEqual(len(conds), 1, conds)
+
+
+class TestIdentityAccounting(unittest.TestCase):
+    """Exact test-identity accounting (Issue #287).
+
+    The executable identity of a CI group is the multiset of unittest IDs
+    its workflow commands expand to.  It must EQUAL the loader-discovered
+    population of the group's registered modules: count equality alone is
+    not enough, so omissions, duplicates, and unregistered extras are each
+    reported individually.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import ci_workflow_parity
+        cls.parity = ci_workflow_parity
+        cls.doc = _load_ci_workflow()
+        cls.registry = cls.parity.registry_modules()
+
+    def _copy(self):
+        import copy
+        return copy.deepcopy(self.doc)
+
+    def _mutate(self, doc, module, old, new):
+        """Rewrite the step running `module`; fail if nothing changed."""
+        for spec in doc["jobs"].values():
+            for step in spec.get("steps", []):
+                run = step.get("run") or ""
+                if "unittest" in run and f"tests.{module}" in run:
+                    mutated = run.replace(old, new, 1)
+                    self.assertNotEqual(mutated, run, "control was a no-op")
+                    step["run"] = mutated
+                    return
+        raise AssertionError(f"no workflow step runs {module}")
+
+    def test_real_workflow_executes_each_registered_identity_exactly_once(self):
+        self.assertEqual(
+            self.parity.identity_problems(self.doc, self.registry), [])
+
+    def test_identity_population_matches_loader_discovery(self):
+        for group in SHARDED_GROUPS:
+            expected = []
+            for module in sorted(self.registry[group]):
+                expected += self.parity.module_test_ids(module)
+            executed = self.parity.group_executed_ids(self.doc)[group]
+            self.assertEqual(sorted(executed), sorted(expected))
+            self.assertEqual(len(executed), len(set(executed)))
+            self.assertGreater(len(executed), 1000)
+
+    def test_module_ids_are_real_tests_never_load_failures(self):
+        ids = self.parity.module_test_ids("test_issue278_integration")
+        self.assertTrue(all(i.startswith("tests.test_issue278_integration.")
+                            for i in ids), ids)
+        with self.assertRaises(self.parity.IdentityError):
+            self.parity.module_test_ids("test_ghost_module_for_287")
+
+    def test_control_omitted_module_is_reported_with_its_ids(self):
+        doc = self._copy()
+        self._mutate(doc, "test_issue273_evidence",
+                     " tests.test_issue273_evidence", "")
+        problems = self.parity.identity_problems(doc, self.registry)
+        self.assertTrue(any("test_issue273_evidence" in p
+                            and "not executed" in p for p in problems),
+                        problems)
+
+    def test_control_duplicated_module_is_reported(self):
+        doc = self._copy()
+        self._mutate(doc, "test_issue237_r8i_methodology",
+                     "tests.test_issue237_r8i_methodology",
+                     "tests.test_issue237_r8i_methodology "
+                     "tests.test_issue237_r8i_methodology")
+        problems = self.parity.identity_problems(doc, self.registry)
+        self.assertTrue(any("executed more than once" in p
+                            and "test_issue237_r8i_methodology" in p
+                            for p in problems), problems)
+
+    def test_control_unregistered_identities_are_reported(self):
+        doc = self._copy()
+        self._mutate(doc, "test_issue237_r8i_methodology",
+                     "tests.test_issue237_r8i_methodology",
+                     "tests.test_issue237_r8i_methodology tests.test_plan_ci")
+        problems = self.parity.identity_problems(doc, self.registry)
+        self.assertTrue(any("not registered" in p and "test_plan_ci" in p
+                            for p in problems), problems)
+
+    def test_control_count_equal_but_different_identity_is_detected(self):
+        # Swap one module for a different module with the same test count:
+        # a bare count comparison would pass; identity accounting must not.
+        counts = {}
+        for module in self.registry["r8i-qwen-qualification"]:
+            counts.setdefault(len(self.parity.module_test_ids(module)),
+                              []).append(module)
+        pair = next(sorted(mods)[:2] for mods in counts.values()
+                    if len(mods) >= 2)
+        doc = self._copy()
+        # remove `pair[0]` wherever it runs, run `pair[1]` twice instead
+        for name, spec in doc["jobs"].items():
+            if not name.startswith("r8i-qwen-qualification"):
+                continue
+            for step in spec["steps"]:
+                run = step.get("run") or ""
+                if "unittest" in run and f"tests.{pair[0]}" in run:
+                    step["run"] = run.replace(
+                        f" tests.{pair[0]}", f" tests.{pair[1]}")
+        problems = self.parity.identity_problems(doc, self.registry)
+        self.assertTrue(problems, "count-preserving swap must be detected")
+
+    def test_proof_is_machine_readable_and_self_consistent(self):
+        proof = self.parity.identity_proof(self.doc, self.registry)
+        self.assertEqual(proof["schema"], "inferswarm.ci.identity-proof/1")
+        for group in SHARDED_GROUPS:
+            entry = proof["groups"][group]
+            self.assertEqual(entry["duplicate_ids"], [])
+            self.assertEqual(entry["missing_ids"], [])
+            self.assertEqual(entry["unregistered_ids"], [])
+            self.assertEqual(entry["executed_count"],
+                             entry["discovered_count"])
+            self.assertEqual(entry["executed_sha256"],
+                             entry["discovered_sha256"])
+            self.assertEqual(
+                sum(j["count"] for j in entry["jobs"].values()),
+                entry["executed_count"])
+        # deterministic: byte-identical across two derivations
+        again = self.parity.identity_proof(self.doc, self.registry)
+        self.assertEqual(json.dumps(proof, sort_keys=True),
+                         json.dumps(again, sort_keys=True))
+
+
+class TestSelectorTokens(unittest.TestCase):
+    """``tests.module.Class.test`` selectors inside shard commands (#287).
+
+    A module may be split across shards at test granularity, but only when
+    the selectors name real tests and the shards together cover the
+    module's loader-discovered identities exactly once.
+    """
+
+    MODULE = "test_issue278_integration"
+    CLASS = "IntegrationChainTests"
+
+    @classmethod
+    def setUpClass(cls):
+        import ci_workflow_parity
+        cls.parity = ci_workflow_parity
+        cls.module_ids = cls.parity.module_test_ids(cls.MODULE)
+
+    def _doc(self, *commands):
+        """Minimal one-group workflow whose shards run `commands`."""
+        return {"jobs": {
+            f"grp-s{i}": {"steps": [{"run": f"python3 -m unittest {c} -v"}]}
+            for i, c in enumerate(commands, 1)}}
+
+    def test_module_token_still_parses_as_a_module(self):
+        doc = self._doc(f"tests.{self.MODULE}")
+        self.assertEqual(self.parity.parse_workflow(doc),
+                         {"grp-s1": {self.MODULE}})
+
+    def test_selector_tokens_reduce_to_their_module_for_parity(self):
+        doc = self._doc(f"tests.{self.MODULE}.{self.CLASS}.test_a "
+                        f"tests.{self.MODULE}.{self.CLASS}.test_b")
+        self.assertEqual(self.parity.parse_workflow(doc),
+                         {"grp-s1": {self.MODULE}})
+        self.assertEqual(
+            self.parity.parse_workflow_tokens(doc),
+            {"grp-s1": [f"{self.MODULE}.{self.CLASS}.test_a",
+                        f"{self.MODULE}.{self.CLASS}.test_b"]})
+
+    def test_selector_expands_to_exactly_the_named_test(self):
+        method = self.module_ids[0].split(".")[-1]
+        self.assertEqual(
+            self.parity.token_test_ids(f"{self.MODULE}.{self.CLASS}.{method}"),
+            [f"tests.{self.MODULE}.{self.CLASS}.{method}"])
+
+    def test_class_selector_expands_to_every_test_of_the_class(self):
+        self.assertEqual(
+            self.parity.token_test_ids(f"{self.MODULE}.{self.CLASS}"),
+            self.module_ids)
+
+    def test_bare_module_token_expands_to_the_whole_module(self):
+        self.assertEqual(self.parity.token_test_ids(self.MODULE),
+                         self.module_ids)
+
+    def test_selector_naming_no_real_test_is_rejected(self):
+        for bad in (f"{self.MODULE}.{self.CLASS}.test_does_not_exist",
+                    f"{self.MODULE}.NoSuchClass",
+                    f"{self.MODULE}.{self.CLASS}.test_a.extra"):
+            with self.subTest(token=bad):
+                with self.assertRaises(self.parity.IdentityError):
+                    self.parity.token_test_ids(bad)
+
+    def test_split_module_across_shards_is_exact_when_covered_once(self):
+        half = len(self.module_ids) // 2
+        a = " ".join(i for i in self.module_ids[:half])
+        b = " ".join(i for i in self.module_ids[half:])
+        doc = self._doc(a, b)
+        registry = {"grp": {self.MODULE}}
+        self.assertEqual(self.parity.parity_problems(doc, registry), [])
+        self.assertEqual(self.parity.identity_problems(doc, registry), [])
+
+    def test_control_split_module_missing_one_test_is_detected(self):
+        doc = self._doc(" ".join(self.module_ids[:5]),
+                        " ".join(self.module_ids[6:]))
+        problems = self.parity.identity_problems(doc, {"grp": {self.MODULE}})
+        self.assertTrue(any("not executed" in p and self.MODULE in p
+                            for p in problems), problems)
+
+    def test_control_split_module_with_overlap_is_detected(self):
+        doc = self._doc(" ".join(self.module_ids[:7]),
+                        " ".join(self.module_ids[6:]))
+        problems = self.parity.identity_problems(doc, {"grp": {self.MODULE}})
+        self.assertTrue(any("more than once" in p for p in problems),
+                        problems)
+
+    def test_control_whole_module_plus_selector_double_runs_a_test(self):
+        doc = self._doc(f"tests.{self.MODULE}", self.module_ids[0])
+        problems = self.parity.identity_problems(doc, {"grp": {self.MODULE}})
+        self.assertTrue(any("more than once" in p for p in problems),
+                        problems)
+
+    def test_control_selector_for_unregistered_module_is_reported(self):
+        doc = self._doc(f"tests.{self.MODULE}",
+                        "tests.test_plan_ci.TestPlannerContract")
+        problems = self.parity.parity_problems(doc, {"grp": {self.MODULE}})
+        self.assertTrue(any("test_plan_ci" in p for p in problems), problems)
 
 
 if __name__ == "__main__":

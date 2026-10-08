@@ -4923,7 +4923,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "repo-integrity",
-   "invariant": "The CI planner is deterministic and fail-closed, fans script changes out to every importing group, and stays at parity with the registry and workflow.",
+   "invariant": "The CI planner is deterministic and fail-closed, fans script changes out to every importing group, and stays at parity with the registry and workflow; the CI Gate (executed as the real workflow script) fails closed on any selected job or shard, and every sharded group runs each registered test identity exactly once.",
    "lineage": "repository authority",
    "named_by_evidence": [
     "docs/implementation/r6-successor-arm-c-requalification-172/evidence/validation.json"

@@ -37,7 +37,8 @@ Output is `ci-plan/1` JSON: `mode`, `groups`, `full_regression`,
 
 How to run one group: the group's exact unittest command is visible in
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (one job per
-group, same name), and the module list per group is in
+group, same name; the R8-I group runs as numbered shard jobs, see
+[Sharded groups](#sharded-groups-issue-287)), and the module list per group is in
 [`scripts/ci_groups.json`](../scripts/ci_groups.json). Locally, after
 bootstrapping the canonical CPU environment:
 
@@ -113,6 +114,70 @@ A script change selects every group whose test modules import it,
 directly or transitively (`tests/test_plan_ci.py`,
 `TestImportClosureFanout`, enforces this). Evidence that a retained
 test reads fans out to that test's group.
+
+## Sharded groups (Issue #287)
+
+A registered group is a *selection and ownership* unit; a workflow job is a
+*scheduling* unit. They are one-to-one except where measured wall time says a
+group must be spread across runners. `r8i-qwen-qualification` is the one such
+group: it stays **one** registered group (one registry entry, one retention
+audit group, one impact-selection target) and the workflow executes it as
+numbered shard jobs `r8i-qwen-qualification-s1` … `-s5`.
+
+What this keeps, by construction:
+
+- **Selection.** Every shard carries the same `if:` expression, so any change
+  that selects `r8i-qwen-qualification` (R8-I source, tests, evidence, a
+  transitive import) selects *all* shards, and full regression on
+  `main`/manual/authority escalation runs them all. A shard is never
+  selected on its own.
+- **The CI Gate.** The gate maps each group to *all* of its executing jobs.
+  A selected group passes only if every shard succeeded. A shard that
+  failed, was cancelled, was skipped, or reported no result fails the gate;
+  so does a missing or malformed result for any job, selected or not. Each
+  shard job also carries a `timeout-minutes` bound so a hung worker fails
+  instead of holding the gate open.
+- **Isolation.** Shards are separate runners with their own checkout and
+  canonical environment; there is no shared mutable state, no in-job
+  parallelism, and no retry.
+- **Identity.** Every registered module runs, and every unittest identity
+  runs exactly once. Modules run whole in one shard, with one declared
+  exception: `test_issue278_integration`, the single hosted bottleneck
+  module (14 fully independent per-test-fixture tests, one test alone about
+  two minutes), is split across two shards by explicit
+  `tests.<module>.<Class>.<test>` selectors.
+
+The partition is derived from measured per-test wall time on a hosted
+`ubuntu-latest` runner (largest unit first into the least-loaded shard), not
+from module counts. It is a scheduling choice, not a contract: re-balance by
+moving a module between shard commands; nothing else changes.
+
+Equality is proved on test *identities*, never on counts alone.
+`scripts/ci_workflow_parity.py` expands each job's real `unittest` command
+through the same loader the command uses and compares the multiset of IDs to
+the loader-discovered population of the group's registered modules:
+
+```bash
+# deterministic identity accounting for this checkout (exit 1 on any drift)
+python3 scripts/ci_workflow_parity.py --group r8i-qwen-qualification
+# the same, for another checkout (for example the base of a CI change)
+python3 scripts/ci_workflow_parity.py --root /path/to/checkout
+```
+
+`tests/test_plan_ci.py` (`TestIdentityAccounting`, `TestSelectorTokens`,
+`TestShardedGroupWorkflow`) fails on an omitted module or test, a duplicated
+module or test, an unregistered module, a selector that names no real test,
+a module split without being declared, and a count-preserving swap. It also
+executes the **real** gate script from `ci.yml` against synthetic job results
+(`TestRealGateScript`) and evaluates every job's real `if:` against real
+planner output (`TestJobSelectionEvaluation`).
+
+When adding a module to the sharded group, register it as usual (below); the
+identity check then fails with `identities discovered but not executed` until
+the module is added to exactly one shard command in `ci.yml`. Add it to the
+least-loaded shard. Do not add it to two shards. Splitting another module
+across shards additionally requires listing it in `SPLIT_MODULES` in
+`tests/test_plan_ci.py` with a measured justification.
 
 ## Test lifecycle (Issue #246)
 
@@ -243,9 +308,11 @@ and every tracked non-Markdown docs file must be explicitly classified.
 Branch protection should require exactly the **CI Gate** check (job
 `ci-gate` in `.github/workflows/ci.yml`). It runs `if: always()` and
 fails closed unless the planner job succeeded with a well-formed plan,
-`repo-integrity` succeeded, and every selected group succeeded
-(cancelled or never-run selected groups are failures; legitimately
-unselected groups are skipped by design).
+`repo-integrity` succeeded, and every job of every selected group succeeded
+(cancelled or never-run selected jobs are failures, as is any job that
+reports no result or a result outside `success`/`failure`/`cancelled`/
+`skipped`; legitimately unselected groups are skipped by design). A sharded
+group is selected as a unit and passes only if all of its shards passed.
 
 ## Adding a group or test module
 
@@ -258,7 +325,8 @@ workflow, and add the module's record to
 any `tests/test_*.py` module is not owned by exactly one registered
 group, and `scripts/check_ci_test_retention.py` fails if it has no
 retention record, so an unregistered or unowned suite cannot slip
-through silently.
+through silently. For a sharded group, also place the module in exactly one
+shard command (see [Sharded groups](#sharded-groups-issue-287)).
 
 ## Adding an evidence-bearing docs subtree
 
@@ -283,4 +351,5 @@ there is no duplicated per-group flag surface. `tests/test_plan_ci.py`
 (`TestWorkflowContract`) parses `.github/workflows/ci.yml` itself and
 fails if any job references a plan output that does not exist, if a
 registered group has no selectable job, or if workflow group ids drift
-from the registry.
+from the registry. A sharded group's jobs are named `<group>-s<K>`, share
+one selection expression, and report under the bare group id.
