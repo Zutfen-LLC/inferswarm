@@ -80,8 +80,12 @@ one `launch(matrix_row) -> request(kind)` executor per matrix row. Laws:
   (``PROMPT_BINDING_MISSING`` / ``PROMPT_BINDING_MISMATCH``), consumed
   as a transport-failed slot. Every request record carries
   ``request_identity`` evidence (prompt id, sha256, byte count — never
-  the prompt text). CPU stub tests use explicit in-row
-  ``prompt_text``/``prompt_sha256``.
+  the prompt text). Review 5461889945 additionally authenticates the
+  repository-retained workload against an independent SHA-256 pin, rejects
+  every in-row override and incomplete/unapproved request setting, and
+  derives identity from the final serialized POST bytes. CPU synthetic
+  bindings are isolated by patching `frozen_prompts` in the test harness;
+  there is no production test-mode argument.
 - **Traceable request-to-server binding**: every request record carries
   launch label, arm, server PID, and both identity tokens; a completion
   response not echoing the launch identity is recorded as
@@ -100,7 +104,7 @@ one `launch(matrix_row) -> request(kind)` executor per matrix row. Laws:
 PR diff). The r3 observer-bracket slice law is retained verbatim as
 `slice_request_bracket`.
 
-## Tests (`tests/test_issue289_launcher.py`, 38 tests, ~105 s)
+## Tests (`tests/test_issue289_launcher.py`, 56 tests, ~124 s)
 
 Two distinct CPU-only loopback stub servers (`tests/stub_issue289_server.py`,
 stdlib `http.server`) — one per arm, distinct identities and observer
@@ -166,9 +170,10 @@ from scripts.issue280_runner import MINIMAL_RERUN_MATRIX
 
 # The frozen prompt bytes + request settings, bound to the accepted
 # workload identity (review 5459338940 B4): load the accepted workload
-# binding and pass it EXPLICITLY — the launcher verifies the SHA-256 of
-# the supplied bytes against the binding before any dispatch and
-# refuses missing/mismatched input (no default text).
+# binding and pass it EXPLICITLY. The launcher authenticates the retained
+# workload against an independent digest pin, then compares the caller's
+# bytes/hash/settings to that authority (not to its own claims). Missing
+# or mismatched authority/settings refuse completion dispatch.
 workload = json.load(open("docs/investigations/"
                           "vulkan-same-request-280/workload.json"))
 prompt_binding = workload["prompts"]   # {"P1": {text, utf8_sha256, settings}}
@@ -222,3 +227,86 @@ frozen binary, or any physical dispatch.
 The accepted #280 r3 terminal remains STOP. Any candidate-B experiment
 is a separate physical authorization decision (issue #289 completion
 section), not granted here.
+
+## Exact-head correction for review 5461889945 (N1 / N2)
+
+Starting reviewed head: `3b499400fba555249185b8669216f46b86442eee`.
+Preflight local HEAD, remote PR branch and GitHub PR object all matched.
+`origin/main` remained `57adca1ffac11fe70a914d5862910100690f9947`:
+no main drift. Existing B1–B4 history is preserved additively.
+
+N1: `_child_alive()` returned a nonempty `(alive, reason)` tuple, but
+readiness tested the tuple itself. RED reproductions with a real loopback
+child showed unreadable/changed start time after capture still producing
+COMPLETE, and an exited child being recorded as ready when the expected
+listener token was available. Readiness now unpacks/checks the Boolean and
+reason before probing the identity token. Missing or changed evidence and
+child exit are immediate failures; the real executor consumes the aborted
+slot, stops synchronously, sends zero completions and performs bounded
+owned-group cleanup. The request-path identity guard is unchanged. A
+one-site mutation restoring tuple truthiness is killed in all three cases.
+
+N2: caller-supplied text/hash consistency was not independent authority;
+in-row text and arbitrary settings could replace the verified request.
+Production now verifies the retained workload bytes against independent
+SHA-256 `d49f7083fd78e244caf64b401cb35bc0a0392d5e0a545d8322ede5a9257050b9`
+and frozen P1 SHA-256
+`726fd522508fd0a0a89184017d30dd808c8538cbce850c3c04d8b07c31f371de`.
+Caller bytes/hash must match that authenticated authority; a missing,
+unknown, self-consistently substituted or row-overridden binding is refused.
+The eight workload settings are mandatory and allowlisted, with exact
+frozen values and strict types (booleans cannot masquerade as numbers).
+Reserved `prompt`, unknown settings and conflicting settings fail closed.
+
+Historical `samplers:["greedy"]` is normalized to `["top_k"]` only under
+[the previously accepted #280 execution identity](https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6030829366).
+Temperature 0, top_k 1, seed 42, n_predict 128, repeat_penalty 1,
+cache_prompt false and stream true remain unchanged. Existing
+`timings_per_token:true` instrumentation remains fixed; an explicit false
+is rejected. No context policy or configurable sampler policy is added.
+No workload or frozen evidence bytes are rewritten.
+
+The effective payload is validated before dispatch. Retained identity is
+derived from the exact serialized bytes passed to urllib: body SHA-256/byte
+count, parsed prompt SHA-256/UTF-8 byte count and parsed effective settings.
+The real CPU HTTP stub captures those actual received bytes and verifies
+equality with the record. Prompt plaintext remains absent from records.
+Synthetic bindings live only in the CPU test harness via a scoped authority
+patch; production accepts neither in-row synthetic data nor a bypass flag.
+
+RED-first commit added 15 focused cases before production changes: 24
+assertion/subtest failures against unchanged reviewed production code, no
+loader errors. The identical primary regressions then passed GREEN.
+Supplemental authority-file loss/drift coverage and the exact targeted
+mutation were also exercised against immutable `git show` bytes of the
+reviewed production module: 18 focused tests, 26 behavioral failures
+(subtests counted separately); the positive approved sampler spelling and
+mutation-detection controls passed. Final launcher suite: 56/56 PASS,
+including all 38 original identities, lifecycle/cleanup/environment laws,
+four original fail-open controls and deliberately mutated r3 STOP replay.
+No original assertion was weakened: the sampler assertion now requires the
+accepted top_k spelling, and the synthetic fixture uses an explicit scoped
+CPU binding while retaining the actual P1 semantic gate.
+
+The first combined run exposed a CPU-stub diagnostic race: SSE completion
+was sent before its synthetic observer bracket finished appending, so a
+reader could see a partial JSON line. The stub now finishes that bracket
+before delivering the response body; production observer/slicing code is
+untouched. This fixes test determinism, not physical execution semantics.
+
+CI topology, planner registry and all five shard commands are unchanged.
+The existing launcher module remains registered in shard 1 only; new
+identities are discovered within that module. Ordinary hosted CI is a
+maintainer-requested pre-review proof of the exact-head five-shard/aggregate
+contract. Final CPU Validation remains deferred until renewed exact-head
+GO; no local canonical full-suite ceremony is run in this correction.
+Living project status is unchanged: this correction adds no acceptance,
+physical result, capability promotion or execution permission. This guide
+and the retention record document the software-only correction instead.
+
+Physical integration remains NOT EXECUTABLE: the pinned production server
+still requires independently reviewed launch-identity echo on both health
+and completion responses. This PR does not implement or bypass that gap.
+Accepted #280 r3 STOP stands. Zero physical execution, zero model/GPU work,
+zero new hardware authority; no candidate-B, #281, holdouts, prerequisite
+issue or broader campaign. Stop for renewed maintainer review, unmerged.
