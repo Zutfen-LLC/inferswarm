@@ -178,6 +178,14 @@ class FakeApi:
         return {"total_count": len(self.runs),
                 "workflow_runs": self.runs[start:start + per_page]}
 
+    def get_run(self, run_id):
+        self.calls.append(("get_run", run_id))
+        self._maybe_fail("get_run")
+        for run in self.runs:
+            if run.get("id") == run_id:
+                return run
+        raise reuse.ApiUnavailable("HTTP 404")
+
     def list_artifacts(self, run_id):
         self.calls.append(("list_artifacts", run_id))
         self._maybe_fail("list_artifacts")
@@ -955,6 +963,257 @@ class SuiteResultAgainstRequest(unittest.TestCase):
         with self.assertRaises(reuse.ReuseError):
             reuse.check_suite_result_against_request(
                 base, make_request(OTHER_SHA), SHA)
+
+
+# ---------------------------------------------------------------------------
+# F — compose-time source authentication (PR #295 review correction)
+#
+# The reviewed compose trusted a decision FILE written by an earlier step:
+# it re-verified the embedded envelope against itself and re-hashed it
+# against the decision's own digest, so a self-consistent fabricated
+# decision (earlier source run/attempt, synthetic exact-head PASS suite
+# receipt, invented artifact id + sha256, recomputed envelope digest,
+# correct current request) minted a PASS receipt with the suite skipped.
+# Composition must authenticate the source against the read-only Actions
+# API itself, and FAIL the gate if it cannot — never mint PASS.
+# ---------------------------------------------------------------------------
+
+def forged_decision(request=None, *, source_run_id=500, attempt=1,
+                    artifact_id=424242, artifact_digest=None):
+    """A coherent, self-consistent, entirely fabricated reuse decision."""
+    request = request or make_request()
+    envelope = executed_envelope(request, source_run_id, attempt)
+    return {
+        "schema": reuse.DECISION_SCHEMA, "action": "reuse",
+        "reason": f"verified prior execution in run {source_run_id}",
+        "expected_sha": SHA, "rejected": [], "api_calls": 3,
+        "source": {
+            "run_id": source_run_id, "run_attempt": attempt,
+            "run_url": None, "workflow": "Final CPU Validation",
+            "artifact_id": artifact_id,
+            "artifact_digest": artifact_digest or "sha256:" + "ab" * 32,
+            "envelope_sha256": reuse.canonical_sha256(envelope),
+        },
+        "source_envelope": envelope,
+    }
+
+
+class ComposeSourceAuthentication(unittest.TestCase):
+    """CLI-level controls: the decision file is a hint, never authority."""
+
+    request = make_request()
+
+    def authentic(self):
+        sim = HostedSim()
+        sim.dispatch()                     # run 1000: physical execution
+        decision = lookup(sim.api, self.request, current_run_id=9000)
+        self.assertEqual(decision["action"], "reuse")
+        return sim.api, decision
+
+    def compose(self, api, decision, *, env_over=None, suite_result=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            dec = Path(tmp) / "decision.json"
+            dec.write_text(json.dumps(decision))
+            out = Path(tmp) / "receipt.json"
+            environ = {
+                "EXPECTED_SHA": SHA, "PR_NUMBER": "", "REUSE": "true",
+                "GITHUB_SHA": SHA, "GITHUB_RUN_ID": "9000",
+                "GITHUB_RUN_ATTEMPT": "1",
+                "GITHUB_WORKFLOW": "Final CPU Validation",
+                "GITHUB_REPOSITORY": REPO, "GITHUB_TOKEN": "t",
+                "GITHUB_API_URL": "https://api.github.com"}
+            environ.update(env_over or {})
+            before = len(getattr(api, "calls", []))
+            rc = reuse.main(
+                ["compose", "--decision", str(dec), "--out", str(out),
+                 "--suite-result", suite_result or str(Path(tmp) / "none"),
+                 "--repo-root", str(ROOT)],
+                environ=environ, api_factory=lambda **kw: api,
+                request_factory=lambda root: self.request)
+            receipt = json.loads(out.read_text()) if out.exists() else None
+            return rc, receipt, len(getattr(api, "calls", [])) - before
+
+    def assert_fails_closed(self, api, decision, **kw):
+        rc, receipt, _ = self.compose(api, decision, **kw)
+        self.assertNotEqual(rc, 0, "compose minted a gate result from an "
+                                   "unauthenticated source")
+        self.assertIsNone(receipt, "a failed compose must never write a "
+                                   "PASS receipt")
+
+    # --- the reported defect --------------------------------------------
+    def test_f1_coherent_forged_decision_is_rejected_empty_api(self):
+        self.assert_fails_closed(FakeApi(), forged_decision())
+
+    def test_f2_forgery_naming_a_real_failed_earlier_run_is_rejected(self):
+        api = FakeApi()
+        api.add(make_run(500, conclusion="failure"),
+                envelope=executed_envelope(self.request, 500))
+        self.assert_fails_closed(api, forged_decision())
+
+    def test_f3_forgery_with_invented_artifact_beside_a_real_run(self):
+        api = FakeApi()
+        api.add(make_run(500), envelope=executed_envelope(self.request, 500))
+        self.assert_fails_closed(api, forged_decision())
+
+    def test_f4_forged_digest_matching_forged_bytes_is_still_rejected(self):
+        # the attacker also makes the decision's artifact digest match the
+        # bytes of its own fabricated envelope: only the API is authority.
+        decision = forged_decision()
+        blob = zip_bytes({reuse.RECEIPT_MEMBER: dumps(
+            decision["source_envelope"])})
+        decision["source"]["artifact_digest"] = (
+            "sha256:" + hashlib.sha256(blob).hexdigest())
+        self.assert_fails_closed(FakeApi(), decision)
+
+    # --- authentic reuse still works, boundedly --------------------------
+    def test_f5_authentic_decision_composes_with_bounded_api_use(self):
+        api, decision = self.authentic()
+        rc, receipt, calls = self.compose(api, decision)
+        self.assertEqual(rc, 0)
+        self.assertEqual(receipt["execution"]["mode"],
+                         "verified_prior_execution")
+        self.assertEqual(receipt["execution"]["source_run_id"], "1000")
+        self.assertLessEqual(calls, 3, "compose-time authentication is "
+                                       "bounded: one run, one artifact "
+                                       "listing, one download")
+        self.assertTrue(gate.validate_final_validation_receipt(receipt, SHA))
+
+    def test_f6_receipt_embeds_api_authenticated_bytes_not_the_decision(self):
+        api, decision = self.authentic()
+        decision.setdefault("source_envelope", {})["marker"] = "ignored"
+        rc, receipt, _ = self.compose(api, decision)
+        if rc == 0:   # (pre-correction code embedded the decision's copy)
+            self.assertEqual(
+                receipt["suite_receipt"],
+                json.loads(zip_member(api, 1000))["suite_receipt"])
+
+    # --- source state changed or unavailable at compose time --------------
+    def test_f7_expired_artifact_at_compose_time_fails_the_gate(self):
+        api, decision = self.authentic()
+        for arts in api.artifacts.values():
+            for art in arts:
+                art["expired"] = True
+        self.assert_fails_closed(api, decision)
+
+    def test_f8_api_outage_after_suite_skipped_fails_never_passes(self):
+        for stage in ("get_run", "list_artifacts", "download"):
+            for err in (reuse.ApiUnavailable("HTTP 503"),
+                        reuse.ApiUnavailable("HTTP 429"),
+                        reuse.ApiUnavailable("HTTP 403"),
+                        TimeoutError("timed out"),
+                        RuntimeError("unexpected")):
+                with self.subTest(stage=stage, err=repr(err)):
+                    api, decision = self.authentic()
+                    api.fail[stage] = err
+                    self.assert_fails_closed(api, decision)
+
+    def test_f9_missing_token_at_compose_fails(self):
+        api, decision = self.authentic()
+        self.assert_fails_closed(api, decision,
+                                 env_over={"GITHUB_TOKEN": ""})
+
+    def test_f10_changed_source_attempt_fails(self):
+        api, decision = self.authentic()
+        api.runs[0]["run_attempt"] = 2          # source was re-run
+        self.assert_fails_closed(api, decision)
+        api, decision = self.authentic()
+        decision["source"]["run_attempt"] = 2    # decision claims another
+        self.assert_fails_closed(api, decision)
+
+    def test_f11_source_run_state_changed_fails(self):
+        for label, over in (("failure", {"conclusion": "failure"}),
+                            ("cancelled", {"conclusion": "cancelled"}),
+                            ("in-progress", {"status": "in_progress",
+                                             "conclusion": None}),
+                            ("other-head", {"head_sha": OTHER_SHA})):
+            with self.subTest(case=label):
+                api, decision = self.authentic()
+                api.runs[0].update(over)
+                self.assert_fails_closed(api, decision)
+
+    def test_f12_tampered_decision_metadata_fails(self):
+        mutations = {
+            "artifact-id": lambda d: d["source"].update(
+                {"artifact_id": d["source"]["artifact_id"] + 1}),
+            "artifact-digest": lambda d: d["source"].update(
+                {"artifact_digest": "sha256:" + "0" * 64}),
+            "envelope-digest": lambda d: d["source"].update(
+                {"envelope_sha256": "0" * 64}),
+            "run-id": lambda d: d["source"].update({"run_id": 999}),
+            "workflow": lambda d: d["source"].update({"workflow": "CI"}),
+            "expected-sha": lambda d: d.update({"expected_sha": OTHER_SHA}),
+            "action": lambda d: d.update({"action": "run"}),
+            "no-source": lambda d: d.update({"source": None}),
+            "schema": lambda d: d.update({"schema": "x"}),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(case=name):
+                api, decision = self.authentic()
+                mutate(decision)
+                self.assert_fails_closed(api, decision)
+
+    def test_f13_source_replaced_after_lookup_fails(self):
+        # a different but individually valid executed receipt now sits in
+        # the API for the same run: it is not the one the lookup verified.
+        api, decision = self.authentic()
+        other = executed_envelope(self.request, 1000)
+        other["suite_receipt"]["ended_unix"] = 2500.0
+        blob = zip_bytes({reuse.RECEIPT_MEMBER: dumps(other)})
+        art = api.artifacts[1000][0]
+        api.blobs[art["id"]] = blob
+        art["digest"] = "sha256:" + hashlib.sha256(blob).hexdigest()
+        art["size_in_bytes"] = len(blob)
+        self.assert_fails_closed(api, decision)
+
+    def test_f14_bytes_not_matching_api_digest_fail(self):
+        api, decision = self.authentic()
+        art = api.artifacts[1000][0]
+        api.blobs[art["id"]] = api.blobs[art["id"]] + b"x"
+        self.assert_fails_closed(api, decision)
+
+    def test_f15_recursive_reuse_source_fails_at_compose(self):
+        sim = HostedSim()
+        sim.dispatch()
+        sim.dispatch()                                  # run 1001 = reuse
+        decision = forged_decision(source_run_id=1001)
+        reuse_env = json.loads(zip_member(sim.api, 1001))
+        decision["source"].update({
+            "artifact_id": sim.api.artifacts[1001][0]["id"],
+            "artifact_digest": sim.api.artifacts[1001][0]["digest"],
+            "envelope_sha256": reuse.canonical_sha256(reuse_env)})
+        self.assert_fails_closed(sim.api, decision)
+
+    def test_f16_request_drift_since_lookup_fails(self):
+        api, decision = self.authentic()
+        self.request, saved = make_request(plan_digest="2" * 64), \
+            self.request
+        try:
+            self.assert_fails_closed(api, decision)
+        finally:
+            self.request = saved
+
+    def test_f17_suite_executed_but_reuse_claimed_fails(self):
+        api, decision = self.authentic()
+        with tempfile.TemporaryDirectory() as tmp:
+            result = Path(tmp) / "suite.json"
+            result.write_text("{}")
+            self.assert_fails_closed(api, decision,
+                                     suite_result=str(result))
+
+    def test_f18_token_isolation_unchanged_workflow_binding(self):
+        compose = next(s for s in _load_workflow()["jobs"][
+            "final-cpu-validation"]["steps"] if "Compose" in s["name"])
+        self.assertEqual(compose["env"]["GITHUB_TOKEN"],
+                         "${{ github.token }}")
+        self.assertNotIn("${{", compose["run"])
+        self.assertNotIn("if", compose)
+
+
+def zip_member(api, run_id) -> bytes:
+    """The receipt member bytes stored for ``run_id`` in the fake API."""
+    art = api.artifacts[run_id][0]
+    with zipfile.ZipFile(io.BytesIO(api.blobs[art["id"]])) as zf:
+        return zf.read(reuse.RECEIPT_MEMBER)
 
 
 # ---------------------------------------------------------------------------
