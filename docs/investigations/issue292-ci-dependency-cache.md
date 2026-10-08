@@ -100,20 +100,25 @@ change to the root ranges (e.g. `numpy>=1.26,<3`) would reuse a stale key. Any
 future enablement must therefore list every closure file literally in
 `cache-dependency-path`.
 
-`tests/test_issue131_cpu_test_env.py::DependencyCacheContractTests` encodes
-this offline and deterministically:
+The contract is encoded offline and deterministically in
+`tests/test_issue131_cpu_test_env.py` (`DependencyCacheContractTests`,
+`CacheContractBypassTests`, `CacheKeyAndMissContractTests`); section 7
+records the fail-closed correction of the first version. In summary:
 
 - the closure of the real authority is exactly those two files (pip semantics,
   nested `-r` relative to the including file, cycle-safe);
-- a workflow that enables pip caching must list the whole closure literally; the
-  default path, a root-only list, and an unlisted transitive file are each
-  rejected by a negative control;
-- `actions/cache` may not store `.venv`, `tests`, `/tmp`, receipts, suite
-  results, or the repository root;
-- bootstrap and doctor steps stay present and unconditional in every
-  environment-bearing job, so a cache hit can never skip them;
+- `setup-python` caching must be `pip` with every closure file listed as a
+  literal repo-relative path (default path, root-only list, unlisted transitive
+  file, glob, absolute or dynamic entries are each rejected);
+- `actions/cache` may store only an allowlisted pip download-cache directory,
+  keyed on runner OS, architecture, exact Python version and a literal
+  `hashFiles` over the whole closure, with no `restore-keys`, cross-OS archive
+  or `fail-on-cache-miss`;
+- every environment-bearing job must run the canonical bootstrap, then the
+  canonical doctor, unconditionally, before using the environment;
 - the real `ci.yml` and `final-cpu-validation.yml` satisfy the policy today
-  (vacuously: neither caches).
+  (neither caches), with the 17 + 1 environment-bearing jobs pinned so the
+  detector cannot go vacuous.
 
 RED/GREEN control, run against the real Final workflow text in memory: adding
 `cache: pip` with the default path yields a finding naming both
@@ -122,19 +127,28 @@ RED/GREEN control, run against the real Final workflow text in memory: adding
 
 ## 5. Trust model if a cache is ever enabled
 
-A restored cache is an untrusted hint. The canonical bootstrap still runs
-`pip install -r requirements-test.txt` (pip verifies the pinned frozen
-packages and re-resolves the ranged ones), re-screens the installed
-environment for model-runtime packages, and checks tracked-file immutability;
-the doctor still enforces interpreter/version/CPU-only rules; no cache path may
-hold the venv or any validation output. A poisoned or mismatched cache can at
-worst cause a download/resolve failure or a different wheel for the ranged
-test dependencies — which the doctor and the suite then judge exactly as they
-judge a cold install. It cannot skip a test, alter the suite population, or
-produce a receipt. The workflows use `contents: read` and add no secrets; the
-policy adds no write privilege. Final CPU Validation is dispatch-only (never a
-fork PR); for ordinary fork PRs, GitHub's own cache scoping applies (not
-re-verified here) and the policy above is the same.
+A restored cache is an untrusted hint and must not become execution authority.
+The canonical bootstrap still runs `pip install -r requirements-test.txt`,
+re-screens the installed environment for model-runtime packages, and checks
+tracked-file immutability; the doctor still enforces interpreter, version and
+CPU-only rules; no cache path may hold the venv, the checkout or any validation
+output; and the contract tests require bootstrap and doctor to run
+unconditionally on every cache state, so a hit can never skip them. A cache
+miss is an ordinary cold run (`fail-on-cache-miss` is rejected), and the
+bootstrap never reads cache environment or adds cache flags (tested).
+
+**Limitation (corrects the first version of this section).** pip does not
+re-verify the integrity of a wheel it finds in its cache, and the frozen
+requirements carry no `--hash` pins. The doctor checks installed versions, CPU-only
+rules and the tracked tree, not wheel contents. A poisoned cache entry that
+reached a restore would therefore be installed. The only defences are GitHub's
+cache scoping (restores come from the current ref or the default branch, and
+fork pull requests are isolated), the absence of any write privilege or secret
+in these workflows, and keeping the cache out of any workflow that is not
+already running the same code. Neither the scoping nor a poisoned-entry
+installation was exercised here. Enabling caching for authoritative validation
+should wait for that to be settled (for example hash-pinned requirements, which
+would change the frozen authority and is out of scope for this issue).
 
 ## 6. Decision and revisit conditions
 
@@ -144,6 +158,47 @@ a slower mirror) or its download/resolve share exceeds a few percent of a job's
 critical path; or the Final validation moves to `main`-scoped or multi-run use
 where a warm entry exists. The contract tests above are the pre-approved
 integration gate.
+
+## 7. Correction round 1 (PR #294 review)
+
+The first version of the contract failed open. Reviewed head
+`fac2cfe54d925111e672a86d1fb95e2b0b740af3` on main
+`57adca1ffac11fe70a914d5862910100690f9947` (no main drift at the start of the
+round). The defects, each demonstrated RED before the fix
+(`ffe8676`, 64 accepted bypasses across 7 tests):
+
+| Bypass accepted by the first validator | Cause |
+| --- | --- |
+| absolute checkout-root and `${{ github.workspace }}` cache paths | path screened by substring markers |
+| `**`, `*`, `.v*nv`, `te*ts`, `..` traversal, `!` negation | globs/dynamic paths evade a denylist |
+| `if/then`, `&&`/`\|\|`, `\|\| true`, `set +e`, continuation, background, step `if`/`continue-on-error`/`shell`/`working-directory`/`env` | "present" meant the command text appeared in the script |
+| `echo`, `printf`, comment, heredoc, `:` embeddings | text match counted inert commands |
+| environment-bearing job with no, partial or misordered bootstrap/doctor | checked only when the job also used a cache |
+
+Corrections (all in the test module; no workflow, script or authority change):
+cache paths are an explicit allowlist (`~/.cache/pip`,
+`/home/runner/.cache/pip`); bootstrap/doctor count only as a plain `run` step
+with no escape-hatch key whose every command line is exactly a canonical line
+(so nothing can make it conditional, ignored, inert or reordered); every
+environment-bearing job is validated whether or not it caches; the `actions/cache`
+key is validated for OS, architecture, Python version and the literal closure
+hash; `restore-keys`, cross-OS archives, `fail-on-cache-miss`, other
+cache-enabling actions, pip source-redirecting environment and
+`GITHUB_ENV`/`defaults.run` rewrites are rejected. Acceptance fixtures (the
+real no-cache workflows, a non-environment job, valid narrow `setup-python` and
+`actions/cache` shapes) pass before and after.
+
+Key invalidation is covered by `simulate_cache_key`, which evaluates a
+validated key offline and asserts it changes with OS, architecture, Python
+version, the root requirements file and the nested frozen file. Cache-miss
+behaviour is covered by asserting the bootstrap's pip command is identical with
+and without a (poisoned) `PIP_CACHE_DIR`.
+
+**Deferred until caching is actually enabled** (not testable offline): the
+exact key `actions/setup-python` computes (documented OS/architecture/Python/
+hash composition); a hosted cold-versus-warm elapsed-time measurement; restore
+behaviour for fork pull requests and cross-branch scoping; poisoned-wheel
+behaviour (see the limitation in section 5).
 
 ## Preserved, not changed
 

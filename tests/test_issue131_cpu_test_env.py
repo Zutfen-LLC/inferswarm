@@ -922,8 +922,38 @@ NESTED_FROZEN_REQUIREMENTS = (
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/"
     "arm-c-retry/frozen-tokenizer/requirements.txt")
 
-# Paths whose caching would turn a performance hint into validation state.
-FORBIDDEN_CACHE_PATH_MARKERS = (".venv", "tests", "/tmp", "receipt", "suite-result")
+# Fail-closed cache contract (Issue #292, correction round 1).  Cache paths
+# are an explicit ALLOWLIST of pip download-cache locations -- never a
+# denylist of markers, which glob/absolute/dynamic paths trivially evade.
+ALLOWED_PIP_CACHE_PATHS = ("~/.cache/pip", "/home/runner/.cache/pip")
+
+# The only shell lines a canonical bootstrap/doctor step may contain.  A step
+# counts as executing the canonical command ONLY when every non-blank,
+# non-comment line is one of these exact lines, so nothing can make the
+# command conditional, ignored, inert or reordered inside the step.
+CANONICAL_BOOTSTRAP_LINES = frozenset({
+    "python3 scripts/bootstrap_test_env.py",
+    "python3 scripts/bootstrap_test_env.py --python 3.12"})
+CANONICAL_DOCTOR_LINES = frozenset({
+    ".venv/bin/python scripts/check_test_env.py"})
+CANONICAL_PATH_EXPORT_LINE = 'echo "$PWD/.venv/bin" >> "$GITHUB_PATH"'
+
+# Step keys that can skip, soften, redirect or re-interpret a command.
+STEP_ESCAPE_KEYS = ("if", "shell", "working-directory", "env")
+
+# A step whose script mentions any of these uses the bootstrapped venv or
+# runs tests, so its job is "environment-bearing".
+ENVIRONMENT_USE_MARKERS = (
+    ".venv/bin/", "-m unittest", "run_full_cpu_suite.py", "pytest")
+
+# Environment variables that redirect where packages come from or which
+# interpreter/startup script a canonical command really runs.
+RISKY_ENV = frozenset({
+    "PIP_CACHE_DIR", "PIP_FIND_LINKS", "PIP_NO_INDEX", "PIP_INDEX_URL",
+    "PIP_EXTRA_INDEX_URL", "PIP_REQUIRE_VIRTUALENV", "PATH", "PYTHONPATH",
+    "PYTHONHOME", "PYTHONSTARTUP", "VIRTUAL_ENV", "BASH_ENV", "ENV"})
+
+GLOB_CHARS = set("*?[]{}")
 
 
 def requirement_closure(root_file: Path, repo: Path) -> set[str]:
@@ -945,56 +975,216 @@ def requirement_closure(root_file: Path, repo: Path) -> set[str]:
     return closure
 
 
-def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
-    """Findings for a parsed workflow's dependency-cache usage.
+def _script_lines(run: object) -> list[str]:
+    """Non-blank, non-comment lines of a run script (exact text, stripped)."""
+    return [line.strip() for line in str(run).splitlines()
+            if line.strip() and not line.strip().startswith("#")]
 
-    Rules: ``setup-python`` caching must be ``pip`` and enumerate EVERY
-    closure file literally in ``cache-dependency-path`` (the default glob
-    would hash only ``**/requirements.txt`` and miss
-    ``requirements-test.txt``); ``actions/cache`` must not store the venv,
-    tests, or validation outputs; the bootstrap and doctor steps must stay
-    unconditional in every job that uses either."""
+
+def _truthy(value: object) -> bool:
+    """Fail-closed truthiness for ``continue-on-error``: anything that is
+    not a literal false (including expressions) counts as possibly true."""
+    return not (value is False or str(value).strip().lower() == "false")
+
+
+def step_roles(step: dict) -> set[str]:
+    """Roles a step PROVABLY plays: ``bootstrap`` / ``doctor``.
+
+    Structural, not textual: the step must be a plain ``run`` step with no
+    escape-hatch key, and every command line must be exactly a canonical
+    line (plus the PATH export for bootstrap).  Conditionals, lists,
+    ``|| true``, ``set +e``, echo/printf/heredoc/comment embeddings,
+    continuations and folded scalars all make the script non-canonical, so
+    the step plays no role (fail closed)."""
+    if "run" not in step or "uses" in step:
+        return set()
+    if any(key in step for key in STEP_ESCAPE_KEYS):
+        return set()
+    if "continue-on-error" in step and _truthy(step["continue-on-error"]):
+        return set()
+    lines = _script_lines(step["run"])
+    if not lines:
+        return set()
+    if all(l in CANONICAL_BOOTSTRAP_LINES | {CANONICAL_PATH_EXPORT_LINE}
+           for l in lines) and any(l in CANONICAL_BOOTSTRAP_LINES for l in lines):
+        return {"bootstrap"}
+    if all(l in CANONICAL_DOCTOR_LINES for l in lines):
+        return {"doctor"}
+    return set()
+
+
+def environment_job_findings(job_name: str, job: dict) -> list[str]:
+    """An environment-bearing job (runs the venv or tests, or declares a
+    bootstrap/doctor) must run canonical bootstrap, then canonical doctor,
+    then anything that uses the environment -- on every cache state."""
+    steps = job.get("steps") or []
+    roles = [step_roles(s) for s in steps]
+    uses_env = [
+        i for i, step in enumerate(steps)
+        if not roles[i] and any(
+            marker in line for line in _script_lines(step.get("run", ""))
+            for marker in ENVIRONMENT_USE_MARKERS)]
+    declared = any(
+        line in CANONICAL_BOOTSTRAP_LINES | CANONICAL_DOCTOR_LINES
+        for step in steps for line in _script_lines(step.get("run", "")))
+    if not uses_env and not any(roles) and not declared:
+        return []  # not environment-bearing
+    bootstrap = [i for i, r in enumerate(roles) if "bootstrap" in r]
+    doctor = [i for i, r in enumerate(roles) if "doctor" in r]
+    findings = []
+    if not bootstrap:
+        findings.append(
+            f"{job_name}: no unconditional canonical bootstrap step "
+            "(scripts/bootstrap_test_env.py)")
+    if not doctor:
+        findings.append(
+            f"{job_name}: no unconditional canonical doctor step "
+            "(scripts/check_test_env.py)")
+    if bootstrap and doctor and bootstrap[0] > doctor[0]:
+        findings.append(f"{job_name}: doctor runs before bootstrap")
+    first = [i for i in (bootstrap[:1] + doctor[:1])]
+    if uses_env and (len(first) < 2 or uses_env[0] < max(first)):
+        findings.append(
+            f"{job_name}: environment is used before the canonical "
+            "bootstrap and doctor have both run")
+    return findings
+
+
+def _literal_repo_path_findings(where: str, entry: str) -> list[str]:
+    if "${{" in entry or entry.startswith(("/", "~", "$")) or ".." in entry \
+            .split("/") or GLOB_CHARS & set(entry):
+        return [f"{where}: {entry!r} is not a literal repo-relative path"]
+    return []
+
+
+def _cache_key_findings(where: str, key: str, closure: set[str],
+                        steps: list[dict]) -> list[str]:
+    """The key must invalidate on OS, architecture, exact Python version and
+    every requirement-closure file (literal ``hashFiles`` arguments)."""
+    findings = []
+    for needle, label in (("runner.os", "runner OS"),
+                          ("runner.arch", "runner architecture")):
+        if needle not in key:
+            findings.append(f"{where}: cache key lacks the {label}")
+    match = re.search(r"steps\.([A-Za-z0-9_-]+)\.outputs\.python-version", key)
+    declared = {s.get("id") for s in steps
+                if str(s.get("uses", "")).startswith("actions/setup-python@")}
+    if not match or match.group(1) not in declared:
+        findings.append(
+            f"{where}: cache key lacks the exact Python version of a "
+            "setup-python step in this job")
+    hashed = {lit for args in re.findall(r"hashFiles\(([^)]*)\)", key)
+              for lit in re.findall(r"['\"]([^'\"]+)['\"]", args)}
+    for entry in sorted(hashed):
+        findings += _literal_repo_path_findings(where + " hashFiles", entry)
+    missing = sorted(closure - hashed)
+    if missing:
+        findings.append(
+            f"{where}: cache key hashFiles omits the requirement closure: "
+            + ", ".join(missing))
+    return findings
+
+
+def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
+    """Fail-closed findings for a parsed workflow's dependency-cache use.
+
+    * ``setup-python`` caching must be ``pip`` with ``cache-dependency-path``
+      enumerating every closure file as a literal repo-relative path.
+    * ``actions/cache`` may store ONLY an allowlisted pip download-cache
+      directory (never the checkout, workspace, venv, tests, outputs, globs
+      or dynamic expressions), keyed on OS, architecture, Python version and
+      the whole closure, with no ``restore-keys``, no cross-OS archive and
+      no ``fail-on-cache-miss`` (a miss must be an ordinary cold run).
+    * No other action may enable caching; pip source-redirecting env vars
+      are forbidden.
+    * Every environment-bearing job runs canonical bootstrap then doctor,
+      unconditionally, before using the environment -- cache or not."""
     findings: list[str] = []
+
+    def env_findings(where: str, env: object) -> None:
+        for name in sorted(RISKY_ENV & set((env or {}))):
+            findings.append(f"{where}: env {name} redirects pip sources/cache")
+
+    def defaults_findings(where: str, defaults: object) -> None:
+        run_defaults = (defaults or {}).get("run") or {}
+        for name in ("shell", "working-directory"):
+            if name in run_defaults:
+                findings.append(
+                    f"{where}: defaults.run.{name} re-interprets every "
+                    "canonical command")
+
+    env_findings("workflow", workflow.get("env"))
+    defaults_findings("workflow", workflow.get("defaults"))
     for job_name, job in (workflow.get("jobs") or {}).items():
         steps = job.get("steps") or []
-        uses_cache = False
+        env_findings(job_name, job.get("env"))
+        defaults_findings(job_name, job.get("defaults"))
         for step in steps:
+            for line in _script_lines(step.get("run", "")):
+                if "GITHUB_ENV" in line:
+                    findings.append(
+                        f"{job_name}: step writes GITHUB_ENV, which can "
+                        "redirect later canonical commands")
+        for step in steps:
+            env_findings(job_name, step.get("env"))
             uses = str(step.get("uses", ""))
             options = step.get("with") or {}
-            if uses.startswith("actions/setup-python@") and options.get("cache"):
-                uses_cache = True
-                if options["cache"] != "pip":
-                    findings.append(
-                        f"{job_name}: setup-python cache must be 'pip', got "
-                        f"{options['cache']!r}")
-                listed = {line.strip() for line in str(
-                    options.get("cache-dependency-path", "")).splitlines()
-                    if line.strip()}
-                missing = sorted(closure - listed)
-                if missing:
-                    findings.append(
-                        f"{job_name}: cache-dependency-path does not list the "
-                        "full requirement closure: " + ", ".join(missing))
-            if uses.startswith("actions/cache"):
-                uses_cache = True
-                for line in str(options.get("path", "")).splitlines():
-                    if any(marker in line for marker in FORBIDDEN_CACHE_PATH_MARKERS) \
-                            or line.strip() in {".", "./", "~"}:
+            if uses.startswith("actions/setup-python@"):
+                for name in options:
+                    if "cache" in str(name).lower() and name not in (
+                            "cache", "cache-dependency-path"):
                         findings.append(
-                            f"{job_name}: actions/cache path {line.strip()!r} "
-                            "would cache environment/validation state")
-        if uses_cache:
-            for needle in ("scripts/bootstrap_test_env.py",
-                           "scripts/check_test_env.py"):
-                guarded = [s for s in steps
-                           if needle in str(s.get("run", ""))]
-                if not guarded:
-                    findings.append(f"{job_name}: missing canonical {needle}")
-                for step in guarded:
-                    if "if" in step:
+                            f"{job_name}: unsupported setup-python option "
+                            f"{name!r}")
+                if options.get("cache"):
+                    if options["cache"] != "pip":
                         findings.append(
-                            f"{job_name}: {needle} step is conditional; it "
-                            "must run on every cache state")
+                            f"{job_name}: setup-python cache must be 'pip', "
+                            f"got {options['cache']!r}")
+                    listed = [line.strip() for line in str(options.get(
+                        "cache-dependency-path", "")).splitlines()
+                        if line.strip()]
+                    for entry in listed:
+                        findings += _literal_repo_path_findings(
+                            f"{job_name}: cache-dependency-path", entry)
+                    missing = sorted(closure - set(listed))
+                    if missing:
+                        findings.append(
+                            f"{job_name}: cache-dependency-path does not "
+                            "list the full requirement closure: "
+                            + ", ".join(missing))
+            elif uses.startswith("actions/cache"):
+                lines = [l.strip() for l in
+                         str(options.get("path", "")).splitlines()
+                         if l.strip()]
+                if not lines:
+                    findings.append(f"{job_name}: actions/cache has no path")
+                for line in lines:
+                    if line not in ALLOWED_PIP_CACHE_PATHS:
+                        findings.append(
+                            f"{job_name}: actions/cache path {line!r} is not "
+                            "an allowed pip download-cache location "
+                            "(environment/validation state must never be "
+                            "cached)")
+                findings += _cache_key_findings(
+                    f"{job_name}: actions/cache", str(options.get("key", "")),
+                    closure, steps)
+                if str(options.get("restore-keys", "")).strip():
+                    findings.append(
+                        f"{job_name}: restore-keys permit stale partial "
+                        "restores")
+                for name in ("enableCrossOsArchive", "fail-on-cache-miss"):
+                    if name in options and _truthy(options[name]):
+                        findings.append(
+                            f"{job_name}: actions/cache {name} must not be "
+                            "enabled")
+            else:
+                for name in options:
+                    if "cache" in str(name).lower():
+                        findings.append(
+                            f"{job_name}: {uses or 'step'} enables caching "
+                            f"({name!r}) outside the cache contract")
+        findings += environment_job_findings(job_name, job)
     return findings
 
 
@@ -1019,18 +1209,46 @@ class DependencyCacheContractTests(unittest.TestCase):
                 cache_policy_findings(workflow, self.closure), [], name)
 
     def test_real_workflows_keep_bootstrap_and_doctor_unconditional(self):
+        # Pin the environment-bearing job set so the structural detector
+        # cannot silently go vacuous (a renamed marker would drop jobs).
+        expected = {
+            "ci.yml": {n for n in self.workflows["ci.yml"]["jobs"]
+                       if n not in {"plan", "ci-gate"}},
+            "final-cpu-validation.yml": {"final-cpu-validation"}}
         for name, workflow in self.workflows.items():
-            for job_name, job in workflow["jobs"].items():
-                runs = [str(s.get("run", "")) for s in job.get("steps", [])]
-                if not any("bootstrap_test_env.py" in r for r in runs):
-                    continue  # not an environment-bearing job
-                self.assertTrue(any("check_test_env.py" in r for r in runs),
-                                f"{name}:{job_name} bootstraps without the doctor")
-                for step in job["steps"]:
-                    run = str(step.get("run", ""))
-                    if "bootstrap_test_env.py" in run or "check_test_env.py" in run:
-                        self.assertNotIn(
-                            "if", step, f"{name}:{job_name}: conditional env step")
+            bearing = {
+                job_name for job_name, job in workflow["jobs"].items()
+                if any("bootstrap" in step_roles(s) for s in job["steps"])}
+            self.assertEqual(bearing, expected[name], name)
+            self.assertEqual(len(bearing), 17 if name == "ci.yml" else 1)
+            for job_name in bearing:
+                self.assertEqual(environment_job_findings(
+                    job_name, workflow["jobs"][job_name]), [], job_name)
+
+    def test_mutated_real_workflows_are_rejected(self):
+        import yaml
+        boot = "python3 scripts/bootstrap_test_env.py"
+        doctor = ".venv/bin/python scripts/check_test_env.py"
+        for path in (CI_WORKFLOW, FINAL_WORKFLOW):
+            original = path.read_text(encoding="utf-8")
+            mutations = {
+                "bootstrap || true": original.replace(
+                    f"          {boot}\n", f"          {boot} || true\n", 1),
+                "doctor || true": original.replace(
+                    f"run: {doctor}\n", f"run: {doctor} || true\n", 1),
+                "doctor removed": original.replace(
+                    f"run: {doctor}\n", 'run: echo "doctor skipped"\n', 1),
+                "bootstrap skipped by step if": original.replace(
+                    "      - name: Bootstrap canonical CPU test environment"
+                    " (Issue #131)\n",
+                    "      - name: Bootstrap canonical CPU test environment"
+                    " (Issue #131)\n        if: github.event_name == 'push'\n",
+                    1)}
+            for label, mutated in mutations.items():
+                with self.subTest(path.name, mutation=label):
+                    self.assertNotEqual(mutated, original, "mutation no-op")
+                    self.assertTrue(cache_policy_findings(
+                        yaml.safe_load(mutated), self.closure))
 
     def _workflow_with(self, **setup_python_with):
         return {"jobs": {"j": {"steps": [
@@ -1286,6 +1504,214 @@ class CacheContractBypassTests(unittest.TestCase):
                  *_canonical_steps(),
                  _step("python3 -m unittest tests.test_x")]
         self.assertEqual(self.findings(steps), [])
+
+
+def simulate_cache_key(key: str, repo: Path, os_name: str, arch: str,
+                       python_version: str) -> str:
+    """Deterministically evaluate a validated cache-key expression offline.
+
+    Mirrors the Actions semantics that matter for invalidation: runner OS,
+    runner architecture, the exact setup-python version output, and
+    ``hashFiles`` over the literal files named (content-addressed)."""
+    import hashlib
+
+    def hash_files(match: re.Match) -> str:
+        digest = hashlib.sha256()
+        for name in re.findall(r"['\"]([^'\"]+)['\"]", match.group(1)):
+            digest.update(name.encode() + b"\0")
+            digest.update((repo / name).read_bytes())
+        return digest.hexdigest()
+
+    key = re.sub(r"\$\{\{\s*hashFiles\(([^)]*)\)\s*\}\}", hash_files, key)
+    for token, value in (("runner.os", os_name), ("runner.arch", arch),
+                         ("steps.py.outputs.python-version", python_version)):
+        key = re.sub(r"\$\{\{\s*" + re.escape(token) + r"\s*\}\}", value, key)
+    return key
+
+
+VALID_CACHE_KEY = (
+    "pip-${{ runner.os }}-${{ runner.arch }}-"
+    "py${{ steps.py.outputs.python-version }}-"
+    "${{ hashFiles('requirements-test.txt', '%s') }}" % NESTED_FROZEN_REQUIREMENTS)
+
+
+class CacheKeyAndMissContractTests(unittest.TestCase):
+    """Issue #292 correction: key invalidation and cache-miss behaviour."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    def workflow(self, *cache_steps) -> dict:
+        return _job_workflow([
+            {"uses": "actions/setup-python@x", "id": "py",
+             "with": {"python-version": "3.12"}},
+            *cache_steps, *_canonical_steps(),
+            _step("python3 -m unittest tests.test_x")])
+
+    def findings(self, **options) -> list[str]:
+        step = _actions_cache(PIP_CACHE_PATH, VALID_CACHE_KEY, **options)
+        return cache_policy_findings(self.workflow(step), self.closure)
+
+    def test_valid_key_is_accepted(self):
+        self.assertEqual(self.findings(), [])
+
+    def test_negative_controls_weak_keys_are_rejected(self):
+        h = "${{ hashFiles('requirements-test.txt', '%s') }}" % (
+            NESTED_FROZEN_REQUIREMENTS)
+        weak = {
+            "static key": "pip-cache-v1",
+            "no runner os": "pip-${{ runner.arch }}-py${{ steps.py.outputs.python-version }}-" + h,
+            "no runner arch": "pip-${{ runner.os }}-py${{ steps.py.outputs.python-version }}-" + h,
+            "no python version": "pip-${{ runner.os }}-${{ runner.arch }}-" + h,
+            "python version from unknown step": (
+                "pip-${{ runner.os }}-${{ runner.arch }}-"
+                "${{ steps.other.outputs.python-version }}-" + h),
+            "root file not hashed": (
+                "pip-${{ runner.os }}-${{ runner.arch }}-"
+                "py${{ steps.py.outputs.python-version }}-"
+                "${{ hashFiles('%s') }}" % NESTED_FROZEN_REQUIREMENTS),
+            "nested file not hashed": (
+                "pip-${{ runner.os }}-${{ runner.arch }}-"
+                "py${{ steps.py.outputs.python-version }}-"
+                "${{ hashFiles('requirements-test.txt') }}"),
+            "glob hashFiles": (
+                "pip-${{ runner.os }}-${{ runner.arch }}-"
+                "py${{ steps.py.outputs.python-version }}-"
+                "${{ hashFiles('**/requirements*.txt') }}"),
+        }
+        for label, key in weak.items():
+            with self.subTest(label):
+                step = _actions_cache(PIP_CACHE_PATH, key)
+                self.assertTrue(cache_policy_findings(
+                    self.workflow(step), self.closure))
+
+    def test_negative_controls_unsafe_restore_options_are_rejected(self):
+        for options in ({"restore-keys": "pip-"},
+                        {"enableCrossOsArchive": True},
+                        {"fail-on-cache-miss": True},
+                        {"fail-on-cache-miss": "${{ inputs.strict }}"}):
+            with self.subTest(**{k: str(v) for k, v in options.items()}):
+                self.assertTrue(self.findings(**options))
+
+    def test_negative_controls_other_caching_surfaces_are_rejected(self):
+        closure = self.closure
+        listed = "\n".join(sorted(closure))
+        cases = {
+            "setup-python poetry cache": [_setup_python(closure, cache="poetry")],
+            "setup-python glob dependency path": [{
+                "uses": "actions/setup-python@x", "with": {
+                    "cache": "pip", "cache-dependency-path": "**/requirements*.txt"}}],
+            "setup-python absolute dependency path": [{
+                "uses": "actions/setup-python@x", "with": {
+                    "cache": "pip",
+                    "cache-dependency-path": listed + "\n/etc/passwd"}}],
+            "setup-python dynamic dependency path": [{
+                "uses": "actions/setup-python@x", "with": {
+                    "cache": "pip",
+                    "cache-dependency-path": listed + "\n${{ github.workspace }}/x"}}],
+            "setup-uv enable-cache": [{
+                "uses": "astral-sh/setup-uv@x", "with": {"enable-cache": True}}],
+        }
+        for label, steps in cases.items():
+            with self.subTest(label):
+                self.assertTrue(cache_policy_findings(
+                    _job_workflow([*steps, *_canonical_steps(),
+                                   _step("python3 -m unittest tests.test_x")]),
+                    closure))
+
+    def test_negative_controls_pip_source_redirection_env_is_rejected(self):
+        for scope in ("workflow", "job", "step"):
+            for name in sorted(RISKY_ENV):
+                workflow = self.workflow()
+                if scope == "workflow":
+                    workflow["env"] = {name: "/x"}
+                elif scope == "job":
+                    workflow["jobs"]["j"]["env"] = {name: "/x"}
+                else:
+                    workflow["jobs"]["j"]["steps"][0]["env"] = {name: "/x"}
+                with self.subTest(scope=scope, var=name):
+                    self.assertTrue(
+                        cache_policy_findings(workflow, self.closure))
+
+    def test_negative_controls_command_reinterpretation_is_rejected(self):
+        for scope in ("workflow", "job"):
+            for defaults in ({"run": {"shell": "python"}},
+                             {"run": {"working-directory": "/tmp"}}):
+                workflow = self.workflow()
+                if scope == "workflow":
+                    workflow["defaults"] = defaults
+                else:
+                    workflow["jobs"]["j"]["defaults"] = defaults
+                with self.subTest(scope=scope, defaults=str(defaults)):
+                    self.assertTrue(
+                        cache_policy_findings(workflow, self.closure))
+
+    def test_negative_control_github_env_writes_are_rejected(self):
+        for script in ('echo "PIP_CACHE_DIR=/x" >> "$GITHUB_ENV"',
+                       'echo "PATH=/evil:$PATH" >> $GITHUB_ENV'):
+            workflow = self.workflow()
+            workflow["jobs"]["j"]["steps"].insert(1, _step(script))
+            with self.subTest(script):
+                self.assertTrue(cache_policy_findings(workflow, self.closure))
+
+    def test_key_invalidates_on_every_authority_input(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            write(repo / "requirements-test.txt", "numpy>=1.26,<3\n")
+            write(repo / NESTED_FROZEN_REQUIREMENTS, "transformers==5.17.0\n")
+
+            def key(**override):
+                args = dict(os_name="Linux", arch="X64", python_version="3.12.15")
+                args.update(override)
+                return simulate_cache_key(VALID_CACHE_KEY, repo, **args)
+
+            base = key()
+            self.assertEqual(base, key(), "deterministic")
+            self.assertNotEqual(base, key(os_name="macOS"))
+            self.assertNotEqual(base, key(arch="ARM64"))
+            self.assertNotEqual(base, key(python_version="3.13.0"))
+            self.assertNotEqual(base, key(python_version="3.12.16"))
+            write(repo / "requirements-test.txt", "numpy>=1.26,<4\n")
+            changed_root = key()
+            self.assertNotEqual(base, changed_root)
+            write(repo / NESTED_FROZEN_REQUIREMENTS, "transformers==5.18.0\n")
+            self.assertNotEqual(changed_root, key())
+
+    def test_cache_miss_does_not_change_the_canonical_install_command(self):
+        """A cold/miss/poisoned-directory run installs exactly as before:
+        the bootstrap never reads cache environment or adds cache flags."""
+        import os
+        from unittest import mock
+
+        commands: list[list[str]] = []
+
+        def fake_run(command, *args, **kwargs):
+            commands.append(list(command))
+            return subprocess.CompletedProcess(command, 0)
+
+        outcomes = []
+        for cache_dir in (None, "/nonexistent/poisoned-pip-cache"):
+            commands.clear()
+            environment = dict(os.environ)
+            environment.pop("PIP_CACHE_DIR", None)
+            if cache_dir:
+                environment["PIP_CACHE_DIR"] = cache_dir
+            with mock.patch.dict(os.environ, environment, clear=True), \
+                    mock.patch.object(bootstrap.subprocess, "run", fake_run):
+                bootstrap.install(Path("/venv/bin/python"), "-r",
+                                  str(bootstrap.REQUIREMENTS))
+            outcomes.append([c for c in commands if "install" in c])
+        self.assertEqual(outcomes[0], outcomes[1])
+        (install_command,) = outcomes[0]
+        self.assertEqual(install_command, [
+            "/venv/bin/python", "-m", "pip", "install",
+            "--disable-pip-version-check", "-r", str(bootstrap.REQUIREMENTS)])
+        source = (ROOT / "scripts" / "bootstrap_test_env.py").read_text(
+            encoding="utf-8")
+        for forbidden in ("PIP_", "--find-links", "--no-index", "--no-deps",
+                          "os.environ", "--cache-dir"):
+            self.assertNotIn(forbidden, source, forbidden)
 
 
 if __name__ == "__main__":
