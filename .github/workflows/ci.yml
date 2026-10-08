@@ -500,9 +500,39 @@ jobs:
       - name: Run group issue-99-103
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof tests.test_issue255_mvp tests.test_issue255_measure tests.test_issue255_baseline tests.test_issue268_operator_plan tests.test_issue268_operator_runtime -v
 
-  r8i-qwen-qualification:
-    name: Group r8i-qwen-qualification
+  # ---------------------------------------------------------------------------
+  # r8i-qwen-qualification is ONE registered planner group executed as 5
+  # bounded, numbered shard jobs (Issue #287).  The registry, the retention
+  # audit, and PR impact selection are unchanged: every shard carries the same
+  # selection expression, so any R8-I change (or a full / manual / authority
+  # escalation) selects ALL shards, and the CI Gate requires EVERY shard.
+  # Shards partition the group by measured hosted per-test cost (largest unit
+  # first, least-loaded bin).  Every module runs whole in exactly one shard,
+  # with ONE declared exception: tests.test_issue278_integration, the single
+  # bottleneck module (14 independent per-test-fixture tests, ~8 minutes
+  # serial on a hosted runner), is split across two shards by explicit
+  # test selectors.  tests/test_plan_ci.py (TestShardedGroupWorkflow,
+  # TestIdentityAccounting, TestSelectorTokens) prove the shards are disjoint
+  # and exhaustive and that executed test identities equal the registered
+  # population exactly, with no duplicates.  See docs/ci-impact-planning.md
+  # ("Sharded groups") for how to add or move a module.
+  #
+  # Group history carried by the registered modules:
+  # Issue #246: current R8-I qualification authority (split from the retired
+  # vulkan-v0-b catch-all by dependency boundary).
+  # Issue #248 R8-I3A diagnostic tooling joins this group.
+  # Issue #250 R8-I3B: diagnostic spine + physical producer + retained-byte
+  # terminal reducer (correction pass 2).
+  # AMENDMENT-008 correction round 2: adversarial bridge law.
+  # AMENDMENT-008 reducer-admission correction: path-aware derive_terminal V0
+  # admission (bridge + historical paths).
+  # Issue #252 R8-I3C: source-first Vulkan path, prospective arms, exact-head
+  # physical tooling, and retained-byte terminal reduction.
+  # ---------------------------------------------------------------------------
+  r8i-qwen-qualification-s1:
+    name: Group r8i-qwen-qualification shard 1
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: plan
     if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
     steps:
@@ -520,18 +550,104 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
-      - name: Run group r8i-qwen-qualification
-        # Issue #246: current R8-I qualification authority (split from
-        # the retired vulkan-v0-b catch-all by dependency boundary).
-        # Issue #248 R8-I3A diagnostic tooling joins this group.
-        # Issue #250 R8-I3B: diagnostic spine + physical producer +
-        # retained-byte terminal reducer (correction pass 2).
-        # AMENDMENT-008 correction round 2: adversarial bridge law.
-        # AMENDMENT-008 reducer-admission correction: path-aware
-        # derive_terminal V0 admission (bridge + historical paths).
-        # Issue #252 R8-I3C: source-first Vulkan path, prospective arms,
-        # exact-head physical tooling, and retained-byte terminal reduction.
-        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue244_r8i5_v340l_import tests.test_issue248_diagnostic tests.test_issue250_diagnostic tests.test_issue250_physical tests.test_issue250_terminal tests.test_issue250_terminalization tests.test_issue250_v0n_nvidia tests.test_issue250_amendment008 tests.test_issue250_amendment008_round2 tests.test_issue250_amendment008_reducer_admission tests.test_issue250_amendment008_reducer_admission_negative tests.test_issue250_pass6_corrections tests.test_issue252_arms tests.test_issue252_phase0 tests.test_issue252_physical tests.test_issue252_terminal tests.test_issue252_capture tests.test_issue252_mechanism tests.test_issue252_vulkanpath tests.test_issue252_round4 tests.test_issue252_round5 tests.test_issue254_producer tests.test_issue254_round5 tests.test_issue254_round7 tests.test_issue258_theorem tests.test_issue260_source_patch tests.test_issue260_observation tests.test_issue262_source_patch tests.test_issue262_h5 tests.test_issue262_pilot tests.test_issue264_source_patch tests.test_issue264_h5 tests.test_issue264_pilot tests.test_issue270_authority tests.test_issue273_admission tests.test_issue273_round3_trust_boundaries tests.test_issue273_evidence tests.test_issue275_collector tests.test_issue275_demo tests.test_issue275_provenance tests.test_issue276_byte_admission tests.test_issue277_reference_first tests.test_issue278_integration tests.test_issue280_observer tests.test_issue280_source tests.test_issue280_runner tests.test_issue280_admission tests.test_issue280_task_check tests.test_issue280_retention_fix tests.test_issue280_real_compat tests.test_issue280_source_compat tests.test_issue289_launcher -v
+      - name: Run group r8i-qwen-qualification shard 1
+        run: python3 -m unittest tests.test_issue248_diagnostic tests.test_issue250_terminal tests.test_issue289_launcher tests.test_issue250_amendment008 tests.test_issue250_pass6_corrections tests.test_issue254_producer tests.test_issue260_source_patch tests.test_issue262_source_patch tests.test_issue264_pilot tests.test_issue280_observer tests.test_issue280_source -v
+
+  r8i-qwen-qualification-s2:
+    name: Group r8i-qwen-qualification shard 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group r8i-qwen-qualification shard 2
+        run: python3 -m unittest tests.test_issue250_terminalization tests.test_issue250_v0n_nvidia tests.test_issue252_physical tests.test_issue252_round4 tests.test_issue252_round5 tests.test_issue278_integration.IntegrationChainTests.test_comparison_callback_custody_tamper_blocks tests.test_issue278_integration.IntegrationChainTests.test_custody_row_drift_blocks_reference_first_zero_launches tests.test_issue278_integration.IntegrationChainTests.test_final_verification_covers_staged_bytes_and_reevaluation_callbacks tests.test_issue278_integration.IntegrationChainTests.test_first_demonstration_matching_and_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_forged_verdicts_cannot_mint_physical_terminal tests.test_issue280_real_compat tests.test_issue280_source_compat -v
+
+  r8i-qwen-qualification-s3:
+    name: Group r8i-qwen-qualification shard 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group r8i-qwen-qualification shard 3
+        run: python3 -m unittest tests.test_issue244_r8i5_v340l_import tests.test_issue250_amendment008_round2 tests.test_issue250_amendment008_reducer_admission tests.test_issue250_amendment008_reducer_admission_negative tests.test_issue252_phase0 tests.test_issue252_vulkanpath tests.test_issue262_pilot tests.test_issue273_evidence tests.test_issue275_provenance tests.test_issue280_runner tests.test_issue280_admission -v
+
+  r8i-qwen-qualification-s4:
+    name: Group r8i-qwen-qualification shard 4
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group r8i-qwen-qualification shard 4
+        run: python3 -m unittest tests.test_issue250_diagnostic tests.test_issue252_terminal tests.test_issue252_mechanism tests.test_issue258_theorem tests.test_issue260_observation tests.test_issue262_h5 tests.test_issue264_source_patch tests.test_issue270_authority tests.test_issue273_admission tests.test_issue273_round3_trust_boundaries tests.test_issue278_integration.IntegrationChainTests.test_blocked_record_reports_observed_launches_and_evidence_label tests.test_issue278_integration.IntegrationChainTests.test_capture_outside_custody_fails_closed_before_staging tests.test_issue278_integration.IntegrationChainTests.test_custody_tamper_between_capture_and_staging_fails_closed tests.test_issue278_integration.IntegrationChainTests.test_evaluate_278_asserts_reducer_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_executor_custody_tamper_blocks_at_final_verification tests.test_issue278_integration.IntegrationChainTests.test_matching_fixture_completes_every_stage tests.test_issue278_integration.IntegrationChainTests.test_reevaluation_rejects_staged_and_custody_tamper tests.test_issue278_integration.IntegrationChainTests.test_signature_rejects_authored_verdict_parameters tests.test_issue278_integration.IntegrationChainTests.test_stage_linkage_binds_retained_bytes_to_derived_results tests.test_issue280_task_check -v
+
+  r8i-qwen-qualification-s5:
+    name: Group r8i-qwen-qualification shard 5
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'r8i-qwen-qualification')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group r8i-qwen-qualification shard 5
+        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue250_physical tests.test_issue252_arms tests.test_issue252_capture tests.test_issue254_round5 tests.test_issue254_round7 tests.test_issue264_h5 tests.test_issue275_collector tests.test_issue275_demo tests.test_issue276_byte_admission tests.test_issue277_reference_first tests.test_issue280_retention_fix -v
 
   r8-qwen-lineage:
     name: Group r8-qwen-lineage
@@ -590,7 +706,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [plan, repo-integrity, issue-74-79, issue-83-95, issue-109-110,
             issue-117-133, issue-187-r7a, issue-209-r7b, issue-222-r7c,
-            issue-99-103, issue-213-gate-ordering, r8i-qwen-qualification,
+            issue-99-103, issue-213-gate-ordering,
+            r8i-qwen-qualification-s1, r8i-qwen-qualification-s2,
+            r8i-qwen-qualification-s3, r8i-qwen-qualification-s4,
+            r8i-qwen-qualification-s5,
             r8-qwen-lineage, issue-115-cleanup]
     if: always()
     steps:
@@ -610,7 +729,11 @@ jobs:
               "issue-209-r7b": "${{ needs.issue-209-r7b.result }}",
               "issue-222-r7c": "${{ needs.issue-222-r7c.result }}",
               "issue-99-103": "${{ needs.issue-99-103.result }}",
-              "r8i-qwen-qualification": "${{ needs.r8i-qwen-qualification.result }}",
+              "r8i-qwen-qualification-s1": "${{ needs.r8i-qwen-qualification-s1.result }}",
+              "r8i-qwen-qualification-s2": "${{ needs.r8i-qwen-qualification-s2.result }}",
+              "r8i-qwen-qualification-s3": "${{ needs.r8i-qwen-qualification-s3.result }}",
+              "r8i-qwen-qualification-s4": "${{ needs.r8i-qwen-qualification-s4.result }}",
+              "r8i-qwen-qualification-s5": "${{ needs.r8i-qwen-qualification-s5.result }}",
               "r8-qwen-lineage": "${{ needs.r8-qwen-lineage.result }}",
               "issue-115-cleanup": "${{ needs.issue-115-cleanup.result }}",
           }
@@ -639,38 +762,56 @@ jobs:
           selected = set(plan_groups) if isinstance(plan_groups, list) else set()
           full = plan_full == "true"
 
-          # Every selected group must map to a job result of success.
-          job_for_group = {
-              "repo-integrity": "repo-integrity",
-              "issue-74-79": "issue-74-79",
-              "issue-83-95": "issue-83-95",
-              "issue-109-110": "issue-109-110",
-              "issue-117-133": "issue-117-133",
-              "issue-213-gate-ordering": "issue-213-gate-ordering",
-              "issue-187-r7a": "issue-187-r7a",
-              "issue-209-r7b": "issue-209-r7b",
-              "issue-222-r7c": "issue-222-r7c",
-              "issue-99-103": "issue-99-103",
-              "r8i-qwen-qualification": "r8i-qwen-qualification",
-              "r8-qwen-lineage": "r8-qwen-lineage",
-              "issue-115-cleanup": "issue-115-cleanup",
+          # Every group maps to ALL of its executing jobs.  A sharded
+          # group (Issue #287) reports under its group id and succeeds
+          # only if every one of its shard jobs succeeded.
+          jobs_for_group = {
+              "repo-integrity": ["repo-integrity"],
+              "issue-74-79": ["issue-74-79"],
+              "issue-83-95": ["issue-83-95"],
+              "issue-109-110": ["issue-109-110"],
+              "issue-117-133": ["issue-117-133"],
+              "issue-213-gate-ordering": ["issue-213-gate-ordering"],
+              "issue-187-r7a": ["issue-187-r7a"],
+              "issue-209-r7b": ["issue-209-r7b"],
+              "issue-222-r7c": ["issue-222-r7c"],
+              "issue-99-103": ["issue-99-103"],
+              "r8i-qwen-qualification": [
+                  "r8i-qwen-qualification-s1",
+                  "r8i-qwen-qualification-s2",
+                  "r8i-qwen-qualification-s3",
+                  "r8i-qwen-qualification-s4",
+                  "r8i-qwen-qualification-s5",
+              ],
+              "r8-qwen-lineage": ["r8-qwen-lineage"],
+              "issue-115-cleanup": ["issue-115-cleanup"],
           }
+
+          # A job result GitHub never supplied (empty) or one outside the
+          # four defined outcomes is a failure for ANY job, selected or not.
+          for job, r in sorted(results.items()):
+              if r not in ("success", "failure", "cancelled", "skipped"):
+                  failures.append(f"job {job} result missing or malformed: {r!r}")
+
+          # Every job of every selected group must have succeeded.
           for group in sorted(selected):
-              job = job_for_group.get(group)
-              if job is None:
+              jobs = jobs_for_group.get(group)
+              if jobs is None:
                   failures.append(f"selected group {group} has no job mapping")
                   continue
-              r = results[job]
-              if r != "success":
-                  failures.append(
-                      f"selected group {group} ({job}) result: {r}")
+              for job in jobs:
+                  r = results[job]
+                  if r != "success":
+                      failures.append(
+                          f"selected group {group} ({job}) result: {r}")
 
           # Unselected groups must not have failed: a failure in a
           # skipped-by-planner job is still a real failure signal.
-          for group, job in job_for_group.items():
-              if group not in selected and results[job] in ("failure", "cancelled"):
-                  failures.append(
-                      f"unselected group {group} ({job}) still failed: {results[job]}")
+          for group, jobs in jobs_for_group.items():
+              for job in jobs:
+                  if group not in selected and results[job] in ("failure", "cancelled"):
+                      failures.append(
+                          f"unselected group {group} ({job}) still failed: {results[job]}")
 
           if failures:
               print("CI GATE FAILED:")
