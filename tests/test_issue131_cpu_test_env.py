@@ -946,20 +946,113 @@ STEP_ESCAPE_KEYS = ("if", "shell", "working-directory", "env")
 ENVIRONMENT_USE_MARKERS = (
     ".venv/bin/", "-m unittest", "run_full_cpu_suite.py", "pytest")
 
-# Environment variables that redirect where packages come from or which
-# interpreter/startup script a canonical command really runs.
+# Environment that could redirect where packages come from, which resolver
+# constraints/config apply, or which interpreter a canonical command runs.
+#
+# pip reads EVERY option from PIP_<OPTION> (PIP_CONFIG_FILE, PIP_CONSTRAINT,
+# PIP_REQUIREMENT, PIP_TARGET, ...) and uv, the bootstrap's documented fallback
+# installer, from UV_<OPTION>, so those families are an ALLOWLIST (prefix
+# rejected, one reviewed exception), not a list of names.  The remaining names
+# are an explicit denylist, compared case-insensitively.
+ALLOWED_PIP_FAMILY_ENV = frozenset({"PIP_DISABLE_PIP_VERSION_CHECK"})
+FORBIDDEN_ENV_PREFIXES = ("PIP_", "UV_")
 RISKY_ENV = frozenset({
     "PIP_CACHE_DIR", "PIP_FIND_LINKS", "PIP_NO_INDEX", "PIP_INDEX_URL",
     "PIP_EXTRA_INDEX_URL", "PIP_REQUIRE_VIRTUALENV", "PATH", "PYTHONPATH",
-    "PYTHONHOME", "PYTHONSTARTUP", "VIRTUAL_ENV", "BASH_ENV", "ENV"})
+    "PYTHONHOME", "PYTHONSTARTUP", "PYTHONUSERBASE", "VIRTUAL_ENV",
+    "BASH_ENV", "ENV", "HOME", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
+    "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE", "SSL_CERT_DIR",
+    "LD_PRELOAD", "LD_LIBRARY_PATH"})
+
+
+def forbidden_env_names(env: object) -> list[str]:
+    """Names in an ``env`` mapping that a validation job must not set."""
+    if env and not isinstance(env, dict):
+        # e.g. ``env: ${{ fromJSON(inputs.env) }}``: keys unknowable here.
+        return ["<dynamic env mapping>"]
+    bad = []
+    for name in sorted((env or {})):
+        upper = str(name).upper()
+        if upper in ALLOWED_PIP_FAMILY_ENV:
+            continue
+        if upper.startswith(FORBIDDEN_ENV_PREFIXES) or upper in RISKY_ENV:
+            bad.append(str(name))
+    return bad
+
+# The only actions/setup-python inputs a validation job may pass.
+SETUP_PYTHON_REVIEWED_INPUTS = frozenset({
+    "python-version", "cache", "cache-dependency-path"})
 
 GLOB_CHARS = set("*?[]{}")
 
 
+class RequirementsAuthorityError(ValueError):
+    """A requirements file contains something the closure cannot account for.
+
+    The closure must be complete or absent: an unhandled directive would
+    silently drop resolver authority from the cache key, so it fails closed."""
+
+
+_REQ_SPEC_RE = re.compile(
+    r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?"                # name
+    r"(?:\s*\[[A-Za-z0-9._,\s-]*\])?"                           # extras
+    r"(?:\s*(?:===|==|~=|!=|<=|>=|<|>)\s*[A-Za-z0-9.*+!_-]+"      # version
+    r"(?:\s*,\s*(?:===|==|~=|!=|<=|>=|<|>)\s*[A-Za-z0-9.*+!_-]+)*)?"
+    r"(?:\s*;[^#]*)?")                                             # marker
+_REQ_INCLUDE_RE = re.compile(
+    r"(?:(?:--requirement|--constraint)(?:\s+|=)|-[rc]\s*)(?P<path>\S.*)")
+
+
+def _requirement_logical_lines(text: str) -> list[str]:
+    """pip's line joining (a trailing backslash continues, except on comment
+    lines) followed by comment stripping (``#`` at line start or after
+    whitespace), returning stripped non-empty logical lines."""
+    joined: list[str] = []
+    buffer: list[str] = []
+    for line in text.splitlines():
+        if not line.endswith("\\") or re.match(r"\s*#", line):
+            buffer.append(line)
+            joined.append("".join(buffer))
+            buffer = []
+        else:
+            buffer.append(line[:-1])
+    if buffer:
+        joined.append("".join(buffer))
+    stripped = (re.sub(r"(^|\s+)#.*$", "", line).strip() for line in joined)
+    return [line for line in stripped if line]
+
+
+def _requirement_include_target(current: Path, repo: Path, raw: str) -> Path:
+    path = raw.strip()
+    if ("${" in path or "://" in path or path.startswith(("/", "~"))
+            or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", path)):
+        raise RequirementsAuthorityError(
+            f"{current.name}: include {path!r} is not a local repo-relative path")
+    target = (current.parent / path).resolve()
+    try:
+        target.relative_to(repo.resolve())
+    except ValueError:
+        raise RequirementsAuthorityError(
+            f"{current.name}: include {path!r} escapes the repository") from None
+    if not target.is_file():
+        raise RequirementsAuthorityError(
+            f"{current.name}: included file {path!r} does not exist")
+    return target
+
+
 def requirement_closure(root_file: Path, repo: Path) -> set[str]:
-    """Repo-relative POSIX paths of a requirements file and every ``-r``
-    file it reaches (pip semantics: a nested path is relative to the file
-    that includes it).  Cycle-safe."""
+    """Repo-relative POSIX paths of a requirements file and every local file
+    pip would read as resolver authority through it: ``-r``/``--requirement``
+    and ``-c``/``--constraint`` includes (all spellings, nested and
+    recursive; a nested path is relative to the including file, as in pip).
+    Cycle-safe.
+
+    FAILS CLOSED (``RequirementsAuthorityError``) on anything else that could
+    change resolution without being a plain registry requirement: other
+    option lines (``--find-links``, ``--index-url``, ``-e``, hashes, ...),
+    direct URL/path/``@`` requirements, ``${VAR}`` expansion, and includes
+    that are non-local, outside the repository or missing."""
     closure: set[str] = set()
     pending = [root_file.resolve()]
     while pending:
@@ -968,10 +1061,23 @@ def requirement_closure(root_file: Path, repo: Path) -> set[str]:
         if relative in closure:
             continue
         closure.add(relative)
-        for raw in current.read_text(encoding="utf-8").splitlines():
-            match = re.match(r"\s*(?:-r|--requirement)[\s=]+(\S+)", raw)
-            if match:
-                pending.append((current.parent / match.group(1)).resolve())
+        for line in _requirement_logical_lines(
+                current.read_text(encoding="utf-8")):
+            if "${" in line:
+                raise RequirementsAuthorityError(
+                    f"{relative}: environment expansion in {line!r}")
+            if line.startswith("-"):
+                include = _REQ_INCLUDE_RE.fullmatch(line)
+                if not include:
+                    raise RequirementsAuthorityError(
+                        f"{relative}: unhandled requirements directive "
+                        f"{line!r}")
+                pending.append(_requirement_include_target(
+                    current, repo, include.group("path")))
+            elif re.search(r"\s-{1,2}[A-Za-z]", line) \
+                    or not _REQ_SPEC_RE.fullmatch(line):
+                raise RequirementsAuthorityError(
+                    f"{relative}: not a plain registry requirement: {line!r}")
     return closure
 
 
@@ -1170,8 +1276,10 @@ def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
     findings: list[str] = []
 
     def env_findings(where: str, env: object) -> None:
-        for name in sorted(RISKY_ENV & set((env or {}))):
-            findings.append(f"{where}: env {name} redirects pip sources/cache")
+        for name in forbidden_env_names(env):
+            findings.append(
+                f"{where}: env {name} is not a reviewed environment input "
+                "(it can redirect pip sources, config, constraints or cache)")
 
     def defaults_findings(where: str, defaults: object) -> None:
         run_defaults = (defaults or {}).get("run") or {}
@@ -1209,10 +1317,12 @@ def cache_policy_findings(workflow: dict, closure: set[str]) -> list[str]:
             options = step.get("with") or {}
             if uses.startswith("actions/setup-python@"):
                 for name in options:
-                    if "cache" in str(name).lower() and name not in (
-                            "cache", "cache-dependency-path"):
+                    # Allowlist: newer setup-python releases take pip inputs
+                    # (pip-install, pip-version, ...) that would bypass the
+                    # canonical bootstrap's resolver inputs.
+                    if name not in SETUP_PYTHON_REVIEWED_INPUTS:
                         findings.append(
-                            f"{job_name}: unsupported setup-python option "
+                            f"{job_name}: unreviewed setup-python input "
                             f"{name!r}")
                 if options.get("cache"):
                     if options["cache"] != "pip":
@@ -2096,6 +2206,43 @@ class PipEnvironmentAllowlistTests(unittest.TestCase):
                                 self.closure),
                             "accepted")
 
+    def test_red_dynamic_whole_mapping_env_is_rejected(self):
+        # ``env: ${{ fromJSON(...) }}`` is a string, not a mapping: its keys
+        # are unknowable statically, so it could carry PIP_CONFIG_FILE.
+        for scope in ("workflow", "job", "step"):
+            for value in ("${{ fromJSON(inputs.env) }}",
+                          "${{ needs.plan.outputs.env }}"):
+                workflow = self.workflow_with_env(scope, "X", None)
+                holder = (workflow if scope == "workflow" else
+                          workflow["jobs"]["j"] if scope == "job" else
+                          workflow["jobs"]["j"]["steps"][-1])
+                holder["env"] = value
+                with self.subTest(scope=scope, value=value):
+                    self.assertTrue(cache_policy_findings(
+                        workflow, self.closure), "accepted")
+
+    def test_red_unreviewed_setup_python_inputs_are_rejected(self):
+        # Newer setup-python releases can install packages or pin pip
+        # themselves, bypassing the canonical bootstrap's resolver inputs.
+        for name, value in (("pip-install", "requests"),
+                            ("pip-version", "99.0"),
+                            ("python-version-file", "/tmp/evil"),
+                            ("token", "x"), ("architecture", "x86"),
+                            ("update-environment", False)):
+            workflow = self.workflow_with_env("job", "CI", "1")
+            workflow["jobs"]["j"]["steps"][0] = {
+                **_B1_PY_STEP, "with": {**_B1_PY_STEP["with"], name: value}}
+            with self.subTest(name):
+                self.assertTrue(cache_policy_findings(
+                    workflow, self.closure), "accepted")
+
+    def test_reviewed_setup_python_inputs_remain_accepted(self):
+        workflow = self.workflow_with_env("job", "CI", "1")
+        workflow["jobs"]["j"]["steps"][0] = {**_B1_PY_STEP, "with": {
+            "python-version": "3.12", "cache": "pip",
+            "cache-dependency-path": "\n".join(sorted(self.closure))}}
+        self.assertEqual(cache_policy_findings(workflow, self.closure), [])
+
     def test_reviewed_env_remains_accepted(self):
         for scope in ("workflow", "job", "step"):
             with self.subTest(scope):
@@ -2110,6 +2257,28 @@ class PipEnvironmentAllowlistTests(unittest.TestCase):
                 self.assertEqual(cache_policy_findings(
                     self.workflow_with_env("job", name, "1"),
                     self.closure), [])
+
+    def test_real_workflows_reject_injected_pip_resolver_env(self):
+        import copy
+        import yaml
+        for path in (CI_WORKFLOW, FINAL_WORKFLOW):
+            real = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                cache_policy_findings(real, self.closure), [], path.name)
+            for name in ("PIP_CONFIG_FILE", "PIP_CONSTRAINT"):
+                for level in ("workflow", "every job", "every step"):
+                    mutated = copy.deepcopy(real)
+                    if level == "workflow":
+                        mutated.setdefault("env", {})[name] = "/tmp/x"
+                    for job in mutated["jobs"].values():
+                        if level == "every job":
+                            job.setdefault("env", {})[name] = "/tmp/x"
+                        elif level == "every step":
+                            for step in job["steps"]:
+                                step.setdefault("env", {})[name] = "/tmp/x"
+                    with self.subTest(path.name, var=name, level=level):
+                        self.assertTrue(
+                            cache_policy_findings(mutated, self.closure))
 
     def test_real_workflows_still_pass_the_env_allowlist(self):
         import yaml

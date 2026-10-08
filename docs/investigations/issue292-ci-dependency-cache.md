@@ -105,8 +105,10 @@ The contract is encoded offline and deterministically in
 `CacheContractBypassTests`, `CacheKeyAndMissContractTests`); section 7
 records the fail-closed correction of the first version. In summary:
 
-- the closure of the real authority is exactly those two files (pip semantics,
-  nested `-r` relative to the including file, cycle-safe);
+- the closure of the real authority is exactly those two files. It follows
+  `-r`/`--requirement` and `-c`/`--constraint` includes in every spelling
+  (nested, recursive, relative to the including file as in pip, cycle-safe) and
+  fails closed on any directive or line it cannot account for (section 9);
 - `setup-python` caching must be `pip` with every closure file listed as a
   literal repo-relative path (default path, root-only list, unlisted transitive
   file, glob, absolute or dynamic entries are each rejected);
@@ -237,6 +239,42 @@ statically decidable and is outside this contract; maintainer review of any
 future cache-enabling change remains the backstop. Likewise a job that uses
 the environment only through a `uses:` composite action is not recognised as
 environment-bearing.
+
+## 9. Correction round 3 (maintainer re-review of `69b3013`)
+
+Re-review verdict: NO-GO on two further dependency-authority gaps (reviewed head
+`69b301322de1cf2a3900ce21bebb1384d496c83c`, main unchanged at
+`57adca1ffac11fe70a914d5862910100690f9947`, hosted CI 37852776613 green).
+Both reproduced before any change. RED controls are commit `1125034`
+(278 failing subtests across 10 of 15 new tests: 274 assertion failures and 4
+errors, where the old code only failed closed *accidentally* through
+`FileNotFoundError` on `https://…`, `file:///…`, `~/…` and a bare `\` instead of
+a deliberate rejection).
+
+| Defect | Why the round-2 validator accepted it | Correction |
+| --- | --- | --- |
+| **B1** pip resolver/config environment | the forbidden-environment list was a short denylist that omitted `PIP_CONFIG_FILE`, `PIP_CONSTRAINT`, `PIP_REQUIREMENT` and every other `PIP_<OPTION>`; a config file can also change cache settings while the requirements-derived key stays the same | an allowlist: every `PIP_*` and `UV_*` variable (uv is the bootstrap's documented fallback installer) is rejected case-insensitively at workflow, job and step level, with the single reviewed exception `PIP_DISABLE_PIP_VERSION_CHECK`; the explicit denylist now also covers proxy, CA-bundle, config-location, `HOME`, `LD_*` and `PYTHON*` inputs |
+| **B2** `-c`/`--constraint` omitted from the closure | `requirement_closure` followed only `-r file` through a regex, so constraints (resolver authority), no-space forms (`-rfile`, `-cfile`), `--requirement=file`, backslash continuations and every other directive were silently dropped, yielding an incomplete closure and cache key | pip-faithful parsing (line joining, comment stripping) that follows all `-r`/`-c` spellings recursively and raises `RequirementsAuthorityError` for any other option line (`--find-links`, `--index-url`, `-e`, hashes, `--no-index`, ...), direct URL/path/`@` requirements, `${VAR}` expansion, and includes that are non-local, outside the repository or missing |
+
+Behavioural controls: a constraint change must change an accepted key, and a key
+that omits a constraint file must be rejected (the closure now includes it).
+Mutation confirmation: injecting `PIP_CONFIG_FILE` or `PIP_CONSTRAINT` into the
+parsed real `ci.yml` and `final-cpu-validation.yml` at workflow, job and step
+level is rejected, while the unmodified workflows stay GREEN; the real closure is
+unchanged (the two files).
+
+Found in my own adversarial pass (RED first, 12 failing subtests, then fixed): a
+whole-map `env: ${{ fromJSON(...) }}` is a string, not a mapping, and its keys
+cannot be known statically (now rejected), and newer `actions/setup-python`
+releases accept pip inputs such as `pip-install` and `pip-version` (the action's
+inputs are now an allowlist: `python-version`, `cache`,
+`cache-dependency-path`).
+
+Remaining limitations: pip configuration can also come from files outside the
+workflow (system, user or in-venv `pip.conf`), which a static workflow check
+cannot see, and the doctor does not inspect it; this joins the obfuscated-shell
+limitation in section 8 as a reason to keep caching out of authoritative
+validation until it is explicitly authorised.
 
 ## Preserved, not changed
 
