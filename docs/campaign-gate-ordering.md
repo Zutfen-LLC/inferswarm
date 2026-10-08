@@ -577,7 +577,22 @@ and never fails the job by itself; only malformed inputs or a failed canonical
 request derivation do. Lookup effort is bounded (3 run pages, 8 probed
 candidates, 2 MiB artifacts).
 
-A verified source means the suite step is skipped. The new run still runs the
+A verified source means the suite step is skipped. The lookup's decision file
+is only a **hint** naming the source (run, attempt, artifact id/digest, receipt
+hash); it carries no receipt bytes. The compose step — the one that mints the
+gate result — **re-authenticates that source itself** against the read-only
+Actions API: the source run is read back and must still be an earlier
+successful run of this workflow at this head and repository with the recorded
+attempt; the artifact must still be unexpired, bound to that run, byte-identical
+to the API digest, executed (not reused), and its suite receipt must match this
+head's independently derived request; every pointer field must equal what the
+API authenticated, and only the API-fetched receipt is embedded. This costs at
+most three read-only calls (run, artifact listing, one download) and uses the
+same token isolation as the lookup. If it cannot be done after the suite was
+skipped (outage, rate limit, permission loss, expiry, changed attempt, any
+mismatch, a forged or tampered decision), the **gate fails**: compose never
+mints a PASS receipt and never claims an execution that did not happen;
+re-dispatching then executes the suite. The new run still runs the
 finalizer and project-status checks on its own checkout and mints **its own**
 gate result: the same `hosted-final-validation-receipt/1` envelope with the
 source's embedded suite receipt and an `execution` block recording
@@ -602,6 +617,17 @@ plain positive integer with no surrounding whitespace).
 
 A failed run keeps its `final-cpu-validation-diagnostics` artifact (suite
 result, lookup decision) but never mints a `final-cpu-validation-receipt`.
+
+**Correction (PR #295 review of `48c38cf`).** The first implementation
+re-verified the decision file's embedded receipt only against itself and its
+own recorded digest, so a self-consistent fabricated decision (an earlier
+source run/attempt, a synthetic exact-head PASS suite receipt, an invented
+artifact id and sha256, a recomputed envelope digest, the correct current
+request) made compose mint a `verified_prior_execution` receipt with no
+Actions API access. The controls in `ComposeSourceAuthentication`
+(`tests/test_issue291_final_validation_reuse.py`) were added RED against that
+head (31 failures/errors, including the coherent forgery being accepted), and
+composition now authenticates the source via the API as described above.
 
 ## Review-critical reuse and accounting terminology
 

@@ -237,7 +237,8 @@ class HostedSim:
             repository=REPO)
         if decision["action"] == "reuse":
             envelope = reuse.compose_reuse_envelope(
-                decision, request=request, expected_sha=expected_sha,
+                decision, api=self.api, repository=REPO,
+                request=request, expected_sha=expected_sha,
                 github_run_id=str(run_id), github_run_attempt=1,
                 workflow="Final CPU Validation", pr_number=pr_number,
                 dispatch_sha=dispatch_sha or expected_sha,
@@ -885,50 +886,65 @@ class EnvelopeExecutionBlock(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class ComposeReverifies(unittest.TestCase):
-    def reuse_decision(self):
+    """Function-level controls; ComposeSourceAuthentication is the CLI view.
+
+    The decision is only a pointer: ``compose_reuse_envelope`` must
+    authenticate the source against the (fake) Actions API and embed the
+    API's bytes.
+    """
+
+    def setUp(self):
         sim = HostedSim()
         sim.dispatch()
-        _, d = sim.dispatch()
-        return d
+        self.api = sim.api
+        self.decision = lookup(sim.api, make_request(), current_run_id=2000)
+        self.assertEqual(self.decision["action"], "reuse")
 
-    def compose(self, decision, request=None, **kw):
-        args = dict(request=request or make_request(), expected_sha=SHA,
+    def compose(self, decision=None, request=None, api=None, **kw):
+        args = dict(api=api or self.api, repository=REPO,
+                    request=request or make_request(), expected_sha=SHA,
                     github_run_id="2000", github_run_attempt=1,
                     workflow="Final CPU Validation", pr_number=None,
                     dispatch_sha=SHA, finalizer_check=True,
                     project_status_check=True)
         args.update(kw)
-        return reuse.compose_reuse_envelope(decision, **args)
+        return reuse.compose_reuse_envelope(
+            decision if decision is not None else self.decision, **args)
 
-    def test_c1_roundtrip_ok(self):
-        self.compose(self.reuse_decision())
+    def test_c1_roundtrip_ok_and_decision_carries_no_receipt_bytes(self):
+        self.assertNotIn("source_envelope", self.decision)
+        self.assertNotIn("envelope", self.decision["source"])
+        envelope = self.compose()
+        self.assertEqual(envelope["execution"]["source_run_id"], "1000")
 
-    def test_c2_tampered_decisions_rejected(self):
-        for name, mutate in {
-                "run-action": lambda d: d.update({"action": "run"}),
-                "no-source": lambda d: d.update({"source": None}),
-                "no-envelope": lambda d: d.pop("source_envelope"),
-                "source-envelope-fail": lambda d: d["source_envelope"][
-                    "suite_receipt"].update({"result": "FAIL"}),
-                "envelope-digest": lambda d: d["source"].update(
-                    {"envelope_sha256": "0" * 64}),
-                "self-source": lambda d: d["source"].update(
-                    {"run_id": 2000}),
-                }.items():
-            with self.subTest(case=name), self.assertRaises(
-                    (reuse.ReuseError, gate.GateOrderingError)):
-                d = copy.deepcopy(self.reuse_decision())
-                mutate(d)
-                self.compose(d)
+    def test_c2_forged_decision_rejected(self):
+        with self.assertRaises(reuse.ReuseError):
+            self.compose(forged_decision())
 
     def test_c3_request_drift_since_lookup_rejected(self):
-        with self.assertRaises((reuse.ReuseError, gate.GateOrderingError)):
-            self.compose(self.reuse_decision(),
-                         request=make_request(plan_digest="2" * 64))
+        with self.assertRaises(reuse.ReuseError):
+            self.compose(request=make_request(plan_digest="2" * 64))
 
     def test_c4_dispatch_sha_must_equal_expected(self):
-        with self.assertRaises((reuse.ReuseError, gate.GateOrderingError)):
-            self.compose(self.reuse_decision(), dispatch_sha=OTHER_SHA)
+        with self.assertRaises(reuse.ReuseError):
+            self.compose(dispatch_sha=OTHER_SHA)
+
+    def test_c5_source_must_be_strictly_earlier_than_this_run(self):
+        for run_id in ("1000", "999"):
+            with self.subTest(run_id=run_id), self.assertRaises(
+                    reuse.ReuseError):
+                self.compose(github_run_id=run_id)
+
+    def test_c6_api_failure_raises_never_returns_an_envelope(self):
+        for stage in ("get_run", "list_artifacts", "download"):
+            api = FakeApi()
+            api.runs, api.artifacts, api.blobs = (
+                list(self.api.runs), dict(self.api.artifacts),
+                dict(self.api.blobs))
+            api.fail[stage] = reuse.ApiUnavailable("HTTP 503")
+            with self.subTest(stage=stage), self.assertRaises(
+                    reuse.ApiUnavailable):
+                self.compose(api=api)
 
 
 class SuiteResultAgainstRequest(unittest.TestCase):

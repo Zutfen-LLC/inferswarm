@@ -162,6 +162,10 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           REUSE: ${{ steps.reuse.outputs.reuse }}
+          # Read-only (actions: read): a reuse composition re-authenticates
+          # its source against the Actions API; if that is impossible the
+          # gate FAILS (the suite was skipped), it never mints PASS.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           .venv/bin/python scripts/final_validation_reuse.py compose \
             --out /tmp/final-validation-receipt.json

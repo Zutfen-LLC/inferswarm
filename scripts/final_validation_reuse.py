@@ -30,7 +30,15 @@ Trust model (reuse is a CACHE of one specific kind of proof, never a bypass):
   reuse receipts are never sources, so chains cannot form), and its embedded
   #213 suite receipt must match the current head's independently derived
   suite configuration, population digests, count and environment authority;
-* anything else — including every API error — means: run the full suite.
+* anything else — including every API error — means: run the full suite;
+* the lookup's decision file is only a HINT naming a source.  Composition
+  (the step that mints the gate result after the suite was skipped)
+  re-authenticates that source itself against the Actions API — successful
+  run identity, attempt, artifact metadata and digest, execution mode and
+  the exact-head suite receipt — and embeds only API-authenticated bytes.
+  If that is impossible (outage, expiry, changed attempt, any mismatch) the
+  gate FAILS: it never mints PASS and never claims an execution that did
+  not happen.
 
 Ordinary CI is never a source.  ``pr_number`` is audit-only.
 """
@@ -232,6 +240,10 @@ class HttpActionsApi:
             f"/repos/{self.repository}/actions/workflows/"
             f"{WORKFLOW_FILE}/runs?{query}")
 
+    def get_run(self, run_id: int) -> dict:
+        return self._get_json(
+            f"/repos/{self.repository}/actions/runs/{int(run_id)}")
+
     def list_artifacts(self, run_id: int) -> dict:
         return self._get_json(
             f"/repos/{self.repository}/actions/runs/{int(run_id)}/"
@@ -264,6 +276,10 @@ class _CountingApi:
     def list_runs(self, page, per_page):
         self.calls += 1
         return self._api.list_runs(page, per_page)
+
+    def get_run(self, run_id):
+        self.calls += 1
+        return self._api.get_run(run_id)
 
     def list_artifacts(self, run_id):
         self.calls += 1
@@ -447,9 +463,11 @@ def _decision(action: str, reason: str, expected_sha: str, *,
         "source": None, "api_calls": api_calls,
     }
     if source is not None:
-        envelope = source.pop("envelope")
-        decision["source"] = source
-        decision["source_envelope"] = envelope
+        # The decision is a HINT: it names the source but never carries the
+        # bytes composition will embed (those are re-fetched and
+        # authenticated at compose time).
+        decision["source"] = {k: v for k, v in source.items()
+                              if k != "envelope"}
     return decision
 
 
@@ -525,48 +543,100 @@ def lookup_verified_prior_execution(
 # Composition
 # ---------------------------------------------------------------------------
 
-def compose_reuse_envelope(decision: dict, *, request: gate.FinalHeadRequest,
+_SOURCE_POINTER_KEYS = ("run_id", "run_attempt", "artifact_id",
+                        "artifact_digest", "envelope_sha256", "workflow")
+
+
+def authenticate_source(api, pointer: object, *, expected_sha: str,
+                        request: gate.FinalHeadRequest, current_run_id: int,
+                        repository: str) -> dict:
+    """Independently authenticate the source a decision names (fail closed).
+
+    ``pointer`` is the (untrusted) ``source`` object of a decision file.
+    Everything it claims is re-derived from the read-only Actions API with
+    the same checks the lookup applies — successful earlier run of this
+    workflow on this head and repository, matching attempt, unexpired
+    artifact bound to that run with a matching API digest, single-member
+    archive, executed (never reused) receipt whose suite receipt matches
+    this head's independently derived request — and must then equal the
+    pointer's artifact id/digest/envelope hash.  Bounded: one run read, one
+    artifact listing, one download.  Returns the verified candidate (whose
+    ``envelope`` came from the API, not from the decision).
+    """
+    if not isinstance(pointer, dict):
+        raise ReuseError("reuse decision lacks its source")
+    if any(key not in pointer for key in _SOURCE_POINTER_KEYS):
+        raise ReuseError("reuse decision source is incomplete")
+    run_id, attempt = pointer["run_id"], pointer["run_attempt"]
+    if not _is_int(run_id) or not _is_int(attempt) \
+            or not _is_int(pointer["artifact_id"]):
+        raise ReuseError("reuse decision source identity is malformed")
+    counting = _CountingApi(api)
+    run = counting.get_run(run_id)
+    if not isinstance(run, dict) or run.get("id") != run_id:
+        raise ReuseError("source run could not be read back from the API")
+    reason = _check_run(run, expected_sha=expected_sha,
+                        current_run_id=current_run_id,
+                        repository=repository)
+    if reason is not None:
+        raise ReuseError(f"source run is not eligible: {reason}")
+    if run["run_attempt"] != attempt:
+        raise ReuseError(
+            f"source run attempt changed (decision {attempt}, API "
+            f"{run['run_attempt']})")
+    verified = _verify_candidate(counting, run, expected_sha=expected_sha,
+                                 request=request)
+    for key, authentic in (("artifact_id", verified["artifact_id"]),
+                           ("artifact_digest", verified["artifact_digest"]),
+                           ("envelope_sha256", verified["envelope_sha256"]),
+                           ("workflow", verified["workflow"])):
+        if pointer[key] != authentic:
+            raise ReuseError(
+                f"decision {key} does not match the API-authenticated "
+                "source")
+    return verified
+
+
+def compose_reuse_envelope(decision: dict, *, api, repository: str,
+                           request: gate.FinalHeadRequest,
                            expected_sha: str, github_run_id: str,
                            github_run_attempt: int, workflow: str,
                            pr_number: int | None, dispatch_sha: str,
                            finalizer_check: bool,
                            project_status_check: bool) -> dict:
-    """Build the NEW run's gate result from a verified source decision.
+    """Build the NEW run's gate result from an API-authenticated source.
 
-    The decision (a file written by an earlier step) is not trusted: the
-    source envelope is fully re-verified against the independently derived
-    request and re-bound to its recorded digest before anything is built.
+    The decision (a file written by an earlier step) is only a pointer.
+    The source is re-authenticated against the read-only Actions API here
+    (:func:`authenticate_source`); the embedded suite receipt is the
+    API-fetched one.  Any failure — including API unavailability — raises:
+    the suite was skipped on the strength of the lookup, so composition
+    must either prove the source or FAIL the gate.
     """
     if not isinstance(decision, dict) \
             or decision.get("schema") != DECISION_SCHEMA \
             or decision.get("action") != "reuse":
         raise ReuseError("decision is not a reuse decision")
-    source, envelope = decision.get("source"), decision.get("source_envelope")
-    if not isinstance(source, dict) or not isinstance(envelope, dict):
-        raise ReuseError("reuse decision lacks its source")
     if decision.get("expected_sha") != expected_sha:
         raise ReuseError("reuse decision is for another head")
+    validate_expected_sha(expected_sha)
     if dispatch_sha != expected_sha:
         raise ReuseError("workflow definition is not the validated head")
     if not isinstance(github_run_id, str) \
             or not _RUN_ID_RE.fullmatch(github_run_id):
         raise ReuseError("reusing run id is not a numeric GitHub run id")
-    run_id, attempt = source.get("run_id"), source.get("run_attempt")
-    if not _is_int(run_id) or not _is_int(attempt):
-        raise ReuseError("source run identity is malformed")
-    if run_id >= int(github_run_id):
-        raise ReuseError("source run is not strictly earlier than this run")
-    verify_source_envelope(envelope, expected_sha=expected_sha,
-                           request=request, run_id=run_id,
-                           run_attempt=attempt)
-    if canonical_sha256(envelope) != source.get("envelope_sha256"):
-        raise ReuseError("source envelope digest differs from the decision")
+    verified = authenticate_source(
+        api, decision.get("source"), expected_sha=expected_sha,
+        request=request, current_run_id=int(github_run_id),
+        repository=repository)
+    envelope = verified["envelope"]
     execution = gate.execution_block_reused(
-        dispatch_sha, source_run_id=str(run_id), source_run_attempt=attempt,
-        source_artifact_id=source.get("artifact_id"),
-        source_artifact_digest=source.get("artifact_digest"),
-        source_envelope_sha256=source["envelope_sha256"],
-        source_workflow=source.get("workflow"))
+        dispatch_sha, source_run_id=str(verified["run_id"]),
+        source_run_attempt=verified["run_attempt"],
+        source_artifact_id=verified["artifact_id"],
+        source_artifact_digest=verified["artifact_digest"],
+        source_envelope_sha256=verified["envelope_sha256"],
+        source_workflow=verified["workflow"])
     return gate.build_final_validation_receipt(
         expected_sha, envelope["suite_receipt"],
         github_run_id=github_run_id, github_run_attempt=github_run_attempt,
@@ -661,7 +731,37 @@ def _cmd_lookup(args, environ, api_factory, request_factory) -> int:
     return 0
 
 
-def _cmd_compose(args, environ, request_factory) -> int:
+def _compose_reuse_authenticated(args, environ, api_factory, *, request,
+                                 expected_sha, run_id, attempt, workflow,
+                                 pr_number, dispatch_sha) -> dict:
+    repository = environ.get("GITHUB_REPOSITORY", "")
+    token = environ.get("GITHUB_TOKEN", "")
+    if not token or not _REPO_RE.fullmatch(repository):
+        raise ReuseError(
+            "the suite was skipped for a verified prior execution but no "
+            "read-only Actions API credentials are available to "
+            "re-authenticate it; the gate fails (re-dispatch to execute)")
+    try:
+        decision = json.loads(Path(args.decision).read_text("utf-8"))
+        api = api_factory(
+            api_url=environ.get("GITHUB_API_URL", "https://api.github.com"),
+            repository=repository, token=token)
+        return compose_reuse_envelope(
+            decision, api=api, repository=repository, request=request,
+            expected_sha=expected_sha, github_run_id=run_id,
+            github_run_attempt=attempt, workflow=workflow,
+            pr_number=pr_number, dispatch_sha=dispatch_sha,
+            finalizer_check=True, project_status_check=True)
+    except (ReuseError, gate.GateOrderingError):
+        raise
+    except Exception as error:  # noqa: BLE001 — outage, timeout, anything
+        raise ReuseError(
+            "cannot re-authenticate the reuse source against the Actions "
+            f"API ({type(error).__name__}: {error}); the suite was skipped "
+            "so the gate fails (re-dispatch to execute)") from error
+
+
+def _cmd_compose(args, environ, api_factory, request_factory) -> int:
     def die(message: str) -> int:
         print(f"final-validation receipt: FAIL {message}")
         return 1
@@ -686,13 +786,14 @@ def _cmd_compose(args, environ, request_factory) -> int:
         if environ.get("REUSE") == "true":
             if Path(args.suite_result).exists():
                 return die("a reuse run must not have executed the suite")
-            decision = json.loads(Path(args.decision).read_text("utf-8"))
-            envelope = compose_reuse_envelope(
-                decision, request=request, expected_sha=expected_sha,
-                github_run_id=run_id, github_run_attempt=attempt,
+            # The suite was skipped on the strength of the lookup: the
+            # source must be re-authenticated against the Actions API NOW
+            # or the gate FAILS (never PASS, never a claimed execution).
+            envelope = _compose_reuse_authenticated(
+                args, environ, api_factory, request=request,
+                expected_sha=expected_sha, run_id=run_id, attempt=attempt,
                 workflow=workflow, pr_number=pr_number,
-                dispatch_sha=dispatch_sha, finalizer_check=True,
-                project_status_check=True)
+                dispatch_sha=dispatch_sha)
         else:
             try:
                 result = json.load(open(args.suite_result))
@@ -752,7 +853,8 @@ def main(argv: list[str] | None = None, *,
         if args.command == "lookup":
             return _cmd_lookup(args, environ, api_factory or HttpActionsApi,
                                request_factory)
-        return _cmd_compose(args, environ, request_factory)
+        return _cmd_compose(args, environ, api_factory or HttpActionsApi,
+                            request_factory)
     except (ReuseError, gate.GateOrderingError) as error:
         print(f"final-validation: FAIL {error}")
         return 1

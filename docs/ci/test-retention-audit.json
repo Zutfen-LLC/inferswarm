@@ -3046,8 +3046,8 @@
   },
   "test_issue291_final_validation_reuse": {
    "baseline_group": "issue-213-gate-ordering",
-   "baseline_serial_seconds": 3.2,
-   "baseline_test_count": 53,
+   "baseline_serial_seconds": 3.3,
+   "baseline_test_count": 73,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-213-gate-ordering",
