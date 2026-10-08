@@ -405,8 +405,9 @@ jobs:
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-213-gate-ordering
         # Issue #226 adds the hosted final-validation controls to this
-        # doctrinal group (same orchestration line).
-        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci -v
+        # doctrinal group (same orchestration line); Issue #291 adds the
+        # verified exact-head receipt-reuse controls.
+        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci tests.test_issue291_final_validation_reuse -v
 
   issue-187-r7a:
     name: Group issue-187-r7a

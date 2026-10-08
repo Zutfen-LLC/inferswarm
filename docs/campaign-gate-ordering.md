@@ -533,6 +533,76 @@ satisfy the gate; supplying BOTH a local suite receipt and a hosted
 final-validation receipt is a fail-closed error (exactly one
 full-suite proof, no competing contracts).
 
+## Duplicate hosted dispatch: verified exact-head receipt reuse (Issue #291)
+
+The Final CPU Validation concurrency group (`final-cpu-validation-<expected_sha>`,
+`cancel-in-progress: false`) only **serializes** same-head dispatches. It does
+not prevent a queued or late `workflow_dispatch` for the same head from running
+the whole suite again on a fresh runner, and the #213 `LaunchGuard` cannot share
+state across separate ephemeral GitHub runners. Measured baseline
+(Actions runs 37772898397 and 37775047769, both on `4502098`; the second was
+created 9 s after the first finished): each run spent about 16m45s in the suite step (queue ≈ 4s,
+checkout ≈ 11s, bootstrap ≈ 23s, doctor < 1s, **suite 16m44s / 16m49s**,
+finalizer ≈ 65s, status < 1s, receipt ≈ 2s, upload ≈ 1s) for 18m39s / 18m34s
+wall time — the second run reproduced a result the first had already
+produced.
+
+After the exact-SHA checkout and environment doctor, and **before** the suite,
+`scripts/final_validation_reuse.py lookup` performs a read-only, bounded,
+fail-closed lookup (token permission `actions: read`; no write token, secret
+or external cache). A prior run is an eligible source only if **all** hold:
+
+- a completed/`success` `workflow_dispatch` run of this repository's own
+  `final-cpu-validation.yml`, earlier than the current run, whose workflow
+  definition **is the validated head** (`head_sha == expected_sha`; the reusing
+  run must likewise have `GITHUB_SHA == expected_sha`, otherwise reuse is
+  disabled);
+- exactly one unexpired `final-cpu-validation-receipt` artifact bound by the
+  API to that run/head and repository, whose downloaded bytes match the
+  API-reported `sha256` digest and which contains exactly one
+  `final-validation-receipt.json` member (size-bounded, strict JSON);
+- the receipt passes the existing `validate_final_validation_receipt`, carries
+  the source's own run id and attempt, `execution.mode == "executed"` under the
+  pinned `final-validation-reuse/1` contract, proven finalizer/status checks,
+  and an embedded #213 suite receipt that validates against **this head's
+  independently derived** suite configuration, population digests, count and
+  environment authority.
+
+Anything else — no source, ordinary CI, failed/cancelled/pending/skipped runs,
+legacy receipts without an `execution` block, reuse receipts (so reuse chains
+cannot form), other heads or configurations, tampered/expired/oversized/malformed
+artifacts, any API outage, rate limit, permission loss or unexpected error —
+runs the canonical suite exactly as before. A lookup problem is never a PASS
+and never fails the job by itself; only malformed inputs or a failed canonical
+request derivation do. Lookup effort is bounded (3 run pages, 8 probed
+candidates, 2 MiB artifacts).
+
+A verified source means the suite step is skipped. The new run still runs the
+finalizer and project-status checks on its own checkout and mints **its own**
+gate result: the same `hosted-final-validation-receipt/1` envelope with the
+source's embedded suite receipt and an `execution` block recording
+`mode: verified_prior_execution`, the source run id/attempt, artifact id and
+digest, the sha256 of the source envelope and the dispatch SHA. The validator
+requires a numeric source run strictly earlier than the reusing run and
+rejects unknown fields, so a reuse receipt satisfies the same
+`handoff_gate_status` path as an executed one (the envelope schema is
+extended narrowly; pre-#291 envelopes remain valid for handoff but are never
+sources). `pr_number` stays audit-only: matching ignores it.
+
+Caveats: GitHub's concurrency semantics cancel a *pending* run when a newer one
+for the same group arrives; a cancelled run is not a PASS and not a source.
+Dispatches that start while the first is still executing queue behind it and so
+find its published artifact; a dispatch that has to run in parallel (for
+example a different dispatch ref) does not see an unfinished source and runs the
+suite. Artifacts expire after 90 days, after which the suite runs again. Ordinary
+CI is a different contract and is never reused here. Untrusted inputs
+(`expected_sha`, `pr_number`) reach scripts only via quoted environment
+bindings and are validated strictly (the optional `pr_number` must now be a
+plain positive integer with no surrounding whitespace).
+
+A failed run keeps its `final-cpu-validation-diagnostics` artifact (suite
+result, lookup decision) but never mints a `final-cpu-validation-receipt`.
+
 ## Review-critical reuse and accounting terminology
 
 A review-critical expensive gate that ran pre-review is **stale** when

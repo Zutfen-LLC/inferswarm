@@ -66,7 +66,8 @@
    "invariant": "Current campaign gate-ordering doctrine: exact-head suite receipts and hosted Final CPU Validation.",
    "test_modules": [
     "test_issue213_campaign_gate_ordering",
-    "test_issue226_final_validation_ci"
+    "test_issue226_final_validation_ci",
+    "test_issue291_final_validation_reuse"
    ]
   },
   "issue-222-r7c": {
@@ -554,6 +555,9 @@
   ],
   "scripts/derive_phase1r_d7_placement.py": [
    "repo-integrity"
+  ],
+  "scripts/final_validation_reuse.py": [
+   "issue-213-gate-ordering"
   ],
   "scripts/finalize_repository.py": [
    "repo-integrity"

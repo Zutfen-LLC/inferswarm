@@ -596,7 +596,7 @@ class IneligibleSources(unittest.TestCase):
             "nan-constant": {"members": {
                 reuse.RECEIPT_MEMBER: good.replace(b"1000.0", b"NaN")}},
             "duplicate-keys": {"members": {reuse.RECEIPT_MEMBER:
-                good[:-1] + b', "result": "FAIL"}'}},
+                good[:-1] + b', "workflow": "CI"}'}},
             "zip-bomb": {"members": {reuse.RECEIPT_MEMBER:
                 b" " * (reuse.MAX_MEMBER_BYTES + 1)}},
         }
