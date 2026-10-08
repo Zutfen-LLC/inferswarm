@@ -157,6 +157,8 @@ class LauncherHarness(unittest.TestCase):
             command_builder=command_builder or self.command_builder,
             workdir=self.tmp,
             host="127.0.0.1", port=self.port,
+            prompt_binding={"P1": P1},  # corrected interface: explicit,
+            # hash-verified frozen prompt bytes (no silent default text)
             retain=lambda label, kind, record, bracket:
                 self.records.append(record),
             on_launch_record=self.launch_records.append,
@@ -404,6 +406,7 @@ class CleanupTests(LauncherHarness):
                 MATRIX,
                 command_builder=self.command_builder,
                 workdir=self.tmp, port=self.port,
+                prompt_binding={"P1": P1},
                 retain=exploding_retain,
                 startup_timeout_s=20)
         # children were spawned; verify none survives the exception path
@@ -447,8 +450,14 @@ class PureFunctionTests(LauncherHarness):
     def test_pid_alive_same_instance_rejects_reused_pid(self):
         m = self.m
         me = os.getpid()
-        self.assertTrue(m.pid_alive_same_instance(me, None))
+        # B3 strict law: a None start-time identity never authenticates
+        # a live PID (the old permissive assert is inverted by review
+        # 5459338940 B3).
+        self.assertFalse(m.pid_alive_same_instance(me, None))
         self.assertFalse(m.pid_alive_same_instance(me, "1"))
+        real_start = m.proc_start_time(me)
+        self.assertIsNotNone(real_start)
+        self.assertTrue(m.pid_alive_same_instance(me, real_start))
         self.assertFalse(m.pid_alive_same_instance(-1, None))
 
     def test_port_occupied_detects_listener(self):
@@ -985,7 +994,8 @@ class NegativeControlTests(LauncherHarness):
         m = self.mutated("no_prior_stop")
         summary, launches = m.campaign_executor(
             MATRIX, command_builder=self.command_builder,
-            workdir=self.tmp, port=self.port, startup_timeout_s=20)
+            workdir=self.tmp, port=self.port, startup_timeout_s=20,
+            prompt_binding={"P1": P1})
         # Either the campaign STOPs (R2 launch fails) or an R2 response is
         # misattributed; a healthy COMPLETE with R2-attributed PIDs must
         # be impossible because R2 cannot bind while R1 lives.
@@ -1038,13 +1048,13 @@ class NegativeControlTests(LauncherHarness):
 
         ctx = m.Launch(MATRIX[1], command_builder=builder,
                        workdir=self.tmp, port=self.port,
-                       startup_timeout_s=20)
+                       startup_timeout_s=20, prompt_binding={"P1": P1})
         # R2 stub can only start if the port is free: start R1's Launch
         # properly first, stop it, then start R2 — sequence through the
         # mutated module (still stops prior launch).
         r1ctx = m.Launch(MATRIX[0], command_builder=self.command_builder,
                          workdir=self.tmp, port=self.port,
-                         startup_timeout_s=20)
+                         startup_timeout_s=20, prompt_binding={"P1": P1})
         r1ctx.start()
         r1ctx.stop()
         ctx.start()
@@ -1109,6 +1119,7 @@ class R3FaithfulnessTests(NegativeControlTests):
         summary, launches = m.campaign_executor(
             MATRIX, command_builder=self.command_builder,
             workdir=self.tmp, port=self.port, startup_timeout_s=20,
+            prompt_binding={"P1": P1},
             retain=lambda label, kind, record, bracket: recs.append(record))
         self.assertEqual(summary["terminal"], "STOP")
         self.assertIn("observer admission failure", summary["stop_reason"])

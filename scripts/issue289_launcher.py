@@ -65,6 +65,7 @@ which this module does not modify.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import signal
@@ -118,13 +119,16 @@ def proc_start_time(pid: int) -> str | None:
 
 def pid_alive_same_instance(pid: int, start_time: str | None) -> bool:
     """The PID is alive AND is the same process instance the launcher
-    spawned (same /proc start time)."""
-    if pid is None or pid <= 0:
+    spawned (same /proc start time). Strictly fail-closed (review
+    5459338940 B3): a missing start-time identity NEVER authenticates a
+    live PID — an unreadable /proc is an identity failure, not a
+    permissive live-check."""
+    if pid is None or pid <= 0 or start_time is None:
         return False
     observed = proc_start_time(pid)
     if observed is None:
         return False
-    return start_time is None or observed == start_time
+    return observed == start_time
 
 
 def port_occupied(host: str, port: int) -> bool:
@@ -202,7 +206,8 @@ class Launch:
 
     def __init__(self, row, *, command_builder, workdir, env=None,
                  host="127.0.0.1", port=8791, slice_observer=None,
-                 retain=None, health=None, startup_timeout_s=STARTUP_TIMEOUT_S):
+                 retain=None, health=None, startup_timeout_s=STARTUP_TIMEOUT_S,
+                 prompt_binding=None):
         self.row = row
         self.arm = row["arm"]
         self.label = row["label"]
@@ -215,6 +220,12 @@ class Launch:
         self.retain = retain
         self.health = health
         self.startup_timeout_s = startup_timeout_s
+        # B4 (review 5459338940): the exact prompt bytes + request
+        # settings the production caller must supply explicitly, keyed
+        # by prompt id. There is NO default prompt text: a row without a
+        # binding (or an explicit in-row synthetic prompt for CPU tests)
+        # is rejected before any HTTP dispatch.
+        self.prompt_binding = prompt_binding
         self.log_path = self.workdir / f"server-{self.label}.log"
         self.proc: subprocess.Popen | None = None
         self.log_file = None
@@ -247,9 +258,15 @@ class Launch:
                 f"foreign process; launch {self.label} refuses to start "
                 f"and will not contact the foreign listener")
         cmd = self.command_builder(self.arm, self.port, self.log_path,
-                                   dict(self.env_extra))
+                                   self.env_extra)
         env = dict(os.environ)
+        # B2 (review 5459338940): the SAME dict the command_builder
+        # received (and may have extended/updated — the documented r3
+        # production pattern) is the child's environment base. The
+        # builder's values are no longer silently discarded.
         env.update(self.env_extra)
+        # Launch-identity injection authority: the launcher's generated
+        # token always wins over caller- or builder-supplied values.
         self._identity = f"{self.label}#{os.getpid()}#{time.monotonic_ns():x}"
         env[IDENTITY_ENV] = self._identity
         self.record["identity"] = self._identity
@@ -270,14 +287,33 @@ class Launch:
             raise LaunchError(
                 f"SPAWN_FAILED launch={self.label} cmd={cmd[0]}: {e}")
         self.record["pid"] = self.proc.pid
+        # B3 (review 5459338940): readiness/requests require a VALID
+        # captured /proc start-time identity. A null capture is a hard
+        # fail-closed launch failure (the child stays owned and is
+        # stopped by the caller / executor).
         self._start_time = proc_start_time(self.proc.pid)
+        if self._start_time is None:
+            self.record["failure"] = (
+                f"START_IDENTITY_CAPTURE_FAILED launch={self.label} "
+                f"pid={self.proc.pid}: /proc start time unreadable; an "
+                f"unverifiable process identity never becomes readiness")
+            raise LaunchError(self.record["failure"])
         self._await_ready()
         self.record["ready_utc"] = utcnow()
 
-    def _child_alive(self) -> bool:
+    def _child_alive(self) -> tuple[bool, str | None]:
+        """(alive, identity_error). B3: an unreadable /proc start time is
+        an identity failure (IDENTITY_UNAVAILABLE), a changed start time
+        is a mismatch (IDENTITY_MISMATCH) — both fail closed, never a
+        permissive live-PID pass."""
         if self.proc is None or self.proc.poll() is not None:
-            return False
-        return pid_alive_same_instance(self.proc.pid, self._start_time)
+            return False, None
+        observed = proc_start_time(self.proc.pid)
+        if observed is None:
+            return False, "IDENTITY_UNAVAILABLE"
+        if self._start_time is None or observed != self._start_time:
+            return False, "IDENTITY_MISMATCH"
+        return True, None
 
     def _await_ready(self):
         deadline = time.monotonic() + self.startup_timeout_s
@@ -381,19 +417,81 @@ class Launch:
 
     # -- requests ----------------------------------------------------------
 
+    def _resolve_prompt(self):
+        """B4 (review 5459338940): resolve the EXACT prompt text and
+        request settings for this launch's row, or return a rejection
+        reason. No default text exists in production: the bytes come
+        only from (in priority order) an explicit in-row synthetic test
+        prompt (``prompt_text`` + ``prompt_sha256`` — CPU tests only) or
+        the explicitly supplied frozen ``prompt_binding`` keyed by the
+        row's prompt id. The resolved bytes are verified against their
+        SHA-256 identity when one is supplied; a missing hash on a
+        binding is a mismatch (ambiguity fails closed)."""
+        prompt_id = self.row.get("prompt")
+        if "prompt_text" in self.row:
+            text = self.row["prompt_text"]
+            expect = self.row.get("prompt_sha256")
+            if not isinstance(text, str) or not text:
+                return None, None, "PROMPT_BINDING_MISMATCH synthetic prompt_text empty"
+            got = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            if expect is not None and got != expect:
+                return (None, None,
+                        f"PROMPT_BINDING_MISMATCH prompt_sha256 {got[:12]}… "
+                        f"!= bound {expect[:12]}…")
+            settings = self.row.get("request_settings")
+            return text, settings, None
+        entry = (self.prompt_binding or {}).get(prompt_id)
+        if entry is None:
+            return (None, None,
+                    f"PROMPT_BINDING_MISSING no prompt bytes bound for "
+                    f"prompt id {prompt_id!r} (launch {self.label}); the "
+                    f"production launcher refuses to substitute default "
+                    f"prompt text")
+        text = entry.get("text")
+        expect = entry.get("utf8_sha256")
+        if not isinstance(text, str) or not text:
+            return (None, None,
+                    f"PROMPT_BINDING_MISMATCH bound prompt {prompt_id!r} "
+                    f"has empty/non-string text")
+        if not isinstance(expect, str) or len(expect) != 64:
+            return (None, None,
+                    f"PROMPT_BINDING_MISMATCH bound prompt {prompt_id!r} "
+                    f"lacks a valid utf8_sha256 identity; ambiguity fails "
+                    f"closed")
+        got = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if got != expect:
+            return (None, None,
+                    f"PROMPT_BINDING_MISMATCH prompt {prompt_id!r} bytes "
+                    f"sha256 {got[:12]}… != frozen {expect[:12]}…")
+        return text, entry.get("settings"), None
+
     def build_request(self, kind):
-        """(url, body_bytes, headers) for one completion request. The
-        default body is the frozen r3 request shape; ``prompts`` rows may
-        be supplied by the production caller through ``row['prompt']``."""
-        body = json.dumps({
-            "prompt": self.row.get("prompt_text", "stub"),
-            "n_predict": 128, "temperature": 0.0, "top_k": 1, "seed": 42,
-            "repeat_penalty": 1.0, "cache_prompt": False,
-            "samplers": ["top_k"], "stream": True,
-            "timings_per_token": True,
-        }).encode()
+        """(url, body_bytes, headers, request_identity) for one
+        completion request. B4: the prompt bytes and request settings
+        are the explicitly supplied, hash-verified frozen values; a
+        missing/mismatched binding raises LaunchError BEFORE any HTTP
+        dispatch. The returned identity evidence (sha256 + byte count)
+        never contains the prompt text itself."""
+        text, settings, rejection = self._resolve_prompt()
+        if rejection is not None:
+            raise LaunchError(rejection)
+        body_settings = {"n_predict": 128, "temperature": 0.0,
+                         "top_k": 1, "seed": 42, "repeat_penalty": 1.0,
+                         "cache_prompt": False, "samplers": ["top_k"],
+                         "stream": True,
+                         "timings_per_token": True}
+        if settings:
+            body_settings.update(settings)
+        prompt_bytes = text.encode("utf-8")
+        body = json.dumps({"prompt": text, **body_settings}).encode()
+        identity = {
+            "prompt_id": self.row.get("prompt"),
+            "prompt_sha256": hashlib.sha256(prompt_bytes).hexdigest(),
+            "prompt_bytes": len(prompt_bytes),
+            "request_settings": dict(body_settings),
+        }
         return (f"http://{self.host}:{self.port}/completion", body,
-                {"Content-Type": "application/json"})
+                {"Content-Type": "application/json"}, identity)
 
     def request(self, kind):
         """One request, served by THIS launch only. The response must echo
@@ -401,14 +499,24 @@ class Launch:
         — stale server, foreign listener, PID-reused process — is recorded
         as an identity-mismatch transport failure and is never admitted as
         an observation of this arm."""
-        if not self._child_alive():
+        alive, identity_error = self._child_alive()
+        if not alive:
             code = self.proc.returncode if self.proc else None
-            return self._failed_request(
-                kind, f"CHILD_NOT_LIVE_AT_REQUEST launch={self.label} "
+            detail = (f"CHILD_IDENTITY_{identity_error} "
+                      f"launch={self.label} pid={self.record['pid']} "
+                      f"expected_start={self._start_time!r}"
+                      if identity_error else
+                      f"CHILD_NOT_LIVE_AT_REQUEST launch={self.label} "
                       f"pid={self.record['pid']} code={code}")
+            return self._failed_request(kind, detail)
+        try:
+            url, data, headers, request_identity = self.build_request(kind)
+        except LaunchError as e:
+            # B4: prompt/request binding rejected BEFORE any HTTP
+            # dispatch — the slot is consumed fail-closed, never sent.
+            return self._failed_request(kind, str(e))
         self.ordinal += 1
         ordinal = self.ordinal
-        url, data, headers = self.build_request(kind)
         t0 = time.monotonic()
         ttft = None
         chunks = []
@@ -457,6 +565,7 @@ class Launch:
             "server_identity": server_identity,
             "launch_identity": self._identity,
             "identity_mismatch": mismatch,
+            "request_identity": request_identity,
             "text": "".join(chunks), "transport_ok": transport_ok,
             "error": err, "ttft_s": ttft, "wall_s": wall,
             "startup_s": self.startup_s,
@@ -495,7 +604,8 @@ class Launch:
             "prompt": self.row.get("prompt"), "kind": kind,
             "server_pid": self.record["pid"],
             "server_identity": None, "launch_identity": self._identity,
-            "identity_mismatch": False, "text": "", "transport_ok": False,
+            "identity_mismatch": False, "request_identity": None,
+            "text": "", "transport_ok": False,
             "error": error, "ttft_s": None, "wall_s": 0.0,
             "startup_s": self.startup_s, "final": None, "health_stop": None,
         }
@@ -523,10 +633,19 @@ class Launch:
 def campaign_executor(matrix, *, command_builder, workdir, env=None,
                       host="127.0.0.1", port=8791, slice_observer=None,
                       retain=None, health=None, on_launch_record=None,
-                      startup_timeout_s=STARTUP_TIMEOUT_S):
+                      startup_timeout_s=STARTUP_TIMEOUT_S,
+                      prompt_binding=None):
     """Deterministic production entry point: run the whole matrix through
     the UNCHANGED pure gate engine (``issue280_runner.run_campaign``) with
     the corrected launch lifecycle. Returns ``(summary, launches)``.
+
+    B4 (review 5459338940): ``prompt_binding`` maps prompt id -> frozen
+    entry ``{"text", "utf8_sha256", "settings"}`` (e.g. the accepted
+    ``docs/investigations/vulkan-same-request-280/workload.json`` prompts).
+    It is REQUIRED for production matrices whose rows carry only a
+    prompt id: a row without bound, hash-verified prompt bytes is
+    rejected before any HTTP dispatch (no silent default text). CPU
+    tests use explicit in-row ``prompt_text``/``prompt_sha256`` instead.
 
     Every owned child is stopped and reaped before control returns — on
     COMPLETE, on gate-engine STOP, on launch failure, and on exception.
@@ -570,7 +689,8 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
         ctx = Launch(row, command_builder=command_builder, workdir=workdir,
                      env=env, host=host, port=port,
                      slice_observer=slice_observer, retain=retain,
-                     health=health, startup_timeout_s=startup_timeout_s)
+                     health=health, startup_timeout_s=startup_timeout_s,
+                     prompt_binding=prompt_binding)
         if launch_failure is None:
             try:
                 ctx.start()

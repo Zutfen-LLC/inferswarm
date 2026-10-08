@@ -55,6 +55,33 @@ one `launch(matrix_row) -> request(kind)` executor per matrix row. Laws:
   every completion). A bare 200, open port, cached health response, or
   foreign-identity answer is never readiness
   (`FOREIGN_SERVER_IDENTITY`).
+- **Environment plumbing (review 5459338940 B2)**: the child environment
+  is built from the SAME dict handed to ``command_builder`` — builder
+  additions/updates (``LD_LIBRARY_PATH``, ``VK_DRIVER_FILES``,
+  ``ISSUE280_OBSERVE`` in the documented production pattern) reach the
+  spawned process; builder values override caller values
+  deterministically; the launcher's generated ``I280_LAUNCH_IDENTITY``
+  always wins over caller- or builder-supplied values.
+- **Strict process identity (review 5459338940 B3)**:
+  ``pid_alive_same_instance(pid, None)`` is false — a missing/unreadable
+  ``/proc`` start time NEVER authenticates a live PID. ``Launch.start()``
+  requires a captured non-null start-time identity before readiness
+  (``START_IDENTITY_CAPTURE_FAILED`` otherwise); every subsequent check
+  requires exact PID+start-time equality; identity-unavailable and
+  identity-mismatch both fail closed with zero HTTP dispatch, and the
+  owned child is still stopped/reaped through the bounded owned-group
+  path (never a kill by port or name).
+- **Explicit prompt binding (review 5459338940 B4)**: the production
+  launcher has NO default prompt text. The exact frozen prompt bytes and
+  request settings must be supplied explicitly (``prompt_binding`` keyed
+  by prompt id, bound to the frozen workload identity — e.g. the
+  accepted ``workload.json`` ``utf8_sha256``); a missing, mismatched, or
+  ambiguous binding is rejected BEFORE HTTP dispatch
+  (``PROMPT_BINDING_MISSING`` / ``PROMPT_BINDING_MISMATCH``), consumed
+  as a transport-failed slot. Every request record carries
+  ``request_identity`` evidence (prompt id, sha256, byte count — never
+  the prompt text). CPU stub tests use explicit in-row
+  ``prompt_text``/``prompt_sha256``.
 - **Traceable request-to-server binding**: every request record carries
   launch label, arm, server PID, and both identity tokens; a completion
   response not echoing the launch identity is recorded as
@@ -73,7 +100,7 @@ one `launch(matrix_row) -> request(kind)` executor per matrix row. Laws:
 PR diff). The r3 observer-bracket slice law is retained verbatim as
 `slice_request_bracket`.
 
-## Tests (`tests/test_issue289_launcher.py`, 24 tests, ~90 s)
+## Tests (`tests/test_issue289_launcher.py`, 38 tests, ~105 s)
 
 Two distinct CPU-only loopback stub servers (`tests/stub_issue289_server.py`,
 stdlib `http.server`) — one per arm, distinct identities and observer
@@ -108,6 +135,14 @@ REAL prelaunch compatibility gate):
   stale-arm routing reproduced on CPU.
 - GREEN (fix commit `a66ca34`): 24/24 OK (~88 s), same test file, byte
   unchanged between runs.
+- Review 5459338940 correction round (B2/B3/B4): RED commit `c66e456`
+  added 14 regressions against the merged head — 9 failed exactly per
+  the review findings (builder environment values lost; permissive
+  None-identity; silent `"stub"` prompt substitution / no binding
+  interface); GREEN fix commit turned all 38 (24 original + 14 new)
+  green with the corrected interface. The old permissive assertion
+  (`pid_alive_same_instance(me, None)` is true) is inverted by the B3
+  strict law.
 
 ## Preservation
 
@@ -125,11 +160,26 @@ campaign exactly like r3, replacing the session-local `LaunchCtx`/`launch`
 with the tracked launcher:
 
 ```python
+import json
 from scripts.issue289_launcher import campaign_executor
+from scripts.issue280_runner import MINIMAL_RERUN_MATRIX
+
+# The frozen prompt bytes + request settings, bound to the accepted
+# workload identity (review 5459338940 B4): load the accepted workload
+# binding and pass it EXPLICITLY — the launcher verifies the SHA-256 of
+# the supplied bytes against the binding before any dispatch and
+# refuses missing/mismatched input (no default text).
+workload = json.load(open("docs/investigations/"
+                          "vulkan-same-request-280/workload.json"))
+prompt_binding = workload["prompts"]   # {"P1": {text, utf8_sha256, settings}}
 
 def command_builder(arm, port, log_path, env_extra):
     dev = ["--device", "Vulkan0"] if arm == "A" else \
           ["--device", "Vulkan0,Vulkan1", "--tensor-split", "1,1"]
+    # The dict handed in IS the child's environment base (B2): values
+    # added/updated here reach the spawned server. The launcher's
+    # I280_LAUNCH_IDENTITY is injected after the builder returns and
+    # always wins.
     env_extra.update(LD_LIBRARY_PATH=..., VK_DRIVER_FILES=...,
                      ISSUE280_OBSERVE="1")
     return [llama_server_path, "--model", model_path, ..., *dev,
@@ -139,6 +189,7 @@ summary, launches = campaign_executor(
     MINIMAL_RERUN_MATRIX,            # unchanged frozen matrix
     command_builder=command_builder,
     workdir=runs_dir, port=8791,
+    prompt_binding=prompt_binding,    # REQUIRED: exact frozen bytes
     retain=lambda label, kind, record, bracket: ...,   # r3 retention law
     health=health_sampler,           # r3 health law
 )
@@ -150,3 +201,24 @@ field) on `/health` and completions — the production llama-server build
 needs a small addition for that, to be staged under its own review before
 any authorized physical run. Every request record binds the response to
 the launch/arm identity for the traceability record.
+
+## Physical integration limitation (review 5459338940 §4) — NOT EXECUTABLE
+
+The pinned production `llama-server` currently does **not** echo
+`I280_LAUNCH_IDENTITY` on `/health` or completion responses. The
+launcher's identity-verified readiness and response-attribution laws
+therefore make the real physical path **NOT EXECUTABLE** as-is: this is
+a deliberate barrier, not a defect to code around. This PR does not
+bypass, mock, weaken, or disable the identity requirement in production
+(the CPU stub servers echo it, as tests only).
+
+The physical path becomes executable only after a narrowly reviewed
+identity-echo implementation in the server wrapper (or an equivalently
+independently verified identity-binding adapter) exists, with source and
+build identities explicitly approved under its own review. Nothing in
+this coding PR authorizes such a build, a source/overlay change to the
+frozen binary, or any physical dispatch.
+
+The accepted #280 r3 terminal remains STOP. Any candidate-B experiment
+is a separate physical authorization decision (issue #289 completion
+section), not granted here.
