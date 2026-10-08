@@ -2033,5 +2033,242 @@ class GithubPathWriteBypassTests(unittest.TestCase):
                     yaml.safe_load(mutated), self.closure))
 
 
+# ---------------------------------------------------------------------------
+# Issue #292 correction round 3 (maintainer re-review of 69b3013).
+#
+# B1: the forbidden-environment list was a short denylist, so pip inputs it
+#     did not name (PIP_CONFIG_FILE, PIP_CONSTRAINT, PIP_REQUIREMENT, ...)
+#     could change the index, config or resolver constraints while the
+#     requirements-derived cache key stayed unchanged.  pip reads EVERY option
+#     from PIP_<OPTION>, so the contract must be an allowlist.
+# B2: requirement_closure followed only ``-r file``; ``-c``/``--constraint``
+#     (resolver authority), no-space forms (``-rfile``), continuations and
+#     other material directives were silently omitted, yielding an incomplete
+#     closure and therefore an incomplete cache key.
+# ---------------------------------------------------------------------------
+
+class PipEnvironmentAllowlistTests(unittest.TestCase):
+    """B1 -- only reviewed environment may reach a validation job."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    def workflow_with_env(self, scope: str, name: str, value="/tmp/x") -> dict:
+        steps = [_B1_PY_STEP,
+                 _actions_cache(PIP_CACHE_PATH, VALID_CACHE_KEY),
+                 *_canonical_steps(),
+                 _step("python3 -m unittest tests.test_x")]
+        workflow = _job_workflow(steps)
+        if scope == "workflow":
+            workflow["env"] = {name: value}
+        elif scope == "job":
+            workflow["jobs"]["j"]["env"] = {name: value}
+        else:  # a non-canonical step, so the step-role rule cannot mask it
+            steps[-1]["env"] = {name: value}
+        return workflow
+
+    MATERIAL = (
+        # the maintainer's reproductions and their relatives
+        "PIP_CONFIG_FILE", "PIP_CONSTRAINT", "PIP_REQUIREMENT",
+        # every other PIP_<OPTION> is honoured by pip
+        "PIP_TARGET", "PIP_PREFIX", "PIP_USER", "PIP_NO_DEPS", "PIP_PRE",
+        "PIP_ONLY_BINARY", "PIP_NO_BINARY", "PIP_PROXY", "PIP_TRUSTED_HOST",
+        "PIP_CERT", "PIP_CLIENT_CERT", "PIP_NO_CACHE_DIR", "PIP_ISOLATED",
+        "PIP_REQUIRE_HASHES", "PIP_USE_FEATURE", "pip_config_file",
+        # uv is the bootstrap's documented fallback installer
+        "UV_INDEX_URL", "UV_EXTRA_INDEX_URL", "UV_CONSTRAINT", "UV_PYTHON",
+        "UV_CACHE_DIR", "UV_NO_INDEX",
+        # network / trust / config-location inputs that redirect resolution
+        "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy",
+        "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE",
+        "SSL_CERT_DIR", "HOME", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
+        "PYTHONUSERBASE", "LD_PRELOAD", "LD_LIBRARY_PATH")
+
+    def test_red_material_pip_and_resolver_env_is_rejected_at_every_level(self):
+        for scope in ("workflow", "job", "step"):
+            for name in self.MATERIAL:
+                for value in ("/tmp/x", "${{ inputs.x }}"):
+                    with self.subTest(scope=scope, var=name, value=value):
+                        self.assertTrue(
+                            cache_policy_findings(
+                                self.workflow_with_env(scope, name, value),
+                                self.closure),
+                            "accepted")
+
+    def test_reviewed_env_remains_accepted(self):
+        for scope in ("workflow", "job", "step"):
+            with self.subTest(scope):
+                self.assertEqual(cache_policy_findings(
+                    self.workflow_with_env(
+                        scope, "PIP_DISABLE_PIP_VERSION_CHECK", "1"),
+                    self.closure), [])
+
+    def test_unrelated_env_remains_accepted(self):
+        for name in ("GITHUB_TOKEN_UNUSED", "CI", "MY_FLAG", "TZ"):
+            with self.subTest(name):
+                self.assertEqual(cache_policy_findings(
+                    self.workflow_with_env("job", name, "1"),
+                    self.closure), [])
+
+    def test_real_workflows_still_pass_the_env_allowlist(self):
+        import yaml
+        for path in (CI_WORKFLOW, FINAL_WORKFLOW):
+            workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                cache_policy_findings(workflow, self.closure), [], path.name)
+
+
+class RequirementClosureAuthorityTests(unittest.TestCase):
+    """B2 -- the closure must contain every local resolver-authority file or
+    fail closed; never return an incomplete closure."""
+
+    def closure_of(self, files: dict[str, str]) -> set[str]:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            for name, body in files.items():
+                write(repo / name, body)
+            return requirement_closure(repo / "root.txt", repo)
+
+    def test_red_constraint_references_are_in_the_closure(self):
+        for label, root in {
+            "-c file": "pkg-a\n-c constraints.txt\n",
+            "-c no space": "pkg-a\n-cconstraints.txt\n",
+            "--constraint file": "pkg-a\n--constraint constraints.txt\n",
+            "--constraint=file": "pkg-a\n--constraint=constraints.txt\n",
+            "-c with comment": "pkg-a\n-c constraints.txt  # pin\n",
+            "-c via continuation": "pkg-a\n-c \\\nconstraints.txt\n",
+        }.items():
+            with self.subTest(label):
+                self.assertEqual(
+                    self.closure_of({"root.txt": root,
+                                     "constraints.txt": "pkg-a==1\n"}),
+                    {"root.txt", "constraints.txt"})
+
+    def test_red_requirement_no_space_and_continuation_forms_are_followed(self):
+        for label, root in {
+            "-rfile": "pkg-a\n-rnested.txt\n",
+            "--requirement=file": "pkg-a\n--requirement=nested.txt\n",
+            "--requirement file": "pkg-a\n--requirement nested.txt\n",
+            "-r via continuation": "pkg-a\n-r \\\nnested.txt\n",
+        }.items():
+            with self.subTest(label):
+                self.assertEqual(
+                    self.closure_of({"root.txt": root, "nested.txt": "pkg-b\n"}),
+                    {"root.txt", "nested.txt"})
+
+    def test_red_nested_and_recursive_constraints_are_followed(self):
+        self.assertEqual(self.closure_of({
+            "root.txt": "pkg-a\n-r sub/mid.txt\n",
+            "sub/mid.txt": "pkg-b\n-c ../constraints/pins.txt\n",
+            "constraints/pins.txt": "pkg-b==2\n-c more.txt\n",
+            "constraints/more.txt": "pkg-c==3\n"}),
+            {"root.txt", "sub/mid.txt", "constraints/pins.txt",
+             "constraints/more.txt"})
+
+    def test_red_unhandled_material_directives_fail_closed(self):
+        directives = {
+            "--find-links": "--find-links /tmp/wheels", "-f": "-f /tmp/wheels",
+            "--index-url": "--index-url https://evil.example/simple",
+            "-i": "-i https://evil.example/simple",
+            "--extra-index-url": "--extra-index-url https://evil.example/s",
+            "--no-index": "--no-index", "--trusted-host": "--trusted-host x",
+            "--pre": "--pre", "--only-binary": "--only-binary :all:",
+            "--no-binary": "--no-binary :all:",
+            "--prefer-binary": "--prefer-binary",
+            "--require-hashes": "--require-hashes",
+            "-e editable": "-e .", "--editable": "--editable ./pkg",
+            "--use-feature": "--use-feature=fast-deps",
+            "--config-settings": "--config-settings x=y",
+            "unknown option": "--frobnicate",
+        }
+        for label, line in directives.items():
+            with self.subTest(label):
+                with self.assertRaises(ValueError):
+                    self.closure_of({"root.txt": f"pkg-a\n{line}\n"})
+
+    def test_red_non_registry_or_dynamic_requirement_lines_fail_closed(self):
+        for label, line in {
+            "local path": "./local-pkg",
+            "parent path": "../other",
+            "absolute path": "/opt/pkg",
+            "direct file reference": "pkg @ file:///tmp/pkg.whl",
+            "direct url reference": "pkg @ https://evil.example/pkg.whl",
+            "bare url": "https://evil.example/pkg.whl",
+            "per-requirement hash option": "pkg==1 --hash=sha256:ab",
+            "env expansion": "pkg==${PKG_VERSION}",
+            "option after marker": "pkg==1 ; python_version>'3' --hash=sha256:a",
+        }.items():
+            with self.subTest(label):
+                with self.assertRaises(ValueError):
+                    self.closure_of({"root.txt": f"pkg-a\n{line}\n"})
+
+    def test_red_non_local_or_escaping_include_paths_fail_closed(self):
+        for label, line in {
+            "url include": "-r https://evil.example/req.txt",
+            "file scheme": "-r file:///tmp/req.txt",
+            "absolute include": "-r /etc/hosts",
+            "home include": "-r ~/req.txt",
+            "escapes repository": "-r ../outside.txt",
+            "constraint url": "-c https://evil.example/c.txt",
+            "constraint absolute": "-c /etc/hosts",
+            "env expansion in path": "-c ${CONSTRAINTS}",
+        }.items():
+            with self.subTest(label):
+                with self.assertRaises(ValueError):
+                    self.closure_of({"root.txt": f"pkg-a\n{line}\n"})
+
+    def test_missing_included_file_fails_closed(self):
+        with self.assertRaises((ValueError, OSError)):
+            self.closure_of({"root.txt": "pkg-a\n-c missing.txt\n"})
+
+    def test_plain_specifiers_comments_and_blank_lines_are_accepted(self):
+        self.assertEqual(self.closure_of({"root.txt": (
+            "# comment\n\njsonschema>=4.18,<5\nnumpy>=1.26,<3  # why\n"
+            "pkg[extra,more]==1.0.0 ; python_version >= '3.10'\n"
+            "Jinja2==3.1.6\nMarkupSafe==3.0.3\n   \npkg-b\n")}),
+            {"root.txt"})
+
+    def test_real_authority_closure_is_unchanged(self):
+        self.assertEqual(requirement_closure(REQUIREMENTS, ROOT),
+                         {"requirements-test.txt", NESTED_FROZEN_REQUIREMENTS})
+
+    # -- behavioural: a constraint change must change an accepted key -------
+    def test_red_constraint_change_invalidates_an_accepted_key(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            write(repo / "root.txt", "pkg-a\n-c constraints.txt\n")
+            write(repo / "constraints.txt", "pkg-a==1\n")
+            closure = requirement_closure(repo / "root.txt", repo)
+            self.assertIn("constraints.txt", closure)
+            key = ("pip-${{ runner.os }}-${{ runner.arch }}-"
+                   "py${{ steps.py.outputs.python-version }}-"
+                   "${{ hashFiles('root.txt', 'constraints.txt') }}")
+            workflow = _job_workflow([
+                _B1_PY_STEP, _actions_cache(PIP_CACHE_PATH, key),
+                *_canonical_steps(), _step("python3 -m unittest tests.test_x")])
+            self.assertEqual(cache_policy_findings(workflow, closure), [])
+            args = dict(os_name="Linux", arch="X64", python_version="3.12.15")
+            before = simulate_cache_key(key, repo, **args)
+            write(repo / "constraints.txt", "pkg-a==2\n")
+            self.assertNotEqual(before, simulate_cache_key(key, repo, **args))
+
+    def test_red_key_that_omits_a_constraint_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw)
+            write(repo / "root.txt", "pkg-a\n-c constraints.txt\n")
+            write(repo / "constraints.txt", "pkg-a==1\n")
+            closure = requirement_closure(repo / "root.txt", repo)
+            key = ("pip-${{ runner.os }}-${{ runner.arch }}-"
+                   "py${{ steps.py.outputs.python-version }}-"
+                   "${{ hashFiles('root.txt') }}")
+            workflow = _job_workflow([
+                _B1_PY_STEP, _actions_cache(PIP_CACHE_PATH, key),
+                *_canonical_steps(), _step("python3 -m unittest tests.test_x")])
+            findings = cache_policy_findings(workflow, closure)
+            self.assertTrue(any("constraints.txt" in f for f in findings),
+                            findings)
+
+
 if __name__ == "__main__":
     unittest.main()
