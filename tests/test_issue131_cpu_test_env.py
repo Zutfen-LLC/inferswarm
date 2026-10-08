@@ -1099,5 +1099,194 @@ class DependencyCacheContractTests(unittest.TestCase):
         self.assertTrue(any("check_test_env.py" in f for f in findings), findings)
 
 
+# ---------------------------------------------------------------------------
+# Issue #292 correction round 1 — the cache contract must fail CLOSED.
+#
+# PR #294 review found the first validator fail-open: cache paths were
+# screened by substring markers (so the checkout root, ${{ github.workspace }}
+# and globs passed), and bootstrap/doctor were "present" if their text merely
+# appeared in a run script (so conditional, ``|| true``, echoed, commented or
+# heredoc-embedded commands counted, and an environment-bearing job with no
+# bootstrap at all was ignored unless it also used a cache).  These controls
+# demonstrate each bypass; they are RED against the first validator.
+# ---------------------------------------------------------------------------
+
+BOOTSTRAP_CMD = "python3 scripts/bootstrap_test_env.py"
+DOCTOR_CMD = ".venv/bin/python scripts/check_test_env.py"
+PIP_CACHE_PATH = "~/.cache/pip"
+
+
+def _step(run: str, **extra) -> dict:
+    return {"run": run, **extra}
+
+
+def _setup_python(closure: set[str], **extra) -> dict:
+    return {"uses": "actions/setup-python@x", "id": "py", "with": {
+        "python-version": "3.12", "cache": "pip",
+        "cache-dependency-path": "\n".join(sorted(closure)), **extra}}
+
+
+def _actions_cache(path: str, key: str | None = None, **extra) -> dict:
+    options = {"path": path, "key": key if key is not None else "k", **extra}
+    return {"uses": "actions/cache@x", "with": options}
+
+
+def _job_workflow(steps: list[dict]) -> dict:
+    return {"jobs": {"j": {"steps": steps}}}
+
+
+def _canonical_steps() -> list[dict]:
+    return [_step(BOOTSTRAP_CMD), _step(DOCTOR_CMD)]
+
+
+class CacheContractBypassTests(unittest.TestCase):
+    """Issue #292 correction: each bypass below must be REJECTED."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.closure = requirement_closure(REQUIREMENTS, ROOT)
+
+    def findings(self, steps: list[dict]) -> list[str]:
+        return cache_policy_findings(_job_workflow(steps), self.closure)
+
+    def assertRejected(self, steps, label):
+        with self.subTest(label):
+            self.assertTrue(self.findings(steps), f"bypass accepted: {label}")
+
+    # -- 1. absolute checkout-root / workspace cache paths ------------------
+    def test_red_checkout_root_and_workspace_cache_paths_are_rejected(self):
+        for path in ("/home/runner/work/inferswarm/inferswarm",
+                     "/home/runner/work/inferswarm/inferswarm/scripts",
+                     "~/work/inferswarm/inferswarm",
+                     "${{ github.workspace }}",
+                     "${{ github.workspace }}/",
+                     "$GITHUB_WORKSPACE",
+                     "${{ runner.temp }}"):
+            self.assertRejected(
+                [_actions_cache(path), *_canonical_steps()], path)
+
+    # -- 2. broad / glob / traversal paths ----------------------------------
+    def test_red_broad_and_glob_cache_paths_are_rejected(self):
+        for path in ("**", "*", "**/*", ".v*nv", "./.[v]env", "te*ts",
+                     "/t[m]p/*", "{.venv,x}", "~/.cache/pip/../../work",
+                     "~/.cache/pip\n.", "~/.cache/pip\n!x", "final-validation-*.json"):
+            self.assertRejected(
+                [_actions_cache(path), *_canonical_steps()], path)
+
+    # -- 3. shell-level conditional execution --------------------------------
+    def test_red_shell_conditional_bootstrap_is_rejected(self):
+        variants = {
+            "if/then": 'if [ "$HIT" != "true" ]; then\n  ' + BOOTSTRAP_CMD + '\nfi',
+            "and-list": '[ "$HIT" != "true" ] && ' + BOOTSTRAP_CMD,
+            "or-list": '[ "$HIT" = "true" ] || ' + BOOTSTRAP_CMD,
+            "|| true": BOOTSTRAP_CMD + " || true",
+            "; true": BOOTSTRAP_CMD + "; true",
+            "set +e": "set +e\n" + BOOTSTRAP_CMD,
+            "negated": "! " + BOOTSTRAP_CMD,
+            "backgrounded": BOOTSTRAP_CMD + " &",
+            "continuation": BOOTSTRAP_CMD + " \\\n  || true",
+            "folded": BOOTSTRAP_CMD + " echo done",
+        }
+        for label, script in variants.items():
+            self.assertRejected(
+                [_step(script), _step(DOCTOR_CMD)], f"bootstrap {label}")
+
+    def test_red_shell_conditional_doctor_is_rejected(self):
+        variants = {
+            "if/then": 'if [ -z "$HIT" ]; then\n  ' + DOCTOR_CMD + '\nfi',
+            "and-list": 'test -d .venv && ' + DOCTOR_CMD,
+            "|| true": DOCTOR_CMD + " || true",
+            "set +e": "set +e\n" + DOCTOR_CMD,
+        }
+        for label, script in variants.items():
+            self.assertRejected(
+                [_step(BOOTSTRAP_CMD), _step(script)], f"doctor {label}")
+
+    def test_red_step_level_escape_hatches_are_rejected(self):
+        for extra in ({"continue-on-error": True},
+                      {"continue-on-error": "${{ steps.s.outputs.x }}"},
+                      {"if": "steps.s.outputs.cache-hit != 'true'"},
+                      {"shell": "python"},
+                      {"working-directory": "/tmp"},
+                      {"env": {"PATH": "/tmp/evil"}}):
+            self.assertRejected(
+                [_step(BOOTSTRAP_CMD, **extra), _step(DOCTOR_CMD)],
+                f"bootstrap step {extra}")
+            self.assertRejected(
+                [_step(BOOTSTRAP_CMD), _step(DOCTOR_CMD, **extra)],
+                f"doctor step {extra}")
+
+    # -- 4. inert commands mistaken for execution ----------------------------
+    def test_red_inert_bootstrap_and_doctor_are_not_counted(self):
+        inert = {
+            "echo": 'echo "%s"',
+            "single-quoted echo": "echo '%s'",
+            "comment": "# %s\ntrue",
+            "heredoc body": "cat <<'EOF'\n%s\nEOF",
+            "colon": ": %s",
+            "printf": 'printf "%%s\\n" "%s"',
+            "trailing comment": "true # %s",
+        }
+        for label, template in inert.items():
+            self.assertRejected(
+                [_step(template % BOOTSTRAP_CMD), _step(DOCTOR_CMD)],
+                f"inert bootstrap: {label}")
+            self.assertRejected(
+                [_step(BOOTSTRAP_CMD), _step(template % DOCTOR_CMD)],
+                f"inert doctor: {label}")
+
+    # -- 5. required environment-bearing job missing bootstrap/doctor --------
+    def test_red_environment_job_without_bootstrap_or_doctor_is_rejected(self):
+        suite = _step("python3 -m unittest tests.test_issue74_methodology -v")
+        runner = _step(".venv/bin/python scripts/run_full_cpu_suite.py --json")
+        cases = {
+            "no bootstrap, no doctor (no cache)": [suite],
+            "no bootstrap (doctor only)": [_step(DOCTOR_CMD), suite],
+            "no doctor (bootstrap only)": [_step(BOOTSTRAP_CMD), suite],
+            "venv suite without either": [runner],
+            "tests before bootstrap": [suite, *_canonical_steps()],
+            "doctor before bootstrap": [
+                _step(DOCTOR_CMD), _step(BOOTSTRAP_CMD), suite],
+            "tests between bootstrap and doctor": [
+                _step(BOOTSTRAP_CMD), suite, _step(DOCTOR_CMD)],
+            "cache but no bootstrap/doctor": [
+                _setup_python(self.closure), suite],
+        }
+        for label, steps in cases.items():
+            self.assertRejected(steps, label)
+
+    # -- acceptance: legitimate shapes keep passing (GREEN before and after) -
+    def test_legitimate_no_cache_environment_job_is_accepted(self):
+        steps = [
+            {"uses": "actions/setup-python@x",
+             "with": {"python-version": "3.12"}},
+            _step(BOOTSTRAP_CMD + '\necho "$PWD/.venv/bin" >> "$GITHUB_PATH"'),
+            _step(DOCTOR_CMD),
+            _step("python3 -m unittest tests.test_issue74_methodology -v")]
+        self.assertEqual(self.findings(steps), [])
+
+    def test_legitimate_non_environment_job_is_accepted(self):
+        self.assertEqual(self.findings([
+            _step("python3 scripts/plan_ci.py --mode pr"),
+            _step("echo planned")]), [])
+
+    def test_valid_narrow_setup_python_pip_cache_is_accepted(self):
+        steps = [_setup_python(self.closure), *_canonical_steps(),
+                 _step("python3 -m unittest tests.test_x")]
+        self.assertEqual(self.findings(steps), [])
+
+    def test_valid_narrow_actions_cache_is_accepted(self):
+        key = ("pip-${{ runner.os }}-${{ runner.arch }}-"
+               "py${{ steps.py.outputs.python-version }}-"
+               "${{ hashFiles('requirements-test.txt', '%s') }}"
+               % NESTED_FROZEN_REQUIREMENTS)
+        steps = [{"uses": "actions/setup-python@x", "id": "py",
+                  "with": {"python-version": "3.12"}},
+                 _actions_cache(PIP_CACHE_PATH, key),
+                 *_canonical_steps(),
+                 _step("python3 -m unittest tests.test_x")]
+        self.assertEqual(self.findings(steps), [])
+
+
 if __name__ == "__main__":
     unittest.main()
