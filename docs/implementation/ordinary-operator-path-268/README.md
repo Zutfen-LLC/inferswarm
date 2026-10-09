@@ -1,5 +1,16 @@
 # Issue #268 — ordinary operator path (design mapping)
 
+> **Post-acceptance note.** Issue #268 was accepted by the maintainer as
+> `R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS` on exact PR #269 head
+> `438c09ff1f3fb0e161f0bbf6d8389554ab8a1515`
+> ([acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776)),
+> within the bounded scope stated below and in the living status record. The
+> status text that follows, and `product-report.md` and `evidence/`, are the
+> retained pre-acceptance record and are deliberately unchanged; where they say
+> "not accepted" or "deferred", the acceptance comment controls. The path is a
+> fixed-topology path for exactly two participants and one three-range layer
+> placement; it is not a planner or a general runtime.
+
 **Status:** Task 1 mapping/context, Task 2 CPU-pure config/plan/strategy seam, and Task 3 ordinary CLI/runtime plus CPU regressions are implemented. Three bounded physical ordinary-path requests have been observed and independently reviewed at measured head `478eb5efc93476dc2be990ac738c7ddd40e11eab`; hosted CI run `37169789383` succeeded on that head. #268 remains unaccepted, current-head CI remains separate, and Final CPU Validation is required/deferred until maintainer exact-head GO. The accepted predecessor is Issue #255 `MVP_DISTRIBUTED_INFERENCE_PASS`, accepted by the maintainer closure at https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991. Its bounded authority is homogeneous NVIDIA/CUDA, `inferswarm01` RTX 3060 + `inferswarm04` RTX 3090, exact Qwen3.8-Flash-Next-UD-IQ1_S three-part release, llama.cpp `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`, fixed/manual whole-layer placement, participant-local verified backing, ordinary text generation and repeatability. It does not establish numerical equivalence, mixed-vendor or production readiness, dynamic scheduling, performance superiority, or R8-J/Vulkan authority.
 
 ## Current gap and proposed entrypoint

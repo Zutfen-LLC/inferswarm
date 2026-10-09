@@ -18,6 +18,7 @@ roadmap paragraph cannot change normative doctrine; that requires an ADR.
 | If you want to | Read |
 |---|---|
 | understand what the project is | [README.md](../README.md) |
+| see which claims are proven, fixture-only, research-internal or unproven | [Capability evidence matrix](capability-evidence-matrix.md) |
 | understand the architecture | [ARCHITECTURE.md](../ARCHITECTURE.md), then the [Fabric Doctrine](architecture/fabric-doctrine.md) |
 | know why something was decided | [ADRs](adr/README.md) |
 | know what happens next | [ROADMAP.md](../ROADMAP.md) |

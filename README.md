@@ -2,79 +2,135 @@
 
 **by Zutfen LLC**
 
-> **Make otherwise impossible large-model inference possible with the hardware you already own.**
-> InferSwarm coordinates heterogeneous compute, memory, storage, and connectivity
-> into one logical inference platform.
+> **Research goal: correct inference on heterogeneous, commodity hardware, to
+> extend which models and workloads an operator's existing resources can run.**
+> Performance is a second, operator-relative question. This is a goal under
+> test, not a demonstrated general capability.
 
 **Many machines. One model.**
 
-*Turn the hardware you already own into distributed inference capacity.*
+*What is demonstrated, and what is not, is bound to evidence in the
+[capability evidence matrix](docs/capability-evidence-matrix.md).*
 
 ```text
 Status: Research / Proof of Concept
 ```
 
-InferSwarm is an experimental Apache-2.0 project intended to let heterogeneous
-resources cooperate on inference without requiring every device or machine to
-look like the same kind of worker.
+InferSwarm is an experimental Apache-2.0 project that asks whether resources
+which do not look alike (different vendors, generations, memory sizes, links
+and machines) can cooperate on one inference request, and whether that extends
+what the hardware an operator already owns can run correctly. It does not
+require every device to look like the same kind of worker, and it does not
+assume that every available resource should take part in every plan.
 
-There is no released production InferSwarm runtime today. The repository is the
-canonical home for architecture decisions, the normative Fabric Doctrine,
-benchmark/evidence records, and the current evidence-gated roadmap. Runtime
-experiments continue in the
-[Zutfen FreeToken fork](#current-implementation-vehicle).
+There is no released production InferSwarm runtime and no general heterogeneous
+planner or runtime today. The repository is the canonical home for
+architecture decisions, the normative Fabric Doctrine, benchmark/evidence
+records, and the current evidence-gated roadmap. Research execution has mostly
+run through the
+[Zutfen FreeToken fork](#current-implementation-vehicles) as research-internal
+harnesses, plus one deliberately narrow in-repo
+[operator path](#current-implementation-vehicles).
 
-## Mission: expand what is possible, not just what is fast
+## Mission: extend what can run correctly
 
-**InferSwarm exists to make correct large-model inference possible when no
-individual available device or machine has the resources to run the requested
-model and workload alone.** The first research question is whether operator-owned,
-inexpensive and mismatched resources can collectively make a previously infeasible
-request feasible, not whether the resulting system beats a high-end GPU benchmark.
+**Primary research goal: capability.** When no individual device or machine an
+operator has can run a requested model and workload correctly by itself, can a
+plan across their mismatched, inexpensive resources still run it? Expanding the
+set of models and workloads that are feasible on existing hardware is the first
+thing InferSwarm tries to demonstrate. Cheaper or faster execution of work that
+a single resource already handles is not the primary goal.
 
-The fabric is intended to account for, plan across, and use resources according
-to their actual capabilities:
+**Secondary, operator-relative dimension: performance.** Throughput, latency,
+energy and cost decide which *feasible* plan to prefer and what a capability
+costs. They do not decide whether a correct plan is feasible unless the operator
+sets an explicit service requirement. A slow, correct plan can be a valid
+capability result and still be unsuitable for a given service level, and neither
+statement is a verdict on the hardware or on heterogeneous inference in general.
 
-- **Compute:** NVIDIA, AMD and Intel GPUs, CPUs, and other viable accelerators,
-  including devices of different generations and speeds.
-- **Memory:** separate GPU VRAM/HBM and system-RAM domains, with explicit model,
-  KV/recurrent, staging and cache roles.
-- **Storage/backing:** NVMe and SSD capacity for verified model artifacts,
-  loading, reuse and other supported backing/cache roles; storage bytes are
-  **not** counted as GPU memory or assumed to execute GPU kernels.
-- **Connectivity:** PCIe and ordinary Ethernet between dissimilar devices
-  and machines, with transfer cost measured rather than assumed away.
+### The planning rule is ordered
 
-**Research decisions follow this order:**
+The [Fabric Doctrine](docs/architecture/fabric-doctrine.md) (section 1, and
+section 4 for the feasible-plan set and ranking) and
+[ADR 0008](docs/adr/0008-canonical-fabric-doctrine.md) fix the order applied to
+a requested model/workload and the resources an operator contributes. This
+section restates it; it does not change it.
 
-1. **Correctness and integrity:** a single model request must actually complete
-   correctly, with trustworthy state ownership, placement, computation and
-   transfer attribution. Aggregating unrelated inference servers is not the
-   same as executing one otherwise-infeasible model.
-2. **Expanded feasibility and capacity:** demonstrate a model, context or legal
-   execution placement that the comparison resource could not support by
-   itself, or prove that an additional resource contributes useful otherwise
-   stranded resident state or computation. Separate technical feasibility
-   from operator-specific service limits.
-3. **Performance, energy and economics:** measure the cost of that capability,
-   then choose among feasible plans under evidence and operator policy.
-   Throughput, latency and efficiency matter, but do not retroactively
-   invalidate a correct **capacity-positive, throughput-negative** proof.
+1. **Correct and technically feasible.** Only plans that satisfy the Model
+   Execution Strategy's legal boundaries, backend and representation
+   compatibility, state coverage, memory fit with headroom, execution and
+   communication paths, resource availability and integrity trust are
+   candidates. Expected poor performance alone does not remove a plan.
+2. **Hard operator constraints.** Eligibility, reservations, limits and explicit
+   minimum service requirements remove plans; technical feasibility and policy
+   feasibility stay distinct.
+3. **Ranking.** Among the plans that remain, prefer the one expected to deliver
+   the greatest useful service under current evidence: TTFT, decode rate,
+   throughput, communication cost, stability, energy or budget as the operator
+   weights them.
 
-A slow distributed implementation can therefore be a successful *capability
-proof* and still be unsuitable for a particular latency, throughput, budget or
-production requirement. An optimization screen is not a universal verdict on
-the hardware, model architecture or feasibility of heterogeneous inference.
-Nor does combining resources imply one coherent, interchangeable address space.
+Legal distribution does not imply required distribution. A healthy compatible
+resource may stay unused when adding it would add no value, and maximizing
+device count or utilization is not the objective.
 
-**FreeToken is the initial experimental runtime and integration vehicle, not
-the InferSwarm product boundary.** llama.cpp/Vulkan and other backend-specific
-proving routes can establish complementary physical facts. The generic fabric
-must remain model- and vendor-independent: model execution strategies define
-legal work/state boundaries; generic planning assigns them to available
-Compute Units, Memory Resources, backing Sources and Links under measured
-constraints. The long-term goal is to make *otherwise impossible* large-model
-workloads possible using the heterogeneous hardware an operator already has.
+### Two capacity claims, kept apart
+
+- **GPU-residency expansion.** Adding a resource lets more of a model's
+  required state sit in accelerator memory than the best single-resource
+  comparison can hold. That comparison may still complete, slowly, through host
+  RAM, so this is a capacity gain rather than necessarily a feasibility gain,
+  and it never implies a speedup.
+- **Whole-model feasibility.** The model/workload cannot be run correctly at
+  all under a declared single-resource envelope (one device or one host, with
+  runtime, representation, context length and headroom stated in advance), but
+  runs correctly when additional resources are added.
+
+Accepted evidence supports the first claim on specific tested substrates, and
+one homogeneous-NVIDIA precedent for the second. Whole-model feasibility with
+heterogeneous resources is **not yet demonstrated**. The
+[evidence matrix](docs/capability-evidence-matrix.md) records which result
+supports which claim.
+
+### What each kind of resource contributes
+
+- **Compute:** GPUs and CPUs of different vendors, generations and speeds. They
+  are not interchangeable, and each participates only where a plan finds it
+  compatible and useful. Evidence differs by vendor today: NVIDIA has physical
+  results on CUDA and Vulkan, AMD has bounded Vulkan results, and Intel GPUs
+  have only been enumerated. No accepted result qualifies mixed-vendor
+  numerical equivalence or serves a mixed-vendor model through the operator
+  path; the one accepted mixed AMD plus NVIDIA Vulkan layer split (Issue #35)
+  is a single-host link-economics characterization.
+- **Memory:** GPU VRAM/HBM and system RAM are separate domains with distinct
+  roles (model state, KV/recurrent state, staging, cache). The two dies of a
+  dual-GPU card are two memory resources, not one pooled address space.
+- **Storage:** SSD and other storage hold verified artifacts as backing and as a
+  source or cache. Stored bytes are never counted as GPU memory and do not
+  execute kernels. Roles for NVMe, CXL or other storage in active plans, beyond
+  verified artifact backing, are future questions under the Doctrine.
+- **Links:** PCIe and ordinary Ethernet carry boundary state and artifacts at a
+  measured cost. A narrow link can be capacity-positive yet throughput-negative
+  for one placement (accepted Issue #35 and the Phase1R D3-D7 results); that is a role-specific
+  finding, not a verdict on the link or the GPU.
+
+### What the evidence shows
+
+The [capability evidence matrix](docs/capability-evidence-matrix.md) binds every
+claim to its code, its accepted record and the scope of that record, in four
+classes:
+
+| Class | Where things stand |
+|---|---|
+| `IMPLEMENTED_AND_PHYSICALLY_PROVEN` | One path: the fixed-topology llama.cpp CUDA/RPC [operator path](#current-implementation-vehicles), accepted for one tested two-host NVIDIA topology. |
+| `CPU_OR_FIXTURE_PROVEN` | Artifact acquisition, peer reuse and locality ranking (#99, #101, #103), and CPU/loopback launcher and observer checks. |
+| `RESEARCH_INTERNAL` | Accepted physical results obtained through research harnesses whose interfaces are explicitly not public: the FreeToken N0 and R1-R5B work, the external Coordinator, R6/V5 Gemma, and the in-repo Vulkan, V340L and link characterizations. |
+| `ASPIRATIONAL_OR_UNPROVEN` | Whole-model feasibility with heterogeneous resources, a general planner or runtime, mixed-vendor serving, Intel execution, pooled or cross-die memory, and general performance superiority. |
+
+**FreeToken is the original research and integration vehicle, not the InferSwarm
+product boundary.** The generic fabric must stay model- and vendor-independent:
+model execution strategies define legal work and state boundaries, and generic
+planning assigns them to available Compute Units, Memory Resources, backing
+Sources and Links under measured constraints.
 
 ## Canonical docs
 
@@ -96,6 +152,11 @@ until real implementations prove the seam.
 
 ## What the research has established
 
+The table lists only capabilities with a recorded maintainer acceptance, each
+bounded to its stated scope. The
+[capability evidence matrix](docs/capability-evidence-matrix.md) adds the
+research-internal, fixture-only and unproven context around them.
+
 <!-- project-status:capabilities:start -->
 | Capability | Evidence scope | Demonstrated result |
 |---|---|---|
@@ -107,12 +168,16 @@ until real implementations prove the seam.
 | Peer reuse and replacement deltas | CPU fixture | Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da). |
 | Locality-aware transition planning | CPU fixture | Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6). |
 | Dense Gemma numerical qualification | Physical | The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76). |
-| Bounded two-host CUDA/RPC inference | Physical | One ordinary Qwen3.8-Flash-Next-UD-IQ1_S text-generation request executed materially on two homogeneous NVIDIA/CUDA hosts using fixed/manual placement and verified participant-local backing; applies only to the tested inferswarm01 RTX 3060 + inferswarm04 RTX 3090 topology and accepted runtime/artifact lineage. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). |
+| Bounded two-host CUDA/RPC inference | Physical | One ordinary Qwen3.8-Flash-Next-UD-IQ1_S text-generation request executed materially on two homogeneous NVIDIA/CUDA hosts using fixed/manual placement and verified participant-local backing; applies only to the tested inferswarm01 RTX 3060 + inferswarm04 RTX 3090 topology and accepted runtime/artifact lineage. The recorded single-host comparison also completed and was faster on the first requests (4.411 versus 3.925 tok/s), so no capacity or speed advantage is established. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). |
+| Ordinary fixed-topology CUDA/RPC operator path | Physical | One ordinary `python -m inferswarm.operator run` invocation executed an operator-supplied fixed llama.cpp CUDA/RPC plan with exactly two participants (one client, one remote), one fixed three-range layer placement, and verified participant-local backing; three bounded requests completed on the tested inferswarm01 RTX 3060 plus inferswarm04 RTX 3090 topology with the exact Qwen3.8-Flash-Next-UD-IQ1_S release and accepted llama.cpp lineage. Remote request compute is attributed by request-bracketed CUDA backend graph-log deltas plus pinned source semantics; remote sampled SM stayed zero and is not positive utilization. This is not a planner, a capacity or speed result, or a numerical-equivalence, mixed-vendor, dynamic-scheduling, production, or Vulkan claim. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/438c09ff1f3fb0e161f0bbf6d8389554ab8a1515/docs/implementation/ordinary-operator-path-268/product-report.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776). |
 
 - Research / proof of concept; no released production runtime.
 - Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.
 - Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.
-- Issue #255 is accepted as MVP_DISTRIBUTED_INFERENCE_PASS only for the bounded tested homogeneous NVIDIA/CUDA two-host topology, exact Qwen3.8-Flash-Next-UD-IQ1_S and llama.cpp lineage, fixed/manual placement, verified participant-local backing, and ordinary text generation/repeatability (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). Issue #268 is the active ordinary operator-path integration frontier; it is not yet accepted and living status grants no execution permission. No numerical-equivalence, mixed-vendor, production-readiness, dynamic-scheduling, performance-superiority, or R8-J/Vulkan authority is implied.
+- Issues #255 and #268 are accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991) and R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776) only for the bounded tested homogeneous NVIDIA/CUDA two-host topology, exact Qwen3.8-Flash-Next-UD-IQ1_S and llama.cpp lineage, fixed placement, verified participant-local backing, and ordinary text generation. The operator path is a fixed-topology path for exactly two participants and one three-range layer placement, not a general heterogeneous planner or runtime. No numerical-equivalence, capacity or speed advantage over the recorded single-host comparison, mixed-vendor, production-readiness, dynamic-scheduling, or R8-J/Vulkan authority is implied.
+- Whole-model feasibility expansion with heterogeneous resources is not yet demonstrated. Accepted capacity-positive evidence is GPU-residency expansion where the single-resource comparison still completed (R2 and R5A against a matched single-GPU offload or source-backed control; Issue #35 on a 14B Q4_K_M model, where the over-capacity single-device control completed at about 0.2 tok/s), plus one homogeneous NVIDIA Gemma chain whose single 12 GiB GPU-resident envelope was infeasible (R6 census, qualified for its frozen subject by V5). These are separate claims and none implies a speedup.
+- Each V340L die is a distinct HBM resource of about 8 GiB. Accepted Issue #243 evidence covers independent per-die execution on one tested host, not one coherent 16 GiB pool, peer or cross-die execution, numerical qualification, or universal cooling; no accepted same-request dual-die result exists.
+- Storage is verified artifact backing and a cache or Source, never GPU memory and never a kernel-executing resource; accepted physical evidence uses local SSD backing, and any NVMe, CXL, or other storage role beyond verified artifact backing remains a future question under the Fabric Doctrine.
 - Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.
 - Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier.
 <!-- project-status:capabilities:end -->
@@ -121,21 +186,38 @@ Earlier work established selective loading, accelerator residency without an
 unexplained persistent host mirror, and local/multi-Node execution on Qwen.
 Canonical Phase 1 retained a scoped `NO-GO` performance verdict; subsequent
 Phase1R experiments established topology-dependent performance and capacity
-tradeoffs. See [ROADMAP.md](ROADMAP.md) and the
+tradeoffs (a narrow link can add capacity while costing throughput). See
+[ROADMAP.md](ROADMAP.md) and the
 [historical Phase1R record](docs/implementation/phase1r-architecture-search-handoff.md)
 for the exact experiments and immutable results.
 
 ## Current research direction
 
+The active gates below serve a capability question rather than being the
+question itself: **a model or workload that is demonstrably infeasible under a
+declared single-resource envelope, and correctly executable once additional
+heterogeneous resources are added**, reported separately from GPU-residency
+expansion and from performance. This direction authorizes nothing and creates no
+new experiment; Issues [#279](https://github.com/Zutfen-LLC/inferswarm/issues/279)
+and [#281](https://github.com/Zutfen-LLC/inferswarm/issues/281) are the existing
+gates where it would be scoped, each with its own approval.
+
 <!-- project-status:frontier:start -->
-**[Issue #268 — R8-K ordinary operator-path integration (three physical requests observed; not accepted)](https://github.com/Zutfen-LLC/inferswarm/issues/268)**
+**[Issue #280 — AMD-only Vulkan same-request pooling (candidate-B-only result STOP; authorization spent)](https://github.com/Zutfen-LLC/inferswarm/issues/280)**
 
-Issue #255 is accepted for its bounded homogeneous NVIDIA/CUDA two-host MVP: inferswarm01 RTX 3060 plus inferswarm04 RTX 3090, exact accepted Qwen3.8-Flash-Next-UD-IQ1_S three-part release and llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 runtime lineage, fixed/manual whole-layer placement, verified participant-local backing, and ordinary text generation/repeatability. Issue #268 advances the frontier to integrating that accepted predecessor into a reproducible ordinary operator path. At measured product head 478eb5efc93476dc2be990ac738c7ddd40e11eab, three ordinary product-path physical requests were observed on that bounded topology with fixed CPU/local CUDA/remote RPC placement, verified participant-local backing and owned cleanup; physical-stage spec PASS and quality APPROVED are review inputs, not #268 maintainer acceptance. This does not assert #268 acceptance, numerical equivalence, mixed-vendor readiness, production readiness, dynamic scheduling, performance superiority, or R8-J/Vulkan authority. The separately accepted #264 bounded pilot remains limited to its path-transition scope: four fresh-process units observed SUBGROUP/subgroup/32x1x1 to LARGE/hybrid/128x1x1 at output.weight, with both arms screening-variable; numerical root cause and H2/H3/H5 theorem closure remain open. Acceptance authority: https://github.com/Zutfen-LLC/inferswarm/issues/264#issuecomment-5969219338.
+Issue #268 is accepted as R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS on exact reviewed head 438c09ff1f3fb0e161f0bbf6d8389554ab8a1515, merged as 4c6df96cd03e50fbb990256507eb859769536aad (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776), and Issue #255 remains accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). Both are bounded to the homogeneous NVIDIA/CUDA two-host topology inferswarm01 RTX 3060 plus inferswarm04 RTX 3090, the exact Qwen3.8-Flash-Next-UD-IQ1_S release and llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 lineage, fixed placement, and verified participant-local backing; they establish no capacity or speed advantage over the recorded single-host comparison. The Issue #188 roadmap priority of 2026-10-06 is AMD-only Vulkan same-request pooling: Issue #280 first, Issue #281 queued behind an accepted #280 result and an explicit CONTINUE decision, and Issue #279 (CUDA capacity/value proposal) open at lower priority as planning only. Issue #280 asks whether the two dies of one V340L can hold useful parts of one model and both execute one request through Vulkan. Its single-use candidate-B-only physical experiment terminated STOP: the cold request proved the same-request two-die mechanism, the warm request failed attribution admission, and the cold synchronized-copy share exceeded its frozen 20% screen. The result is bounded to one V340L, one small model that fits a single die, and one frozen placement; it is not a verdict on dual-die Vulkan execution in general.
 
-- **Issue #255 bounded CUDA/RPC MVP (accepted predecessor) observation:** [`MVP_DISTRIBUTED_INFERENCE_PASS`](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116).
-- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991).
-- **Recorded execution authorization:** blocked — Three ordinary Issue #268 physical product-path requests were observed at measured head 478eb5efc93476dc2be990ac738c7ddd40e11eab, with physical-stage spec PASS and quality APPROVED; ordinary CI run 37169789383 succeeded on that measured head, not necessarily on this documentation head. Issue #268 is not accepted; Final CPU Validation requires maintainer GO on the exact final head and remains REQUIRED/DEFERRED. Living status is informational and grants no execution permission. No fourth or further physical request is authorized. This status grants no further execution authority.. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/268).
+- **Issue #280 candidate-B-only physical result observation:** [`STOP`](https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073758406).
+- **Maintainer acceptance:** pending maintainer acceptance.
+- **Recorded execution authorization:** blocked — No unspent physical authorization exists for Issue #280 or any other gate. The single-use candidate-B-only authorization (https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073673930) was consumed by exactly one launch and two requests and is spent; the earlier 2-launch/4-request authorization (comment 6060425902) and the eight-launch/sixteen-request campaign authority were spent before it. Living status is informational and grants no further execution authority: an observed result, a merge, or green CI never authorizes a rerun, retry, relaunch, R1 repeat, or successor, each of which requires a new explicit maintainer decision. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/280).
 
+- Issue #280 candidate-B-only result (comment 6073758406) executed authorization 6073673930 on accepted main c2f0396cbff20ac0c5c7ddda3412ffad43a6db26 with exactly one launch and two requests, B-cold then B-warm, a 10.479 s physical phase, and no R1 repeat, retry, replacement, or extra request. B-cold established the same-request two-die mechanism on the frozen placement (blocks 0–18 on die A; blocks 19–35 plus the tied output role on die B): die A weights 877,856,768 B (45.63%), KV 79,691,776 B, 445 completed commands; die B weights 1,046,089,728 B (54.37%), KV 71,303,168 B, 393 completed commands; forty graphs admitted; logical boundaries of 573,440 B and two host-staging legs totaling 1,146,880 B, which are logical and staging bytes rather than measured PCIe wire traffic. B-warm failed attribution admission (timeline completion identity does not match recorded event/value) and is not an admissible hardware result. Both responses passed the deterministic task rubric. B-cold synchronized copy time was 23.05% of request wall against the frozen 20% screen. Terminal STOP: the mechanism is proven for the cold request only, warm attribution failed, and no successor work is authorized.
+- Issue #280 remains open and no maintainer disposition of the candidate-B-only STOP is recorded, so acceptance is pending and nothing is inferred from the result, the merged PR #296 engineering, or green CI. The result is bounded: one V340L on inferswarm05, Qwen2.5-3B-Instruct-Q4_K_M (which fits a single die, so this is a mechanism result and not a capacity result), the pinned llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 Vulkan build with the PR #286 successor overlay, and one frozen placement. Custody is append-only: candidate-B-only evidence is retained at controller /home/zutfen/is280b-6073673930-evidence/ and host inferswarm05:/home/hermes/is280b-6073673930/ (TERMINAL.json, MANIFEST.sha256) and is not imported into this repository; the earlier r3 evidence at /home/zutfen/is280r3-evidence/ and inferswarm05:~/is280r3-physical/ is unchanged.
+- Issue #289 and the merged PR #290 launcher and PR #296 kernel-verified serving-process identity mode are CPU and loopback engineering, not physical evidence; PR #296 does not change the pinned llama.cpp executable. The accepted PR #286 successor source identity and the frozen model, prompts, observer, thresholds, and STOP limits are unchanged.
+- Issue #281 (V340L, RX 5600 XT and healthy RX580 Vulkan pooling) is queued behind an accepted #280 result and an explicit CONTINUE decision; neither exists, because the latest #280 result is STOP with acceptance pending. #281 has no recorded plan, plan approval, budget, or execution authorization, its first deliverable would be a concise plan, and no hardware relocation or purchase is assumed. One V340L result cannot establish multi-card scaling or justify a purchase.
+- Issue #188 is roadmap authority and not an execution ticket. Its priority order is: #280, then #281 when queued, then #279 (CUDA capacity/value proposal, open and planning only). Mixed NVIDIA/AMD work is deferred, #239/R8-J remains blocked with its frozen contract and sealed holdout unchanged, and #244 is closed not-planned. No CUDA implementation or physical work is assigned.
+- Research direction, not an authorization: the open capability question is a model or workload that is demonstrably infeasible under a declared single-resource envelope and is correctly executable when additional heterogeneous resources are added. It is a separate claim from GPU-residency expansion, where the single-resource comparison can still complete, and from performance. Issues #279 and #281 are the existing gates where this question would be scoped; this status creates no new prerequisite issue, experiment, or authority.
+- The separately accepted #264 bounded pilot remains limited to its path-transition scope: four fresh-process units observed SUBGROUP/subgroup/32x1x1 to LARGE/hybrid/128x1x1 at output.weight, with both arms screening-variable; numerical root cause and H2/H3/H5 theorem closure remain open. Acceptance authority: https://github.com/Zutfen-LLC/inferswarm/issues/264#issuecomment-5969219338.
 - The #250 predecessor remains accepted as the ARM_A_STOPS_LADDER localized boundary only; observation https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750 and acceptance https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070 remain preserved. This was not established as root cause.
 - Issue #264's sole live minimal experimental selector is subgroup32→large128 hybrid for the output.weight MMV q4_K*f32 route; dimensions/types and frozen comparator identity are scoped to that candidate only. The cooperative-matrix candidate is dead; do not revive it.
 - Four fresh-process units at the frozen execution head observed the actual path transition at all 10 output events per unit. BASE and candidate both differ across their two full-row digests and are screening-variable; matching candidate response tokens do not establish numerical stability or causality.
@@ -143,27 +225,27 @@ Issue #255 is accepted for its bounded homogeneous NVIDIA/CUDA two-host MVP: inf
 - Issue #266 is COMPLETED (closed completed), and PR #256 is MERGED to main as 442e2a02ce89e7fb42bceff1f7a47c8789c17733 (https://github.com/Zutfen-LLC/inferswarm/pull/256); the aggregate #254/#258/#260/#262/#264 stack is historical R8-I3C authority, not a pending review frontier. The bounded #264 result is accepted, and PR #265 merged into the aggregate producer branch as b3b28825d860b01b40f7b5697d5a50266ecaeb39 after exact-head review and Final CPU Validation on 28120bb57bfa9b8997d3d616c24e59a70f96a9af (run 37122285620). Those historical receipts are not validation receipts for the current #255 head. A source/CI/subagent PASS or additive report head grants no new physical authority. No automerge, R8-J, dead-control, or broad-matrix work is authorized.
 - The completed #258 prospective theorem (merged PR #259) keeps historical A3 terminal-capability separate from hypothesis coverage: closure remains impossible, required_arms is empty, and A5 remains observationally capable but nonterminal. #260/#262/#264 use distinct instrumented source identities; their path observations do not reopen historical theorem closure.
 - Issue #241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED; #244 and #239 remain blocked on their Vulkan/comparator path. Issue #255's accepted capability is limited to its bounded tested homogeneous NVIDIA/CUDA two-host MVP; it establishes no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority. The #255 observation asserts the MVP_DISTRIBUTED_INFERENCE_PASS terminal only within that accepted scope.
-- Issue #280 remains the active AMD-only Vulkan same-request gate. The historical eight-launch/sixteen-request campaign terminated STOP and its authority is spent. Issue #284 was completed via merged PR #285; accepted main is 832a9f4adcba2bebfa66f0ed5f1e004cba7fb16d. The separately authorized corrected two-launch/four-request verification also terminated STOP at R1-cold after exactly one launch and one request: semantic check PASS, observer admission FAIL; R1-warm, R2-cold and R2-warm were not_attempted. The real capture is retained unchanged, SHA256 b1fa13966a715d2009efdde4fa602a5a6f0b70d93c3884ceef0d14426bfcc796. This bounded repository correction addresses sequence-layout versus unique logical sequence identity, explicit CPU_Mapped host-buffer ownership, and Qwen2.5 tied logical-output execution evidence. Offline compatibility and adversarial tests are review inputs, not physical acceptance, performance evidence, or a new launch authorization. A synthetic-fixture PASS alone cannot authorize a campaign: the exact producer/model evidence shape requires offline compatibility proof, and the retained real R1 capture is the #280 authority. PR #286 review round 2 binds the historical legacy single-sequence inference to the exact retained capture bytes through a single-use compatibility-gate authority; projection equivalence alone never transfers it, and production runner admission requires the successor direct sequence metadata. Review round 3 closes the remaining polymorphic seams: the authority is consumed only through a non-virtual compatibility-module helper requiring exact type identity (never isinstance), an independent retained-byte SHA-256 recheck and single use, so subclasses, duck types, foreign-module instances and fabricated objects confer nothing; production admission never forwards the capability. The corrected 2-launch/4-request verification remains ON HOLD pending fresh maintainer exact-head review and explicit physical authorization. No automatic rerun, #281, #239/R8-J, holdout, mixed-vendor, purchase, hardware modification, or successor work is authorized.
 <!-- project-status:frontier:end -->
 
 ## Long-term objective
 
-InferSwarm aims to make resources such as:
+InferSwarm aims to account for, and plan across, resource classes such as:
 
-- NVIDIA GPUs;
-- AMD GPUs;
-- Intel GPUs;
-- CPUs;
-- GPU VRAM / HBM;
-- system RAM;
+- NVIDIA, AMD and Intel GPUs, and CPUs;
+- GPU VRAM / HBM and system RAM, as separate memory domains;
 - multiple GPUs with asymmetric local links;
 - multiple machines connected over ordinary Ethernet;
-- NVMe/SSD storage as verified artifact backing and cache/source resources;
-- future memory resources such as CXL where evidence supports them;
+- SSD and other storage as verified artifact backing and as sources or caches,
+  never as GPU memory;
+- future roles for NVMe, CXL or other memory and storage resources where
+  evidence supports them;
 
-available to one logical planning domain, with decisions driven by model
-semantics, measured capability, state requirements, workload demand, and
-operator policy rather than assumed hardware symmetry.
+as one logical planning domain, with decisions driven by model semantics,
+measured capability, state requirements, workload demand, and operator policy
+rather than assumed hardware symmetry. This lists what the fabric is intended to
+handle, not what works today: see the
+[evidence matrix](docs/capability-evidence-matrix.md). Not every resource takes
+part in every plan.
 
 ## Design principles
 
@@ -248,7 +330,7 @@ rule that inter-node execution must use contiguous blocks. The current doctrine
 allows the Model Execution Strategy and planner to select another legal
 intra/inter-node granularity when measurements justify it.
 
-## Current implementation vehicle
+## Current implementation vehicles
 
 <!-- project-status:runtime:start -->
 The [FreeToken fork](https://github.com/Zutfen-LLC/FreeToken) is the initial runtime vehicle.
@@ -258,12 +340,37 @@ Execution uses the exact producer named by the current gate authority,
 never an unreviewed branch tip. FreeToken is not the permanent product boundary.
 <!-- project-status:runtime:end -->
 
-See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
+FreeToken is the original research and integration vehicle. Its N0 and R1-R5B
+work, the external Coordinator and the dense Gemma chain executed on real
+hardware, but through research-internal structures that the code itself labels
+as not public planner, scheduling, strategy or wire APIs. See
+[`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
+
+InferSwarm now also contains one deliberately narrow in-repo **operator path**
+(`inferswarm/operator/`):
+
+```sh
+python -m inferswarm.operator run --config examples/ordinary-two-host.json
+```
+
+One invocation performs one non-streaming generation for an operator-written,
+fixed plan. It accepts exactly two participants (one local client and one remote
+RPC participant), the `llama.cpp` strategy only, and one three-range layer
+placement of the tested 48-layer model: layers 0-40 on the client CPU, 41-44 on
+the client GPU, and 45-47 plus the output layer on the remote GPU, with MoE
+experts on the client CPU. It verifies the runtime binaries, model members and
+the remote's cache ranges before launching, starts the processes over SSH, and
+cleans up only what it created. It is accepted for one tested topology (see the
+table above) and is not a planner, not a general runtime, and not a path for
+other models, vendors, participant counts or placements. Its public interfaces
+are unfrozen.
 
 ## Repository layout
 
 ```text
 .github/             issue templates, pull request template, CI
+inferswarm/operator/ narrow fixed-topology operator path (python -m inferswarm.operator)
+examples/            operator configuration example for that path
 docs/                documentation map and reading rules
 docs/adr/            architecture decision records
 docs/architecture/   normative Fabric Doctrine and its supplements
@@ -274,6 +381,7 @@ docs/protocols/      semantic-boundary and transport design notes
 docs/qualification/  heterogeneous correctness-qualification lane (v1-v5)
 docs/integrations/   host-engine integration notes
 scripts/             CPU-only, deterministic, fail-closed evidence tooling
+tools/               measurement harnesses retained from accepted campaigns
 tests/               tests that guard the retained evidence
 ARCHITECTURE.md      derived architecture overview
 BENCHMARKING.md      benchmark/evidence contract
