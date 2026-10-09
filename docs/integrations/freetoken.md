@@ -16,7 +16,7 @@ canonical home of InferSwarm architecture and is not assumed to be the permanent
 exclusive host runtime.
 
 The repository also contains one narrow in-repo operator path
-(`inferswarm/operator/`, `python -m inferswarm.operator run`), accepted under
+(`inferswarm/operator/`, run as the `inferswarm.operator` module), accepted under
 Issue #268 for a fixed two-participant llama.cpp CUDA/RPC plan on one tested
 NVIDIA topology. It launches the pinned llama.cpp runtime directly and does not
 use FreeToken. FreeToken's N0 and R1-R5B work, the external Coordinator and the
