@@ -5890,6 +5890,27 @@
    "replacement": null,
    "test_count_at_audit": 12
   },
+  "test_issue289_launcher": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 124.0,
+   "baseline_test_count": 56,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws — the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed — a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch — no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
+   "lineage": "Issue #289 extraction of the session-local #280 r3 physical driver lifecycle (inferswarm05 driver.py sha256 2cc001b5...)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue289_launcher.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive two distinct loopback stub server subprocesses on the same port through the real gate engine (issue280_runner.run_campaign) and the real prelaunch compatibility gate; RED run reproduced the retained r3 terminal (stale-arm routing, 20/24 failing) before the GREEN fix (24/24 passing).",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 56
+  },
   "test_issue280_retention_fix": {
    "baseline_group": "r8i-qwen-qualification",
    "baseline_serial_seconds": 0.0,
