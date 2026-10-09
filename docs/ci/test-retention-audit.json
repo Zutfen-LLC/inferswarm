@@ -4340,6 +4340,30 @@
    "replacement": null,
    "test_count_at_audit": 27
   },
+  "test_issue299_bindings": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 40,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Independent owned CPU/CUDA physical-binding and complete tensor/buffer/state/copy observation reconciliation; absent observer and synthetic evidence cannot authorize live execution.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/bindings.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective strict observer contract and offline synthetic plumbing, not physical qualification or performance evidence.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 40
+  },
   "test_issue299_source": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,
