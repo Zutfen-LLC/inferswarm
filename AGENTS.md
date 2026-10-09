@@ -11,6 +11,62 @@ recorded authority, regenerate managed sections, and update affected explanatory
 prose. Explain any no-impact determination in the PR description. Never treat
 an observed PASS, generated status text, or green CI as execution authorization.
 
+## Experiment-first review standard (default)
+
+InferSwarm is **experimental hardware research in a controlled homelab**, not a
+production service or a hostile multi-tenant deployment. Optimize reviews for
+the actual near-term decision: can the named hardware run a trustworthy,
+bounded experiment and produce interpretable measurements? Do not seek
+maximum numbers of findings or treat generic production hardening as progress.
+
+A finding may block a PR or hardware experiment **only if all three apply**:
+
+1. **Realistic here:** identify a concrete failure path under the *actual*
+   host, backend, network, hardware, workload, and operating assumptions.
+   Do not import hypothetical malicious actors or unsupported configurations.
+2. **Material here:** the failure could invalidate the current experiment's
+   result or attribution, defeat its frozen STOP/budget boundaries, harm
+   hardware, or cause uncontrolled/destructive execution.
+3. **Not already contained:** existing ownership, identity, observer,
+   correctness, health, timeout, budget, or fail-closed checks do not prevent
+   the failure or safely stop it before an invalid result is accepted.
+
+The reviewer bears the burden of explaining **what happens in this experiment,
+why it matters, and which existing safeguard fails**. Support NO-GO with a
+reproducible test/trace or a clearly demonstrated code-level path under the
+real configuration. "Cannot prove this is impossible in all environments" is
+not evidence of a blocker. Do not label a theoretical edge case P1 merely
+because it could matter in a different deployment.
+
+**Default to GO with clearly documented limitations** when the experiment
+remains safe and interpretable. Treat general security hardening, hostile
+local-process assumptions, rare portability scenarios, optional diagnostics,
+and future-production concerns as nonblocking unless their relevance is
+demonstrated. Revisit them if/when InferSwarm enters a separately approved
+production-hardening phase.
+
+For example, a stale baseline server actually answering a candidate request
+or missing same-request GPU attribution **is blocking**. A hypothetical
+adversarial same-port listener requiring a host configuration not present in
+the controlled loopback experiment **is not blocking** without evidence that
+it can affect this run. Make the distinction explicit.
+
+Keep review and correction **proportional**: one focused exact-head review,
+the smallest necessary code change, and the existing required validation
+gates. Do not invent prerequisite issues, duplicate qualification campaigns,
+additional LLM review lanes, broader frameworks, new methodology, or repeated
+authorization of unchanged facts. After a bounded experiment, preserve a
+genuine STOP/failed result rather than trying again until PASS.
+
+This standard **does not weaken** already frozen hardware safety, model/source
+identity, observer evidence, semantic acceptance, execution budgets, or
+approval boundaries. It governs which *new* findings deserve to block.
+Documentation-only changes that do not affect executable code, workflows,
+experiment authority, or validation semantics need ordinary applicable CI and
+a focused diff review; do not launch a full hosted CPU campaign merely to
+approve policy wording. For actual campaign/evidence changes, keep the
+exact-head ordering and gates in `docs/campaign-gate-ordering.md`.
+
 ## Authorized campaign autonomy
 
 Once the maintainer has explicitly authorized a bounded campaign with its
