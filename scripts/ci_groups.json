@@ -110,7 +110,8 @@
     "test_issue299_q8_plan",
     "test_issue299_admission",
     "test_issue299_source",
-    "test_issue299_bindings"
+    "test_issue299_bindings",
+    "test_issue299_runtime"
    ]
   },
   "r8-qwen-lineage": {
