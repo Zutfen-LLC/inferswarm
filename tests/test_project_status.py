@@ -220,6 +220,12 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertEqual(frontier['prerequisite']['acceptance'],
                          {'state': 'pending', 'reference': None})
         self.assertEqual(execution['state'], 'blocked')
+        self.assertTrue(execution['step'].startswith(
+            'Issue #280 has no unspent physical authorization;'))
+        self.assertIn('Issue #281 lacks a separately approved plan and physical execution authority',
+                      execution['step'])
+        self.assertIn('Issue #279 remains planning-only', execution['step'])
+        self.assertNotIn('or any other gate', execution['step'])
         for retained in ('6073673930', 'is spent', 'grants no further execution authority',
                          'requires a new explicit maintainer decision'):
             with self.subTest(step=retained):
@@ -255,6 +261,8 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertIn('6073758406', content)
                 self.assertIn('pending maintainer acceptance', content)
                 self.assertIn('authorization:** blocked', content)
+                self.assertIn('Issue #280 has no unspent physical authorization', content)
+                self.assertNotIn('or any other gate', content)
                 self.assertNotIn('authorization:** authorized', content)
         for name, content in surfaces.items():
             with self.subTest(stale_surface=name):
