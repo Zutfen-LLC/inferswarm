@@ -104,7 +104,8 @@
     "test_issue255_measure",
     "test_issue255_baseline",
     "test_issue268_operator_plan",
-    "test_issue268_operator_runtime"
+    "test_issue268_operator_runtime",
+    "test_issue299_metadata"
    ]
   },
   "r8-qwen-lineage": {
@@ -1650,6 +1651,9 @@
   ],
   "scripts/verify_issue95_v4_unseal.py": [
    "repo-integrity"
+  ],
+  "tests/fixtures/issue299/": [
+   "issue-99-103"
   ],
   "tests/test_evidence_manifest_lifecycle.py": [
    "repo-integrity"

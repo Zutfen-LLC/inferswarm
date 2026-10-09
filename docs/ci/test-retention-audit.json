@@ -4314,6 +4314,32 @@
    "replacement": null,
    "test_count_at_audit": 6
   },
+  "test_issue299_metadata": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 25,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Bounded metadata-only Q8 reproduction authenticates exact public headers and complete tensor descriptors without downloading weights; legacy source parsing remains compatible.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/public-header-manifest.json",
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/metadata.py",
+     "inferswarm/operator/source.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective metadata and public provenance contract; no physical execution or full-weight qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 25
+  },
   "test_issue268_operator_plan": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,

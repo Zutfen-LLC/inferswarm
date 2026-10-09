@@ -4,8 +4,11 @@ This file is self-contained so the controller can send it to a participant via
 `ssh python3 -c ...` without requiring an installed product package there.
 """
 from __future__ import annotations
+from dataclasses import dataclass
 import hashlib
+import io
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -47,56 +50,156 @@ def compile_fnv(binary):
 
 
 
+MAX_HEADER_BYTES = 16 << 20
+MAX_EXTENT_BYTES = (1 << 63) - 1
+
+
+@dataclass(frozen=True)
+class TensorRecord:
+    """A descriptor, not verified tensor contents. Member is bound by the caller."""
+    state_id: str
+    member: str
+    ggml_type: int
+    shape: tuple[int, ...]
+    relative_offset: int
+    absolute_offset: int
+    encoded_bytes: int
+
+
+def _encoded_bytes(shape, typ):
+    if typ not in TYPES: raise ValueError(f'unsupported GGUF tensor type: {typ}')
+    if not 1 <= len(shape) <= 4: raise ValueError('invalid GGUF tensor dimensions')
+    elements = 1
+    for dimension in shape:
+        if type(dimension) is not int or not 1 <= dimension <= MAX_EXTENT_BYTES // elements:
+            raise ValueError('invalid GGUF shape')
+        elements *= dimension
+    block, width = TYPES[typ]
+    if shape[0] % block: raise ValueError('block-incompatible GGUF shape')
+    size = elements // block * width
+    if not 1 <= size <= MAX_EXTENT_BYTES: raise ValueError('invalid GGUF encoded extent')
+    return size
+
+
+def _validate_extents(rows, object_bytes, start, alignment):
+    """Allow only actual alignment padding, never infer sizes from next offsets."""
+    if start > object_bytes: raise ValueError('out-of-bounds GGUF header')
+    ordered = sorted(rows, key=lambda r: r.relative_offset)
+    previous_end = start
+    for row in ordered:
+        if row.relative_offset % alignment: raise ValueError('unaligned GGUF offset')
+        if row.absolute_offset != start + row.relative_offset:
+            raise ValueError('GGUF absolute offset mismatch')
+        end = row.absolute_offset + row.encoded_bytes
+        if end > object_bytes: raise ValueError('out-of-bounds GGUF tensor')
+        if row.absolute_offset < previous_end: raise ValueError('overlapping GGUF tensor')
+        if row.absolute_offset != (previous_end + alignment - 1) // alignment * alignment:
+            raise ValueError('GGUF extent mismatch')
+        previous_end = end
+    if object_bytes not in (previous_end, (previous_end + alignment - 1) // alignment * alignment):
+        raise ValueError('GGUF extent mismatch')
+
+
+def _read_gguf_index(stream, *, object_bytes):
+    """Self-contained stream decoder shared by bounded headers and legacy files.
+
+    Read only metadata/index bytes, not even header alignment or tensor prefixes.
+    Tokenizer values are consumed but not retained. Counts, total reads, retained
+    strings/arrays and shape arithmetic have independent finite bounds.
+    """
+    consumed = 0
+    def read(n):
+        nonlocal consumed
+        if n < 0 or consumed + n > MAX_HEADER_BYTES: raise ValueError('oversized GGUF header')
+        data = stream.read(n)
+        consumed += len(data)
+        if len(data) != n: raise ValueError('truncated GGUF metadata')
+        return data
+    def scalar(fmt):
+        result = struct.unpack('<' + fmt, read(struct.calcsize('<' + fmt)))[0]
+        if isinstance(result, float) and not math.isfinite(result): raise ValueError('nonfinite GGUF metadata')
+        return result
+    def text(*, retain=True, maximum=MAX_HEADER_BYTES):
+        n = scalar('Q')
+        if n > maximum: raise ValueError('oversized GGUF string')
+        # Strings discarded from fixtures still undergo UTF-8 validation.
+        try: value = read(n).decode('utf-8')
+        except UnicodeDecodeError as exc: raise ValueError('invalid GGUF UTF-8') from exc
+        return value if retain else None
+    def value(typ, retain):
+        if typ == 8: return text(retain=retain, maximum=65536 if retain else MAX_HEADER_BYTES)
+        if typ == 9:
+            subtype, n = scalar('I'), scalar('Q')
+            if n > (4096 if retain else 1 << 20): raise ValueError('oversized GGUF array')
+            if subtype not in SCALAR and subtype != 8: raise ValueError('unsupported GGUF array subtype')
+            items = [] if retain else None
+            for _ in range(n):
+                item = text(retain=retain, maximum=65536 if retain else MAX_HEADER_BYTES) if subtype == 8 else scalar(SCALAR[subtype])
+                if retain: items.append(item)
+            return tuple(items) if retain else None
+        if typ not in SCALAR: raise ValueError('unsupported GGUF metadata type')
+        return scalar(SCALAR[typ])
+    if read(4) != b'GGUF' or scalar('I') != 3: raise ValueError('expected GGUF v3')
+    n_tensor, n_kv = scalar('Q'), scalar('Q')
+    if n_tensor > 100000 or n_kv > 10000: raise ValueError('oversized GGUF index')
+    metadata = {}; keys = set()
+    for _ in range(n_kv):
+        key, typ = text(maximum=4096), scalar('I')
+        if not key or '\x00' in key: raise ValueError('invalid GGUF metadata key')
+        if key in keys: raise ValueError('duplicate GGUF metadata')
+        keys.add(key)
+        retain = not key.startswith('tokenizer.')
+        item = value(typ, retain)
+        if retain: metadata[key] = item
+    alignment = metadata.get('general.alignment', 32)
+    if type(alignment) is not int or not 1 <= alignment <= 4096 or alignment & (alignment - 1):
+        raise ValueError('invalid GGUF alignment')
+    split = {'split.no', 'split.count', 'split.tensors.count'}
+    if keys & split:
+        if not split <= keys: raise ValueError('invalid GGUF split')
+        number, count, total = (metadata[k] for k in ('split.no', 'split.count', 'split.tensors.count'))
+        if any(type(v) is not int for v in (number, count, total)) or not 1 <= count <= 1024 or not 0 <= number < count or not n_tensor <= total <= 100000:
+            raise ValueError('invalid GGUF split')
+    entries = []; names = set()
+    for _ in range(n_tensor):
+        name, nd = text(maximum=4096), scalar('I')
+        if not name or '\x00' in name: raise ValueError('invalid GGUF tensor name')
+        if name in names: raise ValueError('duplicate GGUF tensor')
+        names.add(name)
+        if not 1 <= nd <= 4: raise ValueError('invalid GGUF tensor dimensions')
+        shape = tuple(scalar('Q') for _ in range(nd))
+        typ, offset = scalar('I'), scalar('Q')
+        length = _encoded_bytes(shape, typ)
+        entries.append((name, typ, shape, offset, length))
+    start = (consumed + alignment - 1) // alignment * alignment
+    rows = tuple(TensorRecord(name, '', typ, shape, offset, start + offset, length)
+                 for name, typ, shape, offset, length in entries)
+    _validate_extents(rows, object_bytes, start, alignment)
+    return tuple(sorted(metadata.items())), rows, consumed
+
+
+def parse_gguf_header(header: bytes, *, object_bytes: int, expected_header_sha256: str) -> tuple:
+    """Return (immutable metadata pairs, TensorRecord tuple) from exact header bytes.
+
+    Header SHA authentication is NOT full-object or tensor-range authentication.
+    No package imports are needed when this file is sent as `python3 -c` source.
+    """
+    if type(object_bytes) is not int or not 1 <= object_bytes <= MAX_EXTENT_BYTES:
+        raise ValueError('invalid object_bytes')
+    if not isinstance(expected_header_sha256, str) or not re.fullmatch('[0-9a-f]{64}', expected_header_sha256):
+        raise ValueError('invalid header SHA-256')
+    if type(header) is not bytes or len(header) > MAX_HEADER_BYTES: raise ValueError('oversized GGUF header')
+    if hashlib.sha256(header).hexdigest() != expected_header_sha256: raise ValueError('header SHA-256 mismatch')
+    metadata, rows, consumed = _read_gguf_index(io.BytesIO(header), object_bytes=object_bytes)
+    if consumed != len(header): raise ValueError('unexpected bytes after GGUF header')
+    return metadata, rows
+
+
 def gguf_tensors(path):
     """Return tensor -> exact (absolute offset, size), never read tensor data."""
-    with Path(path).open('rb') as f:
-        def read(n):
-            b=f.read(n)
-            if len(b)!=n: raise ValueError('truncated GGUF metadata')
-            return b
-        def scalar(fmt): return struct.unpack('<'+fmt,read(struct.calcsize('<'+fmt)))[0]
-        def text():
-            n=scalar('Q')
-            if n>1<<24: raise ValueError('oversized GGUF string')
-            return read(n).decode('utf-8')
-        def value(typ):
-            if typ==8: return text()
-            if typ==9:
-                subtype,n=scalar('I'),scalar('Q')
-                if n>1<<26: raise ValueError('oversized GGUF array')
-                if subtype in SCALAR: read(struct.calcsize('<'+SCALAR[subtype])*n)
-                elif subtype==8:
-                    for _ in range(n): text()
-                else: raise ValueError('unsupported GGUF array subtype')
-                return None
-            if typ not in SCALAR: raise ValueError('unsupported GGUF metadata type')
-            return scalar(SCALAR[typ])
-        if read(4)!=b'GGUF' or scalar('I')!=3: raise ValueError('expected GGUF v3')
-        n_tensor,n_kv=scalar('Q'),scalar('Q')
-        if max(n_tensor,n_kv)>1000000: raise ValueError('oversized GGUF index')
-        alignment=32
-        for _ in range(n_kv):
-            key,typ=text(),scalar('I'); val=value(typ)
-            if key=='general.alignment': alignment=val
-        if type(alignment)is not int or not 1<=alignment<=4096: raise ValueError('invalid GGUF alignment')
-        entries=[]
-        for _ in range(n_tensor):
-            name,nd=text(),scalar('I')
-            if not 1<=nd<=4: raise ValueError('invalid GGUF tensor dimensions')
-            elements=1
-            for _ in range(nd): elements*=scalar('Q')
-            typ,offset=scalar('I'),scalar('Q')
-            if typ not in TYPES: raise ValueError(f'unsupported GGUF tensor type: {typ}')
-            block,width=TYPES[typ]
-            if elements%block: raise ValueError('unaligned GGUF tensor')
-            entries.append((name,offset,elements//block*width))
-        start=(f.tell()+alignment-1)//alignment*alignment
-        limit=os.fstat(f.fileno()).st_size; result={}
-        for name,offset,length in entries:
-            absolute=start+offset
-            if name in result or length<1 or absolute+length>limit: raise ValueError('duplicate or out-of-bounds GGUF tensor')
-            result[name]=(absolute,length)
-        return result
+    with Path(path).open('rb') as stream:
+        _, rows, _ = _read_gguf_index(stream, object_bytes=os.fstat(stream.fileno()).st_size)
+    return {row.state_id: (row.absolute_offset, row.encoded_bytes) for row in rows}
 
 
 def sha(path, offset=0, length=None):
