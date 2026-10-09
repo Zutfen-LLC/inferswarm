@@ -276,6 +276,31 @@ cannot see, and the doctor does not inspect it; this joins the obfuscated-shell
 limitation in section 8 as a reason to keep caching out of authoritative
 validation until it is explicitly authorised.
 
+## 10. Correction round 4 (maintainer re-review of `cceb11a`)
+
+Re-review verdict: NO-GO on two fail-open policy defects (reviewed head
+`cceb11ab3fd4cde99b945258cb9b0a66653a8df4`, main
+`a8c690e1e7aca37769dcc39c1dc8f6d6bab00769`). Both reproduced before any change.
+RED controls are commit `c912527` (1244 failing subtests across 6 new tests, all
+assertion failures; the round-3 validator rejected none of the 67 new
+environment names at any scope or value). GREEN is commit `12fced0`.
+
+| Defect | Why the round-3 validator accepted it | Correction |
+| --- | --- | --- |
+| **B1** interpreter / dynamic-loader environment | outside the `PIP_*`/`UV_*` families the list was still a denylist of names: `LD_PRELOAD`/`LD_LIBRARY_PATH` but not `LD_AUDIT` (loads code into every process), `PYTHONPATH`-style names but not `PYTHONOPTIMIZE` (strips `assert`, silently weakening the suite) | reviewed **prefix families**, matched on the upper-cased name: `PIP_`, `UV_`, `PYTHON`, `_PYTHON`, `LD_`, `DYLD_`, `GLIBC_`, `MALLOC_`, `VIRTUALENV_`, `SETUPTOOLS_`, `DISTUTILS_`, `PYTEST_`, `COVERAGE_`, `OPENSSL_`, `BASH_FUNC_`; plus explicit shell (`SHELLOPTS`, `BASHOPTS`, `IFS`, `CDPATH`), locale/iconv loading (`GCONV_PATH`, `LOCPATH`, `NLSPATH`) and name-resolution (`HOSTALIASES`, `RES_OPTIONS`, `LOCALDOMAIN`) names alongside the existing proxy, CA-bundle, config-location and `PATH`/`HOME` names; any env **name** that is not a plain identifier (a `${{ }}` key, padding, `%%`) is rejected outright. Values are never consulted, so literal and expression values are rejected alike. The single reviewed exception is still `PIP_DISABLE_PIP_VERSION_CHECK` (set by `ci.yml`); names that merely *contain* a family (`MY_PYTHON_LABEL`) stay accepted because the rules are anchored prefixes |
+| **B2** job-level failure tolerance | `continue-on-error` was checked only on steps (where it removes the bootstrap/doctor role); a job-level `continue-on-error: true` or `${{ matrix.experimental }}` on an environment-bearing job reports a failed bootstrap, doctor or suite as success to `needs` and the CI gate | `environment_job_findings` rejects a job-level `continue-on-error` on every environment-bearing job unless it is a literal false; any expression is treated as possibly true. Non-environment jobs may still tolerate failure, and the planner's job-level `if:` selection is untouched |
+
+Preservation: the real workflows stay GREEN; injecting `LD_AUDIT`,
+`PYTHONOPTIMIZE` or `ld_audit` into them at workflow, job or step level is
+rejected; setting job-level `continue-on-error` on every real job flags exactly
+the 17 + 1 environment-bearing jobs and no others. A source-mutation pass (19
+mutants, each reverting one rule) is killed in full, including mutants of the
+earlier rounds' cache-path allowlist, step-level bootstrap/doctor structure,
+key-expression and closure-hash checks, `-c` closure following, fail-closed
+directives, `GITHUB_PATH` and `PIP_*` rules. One mutant initially survived (the
+round-3 non-mapping `env` rule, masked by the new name check), so that rule now
+has a direct test.
+
 ## Preserved, not changed
 
 `scripts/bootstrap_test_env.py`, `scripts/check_test_env.py`,
