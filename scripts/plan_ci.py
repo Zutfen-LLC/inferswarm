@@ -210,6 +210,8 @@ GROUP_TEST_MODULES = {
         "test_issue268_operator_runtime",
         "test_issue299_metadata",
         "test_issue299_profiles",
+        "test_issue299_q8_plan",
+        "test_issue299_admission",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).
@@ -422,6 +424,7 @@ PATH_GROUPS = {
     "docs/implementation/ordinary-operator-path-268/": ["issue-99-103"],
     "inferswarm/operator/": ["issue-99-103"],
     "tests/fixtures/issue299/": ["issue-99-103"],
+    "docs/implementation/profiled-q8-299/": ["issue-99-103"],
     "docs/ci/": ["repo-integrity"],
     "docs/project-status.json": ["repo-integrity"],
     "docs/status-maintenance.md": ["repo-integrity"],

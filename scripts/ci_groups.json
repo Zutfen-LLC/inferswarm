@@ -106,7 +106,9 @@
     "test_issue268_operator_plan",
     "test_issue268_operator_runtime",
     "test_issue299_metadata",
-    "test_issue299_profiles"
+    "test_issue299_profiles",
+    "test_issue299_q8_plan",
+    "test_issue299_admission"
    ]
   },
   "r8-qwen-lineage": {
@@ -265,6 +267,9 @@
   "docs/implementation/plan-driven-artifact-orchestration-101/": [
    "issue-99-103",
    "issue-117-133"
+  ],
+  "docs/implementation/profiled-q8-299/": [
+   "issue-99-103"
   ],
   "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/": [
    "repo-integrity",

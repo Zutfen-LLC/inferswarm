@@ -4314,6 +4314,57 @@
    "replacement": null,
    "test_count_at_audit": 6
   },
+  "test_issue299_q8_plan": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 27,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Complete Q8 tensor/range/state ownership, explicit native fixed selections, immutable plan identity and no fallback.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/qwen_q8.py",
+     "inferswarm/operator/plan.py",
+     "inferswarm/operator/strategy.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective fixed-plan/admission contract; synthetic admission does not qualify physical runtime or memory fit.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 27
+  },
+  "test_issue299_admission": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 16,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Opaque phase-aware memory admission preserves unknown bounds, exact shared aliases, reserves, freshness and measured capability applicability.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/plan.py",
+     "inferswarm/operator/profiles.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective fixed-plan/admission contract; synthetic admission does not qualify physical runtime or memory fit.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 16
+  },
   "test_issue299_profiles": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,
