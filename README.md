@@ -2,8 +2,9 @@
 
 **by Zutfen LLC**
 
-> InferSwarm is an open-source heterogeneous inference fabric for turning
-> disparate compute and memory resources into one logical inference platform.
+> **Make otherwise impossible large-model inference possible with the hardware you already own.**
+> InferSwarm coordinates heterogeneous compute, memory, storage, and connectivity
+> into one logical inference platform.
 
 **Many machines. One model.**
 
@@ -22,6 +23,58 @@ canonical home for architecture decisions, the normative Fabric Doctrine,
 benchmark/evidence records, and the current evidence-gated roadmap. Runtime
 experiments continue in the
 [Zutfen FreeToken fork](#current-implementation-vehicle).
+
+## Mission: expand what is possible, not just what is fast
+
+**InferSwarm exists to make correct large-model inference possible when no
+individual available device or machine has the resources to run the requested
+model and workload alone.** The first research question is whether operator-owned,
+inexpensive and mismatched resources can collectively make a previously infeasible
+request feasible, not whether the resulting system beats a high-end GPU benchmark.
+
+The fabric is intended to account for, plan across, and use resources according
+to their actual capabilities:
+
+- **Compute:** NVIDIA, AMD and Intel GPUs, CPUs, and other viable accelerators,
+  including devices of different generations and speeds.
+- **Memory:** separate GPU VRAM/HBM and system-RAM domains, with explicit model,
+  KV/recurrent, staging and cache roles.
+- **Storage/backing:** NVMe and SSD capacity for verified model artifacts,
+  loading, reuse and other supported backing/cache roles; storage bytes are
+  **not** counted as GPU memory or assumed to execute GPU kernels.
+- **Connectivity:** PCIe and ordinary Ethernet between dissimilar devices
+  and machines, with transfer cost measured rather than assumed away.
+
+**Research decisions follow this order:**
+
+1. **Correctness and integrity:** a single model request must actually complete
+   correctly, with trustworthy state ownership, placement, computation and
+   transfer attribution. Aggregating unrelated inference servers is not the
+   same as executing one otherwise-infeasible model.
+2. **Expanded feasibility and capacity:** demonstrate a model, context or legal
+   execution placement that the comparison resource could not support by
+   itself, or prove that an additional resource contributes useful otherwise
+   stranded resident state or computation. Separate technical feasibility
+   from operator-specific service limits.
+3. **Performance, energy and economics:** measure the cost of that capability,
+   then choose among feasible plans under evidence and operator policy.
+   Throughput, latency and efficiency matter, but do not retroactively
+   invalidate a correct **capacity-positive, throughput-negative** proof.
+
+A slow distributed implementation can therefore be a successful *capability
+proof* and still be unsuitable for a particular latency, throughput, budget or
+production requirement. An optimization screen is not a universal verdict on
+the hardware, model architecture or feasibility of heterogeneous inference.
+Nor does combining resources imply one coherent, interchangeable address space.
+
+**FreeToken is the initial experimental runtime and integration vehicle, not
+the InferSwarm product boundary.** llama.cpp/Vulkan and other backend-specific
+proving routes can establish complementary physical facts. The generic fabric
+must remain model- and vendor-independent: model execution strategies define
+legal work/state boundaries; generic planning assigns them to available
+Compute Units, Memory Resources, backing Sources and Links under measured
+constraints. The long-term goal is to make *otherwise impossible* large-model
+workloads possible using the heterogeneous hardware an operator already has.
 
 ## Canonical docs
 
@@ -105,8 +158,8 @@ InferSwarm aims to make resources such as:
 - system RAM;
 - multiple GPUs with asymmetric local links;
 - multiple machines connected over ordinary Ethernet;
-- future useful backing/memory resources such as NVMe or CXL where evidence
-  supports them;
+- NVMe/SSD storage as verified artifact backing and cache/source resources;
+- future memory resources such as CXL where evidence supports them;
 
 available to one logical planning domain, with decisions driven by model
 semantics, measured capability, state requirements, workload demand, and
