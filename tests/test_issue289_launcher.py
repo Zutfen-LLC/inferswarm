@@ -151,7 +151,7 @@ class LauncherHarness(unittest.TestCase):
                 "--stream", stream]
 
     def run_matrix(self, *, matrix=MATRIX, command_builder=None,
-                   startup_timeout_s=None):
+                   startup_timeout_s=None, identity_mode="echo"):
         return self.m.campaign_executor(
             matrix,
             command_builder=command_builder or self.command_builder,
@@ -163,6 +163,7 @@ class LauncherHarness(unittest.TestCase):
                 self.records.append(record),
             on_launch_record=self.launch_records.append,
             startup_timeout_s=startup_timeout_s or 20,
+            identity_mode=identity_mode,
         )
 
     def dispositions(self, summary):
@@ -961,7 +962,8 @@ class NegativeControlTests(LauncherHarness):
             "                if ident == self._identity:",
             "                if True:  # MUTATED: any identity is readiness"),
         "no_request_identity": (
-            "        if transport_ok and server_identity != self._identity:",
+            "        if (self.identity_mode != \"kernel\"\n"
+            "                and transport_ok and server_identity != self._identity):",
             "        if False:  # MUTATED: no completion identity check"),
         "no_port_preflight": (
             "        if port_occupied(self.host, self.port):",
@@ -1392,6 +1394,291 @@ class FrozenRequestAuthorityRegressionTests(LauncherHarness):
         self.assertEqual(evidence["request_settings"],
                          {k: v for k, v in payload.items() if k != "prompt"})
         self.assertNotIn(P1["text"], json.dumps(record))
+
+
+class OpaqueServerHarness(LauncherHarness):
+    """Harness variant whose stub servers run ``--opaque``: no identity
+    echo anywhere (headers, /health body, SSE payload) — the observable
+    surface of the pinned physical llama-server that blocks the merged
+    #290 echo contract in production."""
+
+    def command_builder(self, arm, port, log_path, env_extra):
+        argv = super().command_builder(arm, port, log_path, env_extra)
+        return argv + ["--opaque"]
+
+
+class EchoModeOpaqueServerREDTests(OpaqueServerHarness):
+    """RED control: the merged-#290 echo contract against an echoless
+    (opaque) server — the exact production blocker recorded in #280
+    (pinned llama-server does not echo I280_LAUNCH_IDENTITY). The echo
+    law correctly refuses readiness (STARTUP_TIMEOUT, no foreign token
+    ever accepted), the campaign STOPs, and zero completion bytes are
+    dispatched. This is the failure the kernel identity mode fixes."""
+
+    def test_echo_mode_opaque_server_stops_with_zero_completions(self):
+        summary, launches = self.run_matrix(startup_timeout_s=3)
+        self.assertEqual(summary["terminal"], "STOP")
+        self.assertEqual(self.dispositions(summary),
+                         ["aborted", "not_attempted", "not_attempted",
+                          "not_attempted"])
+        served = [r for r in self.records if r["transport_ok"]]
+        self.assertEqual(served, [], "echo law must never admit an "
+                         "identity-less server")
+        self.assertIn("STARTUP_TIMEOUT",
+                      launches[0].record.get("failure") or "")
+
+
+class KernelIdentityModeTests(OpaqueServerHarness):
+    """Issue #280 lane 1: kernel-verified listening-socket ownership as
+    the attribution law for an echoless (opaque) server. All lifecycle
+    laws of the merged #290 module must hold unchanged in kernel mode."""
+
+    def test_kernel_mode_full_matrix_opaque_server_admitted(self):
+        """GREEN: the full 2-launch/4-request matrix runs to COMPLETE
+        against opaque servers, with per-request kernel ownership proof
+        recorded and attributed to each launch's own child PID."""
+        summary, launches = self.run_matrix(identity_mode="kernel")
+        self.assertEqual(summary["terminal"], "COMPLETE",
+                         f"stop_reason={summary.get('stop_reason')}")
+        self.assertEqual(self.dispositions(summary), ["accepted"] * 4)
+        for label, ctx in (("R1", launches[0]), ("R2", launches[1])):
+            ki = ctx.record.get("kernel_identity")
+            self.assertIsNotNone(ki, f"{label} readiness proof missing")
+            self.assertEqual(ki["owner_pid"], ctx.record["pid"])
+            self.assertTrue(ki["listen_inodes"])
+            for kind in ("cold", "warm"):
+                rec = [r for r in self.records
+                       if r["launch"] == label and r["kind"] == kind][0]
+                self.assertTrue(rec["transport_ok"], rec.get("error"))
+                self.assertFalse(rec.get("identity_mismatch", False))
+                ko = rec.get("kernel_ownership")
+                self.assertIsNotNone(ko, f"{label}-{kind} proof missing")
+                self.assertEqual(ko["pre_dispatch"][1],
+                                 [ctx.record["pid"]])
+                self.assertIsNotNone(ko["post_response"])
+                self.assertEqual(ko["post_response"][1],
+                                 [ctx.record["pid"]])
+
+    def test_kernel_mode_stale_r1_cannot_serve_r2_requests(self):
+        """The r3 failure shape: a stale R1 listener while R2 attempts to
+        serve. In kernel mode the foreign listener makes R2's readiness
+        ownership proof fail (FOREIGN/owned-child not sole listener), so
+        the campaign STOPs and ZERO R2 completion bytes are dispatched.
+        Control: with the pre-dispatch proof mutated off, bytes WOULD be
+        served by stale R1."""
+        # R1 (opaque) started but never stopped — the stale server
+        stale_argv = self.command_builder(
+            "A", self.port, self.tmp / "stale.log", {})
+        stale = subprocess.Popen(stale_argv)
+        self.addCleanup(terminate, stale)
+        wait_listening(self.port)
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv[2] = str(self.port)  # R2 must bind the SAME port
+            return argv
+
+        summary, launches = self.run_matrix(command_builder=builder,
+                                            identity_mode="kernel",
+                                            startup_timeout_s=3)
+        self.assertEqual(summary["terminal"], "STOP")
+        served = [r for r in self.records
+                  if r["launch"] == "R2" and r["transport_ok"]]
+        self.assertEqual(served, [],
+                         "kernel mode dispatched completion bytes while "
+                         "a foreign listener owned the port")
+
+    def test_kernel_mode_request_fails_when_listener_closed(self):
+        """Direct fault injection: close the owned child's listener after
+        readiness, then request — the pre-dispatch proof must fail with
+        zero completion bytes dispatched."""
+        stopfile = self.tmp / "stop-listening"
+
+        # Start R1 normally, stop it; then start R2 with the fault armed
+        # between readiness and the request.
+        m = self.m
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            if arm == "B":
+                argv += ["--stop-listening-file", str(stopfile)]
+            return argv
+
+        # Start R1 normally, stop it; then start R2 with the fault armed
+        # between readiness and the request.
+        r1 = m.Launch(MATRIX[0], command_builder=self.command_builder,
+                      workdir=self.tmp, port=self.port,
+                      startup_timeout_s=20, prompt_binding={"P1": P1},
+                      identity_mode="kernel")
+        r1.start()
+        r1.stop()
+        r2 = m.Launch(MATRIX[1], command_builder=builder,
+                      workdir=self.tmp, port=self.port,
+                      startup_timeout_s=20, prompt_binding={"P1": P1},
+                      identity_mode="kernel")
+        r2.start()
+        foreign = None
+        try:
+            stopfile.write_text("stop")
+            # wait for the owned child's listener to close
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if not m.port_occupied("127.0.0.1", self.port):
+                    break
+                time.sleep(0.05)
+            # a foreign server seizes the now-free port (the r3 shape:
+            # without the kernel law the next request would be ITS)
+            foreign_log = self.tmp / "foreign-replacement.log"
+            foreign_requests = self.tmp / "foreign-requests.jsonl"
+            foreign_argv = [sys.executable, str(STUB), str(self.port),
+                            "--arm", "X", "--log", str(foreign_log),
+                            "--stream", self.streams["A"], "--opaque",
+                            "--record-requests", str(foreign_requests)]
+            foreign = subprocess.Popen(foreign_argv)
+            self.addCleanup(terminate, foreign)
+            wait_listening(self.port)
+            record, state = r2.request("cold")
+            self.assertFalse(record["transport_ok"])
+            self.assertIn("KERNEL_OWNERSHIP_UNVERIFIED", record["error"])
+            self.assertIsNone(record.get("kernel_ownership"))
+            # the foreign server received ZERO completion bytes
+            self.assertFalse(foreign_requests.exists(),
+                             "kernel law must dispatch zero completion "
+                             "bytes to a foreign listener")
+        finally:
+            r2.stop()
+
+    def test_kernel_mode_unknown_mode_rejected(self):
+        with self.assertRaises(self.m.LaunchError):
+            self.m.Launch(MATRIX[0], command_builder=self.command_builder,
+                          workdir=self.tmp, port=self.port,
+                          identity_mode="bogus")
+
+    def _kernel_engine_closure(self, td, mutated_src, name):
+        """Stage the real gate engine closure and load a (optionally
+        mutated) launcher copy from inside it, exactly as production
+        resolves its dependencies."""
+        scripts_dst = td / "scripts"
+        scripts_dst.mkdir(parents=True, exist_ok=True)
+        for dep in ROOT.glob("scripts/issue280_*.py"):
+            shutil.copy(dep, scripts_dst)
+        area_src = ROOT / "docs/investigations/vulkan-same-request-280"
+        shutil.copytree(area_src, td / "docs/investigations/"
+                        "vulkan-same-request-280")
+        p = scripts_dst / f"{name}.py"
+        p.write_text(mutated_src)
+        return load(f"issue280_{name}", p)
+
+    def test_control_no_pre_dispatch_proof_dispatches_anyway(self):
+        """Negative control: with the pre-dispatch ownership proof
+        mutated off, the launcher DISPATCHES completion bytes to a
+        foreign replacement listener (proven by the foreign server's own
+        request log) — exactly the detectable fail-open the GREEN test
+        guards against."""
+        src = LAUNCHER.read_text()
+        site = ("            if proof is None:\n"
+                "                return self._failed_request(\n")
+        self.assertIn(site, src, "mutation site missing")
+        mutated = src.replace(
+            site,
+            "            if False:  # MUTATED: no pre-dispatch proof\n"
+            "                return self._failed_request(\n", 1)
+        td = Path(tempfile.mkdtemp(prefix="issue280-kmut-"))
+        self.addCleanup(shutil.rmtree, td, ignore_errors=True)
+        m = self._kernel_engine_closure(td, mutated, "mutated_launcher")
+
+        stopfile = td / "stop-listening"
+        foreign_requests = td / "foreign-requests.jsonl"
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            if arm == "B":
+                argv += ["--stop-listening-file", str(stopfile)]
+            return argv
+
+        r1 = m.Launch(MATRIX[0], command_builder=self.command_builder,
+                      workdir=td, port=self.port,
+                      startup_timeout_s=20, prompt_binding={"P1": P1},
+                      identity_mode="kernel")
+        r1.start()
+        r1.stop()
+        r2 = m.Launch(MATRIX[1], command_builder=builder,
+                      workdir=td, port=self.port,
+                      startup_timeout_s=20, prompt_binding={"P1": P1},
+                      identity_mode="kernel")
+        r2.start()
+        foreign = None
+        try:
+            stopfile.write_text("stop")
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if not m.port_occupied("127.0.0.1", self.port):
+                    break
+                time.sleep(0.05)
+            foreign_argv = [sys.executable, str(STUB), str(self.port),
+                            "--arm", "X", "--log", str(td / "foreign.log"),
+                            "--stream", self.streams["A"], "--opaque",
+                            "--record-requests", str(foreign_requests)]
+            foreign = subprocess.Popen(foreign_argv)
+            self.addCleanup(terminate, foreign)
+            wait_listening(self.port)
+            record, state = r2.request("cold")
+            # MUTATED module dispatched bytes to the foreign server —
+            # its own request log is the mechanical proof
+            self.assertTrue(foreign_requests.exists(),
+                            "mutated module dispatched zero bytes — "
+                            "control no longer detects the fail-open")
+            served = [json.loads(l) for l in
+                      foreign_requests.read_text().splitlines() if l]
+            self.assertGreaterEqual(len(served), 1)
+        finally:
+            r2.stop()
+
+    def test_control_kernel_any_200_ready_accepts_foreign(self):
+        """Negative control for kernel readiness: mutating the sole-
+        ownership loop to ignore foreign owners must be detectable —
+        with a foreign listener on the port and the owned child on a
+        side port, the mutated module declares ready through the
+        foreign listener, while the GREEN module raises
+        STARTUP_TIMEOUT."""
+        src = LAUNCHER.read_text()
+        site = ("    for inode, owner in found.items():\n"
+                "        if owner != pid:\n"
+                "            return None\n"
+                "        # confirm the owning pid is the SAME instance "
+                "(start-time law)\n"
+                "        if proc_start_time(owner) != start_time:\n"
+                "            return None\n")
+        self.assertIn(site, src, "mutation site missing")
+        mutated = src.replace(
+            site,
+            "        pass  # MUTATED: any listener owner accepted\n", 1)
+        td = Path(tempfile.mkdtemp(prefix="issue280-kmut2-"))
+        self.addCleanup(shutil.rmtree, td, ignore_errors=True)
+        m = self._kernel_engine_closure(td, mutated, "mutated_launcher2")
+
+        foreign_argv = self.command_builder(
+            "X", self.port, td / "foreign.log", {})
+        foreign = subprocess.Popen(foreign_argv)
+        self.addCleanup(terminate, foreign)
+        wait_listening(self.port)
+
+        def builder(arm, port, log_path, env_extra):
+            argv = self.command_builder(arm, port, log_path, env_extra)
+            argv[2] = str(port + 1)  # owned child alive on a side port
+            return argv
+
+        ctx = m.Launch(MATRIX[0], command_builder=builder,
+                       workdir=td, port=self.port,
+                       startup_timeout_s=5, identity_mode="kernel")
+        # bypass the (unmutated) port preflight so the mutated readiness
+        # law is what this launch exercises
+        m.port_occupied = lambda host, port: False
+        ctx.start()  # mutated: accepts the foreign listener as ready
+        try:
+            self.assertTrue(pid_alive(foreign.pid))
+        finally:
+            ctx.stop()
 
 
 if __name__ == "__main__":

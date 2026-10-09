@@ -35,11 +35,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 IDENTITY_ENV = "I280_LAUNCH_IDENTITY"
 IDENTITY_HEADER = "X-I280-LAUNCH-IDENTITY"
+# Flag files the stub watches for (test-only fault injection):
+#   - ``--stop-listening-file P``: when P exists, the listening socket is
+#     closed while the process stays alive (kernel-mode negative control:
+#     process alive, listener gone => ownership unprovable).
+#   - ``--opaque``: never echoes the launch identity (models the pinned
+#     physical llama-server, which has no identity echo).
 GOOD_TEXT = '{"service":"payments","severity":"high","status":"resolved"}'
 
 ARGS = argparse.Namespace(log=None, arm="?", stale_completion_id=None,
                           foreign_health_id=None, env_report=None,
-                          env_keys=(), record_requests=None)
+                          env_keys=(), record_requests=None,
+                          stop_listening_file=None, opaque=False)
 STARTED_NS = time.monotonic_ns()
 REQUESTS_SERVED = 0
 PREFIX_ROWS = []
@@ -93,16 +100,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header(IDENTITY_HEADER, identity or self._identity())
+        if not ARGS.opaque:
+            self.send_header(IDENTITY_HEADER, identity or self._identity())
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
         if self.path == "/health":
             self._send_json(200, {"ok": True,
-                                  IDENTITY_ENV: self._health_identity(),
-                                  "arm": ARGS.arm, "pid": os.getpid()},
-                            identity=self._health_identity())
+                                  "arm": ARGS.arm, "pid": os.getpid()}
+                            if ARGS.opaque else
+                            {"ok": True,
+                             IDENTITY_ENV: self._health_identity(),
+                             "arm": ARGS.arm, "pid": os.getpid()},
+                            identity=None if ARGS.opaque
+                            else self._health_identity())
             return
         if self.path == "/__test__/env":
             # Test-only loopback reporting of NONSECRET sentinel values
@@ -150,12 +162,18 @@ class Handler(BaseHTTPRequestHandler):
             {"stop": True, "stop_type": "eos", "identity": completion_ident,
              "arm": ARGS.arm, "tokens_predicted": 8, "tokens_evaluated": 8},
         ]
+        if ARGS.opaque:
+            # The pinned physical llama-server has no identity echo at
+            # all — not in headers, not in the SSE payload.
+            chunks = [{k: v for k, v in c.items() if k != "identity"}
+                      for c in chunks]
         body = "".join("data: " + json.dumps(c) + "\n\n" for c in chunks)
         body = body.encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header(IDENTITY_HEADER, completion_ident)
+        if not ARGS.opaque:
+            self.send_header(IDENTITY_HEADER, completion_ident)
         self.end_headers()
         # Finish the synthetic observer bracket before delivering the SSE
         # body. The client must never race a partially appended JSON row.
@@ -182,6 +200,14 @@ def main():
     p.add_argument("--record-requests", dest="record_requests", default=None,
                    help="append exact received /completion request bytes "
                         "to this file (tests only)")
+    p.add_argument("--stop-listening-file", dest="stop_listening_file",
+                   default=None,
+                   help="when this file exists, close the listening "
+                        "socket while staying alive (kernel-mode "
+                        "negative control; tests only)")
+    p.add_argument("--opaque", action="store_true",
+                   help="never echo the launch identity (models the "
+                        "pinned physical llama-server; tests only)")
     ARGS = p.parse_args()
     ARGS.env_keys = tuple(k for k in ARGS.env_keys.split(",") if k)
     if ARGS.stream:
@@ -192,7 +218,27 @@ def main():
     server.daemon_threads = True
     for line in PREFIX_ROWS:
         log_line(line)
-    server.serve_forever(poll_interval=0.05)
+    import threading
+    if ARGS.stop_listening_file:
+        def _watch_stop():
+            while True:
+                if os.path.exists(ARGS.stop_listening_file):
+                    # Close ONLY the listening socket; the process stays
+                    # alive below (kernel-mode negative control: live
+                    # child, unprovable ownership).
+                    try:
+                        server.socket.close()
+                    except Exception:
+                        pass
+                    return
+                time.sleep(0.02)
+        threading.Thread(target=_watch_stop, daemon=True).start()
+    try:
+        server.serve_forever(poll_interval=0.05)
+    except OSError:
+        pass  # listening socket force-closed by the stop-listening watch
+    while True:
+        time.sleep(1)  # stay alive with no listener (negative control)
 
 
 if __name__ == "__main__":
