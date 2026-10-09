@@ -126,6 +126,12 @@ classes:
 | `RESEARCH_INTERNAL` | Accepted physical results obtained through research harnesses whose interfaces are explicitly not public: the FreeToken N0 and R1-R5B work, the external Coordinator, R6/V5 Gemma, and the in-repo Vulkan, V340L and link characterizations. |
 | `ASPIRATIONAL_OR_UNPROVEN` | Whole-model feasibility with heterogeneous resources, a general planner or runtime, mixed-vendor serving, Intel execution, pooled or cross-die memory, and general performance superiority. |
 
+"Correct" is scoped in the accepted CUDA/RPC results: they show coherent,
+repeatable generation, not numerical equivalence. The accepted R8-D record found
+exact-token divergence from a non-RPC reference on two of four corpus cases, and
+[ADR 0010](docs/adr/0010-heterogeneous-numerical-equivalence.md) does not define
+product correctness as bitwise identity.
+
 **FreeToken is the original research and integration vehicle, not the InferSwarm
 product boundary.** The generic fabric must stay model- and vendor-independent:
 model execution strategies define legal work and state boundaries, and generic
@@ -175,6 +181,7 @@ research-internal, fixture-only and unproven context around them.
 - Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.
 - Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.
 - Issues #255 and #268 are accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991) and R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776) only for the bounded tested homogeneous NVIDIA/CUDA two-host topology, exact Qwen3.8-Flash-Next-UD-IQ1_S and llama.cpp lineage, fixed placement, verified participant-local backing, and ordinary text generation. The operator path is a fixed-topology path for exactly two participants and one three-range layer placement, not a general heterogeneous planner or runtime. No numerical-equivalence, capacity or speed advantage over the recorded single-host comparison, mixed-vendor, production-readiness, dynamic-scheduling, or R8-J/Vulkan authority is implied.
+- Correctness in the accepted CUDA/RPC results means coherent, repeatable generation, not numerical equivalence: the accepted R8-D record (Issue #195, PR #197) is a scoped FAIL with exact-token divergence from the non-RPC reference on two of four corpus cases (case-256 at generated position 5; case-4096 immediate EOS), and R8-G characterized the divergence as non-monotonic without identifying one cause. ADR 0010 does not define product correctness as bitwise identity.
 - Whole-model feasibility expansion with heterogeneous resources is not yet demonstrated. Accepted capacity-positive evidence is GPU-residency expansion where the single-resource comparison still completed (R2 and R5A against a matched single-GPU offload or source-backed control; Issue #35 on a 14B Q4_K_M model, where the over-capacity single-device control completed at about 0.2 tok/s), plus one homogeneous NVIDIA Gemma chain whose single 12 GiB GPU-resident envelope was infeasible (R6 census, qualified for its frozen subject by V5). These are separate claims and none implies a speedup.
 - Each V340L die is a distinct HBM resource of about 8 GiB. Accepted Issue #243 evidence covers independent per-die execution on one tested host, not one coherent 16 GiB pool, peer or cross-die execution, numerical qualification, or universal cooling; no accepted same-request dual-die result exists.
 - Storage is verified artifact backing and a cache or Source, never GPU memory and never a kernel-executing resource; accepted physical evidence uses local SSD backing, and any NVMe, CXL, or other storage role beyond verified artifact backing remains a future question under the Fabric Doctrine.

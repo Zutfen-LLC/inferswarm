@@ -167,7 +167,9 @@ class ProjectStatusTests(unittest.TestCase):
         limits = ' '.join(self.record['limits'])
         for denied in ('numerical-equivalence', 'mixed-vendor', 'production-readiness',
                        'dynamic-scheduling', 'R8-J/Vulkan',
-                       'not a general heterogeneous planner or runtime'):
+                       'not a general heterogeneous planner or runtime',
+                       'means coherent, repeatable generation, not numerical equivalence',
+                       'R8-D record (Issue #195, PR #197) is a scoped FAIL'):
             with self.subTest(denied=denied):
                 self.assertIn(denied, limits)
         output = sync.render(self.record)['frontier']
