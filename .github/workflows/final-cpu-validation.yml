@@ -17,6 +17,25 @@ name: Final CPU Validation
 #   gh workflow run final-cpu-validation.yml \
 #     --ref <pr-branch> -f expected_sha=<exact-reviewed-head-sha>
 #
+# Duplicate-dispatch policy (Issue #291): the concurrency group below only
+# SERIALIZES same-head dispatches; it cannot stop a later dispatch from
+# re-running the suite on a fresh runner.  After the exact-SHA checkout and
+# environment doctor, scripts/final_validation_reuse.py performs a read-only,
+# fail-closed lookup for a previously SUCCESSFUL run of THIS workflow on the
+# same immutable head whose receipt artifact is independently verified
+# (Actions-API digest, run/attempt/head binding, #226 envelope validation,
+# identical canonical suite configuration + environment authority, physical
+# execution only — reuse receipts are never sources).  A verified source means
+# the canonical suite is NOT executed again; the new run still runs the
+# finalizer/status checks on its own checkout and mints its own gate result
+# recording execution.mode = verified_prior_execution with the source
+# run/attempt/artifact digest.  Any doubt (no source, API outage, rate limit,
+# missing permission, any failed verification) runs the full suite.  Ordinary
+# CI is never a source.  pr_number stays audit-only.
+#
+# Untrusted dispatch inputs reach scripts ONLY through quoted environment
+# bindings (EXPECTED_SHA / PR_NUMBER), never spliced into script source.
+#
 # Ordinary PR CI (.github/workflows/ci.yml) stays impact-selected and
 # NEVER runs the full suite on ordinary pushes; the two gates are
 # deliberately distinct checks. Both must succeed on the same exact head
@@ -37,6 +56,10 @@ on:
 
 permissions:
   contents: read
+  # Read-only Actions API access for the duplicate lookup (list runs /
+  # artifacts, download a receipt artifact).  No write permission, no
+  # secrets, no external cache service.
+  actions: read
 
 concurrency:
   # One final validation per requested SHA: a second dispatch for the same
@@ -52,12 +75,19 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Validate expected_sha shape (fail closed)
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
           python3 - <<'EOF'
-          import re, sys
-          sha = "${{ inputs.expected_sha }}"
+          import os, re, sys
+          sha = os.environ["EXPECTED_SHA"]
           if not re.fullmatch(r"[0-9a-f]{40}", sha):
               print(f"expected_sha is not an exact 40-hex git SHA: {sha!r}")
+              sys.exit(1)
+          pr = os.environ.get("PR_NUMBER", "")
+          if pr and not re.fullmatch(r"[1-9][0-9]{0,8}", pr):
+              print(f"pr_number is not a plain positive integer: {pr!r}")
               sys.exit(1)
           print("expected_sha shape OK:", sha)
           EOF
@@ -69,9 +99,11 @@ jobs:
           fetch-depth: 0
 
       - name: Mechanically require HEAD == expected_sha
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           head="$(git rev-parse HEAD)"
-          expected="${{ inputs.expected_sha }}"
+          expected="$EXPECTED_SHA"
           echo "HEAD=$head expected=$expected"
           if [ "$head" != "$expected" ]; then
             echo "checked-out head does not match the requested exact SHA (fail closed)"
@@ -91,7 +123,18 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
 
+      - name: Look up verified prior execution (read-only, fail closed)
+        id: reuse
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          .venv/bin/python scripts/final_validation_reuse.py lookup \
+            --out /tmp/reuse-decision.json
+
       - name: Run canonical full CPU suite (serial/executed identity required)
+        if: steps.reuse.outputs.reuse != 'true'
         run: |
           set -euo pipefail
           started=$(date +%s)
@@ -113,98 +156,53 @@ jobs:
         run: python3 scripts/sync_project_status.py --check
 
       - name: Compose and validate final-validation receipt (fail closed)
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          REUSE: ${{ steps.reuse.outputs.reuse }}
+          # Read-only (actions: read): a reuse composition re-authenticates
+          # its source against the Actions API; if that is impossible the
+          # gate FAILS (the suite was skipped), it never mints PASS.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python3 - <<'EOF'
-          import json, sys
-          from pathlib import Path
-          sys.path.insert(0, "scripts")
-          import issue213_gate_orchestration as gate
-
-          repo = Path(".").resolve()
-          expected_sha = "${{ inputs.expected_sha }}"
-          run_id = "${{ github.run_id }}"
-          run_attempt = int("${{ github.run_attempt }}")
-          workflow_name = "${{ github.workflow }}"
-          pr_number_raw = "${{ inputs.pr_number }}".strip()
-          pr_number = int(pr_number_raw) if pr_number_raw else None
-
-          def die(message):
-              print(f"final-validation receipt: FAIL {message}")
-              sys.exit(1)
-
-          try:
-              result = json.load(open("/tmp/suite-result.json"))
-          except (OSError, json.JSONDecodeError) as error:
-              die(f"suite result unreadable: {error}")
-
-          # The canonical suite identity — runner schema, canonical command,
-          # normalized configuration, serial/executed digest EQUALITY, count
-          # — is derived (never trusted from the workflow env): a malformed
-          # or identity-mismatched result fails the validation here.
-          try:
-              suite = gate.suite_identity(result)
-          except gate.GateOrderingError as error:
-              die(f"suite identity malformed: {error}")
-          if suite["serial_digest"] != suite["executed_digest"]:
-              die("serial/executed identity mismatch")
-
-          # Independently re-derive the expected identity from the exact
-          # checked-out tree and require the executed run to match it: a
-          # different suite configuration or environment cannot validate
-          # this head.
-          request = gate.current_final_head_request(repo)
-          if request.git_commit_sha != expected_sha:
-              die("final-head request SHA drifted from expected_sha")
-          if request.suite["serial_digest"] != suite["serial_digest"]:
-              die("executed population digest differs from this head's "
-                  "canonical plan")
-          if request.suite["count"] != suite["count"]:
-              die("executed count differs from this head's canonical plan")
-          if request.suite["suite_config"] != suite["suite_config"]:
-              die("executed suite configuration differs from the canonical "
-                  "final-validation configuration")
-
-          # The exact-head suite receipt (same #213 machinery as a local
-          # run; no local/hosted double requirement).
-          started = float(open("/tmp/suite-started.unix").read().strip())
-          ended = float(open("/tmp/suite-ended.unix").read().strip())
-          try:
-              receipt = gate.build_receipt(repo, result, started, ended)
-          except gate.GateOrderingError as error:
-              die(f"cannot bind suite receipt to the exact head: {error}")
-          if not gate.validate_receipt(receipt.to_dict(),
-                                       request.to_dict()):
-              die("suite receipt does not validate against the exact head")
-
-          # ONE envelope contract, built by the repository-owned builder:
-          # finalizer_check/project_status_check are True precisely because
-          # this step runs only after those steps succeeded on this head.
-          try:
-              envelope = gate.build_final_validation_receipt(
-                  expected_sha, receipt.to_dict(),
-                  github_run_id=run_id, github_run_attempt=run_attempt,
-                  workflow=workflow_name, pr_number=pr_number,
-                  finalizer_check=True, project_status_check=True)
-          except gate.GateOrderingError as error:
-              die(f"cannot build the final-validation receipt: {error}")
-          json.dump(envelope, open("/tmp/final-validation-receipt.json", "w"),
-                    indent=1, sort_keys=True)
-          print("final-validation receipt: OK")
-          print(json.dumps(envelope, sort_keys=True)[:2000])
-          EOF
+          .venv/bin/python scripts/final_validation_reuse.py compose \
+            --out /tmp/final-validation-receipt.json
 
       - name: Retain final-validation receipt artifact
-        if: always()
+        # The PASS receipt exists only for a run that reached this point
+        # successfully; a failed run never mints one (its diagnostics are
+        # kept separately below).
+        if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: final-cpu-validation-receipt
-          path: |
-            /tmp/final-validation-receipt.json
-            /tmp/suite-result.json
+          path: /tmp/final-validation-receipt.json
           retention-days: 90
           if-no-files-found: error
 
+      - name: Retain run diagnostics (never a PASS receipt)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: final-cpu-validation-diagnostics
+          path: |
+            /tmp/suite-result.json
+            /tmp/reuse-decision.json
+          retention-days: 90
+          if-no-files-found: warn
+
       - name: Final CPU Validation summary
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REUSE: ${{ steps.reuse.outputs.reuse }}
         run: |
-          echo "Final CPU Validation PASS on exact head ${{ inputs.expected_sha }}"
-          echo "run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Final CPU Validation PASS on exact head $EXPECTED_SHA"
+          if [ "$REUSE" = "true" ]; then
+            echo "execution: verified_prior_execution (suite not re-run)"
+          else
+            echo "execution: executed (canonical suite ran in this run)"
+          fi
+          echo "run: $RUN_URL"

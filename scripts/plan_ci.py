@@ -180,6 +180,9 @@ GROUP_TEST_MODULES = {
         # in the same orchestration line; envelope validates against the
         # same #213 machinery).
         "test_issue226_final_validation_ci",
+        # Issue #291: verified exact-head receipt reuse for hosted Final
+        # CPU Validation (duplicate-dispatch dedup, fail closed).
+        "test_issue291_final_validation_reuse",
     ],
     "issue-187-r7a": [
         "test_issue187_r7a",
@@ -710,6 +713,7 @@ PATH_GROUPS = {
     # rule — a workflow change always selects full regression; these
     # entries deliberately do NOT narrow that.)
     "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],
+    "scripts/final_validation_reuse.py": ["issue-213-gate-ordering"],
     "docs/campaign-gate-ordering.md": ["issue-213-gate-ordering"],
     # The parallel full-suite runner itself (Issue #173): its contract
     # tests are repo-integrity modules; classify explicitly instead of

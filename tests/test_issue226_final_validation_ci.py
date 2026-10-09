@@ -159,7 +159,11 @@ class FinalValidationWorkflowTests(unittest.TestCase):
                          "${{ inputs.expected_sha }}")
         require = steps[2]
         self.assertIn("rev-parse HEAD", require["run"])
-        self.assertIn("expected_sha", require["run"])
+        # Issue #291: the input reaches the script through a quoted
+        # environment binding, never spliced into script source.
+        self.assertEqual(require["env"]["EXPECTED_SHA"],
+                         "${{ inputs.expected_sha }}")
+        self.assertIn("EXPECTED_SHA", require["run"])
         # the shape check, the checkout binding, and the HEAD==SHA proof
         # all precede the Python setup / suite execution steps.
         names = [step.get("name", "") for step in steps]
@@ -210,14 +214,27 @@ class FinalValidationWorkflowTests(unittest.TestCase):
         self.assertLess(names.index(status), names.index(compose))
 
     def test_control13_receipt_binds_run_identity_and_sha(self):
+        # Issue #291 moved the inline composition into the
+        # repository-owned scripts/final_validation_reuse.py ``compose``
+        # command (no expression interpolation into script source).  The
+        # same bindings must be supplied through the step environment and
+        # consumed by the composer.
         compose = next(s for s in
                        self.doc["jobs"]["final-cpu-validation"]["steps"]
                        if "Compose" in s.get("name", ""))
-        run = compose["run"]
-        for binding in ("github.run_id", "github.run_attempt",
-                        "inputs.expected_sha", "suite_identity",
-                        "build_receipt", "validate_receipt"):
-            self.assertIn(binding, run)
+        self.assertIn("final_validation_reuse.py compose", compose["run"])
+        env = compose["env"]
+        self.assertEqual(env["EXPECTED_SHA"], "${{ inputs.expected_sha }}")
+        self.assertEqual(env["GITHUB_RUN_ID"], "${{ github.run_id }}")
+        self.assertEqual(env["GITHUB_RUN_ATTEMPT"],
+                         "${{ github.run_attempt }}")
+        source = (ROOT / "scripts" / "final_validation_reuse.py").read_text(
+            encoding="utf-8")
+        for binding in ("GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT",
+                        "EXPECTED_SHA", "suite_identity", "build_receipt",
+                        "validate_receipt",
+                        "build_final_validation_receipt"):
+            self.assertIn(binding, source)
 
     def test_control19_no_pull_request_target_or_elevated_execution(self):
         # No pull_request_target TRIGGER (the only trigger is
@@ -227,7 +244,10 @@ class FinalValidationWorkflowTests(unittest.TestCase):
         for key in triggers:
             self.assertNotIn("pull_request", key)
         permissions = self.doc["permissions"]
-        self.assertEqual(permissions, {"contents": "read"})
+        # Issue #291: ``actions: read`` is the minimum needed for the
+        # read-only duplicate-receipt lookup; still no write permission.
+        self.assertEqual(permissions,
+                         {"contents": "read", "actions": "read"})
 
     def test_every_step_shape_is_valid_actions_step(self):
         # A step must be exactly one of: a `uses` step (with optional

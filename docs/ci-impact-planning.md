@@ -77,7 +77,10 @@ dispatch ref is transport only). It executes the canonical
 on that exact SHA and retains a structured exact-head receipt. Campaign
 handoff requires the ordinary `CI Gate` AND the `Final CPU Validation
 Gate` on the same exact head; see
-[campaign gate ordering](campaign-gate-ordering.md).
+[campaign gate ordering](campaign-gate-ordering.md). A duplicate dispatch for a
+head that already has a verified successful hosted execution does not re-run
+the suite: it records `verified_prior_execution` against the independently
+verified source receipt, and any doubt runs the full suite (Issue #291).
 
 ## Groups
 
