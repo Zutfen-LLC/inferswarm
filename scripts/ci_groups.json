@@ -108,7 +108,8 @@
     "test_issue299_metadata",
     "test_issue299_profiles",
     "test_issue299_q8_plan",
-    "test_issue299_admission"
+    "test_issue299_admission",
+    "test_issue299_source"
    ]
   },
   "r8-qwen-lineage": {

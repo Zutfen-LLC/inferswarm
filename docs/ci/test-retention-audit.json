@@ -4340,6 +4340,30 @@
    "replacement": null,
    "test_count_at_audit": 27
   },
+  "test_issue299_source": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 21,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Full-source Q8 member/header/assigned-state verification on both roles, exact optional CPU+CUDA cache identity, bounded standalone serialization and legacy preservation.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/source.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective exact source/serialization contract; verified cache identity does not establish physical consumption or runtime qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 21
+  },
   "test_issue299_admission": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,
