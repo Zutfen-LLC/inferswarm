@@ -366,6 +366,43 @@ framework or an already-accepted full inventory/copy schema. The native producer
 must supply actual source/allocation/request facts, never merely echo plan facts.
 Complete fact catalogs and their joins remain required downstream.
 
+### Calculated static-inventory prerequisite
+
+The separately reviewed pure `q8_static_inventory(config, metadata, *, candidate=None)`
+helper supplies expected ownership, not observed facts or a `/2` receipt. Its
+inputs are the existing typed profiled config and authenticated public metadata;
+an optional typed candidate must equal every freshly rederived field with exact
+nested types. The actual workload record and exact integer context, slots,
+batch and microbatch are checked before candidate derivation or arithmetic,
+without changing the qualified strategy's numeric/cache law.
+
+The immutable description retains pinned base/tree and normalized metadata
+identities, explicit selection, all 1,224 weight assignments, and 109 persistent
+cache expectations. Each cache retains its original logical state/owner/memory,
+actual native name, scalar type, GGML four dimensions (trailing ones included),
+constructor/shape provenance and byte lower bound. These are calculated native
+constructor expectations, not actual backend extent, padding, initialization or
+residency. Indexer K has no invented V; borrowed stream views are not extra
+physical cache tensors. Legal context changes alter padded K/V/indexer shapes
+and bytes; default-context totals are not a universal inventory.
+
+The two logical composites remain separately unresolved: client-control on A
+and final logical output on the final B owner, with original dependencies and
+unknown capacities. This does not move initial client output staging to B or
+supply a component/reservation recipe. All original charge phases, unknown
+future bounds and capability requirements remain description-only, including
+the unmodified-source-tree requirement; derived observer/build handling is
+still separate pending work. A BLOCKED resource plan can have an ownership
+description without becoming dispatch-ready.
+
+The helper records pending request-valued control/state authority, graph/ubatch,
+actual boundary/side-input copies, output computation/custody and original
+controller/owned-process binding. Full static reconciliation still requires
+layout/component/allocator closure, actual source/build/identity/resource and
+freshness joins. Both public `/2` entrypoints below continue to refuse;
+synthetic inventories, parsed envelopes and source citations cannot unlock
+execution or output acceptance. The earlier `/1` semantics remain unchanged.
+
 ### Request phases and fail-closed pending reconciliation
 
 Before POST, the caller knows `invocation_token` and `request_nonce` only.

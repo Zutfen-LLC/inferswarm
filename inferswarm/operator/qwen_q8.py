@@ -5,8 +5,8 @@ Only one explicitly selected fixed candidate is emitted. No execution or search.
 """
 from __future__ import annotations
 from dataclasses import dataclass, replace
-from .config import profile_subject
-from .metadata import _index, _public_members
+from .config import ModelIdentity, ProfiledOperatorConfig, profile_subject
+from .metadata import MetadataIndex, _index, _public_members
 from .source import _encoded_bytes, _validate_extents
 from .plan import ResourceCharge, LegalCandidate, CapabilityRequirement, PHASES
 from .profiles import thaw, integer, keys, text
@@ -443,6 +443,149 @@ def q8_candidates(config, metadata):
         canonical_strategy_options=freeze(normalized_options))
     validate_q8_ownership(candidate,metadata)
     return (candidate,)
+
+
+@dataclass(frozen=True)
+class Q8PersistentCache:
+    """CALCULATED named cache expectation, not an allocation/initialization fact.
+
+    native_dimensions uses GGML's four ne dimensions, including trailing ones;
+    state.lower_bound_bytes excludes backend padding/extent and residency.
+    Stream views do not introduce additional physical cache expectations.
+    """
+    state: RequiredState
+    native_name: str
+    ggml_type: int
+    native_dimensions: tuple[int, int, int, int]
+    source_sites: tuple[str, ...]
+    phase: str = 'persistent-pre-request-expectation'
+
+
+@dataclass(frozen=True)
+class Q8LogicalComposite:
+    """Unresolved logical obligation, not a persistent/completed native tensor."""
+    state: RequiredState
+    phase: str = 'unresolved-phase-partition'
+
+
+@dataclass(frozen=True)
+class Q8StaticInventory:
+    """Description only: no dispatch, output acceptance or source-byte proof.
+
+    Startup reservation/output containers do not establish request computation.
+    No component capacities or allocator/reservation closure are supplied here;
+    in particular initial client output staging is NOT assigned to final B state.
+    """
+    base_revision: str
+    base_tree: str
+    metadata_source: ModelIdentity
+    metadata_digest: str
+    header_identities: tuple
+    model_metadata: tuple
+    selection: str
+    weights: tuple[WeightAssignment, ...]
+    persistent_caches: tuple[Q8PersistentCache, ...]
+    logical_composites: tuple[Q8LogicalComposite, ...]
+    charges: tuple[ResourceCharge, ...]
+    capability_requirements: tuple[CapabilityRequirement, ...]
+    pending_dynamic: tuple[str, ...]
+    charge_semantics: str = 'description-only/resource-obligations'
+
+
+def _inventory_exact_value(actual, expected):
+    """Complete typed equality; bool/int equality cannot mask a substitution."""
+    from dataclasses import fields, is_dataclass
+    if type(actual) is not type(expected): return False
+    if is_dataclass(expected):
+        return all(_inventory_exact_value(getattr(actual, f.name), getattr(expected, f.name))
+                   for f in fields(expected))
+    if isinstance(expected, tuple):
+        return len(actual) == len(expected) and all(_inventory_exact_value(a, e) for a, e in zip(actual, expected))
+    return actual == expected
+
+
+def q8_static_inventory(config: ProfiledOperatorConfig, metadata: MetadataIndex, *,
+                        candidate: LegalCandidate | None = None) -> Q8StaticInventory:
+    """Pure source-derived pre-request expectations, never admission evidence.
+
+    Re-derive from the typed config and authenticated public metadata. A supplied
+    candidate must match EVERY freshly derived field, not totals or a digest.
+    A new coherent config describes that new config only: original controller,
+    process/source/build custody and freshness are later reconciliation work.
+    BLOCKED/unknown-resource plans can still have these ownership expectations.
+    """
+    from dataclasses import fields
+    from .config import WorkloadSettings
+    from .plan import _immutable
+    if type(config) is not ProfiledOperatorConfig or not _immutable(config):
+        raise ValueError('typed inventory config: immutable ProfiledOperatorConfig required')
+    if type(config.workload) is not WorkloadSettings:
+        raise ValueError('typed inventory workload: WorkloadSettings required')
+    for name in ('context', 'slots', 'batch', 'microbatch'):
+        integer(getattr(config.workload, name), 'inventory workload ' + name)
+    if type(metadata) is not MetadataIndex or not _immutable(metadata):
+        raise ValueError('typed inventory metadata: immutable MetadataIndex required')
+    if candidate is not None and type(candidate) is not LegalCandidate:
+        raise ValueError('typed inventory candidate: LegalCandidate required')
+    expected, = q8_candidates(config, metadata)
+    if candidate is not None:
+        for field in fields(LegalCandidate):
+            if not _inventory_exact_value(getattr(candidate, field.name), getattr(expected, field.name)):
+                raise ValueError('inventory candidate mismatch: ' + field.name)
+
+    h = dict(metadata.model_metadata)
+    cache = thaw(config.workload.cache_settings)
+    rows = cache['recurrent_rows'] * (1 + cache['rs_sequences'])
+    cells, streams = cache['attention_cells'], cache['cache_streams']
+    states = {s.state_id:s for s in expected.required_state}
+    persistent = []
+    # Pinned constructors, not receipts: recurrent.cpp:101-113; kv-cache.cpp:
+    # 209-244; hybrid-idx.cpp:49-68. Source pin is citation, not byte verification.
+    recurrent_site = RUNTIME_PIN + ':src/llama-memory-recurrent.cpp:101-113'
+    recurrent_shape_site = RUNTIME_PIN + ':src/llama-hparams.cpp:226-257'
+    ple_shape_site = RUNTIME_PIN + ':src/llama-hparams.cpp:268-275'
+    kv_site = RUNTIME_PIN + ':src/llama-kv-cache.cpp:230-244'
+    kv_shape_site = RUNTIME_PIN + ':src/llama-hparams.cpp:156-166'
+    idx_site = RUNTIME_PIN + ':src/llama-memory-hybrid-idx.cpp:49-68'
+    def add(name, layer, typ, dimensions, sites):
+        sid = f'{name}_l{layer}'
+        state = states[sid]
+        lower = (4 if typ == 0 else 2)
+        for dim in dimensions: lower *= dim
+        if (state.representation, state.lower_bound_bytes) != ('f32' if typ == 0 else 'f16', lower):
+            raise ValueError('inventory native cache lower bound mismatch: ' + sid)
+        persistent.append(Q8PersistentCache(state, sid, typ, dimensions, sites))
+
+    for layer in range(h['qwen4exp.block_count']):
+        if layer % h['qwen4exp.full_attention_interval'] == h['qwen4exp.full_attention_interval'] - 1:
+            # GGML_TYPE_F16=1; selected FA off, no unified KV. Value dimensions
+            # are constant for this authenticated model, even with v_trans.
+            for name, dim in (('cache_k', h['qwen4exp.attention.key_length'] * h['qwen4exp.attention.head_count_kv']),
+                              ('cache_v', h['qwen4exp.attention.value_length'] * h['qwen4exp.attention.head_count_kv'])):
+                add(name, layer, 1, (dim, cells, streams, 1), (kv_site, kv_shape_site))
+            # cache_%sk_l%d + name_tag="idx_"; raw single-head K, MLA skips V.
+            add('cache_idx_k', layer, 1, (h['qwen4exp.attention.indexer.key_length'], cells, streams, 1),
+                (idx_site, kv_site))
+        else:
+            # GGML_TYPE_F32=0; native 2D R/S history/state, four ne dimensions.
+            r = (h['qwen4exp.ssm.conv_kernel'] - 1) * (h['qwen4exp.ssm.inner_size'] +
+                 2 * h['qwen4exp.ssm.group_count'] * h['qwen4exp.ssm.state_size'])
+            s = h['qwen4exp.ssm.state_size'] * h['qwen4exp.ssm.inner_size']
+            add('cache_r', layer, 0, (r, rows, 1, 1), (recurrent_site, recurrent_shape_site))
+            add('cache_s', layer, 0, (s, rows, 1, 1), (recurrent_site, recurrent_shape_site))
+            if layer in h['qwen4exp.ple.layers']:
+                ple = (h['qwen4exp.ple.conv_kernel'] - 1) * h['qwen4exp.ple.ngram_size'] * \
+                      h['qwen4exp.hyper_connection.count'] * h['qwen4exp.embedding_length']
+                add('cache_ple_r', layer, 0, (ple, rows, 1, 1), (recurrent_site, ple_shape_site))
+    composites = tuple(Q8LogicalComposite(states[sid]) for sid in ('client-control', 'final-output-state'))
+    if {r.state.state_id for r in persistent} | {r.state.state_id for r in composites} != set(states):
+        raise ValueError('inventory state partition coverage')
+    return Q8StaticInventory(RUNTIME_PIN, RUNTIME_TREE, metadata.source, metadata.metadata_digest,
+        metadata.header_identities, metadata.model_metadata, config.selection, expected.assignments,
+        tuple(sorted(persistent, key=lambda r:r.state.state_id)), composites, expected.charges,
+        expected.capability_requirements, ('request-valued-control-and-state-authority',
+        'same-request-graph-and-ubatch', 'actual-boundary-and-side-input-copies',
+        'final-output-computation-and-custody', 'original-controller-and-owned-process-binding'))
 
 
 @dataclass(frozen=True)

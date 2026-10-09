@@ -4321,7 +4321,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-99-103",
-   "invariant": "Complete Q8 tensor/range/state ownership, explicit native fixed selections, immutable plan identity and no fallback.",
+   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, explicit fixed selections and no fallback.",
    "lineage": "Issue #299 profiled Q8 ordinary operator",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -4335,10 +4335,10 @@
     ]
    },
    "pinned_by_evidence": [],
-   "rationale": "Prospective fixed-plan/admission contract; synthetic admission does not qualify physical runtime or memory fit.",
+   "rationale": "Prospective fixed-plan/admission and calculated inventory contracts; inventory descriptions and synthetic admission do not qualify allocation, physical runtime or memory fit.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 27
+   "test_count_at_audit": 40
   },
   "test_issue299_bindings": {
    "baseline_group": "issue-99-103",
