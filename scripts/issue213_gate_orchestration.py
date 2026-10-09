@@ -99,6 +99,16 @@ CI_STATUS_SCHEMA = "hosted-ci-exact-head-status/1"
 # project-status proof.  It is an ENVELOPE over the #213 machinery, never
 # a competing identity format.
 FINAL_VALIDATION_RECEIPT_SCHEMA = "hosted-final-validation-receipt/1"
+# Issue #291: an envelope may carry an ``execution`` block saying HOW its
+# full-suite proof was obtained.  ``executed`` = this run physically ran the
+# canonical suite; ``verified_prior_execution`` = this run ran no tests and
+# binds a previously SUCCESSFUL hosted execution of the same immutable head
+# (source run/attempt/artifact digest) that was independently verified.
+# Envelopes without the block (pre-#291) stay valid for handoff but are
+# never eligible as reuse sources.
+FINAL_VALIDATION_REUSE_CONTRACT = "final-validation-reuse/1"
+EXECUTION_MODE_EXECUTED = "executed"
+EXECUTION_MODE_REUSED = "verified_prior_execution"
 LAUNCH_IDENTITY_SCHEMA = "suite-launch-identity/1"
 LAUNCH_LOCK_SCHEMA = "suite-launch-lock/2"
 COMPLETION_SCHEMA = "suite-launch-completion/1"
@@ -200,6 +210,8 @@ GATE_CLASSIFICATIONS = frozenset({
 
 _GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_ARTIFACT_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+_RUN_ID_RE = re.compile(r"^[1-9][0-9]{0,18}$")
 
 # Hard wall for one full-suite launch used by the guard's wait/aging logic.
 LAUNCH_GUARD_TIMEOUT_SECONDS = 4 * 60 * 60
@@ -781,13 +793,132 @@ def validate_hosted_ci_status(status: dict, expected_sha: str) -> bool:
     return sha == expected_sha
 
 
+def execution_block_executed(dispatch_sha: str) -> dict:
+    """The ``execution`` block of a run that physically ran the suite.
+
+    ``dispatch_sha`` is the commit the running workflow DEFINITION came
+    from (``GITHUB_SHA``); reuse trusts only runs whose definition is the
+    validated head itself.
+    """
+    return {"mode": EXECUTION_MODE_EXECUTED,
+            "reuse_contract": FINAL_VALIDATION_REUSE_CONTRACT,
+            "dispatch_sha": _validate_git_sha(dispatch_sha,
+                                              "execution dispatch_sha")}
+
+
+def execution_block_reused(dispatch_sha: str, *, source_run_id: str,
+                           source_run_attempt: int,
+                           source_artifact_id: int,
+                           source_artifact_digest: str,
+                           source_envelope_sha256: str,
+                           source_workflow: str) -> dict:
+    """The ``execution`` block of a run that reused a verified prior one."""
+    return {"mode": EXECUTION_MODE_REUSED,
+            "reuse_contract": FINAL_VALIDATION_REUSE_CONTRACT,
+            "dispatch_sha": dispatch_sha,
+            "source_run_id": source_run_id,
+            "source_run_attempt": source_run_attempt,
+            "source_artifact_id": source_artifact_id,
+            "source_artifact_digest": source_artifact_digest,
+            "source_envelope_sha256": source_envelope_sha256,
+            "source_workflow": source_workflow}
+
+
+_EXECUTED_KEYS = frozenset({"mode", "reuse_contract", "dispatch_sha"})
+_REUSED_KEYS = _EXECUTED_KEYS | frozenset({
+    "source_run_id", "source_run_attempt", "source_artifact_id",
+    "source_artifact_digest", "source_envelope_sha256", "source_workflow"})
+
+
+def _is_pos_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) \
+        and value >= 1
+
+
+def validate_execution_block(execution: object, *, git_commit_sha: str,
+                             github_run_id: str) -> str:
+    """Strictly validate an envelope ``execution`` block (fail closed).
+
+    Exact key sets (no unknown fields), the pinned reuse contract, a real
+    dispatch SHA, and — for ``verified_prior_execution`` — a complete,
+    well-formed source binding that cannot point at the envelope's own
+    run or at a later one (no self-reference or cyclic chain), and whose
+    dispatch SHA equals the validated head.  Returns the mode.
+    """
+    if not isinstance(execution, dict):
+        raise GateOrderingError(
+            "final-validation execution block is not an object (fail "
+            "closed)")
+    mode = execution.get("mode")
+    if mode == EXECUTION_MODE_EXECUTED:
+        expected_keys = _EXECUTED_KEYS
+    elif mode == EXECUTION_MODE_REUSED:
+        expected_keys = _REUSED_KEYS
+    else:
+        raise GateOrderingError(
+            f"unknown final-validation execution mode (fail closed): "
+            f"{mode!r}")
+    if set(execution) != expected_keys:
+        raise GateOrderingError(
+            "final-validation execution block has missing or unknown "
+            f"fields (fail closed): {sorted(set(execution) ^ expected_keys)}")
+    if execution["reuse_contract"] != FINAL_VALIDATION_REUSE_CONTRACT:
+        raise GateOrderingError(
+            "final-validation execution reuse_contract mismatch (fail "
+            f"closed): {execution['reuse_contract']!r}")
+    _validate_git_sha(execution["dispatch_sha"], "execution dispatch_sha")
+    if mode == EXECUTION_MODE_EXECUTED:
+        return mode
+    if execution["dispatch_sha"] != git_commit_sha:
+        raise GateOrderingError(
+            "verified_prior_execution requires the workflow definition "
+            "to be the validated head (dispatch_sha != head, fail closed)")
+    source_run = execution["source_run_id"]
+    if not isinstance(source_run, str) or not _RUN_ID_RE.fullmatch(
+            source_run):
+        raise GateOrderingError(
+            f"execution source_run_id is malformed (fail closed): "
+            f"{source_run!r}")
+    if not isinstance(github_run_id, str) \
+            or not _RUN_ID_RE.fullmatch(github_run_id):
+        raise GateOrderingError(
+            "a reuse envelope requires a numeric GitHub run id (fail "
+            f"closed): {github_run_id!r}")
+    if int(source_run) >= int(github_run_id):
+        raise GateOrderingError(
+            "execution source run must be strictly earlier than the "
+            "reusing run (self/forward reference, fail closed)")
+    if not _is_pos_int(execution["source_run_attempt"]):
+        raise GateOrderingError(
+            "execution source_run_attempt is malformed (fail closed)")
+    if not _is_pos_int(execution["source_artifact_id"]):
+        raise GateOrderingError(
+            "execution source_artifact_id is malformed (fail closed)")
+    digest = execution["source_artifact_digest"]
+    if not isinstance(digest, str) or not _ARTIFACT_DIGEST_RE.fullmatch(
+            digest):
+        raise GateOrderingError(
+            "execution source_artifact_digest is malformed (fail closed)")
+    env_digest = execution["source_envelope_sha256"]
+    if not isinstance(env_digest, str) or not _SHA256_RE.fullmatch(
+            env_digest):
+        raise GateOrderingError(
+            "execution source_envelope_sha256 is malformed (fail closed)")
+    workflow = execution["source_workflow"]
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise GateOrderingError(
+            "execution source_workflow is malformed (fail closed)")
+    return mode
+
+
 def build_final_validation_receipt(git_commit_sha: str, suite_receipt: dict,
                                    *, github_run_id: str,
                                    github_run_attempt: int,
                                    workflow: str = "Final CPU Validation",
                                    pr_number: int | None = None,
                                    finalizer_check: bool,
-                                   project_status_check: bool) -> dict:
+                                   project_status_check: bool,
+                                   execution: dict | None = None) -> dict:
     """Build a hosted Final CPU Validation envelope (Issue #226).
 
     The envelope is DERIVED, never trusted: it embeds a structurally
@@ -849,6 +980,8 @@ def build_final_validation_receipt(git_commit_sha: str, suite_receipt: dict,
     }
     if pr_number is not None:
         envelope["pr_number"] = pr_number
+    if execution is not None:
+        envelope["execution"] = execution
     validate_final_validation_receipt(envelope, git_commit_sha)
     return envelope
 
@@ -918,6 +1051,9 @@ def validate_final_validation_receipt(envelope: dict,
             raise GateOrderingError(
                 f"final-validation receipt pr_number is malformed (fail "
                 f"closed): {pr!r}")
+    if "execution" in envelope:
+        validate_execution_block(envelope["execution"], git_commit_sha=sha,
+                                 github_run_id=envelope["github_run_id"])
     return sha == expected_sha
 
 
