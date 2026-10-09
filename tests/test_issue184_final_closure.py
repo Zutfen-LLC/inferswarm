@@ -255,7 +255,9 @@ class Issue184LivingStatusTests(unittest.TestCase):
         self.assertEqual(e["state"], "blocked")
         self.assertEqual(e["reference"], frontier["reference"])
         self.assertIn("Living status is informational and grants no further execution authority", e["step"])
-        self.assertIn("No unspent physical authorization exists", e["step"])
+        self.assertIn("Issue #280 has no unspent physical authorization", e["step"])
+        self.assertIn("Issue #281 lacks a separately approved plan and physical execution authority", e["step"])
+        self.assertNotIn("or any other gate", e["step"])
         self.assertIn("no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority",
                       " ".join(e["constraints"]))
         # The pre-acceptance #268 wording must not return on the living surfaces.
