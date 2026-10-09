@@ -952,27 +952,51 @@ ENVIRONMENT_USE_MARKERS = (
 # pip reads EVERY option from PIP_<OPTION> (PIP_CONFIG_FILE, PIP_CONSTRAINT,
 # PIP_REQUIREMENT, PIP_TARGET, ...) and uv, the bootstrap's documented fallback
 # installer, from UV_<OPTION>, so those families are an ALLOWLIST (prefix
-# rejected, one reviewed exception), not a list of names.  The remaining names
-# are an explicit denylist, compared case-insensitively.
+# rejected, one reviewed exception), not a list of names.
+#
+# Correction round 4: the same holds for every other component a canonical
+# command runs through, so each is a reviewed PREFIX family, not a name list:
+# CPython reads every PYTHON*/_PYTHON* name (PYTHONOPTIMIZE strips asserts),
+# glibc ld.so every LD_* name (LD_AUDIT loads code into every process), plus
+# the macOS loader, glibc tunables/malloc, virtualenv/setuptools/distutils,
+# pytest, coverage (auto-start), OpenSSL (config/provider loading) and bash
+# exported functions (BASH_FUNC_python3%% redefines ``python3``).  The
+# remaining names are an explicit denylist.  All comparisons are on the
+# stripped, upper-cased name; a name that is not a plain identifier
+# (``${{ ... }}`` keys, padding, ``%%``) is rejected outright, since what it
+# evaluates to or how a consumer reads it cannot be reviewed statically.
 ALLOWED_PIP_FAMILY_ENV = frozenset({"PIP_DISABLE_PIP_VERSION_CHECK"})
-FORBIDDEN_ENV_PREFIXES = ("PIP_", "UV_")
+FORBIDDEN_ENV_PREFIXES = (
+    "PIP_", "UV_",                                  # resolver / installer
+    "PYTHON", "_PYTHON",                            # interpreter
+    "LD_", "DYLD_", "GLIBC_", "MALLOC_",            # dynamic loader / libc
+    "VIRTUALENV_", "SETUPTOOLS_", "DISTUTILS_",     # packaging
+    "PYTEST_", "COVERAGE_",                         # test runner hooks
+    "OPENSSL_",                                     # TLS library loading
+    "BASH_FUNC_")                                   # shell function import
 RISKY_ENV = frozenset({
-    "PIP_CACHE_DIR", "PIP_FIND_LINKS", "PIP_NO_INDEX", "PIP_INDEX_URL",
-    "PIP_EXTRA_INDEX_URL", "PIP_REQUIRE_VIRTUALENV", "PATH", "PYTHONPATH",
-    "PYTHONHOME", "PYTHONSTARTUP", "PYTHONUSERBASE", "VIRTUAL_ENV",
-    "BASH_ENV", "ENV", "HOME", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
+    "PATH", "VIRTUAL_ENV", "HOME", "XDG_CONFIG_HOME", "XDG_CONFIG_DIRS",
+    "BASH_ENV", "ENV", "SHELLOPTS", "BASHOPTS", "IFS", "CDPATH",
     "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
     "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE", "SSL_CERT_DIR",
-    "LD_PRELOAD", "LD_LIBRARY_PATH"})
+    "GCONV_PATH", "LOCPATH", "NLSPATH",
+    "HOSTALIASES", "RES_OPTIONS", "LOCALDOMAIN"})
+_ENV_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def forbidden_env_names(env: object) -> list[str]:
-    """Names in an ``env`` mapping that a validation job must not set."""
+    """Names in an ``env`` mapping that a validation job must not set.
+
+    Values are deliberately ignored: a forbidden name is rejected whatever
+    it is set to, literal or ``${{ }}`` expression."""
     if env and not isinstance(env, dict):
         # e.g. ``env: ${{ fromJSON(inputs.env) }}``: keys unknowable here.
         return ["<dynamic env mapping>"]
     bad = []
-    for name in sorted((env or {})):
+    for name in sorted((env or {}), key=str):
+        if not _ENV_NAME_RE.fullmatch(str(name)):
+            bad.append(str(name))
+            continue
         upper = str(name).upper()
         if upper in ALLOWED_PIP_FAMILY_ENV:
             continue
@@ -1138,6 +1162,15 @@ def environment_job_findings(job_name: str, job: dict) -> list[str]:
     bootstrap = [i for i, r in enumerate(roles) if "bootstrap" in r]
     doctor = [i for i, r in enumerate(roles) if "doctor" in r]
     findings = []
+    # A job-level continue-on-error reports a failed bootstrap, doctor or
+    # suite as success to ``needs`` and the CI gate.  Fail closed: anything
+    # but a literal false (including any ``${{ }}`` expression) is refused.
+    # Job-level ``if:`` (the planner's selection) is not tolerance.
+    if "continue-on-error" in job and _truthy(job["continue-on-error"]):
+        findings.append(
+            f"{job_name}: job-level continue-on-error "
+            f"{job['continue-on-error']!r} lets a failed bootstrap, doctor "
+            "or suite pass")
     if not bootstrap:
         findings.append(
             f"{job_name}: no unconditional canonical bootstrap step "
@@ -2522,6 +2555,15 @@ class InterpreterLoaderEnvTests(unittest.TestCase):
                     self.assertTrue(cache_policy_findings(
                         _env_workflow(scope, {name: "1"}),
                         self.closure), "accepted")
+
+    def test_round3_non_mapping_env_rule_is_pinned(self):
+        # Preservation: the round-3 whole-map rule must stay its own rule,
+        # not be masked by the round-4 name check (a list of benign names
+        # or an expression string is never an env mapping).
+        for env in ("${{ fromJSON(inputs.env) }}", ["CI"], ("TZ",)):
+            with self.subTest(env=env):
+                self.assertEqual(forbidden_env_names(env),
+                                 ["<dynamic env mapping>"])
 
     def test_reviewed_and_benign_env_remains_accepted(self):
         # The documented reviewed input, plus names that merely CONTAIN a
