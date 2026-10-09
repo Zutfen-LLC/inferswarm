@@ -48,6 +48,10 @@ An investigation is evidence in, not a decision or doctrine update out.
   — the R8-I6 V340L comparator/2 physical-authority gate (repository/CPU-only
   tooling and tests; no physical execution authority without the exact-head
   maintainer dispatch).
+- [issue292-ci-dependency-cache.md](issue292-ci-dependency-cache.md) — the
+  Issue #292 measurement of hosted CPU-validation setup time and dependency
+  caching; it records the decision to defer caching and the contract tests that
+  gate any future enablement.
 - [data/](data/README.md) — the byte-preserved derivation outputs and their
   `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
   placements, and the Phase1R D3/D4/D7 placements. The tools that produce them
