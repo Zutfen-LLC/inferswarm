@@ -36,11 +36,20 @@ laws fixed here:
   the same process identity the launcher spawned, and (b) the server
   reporting THIS launch's identity token. A bare HTTP 200, an open port,
   or a cached health response is never readiness. The token is unique per
-  launch (``<label>#<launcher-pid>#<monotonic-nonce>``), injected into the
-  child environment as ``I280_LAUNCH_IDENTITY``, and echoed on ``/health``
+  launch (``<label>#<launcher-pid>#<monotonic-nonce>``), injected into
+  the child environment as ``I280_LAUNCH_IDENTITY``, and echoed on ``/health``
   and in every completion response, so an HTTP request can never be
   routed to — or admitted from — a previous launch/arm, including across
-  a bind collision, early exit, or PID reuse.
+  a bind collision, early exit, or PID reuse. ``identity_mode="kernel"``
+  (issue #280 lane 1) satisfies the same attribution law without a
+  server-side echo: the launch is attributed through kernel-verified
+  listening-socket ownership (/proc/net/tcp{,6} LISTEN inodes cross-bound
+  to the owned child's /proc fd table, PID + non-inherited start time),
+  proven at readiness and re-proven immediately before and after every
+  request; a stale/foreign listener structurally cannot satisfy the
+  proof, so zero completion bytes are dispatched to it. This mode exists
+  for the pinned, unmodified physical llama-server, which implements no
+  identity echo; the default ``echo`` mode is unchanged.
 - **Traceability.** Every request record carries launch label, arm, server
   PID, and both identity tokens alongside the response bytes; a response
   whose server identity does not match the current launch is recorded as
@@ -88,6 +97,20 @@ PORT_PROBE_TIMEOUT_S = 0.5
 
 IDENTITY_ENV = "I280_LAUNCH_IDENTITY"
 IDENTITY_HEADER = "X-I280-LAUNCH-IDENTITY"
+
+# Attribution contract selector. ``echo`` is the merged-#290 law: the
+# server must echo this launch's token on /health and every completion
+# (supported by the CPU stub; NOT by the pinned physical llama-server).
+# ``kernel`` satisfies the same laws through kernel-verified listening-
+# socket ownership instead of a server-side echo: readiness and every
+# request are attributed to this launch's owned child process instance
+# (PID + non-inherited /proc start time) through /proc/net/tcp{,6} LISTEN
+# inodes cross-bound to the child's open-fd table. This exists so the
+# pinned, unmodified physical llama-server (which has no echo patch) can
+# satisfy the launcher's attribution law without altering frozen source
+# or build identity. Both modes retain every other lifecycle law
+# (ownership, sequencing, port preflight, fail-closed slots, cleanup).
+IDENTITY_MODES = ("echo", "kernel")
 
 # Independently pinned retained #280 workload, NOT a caller-supplied hash.
 # These bytes are unchanged at reviewed head 3b499400 and accepted main
@@ -203,6 +226,104 @@ def port_occupied(host: str, port: int) -> bool:
         return False
 
 
+def _parse_ip(hexaddr: str) -> str | None:
+    """Parse a /proc/net/tcp little-endian hex IPv4/IPv6 address. Kept as
+    a pure helper for callers/tests that need address-level evidence."""
+    try:
+        raw = bytes.fromhex(hexaddr)
+    except ValueError:
+        return None
+    raw = raw[::-1]
+    if len(raw) == 4:
+        return socket.inet_ntop(socket.AF_INET, raw)
+    if len(raw) == 16:
+        # /proc presents IPv6 in 32-bit word order
+        words = [raw[i:i + 4] for i in range(0, 16, 4)]
+        reordered = b"".join(w[::-1] for w in words)
+        return socket.inet_ntop(socket.AF_INET6, reordered)
+    return None
+
+
+def verify_kernel_ownership(host: str, port: int, pid: int,
+                            start_time: str | None) -> tuple | None:
+    """Kernel-verified proof that the exact spawned process instance
+    (PID + non-inherited /proc start time) is the sole owner of the port's
+    listening socket, for the kernel identity mode (issue #280 lane 1).
+
+    Returns ``(inodes, owners)`` — the LISTEN inode(s) and owning pid(s)
+    — when every listener on the port belongs to that exact process
+    instance, else None. None is ALSO returned when kernel evidence is
+    unavailable or the process identity cannot be confirmed (fail-closed:
+    unverifiable is never attributed), so callers must record the
+    observed evidence separately for diagnostics."""
+    # read kernel tables once; None => unavailable evidence
+    found = listen_inodes(host, port)
+    if not found:
+        return None
+    if not pid_alive_same_instance(pid, start_time):
+        return None
+    for inode, owner in found.items():
+        if owner != pid:
+            return None
+        # confirm the owning pid is the SAME instance (start-time law)
+        if proc_start_time(owner) != start_time:
+            return None
+    return tuple(found.keys()), tuple(found.values())
+
+
+def listen_inodes(host: str, port: int) -> dict | None:
+    """Map of LISTEN socket inode -> owning pid for every process
+    listening on ``port`` (any address), read from kernel tables
+    (/proc/net/tcp and /proc/net/tcp6) cross-bound to every
+    /proc/<pid>/fd socket entry.
+
+    Address-independent by law: a foreign listener on ANY local address
+    of the port is visible and must fail attribution, because a wildcard
+    or sibling-family binding can intercept connections to the launch's
+    host:port. Returns None when the kernel evidence cannot be read
+    (fail-closed: the caller must treat unavailable evidence as an
+    identity failure, never as absence of listeners)."""
+    inode_owner = {}
+    try:
+        for pd in Path("/proc").iterdir():
+            if not pd.name.isdigit():
+                continue
+            pid = int(pd.name)
+            try:
+                for fd in (pd / "fd").iterdir():
+                    try:
+                        target = str(fd.readlink())
+                    except OSError:
+                        continue
+                    if target.startswith("socket:[") and target.endswith("]"):
+                        inode_owner.setdefault(target[8:-1], []).append(pid)
+            except (OSError, PermissionError):
+                continue
+    except OSError:
+        return None
+    found = {}
+    for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            lines = Path(table).read_text().splitlines()[1:]
+        except OSError:
+            return None
+        for line in lines:
+            parts = line.split()
+            if len(parts) < 10 or parts[3] != "0A":
+                continue
+            p = parts[1].rsplit(":", 1)[-1]
+            try:
+                lport = int(p, 16)
+            except ValueError:
+                continue
+            if lport != port:
+                continue
+            inode = parts[9]
+            for owner in inode_owner.get(inode, []):
+                found[inode] = owner
+    return found
+
+
 def slice_request_bracket(log_text: str, ordinal: int) -> str | None:
     """Derive the per-request observer bracket from the append-only server
     log (r3 driver law, byte-identical semantics): the ``recording`` +
@@ -267,7 +388,7 @@ class Launch:
     def __init__(self, row, *, command_builder, workdir, env=None,
                  host="127.0.0.1", port=8791, slice_observer=None,
                  retain=None, health=None, startup_timeout_s=STARTUP_TIMEOUT_S,
-                 prompt_binding=None):
+                 prompt_binding=None, identity_mode="echo"):
         self.row = row
         self.arm = row["arm"]
         self.label = row["label"]
@@ -280,6 +401,11 @@ class Launch:
         self.retain = retain
         self.health = health
         self.startup_timeout_s = startup_timeout_s
+        if identity_mode not in IDENTITY_MODES:
+            raise LaunchError(
+                f"IDENTITY_MODE_UNKNOWN {identity_mode!r}; known modes: "
+                f"{', '.join(IDENTITY_MODES)}")
+        self.identity_mode = identity_mode
         # Explicit caller binding is checked against independently pinned
         # repository workload authority (N2). No in-row prompt overrides,
         # silent settings defaults, or production synthetic-test bypass.
@@ -289,6 +415,7 @@ class Launch:
         self.log_file = None
         self._start_time: str | None = None
         self._identity: str | None = None
+        self._kernel_proof: tuple | None = None
         self._t0: float | None = None
         self.startup_s: float | None = None
         self.ordinal = 0
@@ -387,6 +514,29 @@ class Launch:
                     if identity_error else
                     f"CHILD_EXITED_BEFORE_READY launch={self.label} "
                     f"pid={self.record['pid']} code={code}")
+            if self.identity_mode == "kernel":
+                # Kernel attribution law: readiness = the owned child is
+                # the kernel-verified sole listener on the port AND the
+                # server answers /health 200. An HTTP 200 without the
+                # ownership proof is never readiness, and an ownership
+                # proof without a live HTTP endpoint is never readiness.
+                proof = verify_kernel_ownership(
+                    self.host, self.port, self.record["pid"],
+                    self._start_time)
+                if proof is not None and self._health_ok():
+                    self.startup_s = time.monotonic() - t0
+                    self.record["kernel_identity"] = {
+                        "listen_inodes": list(proof[0]),
+                        "owner_pid": proof[1][0] if proof[1] else None,
+                        "start_time": self._start_time,
+                    }
+                    return
+                evidence = listen_inodes(self.host, self.port)
+                self.record["last_kernel_evidence"] = (
+                    {str(k): v for k, v in evidence.items()}
+                    if isinstance(evidence, dict) else None)
+                time.sleep(READY_POLL_INTERVAL_S)
+                continue
             ident = self._probe_identity()
             if ident is not None:
                 last_observed = ident
@@ -424,6 +574,18 @@ class Launch:
                 return data.get(IDENTITY_ENV) or data.get("identity")
         except (urllib.error.URLError, OSError, ValueError):
             return None
+
+    def _health_ok(self) -> bool:
+        """GET /health answering HTTP 200 (kernel mode readiness
+        component; NOT readiness by itself — the ownership proof is the
+        attribution law, this only proves the endpoint serves)."""
+        url = f"http://{self.host}:{self.port}/health"
+        try:
+            with urllib.request.urlopen(url,
+                                        timeout=STARTUP_PROBE_TIMEOUT_S) as r:
+                return r.status == 200
+        except (urllib.error.URLError, OSError, ValueError):
+            return False
 
     def stop(self):
         """Bounded graceful stop (SIGTERM to the owned process group),
@@ -557,6 +719,22 @@ class Launch:
             # B4: prompt/request binding rejected BEFORE any HTTP
             # dispatch — the slot is consumed fail-closed, never sent.
             return self._failed_request(kind, str(e))
+        if self.identity_mode == "kernel":
+            # Kernel attribution law at request time: prove ownership of
+            # the listening socket IMMEDIATELY before dispatching any
+            # HTTP bytes. A stale/foreign listener (r3 failure shape)
+            # cannot satisfy this proof, so zero completion bytes are
+            # sent to a server that is not this launch's owned child.
+            proof = verify_kernel_ownership(
+                self.host, self.port, self.record["pid"], self._start_time)
+            if proof is None:
+                return self._failed_request(
+                    kind,
+                    f"KERNEL_OWNERSHIP_UNVERIFIED launch={self.label} "
+                    f"pid={self.record['pid']} port={self.port}: no "
+                    f"kernel proof the owned child solely owns the "
+                    f"listening socket; zero completion bytes dispatched")
+            self._kernel_proof = proof
         self.ordinal += 1
         ordinal = self.ordinal
         t0 = time.monotonic()
@@ -593,7 +771,29 @@ class Launch:
             err = f"{type(e).__name__}: {e}"
         wall = time.monotonic() - t0
         mismatch = False
-        if transport_ok and server_identity != self._identity:
+        kernel_ownership = None
+        if self.identity_mode == "kernel":
+            # Post-response attribution: re-verify sole ownership AFTER
+            # the response and retain the kernel evidence on the request
+            # record. A response that arrived while ownership could not
+            # be re-proven is a transport failure, never an observation.
+            post = verify_kernel_ownership(
+                self.host, self.port, self.record["pid"], self._start_time)
+            kernel_ownership = {
+                "pre_dispatch": (list(self._kernel_proof[0]),
+                                 list(self._kernel_proof[1]))
+                if self._kernel_proof is not None else None,
+                "post_response": (list(post[0]), list(post[1]))
+                if post is not None else None,
+            }
+            if transport_ok and post is None:
+                transport_ok = False
+                err = (f"KERNEL_OWNERSHIP_UNVERIFIED_POST_RESPONSE "
+                       f"launch={self.label} pid={self.record['pid']}: "
+                       f"response not attributable to this launch's "
+                       f"owned child")
+        if (self.identity_mode != "kernel"
+                and transport_ok and server_identity != self._identity):
             mismatch = True
             transport_ok = False
             err = (f"SERVER_IDENTITY_MISMATCH launch={self.label} "
@@ -605,6 +805,7 @@ class Launch:
             "ordinal": ordinal,
             "server_pid": self.record["pid"],
             "server_identity": server_identity,
+            "kernel_ownership": kernel_ownership,
             "launch_identity": self._identity,
             "identity_mismatch": mismatch,
             "request_identity": request_identity,
@@ -676,7 +877,7 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
                       host="127.0.0.1", port=8791, slice_observer=None,
                       retain=None, health=None, on_launch_record=None,
                       startup_timeout_s=STARTUP_TIMEOUT_S,
-                      prompt_binding=None):
+                      prompt_binding=None, identity_mode="echo"):
     """Deterministic production entry point: run the whole matrix through
     the UNCHANGED pure gate engine (``issue280_runner.run_campaign``) with
     the corrected launch lifecycle. Returns ``(summary, launches)``.
@@ -735,7 +936,8 @@ def campaign_executor(matrix, *, command_builder, workdir, env=None,
                      env=env, host=host, port=port,
                      slice_observer=slice_observer, retain=retain,
                      health=health, startup_timeout_s=startup_timeout_s,
-                     prompt_binding=prompt_binding)
+                     prompt_binding=prompt_binding,
+                     identity_mode=identity_mode)
         if launch_failure is None:
             try:
                 ctx.start()
