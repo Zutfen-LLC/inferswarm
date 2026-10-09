@@ -105,7 +105,8 @@
     "test_issue255_baseline",
     "test_issue268_operator_plan",
     "test_issue268_operator_runtime",
-    "test_issue299_metadata"
+    "test_issue299_metadata",
+    "test_issue299_profiles"
    ]
   },
   "r8-qwen-lineage": {

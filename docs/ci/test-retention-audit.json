@@ -4314,6 +4314,30 @@
    "replacement": null,
    "test_count_at_audit": 6
   },
+  "test_issue299_profiles": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 55,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Immutable resource profiles and strict config/3 bind physical identities, evidence applicability and freshness; one remote endpoint supports multiple physical bindings without changing legacy config/2.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/config.py",
+     "inferswarm/operator/profiles.py",
+     "tests/issue299_fixture.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective profile/config contract; synthetic and replay evidence never qualify live execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 55
+  },
   "test_issue299_metadata": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,

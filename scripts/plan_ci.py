@@ -209,6 +209,7 @@ GROUP_TEST_MODULES = {
         "test_issue268_operator_plan",
         "test_issue268_operator_runtime",
         "test_issue299_metadata",
+        "test_issue299_profiles",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).
