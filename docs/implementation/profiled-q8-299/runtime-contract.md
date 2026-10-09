@@ -6,6 +6,15 @@ IQ1_S `/2` plan, normalized digest and `-cmoe` lowering unchanged. The two expli
 selections are `one-gpu` and `cpu-only`; a failed GPU candidate never selects the
 CPU alternative, changes ownership or changes its copy route.
 
+**Prospective /2 scope note (October 9, 2026):** The maintainer-authorized
+observation-only successor is described in [Prospective /2 parser contract](#prospective-2-parser-contract)
+below. That addition separates pinned base source from derived patch/build
+identities and phases static admission before dispatch from dynamic acceptance
+after execution. The preceding fixed `/1` source analysis and the historical
+citations/digests below remain unchanged; they do not describe a derived `/2`
+artifact. The current `/2` implementation is **identity/parser-only**: both
+incomplete reconcilers refuse, so it cannot admit dispatch or accept output.
+
 ## Authenticated identities and evidence scope
 
 - Unmodified llama.cpp commit: `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`.
@@ -234,3 +243,170 @@ performance, weight access or #300 execution authorization follows from this wor
 | `ggml/src/ggml-cuda/ggml-cuda.cu` | `523470d6604755b82d0208414ce40f1378941b10bc1349763bbdf02edaab9634` |
 | `ggml/src/ggml-cuda/common.cuh` | `a210a71f965419ab55cce071b900df118c2520c1566ea5e068d8be07805644a2` |
 | `ggml/src/ggml-cuda/top-k.cu` | `e8fd64d90d021e5d0549e6c529619a782a050df3e309ac088151d6b5490a5c89` |
+
+## Prospective /2 parser contract
+
+This is the bounded Slice 4D0a safety contract in
+`inferswarm/operator/phased_observation.py`, **not completion of Slice 4D0**.
+The approved successor may instrument existing native observation points only;
+it may not change computation, kernels, placement, scheduling or transfers.
+The legacy `bindings.py` `/1` contract is untouched. No CLI/runner execution
+authority, native producer, build, deployment or physical qualification is
+supplied by this slice. Self-consistent hashes are not signatures or
+cryptographic attestation of native facts.
+
+### Derived native build identity
+
+The `q8-native-build-manifest/2` JSON object has exactly these fields:
+
+| Field | Exact type/meaning |
+|---|---|
+| `schema` | String `q8-native-build-manifest/2` |
+| `base_revision` | Lowercase 40-hex pinned commit `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4` |
+| `base_tree` | Lowercase 40-hex pinned tree `950999fe62b7fe55f44ab5b7394e3c8542f37f12` |
+| `patch_sha256` | Nonzero lowercase SHA-256 of the separately retained observation patch |
+| `transformed_manifest_sha256` | Nonzero lowercase SHA-256 of the separately retained transformed-file manifest |
+| `protocol` | String `inferswarm-native-observation/2` |
+| `compiler` | Nonempty exact compiler identity string; actual toolchain identity must be independently collected |
+| `build_options` | Nonempty array of at most 256 exact flag strings, **ordered** |
+| `executable_sha256` | Nonzero lowercase SHA-256 of the actual executable bytes |
+| `backend_libraries` | Nonempty array of at most 128 objects with exactly `name` and nonzero lowercase `sha256`; names must be unique |
+
+Identity/flag/name strings are exact nonempty UTF-8, without surrounding
+whitespace or NUL, at most 4,096 encoded bytes. Library rows normalize by name
+(the unique-name sort also gives exact pair order); compiler flags remain in
+original order. The identity's `manifest_sha256` is computed over this complete
+normalized object, including `schema`, with the canonical encoding below; it
+is not a wire field. Direct `NativeBuildIdentity` construction validates every
+component, normalizes/deep-snapshots arrays, and verifies that supplied manifest
+digest. A legal `/2` derived observer never reports `is_unmodified_base=True`.
+All-zero patch/transformed identities cannot masquerade as an unmodified build.
+
+`native_build_matches` is a pure exact component comparison;
+`require_native_build_match` refuses with the differing component (patch,
+transformed manifest, compiler, ordered flags, executable or backend libraries).
+Wrong base revision/tree and protocol are specifically refused during
+construction/parsing. An opaque build label cannot substitute for these hashes.
+Neither function reads artifacts. The downstream collector must read/authenticate
+the retained patch and transformed-file manifest, each actual transformed file,
+toolchain/effective options, executable and loaded backend library bytes, then
+join those identities to the owned live image/process and deployment descriptor.
+The actual manifest format and artifact-reading proof belong to the native
+build/collector slices; parser equality alone is not that proof.
+
+### Raw observation envelope and completeness fences
+
+A successful typed `TransportReply` is required: exact integer `exit_code=0`
+(no boolean or float), exact byte payload, at most 8 MiB. Status is checked
+**before** decoding. UTF-8 JSON rejects duplicate keys at every level,
+NaN/Infinity and nonfinite exponent floats. No unknown or missing envelope or
+sequence-row fields are accepted.
+
+The `inferswarm-native-observation/2` object has exactly these fields:
+
+| Field | Exact type/meaning |
+|---|---|
+| `schema` | String `inferswarm-native-observation/2` |
+| `phase` | String `static` or `dynamic` |
+| `participant_id` | Exact participant identity string |
+| `plan_digest` | Lowercase SHA-256 of the frozen reconciliation oracle, not invented placement facts |
+| `invocation_token` | Caller-owned invocation identity string |
+| `stream_generation` | Exact native emitter/reset generation string, constant across this capture |
+| `stream_kind` | String `snapshot`, `whole` or `prefix` |
+| `sequence_start` | Nonnegative integer, inclusive first declared counter |
+| `terminal_sequence` | Nonnegative integer, **exclusive** next-counter fence for this capture |
+| `event_count` | Nonnegative integer equal to array length and `terminal_sequence - sequence_start` |
+| `sequence` | Array of objects with exactly `sequence` (nonnegative integer) and `event` (exact native event identity/kind string) |
+| `terminal` | Boolean final fence, not proof of successful execution |
+| `snapshot_fence` | Boolean explicit static inventory snapshot fence |
+| `dropped_events` | Nonnegative integer; any nonzero value refuses parsing |
+| `overflow` | Boolean; true refuses parsing |
+| `facts` | Bounded JSON object containing independently observed facts; its inventory/event-catalog semantics are not admitted in this slice |
+| `terminal_digest` | Lowercase SHA-256 binding **all other fields**, including interval/count/generation/drop/overflow/facts |
+
+Counters are bounded by `2^31`; booleans are never integers at these boundaries.
+Each sequence must enumerate the complete declared interval in order with no
+gaps or duplicates. Generations have independent counters; a reset must create
+a different generation, not silently splice observations. These rules concern
+one capture, not cross-capture native generation/freshness authentication, which
+is still a collector/reconciler dependency.
+
+- **`snapshot`:** static only, `terminal=true`, `snapshot_fence=true`, zero start
+  and terminal counters, zero count and empty sequence. It can truthfully carry
+  a static inventory object without event history, but does not prove its
+  completeness/source/physical residence, dynamic work or execution.
+- **`whole`:** starts at zero, `terminal=true`, `snapshot_fence=false`, exact
+  contiguous rows up to the exclusive terminal fence. Dynamic whole streams
+  require at least one native event. Static empty lists require the explicit
+  snapshot alternative instead. A terminal event list alone cannot establish
+  that all required request/copy/state work occurred.
+- **`prefix`:** starts at zero, `terminal=false`, `snapshot_fence=false`, exact
+  contiguous rows up to the current exclusive capture counter. An empty dynamic
+  prefix may describe pre-execution capture. A prefix is never a whole-stream,
+  execution or acceptance proof. Arbitrary nonzero-start suffix captures are not
+  supported. In particular `[3,5]` cannot be labeled whole-stream evidence.
+
+Canonical hashing uses UTF-8 bytes of JSON with sorted object keys, separators
+`,` and `:`, ASCII escaping enabled and nonfinite values forbidden. Array order
+is retained. For streams only `terminal_digest` is excluded from its own hash;
+no declared completeness/status field or fact is omitted. This is a content
+integrity join, not independent producer authentication.
+
+The entire raw/direct-constructor object is limited to 65,536 value nodes,
+16,384 entries per object/array, nesting depth 32 (envelope at depth zero),
+65,536 UTF-8 bytes per fact string without NUL, signed 64-bit fact integers and
+finite floats. Keys and identity/event strings use the 4,096-byte exact-string
+limit. The canonical complete envelope also cannot exceed 8 MiB. Nested values
+are defensively snapshotted into immutable tagged object tuples and array
+tuples, including sequence rows, on **both** parse and direct dataclass
+construction. Deepcopy preserves that immutability and input data is unchanged.
+
+`facts` is intentionally observation-only and bounded, not a universal telemetry
+framework or an already-accepted full inventory/copy schema. The native producer
+must supply actual source/allocation/request facts, never merely echo plan facts.
+Complete fact catalogs and their joins remain required downstream.
+
+### Request phases and fail-closed pending reconciliation
+
+Before POST, the caller knows `invocation_token` and `request_nonce` only.
+`RequestIdentity` permits `task_id=None`, `response_id=None` and empty
+`graph_generations`; those fields are bound later from actual native/server
+facts, not guessed pre-dispatch. Known task/response IDs are exact strings;
+known graph generations are a bounded immutable tuple of unique nonnegative
+integers. One request can own multiple graph and ubatch generations. This narrow
+value records graph IDs, not the still-pending graph/ubatch lineage/count/token
+catalog or response-custody proof. A later immutable value can record new facts
+without changing the original dispatch identity.
+
+`reconcile_static` always raises `IncompleteReconciliation` with
+`static incomplete reconciliation: unsupported admission`.
+`reconcile_dynamic` always raises it with
+`dynamic incomplete reconciliation: unsupported acceptance`, even for an empty
+catalog or a caller-forged positive static receipt. Neither creates
+`STATIC_ADMITTED` or `DYNAMIC_ACCEPTED`. The reserved `PhaseReceipt` is a
+structural value, not authority; parsing or direct construction of any value
+cannot unlock dispatch/output. The old partial routines were removed rather
+than retained as pretend complete acceptance. Clock/mode arguments cannot
+bypass these unconditional refusals.
+
+The original full matrix remains mandatory, **pending**:
+
+- STATIC: complete 1,224 weights, 109 persistent native states plus two logical
+  composites; exact source/member/range/cache consumption, PLE residence,
+  physical bindings/domain/base extents/allocation catalogs and hidden mirrors;
+  fresh independent owned PID/start/host/build/profile identity, measured/bounded
+  resource charges and no required UNKNOWN metrics. Available static ownership
+  and source/resource evidence must pass before dispatch.
+- DYNAMIC: actual same-request graphs/ubatches and counts/indexes/token counts,
+  shapes/strides/ranges, 111 logical-state lineage/authority epochs/control and
+  final A-side output staging/custody; every split input/boundary/side-input,
+  transfer occurrence and actual GET/SET server completion; B-CPU→A-staging→B-CUDA
+  client-mediated legs, cache reads/writes, framing/TCP/PCIe/payload accounting,
+  zero/no-op transfers, generation/drop/overflow/terminal and post-blocking-call
+  freshness/resource/lifecycle checks. Dynamic acceptance gates output, not POST.
+- Producers/integration: independently authenticated observation-only native
+  hooks and retained base+patch/build artifact proof; actual bounded collector,
+  live identity reader, deployment and normal-runner wiring; then no-effects CLI,
+  examples/receipts and independent review. No native build/model/inference/GPU
+  or physical qualification was performed by this parser slice. #300 authority
+  remains separate.

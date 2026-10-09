@@ -215,6 +215,8 @@ GROUP_TEST_MODULES = {
         "test_issue299_source",
         "test_issue299_bindings",
         "test_issue299_runtime",
+        "test_issue299_phased_observation",
+        "test_issue299_native_build",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).
