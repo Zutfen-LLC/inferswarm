@@ -453,6 +453,142 @@ class Q8Runner(unittest.TestCase):
             else: self.assertTrue(h.manager.leases)
 
 
+class Q8RequestFreshness(unittest.TestCase):
+    """Elapsed time at the real runner's final transport/admission boundaries."""
+    @classmethod
+    def setUpClass(cls):
+        cls.plans = {s: plan_fixture(s) for s in ('one-gpu', 'cpu-only')}
+
+    def profile_expiring(self, seconds):
+        raw = synthetic_mapping(); snapshot = raw['profiles']['snapshot']
+        snapshot['evidence'][0]['expires_at'] = self.timestamp(NOW+timedelta(seconds=seconds))
+        reseal_profiles(snapshot); raw['profiles']['digest'] = profile_digest(snapshot)
+        plan = build_plan(parse_config(raw,now=NOW,profile_mode='replay'),now=NOW)
+        self.assertEqual(plan.admission.status,'ADMITTED',plan.admission.deficits)
+        return plan
+
+    @staticmethod
+    def timestamp(value): return value.isoformat().replace('+00:00','Z')
+
+    def elapsed_harness(self, plan, *, delay_at='alive', seconds=2, expiry=None, age=None):
+        h = Harness(plan); current = [NOW]; admissions = []; final_alive = []; captures = []
+        original_call = h.transport.call; original_observe = h.observe
+        original_reader = h.identity_reader; original_poll = h.poll
+        def clock():
+            caller = sys._getframe(1).f_code.co_name
+            if caller == '_profiled_admission':
+                admissions.append(current[0])
+                if len(admissions)==2 and delay_at=='admission':
+                    current[0] = NOW+timedelta(seconds=seconds)
+                h.events.append(('admission-clock',current[0]))
+            elif caller == '_now':
+                h.events.append(('evidence-clock',sys._getframe(2).f_code.co_name,current[0]))
+            return current[0]
+        def call(address,payload):
+            if payload['action']=='alive' and len(captures)==2 and not h.posts and len(final_alive)<2:
+                current[0] = NOW+timedelta(seconds=seconds) if delay_at=='alive' else current[0]
+                final_alive.append((address,payload['name']))
+            return original_call(address,payload)
+        def observe(*args,**kwargs):
+            reply = original_observe(*args,**kwargs)
+            captures.append(json.loads(reply.payload))
+            return reply
+        def reader(*args):
+            h.events.append(('identity',args[0].participant_id)); return original_reader(*args)
+        def poll():
+            h.events.append(('tunnel-poll',)); return original_poll()
+        remote = next(p for p in plan.participants if p.role=='remote')
+        def mutate(data):
+            if data['participant_id']!=remote.participant_id: return
+            if expiry is not None: data['evidence']['expires_at'] = self.timestamp(NOW+timedelta(seconds=expiry))
+            if age is not None: data['evidence']['observed_at'] = self.timestamp(NOW-timedelta(seconds=age))
+        h.capture_mutate = mutate; h.clock = clock; h.transport.call = call
+        h.observe = observe; h.identity_reader = reader; h.poll = poll
+        return h, current, admissions, final_alive, captures
+
+    def run_elapsed(self, fixture, reason=None):
+        h, current, admissions, final_alive, captures = fixture
+        before = copy.deepcopy(h.plan); sources = copy.deepcopy(h.sources); runner = h.runner()
+        result = None; error = None
+        # Only the recording boundaries may run: no real SSH/socket/inference.
+        with patch('subprocess.run',side_effect=AssertionError('unexpected external subprocess')), \
+                patch('socket.socket',side_effect=AssertionError('unexpected external socket')):
+            try: result = runner.run(h.plan)
+            except ValueError as exc: error = exc
+        self.assertEqual(h.plan,before); self.assertEqual(h.sources,sources)
+        self.assertEqual(len(captures),2); self.assertEqual(len(h.reads),6)
+        self.assertFalse(h.manager.leases); self.assertFalse(h.transport.active)
+        self.assertEqual(h.transport.foreign,{'untouched':'foreign-pid-and-token'})
+        self.assertTrue(h.stopped)
+        self.assertEqual(set(runner.last_cleanup),{p.execution_address for p in h.plan.participants})
+        self.assertTrue(all(r['lease']=='released' for r in runner.last_cleanup.values()))
+        expected_alive = [(p.execution_address,'rpc' if p.role=='remote' else 'client')
+            for p in sorted(h.plan.participants,key=lambda p:p.role,reverse=True)]
+        self.assertEqual(final_alive,expected_alive)
+        self.assertEqual(len(admissions),2)
+        if reason is not None:
+            self.assertIsInstance(error,ValueError,f'expected {reason!r}; actual posts={h.posts}')
+            self.assertEqual(str(error),reason); self.assertEqual(h.posts,0)
+            return
+        self.assertIsNone(error); self.assertEqual(h.posts,1)
+        self.assertEqual(result['admission']['status'],'ADMITTED')
+        self.assertEqual(result['plan_digest'],h.plan.digest); self.assertEqual(result['selection'],h.plan.selection)
+        self.assertEqual((result['observed_materialization']['tensor_count'],
+            result['observed_materialization']['state_count']),(1224,111))
+        self.assertEqual(revalidate_admission(h.plan,now=current[0]).status,'ADMITTED')
+        for flag in ('execution_authorized','physical_qualified','execution_ready'): self.assertIs(result[flag],False)
+        # Real public gates read the elapsed clock AFTER both blocking alive calls
+        # and the tunnel check, with no further identity/health/transport work.
+        post = next(i for i,e in enumerate(h.events) if e[0]=='post')
+        self.assertEqual([e[0] for e in h.events[post-6:post+1]],
+            ['evidence-clock','alive','alive','tunnel-poll','admission-clock','evidence-clock','post'])
+        self.assertEqual(h.events[post-6][1],'reconcile_materialization')
+        self.assertEqual(h.events[post-1],('evidence-clock','reconcile_bindings',current[0]))
+        # Returned receipts retain the original complete capture, not a recapture
+        # or modified expiry, and privately normalize it deterministically.
+        observed = {r['participant_id']:r['observed'] for r in result['observed_bindings']}
+        self.assertEqual(observed,{d['participant_id']:d for d in captures})
+        self.assertEqual(len(result['observed_materialization']['observed']['observations']),2)
+        first = result['observed_bindings'][0]; first['observed']['tensors'].clear()
+        self.assertTrue(captures[0]['tensors'])
+
+    def test_profile_expires_during_final_owned_alive_refuses_before_post(self):
+        for delay in (1,2):
+            with self.subTest(elapsed_seconds=delay):
+                fixture = self.elapsed_harness(self.profile_expiring(1),seconds=delay)
+                self.run_elapsed(fixture,'Q8 admission refused: expired evidence: synthetic-A')
+                self.assertEqual(revalidate_admission(fixture[0].plan,now=fixture[1][0]).status,'BLOCKED')
+
+    def test_observer_expires_on_final_admission_clock_refuses_before_post(self):
+        fixture = self.elapsed_harness(self.plans['one-gpu'],delay_at='admission',expiry=1)
+        self.run_elapsed(fixture,'expired observer evidence')
+        self.assertEqual(revalidate_admission(fixture[0].plan,now=fixture[1][0]).status,'ADMITTED')
+
+    def test_observer_expires_during_final_owned_alive_refuses_before_post(self):
+        for delay in (1,2):
+            with self.subTest(elapsed_seconds=delay):
+                fixture = self.elapsed_harness(self.plans['one-gpu'],seconds=delay,expiry=1)
+                self.run_elapsed(fixture,'expired observer evidence')
+                self.assertEqual(revalidate_admission(fixture[0].plan,now=fixture[1][0]).status,'ADMITTED')
+
+    def test_elapsed_but_fresh_profiles_and_observers_one_post_both_selections(self):
+        for selection in self.plans:
+            for delay_at in ('alive','admission'):
+                with self.subTest(selection=selection,delay_at=delay_at):
+                    plan = self.profile_expiring(3) if selection=='one-gpu' else self.plans[selection]
+                    self.run_elapsed(self.elapsed_harness(plan,delay_at=delay_at,expiry=3))
+
+    def test_observer_stale_after_final_alive_refuses_with_exact_max_age_predicate(self):
+        plan = self.plans['one-gpu']
+        fixture = self.elapsed_harness(plan,seconds=3,age=plan.policy.max_age_seconds-2)
+        self.run_elapsed(fixture,'stale observer evidence')
+        self.assertEqual(revalidate_admission(plan,now=fixture[1][0]).status,'ADMITTED')
+
+    def test_observer_exact_max_age_after_final_alive_still_accepts(self):
+        plan = self.plans['one-gpu']
+        self.run_elapsed(self.elapsed_harness(plan,age=plan.policy.max_age_seconds-2))
+
+
 class Q8SSHSource(unittest.TestCase):
     def fixture(self):
         fixture = source_tests.Q8Source(methodName='test_full_source_and_ranges_on_both_roles_without_cache_effects')

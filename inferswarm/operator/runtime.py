@@ -327,11 +327,13 @@ class OperatorRunner:
                     invocation_token=self.leases.token,identity_reader=self.identity_reader,**mode))
             actual_bindings=bindings.reconcile_bindings(plan,observations,**mode)
             material=bindings.reconcile_materialization(plan,observations,source_receipts=sources,**mode)
-            # Fresh real UTC in live mode again, immediately before the sole POST.
-            admission=self._profiled_admission(plan)
             self._live(client,remote)
             if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited before request')
             request=dict(plan.request)
+            # Recheck plan and retained capture freshness after blocking liveness;
+            # no external transport/identity work may intervene before the POST.
+            admission=self._profiled_admission(plan)
+            actual_bindings=bindings.reconcile_bindings(plan,observations,**mode)
             response=self.http.post(base+'/v1/chat/completions',
                 {'messages':[{'role':'user','content':request['prompt']}],
                  'max_tokens':request['max_tokens'],'temperature':request['temperature'],

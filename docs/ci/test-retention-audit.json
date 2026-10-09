@@ -4367,7 +4367,7 @@
   "test_issue299_runtime": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,
-   "baseline_test_count": 30,
+   "baseline_test_count": 36,
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-99-103",
@@ -4386,7 +4386,7 @@
    "rationale": "Offline actual-runner and small standalone-source integration proof; synthetic observations do not establish physical execution or qualification.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 30
+   "test_count_at_audit": 36
   },
   "test_issue299_source": {
    "baseline_group": "issue-99-103",
