@@ -188,11 +188,20 @@ with three findings; all three were corrected and re-verified.
    or nonzero sequence_start, and a middle-row sequence gap) rather than mere
    tampering detection; unsealed-tampering refusals are retained alongside.
 
-After corrections, SPEC continuation verdict: PASS; independent QUALITY
-verdict: APPROVED. Campaign ledger after the final re-run: 4070s of the
-5400s cumulative ceiling. Parent verification: focused 377-test rerun across
-all ten #299 modules, doctor/planner/retention checks PASS in the canonical
-venv.
+After corrections, SPEC continuation verdict: PASS. The full independent
+QUALITY review returned NOT APPROVED with five findings; all five were then
+corrected and re-verified: (1) the RPC server child now also receives
+IS301_RPC_ENDPOINT; (2) the native facts builder refuses scalar/array fact
+mixing and bounds the first appended element (no malformed-JSON or lost-fact
+path); (3) the retention audit records the true 16-method count; (4) retained
+capture bytes are pinned by expected SHA-256 in the tests, so re-authored
+self-consistent fixtures are detected; (5) a focused test asserts archive
+membership equals the exact link-command inputs (index drift guarded).
+Focused reruns pass 126 tests across the touched modules; retention and
+doctor checks PASS. An independent QUALITY re-review of the corrected head
+read the corrected files and re-ran the focused suites (all OK); verdict
+APPROVED with no new findings. Campaign ledger after the final re-run:
+4070s of the 5400s cumulative ceiling.
 
 Honest limits: this is CPU-only native proof — the tiny fixture does not
 observe Q8 tensors, model-specific hooks or any CUDA path; the B CPU→A

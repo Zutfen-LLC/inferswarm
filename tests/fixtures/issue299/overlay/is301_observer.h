@@ -192,17 +192,26 @@ struct facts_builder {
     void add(const std::string & key, const std::string & canonical_value) {
         std::lock_guard<std::mutex> lock(mu);
         for (auto & row : rows) {
-            if (row.first == key) { row.second = canonical_value; return; }
+            if (row.first == key) {
+                // Scalar overwrite onto an accumulated array would corrupt the
+                // canonical form: refuse (keep the last well-formed value).
+                if (is_array(key)) { return; }
+                row.second = canonical_value; return;
+            }
         }
+        if (canonical_value.size() > 4096) { return; }  // bounded scalar facts
         rows.emplace_back(key, canonical_value);
     }
     // Append one canonical element to the array value under key (bounded).
     // Array rows are stored as element lists; brackets are applied at render.
     void append(const std::string & key, const std::string & canonical_element) {
+        static const size_t FACT_BOUND = 4096;
         std::lock_guard<std::mutex> lock(mu);
+        if (canonical_element.size() > FACT_BOUND) { return; }  // bounded first element
         for (auto & row : rows) {
             if (row.first == key) {
-                if (row.second.size() + canonical_element.size() + 1 > 4096) return;  // bounded
+                if (!is_array(key)) { return; }  // never corrupt a scalar fact
+                if (row.second.size() + canonical_element.size() + 1 > FACT_BOUND) return;
                 if (!row.second.empty()) row.second += ",";
                 row.second += canonical_element;
                 return;

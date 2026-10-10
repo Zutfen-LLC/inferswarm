@@ -4915,7 +4915,7 @@
    "rationale": "Canonical controls never compile native targets or require private source/campaign budget. Historical stock build is separate old-builder evidence, not observer or corrected-builder execution proof.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 34
+   "test_count_at_audit": 16
   },
   "test_issue299_phased_observation": {
    "baseline_group": "issue-99-103",

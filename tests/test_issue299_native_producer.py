@@ -8,10 +8,19 @@ import hashlib
 import importlib
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 FIXTURES = Path(__file__).resolve().parents[1] / 'tests' / 'fixtures' / 'issue299'
 CAPTURES = FIXTURES / 'native-captures'
+# Expected SHA-256 of each retained genuine capture; a modified/re-authored
+# fixture (even a self-consistent one) must fail these pins before parsing.
+RETAINED_CAPTURE_DIGESTS = {
+    'static-capture.json': '4d3a19127612e47485d22c2e0df7bcb401a290b44323cac62f54bd585d29986b',
+    'dynamic-capture.json': '7626a1c454e9028f72265eae4ef38f70122f53fe7dd856f946640e78b719168a',
+    'rpc/static-capture.json': '2d9377bf310519ff412d65284bdc9aa7fde33c8212e43b36504c684327e1146b',
+    'rpc/dynamic-capture.json': 'ebd248c960f70ad87ad5a2688e3f8c6bb9c7faa935d3827659b74d9a18e65677',
+}
 
 from inferswarm.operator.bindings import TransportReply  # noqa: E402
 from inferswarm.operator import phased_observation as contract  # noqa: E402
@@ -88,6 +97,37 @@ class ProducerTests(unittest.TestCase):
         for name in catalog:
             self.assertIsInstance(name, str) and self.assertTrue(name)
 
+    def test_archive_membership_matches_link_inputs(self):
+        # The per-target backend-library archives must contain exactly the
+        # objects each link command consumes. Expected sets are derived from
+        # the recipe's own compile order (frozen closure), then the declared
+        # archive membership in execute() must equal them: index drift or
+        # accidental membership changes fail here.
+        from inferswarm.operator.native_observer import full_build as fb
+        from pathlib import Path as _P
+        import inspect
+        with tempfile.TemporaryDirectory() as tmp:
+            out = _P(tmp)
+            r = fb.assemble(_P('/nonexistent-tree'), out)
+            compiles = [c for c in r['commands'] if '-c' in c]
+            src_names = [c[c.index('-c') + 1].split('/')[-1] for c in compiles]
+            sink = src_names.index('is301_sink.cpp')
+            rpc_main = src_names.index('rpc-server.cpp')
+            ggml_last = max(i for i, n in enumerate(src_names)
+                            if n in ('transport.cpp', 'ggml-rpc.cpp'))
+            ggml = set(range(ggml_last + 1))
+            server = set(range(len(compiles))) - {rpc_main, len(compiles) - 1}
+            expected = {'llama-server': server,
+                        'ggml-rpc-server': ggml | {sink} | {rpc_main},
+                        'fixture': ggml | {sink, len(compiles) - 1}}
+            for name, cmd in zip(('llama-server', 'ggml-rpc-server', 'fixture'), r['commands'][-3:]):
+                objs = {int(_P(a).stem) for a in cmd if a.endswith('.o')}
+                self.assertEqual(objs, expected[name], name + ' link membership drift')
+            # Declared archive ranges in execute() must cover the same sets.
+            src_text = inspect.getsource(fb.execute)
+            self.assertIn("list(range(len(recipe['sources']) + 5))", src_text)
+            self.assertIn("list(range(ggml_count)) + [len(recipe['sources']) + 1]", src_text)
+
     def test_manifest_emission_is_parseable(self):
         emit = getattr(self.producer, 'build_manifest_body', None)
         self.assertIsNotNone(emit, 'build_manifest_body is not implemented')
@@ -109,6 +149,12 @@ class GenuineCaptureTests(unittest.TestCase):
         path = CAPTURES / 'static-capture.json'
         if not path.is_file():
             raise unittest.SkipTest('genuine static capture not retained')
+        # Byte-pin every retained capture: replacement with newly authored
+        # self-consistent bytes is detected here, before any parse.
+        for name, expected in RETAINED_CAPTURE_DIGESTS.items():
+            actual = hashlib.sha256((FIXTURES / 'native-captures' / name).read_bytes()).hexdigest()
+            if actual != expected:
+                raise AssertionError('retained capture byte drift: ' + name)
         cls.static_bytes = path.read_bytes()
         cls.dynamic_bytes = (CAPTURES / 'dynamic-capture.json').read_bytes()
 

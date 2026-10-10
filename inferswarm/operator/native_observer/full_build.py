@@ -272,7 +272,8 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         cmd = [str(output / 'ggml-rpc-server'), '-H', '127.0.0.1', '-p', str(port),
                '-d', 'CPU', '-t', '1']
         from .build import wait_listener
-        with supervisor.server(cmd, env_extra={'IS301_OBSERVE': '1'}) as server:
+        with supervisor.server(cmd, env_extra={'IS301_OBSERVE': '1',
+                                              'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}'}) as server:
             wait_listener(supervisor, server, port)
             supervisor.run([str(output / 'native-buffer-graph-observed'), 'rpc', str(rpc_dir)],
                            seconds=supervisor.limits.fixture_seconds,
