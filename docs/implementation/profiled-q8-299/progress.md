@@ -328,12 +328,20 @@ native evidence checks pass — CPU/RPC static+dynamic captures, three
 export streams (fixture-cpu, fixture-rpc, ggml-rpc-server), the refused
 adversarial capture, and the clean fact-bounds capture (3 tasks, 2
 responses, 2 allocations). Final campaign ledger: **5244.2s of 5400s
-(155.8s remaining)**. Updated executable identities (issue301-correction-ggml scratch root):
-`ggml-rpc-server` f6bd79694cdcb13e30a95a5edf19512ed041d6b7f03eb5133748ae6ce887232b;
-`native-buffer-graph-observed` d4f6ecdb25d2dd1fd3eaf2fb5deab542155a80fb9b327eb84b06d2ba38e388a4;
-`native-fact-bounds` 1b36ce9408957587d9c5c28c17494e753943aec36d42a1bc71634393a53e42a2
-(per-executable /2 manifests + separated provenance re-emitted); no llama-server rebuild is claimed and the STOP item stands
-(~700-750s additional supervised budget required).
+(155.8s remaining)** at that point. UPDATED after the atomic-claim fix:
+a clean-slate GGML-closure phase at the FINAL corrected sources
+(issue301-correction-final scratch root) regenerated all evidence;
+provenance, retained manifest and this record now agree on transformed
+manifest sha256
+bc85de2871c9a945aaee9c0e8e7912dd7ee8a7690d00f1d347a94fafeb049065, closing
+the final-verification stale-digest finding. FINAL campaign ledger:
+**5328.0s of 5400s (72.0s remaining)**. Final executable identities:
+`ggml-rpc-server` 7f7b9ee2bf9ae0834bd839ca5b0e1986a81ac0646afd9124123938353bf72f05;
+`native-buffer-graph-observed` 70c934e1e4f5c6342a6d71f9dd2d0ea395d90ed1b854e9fc27193371c560bc84;
+`native-fact-bounds` 964cb9d5e538f5e214cf9e54262fdde733c93e8d45aaf64b3ac2c514f6de0bd3
+(per-executable /2 manifests + separated provenance emitted; capture byte
+pins updated to this build). No llama-server rebuild is claimed and the
+STOP item stands (~700-750s additional supervised budget required).
 
 
 ### Tests

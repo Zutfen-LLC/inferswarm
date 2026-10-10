@@ -26,20 +26,29 @@ SOURCE = SCRATCH.parent / 'llama-src'
 TREE = SCRATCH / 'issue301-overlay-tree'
 OUT = SCRATCH / 'issue301-correction-ggml'
 
-# Refresh ONLY the fixture TU in the authenticated tree, then re-verify all.
-fixture_rel = 'tests/native-buffer-graph-observed.cpp'
-retained = Path(fb.OVERLAY) / fixture_rel
-(TREE / fixture_rel).write_bytes(retained.read_bytes())
+# Refresh EVERY overlay file in the authenticated tree (the observer header
+# and any transformed bytes may have changed since the tree was materialized),
+# then re-verify all inputs against the CURRENT retained manifest.
+import shutil
+for rel in list(overlay_module.TRANSFORMED) + list(overlay_module.NEW_FILES):
+    src = Path(fb.OVERLAY) / rel
+    (TREE / rel).write_bytes(src.read_bytes())
+shutil.copyfile(Path(fb.FIXTURES) / 'native-observer-transformed.json',
+                TREE / 'native-observer-transformed.json')
 verified = fb.verify_tree_inputs(TREE, SOURCE)
 print('re-authenticated input files:', len(verified))
 
 recipe = json.loads((OUT / 'recipe.json').read_text())
-compile_fb = [c for c in recipe['commands'] if '-c' in c
-              and any('native-buffer-graph-observed' in a for a in c)][0]
-compile_fb = [str(a) for a in compile_fb]
+# Recompile every header-dependent TU: transformed C++ files + sink + fixtures.
+recompile_names = ('ggml-backend.cpp', 'ggml-rpc.cpp', 'is301_sink.cpp',
+                   'native-buffer-graph-observed.cpp', 'native-fact-bounds.cpp')
+recompiles = [[str(a) for a in c] for c in recipe['commands']
+              if '-c' in c and any(n in str(c[c.index('-c') + 1]) for n in recompile_names)]
+compile_fb = recompiles[0]
 
 with Supervisor(SCRATCH / 'issue301-correction-tail2', workspace=Workspace(SCRATCH)) as supervisor:
-    supervisor.run(compile_fb)
+    for c in recompiles:
+        supervisor.run(c)
     # relink observed fixture: reuse GGML objects + sink + fresh fixture obj
     import glob
     ggml_objs = sorted(glob.glob(str(OUT / '0*.o')))
@@ -62,7 +71,13 @@ with Supervisor(SCRATCH / 'issue301-correction-tail2', workspace=Workspace(SCRAT
     link = ['/usr/bin/c++', '-pthread', '-ldl', '-lm']
     supervisor.run([*link, *ggml_only, sink_obj, observed_obj,
                     '-o', str(OUT / 'native-buffer-graph-observed')])
-    print('observed fixture relinked')
+    rpc_obj = [c[c.index('-o') + 1] for c in recipe['commands']
+               if '-c' in c and 'rpc-server.cpp' in str(c[c.index('-c') + 1])][0]
+    supervisor.run([*link, *ggml_only, sink_obj, rpc_obj,
+                    '-o', str(OUT / 'ggml-rpc-server')])
+    supervisor.run([*link, *ggml_only, sink_obj, fb_obj,
+                    '-o', str(OUT / 'native-fact-bounds')])
+    print('all three executables relinked')
 
     cpu_dir = OUT / 'fixture-cpu'
     rpc_dir = OUT / 'fixture-rpc'

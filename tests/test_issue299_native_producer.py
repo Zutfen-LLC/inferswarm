@@ -16,13 +16,13 @@ CAPTURES = FIXTURES / 'native-captures'
 # Expected SHA-256 of each retained genuine capture; a modified/re-authored
 # fixture (even a self-consistent one) must fail these pins before parsing.
 RETAINED_CAPTURE_DIGESTS = {
-    'static-capture.json': '207f7f414cf56c7b6a25e3c7366bf2f01f8491b897718baecf37e622b38721d9',
-    'dynamic-capture.json': 'c6d0015f91b7a830e4e96ea602935af18b3e09709dba13b68246f6adf1b05646',
-    'rpc/static-capture.json': '2840f5782383849679e038ec9528030ae7f4cc4f2d689d1ad5bcbf7d8891b884',
-    'rpc/dynamic-capture.json': 'f1ffaa3e05a6cacb9fff1f696a2063e56ba45619bddcf73a6fd669c86214749f',
-    'exports/fixture-cpu-observed.json': '2a91d1e8c7591e6635b4181fc06221fbca862cc126531a8abb245a52c263fee9',
+    'static-capture.json': '7e9e1e068c52694cb90e89c99c2b7d6d75f0e049a4139a0da245f62788337a99',
+    'dynamic-capture.json': 'a19ef10ed3aefe7e206c5a4b2d9fb1665c9ea5e4cb27fec1d80f096e1b89889d',
+    'rpc/static-capture.json': '7d53a6880aba6b896d4a3b44b392088c5a79c5670984288125c743c84faa8870',
+    'rpc/dynamic-capture.json': '3ea37236b3eba4b573660c08b85402c2072c91c0bae19ddcae71d6c72bf13a39',
+    'exports/fixture-cpu-observed.json': 'cf0747cb2cc40be75542d118af19c39e70879f9480d9a628ec7e7237d8b7424e',
     'exports/fixture-rpc-observed.json': '690e6450080bf70f0b6bac762399afa416600caf0c0298006271a8c082e53a11',
-    'exports/ggml-rpc-server-observed.json': 'd74c6d85d45edeccbe635520bf1fb150fca892e44abf621e3f21a324eb09526d',
+    'exports/ggml-rpc-server-observed.json': '92d4eba0d9098b4e3614cc4b81a1664706737dc9d4077bdc946e4616f3cf20ec',
     'fact-bounds/clean.json': 'f34ca1b903d3c59ec1a7992ce0aba2ade29b40d3683653cfcbbefe01e7acffde',
 }
 

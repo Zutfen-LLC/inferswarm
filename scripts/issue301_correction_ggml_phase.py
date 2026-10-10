@@ -29,7 +29,7 @@ from inferswarm.operator.native_observer.producer import build_manifest_body
 
 SOURCE = SCRATCH.parent / 'llama-src'
 TREE = SCRATCH / 'issue301-overlay-tree'
-OUT = SCRATCH / 'issue301-correction-ggml'
+OUT = SCRATCH / 'issue301-correction-final'
 
 KEEP_SUFFIXES = ('/build-info.cpp', '/is301_sink.cpp', '/rpc-server.cpp',
                  '/native-buffer-graph-observed.cpp', '/native-fact-bounds.cpp')
