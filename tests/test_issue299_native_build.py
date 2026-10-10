@@ -498,5 +498,60 @@ class NativeBuildTests(unittest.TestCase):
         self.assertEqual(len(set(identities)), len(identities))
 
 
+    def test_added_executable_bit_is_refused(self):
+        # QUALITY finding Q4: a pinned 100644 file flipped to 0755 must be
+        # refused (mode is part of the authenticated input identity).
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-mode-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+                (derived / 'common/common.cpp').chmod(0o755)
+                with self.assertRaisesRegex(ov.OverlayError, 'common/common.cpp'):
+                    ov.verify_tree_inputs(derived, source)
+
+    def test_regular_to_symlink_substitution_is_refused(self):
+        # QUALITY finding Q4: replacing a pinned regular file with a symlink
+        # (even one resolving to the pinned bytes) must be refused — symlinks
+        # can be retargeted after verification and before the compiler reads.
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-sym-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+                pinned_bytes = (source / 'common/common.cpp').read_bytes()
+                outside = root / 'outside.cpp'
+                outside.write_bytes(pinned_bytes)
+                (derived / 'common/common.cpp').unlink()
+                (derived / 'common/common.cpp').symlink_to(outside)
+                with self.assertRaisesRegex(ov.OverlayError, 'common/common.cpp'):
+                    ov.verify_tree_inputs(derived, source)
+
+    def test_dangling_or_foreign_entry_is_refused(self):
+        # QUALITY finding Q4 (enumeration): an unaccounted filesystem entry
+        # (here a dangling symlink) must be refused by the complete
+        # expected/actual set comparison.
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-dangling-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+                (derived / 'common/dangling').symlink_to(root / 'does-not-exist')
+                with self.assertRaisesRegex(ov.OverlayError, 'dangling'):
+                    ov.verify_tree_inputs(derived, source)
+
+
 if __name__ == '__main__':
     unittest.main()

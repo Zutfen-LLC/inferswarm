@@ -422,6 +422,9 @@ int main(int argc, char ** argv) {
     else { backends[0] = cpu_backend; ggml_backend_free(backend); backend = cpu_backend; }
     ggml_backend_sched_t sched = ggml_backend_sched_new(backends, nullptr, n_backends, 8, false, false);
     assert(sched);
+    // Mirror llama-server startup: reserve the scheduler's graph allocation
+    // before async compute (multi-backend graphs cannot auto-reallocate).
+    assert(ggml_backend_sched_reserve(sched, graph));
     assert(ggml_backend_sched_graph_compute_async(sched, graph) == GGML_STATUS_SUCCESS);
     ggml_backend_sched_synchronize(sched);
     is301::stream().record("fixture_graph");

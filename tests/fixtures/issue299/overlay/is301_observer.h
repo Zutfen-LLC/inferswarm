@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -351,12 +352,27 @@ inline void export_capture(const char * phase, const char * stream_kind,
     static int export_counter = 0;
     static std::mutex export_mu;
     std::lock_guard<std::mutex> export_lock(export_mu);
+    const long long process_id = pid();
     if (export_counter >= MAX_EXPORTS) {
         std::fprintf(stderr, "is301: export cap reached\n");
         return;
     }
+    if (export_counter == 0) {
+        // One export directory serves at most ONE observing process: a
+        // non-empty directory not authored by this process is refused, so a
+        // shared directory cannot accumulate an unbounded number of exports
+        // across processes/restarts. (The controller owns directory layout.)
+        for (auto & entry : std::filesystem::directory_iterator(export_dir)) {
+            const std::string & n = entry.path().filename().string();
+            const std::string prefix = std::string(participant) + "-" +
+                                       std::to_string(process_id) + "-";
+            if (n.rfind(prefix, 0) != 0) {
+                std::fprintf(stderr, "is301: export dir in use by another process\n");
+                return;
+            }
+        }
+    }
     const int current = export_counter++;
-    const long long process_id = pid();
     const std::string generation = std::string("exp-") + std::to_string(process_id) + "-" +
         std::to_string(current) + "-" + std::to_string(now_ns());
     const std::string body = envelope(phase, participant, std::string(64, '0'),

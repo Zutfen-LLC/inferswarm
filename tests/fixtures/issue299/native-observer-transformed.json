@@ -32,7 +32,7 @@
     },
     {
       "path": "tests/native-buffer-graph-observed.cpp",
-      "sha256": "956befaee2612c9eda85ebac89fc9652c2657627f0d6574406314c705ff9c651"
+      "sha256": "b0710142764a31696fb3c4c8dd50742e1d61efc7618411d4894e04dd00601abc"
     },
     {
       "path": "tests/native-fact-bounds.cpp",
@@ -44,7 +44,7 @@
     },
     {
       "path": "is301_observer.h",
-      "sha256": "2805ffb0ad53f52b52c7848ad8bec5657e3501f9030a13c802513aaf085333b3"
+      "sha256": "cbdcd2611a0ac9d075f7cfcf8ec3f20789ca5269665e5b0312abfac5225b46e3"
     }
   ],
   "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",

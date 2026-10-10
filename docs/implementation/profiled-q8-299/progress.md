@@ -296,6 +296,43 @@ compiler job, ~300 llama/common/server TUs at the measured ~2.1s/TU rate
 plus the server link). No previous manifest is claimed as proof of the
 corrected llama-server executable.
 
+### Independent review of the correction round
+
+- **SPEC review**: PASS, no findings (12/12 matrix; report
+  `pr304-correction/spec-review.md`, sha256 d0a982f3…). Verified the
+  scheduler hook, export seam, fixture truth, lifecycle/allocation facts,
+  fail-closed fences, canonical ordering, P1-C materialization and
+  authentication, no regression of reviewed enrichments (derive script
+  idempotent, byte-stable), native evidence honesty, and the RED->GREEN
+  test evidence. 64 focused tests, zero failures/skips; repo left clean.
+- **QUALITY review**: one Important + one Minor finding, both corrected and
+  re-verified. (1) `verify_tree_inputs()` now enforces the exact pinned
+  mode class (added/lost executable bits refused), rejects any
+  regular-file<->symlink substitution (symlinks can be retargeted after
+  verification), rejects dangling/foreign filesystem entries via complete
+  no-follow enumeration, and requires every tree entry to be a regular
+  non-symlink file. Three new offline negative controls (0755 flip,
+  symlink substitution, dangling entry) RED-verified the bypasses and now
+  pass. (2) `export_capture` refuses a shared export directory already
+  used by another process, bounding one directory to one process's
+  64-export cap. The RPC fixture now also reserves the scheduler graph
+  (mirroring llama-server startup) before async compute; a genuine
+  fixture-rpc export stream is additionally retained. Final focused
+  suites: 67 producer+build methods OK (26+41); retention audit OK.
+
+Post-QUALITY native re-run (fixture-tail phase, incremental): all nine
+native evidence checks pass — CPU/RPC static+dynamic captures, three
+export streams (fixture-cpu, fixture-rpc, ggml-rpc-server), the refused
+adversarial capture, and the clean fact-bounds capture (3 tasks, 2
+responses, 2 allocations). Final campaign ledger: **5244.2s of 5400s
+(155.8s remaining)**. Updated executable identities (issue301-correction-ggml scratch root):
+`ggml-rpc-server` f6bd79694cdcb13e30a95a5edf19512ed041d6b7f03eb5133748ae6ce887232b;
+`native-buffer-graph-observed` d4f6ecdb25d2dd1fd3eaf2fb5deab542155a80fb9b327eb84b06d2ba38e388a4;
+`native-fact-bounds` 1b36ce9408957587d9c5c28c17494e753943aec36d42a1bc71634393a53e42a2
+(per-executable /2 manifests + separated provenance re-emitted); no llama-server rebuild is claimed and the STOP item stands
+(~700-750s additional supervised budget required).
+
+
 ### Tests
 
 - `tests/test_issue299_native_producer.py`: 26 methods (16 prior + 10

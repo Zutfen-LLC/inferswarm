@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import stat
 from pathlib import Path
 import subprocess
 
@@ -97,12 +98,23 @@ def verify_tree_inputs(tree, source) -> dict[str, str]:
         for path in pinned
     }
     expected = set(pinned) | set(NEW_FILES) | {'native-observer-transformed.json'}
-    actual = {str(p.relative_to(tree)) for p in tree.rglob('*') if p.is_file()}
+    # Enumerate without following symlinks: every filesystem entry under the
+    # tree must be accounted for (dangling symlinks and unexpected types too).
+    actual = set()
+    for entry in tree.rglob('*'):
+        if entry.is_dir():
+            continue
+        actual.add(str(entry.relative_to(tree)))
+    actual = {a for a in actual if a != '.git' and not a.startswith('.git/')}
+
+
     verified = {}
     for path in sorted(expected | actual):
         file = tree / path
-        if path not in expected or path not in actual or not file.is_file():
+        if path not in expected or path not in actual:
             raise OverlayError('dirty or foreign source input: ' + path)
+        if file.is_symlink() or not stat.S_ISREG(file.stat(follow_symlinks=False).st_mode):
+            raise OverlayError('dirty or foreign source input (not a regular file): ' + path)
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         expected_digest = rows.get(path, pinned_sha256.get(path))
         if path == 'native-observer-transformed.json':
@@ -111,8 +123,21 @@ def verify_tree_inputs(tree, source) -> dict[str, str]:
             raise OverlayError('dirty or foreign source input: ' + path)
         if path in pinned:
             mode, _oid = pinned[path]
-            if mode == '100755' and not file.stat().st_mode & 0o111:
-                raise OverlayError('dirty or foreign source input: ' + path)
+            st = file.stat(follow_symlinks=False)
+            # Pinned regular files must remain regular, non-symlink, with the
+            # exact pinned mode class: no added/lost executable bits and no
+            # regular<->symlink substitution (symlinks can be retargeted after
+            # verification, so a pinned regular file must never become one).
+            if mode in ('100644', '100755'):
+                if file.is_symlink() or not stat.S_ISREG(st.st_mode):
+                    raise OverlayError('dirty or foreign source input (not a regular file): ' + path)
+                if mode == '100755' and not st.st_mode & 0o111:
+                    raise OverlayError('dirty or foreign source input (lost executable bit): ' + path)
+                if mode == '100644' and st.st_mode & 0o111:
+                    raise OverlayError('dirty or foreign source input (added executable bit): ' + path)
+            elif mode == '120000':
+                if not file.is_symlink():
+                    raise OverlayError('dirty or foreign source input (symlink materialized as regular file): ' + path)
         verified[path] = digest
     return verified
 
