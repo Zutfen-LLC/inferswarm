@@ -161,20 +161,38 @@ Delivered and verified:
   doctor/planner/retention checks PASS in the canonical venv.
 
 
-Independent review record for this child slice: SPEC round 1 raised two
-findings — build-manifest backend-library identity (object concatenation
-mislabeled as a library artifact) and tiny-fixture coverage scope. Both were
-addressed: `full_build.py` now emits real per-target static archives
-(`libllama-full.a` for the server link closure, `libggml-static.a` for the
-GGML closure + sink) built with `/usr/bin/ar` from the exact linked member
-objects, and the coverage scope was confirmed already honestly documented in
-the limits paragraph. SPEC continuation verdict: PASS. Independent QUALITY
-review verdict: APPROVED (the IS301_RPC_ENDPOINT note was calibrated as
-non-blocking: the server observes its own accepted connections without
-consuming the variable; the client fixture consumed it and the retained RPC
-captures contain genuine rpc_set/rpc_get facts). Parent verification: focused
-377-test rerun across all ten #299 modules, doctor/planner/retention checks
-PASS in the canonical venv.
+Independent review record for this child slice: SPEC round 1 returned FAIL
+with three findings; all three were corrected and re-verified.
+
+1. *Build manifests misidentified object bytes as backend libraries* —
+   corrected: `full_build.py` and the retained run artifacts now emit real
+   per-target static archives (`libllama-full.a` for the server link closure,
+   `libggml-static.a` for the GGML closure + sink) built with `/usr/bin/ar`
+   from the exact linked member objects.
+2. *Fact catalog did not supply transfer shapes/endpoints or graph lineage* —
+   corrected: transfer facts now carry type, native 4-dimension shape and
+   view offset (plus remote_ptr on RPC legs); graph facts carry a real
+   graph_id and an explicit `ubatch_lineage: "unknown"` marker; model-load
+   facts carry explicit `output_custody: "unknown"` and
+   `tensor_ranges: "unsupported"` markers per the issue's explicit
+   unsupported/unknown-field requirement. Patch sha256 now
+   `14a3870a4392605fc606382c3af9bebe96c308f63c70c549356f0341e54ccc89`.
+   The full supervised build was re-executed within budget with the enriched
+   overlay: llama-server 35,845,408 bytes (sha256 4ff549e0…), ggml-rpc-server
+   4,089,512 bytes (90f4ca76…); all four re-retained captures parse with
+   verified digests and enriched facts.
+3. *Wrong-generation control only tested digest binding* — corrected: the
+   mutation controls now RECOMPUTE valid terminal digests over mutated
+   envelopes, so refusal exercises the semantic fences (drop/overflow with
+   consistent counters, whole-stream mislabeled as prefix via terminal=false
+   or nonzero sequence_start, and a middle-row sequence gap) rather than mere
+   tampering detection; unsealed-tampering refusals are retained alongside.
+
+After corrections, SPEC continuation verdict: PASS; independent QUALITY
+verdict: APPROVED. Campaign ledger after the final re-run: 4070s of the
+5400s cumulative ceiling. Parent verification: focused 377-test rerun across
+all ten #299 modules, doctor/planner/retention checks PASS in the canonical
+venv.
 
 Honest limits: this is CPU-only native proof — the tiny fixture does not
 observe Q8 tensors, model-specific hooks or any CUDA path; the B CPU→A

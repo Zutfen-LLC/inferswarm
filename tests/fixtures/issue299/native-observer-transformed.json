@@ -8,11 +8,11 @@
     },
     {
       "path": "ggml/src/ggml-backend.cpp",
-      "sha256": "f99908b67936c0697d09a104e20cae50f502f85910be596396258e78d8c03fd1"
+      "sha256": "3b19d7a2ec07cbb06061937494114a1766cc620e7058b2f8efd0a96852008fe6"
     },
     {
       "path": "ggml/src/ggml-rpc/ggml-rpc.cpp",
-      "sha256": "8e9769dcd6584813ef9a12cc39e42b5ff9cd4f53a9cd85357b054cd5c7f803dd"
+      "sha256": "aa24ae3bc806d581d2fb7a50d7f65d5baf31528119adf2061566eb2269347185"
     },
     {
       "path": "is301_c_shim.h",
@@ -28,7 +28,7 @@
     },
     {
       "path": "src/llama-model-loader.cpp",
-      "sha256": "bc444a4a04850ca85dc7303fb4e0b5e4449eba4971738b443ae69e15a2a19121"
+      "sha256": "51b11d434994a25de46d6c8ec856eba5f5ccac7aa44832ca36f6e0def56255b7"
     },
     {
       "path": "tests/native-buffer-graph-observed.cpp",
@@ -40,9 +40,9 @@
     },
     {
       "path": "is301_observer.h",
-      "sha256": "9cad62628166161270305319770a56e9bfa1466bd34bb4b361f6ed90e4c2e422"
+      "sha256": "bffef2e60b1163f1a4c0ca2db41cce2e078f0b9da9718382ed682811d2e19d22"
     }
   ],
-  "patch_sha256": "95e9d4361c44a43ade3433f6ab645bd44e327ceed4c161268d80d6f380ba4e25",
+  "patch_sha256": "14a3870a4392605fc606382c3af9bebe96c308f63c70c549356f0341e54ccc89",
   "schema": "native-observer-transformed/1"
 }

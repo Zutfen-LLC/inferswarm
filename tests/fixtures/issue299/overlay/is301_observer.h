@@ -250,6 +250,15 @@ inline std::string kv_raw(const char * k, const std::string & canonical_json) {
 inline std::string kv_bool(const char * k, bool v) {
     return quote(k) + std::string(":") + (v ? "true" : "false");
 }
+// Canonical 4-dimension shape array ["n0",...,"n3"] for transfer facts.
+inline std::string kv_shape(const char * k, const int64_t * ne) {
+    std::string out = quote(k) + std::string(":[");
+    for (int i = 0; i < 4; i++) {
+        if (i) out += ",";
+        out += std::to_string((long long) ne[i]);
+    }
+    return out + "]";
+}
 
 // ---- envelope emission -----------------------------------------------------
 // Build the complete canonical envelope (sorted keys everywhere) and seal it

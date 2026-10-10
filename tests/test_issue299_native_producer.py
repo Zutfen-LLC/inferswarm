@@ -141,33 +141,64 @@ class GenuineCaptureTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.parse(self.dynamic_bytes[:len(self.dynamic_bytes) // 2])
 
+    def _resealed(self, **mutations):
+        """Mutate the genuine capture and RECOMPUTE a valid terminal digest.
+
+        The mutated capture is internally consistent (digest, counters and
+        fields agree), so refusal exercises the envelope's semantic fences,
+        not mere digest-binding failure.
+        """
+        import hashlib as _h
+        from inferswarm.operator.profiles import canonical as _canonical
+        record = json.loads(self.dynamic_bytes)
+        record.update(mutations)
+        material = {k: v for k, v in record.items() if k != 'terminal_digest'}
+        record['terminal_digest'] = _h.sha256(_canonical(material)).hexdigest()
+        return json.dumps(record).encode()
+
     def test_dropped_events_refused(self):
+        with self.assertRaises(ValueError):
+            self.parse(self._resealed(dropped_events=1, event_count=13,
+                                      terminal_sequence=13))
         record = json.loads(self.dynamic_bytes)
         record['dropped_events'] = 1
-        payload = json.dumps(record).encode()
         with self.assertRaises(ValueError):
-            self.parse(payload)
+            self.parse(json.dumps(record).encode())  # unsealed tampering too
 
     def test_wrong_generation_splice_refused(self):
-        record = json.loads(self.dynamic_bytes)
-        record['stream_generation'] = 'other-generation'
-        payload = json.dumps(record).encode()
+        # Within one capture a generation string is opaque (cross-capture
+        # generation authentication is an explicit downstream collector
+        # dependency), but a spliced capture mislabeling its interval IS
+        # refused: whole streams must start at zero.
         with self.assertRaises(ValueError):
-            self.parse(payload)  # digest binds generation; tampering refused
+            self.parse(self._resealed(sequence_start=3))
 
     def test_overflow_refused(self):
+        with self.assertRaises(ValueError):
+            self.parse(self._resealed(overflow=True))
         record = json.loads(self.dynamic_bytes)
         record['overflow'] = True
-        payload = json.dumps(record).encode()
         with self.assertRaises(ValueError):
-            self.parse(payload)
+            self.parse(json.dumps(record).encode())
 
     def test_missing_terminal_fence_refused(self):
-        record = json.loads(self.dynamic_bytes)
-        record['terminal'] = False
-        payload = json.dumps(record).encode()
+        # A whole stream with terminal=false is a prefix mislabeled whole;
+        # refusal is semantic even with a valid recomputed digest.
         with self.assertRaises(ValueError):
-            self.parse(payload)
+            self.parse(self._resealed(terminal=False))
+
+    def test_sequence_gap_refused_with_valid_digest(self):
+        record = json.loads(self.dynamic_bytes)
+        # Drop a MIDDLE row; counters still declare the full interval, so the
+        # remaining rows fail contiguous enumeration with a valid digest.
+        record['sequence'] = record['sequence'][:4] + record['sequence'][5:]
+        import hashlib as _h
+        from inferswarm.operator.profiles import canonical as _canonical
+        material = {k: v for k, v in record.items() if k != 'terminal_digest'}
+        record['terminal_digest'] = _h.sha256(_canonical(material)).hexdigest()
+        # Rows no longer enumerate the declared interval contiguously.
+        with self.assertRaises(ValueError):
+            self.parse(json.dumps(record).encode())
 
 
 if __name__ == '__main__':

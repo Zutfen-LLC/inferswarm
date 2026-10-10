@@ -1792,7 +1792,9 @@ bool llama_model_loader::load_all_data(
         is301::facts().add("model_load", std::string("{") +
             is301::kv_num("n_tensors", (long long) n_tensors) + "," +
             is301::kv_num("n_tensors_moved", (long long) n_tensors_moved) + "," +
-            is301::kv_num("size_data", (long long) size_data) + "}");
+            is301::kv_str("output_custody", "unknown") + "," +
+            is301::kv_num("size_data", (long long) size_data) + "," +
+            is301::kv_str("tensor_ranges", "unsupported") + "}");
     }
     return true;
 }

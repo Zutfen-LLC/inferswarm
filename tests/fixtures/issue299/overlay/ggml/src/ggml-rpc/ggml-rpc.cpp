@@ -728,7 +728,10 @@ static void ggml_backend_rpc_buffer_set_tensor(ggml_backend_buffer_t buffer, ggm
             is301::kv_num("offset", (long long) offset) + "," +
             is301::kv_str("op", "rpc_set") + "," +
             is301::kv_num("remote_ptr", (long long) ctx->remote_ptr) + "," +
-            is301::kv_str("tensor", tensor->name) + "}");
+            is301::kv_shape("shape", tensor->ne) + "," +
+            is301::kv_str("tensor", tensor->name) + "," +
+            is301::kv_str("type", ggml_type_name(tensor->type)) + "," +
+            is301::kv_num("view_offset", (long long) tensor->view_offs) + "}");
     }
 }
 
@@ -746,7 +749,10 @@ static void ggml_backend_rpc_buffer_get_tensor(ggml_backend_buffer_t buffer, con
             is301::kv_num("offset", (long long) offset) + "," +
             is301::kv_str("op", "rpc_get") + "," +
             is301::kv_num("remote_ptr", (long long) ctx->remote_ptr) + "," +
-            is301::kv_str("tensor", tensor->name) + "}");
+            is301::kv_shape("shape", tensor->ne) + "," +
+            is301::kv_str("tensor", tensor->name) + "," +
+            is301::kv_str("type", ggml_type_name(tensor->type)) + "," +
+            is301::kv_num("view_offset", (long long) tensor->view_offs) + "}");
     }
 }
 

@@ -353,7 +353,10 @@ void ggml_backend_tensor_set(struct ggml_tensor * tensor, const void * data, siz
             is301::kv_num("bytes", (long long) size) + "," +
             is301::kv_num("offset", (long long) offset) + "," +
             is301::kv_str("op", "set") + "," +
-            is301::kv_str("tensor", tensor->name) + "}");
+            is301::kv_shape("shape", tensor->ne) + "," +
+            is301::kv_str("tensor", tensor->name) + "," +
+            is301::kv_str("type", ggml_type_name(tensor->type)) + "," +
+            is301::kv_num("view_offset", (long long) tensor->view_offs) + "}");
     }
 }
 
@@ -376,7 +379,10 @@ void ggml_backend_tensor_get(const struct ggml_tensor * tensor, void * data, siz
             is301::kv_num("bytes", (long long) size) + "," +
             is301::kv_num("offset", (long long) offset) + "," +
             is301::kv_str("op", "get") + "," +
-            is301::kv_str("tensor", tensor->name) + "}");
+            is301::kv_shape("shape", tensor->ne) + "," +
+            is301::kv_str("tensor", tensor->name) + "," +
+            is301::kv_str("type", ggml_type_name(tensor->type)) + "," +
+            is301::kv_num("view_offset", (long long) tensor->view_offs) + "}");
     }
 }
 
@@ -475,9 +481,12 @@ enum ggml_status ggml_backend_graph_compute(ggml_backend_t backend, struct ggml_
     ggml_backend_synchronize(backend);
     if (is301::enabled()) {
         is301::stream().record("graph_compute");
-        is301::facts().append("graphs", std::string("{") + is301::kv_num("nodes",
+        is301::facts().append("graphs", std::string("{") +
+            is301::kv_num("graph_id", (long long) (uintptr_t) cgraph) + "," +
+            is301::kv_num("nodes",
             (long long) (cgraph ? cgraph->n_nodes : 0)) + "," + is301::kv_num("status",
-            (long long) err) + "}");
+            (long long) err) + "," +
+            is301::kv_str("ubatch_lineage", "unknown") + "}");
     }
     return err;
 }
