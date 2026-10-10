@@ -45,6 +45,19 @@ class OverlayError(RuntimeError):
     pass
 
 
+# Production scratch confinement root for derived overlay trees. Tests own
+# portable temporary roots and may substitute the confinement check ONLY
+# through this narrow module-level seam (mock.patch.object(overlay,
+# '_authorized_scratch_root', ...)). There is deliberately no
+# caller-controlled scratch-root parameter on apply(): every ordinary caller
+# keeps the production invariant that unauthorized destinations are refused.
+SCRATCH_ROOT = Path('/home/zutfen/.hermes/cache/scratch')
+
+
+def _authorized_scratch_root() -> Path:
+    return SCRATCH_ROOT
+
+
 def _git(source: Path, *args: str) -> bytes:
     return subprocess.check_output(['git', '-C', str(source), *args], timeout=30)
 
@@ -172,7 +185,7 @@ def apply(source, destination) -> dict:
     authenticate(source)
     if destination.exists():
         raise OverlayError('destination already exists: ' + str(destination))
-    if not destination.is_relative_to(Path('/home/zutfen/.hermes/cache/scratch')):
+    if not destination.is_relative_to(_authorized_scratch_root()):
         raise OverlayError('overlay trees stay in authorized scratch')
     entries = _pinned_entries(source)
     destination.mkdir(parents=True)

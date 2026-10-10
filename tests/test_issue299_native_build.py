@@ -7,6 +7,7 @@ import time
 from unittest import mock
 import json
 import os
+from contextlib import contextmanager
 from pathlib import Path
 import sys
 import tempfile
@@ -35,6 +36,25 @@ class NativeBuildTests(unittest.TestCase):
 
     def supervisor(self, root=None, **kwargs):
         return self.b.Supervisor(root or self.root, workspace=self.workspace, **kwargs)
+
+    @contextmanager
+    def portable_scratch(self, prefix):
+        """Automatically cleaned, test-owned scratch root (PR #304 round 3).
+
+        Replaces the development-host TemporaryDirectory(dir='/home/zutfen/
+        .hermes/cache/scratch') that made these controls FileNotFoundError on
+        hosted runners. The production scratch-confinement invariant keeps
+        executing — narrowed onto this test-owned root through the private
+        overlay seam — while real Git-blob materialization and authentication
+        run unchanged. No caller-controlled scratch-root override exists.
+        """
+        from inferswarm.operator.native_observer import overlay
+        root = self.workspace_root / 'authorized-scratch'
+        root.mkdir(exist_ok=True)
+        with mock.patch.object(overlay, '_authorized_scratch_root',
+                               return_value=root), \
+                tempfile.TemporaryDirectory(prefix=prefix, dir=root) as tmp:
+            yield Path(tmp)
 
     def assembled(self, dest, target='cpu-rpc'):
         # Identity/version values attributed to pinned ggml CMake definitions;
@@ -433,10 +453,81 @@ class NativeBuildTests(unittest.TestCase):
                        indent=2, sort_keys=True) + '\n')
         return overlay
 
+    def test_overlay_apply_refuses_destination_outside_authorized_scratch(self):
+        # Independent production guard: with the private seam pointed at one
+        # test-owned root, apply() must still refuse a real destination in a
+        # DIFFERENT directory tree (here /tmp, standing in for any foreign
+        # root) even after successful authentication — the scratch-confinement
+        # restriction itself executes and rejects unauthorized destinations.
+        from inferswarm.operator.native_observer import overlay
+        root = self.workspace_root / 'confine'
+        root.mkdir()
+        source, revision, tree = self.fake_pin(root)
+        ov = self.fake_overlay(source, revision, tree)
+        with mock.patch.object(ov, 'PIN', revision), \
+                mock.patch.object(ov, 'TREE', tree), \
+                mock.patch.object(ov, '_authorized_scratch_root',
+                                  return_value=root / 'authorized-scratch'):
+            with tempfile.TemporaryDirectory(prefix='foreign-dest-') as foreign:
+                with self.assertRaisesRegex(ov.OverlayError,
+                                            'overlay trees stay in authorized scratch'):
+                    ov.apply(source, Path(foreign) / 'derived')
+                # Authorized destination within the seam root still works and
+                # materializes actual authenticated Git blobs.
+                destination = root / 'authorized-scratch' / 'derived'
+                manifest = ov.apply(source, destination)
+                self.assertEqual(manifest['base_revision'], revision)
+                self.assertEqual((destination / 'common/common.cpp').read_bytes(),
+                                 b'int pinned_source;\n')
+                self.assertFalse((destination / '.git').exists())
+
+    def test_overlay_controls_pass_without_development_home(self):
+        # Hosted-runner-style environment: nothing in these controls may read
+        # or depend on the development-home pinned llama.cpp checkout. Prove
+        # it by running the full materialize + authenticate + tamper-refuse
+        # cycle in a portable test-owned root while every ordinary file-read
+        # API into that checkout raises, and assert no read was attempted.
+        from inferswarm.operator.native_observer import overlay
+        forbidden = '/home/zutfen/.hermes/cache/scratch/is299/llama-src'
+        attempts = []
+
+        def guard(label, original):
+            def checked(*args, **kwargs):
+                # Scan every positional and keyword value that is a str/Path
+                # (covers open(file=...), read_text(encoding=...), Path self,
+                # io.open(path, mode) and any other call form) and forward the
+                # call unchanged so legitimate reads behave identically.
+                for candidate in (*args, *kwargs.values()):
+                    if isinstance(candidate, (str, Path)) and str(candidate).startswith(forbidden):
+                        attempts.append(label + ': ' + str(candidate))
+                        raise FileNotFoundError('development-host checkout read via ' + label)
+                return original(*args, **kwargs)
+            return checked
+
+        import builtins
+        import io
+        with mock.patch.object(Path, 'read_text',
+                               guard('read_text', Path.read_text)), \
+                mock.patch.object(Path, 'read_bytes',
+                                  guard('read_bytes', Path.read_bytes)), \
+                mock.patch.object(io, 'open', guard('io.open', io.open)), \
+                mock.patch.object(builtins, 'open', guard('open', builtins.open)):
+            with self.portable_scratch('p1c-nohome-') as tmp:
+                root = Path(tmp)
+                source, revision, tree = self.fake_pin(root)
+                ov = self.fake_overlay(source, revision, tree)
+                derived = root / 'derived'
+                with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                    ov.apply(source, derived)
+                    ov.verify_tree_inputs(derived, source)
+                    (derived / 'common/common.cpp').write_text('foreign compiled source\n')
+                    with self.assertRaisesRegex(ov.OverlayError, 'common/common.cpp'):
+                        ov.verify_tree_inputs(derived, source)
+        self.assertEqual(attempts, [])
+
     def test_dirty_untransformed_tu_is_refused(self):
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-red-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -450,8 +541,7 @@ class NativeBuildTests(unittest.TestCase):
 
     def test_reused_overlay_tree_full_authentication(self):
         from inferswarm.operator.native_observer import full_build
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-red-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -465,8 +555,7 @@ class NativeBuildTests(unittest.TestCase):
                 assemble.assert_not_called()
 
     def test_overlay_apply_materializes_from_git_not_worktree(self):
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-red-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -502,8 +591,7 @@ class NativeBuildTests(unittest.TestCase):
         # QUALITY finding Q4: a pinned 100644 file flipped to 0755 must be
         # refused (mode is part of the authenticated input identity).
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-mode-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-mode-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -519,8 +607,7 @@ class NativeBuildTests(unittest.TestCase):
         # (even one resolving to the pinned bytes) must be refused — symlinks
         # can be retargeted after verification and before the compiler reads.
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-sym-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-sym-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -540,8 +627,7 @@ class NativeBuildTests(unittest.TestCase):
         # (here a dangling symlink) must be refused by the complete
         # expected/actual set comparison.
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-dangling-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-dangling-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -576,8 +662,7 @@ class NativeBuildTests(unittest.TestCase):
         # manifest digests).
         from inferswarm.operator.native_observer import full_build as fb
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-sink-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-sink-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)
@@ -616,8 +701,7 @@ class NativeBuildTests(unittest.TestCase):
 
     def test_symlink_to_existing_directory_is_refused(self):
         from inferswarm.operator.native_observer import overlay
-        scratch = Path('/home/zutfen/.hermes/cache/scratch')
-        with tempfile.TemporaryDirectory(prefix='p1c-foreigndir-', dir=scratch) as tmp:
+        with self.portable_scratch('p1c-foreigndir-') as tmp:
             root = Path(tmp)
             source, revision, tree = self.fake_pin(root)
             ov = self.fake_overlay(source, revision, tree)

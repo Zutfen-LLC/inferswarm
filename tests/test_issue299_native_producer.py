@@ -251,20 +251,85 @@ class NativeOverlayCorrectionTests(unittest.TestCase):
 
     repo = Path(__file__).resolve().parents[1]
     overlay = FIXTURES / 'overlay'
-    pin = Path('/home/zutfen/.hermes/cache/scratch/is299/llama-src')
 
     def _text(self, relative):
         return (self.overlay / relative).read_text()
 
+    @staticmethod
+    def _original_from_retained_patch(target, postimage):
+        """Reverse-apply the retained overlay patch's section for `target`.
+
+        The retained patch is the authenticated original-source evidence: its
+        context and removed lines ARE the pinned preimage bytes. Reconstruction
+        walks the unified-diff hunks in order, verifies every context line
+        against the retained postimage (any drift fails the test), drops added
+        lines and reinstates removed ones.
+        """
+        import re
+        patch_lines = (FIXTURES / 'native-observer-overlay.patch').read_text().splitlines(True)
+        hunks = []
+        current = None
+        header = re.compile(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
+        for line in patch_lines:
+            if line.startswith('+++ b/'):
+                current = line[len('+++ b/'):].rstrip('\n')
+                continue
+            if line.startswith(('--- a/', 'diff --git')):
+                continue
+            if line.startswith('@@'):
+                match = header.match(line)
+                if match and current == target:
+                    hunks.append({'old': int(match.group(1)),
+                                  'new': int(match.group(3)), 'lines': []})
+                continue
+            if current == target and hunks:
+                if not line.startswith('\\'):
+                    hunks[-1]['lines'].append(line)
+        assert hunks, 'no retained patch hunks for ' + target
+        post = postimage.splitlines(True)
+        result, index = [], 0
+        for hunk in hunks:
+            while index < hunk['new'] - 1:
+                result.append(post[index])
+                index += 1
+            for line in hunk['lines']:
+                tag, content = line[0], line[1:]
+                if tag == ' ':
+                    assert index < len(post) and post[index] == content, \
+                        'retained patch context drift at postimage line ' + str(index + 1)
+                    result.append(content)
+                    index += 1
+                elif tag == '-':
+                    result.append(content)
+                elif tag == '+':
+                    index += 1
+        result.extend(post[index:])
+        return ''.join(result)
+
     def test_sched_completion_path_is_instrumented(self):
+        # Original-source authority is the RETAINED, digest-bound overlay
+        # patch (tests/fixtures/issue299/native-observer-overlay.patch), not
+        # a development-host llama.cpp checkout: the pinned preimage is
+        # reconstructed by reverse-applying the authenticated patch section
+        # to the retained transformed file, then the ORIGINAL whole-function
+        # absence assertion runs against it exactly as before. The actual
+        # scheduler-completion hook (the true async server path through
+        # ggml_backend_sched_compute_splits) must be present in the
+        # transformed retained file and absent from the pinned preimage.
+        manifest = json.loads((FIXTURES / 'native-observer-transformed.json').read_text())
+        self.assertEqual(manifest['patch_sha256'],
+                         hashlib.sha256((FIXTURES / 'native-observer-overlay.patch').read_bytes()).hexdigest())
         transformed = self._text('ggml/src/ggml-backend.cpp')
-        original = (self.pin / 'ggml/src/ggml-backend.cpp').read_text()
         start = transformed.index('enum ggml_status ggml_backend_sched_graph_compute_async(')
         end = transformed.index('\n}', start) + 2
         self.assertIn('record("sched_graph_compute")', transformed[start:end])
+        self.assertIn('ggml_backend_sched_compute_splits(sched);', transformed[start:end])
+        original = self._original_from_retained_patch('ggml/src/ggml-backend.cpp', transformed)
         original_start = original.index('enum ggml_status ggml_backend_sched_graph_compute_async(')
         original_end = original.index('\n}', original_start) + 2
         self.assertNotIn('record("sched_graph_compute")', original[original_start:original_end])
+        self.assertIn('return ggml_backend_sched_compute_splits(sched);',
+                      original[original_start:original_end])
 
     def test_export_seam_on_real_daemons(self):
         header = self._text('is301_observer.h')
