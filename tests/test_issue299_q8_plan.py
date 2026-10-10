@@ -945,4 +945,47 @@ class Q8StaticInventoryTests(unittest.TestCase):
             self.assertEqual(q.q8_llama_cpp_spec(build_plan(c, now=NOW)), spec)
 
 
+class PureProfiledDigestTests(unittest.TestCase):
+    """Mechanical private seam parity; no admission or new strategy semantics."""
+
+    def test_pure_digest_matches_wrapper_without_io_both_choices(self):
+        from contextlib import ExitStack
+        from inferswarm.operator import plan as planner
+        from inferswarm.operator.qwen_q8 import q8_candidates
+        m = metadata()
+        for selection in ('one-gpu', 'cpu-only'):
+            c = config(selection)
+            candidate, = q8_candidates(c, m)
+            expected = planner._profiled_digest(c, candidate)
+            with self.subTest(selection=selection), ExitStack() as stack:
+                mocks = [stack.enter_context(patch(target, side_effect=AssertionError('pure seam I/O')))
+                    for target in ('builtins.open', 'pathlib.Path.open',
+                                   'inferswarm.operator.metadata.load_metadata_index',
+                                   'subprocess.run', 'subprocess.Popen', 'socket.socket')]
+                self.assertEqual(planner._profiled_digest_from_metadata(c, candidate, m), expected)
+                for mock in mocks:
+                    mock.assert_not_called()
+
+    def test_pure_digest_path_exclusion_canonical_order_and_mismatch_reason(self):
+        from inferswarm.operator import plan as planner
+        from inferswarm.operator.profiles import freeze, thaw
+        from inferswarm.operator.qwen_q8 import q8_candidates
+        m = metadata()
+        for selection in ('one-gpu', 'cpu-only'):
+            c = parse_config(fully_bounded_mapping(selection), now=NOW, profile_mode='replay')
+            candidate, = q8_candidates(c, m)
+            expected = planner._profiled_digest(c, candidate)
+            options = thaw(c.strategy_options)
+            options['bounds'].reverse()
+            reordered = replace(c, strategy_options=freeze(options))
+            relocated = replace(reordered, metadata=replace(c.metadata, path='/description/not-read'))
+            with self.subTest(selection=selection):
+                self.assertEqual(planner._profiled_digest_from_metadata(relocated, candidate, m), expected)
+                wrong = replace(candidate, canonical_strategy_options=freeze({}))
+                for call in (lambda: planner._profiled_digest(c, wrong),
+                             lambda: planner._profiled_digest_from_metadata(c, wrong, m)):
+                    with self.assertRaisesRegex(ValueError, '^plan strategy options integrity mismatch$'):
+                        call()
+
+
 if __name__=='__main__': unittest.main()

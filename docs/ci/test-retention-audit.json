@@ -4321,7 +4321,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-99-103",
-   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, explicit fixed selections and no fallback.",
+   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, mechanical pure digest parity, explicit fixed selections and no fallback.",
    "lineage": "Issue #299 profiled Q8 ordinary operator",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -4338,7 +4338,7 @@
    "rationale": "Prospective fixed-plan/admission and calculated inventory contracts; inventory descriptions and synthetic admission do not qualify allocation, physical runtime or memory fit.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 40
+   "test_count_at_audit": 42
   },
   "test_issue299_bindings": {
    "baseline_group": "issue-99-103",
@@ -4371,7 +4371,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-99-103",
-   "invariant": "Immutable successor /2 build/request/stream identities, early bounded canonical accounting and incremental digest; incomplete static/dynamic reconciliation always refuses.",
+   "invariant": "Immutable successor /2 build/request/stream identities, early bounded canonical accounting and incremental digest, detached closed-typed original-plan expectations; incomplete static/dynamic reconciliation always refuses.",
    "lineage": "Issue #299 profiled Q8 ordinary operator",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -4381,10 +4381,10 @@
     ]
    },
    "pinned_by_evidence": [],
-   "rationale": "Offline parser/value-contract proof only; no native provenance, dispatch/output acceptance or physical qualification.",
+   "rationale": "Offline parser/value and pure expectation-contract proof only; retained original identity is not native provenance, dispatch/output acceptance or physical qualification.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 55
+   "test_count_at_audit": 76
   },
   "test_issue299_native_build": {
    "baseline_group": "issue-99-103",

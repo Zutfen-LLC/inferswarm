@@ -12,8 +12,9 @@ below. That addition separates pinned base source from derived patch/build
 identities and phases static admission before dispatch from dynamic acceptance
 after execution. The preceding fixed `/1` source analysis and the historical
 citations/digests below remain unchanged; they do not describe a derived `/2`
-artifact. The current `/2` implementation is **identity/parser-only**: both
-incomplete reconcilers refuse, so it cannot admit dispatch or accept output.
+artifact. The current `/2` implementation supplies **identity/parser and pure
+expectation foundations only**: both incomplete reconcilers refuse, so it
+cannot admit dispatch or accept output.
 
 ## Authenticated identities and evidence scope
 
@@ -402,6 +403,41 @@ layout/component/allocator closure, actual source/build/identity/resource and
 freshness joins. Both public `/2` entrypoints below continue to refuse;
 synthetic inventories, parsed envelopes and source citations cannot unlock
 execution or output acceptance. The earlier `/1` semantics remain unchanged.
+
+### Original-plan expectation prerequisite
+
+`derive_static_plan_context(plan, metadata, *, original_plan_digest)` is pure:
+its three-field `StaticPlanContext` retains the independently held original
+plan digest, a detached typed config and calculated inventory. Retain that
+original identity before source/process lifecycle work; do not regenerate it
+from the presented plan or observation. Exact closed nested record/scalar and
+object/array shapes are checked before profile, inventory and digest derivation.
+All 12 mirrored plan/config fields, normalized profile integrity, the complete
+candidate/source law and presented/original digest equality are required.
+The private generic metadata-supplied digest seam preserves the original `/3`
+payload, options normalization and metadata-path exclusion; the old wrapper
+still reads and authenticates the actual metadata file.
+
+Retained dataclass nodes are deeply detached from caller inputs while internal
+aliases, tuple ordering and FrozenMapping tags are preserved. Direct context
+construction validates shape and detaches, but does not establish semantic
+integrity or provenance. Cached admission is typed description, not authority;
+BLOCKED/UNKNOWN plans may describe expectations. A coherent new plan under a
+new identity describes that new plan only and cannot certify an earlier owned
+source/process/build lifecycle.
+
+Neither helper accepts observation/receipt/clock/reader/transport inputs or
+performs I/O. Normalized profile integrity is not freshness or applicability;
+a passed MetadataIndex and an identity-excluded path do not verify current
+metadata/weight files. There is no admission verdict, trust flag or receipt.
+Both actual `/2` reconcilers still refuse any context or forged positive receipt.
+Full static layout/component/reservation/allocator and independently read
+source/build/identity/resource/freshness joins remain separate pending work.
+In particular a derived observation build cannot satisfy the unchanged historic
+unmodified-artifact requirement merely by reporting the pinned base: later
+versioned qualification must separately bind independently read base, patch,
+transformed files, compiler/options, executable and loaded artifacts without
+weakening `/1` requirements.
 
 ### Request phases and fail-closed pending reconciliation
 

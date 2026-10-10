@@ -261,8 +261,13 @@ def _profiled_digest(config,candidate):
     # supply canonical options for a different current config. Normalization
     # (including unordered inventories and object/array shape) stays strategy-owned.
     from .metadata import load_metadata_index
-    from .strategy import candidates_for
     metadata=load_metadata_index(config.metadata.path,expected_sha256=config.metadata.sha256)
+    return _profiled_digest_from_metadata(config,candidate,metadata)
+
+
+def _profiled_digest_from_metadata(config,candidate,metadata):
+    """Pure calculation under the original strategy-owned digest law."""
+    from .strategy import candidates_for
     current,=candidates_for(config,metadata)
     if current.canonical_strategy_options!=candidate.canonical_strategy_options:
         raise ValueError('plan strategy options integrity mismatch')
