@@ -100,6 +100,90 @@ The first independent whole-bounded SPEC review failed with three findings (per-
 
 This oracle grants no admission, dispatch, output acceptance or execution authority. Effective argv/environment/server/cparams join, full static/dynamic reconciliation, native producer/full server, real collector/identity reader, normal-runner wiring, CLI, examples and final integration review remain pending.
 
+
+## Issue #301 native producer and full-server build (child slice)
+
+Child issue #301 ("Implement Q8 native telemetry and reproducible full-server
+build") was implemented on this branch on October 10, 2026, continuing from
+checkpoint `210f803`. Pre-work budget was recorded before any native build
+(scratch `issue301-prework-budget.md`; ledger carried at 51.3s, never reset;
+final cumulative 2654s of the 5400s ceiling; one build at a time, one compiler
+job, 3GiB AS/256MiB file/4GiB tree RSS, no core dumps, disk floor held).
+
+Delivered and verified:
+
+- **Observation overlay** (`tests/fixtures/issue299/overlay/`): strictly
+  observation-only hooks (guarded by `IS301_OBSERVE=1`) at documented seams —
+  buffer allocation completion (ggml-alloc.c via C shim), graph compute and
+  tensor set/get completions (ggml-backend.cpp), RPC client SET/GET
+  completions plus server accept/command loop (ggml-rpc.cpp), model loader
+  completion, KV-cache constructor completion, server task/response lifecycle
+  (server-queue.cpp). No computation, kernel, placement, scheduling or
+  transfer behavior changed. `is301_observer.h` emits complete
+  `inferswarm-native-observation/2` envelopes: canonical JSON (sorted keys at
+  every level, ASCII-safe) sealed with a self-contained SHA-256 over the
+  envelope minus `terminal_digest` — cross-verified against the independent
+  Python parser, which accepts every retained native-emitted capture.
+- **Identity**: retained unified patch
+  (`native-observer-overlay.patch`, sha256 `95e9d4361c44a43ade3433f6ab645bd44e327ceed4c161268d80d6f380ba4e25`)
+  and transformed-file manifest (`native-observer-transformed.json`) derived
+  once from the authenticated pin by `scripts/issue301_derive_overlay.py`
+  (exact anchored replacements; every anchor unique at the pin).
+- **Reproducible full-server build**
+  (`inferswarm/operator/native_observer/full_build.py`): direct GCC recipe
+  (no CMake in environment; no installs authorized) with the complete
+  330-TU target/dependency closure authenticated from the pin's CMake target
+  definitions — ggml-base/cpu/rpc, vendor hash, llama core + 154 model TUs,
+  common (parsers/jinja/subprocess), mtmd + 50 clip model TUs, server-context/
+  impl, cpp-httplib definitions, generated ggml-version.h/llama-version.h/
+  build-info.cpp and the CMake priority-4 empty-asset ui.cpp/ui.h form.
+  Per-target include resolution is mirrored (common before src so
+  common/jinja resolves common/unicode.h).
+- **Supervised execution**: 337 compiles + 3 links under the campaign
+  Supervisor in one fresh output root. Both actual full targets built:
+  `llama-server` (35,833,064 bytes, sha256 bc6d208a…, 335 objects) and
+  `ggml-rpc-server` (4,085,360 bytes, sha256 766abb93…, 30 objects). Per-
+  executable `q8-native-build-manifest/2` artifacts parse under
+  `parse_build_manifest` and never claim the unmodified base.
+- **Genuine native captures**: the patched tiny CPU fixture ran twice (CPU and
+  RPC loopback against the patched `ggml-rpc-server` on an owned reaped
+  listener). All four envelopes (static snapshot + dynamic whole, per run)
+  parse with verified terminal digests; the RPC dynamic capture shows genuine
+  `rpc_set`/`rpc_get` transfer facts with real remote pointers. Retained at
+  `tests/fixtures/issue299/native-captures/`. Native IDs (pids, pointers,
+  sizes, counters) come from execution; controller values stay distinct.
+- **Offline tests** (`tests/test_issue299_native_producer.py`, 14 methods):
+  replay the retained genuine captures and refuse mutated evidence
+  (truncated, dropped-events, overflow, wrong generation, missing terminal
+  fence). No test compiles, charges the campaign ledger or launches a server.
+  Registered on all four living CI surfaces with a retention-audit record;
+  focused parent rerun passes 377 tests across the ten #299 modules;
+  doctor/planner/retention checks PASS in the canonical venv.
+
+
+Independent review record for this child slice: SPEC round 1 raised two
+findings — build-manifest backend-library identity (object concatenation
+mislabeled as a library artifact) and tiny-fixture coverage scope. Both were
+addressed: `full_build.py` now emits real per-target static archives
+(`libllama-full.a` for the server link closure, `libggml-static.a` for the
+GGML closure + sink) built with `/usr/bin/ar` from the exact linked member
+objects, and the coverage scope was confirmed already honestly documented in
+the limits paragraph. SPEC continuation verdict: PASS. Independent QUALITY
+review verdict: APPROVED (the IS301_RPC_ENDPOINT note was calibrated as
+non-blocking: the server observes its own accepted connections without
+consuming the variable; the client fixture consumed it and the retained RPC
+captures contain genuine rpc_set/rpc_get facts). Parent verification: focused
+377-test rerun across all ten #299 modules, doctor/planner/retention checks
+PASS in the canonical venv.
+
+Honest limits: this is CPU-only native proof — the tiny fixture does not
+observe Q8 tensors, model-specific hooks or any CUDA path; the B CPU→A
+staging→B CUDA route is unchanged with no fallback; both `/2` reconcilers
+remain fail-closed; no model download/inference/GPU/deployment/merge occurred.
+A derived observer build is never the unmodified pin. Physical preparation
+stays #300. Independent SPEC/QUALITY review records for this slice are
+retained in scratch alongside prior review artifacts.
+
 ## Remaining work
 
 1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.

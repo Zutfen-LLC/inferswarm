@@ -367,6 +367,37 @@ framework or an already-accepted full inventory/copy schema. The native producer
 must supply actual source/allocation/request facts, never merely echo plan facts.
 Complete fact catalogs and their joins remain required downstream.
 
+
+### #301 native producer and full-server build (implemented child slice)
+
+The observation-only native overlay and full-server build authorized by the
+October 9 maintainer scope amendment are implemented on this branch. The
+`q8-native-build-manifest/2` objects now describe actual built executables:
+the observation-patched full `llama-server` and `ggml-rpc-server` targets of
+the pinned base, produced by a direct GCC recipe whose 330-TU closure was
+authenticated from the pin's own CMake target definitions (no CMake in the
+environment; no installs authorized). Patch identity
+(`patch_sha256` + transformed-file manifest) binds the retained overlay bytes.
+These are derived observer builds: `is_unmodified_base` is false by
+construction and by emission.
+
+The native emitter (`is301_observer.h`) produces complete
+`inferswarm-native-observation/2` envelopes whose canonical byte form and
+SHA-256 `terminal_digest` are computed natively (self-contained FIPS 180-4
+implementation) and accepted by `parse_observation` — a cross-implementation
+agreement, not a co-designed pass. Retained genuine captures exist for static
+snapshot and dynamic whole streams from both CPU and RPC-loopback executions
+of the patched tiny fixture; mutation negative controls refuse tampered
+variants. The finite fact catalog covers process/build facts, allocation
+extents, graph status, transfer endpoints/sizes and task/response lineage as
+execution-derived values.
+
+Still not supplied by this slice: full static/dynamic reconciliation (both
+`/2` reconcilers remain fail-closed), collector/identity-reader wiring into
+`run_config`, the plan-only CLI and examples. The tiny CPU fixture observes no
+Q8 tensors, no model load hooks and no CUDA path; CPU-only verification does
+not establish CUDA translation-unit compilation or physical GPU correctness.
+
 ### Calculated static-inventory prerequisite
 
 The separately reviewed pure `q8_static_inventory(config, metadata, *, candidate=None)`

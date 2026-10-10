@@ -113,7 +113,8 @@
     "test_issue299_bindings",
     "test_issue299_runtime",
     "test_issue299_phased_observation",
-    "test_issue299_native_build"
+    "test_issue299_native_build",
+    "test_issue299_native_producer"
    ]
   },
   "r8-qwen-lineage": {

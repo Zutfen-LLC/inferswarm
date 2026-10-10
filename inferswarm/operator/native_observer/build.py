@@ -397,7 +397,7 @@ class Supervisor:
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
         resource.setrlimit(resource.RLIMIT_FSIZE, (self.limits.file_bytes,) * 2)
 
-    def spawn(self, command):
+    def spawn(self, command, env_extra=None):
         self.check()
         index = len(self.rows)
         row = {'command': list(map(str, command)), 'start_unix': time.time(),
@@ -405,6 +405,11 @@ class Supervisor:
                'stderr': str(self.root / f'step-{index:03d}.stderr')}
         env = {'PATH': '/usr/bin:/bin', 'LC_ALL': 'C', 'OMP_NUM_THREADS': '1',
                'HOME': str(self.root), 'LLAMA_CACHE': str(self.root / 'cache')}
+        if env_extra:
+            bad = set(env_extra) - {'IS301_OBSERVE', 'IS301_RPC_ENDPOINT'}
+            if bad or not all(isinstance(v, str) for v in env_extra.values()):
+                raise BuildError('unsupported supervised environment extension')
+            env.update(env_extra)
         start = time.monotonic()
         with _exclusive_output(row['stdout']) as out, _exclusive_output(row['stderr']) as err:
             child = subprocess.Popen(row['command'], cwd=self.root, env=env, stdout=out,
@@ -435,11 +440,11 @@ class Supervisor:
             raise BuildError('owned descendant reaping deadline exceeded')
         self.active.pop(child.pid, None)
 
-    def run(self, command, seconds=None):
+    def run(self, command, seconds=None, env_extra=None):
         seconds = self.limits.phase_seconds if seconds is None else seconds
         if not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or not 0 < seconds <= self.limits.phase_seconds:
             raise ValueError('malformed child deadline')
-        child, row, start = self.spawn(command)
+        child, row, start = self.spawn(command, env_extra)
         reason = 'completed'
         deadline = start + seconds
         remaining = self.remaining_server_seconds()
@@ -470,9 +475,9 @@ class Supervisor:
             self.check_storage()
 
     @contextmanager
-    def server(self, command):
+    def server(self, command, env_extra=None):
         """Checked synchronous bodies only; no autonomous blocking-body watchdog."""
-        child, row, start = self.spawn(command)
+        child, row, start = self.spawn(command, env_extra)
         self.servers[child.pid] = (start, start + self.limits.fixture_seconds)
         try:
             yield child

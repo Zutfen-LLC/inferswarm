@@ -1,0 +1,216 @@
+--- a/ggml/src/ggml-alloc.c
++++ b/ggml/src/ggml-alloc.c
+@@ -1,3 +1,4 @@
++#include "is301_c_shim.h"
+ #include "ggml-alloc.h"
+ #include "ggml-backend-impl.h"
+ #include "ggml.h"
+@@ -1241,7 +1242,13 @@
+     if (ggml_backend_buft_is_meta(buft)) {
+         return ggml_backend_meta_alloc_ctx_tensors_from_buft(ctx, buft);
+     }
+-    return ggml_backend_alloc_ctx_tensors_from_buft_impl(ctx, buft, &nbytes_total, /*no_alloc =*/ false);
++    ggml_backend_buffer_t is301_buf = ggml_backend_alloc_ctx_tensors_from_buft_impl(ctx, buft, &nbytes_total, /*no_alloc =*/ false);
++    if (is301_buf != NULL && is301_is_enabled()) {
++        is301_record_event("alloc_ctx_tensors");
++        is301_fact_num("alloc_buffer_bytes", (long long) ggml_backend_buffer_get_size(is301_buf));
++        is301_fact_str("alloc_backend", ggml_backend_buft_name(buft));
++    }
++    return is301_buf;
+ }
+ 
+ ggml_backend_buffer_t ggml_backend_alloc_ctx_tensors(struct ggml_context * ctx, ggml_backend_t backend) {
+--- a/ggml/src/ggml-backend.cpp
++++ b/ggml/src/ggml-backend.cpp
+@@ -7,6 +7,8 @@
+ #endif
+ #include <windows.h>
+ #endif
++
++#include "is301_observer.h"
+ 
+ #include "ggml-backend.h"
+ #include "ggml-backend-impl.h"
+@@ -345,6 +347,14 @@
+     GGML_ASSERT(offset + size <= ggml_nbytes(tensor) && "tensor write out of bounds");
+ 
+     buf->iface.set_tensor(buf, tensor, data, offset, size);
++    if (is301::enabled()) {
++        is301::stream().record("tensor_set");
++        is301::facts().append("transfers", std::string("{") +
++            is301::kv_num("bytes", (long long) size) + "," +
++            is301::kv_num("offset", (long long) offset) + "," +
++            is301::kv_str("op", "set") + "," +
++            is301::kv_str("tensor", tensor->name) + "}");
++    }
+ }
+ 
+ void ggml_backend_tensor_get(const struct ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+@@ -360,6 +370,14 @@
+     GGML_ASSERT(offset + size <= ggml_nbytes(tensor) && "tensor read out of bounds");
+ 
+     buf->iface.get_tensor(buf, tensor, data, offset, size);
++    if (is301::enabled()) {
++        is301::stream().record("tensor_get");
++        is301::facts().append("transfers", std::string("{") +
++            is301::kv_num("bytes", (long long) size) + "," +
++            is301::kv_num("offset", (long long) offset) + "," +
++            is301::kv_str("op", "get") + "," +
++            is301::kv_str("tensor", tensor->name) + "}");
++    }
+ }
+ 
+ void ggml_backend_tensor_set_2d(struct ggml_tensor * tensor, const void * data, size_t offset, size_t size,
+@@ -455,6 +473,12 @@
+ enum ggml_status ggml_backend_graph_compute(ggml_backend_t backend, struct ggml_cgraph * cgraph) {
+     enum ggml_status err = ggml_backend_graph_compute_async(backend, cgraph);
+     ggml_backend_synchronize(backend);
++    if (is301::enabled()) {
++        is301::stream().record("graph_compute");
++        is301::facts().append("graphs", std::string("{") + is301::kv_num("nodes",
++            (long long) (cgraph ? cgraph->n_nodes : 0)) + "," + is301::kv_num("status",
++            (long long) err) + "}");
++    }
+     return err;
+ }
+ 
+--- a/ggml/src/ggml-rpc/ggml-rpc.cpp
++++ b/ggml/src/ggml-rpc/ggml-rpc.cpp
+@@ -1,3 +1,4 @@
++#include "is301_observer.h"
+ #include "ggml-rpc.h"
+ #include "ggml-impl.h"
+ #include "ggml-backend-impl.h"
+@@ -720,6 +721,15 @@
+     memcpy(input + sizeof(rpc_tensor) + sizeof(offset), data, size);
+     std::shared_ptr<uint8_t> input_ptr(input, std::default_delete<uint8_t[]>());
+     ctx->dispatcher->send(RPC_CMD_SET_TENSOR, input_ptr, input_size);
++    if (is301::enabled()) {
++        is301::stream().record("rpc_set_tensor");
++        is301::facts().append("transfers", std::string("{") +
++            is301::kv_num("bytes", (long long) size) + "," +
++            is301::kv_num("offset", (long long) offset) + "," +
++            is301::kv_str("op", "rpc_set") + "," +
++            is301::kv_num("remote_ptr", (long long) ctx->remote_ptr) + "," +
++            is301::kv_str("tensor", tensor->name) + "}");
++    }
+ }
+ 
+ static void ggml_backend_rpc_buffer_get_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * tensor, void * data, size_t offset, size_t size) {
+@@ -729,6 +739,15 @@
+     request->offset = offset;
+     request->size = size;
+     ctx->dispatcher->send(RPC_CMD_GET_TENSOR, request, sizeof(*request), data, size);
++    if (is301::enabled()) {
++        is301::stream().record("rpc_get_tensor");
++        is301::facts().append("transfers", std::string("{") +
++            is301::kv_num("bytes", (long long) size) + "," +
++            is301::kv_num("offset", (long long) offset) + "," +
++            is301::kv_str("op", "rpc_get") + "," +
++            is301::kv_num("remote_ptr", (long long) ctx->remote_ptr) + "," +
++            is301::kv_str("tensor", tensor->name) + "}");
++    }
+ }
+ 
+ static bool ggml_backend_rpc_buffer_cpy_tensor(ggml_backend_buffer_t buffer, const ggml_tensor * src, ggml_tensor * dst) {
+@@ -1835,6 +1854,9 @@
+             GGML_LOG_ERROR("Unknown command: %d\n", cmd);
+             break;
+         }
++        if (is301::enabled()) {
++            is301::stream().record("rpc_server_command");
++        }
+         switch (cmd) {
+             case RPC_CMD_HELLO: {
+                 // HELLO command is handled above
+@@ -2118,6 +2140,9 @@
+         }
+         printf("Accepted client connection\n");
+         fflush(stdout);
++        if (is301::enabled()) {
++            is301::stream().record("rpc_server_client");
++        }
+         rpc_serve_client(backends, cache_dir, client_socket);
+         printf("Client connection closed\n");
+         fflush(stdout);
+--- a/src/llama-kv-cache.cpp
++++ b/src/llama-kv-cache.cpp
+@@ -1,3 +1,4 @@
++#include "is301_observer.h"
+ #include "llama-kv-cache.h"
+ 
+ #include "llama-impl.h"
+@@ -364,6 +365,13 @@
+ 
+     const char * LLAMA_KV_CACHE_DEBUG = getenv("LLAMA_KV_CACHE_DEBUG");
+     debug = LLAMA_KV_CACHE_DEBUG ? atoi(LLAMA_KV_CACHE_DEBUG) : 0;
++    if (is301::enabled()) {
++        is301::stream().record("kv_cache_constructed");
++        is301::facts().add("kv_cache", std::string("{") +
++            is301::kv_num("kv_size", (long long) get_size()) + "," +
++            is301::kv_num("n_stream", (long long) n_stream) + "," +
++            is301::kv_str("name", name_tag) + "}");
++    }
+ }
+ 
+ void llama_kv_cache::clear(bool data) {
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -1,3 +1,4 @@
++#include "is301_observer.h"
+ #include "llama-model-loader.h"
+ 
+ #include "ggml-alloc.h"
+@@ -1786,6 +1787,13 @@
+         }
+     }
+ 
++    if (is301::enabled()) {
++        is301::stream().record("model_load_all_data");
++        is301::facts().add("model_load", std::string("{") +
++            is301::kv_num("n_tensors", (long long) n_tensors) + "," +
++            is301::kv_num("n_tensors_moved", (long long) n_tensors_moved) + "," +
++            is301::kv_num("size_data", (long long) size_data) + "}");
++    }
+     return true;
+ }
+ 
+--- a/tools/server/server-queue.cpp
++++ b/tools/server/server-queue.cpp
+@@ -1,3 +1,4 @@
++#include "is301_observer.h"
+ #include "server-task.h"
+ #include "server-queue.h"
+ 
+@@ -84,6 +85,10 @@
+ int server_queue::get_new_id() {
+     std::unique_lock<std::mutex> lock(mutex_tasks);
+     int new_id = id++;
++    if (is301::enabled()) {
++        is301::stream().record("server_task_new_id");
++        is301::facts().add("request", is301::kv_num("task_id", (long long) new_id));
++    }
+     return new_id;
+ }
+ 
+@@ -150,6 +155,9 @@
+         lock.unlock();
+ 
+         QUE_DBG("processing task, id = %d\n", task.id);
++        if (is301::enabled()) {
++            is301::stream().record("server_task_processed");
++        }
+         if (!callback_new_task(std::move(task), is_yielding)) {
+             // set it aside, do not put it back in the queue, else we offer it again in a loop
+             GGML_ASSERT(is_yielding && "a task can only be declined while yielding");
+@@ -479,6 +487,10 @@
+ 
+ void server_response::send(server_task_result_ptr && result) {
+     RES_DBG("sending result for task id = %d\n", result->id);
++    if (is301::enabled()) {
++        is301::stream().record("server_response_send");
++        is301::facts().add("request", is301::kv_num("response_id", (long long) result->id));
++    }
+ 
+     std::unique_lock<std::mutex> lock(mutex_results);
+     for (const auto & id_task : waiting_task_ids) {
