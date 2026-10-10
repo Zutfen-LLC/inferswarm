@@ -19,6 +19,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -358,19 +361,22 @@ inline void export_capture(const char * phase, const char * stream_kind,
         return;
     }
     if (export_counter == 0) {
-        // One export directory serves at most ONE observing process: a
-        // non-empty directory not authored by this process is refused, so a
-        // shared directory cannot accumulate an unbounded number of exports
-        // across processes/restarts. (The controller owns directory layout.)
-        for (auto & entry : std::filesystem::directory_iterator(export_dir)) {
-            const std::string & n = entry.path().filename().string();
-            const std::string prefix = std::string(participant) + "-" +
-                                       std::to_string(process_id) + "-";
-            if (n.rfind(prefix, 0) != 0) {
-                std::fprintf(stderr, "is301: export dir in use by another process\n");
-                return;
-            }
+        // One export directory serves at most ONE observing process, claimed
+        // ATOMICALLY via O_CREAT|O_EXCL: concurrent starters cannot both win,
+        // so a shared directory cannot accumulate exports across processes.
+        // A stale claim from a crashed process fails closed (controller owns
+        // directory layout: one fresh directory per observed process).
+        const std::string claim = export_dir + "/" + participant + "-" +
+                                  std::to_string(process_id) + "-claim";
+        const int fd = ::open(claim.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+        if (fd < 0) {
+            std::fprintf(stderr, "is301: export dir already claimed by another process\n");
+            return;
         }
+        const std::string owner = std::to_string(process_id) + "\n";
+        const bool claimed = ::write(fd, owner.data(), owner.size()) >= 0;
+        ::close(fd);
+        if (!claimed) return;
     }
     const int current = export_counter++;
     const std::string generation = std::string("exp-") + std::to_string(process_id) + "-" +

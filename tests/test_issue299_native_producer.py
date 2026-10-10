@@ -284,6 +284,10 @@ class NativeOverlayCorrectionTests(unittest.TestCase):
         self.assertRegex(header, r'MAX_EXPORTS|EXPORT_CAP|MAX_EXPORT')
         self.assertIn('.tmp', header)
         self.assertIn('rename(', header)
+        # The directory bound is an ATOMIC claim (O_CREAT|O_EXCL), not a
+        # racy scan: concurrent processes cannot both claim one directory.
+        self.assertIn('O_EXCL', header)
+        self.assertIn('-claim', header)
 
     def test_request_lineage_is_array_not_scalar_overwrite(self):
         script = (self.repo / 'scripts/issue301_derive_overlay.py').read_text()

@@ -313,9 +313,12 @@ corrected llama-server executable.
   no-follow enumeration, and requires every tree entry to be a regular
   non-symlink file. Three new offline negative controls (0755 flip,
   symlink substitution, dangling entry) RED-verified the bypasses and now
-  pass. (2) `export_capture` refuses a shared export directory already
-  used by another process, bounding one directory to one process's
-  64-export cap. The RPC fixture now also reserves the scheduler graph
+  pass. (2) `export_capture` claims its export directory ATOMICALLY
+  (O_CREAT|O_EXCL claim file) on first export — concurrent processes cannot
+  both win — bounding one directory to one process's 64-export cap (a stale
+  claim from a crashed process fails closed; the controller owns directory
+  layout). The QUALITY re-review's residual TOCTOU Minor on the earlier
+  scan-based check is thereby closed; the claim marker is asserted offline. The RPC fixture now also reserves the scheduler graph
   (mirroring llama-server startup) before async compute; a genuine
   fixture-rpc export stream is additionally retained. Final focused
   suites: 67 producer+build methods OK (26+41); retention audit OK.
