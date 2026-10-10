@@ -458,3 +458,68 @@ class RoundTwoRegressionTests(unittest.TestCase):
                                ('EXPORT_CLAIM_CPP', 'native-export-claim.cpp')):
             self.assertIn(constant, generator, 'native fixture generator missing')
             self.assertEqual(generator[constant], (FIXTURES / 'overlay/tests' / path).read_text())
+
+
+class CorrectedNativeEvidenceTests(unittest.TestCase):
+    """Replay the corrected native run; no compile, launch or ledger write."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = FIXTURES / 'round2-native'
+        data = (cls.root / 'build-proof.json').read_bytes()
+        if hashlib.sha256(data).hexdigest() != '70c1c66e82816e238db7fc1437c566abfc2a0add08335bda75ac8907faad342e':
+            raise AssertionError('corrected native evidence packet byte drift')
+        cls.proof = json.loads(data)
+
+    def test_corrected_captures_are_byte_pinned_and_sealed(self):
+        for name, source in self.proof['capture_sources'].items():
+            with self.subTest(name=name):
+                data = (self.root / name).read_bytes()
+                self.assertEqual(hashlib.sha256(data).hexdigest(), source['sha256'])
+                body = json.loads(data)
+                material = {k: v for k, v in body.items() if k != 'terminal_digest'}
+                canonical = json.dumps(material, sort_keys=True, separators=(',', ':'),
+                                       ensure_ascii=True).encode()
+                self.assertEqual(body['terminal_digest'], hashlib.sha256(canonical).hexdigest())
+                if name.startswith('control-') or name.startswith('fact-') and 'refused' in name:
+                    continue  # refusal/control evidence is deliberately not admitted
+                contract.parse_observation(TransportReply(0, data))
+
+    def test_corrected_scalar_native_refuses_and_preserves_prior_value(self):
+        for name in ('fact-append-refused.json', 'fact-overwrite-refused.json'):
+            data = (self.root / name).read_bytes()
+            with self.assertRaisesRegex(ValueError, 'dropped events'):
+                contract.parse_observation(TransportReply(0, data))
+        overwrite = json.loads((self.root / 'fact-overwrite-refused.json').read_bytes())
+        self.assertEqual(overwrite['facts']['overwrite-bound'], 'small')
+        self.assertEqual(overwrite['dropped_events'], 1)
+        self.assertTrue(overwrite['overflow'])
+        controls = self.proof['native_red_green_controls']['controls']
+        self.assertEqual(controls['reviewed']['scalar_length'], 4097)
+        self.assertEqual(controls['reviewed']['dropped'], 0)
+        self.assertEqual(controls['corrected']['scalar_length'], 5)
+        self.assertEqual(controls['corrected']['dropped'], 1)
+
+    def test_corrected_native_directory_claim_red_green(self):
+        controls = self.proof['native_red_green_controls']['controls']
+        self.assertEqual(controls['reviewed']['race'],
+                         {'race_exports': 2, 'after_stale_exports': 3})
+        self.assertEqual(controls['corrected']['race'],
+                         {'race_exports': 1, 'after_stale_exports': 1})
+        claim = json.loads((self.root / 'export-claim-proof.json').read_bytes())
+        self.assertEqual(claim['event_count'], 1)
+        self.assertEqual(claim['dropped_events'], 0)
+
+    def test_corrected_executable_manifests_and_budget(self):
+        verified = self.proof['verification']
+        self.assertEqual(verified['verdict'], 'PASS')
+        self.assertEqual(verified['phase_count'], 96)
+        self.assertLessEqual(verified['final_seconds'], 6600)
+        self.assertEqual(verified['compile_objects'], 339)
+        self.assertEqual(verified['authenticated_tree_files'], 3595)
+        transformed = hashlib.sha256((FIXTURES / 'native-observer-transformed.json').read_bytes()).hexdigest()
+        for name, expected in verified['executables'].items():
+            manifest = json.loads((self.root / (name + '.build-manifest.json')).read_bytes())
+            self.assertEqual(manifest, expected)
+            self.assertEqual(manifest['transformed_manifest_sha256'], transformed)
+            self.assertFalse(contract.parse_build_manifest(manifest).is_unmodified_base)

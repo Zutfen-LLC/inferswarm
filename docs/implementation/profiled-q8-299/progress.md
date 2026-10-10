@@ -402,10 +402,70 @@ Reproduction explicitly opts into this authorization:
   --output /home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full
 ```
 
-At this checkpoint compilation has NOT started. Genuine historical captures
-and every historical phase remain unchanged. Native results, independent
-SPEC then QUALITY reviews and the final exact-head handoff will be recorded
-additively after execution. #302 remains blocked; #299 is open; #300 is untouched.
+At the pre-build checkpoint compilation had not started. The one authorized
+fresh canonical execution subsequently completed successfully at correction
+commit `348bd6673138c3813282ca82782ce5b1a7ea4a01`; no full rebuild was attempted.
+The authenticated materialized tree contains 3595 files. All 339 new object
+compilations, five executable links, archive listings and bounded native
+operations have actual execution receipts. The 335-object `llama-server`
+closure includes `tools/server/main.cpp`; main-free backend libraries are
+recorded separately. Complete command/object/header/generated/system/tool
+provenance is retained, not inferred from the archive membership.
+
+Corrected executable SHA-256 identities:
+
+| Executable | SHA-256 |
+| --- | --- |
+| llama-server | `1058266e497df92d919177702f55131b4675e107c2b316973ec72b35dd999987` |
+| ggml-rpc-server | `5f535dd9693f6b82ce132c24566c662ad8b2c85aa25a863ddd741cae5af0bb35` |
+| native-buffer-graph-observed | `0776ef2268bb0b59e174f882242322ad0f401ea01ca567a691cb50f8347a0968` |
+| native-fact-bounds | `06f0c8a9974683251fee54baf36861c0ad8327bf819476bb06709d3dd5a778c4` |
+| native-export-claim | `05680bac0c5e9cd73076cfdc71fac56b6409513f605d96cf419fe57a90d21716` |
+
+The transformed manifest SHA-256 is
+`f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7`.
+Parent read-only verification passes all executable `/2` manifests, actual
+ordered link-object hashes, backend-library bytes/listing equality, compiler
+identities, consumed dependency closure, post-build source authentication,
+claim and scalar fixtures, and genuine CPU/RPC captures. `llama-server
+--version` exited zero; this is no-model build identity, not inference proof.
+
+The full build phase consumed 1022.6260212659836 seconds. Two authenticated
+reviewed-versus-corrected tiny native controls consumed another
+9.84840909903869 seconds on the same continuous ledger. All eight control
+compile/link/run operations exited zero. The controller initially asserted
+incorrectly that the reviewed zero-event whole stream must parse; it actually
+refuses for missing native events. That verifier failure, original log and
+phase reason remain preserved unchanged. Read-only reduction verifies the
+actual native behavioral RED/GREEN without any rerun: reviewed export race
+publishes two files and three after stale reuse; corrected publishes exactly
+one and remains one. Reviewed scalar overwrite emits 4097 bytes with zero
+drops; corrected preserves `small`, counts one drop and marks overflow.
+Both seals verify. The separate full-build scalar fixture contains native
+events and its valid-seal oversized refusal is tested at the real parser.
+
+Final continuous ledger: 96 phases, 6360.491934636724 seconds consumed,
+1032.4744303650223 additional seconds, 239.50806536327582 seconds unused under
+6600. Original 94 phase entries and original ledger copy are preserved.
+The build retains one compiler job, 3 GiB process AS, 4 GiB owned-tree RSS,
+256 MiB/file, 4 GiB artifacts, 16 GiB free-disk floor, 1800s phase maximum,
+60s tiny-operation timeout, no core dumps and exact-owned cleanup. The default
+unrelated cumulative ceiling remains 5400 seconds.
+
+Thirteen separately named captures and all five complete `/2` manifests are
+committed under `tests/fixtures/issue299/round2-native/`, pinned by the evidence
+packet and four offline replay tests. All eight previous native captures
+remain byte-identical historical evidence, never relabeled corrected-source
+proof. The complete build, authenticated tree, objects, commands, dependency
+files, separated provenance, original/final ledgers, receipts and native
+control outputs are byte-verified durable mirrors at
+`/home/zutfen/data/inferswarm-pr304-round2/` (630 MiB). Independent SPEC then
+QUALITY review and final fresh CPU/audit results will be recorded in the PR
+exact-head handoff; this progress checkpoint does not assert those gates yet.
+#302 remains blocked; #299 is open; #300 is untouched. No hosted CI or Final
+CPU Validation was dispatched. Collector/normal Q8 wiring and all physical,
+CUDA, route, real-model and performance qualification remain unproved.
+
 
 ## Remaining work
 

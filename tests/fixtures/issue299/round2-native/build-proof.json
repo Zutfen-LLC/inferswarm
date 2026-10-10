@@ -1,0 +1,338 @@
+{
+  "build_input_head": "348bd6673138c3813282ca82782ce5b1a7ea4a01",
+  "capture_sources": {
+    "control-corrected-scalar.json": {
+      "bytes": 530,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-reviewed-controls/step-007.stdout",
+      "sha256": "e05d5a13ec36869bef5a1f74c081d64e617b1fc84a8a78ed2fc5551135448c4a"
+    },
+    "control-reviewed-scalar.json": {
+      "bytes": 4623,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-reviewed-controls/step-003.stdout",
+      "sha256": "0d07eb7652e62f7f6b34956f463ad790ff1a94c883ffb6a3c74cc267f7a39bb5"
+    },
+    "cpu-dynamic.json": {
+      "bytes": 1752,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-cpu/dynamic-capture.json",
+      "sha256": "aab28a03ac73f084508a6d2de573124db02fd0b0b31f4cc4e7accff89db8d44e"
+    },
+    "cpu-static.json": {
+      "bytes": 709,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-cpu/static-capture.json",
+      "sha256": "24587bbc41a9b7fec76faef9965e7585be8760770f4b3500f6a2e6a397d4dd46"
+    },
+    "export-claim-proof.json": {
+      "bytes": 610,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/claim-proof/claim-race-3409968-0000.json",
+      "sha256": "b4068f430f63c2876032cd168b826c7ea85fbaaca5de565de63c275f7251c7fb"
+    },
+    "export-fixture-cpu.json": {
+      "bytes": 1756,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/fixture-cpu/fixture-cpu-3409833-0000.json",
+      "sha256": "be87b365eed98f8d2db2dd374fa321abb922a211cec6df2efe9b36d1e8a09487"
+    },
+    "export-fixture-rpc.json": {
+      "bytes": 2472,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/fixture-rpc/fixture-rpc-3409889-0000.json",
+      "sha256": "67001abc57713c34807a5689aa8844ae91d4652297e2ff674038a5ebee2c6a11"
+    },
+    "export-rpc-server.json": {
+      "bytes": 1742,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/rpc-server/ggml-rpc-server-3409867-0000.json",
+      "sha256": "54087f43e43e79183ef01238329f6e86140e3f64ed48d50b5ca579585a64e1e0"
+    },
+    "fact-append-refused.json": {
+      "bytes": 812,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-fact-bounds/fact-bounds-capture.json",
+      "sha256": "efda406ca092cc2f4dfb7dd18aee2b1039196f96c404de0dba0daaa1d88e5353"
+    },
+    "fact-clean.json": {
+      "bytes": 814,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-fact-bounds/fact-bounds-clean.json",
+      "sha256": "f34ca1b903d3c59ec1a7992ce0aba2ade29b40d3683653cfcbbefe01e7acffde"
+    },
+    "fact-overwrite-refused.json": {
+      "bytes": 843,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-fact-bounds/fact-scalar-overwrite.json",
+      "sha256": "878b5908d2e632e119b4c7304fe9990ff93b59ec912db40ac9aee1426934b2d6"
+    },
+    "rpc-dynamic.json": {
+      "bytes": 2468,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-rpc/dynamic-capture.json",
+      "sha256": "18204393ccdee5a76499372a2cee9ac796885be4f32994e4bf144a3b2d6db4e0"
+    },
+    "rpc-static.json": {
+      "bytes": 709,
+      "original_native_path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-rpc/static-capture.json",
+      "sha256": "37af9b4c703aecef2c0a29f23deb4ee1b85d64c459f005af579040ea79e73e50"
+    }
+  },
+  "durable_root": "/home/zutfen/data/inferswarm-pr304-round2",
+  "expected_main": "008e0727a08191d7ba47c0b7ea28a6493e662de1",
+  "final_phase_count": 96,
+  "historical_ledger_phase_count": 94,
+  "limitations": [
+    "CPU-only build and tiny synthetic buffers/graphs/loopback. No Q8 model execution, GPU, CUDA route correctness or performance.",
+    "Original eight captures remain historical; new captures are separate.",
+    "Reviewed zero-event scalar control is valid-seal emitter-bound evidence, not a parser-admitted whole stream. Original verifier assertion failure preserved; no native rerun."
+  ],
+  "native_operations_exit_codes": "all full-build and reviewed-control operations exited 0; owned RPC daemon intentionally killed/reaped",
+  "native_red_green_controls": {
+    "controls": {
+      "corrected": {
+        "binary_sha256": "98be45b11b48eb5028994f91da4225673ce7ff10bb571193a3d95e1e3b13fc02",
+        "dropped": 1,
+        "header_sha256": "b5be7e87dde9bd0725f56253d123be30a29689284aaef6345e6b2bee30bcd9f2",
+        "overflow": true,
+        "race": {
+          "after_stale_exports": 1,
+          "race_exports": 1
+        },
+        "scalar_capture_sha256": "e05d5a13ec36869bef5a1f74c081d64e617b1fc84a8a78ed2fc5551135448c4a",
+        "scalar_length": 5
+      },
+      "reviewed": {
+        "binary_sha256": "6b29eaab5806e961bedb73f45ab9bbda85c3714fd9cacfbd675c4aab41be6c3b",
+        "dropped": 0,
+        "header_sha256": "6b2531f49318e1136d4280d79796e7c29ee0a2a3f3a135561f7f20d333d5c64a",
+        "overflow": false,
+        "race": {
+          "after_stale_exports": 3,
+          "race_exports": 2
+        },
+        "scalar_capture_sha256": "0d07eb7652e62f7f6b34956f463ad790ff1a94c883ffb6a3c74cc267f7a39bb5",
+        "scalar_length": 4097
+      }
+    },
+    "verdict": "NATIVE_BEHAVIORAL_RED_GREEN_VERIFIED",
+    "verifier_limit": "Original controller assertion incorrectly expected the reviewed zero-event whole stream to parse. Both native controls compiled and exited 0. No native rerun. Initial log and failed verifier phase remain preserved. Reviewed stream refusal was dynamic whole requires native events, not scalar bound enforcement. Main build scalar fixture has a native event and separately verifies valid-seal completeness refusal."
+  },
+  "reviewed_starting_head": "7880aacaa78dddf893697352395d2d9502480ea6",
+  "schema": "issue301-corrected-native-proof/1",
+  "verification": {
+    "additional_seconds": 1032.4744303650223,
+    "authenticated_tree_files": 3595,
+    "captures": [
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-cpu/dynamic-capture.json",
+        "sha256": "aab28a03ac73f084508a6d2de573124db02fd0b0b31f4cc4e7accff89db8d44e"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-cpu/static-capture.json",
+        "sha256": "24587bbc41a9b7fec76faef9965e7585be8760770f4b3500f6a2e6a397d4dd46"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-rpc/dynamic-capture.json",
+        "sha256": "18204393ccdee5a76499372a2cee9ac796885be4f32994e4bf144a3b2d6db4e0"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/fixture-rpc/static-capture.json",
+        "sha256": "37af9b4c703aecef2c0a29f23deb4ee1b85d64c459f005af579040ea79e73e50"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/claim-proof/claim-race-3409968-0000.json",
+        "sha256": "b4068f430f63c2876032cd168b826c7ea85fbaaca5de565de63c275f7251c7fb"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/fixture-cpu/fixture-cpu-3409833-0000.json",
+        "sha256": "be87b365eed98f8d2db2dd374fa321abb922a211cec6df2efe9b36d1e8a09487"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/fixture-rpc/fixture-rpc-3409889-0000.json",
+        "sha256": "67001abc57713c34807a5689aa8844ae91d4652297e2ff674038a5ebee2c6a11"
+      },
+      {
+        "path": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/exports/rpc-server/ggml-rpc-server-3409867-0000.json",
+        "sha256": "54087f43e43e79183ef01238329f6e86140e3f64ed48d50b5ca579585a64e1e0"
+      }
+    ],
+    "compile_objects": 339,
+    "executables": {
+      "ggml-rpc-server": {
+        "backend_libraries": [
+          {
+            "name": "libggml-static.a",
+            "sha256": "f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-O0",
+          "-g0",
+          "-pthread",
+          "-D_GNU_SOURCE",
+          "-D_XOPEN_SOURCE=600",
+          "-DGGML_SCHED_MAX_COPIES=4",
+          "-DGGML_USE_CPU",
+          "-DGGML_USE_RPC",
+          "-DLLAMA_SUBPROCESS",
+          "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+          "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+          "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+          "-DCPPHTTPLIB_TCP_NODELAY=1"
+        ],
+        "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+        "executable_sha256": "5f535dd9693f6b82ce132c24566c662ad8b2c85aa25a863ddd741cae5af0bb35",
+        "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+      },
+      "llama-server": {
+        "backend_libraries": [
+          {
+            "name": "libllama-full.a",
+            "sha256": "6bafcb05a5188e287117d5df9d2b36798bf95c92640317697b26d2af0f5138c6"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-O0",
+          "-g0",
+          "-pthread",
+          "-D_GNU_SOURCE",
+          "-D_XOPEN_SOURCE=600",
+          "-DGGML_SCHED_MAX_COPIES=4",
+          "-DGGML_USE_CPU",
+          "-DGGML_USE_RPC",
+          "-DLLAMA_SUBPROCESS",
+          "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+          "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+          "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+          "-DCPPHTTPLIB_TCP_NODELAY=1"
+        ],
+        "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+        "executable_sha256": "1058266e497df92d919177702f55131b4675e107c2b316973ec72b35dd999987",
+        "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+      },
+      "native-buffer-graph-observed": {
+        "backend_libraries": [
+          {
+            "name": "libggml-static.a",
+            "sha256": "f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-O0",
+          "-g0",
+          "-pthread",
+          "-D_GNU_SOURCE",
+          "-D_XOPEN_SOURCE=600",
+          "-DGGML_SCHED_MAX_COPIES=4",
+          "-DGGML_USE_CPU",
+          "-DGGML_USE_RPC",
+          "-DLLAMA_SUBPROCESS",
+          "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+          "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+          "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+          "-DCPPHTTPLIB_TCP_NODELAY=1"
+        ],
+        "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+        "executable_sha256": "0776ef2268bb0b59e174f882242322ad0f401ea01ca567a691cb50f8347a0968",
+        "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+      },
+      "native-export-claim": {
+        "backend_libraries": [
+          {
+            "name": "libggml-static.a",
+            "sha256": "f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-O0",
+          "-g0",
+          "-pthread",
+          "-D_GNU_SOURCE",
+          "-D_XOPEN_SOURCE=600",
+          "-DGGML_SCHED_MAX_COPIES=4",
+          "-DGGML_USE_CPU",
+          "-DGGML_USE_RPC",
+          "-DLLAMA_SUBPROCESS",
+          "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+          "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+          "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+          "-DCPPHTTPLIB_TCP_NODELAY=1"
+        ],
+        "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+        "executable_sha256": "05680bac0c5e9cd73076cfdc71fac56b6409513f605d96cf419fe57a90d21716",
+        "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+      },
+      "native-fact-bounds": {
+        "backend_libraries": [
+          {
+            "name": "libggml-static.a",
+            "sha256": "f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-O0",
+          "-g0",
+          "-pthread",
+          "-D_GNU_SOURCE",
+          "-D_XOPEN_SOURCE=600",
+          "-DGGML_SCHED_MAX_COPIES=4",
+          "-DGGML_USE_CPU",
+          "-DGGML_USE_RPC",
+          "-DLLAMA_SUBPROCESS",
+          "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+          "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+          "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+          "-DCPPHTTPLIB_TCP_NODELAY=1"
+        ],
+        "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+        "executable_sha256": "06f0c8a9974683251fee54baf36861c0ad8327bf819476bb06709d3dd5a778c4",
+        "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+      }
+    },
+    "execution_receipts": 362,
+    "final_seconds": 6360.491934636724,
+    "ledger_sha256": "23dd638328d42bff3ee64853d3367b9bacbb1d77d28bea3c4c966154f859631f",
+    "no_model_smoke": {
+      "command": [
+        "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/llama-server",
+        "--version"
+      ],
+      "elapsed_seconds": 0.5763615439645946,
+      "exit_code": 0,
+      "peak_sampled_phase_rss_bytes": 649125888,
+      "pid": 3409788,
+      "reason": "completed",
+      "start_ticks": "96650633",
+      "start_unix": 1791665497.1642423,
+      "stderr": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/step-352.stderr",
+      "stdout": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full/step-352.stdout"
+    },
+    "phase": {
+      "elapsed_seconds": 1022.6260212659836,
+      "peak_sampled_rss_bytes": 649125888,
+      "reason": "completed",
+      "root": "/home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full",
+      "status": "finished"
+    },
+    "phase_count": 96,
+    "source_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7",
+    "starting_seconds": 5328.017504271702,
+    "unused_seconds": 239.50806536327582,
+    "verdict": "PASS"
+  }
+}
