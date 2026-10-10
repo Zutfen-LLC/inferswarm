@@ -87,6 +87,19 @@ The private generic `_profiled_digest_from_metadata` is a mechanical extraction:
 
 Full static layout/component/reservation/allocator closure, actual source/mapping/cache continuity, independently read owned identity and versioned derived-build qualification, resource/freshness joins, same-request dynamic evidence, native producer, collector and normal wiring remain pending. This slice is not static admission, output acceptance, physical qualification or completion of #299.
 
+## Reviewed finite startup expectation oracle (4D0b3)
+
+`derive_q8_startup_oracle(plan, metadata, *, original_plan_digest, startup)` derives four frozen/slots expectation records (settings, dimensions, members, charges) from the original retained context FIRST, then the supplied startup description. The oracle is a pure finite prerequisite: it never allocates, launches, observes or authorizes anything, and both `/2` reconcilers still refuse unconditionally even when passed the oracle.
+
+The first independent whole-bounded SPEC review failed with three findings (per-sequence embeddings UNKNOWN handling, five missing actual allocation/init/release citations, recurrent `rs_idx` native uint32 representation). All three were corrected (exact six production replacements, four appended regression methods, all 14 previous startup methods byte-unchanged) and independently reproduced by parent checks: final test bytes replay 3 methods / 26 assertion failures / 0 errors against the authenticated pre-fix producer `2187a9fc…`.
+
+- Independent whole-bounded SPEC round-2 PASS: 176 scoped tests (60 Q8-plan, 76 phased, 40 bindings) in 233.185s, zero failures/errors/skips, loader/log exact multiset; 15 control groups, no findings; all ten matrix items PASS; 31-owner/218-field receiving census; 36 native families/61 source associations authenticated. Parent verified the packet (37 review artifacts, 142/145 path preservation).
+- Independent whole-bounded QUALITY APPROVED: fresh 60 touched-module tests in 113.475s, zero failures/errors/skips; 10 newly authored control groups (corrected settings/source/uint32 seams, coverage, detachment, purity tripwires, cached-admission authority refusal); benign lock-in GREEN on authenticated pre-fix bytes; no Critical/Important/Minor findings. Retained same-byte 176-test runs and correction RED were authenticated and honestly reused, not re-executed.
+- After session recovery the parent freshly reran doctor and the full 176-test population (227.257s, zero failures/errors/skips) at the identical frozen bytes with exact loader/log identity.
+- Reviewed `qwen_q8.py` SHA-256: `3e09160738f205b2b77f49824995933e50a6a18a9a34894edd8784e6f0422a40`; `test_issue299_q8_plan.py`: `6a53d214cde935a357ea765a747e0de81de51bd5461366642620d74297f7f554`. Review/report hashes: SPEC-r2 `30a4e44e…`, QUALITY `cdaaabcf…`.
+
+This oracle grants no admission, dispatch, output acceptance or execution authority. Effective argv/environment/server/cparams join, full static/dynamic reconciliation, native producer/full server, real collector/identity reader, normal-runner wiring, CLI, examples and final integration review remain pending.
+
 ## Remaining work
 
 1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.

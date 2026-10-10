@@ -4321,7 +4321,7 @@
    "category": "CURRENT_CONTRACT",
    "disposition": "retain",
    "group": "issue-99-103",
-   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, mechanical pure digest parity, explicit fixed selections and no fallback.",
+   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, mechanical pure digest parity, explicit fixed selections and no fallback, and the finite pure startup expectation oracle over the retained original context.",
    "lineage": "Issue #299 profiled Q8 ordinary operator",
    "named_by_evidence": [],
    "owned_surfaces": {
@@ -4335,10 +4335,10 @@
     ]
    },
    "pinned_by_evidence": [],
-   "rationale": "Prospective fixed-plan/admission and calculated inventory contracts; inventory descriptions and synthetic admission do not qualify allocation, physical runtime or memory fit.",
+   "rationale": "Prospective fixed-plan/admission, calculated inventory and pure startup expectation contracts; expectation descriptions and synthetic admission do not qualify allocation, physical runtime or memory fit.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 42
+   "test_count_at_audit": 60
   },
   "test_issue299_bindings": {
    "baseline_group": "issue-99-103",

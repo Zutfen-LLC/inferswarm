@@ -988,4 +988,609 @@ class PureProfiledDigestTests(unittest.TestCase):
                         call()
 
 
+class Q8StartupOracleTests(unittest.TestCase):
+    """Pinned-source expectations, never allocator or execution witnesses."""
+
+    def oracle(self, selection='one-gpu', bounded=False, startup=None):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        m = metadata()
+        c = parse_config(fully_bounded_mapping(selection), now=NOW, profile_mode='replay') if bounded else config(selection)
+        p = build_plan(c, now=NOW)
+        startup = q.Q8StartupInputs(1, 1, False, False, 0) if startup is None else startup
+        return q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+
+    def test_both_selections_source_components_without_capacity_or_authority(self):
+        from inferswarm.operator import qwen_q8 as q
+        for selection in ('one-gpu', 'cpu-only'):
+            for bounded in (False, True):
+                with self.subTest(selection=selection, bounded=bounded):
+                    oracle = self.oracle(selection, bounded)
+                    rows = {r.component_id:r for r in oracle.components}
+                    self.assertEqual(rows['output.ids'].dimensions, (128,))
+                    self.assertEqual(rows['output.ids'].minimum_bytes, 512)
+                    self.assertEqual(rows['output.logits'].dimensions, (248320, 1))
+                    self.assertEqual(rows['output.base'].allocation_request_bytes, 993280)
+                    self.assertEqual((rows['output.logits'].participant_id, rows['output.logits'].memory_id), ('process-A', 'A-ram'))
+                    self.assertEqual(rows['final.template'].memory_id, 'B-vram' if selection == 'one-gpu' else 'B-ram')
+                    for family in ('attn', 'idx'):
+                        self.assertEqual(rows[family + '.cells/stream-0/pos'].minimum_bytes, 8192)
+                        self.assertEqual(rows[family + '.cells/stream-0/ext'].minimum_bytes, 24576)
+                        self.assertEqual(rows[family + '.cells/stream-0/seq'].dimensions, (256, 2048))
+                        self.assertIsNone(rows[family + '.cells/stream-0/used'].minimum_bytes)
+                    self.assertEqual(len(oracle.context.inventory.persistent_caches), 109)
+                    self.assertEqual(Counter(j.charge for j in oracle.charge_joins), Counter(oracle.context.inventory.charges))
+                    self.assertTrue(all(r.capacity_bytes is None for r in oracle.components))
+                    self.assertEqual(rows['reserve.compute/binding-B-cpu'].dimensions, (None,))
+                    self.assertTrue(oracle.pending)
+                    for name in ('status', 'receipt', 'execution_ready', 'static_admitted', 'trusted'):
+                        self.assertFalse(hasattr(oracle, name))
+                    self.assertIs(type(oracle), q.Q8StartupOracle)
+
+    def test_expected_flags_unknowns_sampler_counts_and_prompt_policy(self):
+        from inferswarm.operator import qwen_q8 as q
+        from itertools import product
+        for embeddings, samplers, cache in product((False, True, None), (False, True, None), (0, 17, -1, None)):
+            maximum = 1 if embeddings is False else 128 if embeddings is True else None
+            startup = q.Q8StartupInputs(maximum, 1 if embeddings is not None else None, embeddings, samplers, cache)
+            o = self.oracle(startup=startup)
+            rows = {r.component_id:r for r in o.components}
+            self.assertIs(rows['output.embd'].enabled, embeddings)
+            self.assertEqual(rows['output.embd'].dimensions, (2560, 1))
+            self.assertEqual(rows['output.embd'].minimum_bytes, 10240)
+            payload = 8 * 248320 + 4 * (1 + 248320)
+            expected = None if embeddings is None or samplers is None else 993280 + (10240 if embeddings else 0) + (payload if samplers else 0)
+            self.assertEqual(rows['output.base'].allocation_request_bytes, expected)
+            for member in ('logits_count', 'probs_count', 'candidates_count'):
+                r = rows['output.sampling/sampling.' + member]
+                self.assertIs(r.enabled, samplers)
+                self.assertEqual((r.dimensions, r.minimum_bytes, r.alias_group), ((1,), 4, None))
+                self.assertIsNone(r.allocation_request_bytes)
+            for member in ('logits', 'probs', 'sampled', 'candidates'):
+                self.assertEqual(rows['output.sampling/sampling.' + member].alias_group, 'output.base')
+            self.assertIs(rows['server.prompt-cache'].enabled, None if cache is None else cache != 0)
+            self.assertEqual(rows['server.prompt-cache'].dimensions, (0,))
+            self.assertIsNone(rows['server.prompt-cache'].minimum_bytes)
+            self.assertTrue(any('CPU-samplers' in p for p in o.pending))
+        all_unknown = self.oracle(startup=q.Q8StartupInputs(None, None, None, None, None))
+        self.assertIsNone(next(r for r in all_unknown.components if r.site_id == 'graph.pp').dimensions[2])
+
+    def test_non256_context_graph_order_and_expected_binding_domains(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        for selection in ('one-gpu', 'cpu-only'):
+            for context, batch, microbatch in ((257, 257, 257), (513, 64, 1), (2049, 128, 32)):
+                raw = q8_mapping(selection)
+                raw['workload'].update(context=context, batch=batch, microbatch=microbatch)
+                raw['workload']['cache_settings']['attention_cells'] = (context + 255) // 256 * 256
+                for e in raw['profiles']['snapshot']['evidence']:
+                    if 'workload:digest' in e['dependencies']:
+                        e['dependencies']['workload:digest'] = sha(raw['workload'])
+                reseal_profiles(raw['profiles']['snapshot'])
+                raw['profiles']['digest'] = profile_digest(raw['profiles']['snapshot'])
+                c = parse_config(raw, now=NOW, profile_mode='replay'); p = build_plan(c, now=NOW)
+                o = q.derive_q8_startup_oracle(p, metadata(), original_plan_digest=p.digest,
+                    startup=q.Q8StartupInputs(batch, 1, True, False, 0))
+                rows = {r.component_id:r for r in o.components}
+                self.assertEqual(rows['output.ids'].dimensions, (batch,))
+                self.assertEqual(rows['attn.cells/stream-0/pos'].dimensions, ((context + 255) // 256 * 256,))
+                passes = ('graph.hc-pre', 'graph.hc-comb', 'graph.hc-post', 'graph.pp', 'graph.tg', 'graph.pp-again')
+                self.assertTrue(any('>'.join(passes) in x for x in o.pending))
+                for site in passes[:3] + ('graph.tg',):
+                    self.assertEqual(rows[site].dimensions, (1, 1, 1))
+                for site in ('graph.pp', 'graph.pp-again'):
+                    self.assertEqual(rows[site].dimensions, (microbatch, 1, microbatch))
+                    self.assertEqual(rows[site].alias_group, 'sched/galloc-reservation')
+                self.assertEqual(len([r for r in o.components if r.site_id == 'graph.results']), 2)
+                self.assertEqual(len([r for r in o.components if r.site_id == 'reserve.compute']), 3 if selection == 'one-gpu' else 2)
+                for r in o.components:
+                    self.assertTrue(r.source_sites)
+                    self.assertTrue(all(x.startswith(PIN + ':') for x in r.source_sites))
+                    if r.site_id == 'reserve.compute':
+                        self.assertEqual(r.dimensions, (None,))
+                        self.assertIsNone(r.minimum_bytes)
+                        self.assertTrue(any('at-most-16-per-distinct-dynallocator' in x for x in r.pending))
+                    if r.site_id in ('rpc.alloc', 'rpc.receive', 'rpc.cache-hit', 'rpc.graph'):
+                        self.assertEqual((r.participant_id, r.memory_id), ('process-B', 'B-ram'))
+                self.assertEqual(rows['rpc.send'].partition, 'load-only')
+                self.assertTrue(any('sizeof-rpc_tensor+8+payload' in x for x in rows['rpc.send'].pending))
+
+    def test_original_charge_partitions_domain_gaps_and_optional_fixtures(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan, ResourceCharge
+        for selection in ('one-gpu', 'cpu-only'):
+            raw = q8_mapping(selection)
+            raw['strategy_options']['rpc_cache'] = 'enabled'
+            remote = next(p for p in raw['participants'] if p['role'] == 'remote')
+            for row in raw['placement']:
+                if row['binding_id'] == 'binding-A-cpu':
+                    continue
+                for descriptor in row['state_ranges']:
+                    remote['cache_ranges'].append(dict(**descriptor, unit_id=row['unit_id'],
+                        sha256=sha({'SYNTHETIC':descriptor['state_id']}),
+                        cache_key=format(len(remote['cache_ranges']) + 1, '016x'),
+                        source_id=raw['model']['source_id'], revision=raw['model']['revision'], representation='Q8_0'))
+            runtime = next(r for r in raw['profiles']['snapshot']['runtime_capabilities'] if r['runtime_id'] == 'runtime-B-cpu')
+            raw['strategy_options']['host_mirrors'] = [dict(allocation_id='explicit-copy', memory_id='B-ram', bytes=2**20, evidence_id=runtime['evidence_id'])]
+            for phase in ('load', 'serve', 'cleanup'):
+                charge = ResourceCharge('host-mirror:explicit-copy/' + phase, 'B-ram', 'optional', 2**20, phase, runtime['evidence_id'])
+                runtime['capabilities'].append(q.bound_capability(charge, charge.bytes))
+            evidence = next(e for e in raw['profiles']['snapshot']['evidence'] if e['evidence_id'] == runtime['evidence_id'])
+            # Obtain the exact fixture physical identity, never a guessed identity.
+            evidence['dependencies']['memory:B-ram:physical_id'] = next(m['physical_id'] for m in raw['profiles']['snapshot']['memory_resources'] if m['memory_id'] == 'B-ram')
+            reseal_profiles(raw['profiles']['snapshot']); raw['profiles']['digest'] = profile_digest(raw['profiles']['snapshot'])
+            p = build_plan(parse_config(raw, now=NOW, profile_mode='replay'), now=NOW)
+            o = q.derive_q8_startup_oracle(p, metadata(), original_plan_digest=p.digest, startup=q.Q8StartupInputs(None, None, None, None, None))
+            self.assertEqual(Counter(j.charge for j in o.charge_joins), Counter(p.candidate.charges))
+            for j in o.charge_joins:
+                aid = j.charge.allocation_id
+                self.assertTrue(j.pending)
+                if aid.startswith(('observer:', 'verification-read-buffer:', 'verification-page-residence:', 'host-mirror:', 'boundary-bounce')):
+                    self.assertEqual(j.site_ids, ())
+                if aid.startswith('workspace:') and j.charge.memory_id != 'A-ram':
+                    self.assertEqual(j.site_ids, ())
+                    self.assertIn('unresolved-domain-gap:backend-workspace-vs-A-host', j.pending)
+                if aid.startswith('state-allocator-overhead:') and j.charge.memory_id != 'A-ram':
+                    self.assertIn('unresolved-domain-gap:A-host-metadata-vs-charge-memory', j.pending)
+                if aid.startswith(('full-tensor-cache-hit-vector/', 'cache-hit-vector-overlap/')):
+                    self.assertEqual((j.site_ids, j.partition), (('rpc.cache-hit',), 'load-only'))
+                if aid.startswith('assigned-cache-disk/'):
+                    self.assertEqual(j.partition, 'backing')
+            self.assertTrue(any(j.charge.allocation_id.startswith('host-mirror:') for j in o.charge_joins))
+
+    def test_intrinsic_inputs_and_contextual_effective_limits(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        p = build_plan(config(), now=NOW); m = metadata()
+        base = q.Q8StartupInputs(1, 1, False, False, 0)
+        for field in ('n_outputs_max', 'n_outputs_max_per_seq', 'cache_ram_mib'):
+            for bad in (True, False, 1.0, '1', (), -2, 2**31):
+                with self.subTest(field=field, bad=bad), self.assertRaisesRegex(ValueError, 'startup input ' + field):
+                    replace(base, **{field:bad})
+        for field in ('embeddings', 'backend_samplers_present'):
+            for bad in (0, 1, 'false', (), 1.0):
+                with self.subTest(field=field, bad=bad), self.assertRaisesRegex(ValueError, 'startup input ' + field):
+                    replace(base, **{field:bad})
+        for field in ('n_outputs_max', 'n_outputs_max_per_seq'):
+            with self.assertRaisesRegex(ValueError, 'startup input ' + field):
+                replace(base, **{field:0})
+        with self.assertRaisesRegex(ValueError, 'startup input n_outputs_max_per_seq'):
+            replace(base, n_outputs_max_per_seq=2)
+        for startup, reason in ((q.Q8StartupInputs(129, 1, None, None, None), 'startup effective output limits'),
+                                (q.Q8StartupInputs(2, 1, False, None, None), 'startup effective output limits'),
+                                (q.Q8StartupInputs(1, 1, True, None, None), 'startup effective output limits'),
+                                (q.Q8StartupInputs(128, 2, True, None, None), 'startup effective output limits')):
+            with self.subTest(startup=startup), self.assertRaisesRegex(ValueError, reason):
+                q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+        for limit in (-1, 0, 1, 2**31-1, None):
+            self.assertEqual(self.oracle(startup=replace(base, cache_ram_mib=limit)).startup.cache_ram_mib, limit)
+        for bad in ({}, (), None):
+            with self.assertRaisesRegex(ValueError, 'startup input type'):
+                q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=bad)
+        unchecked = copy.deepcopy(base); object.__setattr__(unchecked, 'embeddings', 1)
+        with self.assertRaisesRegex(ValueError, 'startup input embeddings'):
+            q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=unchecked)
+        with self.assertRaises(TypeError): q.Q8StartupInputs(1, 1, False, False, 0, capacity_bytes=1)
+
+    def test_context_predicates_win_before_bad_startup(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        from inferswarm.operator.profiles import freeze, thaw
+        p = build_plan(config(), now=NOW); m = metadata()
+        changed = build_plan(replace(p.config, request=tuple((k, 'changed' if k == 'prompt' else v) for k,v in p.config.request)), now=NOW)
+        cases = [(changed, m, 'static context original plan digest'),
+                 (replace(p, workload=replace(p.workload, slots=True)), m, 'static context typed input: plan.workload.slots'),
+                 (replace(p, selection='cpu-only'), m, 'static context plan field mismatch: selection'),
+                 (replace(p, candidate=replace(p.candidate, assignments=p.candidate.assignments[:-1])), m, 'inventory candidate mismatch: assignments'),
+                 (p, replace(m, source=replace(m.source, revision='other')), 'model member identity authentication')]
+        for bad_plan, bad_meta, reason in cases:
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                q.derive_q8_startup_oracle(bad_plan, bad_meta, original_plan_digest=p.digest, startup=None)
+        raw = q8_mapping(); snapshot = raw['profiles']['snapshot']; runtime = snapshot['runtime_capabilities'][0]
+        runtime['source_revision'] = 'a'*40
+        e = next(e for e in snapshot['evidence'] if e['evidence_id'] == runtime['evidence_id'])
+        e['dependencies']['runtime:' + runtime['runtime_id'] + ':source_revision'] = 'a'*40
+        reseal_profiles(snapshot); raw['profiles']['digest'] = profile_digest(snapshot)
+        c = parse_config(raw, now=NOW, profile_mode='replay')
+        with self.assertRaisesRegex(ValueError, 'runtime source pin'):
+            q.derive_q8_startup_oracle(replace(p, config=c, profiles=c.profiles), m, original_plan_digest=p.digest, startup=None)
+        opts = thaw(p.config.strategy_options); opts['startup_timeout_seconds'] += 1
+        fresh = build_plan(replace(p.config, strategy_options=freeze(opts)), now=NOW)
+        with self.assertRaisesRegex(ValueError, 'static context original plan digest'):
+            q.derive_q8_startup_oracle(fresh, m, original_plan_digest=p.digest, startup=None)
+
+    def test_whole_catalog_coverage_field_parity_and_closed_intrinsic_rows(self):
+        from inferswarm.operator import qwen_q8 as q
+        from dataclasses import fields
+        o = self.oracle()
+        for changes in (dict(components=o.components[:-1]), dict(components=o.components + (o.components[0],)),
+                        dict(components=o.components + (replace(next(r for r in o.components if r.site_id == 'reserve.compute'), component_id='reserve.compute/extra'),))):
+            with self.subTest(changes=tuple(changes)), self.assertRaisesRegex(ValueError, 'startup component coverage'):
+                replace(o, **changes)
+        for rows in (o.charge_joins[:-1], o.charge_joins + (o.charge_joins[0],)):
+            with self.assertRaisesRegex(ValueError, 'startup charge coverage'): replace(o, charge_joins=rows)
+        with self.assertRaisesRegex(ValueError, 'startup oracle pending'):
+            replace(o, pending=o.pending[:-1])
+        rows = {r.component_id:r for r in o.components}
+        r = rows['output.logits']
+        for field, value, reason in (
+            ('component_id', 'output.logits/extra', 'startup component member'),
+            ('site_id', 'fake', 'startup component site_id'),
+            ('dimension_law', 'rpc-frame', 'startup component dimension_law'),
+            ('representation', 'fake', 'startup component representation'),
+            ('alias_group', 'fake', 'startup component alias_group'),
+            ('capacity_bytes', 0, 'startup component capacity_bytes'),
+            ('capacity_bytes', 1, 'startup component capacity_bytes'),
+            ('dimensions', (True, 1), 'startup component dimensions'),
+            ('minimum_bytes', True, 'startup component minimum_bytes'),
+            ('enabled', 1, 'startup component enabled'),
+            ('source_sites', ('fake',), 'startup component source_sites')):
+            with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, reason):
+                replace(r, **{field:value})
+        # Intrinsic shape is not provenance/relative-formula proof: legitimate
+        # scalar changes may construct, but the WHOLE oracle refuses them.
+        for row in o.components:
+            for field, value in (
+                ('participant_id', 'wrong-host'), ('memory_id', 'wrong-memory'),
+                ('logical_state_id', None if row.logical_state_id is not None else 'client-control'),
+                ('partition', 'request-only' if row.partition != 'request-only' else 'startup-active'),
+                ('lifetime', 'request' if row.lifetime != 'request' else 'context'),
+                ('dimensions', (2,)), ('minimum_bytes', 1 if row.minimum_bytes != 1 else 2),
+                ('allocation_request_bytes', 1), ('enabled', False if row.enabled is not False else True),
+                ('pending', ('missing-dependencies',))):
+                # Bypass construction only to probe the receiving whole-node
+                # guard, not to fabricate a successful oracle.
+                bad = copy.deepcopy(row); object.__setattr__(bad, field, value)
+                changed = tuple(bad if x.component_id == row.component_id else x for x in o.components)
+                with self.subTest(component=row.component_id, field=field), self.assertRaisesRegex(ValueError, 'startup component'):
+                    replace(o, components=changed)
+        for field in fields(q.Q8StartupChargeJoin):
+            j = copy.deepcopy(o.charge_joins[0])
+            value = replace(j.charge, bytes=1) if field.name == 'charge' else ('output.ids',) if field.name == 'site_ids' else 'request-only' if field.name == 'partition' else ('missing',)
+            object.__setattr__(j, field.name, value)
+            with self.subTest(join_field=field.name), self.assertRaisesRegex(ValueError, 'startup charge'):
+                replace(o, charge_joins=(j,) + o.charge_joins[1:])
+        charge = replace(o.context.inventory.charges[0], allocation_id='unmapped/verification', phase='verification')
+        context = replace(o.context, inventory=replace(o.context.inventory, charges=(charge,)))
+        with self.assertRaisesRegex(ValueError, 'startup unmapped charge prefix'):
+            replace(o, context=context)
+        self.assertEqual(replace(o, components=tuple(reversed(o.components)), charge_joins=tuple(reversed(o.charge_joins))), o)
+
+    def test_all_retained_nodes_detached_and_charge_aliases_owned(self):
+        from inferswarm.operator import qwen_q8 as q
+        from dataclasses import fields, is_dataclass
+        o = self.oracle(); caller = (o.context, o.startup, o.components, o.charge_joins)
+        direct = q.Q8StartupOracle(*caller, o.pending)
+        def nodes(value, result):
+            if is_dataclass(value):
+                result[id(value)] = value
+                for field in fields(value): nodes(getattr(value, field.name), result)
+            elif isinstance(value, tuple):
+                for child in value: nodes(child, result)
+        source, retained = {}, {}; nodes(caller, source); nodes(direct, retained)
+        self.assertFalse(set(source) & set(retained))
+        charges = {c.allocation_id:c for c in direct.context.inventory.charges}
+        for join in direct.charge_joins: self.assertIs(join.charge, charges[join.charge.allocation_id])
+        before = copy.deepcopy(direct)
+        for node in source.values(): object.__setattr__(node, fields(node)[0].name, 'caller-mutated')
+        self.assertEqual(direct, before)
+        with self.assertRaises(FrozenInstanceError): direct.startup.embeddings = True
+        # Standalone charge rows own their retained caller charge as well.
+        c = copy.deepcopy(direct.charge_joins[0].charge)
+        j = q.Q8StartupChargeJoin(c, direct.charge_joins[0].site_ids, direct.charge_joins[0].partition, direct.charge_joins[0].pending)
+        self.assertIsNot(j.charge, c)
+        object.__setattr__(c, 'bytes', 1)
+        self.assertEqual(j, direct.charge_joins[0])
+
+    def test_public_success_purity_noauthority_and_actual_reconciler_refusals(self):
+        from contextlib import ExitStack
+        from inferswarm.operator import qwen_q8 as q, phased_observation as phase
+        from inferswarm.operator.plan import build_plan
+        import inspect
+        p = build_plan(config(), now=NOW); m = metadata()
+        startup = q.Q8StartupInputs(None, None, None, None, None)
+        expected = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+        with ExitStack() as stack:
+            spies = [stack.enter_context(patch(name, side_effect=AssertionError('pure startup I/O/authority')))
+                for name in ('builtins.open', 'pathlib.Path.open', 'inferswarm.operator.metadata.load_metadata_index',
+                             'subprocess.run', 'subprocess.Popen', 'socket.socket', 'time.time', 'time.monotonic',
+                             'inferswarm.operator.phased_observation.PhaseReceipt')]
+            actual = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+            self.assertEqual(actual, expected)
+            for spy in spies: spy.assert_not_called()
+        self.assertEqual(tuple(inspect.signature(q.derive_q8_startup_oracle).parameters),
+                         ('plan', 'metadata', 'original_plan_digest', 'startup'))
+        with self.assertRaisesRegex(phase.IncompleteReconciliation, '^static incomplete reconciliation: unsupported admission$'):
+            phase.reconcile_static(actual, (), {})
+        with self.assertRaisesRegex(phase.IncompleteReconciliation, '^dynamic incomplete reconciliation: unsupported acceptance$'):
+            phase.reconcile_dynamic(actual, None, (), None)
+        for forbidden in ('capacity_bytes', 'observations', 'catalog', 'clock', 'receipt'):
+            with self.subTest(forbidden=forbidden), self.assertRaises(TypeError):
+                q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup, **{forbidden:None})
+
+    def test_constructor_record_field_census_walks_heterogeneous_and_optional_nodes(self):
+        from dataclasses import fields, is_dataclass
+        from inferswarm.operator import qwen_q8 as q, config as cfg, profiles as prof, plan as planner, phased_observation as phase
+        raw = q8_mapping(); raw['strategy_options']['rpc_cache'] = 'enabled'
+        remote = next(p for p in raw['participants'] if p['role'] == 'remote')
+        for row in raw['placement']:
+            if row['binding_id'] == 'binding-A-cpu': continue
+            for d in row['state_ranges']:
+                remote['cache_ranges'].append(dict(**d, unit_id=row['unit_id'], sha256=sha({'SYNTHETIC':d['state_id']}),
+                    cache_key=format(len(remote['cache_ranges'])+1, '016x'), source_id=raw['model']['source_id'],
+                    revision=raw['model']['revision'], representation='Q8_0'))
+        p = planner.build_plan(parse_config(raw, now=NOW, profile_mode='replay'), now=NOW)
+        o = q.derive_q8_startup_oracle(p, metadata(), original_plan_digest=p.digest, startup=q.Q8StartupInputs(None, None, None, None, None))
+        pairs = {}
+        def walk(value, path=()):
+            if is_dataclass(value):
+                for field in fields(value):
+                    pairs.setdefault((type(value), field.name), path + (field.name,))
+                    walk(getattr(value, field.name), path + (field.name,))
+            elif isinstance(value, tuple):
+                for i, child in enumerate(value): walk(child, path + (i,))
+        walk(o)
+        # Independent list of retained record OWNERS. The walk above must
+        # discover all children, including FrozenMapping's mixed tuple slots.
+        owners = (q.Q8StartupOracle, q.Q8StartupInputs, q.Q8StartupComponent, q.Q8StartupChargeJoin,
+                  phase.StaticPlanContext, q.Q8StaticInventory, q.WeightAssignment, q.RequiredState,
+                  q.Q8PersistentCache, q.Q8LogicalComposite, planner.ResourceCharge, planner.CapabilityRequirement,
+                  cfg.ProfiledOperatorConfig, cfg.ProfiledParticipant, cfg.PhysicalBinding, cfg.BackingDescriptor,
+                  cfg.CacheRange, cfg.BindingPlacement, cfg.ModelIdentity, cfg.MetadataIdentity, cfg.ProfileIdentity,
+                  cfg.ProfilePolicy, cfg.MemoryLimit, cfg.WorkloadSettings, prof.ResourceSnapshot, prof.HostProfile,
+                  prof.ComputeProfile, prof.MemoryProfile, prof.LinkProfile, prof.RuntimeCapability, prof.EvidenceRef)
+        expected = {(owner, f.name) for owner in owners for f in fields(owner)}
+        self.assertEqual(set(pairs), expected)
+        probed = set()
+        for pair, path in pairs.items():
+            bad = copy.deepcopy(o); target = bad
+            for step in path[:-1]: target = target[step] if type(step) is int else getattr(target, step)
+            object.__setattr__(target, path[-1], [])
+            with self.subTest(owner=pair[0].__name__, field=pair[1]), self.assertRaises(ValueError):
+                q.Q8StartupOracle(bad.context, bad.startup, bad.components, bad.charge_joins, bad.pending)
+            probed.add(pair)
+        self.assertEqual(probed, expected)
+
+    def test_closed_root_classes_and_context_relative_output_width_branch(self):
+        from dataclasses import dataclass, fields
+        from inferswarm.operator import qwen_q8 as q
+        o = self.oracle()
+        @dataclass(frozen=True, slots=True)
+        class ExtraInputs(q.Q8StartupInputs):
+            future: int = 0
+        with self.assertRaisesRegex(ValueError, 'startup input type'):
+            ExtraInputs(1, 1, False, False, 0)
+        @dataclass(frozen=True, slots=True)
+        class ExtraComponent(q.Q8StartupComponent):
+            future: int = 0
+        with self.assertRaisesRegex(ValueError, 'startup component type'):
+            ExtraComponent(**{f.name:getattr(o.components[0], f.name) for f in fields(q.Q8StartupComponent)})
+        @dataclass(frozen=True, slots=True)
+        class ExtraOracle(q.Q8StartupOracle):
+            future: int = 0
+        with self.assertRaisesRegex(ValueError, 'startup oracle type'):
+            ExtraOracle(o.context, o.startup, o.components, o.charge_joins, o.pending)
+        # Direct description constructors cannot establish public metadata
+        # provenance; retain the optional output-width law rather than ignore it.
+        for width, expected in ((0, 2560), (3200, 3200)):
+            inv = replace(o.context.inventory, model_metadata=o.context.inventory.model_metadata + (('qwen4exp.embedding_length_out', width),))
+            context = replace(o.context, inventory=inv)
+            startup = q.Q8StartupInputs(128, 1, True, False, 0)
+            # Existing rows fail relative law; independent private builder here
+            # is tested only as a constructor fixture, never public authority.
+            with self.assertRaisesRegex(ValueError, 'startup component law'):
+                replace(o, context=context, startup=startup)
+            direct = q.Q8StartupOracle(context, startup, q._q8_startup_components(context, startup),
+                                      q._q8_startup_charge_joins(context), q._q8_startup_pending(context))
+            rows = {r.component_id:r for r in direct.components}
+            self.assertEqual(rows['output.embd'].dimensions, (expected, 1))
+            self.assertEqual(rows['output.base'].allocation_request_bytes, 993280+4*expected)
+        # Every conditional description row remains part of whole coverage.
+        for r in o.components:
+            with self.subTest(missing=r.component_id), self.assertRaisesRegex(ValueError, 'startup component coverage'):
+                replace(o, components=tuple(x for x in o.components if x is not r))
+
+
+    def test_public_nodes_and_deliberately_shared_context_aliases_are_detached(self):
+        from dataclasses import fields, is_dataclass
+        from inferswarm.operator import qwen_q8 as q, phased_observation as phase
+        from inferswarm.operator.plan import build_plan
+        p = build_plan(config(), now=NOW); m = metadata()
+        startup = q.Q8StartupInputs(None, None, None, None, None)
+        actual = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+        def nodes(value, result):
+            if is_dataclass(value):
+                result[id(value)] = value
+                for f in fields(value): nodes(getattr(value, f.name), result)
+            elif isinstance(value, tuple):
+                for child in value: nodes(child, result)
+        caller, retained = {}, {}; nodes((p, m, startup), caller); nodes(actual, retained)
+        self.assertFalse(set(caller).intersection(retained))
+        # The approved context description permits this shared model node;
+        # detachment must preserve its identity relationship within the result.
+        inv = replace(actual.context.inventory, metadata_source=actual.context.config.model)
+        context = phase.StaticPlanContext(p.digest, actual.context.config, inv)
+        self.assertIs(context.config.model, context.inventory.metadata_source)
+        direct = replace(actual, context=context)
+        self.assertIs(direct.context.config.model, direct.context.inventory.metadata_source)
+        before = copy.deepcopy((actual, direct))
+        for node in caller.values(): object.__setattr__(node, fields(node)[0].name, 'caller-only-mutated')
+        object.__setattr__(context.config.model, 'source_id', 'caller-only-mutated')
+        self.assertEqual((actual, direct), before)
+
+    def test_relative_width_never_coerces_false_null_or_zero_float(self):
+        from inferswarm.operator import qwen_q8 as q
+        o = self.oracle()
+        for width in (False, True, None, 0.0, 3200.0, -1, 262145):
+            inv = replace(o.context.inventory, model_metadata=o.context.inventory.model_metadata + (('qwen4exp.embedding_length_out', width),))
+            with self.subTest(width=width), self.assertRaisesRegex(ValueError, 'startup output width'):
+                replace(o, context=replace(o.context, inventory=inv))
+
+    def test_native_authority_sites_name_actual_source_definitions(self):
+        o = self.oracle()
+        rows = {r.component_id:r for r in o.components}
+        required = {
+            'output.base': 'ggml/src/ggml-rpc/ggml-rpc.cpp:ggml_backend_rpc_device_i:2220-2229',
+            'output.embd': 'src/llama-model.cpp:llama_model_base::load_hparams:1229-1233',
+            'vocab.ids': 'src/llama-model.h:LLAMA_LOAD_LOCALS:829-847',
+            'graph.hc-pre': 'src/llama-context.cpp:llama_context::resolve_fused_ops:505-579:HC-pre-first',
+            'graph.results/gf_res_prev': 'src/llama-graph.cpp:llm_graph_result::llm_graph_result/reset:1311-1354',
+            'final.template': 'src/models/qwen4exp.cpp:llama_model_qwen4exp::graph::graph:428-440',
+            'rpc.alloc': 'ggml/src/ggml-rpc/ggml-rpc.cpp:rpc_server::alloc_buffer:1224-1243',
+            'rpc.receive': 'ggml/src/ggml-rpc/ggml-rpc.cpp:recv_msg(vector):279-290',
+            'rpc.cache-hit': 'ggml/src/ggml-rpc/ggml-rpc.cpp:rpc_server::get_cached_file/set_tensor_hash:1452-1511',
+        }
+        for cid, authority in required.items():
+            with self.subTest(component=cid): self.assertIn(PIN + ':' + authority, rows[cid].source_sites)
+
+
+    def test_unknown_embeddings_reject_per_sequence_two_public_and_whole(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        m = metadata()
+        for selection in ('one-gpu', 'cpu-only'):
+            p = build_plan(config(selection), now=NOW)
+            good = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest,
+                startup=q.Q8StartupInputs(1, 1, False, False, 0))
+            self.assertEqual(q.Q8StartupOracle(good.context, good.startup,
+                good.components, good.charge_joins, good.pending), good)
+            for total in (128, None):
+                supported = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest,
+                    startup=q.Q8StartupInputs(total, 1, None, False, 0))
+                self.assertEqual(q.Q8StartupOracle(supported.context, supported.startup,
+                    supported.components, supported.charge_joins, supported.pending), supported)
+                # This is intrinsically valid; the nonspeculative S=1 law
+                # belongs to the context-aware receiving guard only.
+                bad = q.Q8StartupInputs(total, 2, None, False, 0)
+                self.assertEqual(bad.n_outputs_max_per_seq, 2)
+                for receiver in ('public', 'whole'):
+                    with self.subTest(selection=selection, total=total, receiver=receiver):
+                        with self.assertRaisesRegex(ValueError, '^startup effective output limits$'):
+                            if receiver == 'public':
+                                q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=bad)
+                            else:
+                                q.Q8StartupOracle(supported.context, bad, supported.components,
+                                    supported.charge_joins, supported.pending)
+
+    def test_unknown_embeddings_valid_limits_keep_original_context_priority(self):
+        from inferswarm.operator import qwen_q8 as q
+        from inferswarm.operator.plan import build_plan
+        m = metadata()
+        for selection in ('one-gpu', 'cpu-only'):
+            p = build_plan(config(selection), now=NOW)
+            for total in (128, None):
+                for per_seq in (1, None):
+                    with self.subTest(selection=selection, total=total, per_seq=per_seq):
+                        startup = q.Q8StartupInputs(total, per_seq, None, False, 0)
+                        o = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest, startup=startup)
+                        self.assertEqual(o.startup, startup)
+                        self.assertEqual(q.Q8StartupOracle(o.context, o.startup,
+                            o.components, o.charge_joins, o.pending), o)
+                        self.assertTrue(all(r.capacity_bytes is None for r in o.components))
+                        self.assertIsNone(next(r for r in o.components if r.site_id == 'output.base').allocation_request_bytes)
+            unknown = q.derive_q8_startup_oracle(p, m, original_plan_digest=p.digest,
+                startup=q.Q8StartupInputs(None, None, None, None, None))
+            self.assertIsNone(next(r for r in unknown.components if r.site_id == 'graph.pp').dimensions[2])
+            changed = build_plan(replace(p.config,
+                request=tuple((k, 'changed' if k == 'prompt' else v) for k, v in p.config.request)), now=NOW)
+            mirrored = replace(p, selection='cpu-only' if selection == 'one-gpu' else 'one-gpu')
+            for bad_plan, reason in ((changed, 'static context original plan digest'),
+                                    (mirrored, 'static context plan field mismatch: selection')):
+                for total in (128, None):
+                    with self.subTest(selection=selection, reason=reason, total=total):
+                        with self.assertRaisesRegex(ValueError, '^' + reason + '$'):
+                            q.derive_q8_startup_oracle(bad_plan, m, original_plan_digest=p.digest,
+                                startup=q.Q8StartupInputs(total, 2, None, False, 0))
+
+    def test_emitted_sources_cover_actual_allocation_init_and_release(self):
+        # These pinned definition/range facts are fixture-portable; normal tests
+        # never open or require a private native checkout.
+        from inferswarm.operator import qwen_q8 as q
+        import re
+        facts = (
+            ('read allocation', 'loader.read', 'src/llama-model-loader.cpp',
+             'llama_model_loader::load_all_data', '1731-1739', 1732),
+            ('upload allocation', 'loader.upload', 'src/llama-model-loader.cpp',
+             'llama_model_loader::load_all_data', '1502-1513,1519-1581,1746-1754', 1562),
+            ('upload release', 'loader.upload', 'src/llama-model-loader.cpp',
+             'llama_model_loader::load_all_data', '1502-1513,1519-1581,1746-1754', 1752),
+            ('effective batch capacity', 'server.batch/token', 'tools/server/server-context.cpp',
+             'server_context_impl::load_model', '1343-1348', 1348),
+            ('tokens reserve wrapper', 'server.batch/tokens', 'tools/server/server-context.cpp',
+             'server_batch::init', '148-154', 153),
+        )
+        for selection in ('one-gpu', 'cpu-only'):
+            o = self.oracle(selection)
+            self.assertEqual(q.Q8StartupOracle(o.context, o.startup,
+                o.components, o.charge_joins, o.pending), o)
+            rows = {r.component_id:r for r in o.components}
+            for fact, cid, path, definition, ranges, line in facts:
+                with self.subTest(selection=selection, fact=fact):
+                    prefix = PIN + ':' + path + ':' + definition + ':'
+                    emitted_ranges = [s[len(prefix):] for s in rows[cid].source_sites if s.startswith(prefix)]
+                    intervals = [tuple(map(int, part.split('-'))) if '-' in part else (int(part), int(part))
+                        for text in emitted_ranges for part in text.split(',')
+                        if re.fullmatch(r'\d+(?:-\d+)?', part)]
+                    self.assertTrue(any(lo <= line <= hi for lo, hi in intervals),
+                        (fact, line, rows[cid].source_sites))
+                    self.assertIn(prefix + ranges, rows[cid].source_sites)
+                    if cid == 'loader.read':
+                        expected_sources = (prefix + ranges,)
+                        old = (prefix + '1502-1513,1631-1664',)
+                    elif cid == 'loader.upload':
+                        expected_sources = (prefix + ranges,)
+                        old = (prefix + '1502-1513,1769-1780',)
+                    else:
+                        expected_sources = (
+                            PIN + ':tools/server/server-context.cpp:server_context_impl::load_model:1343-1348',
+                            PIN + ':tools/server/server-context.cpp:server_batch::init:148-154',
+                            PIN + ':src/llama-batch.cpp:llama_batch_init:945-970')
+                        old = (PIN + ':tools/server/server-context.cpp:server_context_impl::load_model:1253-1314',
+                            PIN + ':src/llama-batch.cpp:llama_batch_init:945-970')
+                    self.assertEqual(rows[cid].source_sites, expected_sources)
+                    with self.assertRaisesRegex(ValueError, '^startup component source_sites$'):
+                        replace(rows[cid], source_sites=old)
+                    bad = copy.deepcopy(rows[cid]); object.__setattr__(bad, 'source_sites', old)
+                    with self.assertRaisesRegex(ValueError, '^startup component source_sites$'):
+                        replace(o, components=tuple(bad if r.component_id == cid else r for r in o.components))
+            for cid in ('loader.read', 'loader.upload'):
+                self.assertEqual((rows[cid].partition, rows[cid].lifetime), ('load-only', 'load-call'))
+                self.assertEqual(rows[cid].dimensions, (None,))
+                self.assertIsNone(rows[cid].minimum_bytes)
+                self.assertIsNone(rows[cid].allocation_request_bytes)
+                self.assertIsNone(rows[cid].capacity_bytes)
+
+    def test_recurrent_rollback_indices_match_native_unsigned_declaration(self):
+        from inferswarm.operator import qwen_q8 as q
+        header = PIN + ':src/llama-memory-recurrent.h:llama_memory_recurrent::rs_idx:76-77'
+        constructor = PIN + ':src/llama-memory-recurrent.cpp:llama_memory_recurrent::llama_memory_recurrent:20-39'
+        for selection in ('one-gpu', 'cpu-only'):
+            o = self.oracle(selection)
+            self.assertEqual(q.Q8StartupOracle(o.context, o.startup,
+                o.components, o.charge_joins, o.pending), o)
+            row = next(r for r in o.components if r.component_id == 'recurrent.rs_idx')
+            self.assertEqual((row.dimensions, row.minimum_bytes, row.dimension_law), ((1,), 4, 'recurrent-index'))
+            self.assertIsNone(row.capacity_bytes)
+            self.assertIsNone(row.allocation_request_bytes)
+            self.assertEqual(row.pending, ('native-capacity-ABI-heap-residence-UNKNOWN', 'initial-values=0'))
+            self.assertIn(constructor, row.source_sites)
+            with self.subTest(selection=selection, fact='native unsigned tag'):
+                self.assertEqual(row.representation, 'host-vector-uint32')
+            with self.subTest(selection=selection, fact='unsigned header authority'):
+                self.assertIn(header, row.source_sites)
+            with self.subTest(selection=selection, fact='intrinsic signed refusal'):
+                with self.assertRaisesRegex(ValueError, '^startup component representation$'):
+                    replace(row, representation='host-vector-int32')
+            bad = copy.deepcopy(row); object.__setattr__(bad, 'representation', 'host-vector-int32')
+            with self.subTest(selection=selection, fact='whole signed receiving refusal'):
+                with self.assertRaisesRegex(ValueError, '^startup component representation$'):
+                    replace(o, components=tuple(bad if r is row else r for r in o.components))
+            bad_dimensions = replace(row, dimensions=(2,), minimum_bytes=8)
+            with self.assertRaisesRegex(ValueError, '^startup component law: recurrent.rs_idx.dimensions$'):
+                replace(o, components=tuple(bad_dimensions if r is row else r for r in o.components))
+            rows = {r.component_id:r for r in o.components}
+            for cid in ('output.ids', 'vocab.ids', 'attn.cells/stream-0/pos', 'idx.cells/stream-0/shift'):
+                self.assertEqual(rows[cid].representation, 'host-vector-int32')
+
+
 if __name__=='__main__': unittest.main()
