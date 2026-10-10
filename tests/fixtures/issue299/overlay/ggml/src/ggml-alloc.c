@@ -1245,8 +1245,7 @@ ggml_backend_buffer_t ggml_backend_alloc_ctx_tensors_from_buft(struct ggml_conte
     ggml_backend_buffer_t is301_buf = ggml_backend_alloc_ctx_tensors_from_buft_impl(ctx, buft, &nbytes_total, /*no_alloc =*/ false);
     if (is301_buf != NULL && is301_is_enabled()) {
         is301_record_event("alloc_ctx_tensors");
-        is301_fact_num("alloc_buffer_bytes", (long long) ggml_backend_buffer_get_size(is301_buf));
-        is301_fact_str("alloc_backend", ggml_backend_buft_name(buft));
+        is301_fact_alloc((long long) ggml_backend_buffer_get_size(is301_buf), ggml_backend_buft_name(buft));
     }
     return is301_buf;
 }

@@ -4,23 +4,23 @@
   "files": [
     {
       "path": "ggml/src/ggml-alloc.c",
-      "sha256": "cf4f3a8aff593dbd640f46a3a33975e325ddcd4f85826685d21405cc8aec8c4d"
+      "sha256": "97e83026c72d1df175063a260b630cab4883dec2676fa5ca48a877984af0ba8c"
     },
     {
       "path": "ggml/src/ggml-backend.cpp",
-      "sha256": "3b19d7a2ec07cbb06061937494114a1766cc620e7058b2f8efd0a96852008fe6"
+      "sha256": "43059967ecd446d160a14b50374158d339214633f62270e4a6f78970e6a09761"
     },
     {
       "path": "ggml/src/ggml-rpc/ggml-rpc.cpp",
-      "sha256": "aa24ae3bc806d581d2fb7a50d7f65d5baf31528119adf2061566eb2269347185"
+      "sha256": "356c6d66244615def8dad00be7392e8da8f2b81f768ed6c0c45752b2f879c75e"
     },
     {
       "path": "is301_c_shim.h",
-      "sha256": "a9d89c66077731792757533b7804dafa6e1286b2b880e7fb74bcb8430d993126"
+      "sha256": "055662930422870ad604102d4294b0cdf758fb62810f47fe41642de3a031e00e"
     },
     {
       "path": "is301_sink.cpp",
-      "sha256": "77812814c520b1cbce74177c3a06e5c6d32c0eca4f708a4aab87b51e04753612"
+      "sha256": "5fa23725a84a6675f4158a0eaa3aacbc0f5c69792535f37a6712bae5f29cf114"
     },
     {
       "path": "src/llama-kv-cache.cpp",
@@ -32,17 +32,21 @@
     },
     {
       "path": "tests/native-buffer-graph-observed.cpp",
-      "sha256": "0a44fda97fc2385f1d1326c30531fbb68f60f02a743c637d982ddfcc9e6a232e"
+      "sha256": "956befaee2612c9eda85ebac89fc9652c2657627f0d6574406314c705ff9c651"
+    },
+    {
+      "path": "tests/native-fact-bounds.cpp",
+      "sha256": "e55fe8e7ef784d64f87238cc5bce5f47f7f8fdcd19a6732468a2f87538bd26ce"
     },
     {
       "path": "tools/server/server-queue.cpp",
-      "sha256": "bb69067ce3a97e147b5e6394d2ec31de7ecba781484aeddd2b499ae521cd8d17"
+      "sha256": "a59ce916ce0e8f9e43a8155017a2a0c714d27fb9796da33550a78aa7d05dec0d"
     },
     {
       "path": "is301_observer.h",
-      "sha256": "078a59d40ccb16d038c389f476648e2e527e5ca3258ee220c6786cd968421b91"
+      "sha256": "2805ffb0ad53f52b52c7848ad8bec5657e3501f9030a13c802513aaf085333b3"
     }
   ],
-  "patch_sha256": "14a3870a4392605fc606382c3af9bebe96c308f63c70c549356f0341e54ccc89",
+  "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
   "schema": "native-observer-transformed/1"
 }

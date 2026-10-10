@@ -87,7 +87,9 @@ int server_queue::get_new_id() {
     int new_id = id++;
     if (is301::enabled()) {
         is301::stream().record("server_task_new_id");
-        is301::facts().add("request", is301::kv_num("task_id", (long long) new_id));
+        is301::facts().append("tasks", std::string("{") +
+            is301::kv_str("response_id", "unknown") + "," +
+            is301::kv_num("task_id", (long long) new_id) + "}");
     }
     return new_id;
 }
@@ -135,9 +137,12 @@ void server_queue::wait_until_no_sleep() {
 }
 
 void server_queue::terminate() {
-    std::unique_lock<std::mutex> lock(mutex_tasks);
-    running = false;
-    condition_tasks.notify_all();
+    {
+        std::unique_lock<std::mutex> lock(mutex_tasks);
+        running = false;
+        condition_tasks.notify_all();
+    }
+    is301::export_capture("dynamic", "whole", true, false, "llama-server");
 }
 
 bool server_queue::process_new_tasks(bool is_yielding) {
@@ -489,7 +494,8 @@ void server_response::send(server_task_result_ptr && result) {
     RES_DBG("sending result for task id = %d\n", result->id);
     if (is301::enabled()) {
         is301::stream().record("server_response_send");
-        is301::facts().add("request", is301::kv_num("response_id", (long long) result->id));
+        is301::facts().append("responses", std::string("{") +
+            is301::kv_num("task_id", (long long) result->id) + "}");
     }
 
     std::unique_lock<std::mutex> lock(mutex_results);

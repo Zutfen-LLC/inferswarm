@@ -19,6 +19,7 @@ from inferswarm.operator.phased_observation import (
 EVENT_CATALOG = (
     'alloc_ctx_tensors',        # backend buffer allocation completed (ggml-alloc.c)
     'graph_compute',            # synchronous graph compute returned (ggml-backend.cpp)
+    'sched_graph_compute',      # scheduler-completion path actually used by llama-server; async entry observed at completion
     'tensor_set',               # backend tensor write completed (ggml-backend.cpp)
     'tensor_get',               # backend tensor read completed (ggml-backend.cpp)
     'rpc_set_tensor',           # RPC client SET_TENSOR dispatched+awaited
@@ -31,25 +32,29 @@ EVENT_CATALOG = (
     'server_task_processed',    # task dequeued for processing
     'server_response_send',     # response dispatched to waiting task
     'fixture_alloc',            # tiny fixture: allocation observed
+    'fixture_cpu_init',         # tiny fixture: CPU backend initialized
     'fixture_graph',            # tiny fixture: graph compute observed
     'fixture_set',              # tiny fixture: tensor write observed
     'fixture_get',              # tiny fixture: tensor readback observed
     'fixture_rpc_loopback',     # tiny fixture: RPC loopback GET completed
+    'fixture_fact_bounds',      # adversarial fact-bounds fixture marker event
 )
 
 # Facts (bounded catalog, mirroring the issue text): process/build/config and
-# physical bindings; tensor/state/component/base-buffer extents; request/
-# task/response lineage; transfer endpoints/shapes/bytes/completions; output
-# custody. Unsupported values are emitted as the explicit string "unknown",
-# never fabricated.
+# physical bindings; tensor/state/component/base-buffer extents; request/task
+# lineage ({task_id, response_id: "unknown" until observed}) and responses
+# ({task_id}); transfer endpoints/shapes/bytes/completions; output custody.
+# Allocation records are preserved per allocation as [{buffer_bytes, backend}].
+# Unsupported values are emitted as the explicit string "unknown", never fabricated.
 FACT_KEYS = (
     'process',      # {pid, argv0, start_unix_ns}
     'build',        # {compiler, executable_sha256} — join key, not proof
     'config',       # observed effective argv/flag facts
-    'allocations',  # [{name, buffer_bytes, tensor_bytes, backend}]
+    'allocations',  # [{buffer_bytes, backend}] records preserved per allocation
     'graphs',       # [{graph_id, nodes, status}]
     'transfers',    # [{op, endpoint, tensor, offset, bytes}]
-    'request',      # {task_id, response_id} native lineage
+    'tasks',        # [{task_id, response_id: "unknown" until observed}]
+    'responses',    # [{task_id}]
 )
 
 

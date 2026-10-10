@@ -154,12 +154,15 @@ def assemble(root: Path, out: Path):
                                            'tools/ui/ui.cpp',
                                            'tools/server/main.cpp',
                                            'tools/rpc/rpc-server.cpp',
-                                           'tests/native-buffer-graph-observed.cpp']):
+                                           'tests/native-buffer-graph-observed.cpp',
+                                           'tests/native-fact-bounds.cpp']):
         src = out / 'build-info.cpp' if rel == 'build-info.cpp' else (
               out / 'ui.cpp' if rel == 'tools/ui/ui.cpp' else (
               OVERLAY / 'is301_sink.cpp' if rel == 'is301_sink.cpp' else (
               OVERLAY / 'tests/native-buffer-graph-observed.cpp'
-              if rel == 'tests/native-buffer-graph-observed.cpp' else root / rel)))
+              if rel == 'tests/native-buffer-graph-observed.cpp' else (
+              OVERLAY / 'tests/native-fact-bounds.cpp'
+              if rel == 'tests/native-fact-bounds.cpp' else root / rel))))
         obj = out / f'{index:04d}.o'
         compiler = '/usr/bin/cc' if src.suffix == '.c' else '/usr/bin/c++'
         std = '-std=c11' if src.suffix == '.c' else '-std=c++17'
@@ -170,20 +173,22 @@ def assemble(root: Path, out: Path):
         objects.append(obj)
     link = '/usr/bin/c++'
     libs = ['-pthread', '-ldl', '-lm']
-    # llama-server: every object except the rpc-server TU and the fixture TU.
-    server_objects = objects[:-2]
+    # llama-server: every object except the rpc-server/fact-bounds/fixture TUs.
+    server_objects = objects[:-3]
     commands.append([link, *server_objects, *libs, '-o', str(out / 'llama-server')])
     # ggml-rpc-server: GGML closure + sink only, per tools/rpc/CMakeLists
     # (links ggml: ggml-base + cpu + rpc; no llama/common/server TUs).
     ggml_count = len(GGML_BASE) + len(GGML_REG) + len(GGML_CPU) + len(GGML_RPC)
     sink = objects[len(sources) + 1]  # is301_sink.cpp compiles right after build-info
-    rpc_main = objects[-2]            # tools/rpc/rpc-server.cpp TU
+    rpc_main = objects[-3]            # tools/rpc/rpc-server.cpp TU
     commands.append([link, *objects[:ggml_count], sink, rpc_main, *libs,
                      '-o', str(out / 'ggml-rpc-server')])
-    ggml_count = len(GGML_BASE) + len(GGML_REG) + len(GGML_CPU) + len(GGML_RPC)
     sink = objects[len(sources) + 1]
-    commands.append([link, *objects[:ggml_count], sink, objects[-1], *libs,
+    commands.append([link, *objects[:ggml_count], sink, objects[-2], *libs,
                      '-o', str(out / 'native-buffer-graph-observed')])
+    # Adversarial fact-bounds proof links the GGML closure + sink + its own TU.
+    commands.append([link, *objects[:ggml_count], sink, objects[-1], *libs,
+                     '-o', str(out / 'native-fact-bounds')])
     for row in commands:
         pass
     return {'sources': serializable_sources,
@@ -225,11 +230,57 @@ def _render_templates(root: Path, out: Path):
         '    static const std::array<llama_ui_asset, 0> empty{}; return empty; }\n')
 
 
+def verify_tree_inputs(tree, source) -> dict[str, str]:
+    """Full-build gate: authenticate all overlay files before command assembly."""
+    try:
+        return overlay_module.verify_tree_inputs(Path(tree), Path(source))
+    except overlay_module.OverlayError as exc:
+        raise BuildError(str(exc)) from exc
+
+
+def _digest_file(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _provenance_body(*, revision, tree, retained_patch_sha256,
+                     transformed_manifest_sha256, transformed_sources,
+                     untransformed_inputs, generated_inputs, compiler_identity,
+                     link_inputs, executable_sha256, overlay_root,
+                     legacy_compiler=None):
+    pairs = sorted(untransformed_inputs.items())
+    generated_rows = ([{'path': path, 'sha256': digest} for path, digest in generated_inputs.items()]
+                      if isinstance(generated_inputs, dict) else list(generated_inputs))
+    aggregate = hashlib.sha256(json.dumps(pairs, separators=(',', ':')).encode()).hexdigest()
+    return {
+        'base_revision': revision, 'base_tree': tree,
+        'pinned_base': {'revision': revision, 'tree': tree},
+        'overlay_root': str(overlay_root),
+        'patch_sha256': retained_patch_sha256,
+        'retained_patch_sha256': retained_patch_sha256,
+        'transformed_manifest_sha256': transformed_manifest_sha256,
+        'transformed_sources': sorted(transformed_sources, key=lambda row: row['path']),
+        'untransformed_input_count': len(untransformed_inputs),
+        'untransformed_inputs_sha256': aggregate,
+        'generated_inputs': generated_rows,
+        'compiler': legacy_compiler if legacy_compiler is not None else compiler_identity,
+        'compiler_identity': compiler_identity,
+        'link_inputs': link_inputs,
+        'executable_sha256': executable_sha256,
+        'verdict': 'observation-patched full llama-server + ggml-rpc-server built; '
+                   'tiny CPU/RPC fixtures executed with genuine native captures',
+    }
+
+
+def _verify_generated_inputs(generated):
+    for path, expected in generated.items():
+        if not Path(path).is_file() or _digest_file(Path(path)) != expected:
+            raise BuildError('dirty or foreign source input: ' + str(path))
+
+
 def _toolchain_identity(supervisor: Supervisor):
     """Collect exact compiler identity through the supervised environment."""
     row = supervisor.run(['/usr/bin/c++', '--version'])
-    text = (Path(row['stdout'])).read_text().splitlines()[0]
-    return text.strip()
+    return Path(row['stdout']).read_text().splitlines()[0].strip()
 
 
 def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
@@ -237,26 +288,29 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
     if workspace != CAMPAIGN:
         raise BuildError('unauthorized native workspace')
     output = output_root(output, workspace)
-    tree = Path(overlay_root) if overlay_root else (SCRATCH / 'issue301-overlay-tree')
+    source = Path(source).resolve()
+    tree = Path(overlay_root).resolve() if overlay_root else (SCRATCH / 'issue301-overlay-tree')
     if tree.exists():
-        # An existing tree is usable only if every byte still matches the
-        # CURRENT retained manifest; a stale overlay refuses loudly.
-        current = json.loads((FIXTURES / 'native-observer-transformed.json').read_text())
-        import hashlib as _h
-        for row in current['files']:
-            p = tree / row['path']
-            if not p.is_file() or _h.sha256(p.read_bytes()).hexdigest() != row['sha256']:
-                raise BuildError('stale overlay tree; remove ' + str(tree))
+        overlay_module.authenticate(source)
     else:
         overlay_module.apply(source, tree)
-    manifest_meta = json.loads((Path(tree) / 'native-observer-transformed.json').read_text())
-    recipe = assemble(Path(tree), output)
+    authenticated_inputs = verify_tree_inputs(tree, source)
+    manifest_meta = json.loads((tree / 'native-observer-transformed.json').read_text())
+    transformed_paths = set(overlay_module.TRANSFORMED) | set(overlay_module.NEW_FILES)
+    untransformed_inputs = {path: digest for path, digest in authenticated_inputs.items()
+                            if path not in transformed_paths and path != 'native-observer-transformed.json'}
+    recipe = assemble(tree, output)
     with Supervisor(output, workspace=workspace) as supervisor:
         dump(output / 'recipe.json', recipe)
-        _render_templates(Path(tree), output)
+        _render_templates(tree, output)
+        generated_paths = ('build-info.cpp', 'ggml-version.h', 'llama-version.h', 'ui.cpp', 'ui.h')
+        generated_inputs = {str(output / name): _digest_file(output / name) for name in generated_paths}
         compiler = _toolchain_identity(supervisor)
         for command in recipe['commands']:
             supervisor.run(command)
+        # Close the tampering window before any fixture execution or manifests.
+        verify_tree_inputs(tree, source)
+        _verify_generated_inputs(generated_inputs)
         # Patched tiny fixture: CPU then RPC loopback, both observed.
         cpu_dir = output / 'fixture-cpu'
         rpc_dir = output / 'fixture-rpc'
@@ -264,7 +318,9 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         rpc_dir.mkdir()
         supervisor.run([str(output / 'native-buffer-graph-observed'), 'cpu', str(cpu_dir)],
                        seconds=supervisor.limits.fixture_seconds,
-                       env_extra={'IS301_OBSERVE': '1'})
+                       env_extra={'IS301_OBSERVE': '1',
+                                  'IS301_EXPORT_DIR': str(output / 'exports' / 'fixture-cpu')})
+        (output / 'exports' / 'fixture-cpu').mkdir(parents=True, exist_ok=True)
         import socket
         with socket.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
@@ -272,13 +328,24 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         cmd = [str(output / 'ggml-rpc-server'), '-H', '127.0.0.1', '-p', str(port),
                '-d', 'CPU', '-t', '1']
         from .build import wait_listener
+        export_root = output / 'exports'
+        export_root.mkdir()
         with supervisor.server(cmd, env_extra={'IS301_OBSERVE': '1',
-                                              'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}'}) as server:
+                                              'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}',
+                                              'IS301_EXPORT_DIR': str(export_root / 'rpc-server')}) as server:
+            (export_root / 'rpc-server').mkdir()
             wait_listener(supervisor, server, port)
             supervisor.run([str(output / 'native-buffer-graph-observed'), 'rpc', str(rpc_dir)],
                            seconds=supervisor.limits.fixture_seconds,
                            env_extra={'IS301_OBSERVE': '1',
-                                      'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}'})
+                                      'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}',
+                                      'IS301_EXPORT_DIR': str(export_root / 'fixture-rpc')})
+        # Adversarial fact-bounds fixture: refused-overbound capture + clean capture.
+        fact_bounds_dir = output / 'fixture-fact-bounds'
+        fact_bounds_dir.mkdir()
+        supervisor.run([str(output / 'native-fact-bounds'), str(fact_bounds_dir)],
+                       seconds=supervisor.limits.fixture_seconds,
+                       env_extra={'IS301_OBSERVE': '1'})
         # Per-executable /2 manifests from actual build facts.
         manifests = {}
         # Static per-target archives mirror the pin's CMake static libraries;
@@ -289,34 +356,47 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         import subprocess as _sp
         ggml_count = len(GGML_BASE) + len(GGML_REG) + len(GGML_CPU) + len(GGML_RPC)
         archive_members = {
-            'llama-server': ('libllama-full.a', list(range(len(recipe['sources']) + 5))),
+            'llama-server': ('libllama-full.a', list(range(len(recipe['sources']) + 4))),
             'ggml-rpc-server': ('libggml-static.a',
                                 list(range(ggml_count)) + [len(recipe['sources']) + 1]),
             'native-buffer-graph-observed': ('libggml-static.a',
                                 list(range(ggml_count)) + [len(recipe['sources']) + 1]),
+            'native-fact-bounds': ('libggml-static.a',
+                                list(range(ggml_count)) + [len(recipe['sources']) + 1]),
         }
-        for exe in ('llama-server', 'ggml-rpc-server', 'native-buffer-graph-observed'):
+        link_inputs = {}
+        executable_hashes = {}
+        for exe in ('llama-server', 'ggml-rpc-server', 'native-buffer-graph-observed',
+                    'native-fact-bounds'):
             name, members = archive_members[exe]
             objects = [output / f'{i:04d}.o' for i in members]
+            ordered_hashes = [_digest_file(obj) for obj in objects]
+            link_inputs[exe] = {
+                'objects': [str(obj) for obj in objects],
+                'sha256': hashlib.sha256(b''.join(bytes.fromhex(d) for d in ordered_hashes)).hexdigest(),
+            }
             archive = output / name
             _sp.run(['/usr/bin/ar', 'rc', str(archive), *[str(o) for o in objects]], check=True)
+            executable_hashes[exe] = _digest_file(output / exe)
             body = build_manifest_body(
                 compiler=compiler,
                 options=tuple(CFLAGS),
-                executable_sha256=hashlib.sha256((output / exe).read_bytes()).hexdigest(),
-                backend_libraries=((name, hashlib.sha256(archive.read_bytes()).hexdigest()),),
+                executable_sha256=executable_hashes[exe],
+                backend_libraries=((name, _digest_file(archive)),),
                 patch_sha256=manifest_meta['patch_sha256'],
-                transformed_manifest_sha256=hashlib.sha256(
-                    (FIXTURES / 'native-observer-transformed.json').read_bytes()).hexdigest())
+                transformed_manifest_sha256=_digest_file(
+                    FIXTURES / 'native-observer-transformed.json'))
             manifests[exe] = body
             dump(output / f'{exe}.build-manifest.json', body)
-        dump(output / 'provenance.json', {
-            'base_revision': PIN, 'base_tree': TREE,
-            'overlay_root': str(tree),
-            'patch_sha256': manifest_meta['patch_sha256'],
-            'compiler': compiler,
-            'verdict': 'observation-patched full llama-server + ggml-rpc-server built; '
-                       'tiny CPU/RPC fixtures executed with genuine native captures'})
+        dump(output / 'provenance.json', _provenance_body(
+            revision=overlay_module.PIN, tree=overlay_module.TREE,
+            retained_patch_sha256=manifest_meta['patch_sha256'],
+            transformed_manifest_sha256=_digest_file(FIXTURES / 'native-observer-transformed.json'),
+            transformed_sources=manifest_meta['files'],
+            untransformed_inputs=untransformed_inputs,
+            generated_inputs=generated_inputs, compiler_identity=compiler,
+            link_inputs=link_inputs, executable_sha256=executable_hashes,
+            overlay_root=tree, legacy_compiler=compiler))
     return output
 
 

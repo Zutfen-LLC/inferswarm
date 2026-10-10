@@ -34,6 +34,7 @@ NEW_FILES = (
     'is301_c_shim.h',
     'is301_sink.cpp',
     'tests/native-buffer-graph-observed.cpp',
+    'tests/native-fact-bounds.cpp',
 )
 
 
@@ -52,8 +53,72 @@ def authenticate(source: Path) -> None:
         raise OverlayError('base identity mismatch: ' + repr(identity))
 
 
+def _pinned_entries(source: Path):
+    """Return the exact pin tree as {path: (mode, blob_oid)}."""
+    raw = _git(source, 'ls-tree', '-r', '-z', PIN)
+    entries = {}
+    for record in raw.split(b'\0'):
+        if not record:
+            continue
+        metadata, name = record.split(b'\t', 1)
+        mode, kind, oid = metadata.decode('ascii').split()
+        path = name.decode('utf-8', 'surrogateescape')
+        if mode == '160000' or kind == 'commit':
+            raise OverlayError('pinned source contains unsupported submodule: ' + path)
+        if kind != 'blob' or mode not in ('100644', '100755', '120000'):
+            raise OverlayError('unsupported pinned tree entry: ' + path)
+        entries[path] = (mode, oid)
+    return entries
+
+
+def _manifest_rows(manifest):
+    rows = {row['path']: row['sha256'] for row in manifest.get('files', [])}
+    expected = set(TRANSFORMED) | set(NEW_FILES)
+    if set(rows) != expected:
+        raise OverlayError('retained transformed manifest path set mismatch')
+    return rows
+
+
+def verify_tree_inputs(tree, source) -> dict[str, str]:
+    """Authenticate every materialized tree byte against pin/retained blobs."""
+    tree, source = Path(tree).resolve(), Path(source).resolve()
+    manifest_path = tree / 'native-observer-transformed.json'
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, ValueError) as exc:
+        raise OverlayError('dirty or foreign source input: native-observer-transformed.json') from exc
+    rows = _manifest_rows(manifest)
+    retained_manifest = FIXTURES / 'native-observer-transformed.json'
+    if not retained_manifest.is_file() or hashlib.sha256(manifest_path.read_bytes()).digest() != hashlib.sha256(retained_manifest.read_bytes()).digest():
+        raise OverlayError('dirty or foreign source input: native-observer-transformed.json')
+    pinned = _pinned_entries(source)
+    pinned_sha256 = {
+        path: hashlib.sha256(_git(source, 'cat-file', 'blob', f'{PIN}:{path}')).hexdigest()
+        for path in pinned
+    }
+    expected = set(pinned) | set(NEW_FILES) | {'native-observer-transformed.json'}
+    actual = {str(p.relative_to(tree)) for p in tree.rglob('*') if p.is_file()}
+    verified = {}
+    for path in sorted(expected | actual):
+        file = tree / path
+        if path not in expected or path not in actual or not file.is_file():
+            raise OverlayError('dirty or foreign source input: ' + path)
+        digest = hashlib.sha256(file.read_bytes()).hexdigest()
+        expected_digest = rows.get(path, pinned_sha256.get(path))
+        if path == 'native-observer-transformed.json':
+            expected_digest = hashlib.sha256(retained_manifest.read_bytes()).hexdigest()
+        if digest != expected_digest:
+            raise OverlayError('dirty or foreign source input: ' + path)
+        if path in pinned:
+            mode, _oid = pinned[path]
+            if mode == '100755' and not file.stat().st_mode & 0o111:
+                raise OverlayError('dirty or foreign source input: ' + path)
+        verified[path] = digest
+    return verified
+
+
 def apply(source, destination) -> dict:
-    """Pure derivation: copy the base tree, then overlay retained files."""
+    """Derive the overlay using only authenticated Git blobs and retained files."""
     source = Path(source).resolve()
     destination = Path(destination).resolve()
     authenticate(source)
@@ -61,28 +126,39 @@ def apply(source, destination) -> dict:
         raise OverlayError('destination already exists: ' + str(destination))
     if not destination.is_relative_to(Path('/home/zutfen/.hermes/cache/scratch')):
         raise OverlayError('overlay trees stay in authorized scratch')
-    subprocess.run(['cp', '-a', str(source) + '/.', str(destination)],
-                   check=True, timeout=600)
-    # The copied .git would let later git commands see the base; keep it as
-    # read-only provenance but never write to the base itself.
+    entries = _pinned_entries(source)
+    destination.mkdir(parents=True)
+    for name, (mode, oid) in entries.items():
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = _git(source, 'cat-file', 'blob', f'{PIN}:{name}')
+        target.write_bytes(content)
+        if mode == '100755':
+            target.chmod(target.stat().st_mode | 0o111)
+        elif mode == '120000':
+            target.unlink()
+            target.symlink_to(content.decode('utf-8', 'surrogateescape'))
     for name in TRANSFORMED:
         patched = OVERLAY_DIR / name
         if not patched.is_file():
             raise OverlayError('retained transformed file missing: ' + name)
-        (destination / name).write_bytes(patched.read_bytes())
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(patched.read_bytes())
     for name in NEW_FILES:
         origin = OVERLAY_DIR / name
         if not origin.is_file():
             raise OverlayError('retained overlay file missing: ' + name)
-        (destination / name).write_bytes(origin.read_bytes())
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(origin.read_bytes())
     manifest = json.loads((FIXTURES / 'native-observer-transformed.json').read_text())
-    # Re-verify every declared transformed byte inside the derived tree.
-    for row in manifest['files']:
-        path = destination / row['path']
-        if not path.is_file():
-            raise OverlayError('manifest file missing in overlay tree: ' + row['path'])
-        if hashlib.sha256(path.read_bytes()).hexdigest() != row['sha256']:
-            raise OverlayError('overlay tree byte mismatch: ' + row['path'])
+    rows = _manifest_rows(manifest)
+    for name, expected_digest in rows.items():
+        path = destination / name
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected_digest:
+            raise OverlayError('overlay tree byte mismatch: ' + name)
     (destination / 'native-observer-transformed.json').write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+    verify_tree_inputs(destination, source)
     return manifest

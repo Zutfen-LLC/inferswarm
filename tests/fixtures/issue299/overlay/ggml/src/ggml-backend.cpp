@@ -9,7 +9,6 @@
 #endif
 
 #include "is301_observer.h"
-
 #include "ggml-backend.h"
 #include "ggml-backend-impl.h"
 #include "ggml-alloc.h"
@@ -2056,7 +2055,17 @@ enum ggml_status ggml_backend_sched_graph_compute_async(ggml_backend_sched_t sch
         }
     }
 
-    return ggml_backend_sched_compute_splits(sched);
+    enum ggml_status is301_err = ggml_backend_sched_compute_splits(sched);
+    if (is301::enabled()) {
+        is301::stream().record("sched_graph_compute");
+        is301::facts().append("graphs", std::string("{") +
+            is301::kv_num("graph_id", (long long) (uintptr_t) graph) + "," +
+            is301::kv_num("nodes", (long long) (graph ? graph->n_nodes : 0)) + "," +
+            is301::kv_num("splits", (long long) ggml_backend_sched_get_n_splits(sched)) + "," +
+            is301::kv_num("status", (long long) is301_err) + "," +
+            is301::kv_str("ubatch_lineage", "unknown") + "}");
+    }
+    return is301_err;
 }
 
 void ggml_backend_sched_synchronize(ggml_backend_sched_t sched) {

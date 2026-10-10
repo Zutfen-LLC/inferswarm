@@ -406,7 +406,8 @@ class Supervisor:
         env = {'PATH': '/usr/bin:/bin', 'LC_ALL': 'C', 'OMP_NUM_THREADS': '1',
                'HOME': str(self.root), 'LLAMA_CACHE': str(self.root / 'cache')}
         if env_extra:
-            bad = set(env_extra) - {'IS301_OBSERVE', 'IS301_RPC_ENDPOINT'}
+            bad = set(env_extra) - {'IS301_OBSERVE', 'IS301_RPC_ENDPOINT',
+                                    'IS301_EXPORT_DIR'}
             if bad or not all(isinstance(v, str) for v in env_extra.values()):
                 raise BuildError('unsupported supervised environment extension')
             env.update(env_extra)

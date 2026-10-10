@@ -2152,6 +2152,7 @@ void ggml_backend_rpc_start_server(const char * endpoint, const char * cache_dir
         rpc_serve_client(backends, cache_dir, client_socket);
         printf("Client connection closed\n");
         fflush(stdout);
+        is301::export_capture("dynamic", "whole", true, false, "ggml-rpc-server");
     }
     rpc_transport_shutdown();
     for (auto backend : backends) {

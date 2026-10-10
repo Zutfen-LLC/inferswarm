@@ -181,6 +181,8 @@ struct facts_builder {
     std::mutex mu;
     std::vector<std::pair<std::string, std::string>> rows;
     std::vector<std::string> array_keys;  // keys whose value renders with brackets
+    long long dropped = 0;
+    bool overflowed = false;
     void mark_array(const std::string & key) {
         for (auto & k : array_keys) { if (k == key) return; }
         array_keys.push_back(key);
@@ -195,11 +197,11 @@ struct facts_builder {
             if (row.first == key) {
                 // Scalar overwrite onto an accumulated array would corrupt the
                 // canonical form: refuse (keep the last well-formed value).
-                if (is_array(key)) { return; }
+                if (is_array(key)) { dropped++; return; }
                 row.second = canonical_value; return;
             }
         }
-        if (canonical_value.size() > 4096) { return; }  // bounded scalar facts
+        if (canonical_value.size() > 4096) { dropped++; return; }  // bounded scalar facts
         rows.emplace_back(key, canonical_value);
     }
     // Append one canonical element to the array value under key (bounded).
@@ -207,11 +209,13 @@ struct facts_builder {
     void append(const std::string & key, const std::string & canonical_element) {
         static const size_t FACT_BOUND = 4096;
         std::lock_guard<std::mutex> lock(mu);
-        if (canonical_element.size() > FACT_BOUND) { return; }  // bounded first element
+        if (canonical_element.size() > FACT_BOUND) { dropped++; return; }  // bounded first element
         for (auto & row : rows) {
             if (row.first == key) {
-                if (!is_array(key)) { return; }  // never corrupt a scalar fact
-                if (row.second.size() + canonical_element.size() + 1 > FACT_BOUND) return;
+                if (!is_array(key)) { dropped++; return; }  // never corrupt a scalar fact
+                if (row.second.size() + canonical_element.size() + 1 > FACT_BOUND) {
+                    dropped++; overflowed = true; return;
+                }
                 if (!row.second.empty()) row.second += ",";
                 row.second += canonical_element;
                 return;
@@ -285,14 +289,22 @@ inline std::string envelope(const char * phase, const std::string & participant,
         seq += r.events[i];
     }
     seq += "]";
+    long long dropped_events = 0;
+    bool capture_overflow = r.overflow;
+    {
+        facts_builder & f = facts();
+        std::lock_guard<std::mutex> flock(f.mu);
+        dropped_events = r.dropped + f.dropped;
+        capture_overflow = r.overflow || f.overflowed;
+    }
     std::string facts_json = facts().canonical_object();
     std::string core;
     core += "{";
-    core += kv_num("dropped_events", r.dropped) + ",";
+    core += kv_num("dropped_events", dropped_events) + ",";
     core += kv_num("event_count", (long long) r.count) + ",";
     core += kv_raw("facts", facts_json) + ",";
     core += kv_str("invocation_token", invocation_token) + ",";
-    core += kv_bool("overflow", r.overflow) + ",";
+    core += kv_bool("overflow", capture_overflow) + ",";
     core += kv_str("participant_id", participant) + ",";
     core += kv_str("phase", phase) + ",";
     core += kv_str("plan_digest", plan_digest) + ",";
@@ -319,6 +331,50 @@ inline void reset() {
     r.count = 0; r.dropped = 0; r.overflow = false;
     for (int i = 0; i < recorder::MAX_EVENTS; i++) r.events[i].clear();
     f.rows.clear();
+    f.dropped = 0;
+    f.overflowed = false;
+}
+
+// ---- bounded collector export ---------------------------------------------
+// Writes one sealed envelope under $IS301_EXPORT_DIR. Each capture is isolated
+// by a fresh generation and reset only after atomic publication succeeds.
+inline void export_capture(const char * phase, const char * stream_kind,
+                           bool terminal, bool snapshot_fence,
+                           const char * participant) {
+    if (!enabled()) return;
+    static const std::string export_dir = [] {
+        const char * value = std::getenv("IS301_EXPORT_DIR");
+        return value ? std::string(value) : std::string();
+    }();
+    if (export_dir.empty()) return;
+    static const int MAX_EXPORTS = 64;
+    static int export_counter = 0;
+    static std::mutex export_mu;
+    std::lock_guard<std::mutex> export_lock(export_mu);
+    if (export_counter >= MAX_EXPORTS) {
+        std::fprintf(stderr, "is301: export cap reached\n");
+        return;
+    }
+    const int current = export_counter++;
+    const long long process_id = pid();
+    const std::string generation = std::string("exp-") + std::to_string(process_id) + "-" +
+        std::to_string(current) + "-" + std::to_string(now_ns());
+    const std::string body = envelope(phase, participant, std::string(64, '0'),
+        "export", generation, stream_kind, terminal, snapshot_fence);
+    char suffix[32];
+    std::snprintf(suffix, sizeof suffix, "-%04d.json", current);
+    const std::string name = export_dir + "/" + participant + "-" +
+        std::to_string(process_id) + suffix;
+    const std::string temporary = name + ".tmp";
+    std::FILE * out = std::fopen(temporary.c_str(), "wb");
+    if (!out) return;
+    const bool written = std::fwrite(body.data(), 1, body.size(), out) == body.size();
+    const bool closed = std::fclose(out) == 0;
+    if (!written || !closed || std::rename(temporary.c_str(), name.c_str()) != 0) {
+        std::remove(temporary.c_str());
+        return;
+    }
+    reset();
 }
 
 } // namespace is301

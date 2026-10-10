@@ -211,6 +211,104 @@ A derived observer build is never the unmodified pin. Physical preparation
 stays #300. Independent SPEC/QUALITY review records for this slice are
 retained in scratch alongside prior review artifacts.
 
+## PR #304 maintainer-review correction round (2026-10-10)
+
+Maintainer review 5479625739 (CHANGES REQUIRED at `bedf44a`) identified three
+P1 findings. All three were corrected on this branch; correction commits
+preserve `bedf44a` in ancestry (no rebase/amend/force-push).
+
+- **P1-A (scheduler observation + collector export)**: the overlay now
+  instruments `ggml_backend_sched_graph_compute_async` — the entry
+  `llama-context.cpp:2513` actually uses — recording completion AFTER
+  `ggml_backend_sched_compute_splits` returns, with no added synchronization
+  or behavior change. Facts carry graph identity (graph_id, nodes, splits,
+  status) with explicit `ubatch_lineage: "unknown"`. A bounded producer-owned
+  export seam (`is301::export_capture`, IS301_EXPORT_DIR, 64-export cap,
+  fresh generation + reset per capture, atomic .tmp+rename publication) is
+  wired at `server_queue::terminate()` (llama-server) and the RPC server's
+  per-connection site (ggml-rpc.cpp). The tiny fixture now executes the TRUE
+  scheduler path (CPU-last backend ordering per the pin's own
+  `ggml_backend_sched_new` assertion) and exercises the export.
+- **P1-B (valid, non-overwritten, fail-closed facts)**: server lifecycle
+  facts are array elements (`tasks` [{response_id, task_id}] with the honest
+  "unknown" response marker; `responses` [{task_id}] join key) instead of
+  invalid scalar-overwriting JSON. Allocation records are preserved per
+  allocation (`allocations` [{backend, buffer_bytes}] via a new
+  `is301_fact_alloc` C shim), replacing last-value-only scalars. EVERY
+  fact-capacity refusal in the facts builder increments dropped/overflow
+  counters folded into the fixed `/2` fences (`dropped_events`/`overflow`),
+  so a truncated stream can no longer report zero drops. The adversarial
+  native-fact-bounds fixture proves both directions natively: the overbound
+  capture is REFUSED by the parser for dropped_events>0 (valid-digest
+  semantic refusal), and the clean capture preserves all 3 tasks + 2
+  responses + 2 allocations.
+- **P1-C (complete compiled-source authentication)**: `overlay.apply()`
+  materializes every unmodified file from pinned Git blobs (cat-file at the
+  pin, mode-preserving, .git excluded, symlink-aware) instead of `cp -a` of
+  the mutable worktree; `verify_tree_inputs()` authenticates ALL 3,594 tree
+  files against pin/retained manifests before ANY compile and again after
+  compilation; reused overlay trees get the same complete check. Build
+  provenance now separates pinned base, retained patch, transformed sources,
+  untransformed-input aggregate (3,582 files), generated inputs, compiler
+  identity, per-executable ordered link inputs and executable hashes. A
+  dirty worktree copy is refused (offline negative control with a fake pin
+  repo, including the dirty-untransformed-TU refusal before command
+  assembly).
+
+### Native validation within the remaining authorized envelope
+
+The cumulative native ledger stood at 4070.3s of 5400s before this round.
+One supervised full rebuild attempt spent 771s but failed on the last link
+(fact-bounds executable initially linked without its own TU); the corrected
+GGML-closure phases then completed within budget. Final ledger:
+**5164.5s of 5400s (235.5s remaining)**. All phases ran under the campaign
+Supervisor (one compiler job, 3GiB AS, 4GiB owned-tree RSS abort, 256MiB
+file cap, 16GiB disk floor, 60s fixture timeouts, no core dumps).
+
+Genuine native evidence retained (all byte-pinned in
+`tests/test_issue299_native_producer.py`):
+
+- `native-captures/{static,dynamic}-capture.json` and `rpc/` — regenerated
+  CPU/RPC-loopback captures now containing `sched_graph_compute` events and
+  scheduler graph facts (parse-verified, digests valid).
+- `native-captures/exports/` — real collector-exported sealed streams from
+  the fixture process and the patched `ggml-rpc-server` (per-connection
+  export seam; 12 and 17 events).
+- `native-captures/fact-bounds/clean.json` — the adversarial fact-bounds
+  clean capture (3 tasks / 2 responses / 2 allocations, zero drops).
+- Build artifacts (issue301-correction-ggml scratch root):
+  `ggml-rpc-server` sha256 58dc9c746670a036809b8de89c496fb7f99cd44b9181b0a5d50e5df4641aadcc;
+  `native-buffer-graph-observed` 1f9c24bfb08dc3ce88de0d497746e6517299e2a7d75ff55f8226942f05a163ea;
+  `native-fact-bounds` 559b8cfaff34f4f8d6aefdb99bc642f1f3c353e2e657e677c25b44c0b8099ca0;
+  per-executable `q8-native-build-manifest/2` (parse_build_manifest OK,
+  never the unmodified base) and separated provenance.
+  Retained patch sha256 d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef;
+  transformed manifest sha256 6244b3eebba5f426add5c154c3a25f419c5554b73773c37969b677e7997471c0.
+
+**STOP item — llama-server corrected-executable rebuild**: the corrected
+overlay changes 8 server-closure-relevant TUs (ggml-alloc.c,
+ggml-backend.cpp, ggml-rpc.cpp, server-queue.cpp, model-loader, kv-cache,
+sink, fixtures). The GGML closure + both server-adjacent fixtures were
+rebuilt and validated within budget; the ~300-TU llama-server relink did
+NOT fit the remaining 235.5s. **Exact additional build budget required:
+approximately 700-750 seconds of supervised native compilation** (one
+compiler job, ~300 llama/common/server TUs at the measured ~2.1s/TU rate
+plus the server link). No previous manifest is claimed as proof of the
+corrected llama-server executable.
+
+### Tests
+
+- `tests/test_issue299_native_producer.py`: 26 methods (16 prior + 10
+  correction: 6 source-realistic pre-build controls RED->GREEN + 4 genuine
+  native-evidence controls). All prior mutation controls keep passing
+  against the regenerated byte-pinned captures.
+- `tests/test_issue299_native_build.py`: 38 methods (34 prior + 4 P1-C
+  authentication controls RED->GREEN).
+- Full #299 population rerun: 393 methods across ten modules, zero
+  failures/skips; CI retention audit and planner self-check PASS. The
+  derive script is verified idempotent (byte-stable regeneration).
+
+
 ## Remaining work
 
 1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.

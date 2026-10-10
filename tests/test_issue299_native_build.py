@@ -399,6 +399,104 @@ class NativeBuildTests(unittest.TestCase):
         self.assertFalse(self.root.exists())
         self.assertFalse(list(self.workspace_root.glob('admission-refusal-*.json')))
 
+    def fake_pin(self, root):
+        """Create a tiny real Git pin and return (source, revision, tree)."""
+        import subprocess
+        source = root / 'pin'
+        source.mkdir()
+        (source / 'common').mkdir()
+        (source / 'common/common.cpp').write_bytes(b'int pinned_source;\n')
+        (source / 'common/common.h').write_bytes(b'#define PINNED 1\n')
+        subprocess.run(['git', '-C', str(source), 'init', '-q'], check=True)
+        subprocess.run(['git', '-C', str(source), 'config', 'user.email', 'test@example.invalid'], check=True)
+        subprocess.run(['git', '-C', str(source), 'config', 'user.name', 'Test'], check=True)
+        subprocess.run(['git', '-C', str(source), 'add', 'common'], check=True)
+        subprocess.run(['git', '-C', str(source), 'commit', '-qm', 'pin'], check=True)
+        revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
+        tree = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD^{tree}'], text=True).strip()
+        return source, revision, tree
+
+    def fake_overlay(self, source, revision, tree):
+        import inferswarm.operator.native_observer.overlay as overlay
+        previous = {name: getattr(overlay, name) for name in
+                    ('PIN', 'TREE', 'TRANSFORMED', 'NEW_FILES', 'FIXTURES', 'OVERLAY_DIR')}
+        self.addCleanup(lambda: [setattr(overlay, name, value) for name, value in previous.items()])
+        overlay.PIN, overlay.TREE = revision, tree
+        overlay.TRANSFORMED = ()
+        overlay.NEW_FILES = ()
+        overlay.FIXTURES = source.parent / 'fixtures'
+        overlay.OVERLAY_DIR = overlay.FIXTURES / 'overlay'
+        overlay.OVERLAY_DIR.mkdir(parents=True)
+        (overlay.FIXTURES / 'native-observer-transformed.json').write_text(
+            json.dumps({'base_revision': revision, 'base_tree': tree, 'files': [],
+                        'patch_sha256': 'a' * 64, 'schema': 'native-observer-transformed/1'},
+                       indent=2, sort_keys=True) + '\n')
+        return overlay
+
+    def test_dirty_untransformed_tu_is_refused(self):
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+                ov.verify_tree_inputs(derived, source)
+                (derived / 'common/common.cpp').write_text('foreign compiled source\\n')
+                with self.assertRaisesRegex(ov.OverlayError, 'common/common.cpp'):
+                    ov.verify_tree_inputs(derived, source)
+
+    def test_reused_overlay_tree_full_authentication(self):
+        from inferswarm.operator.native_observer import full_build
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+            (derived / 'common/common.cpp').write_text('foreign compiled source\\n')
+            with mock.patch.object(full_build, 'assemble', side_effect=AssertionError('command assembly must not run')) as assemble:
+                with self.assertRaisesRegex(full_build.BuildError, 'common/common.cpp'):
+                    full_build.verify_tree_inputs(derived, source)
+                assemble.assert_not_called()
+
+    def test_overlay_apply_materializes_from_git_not_worktree(self):
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-red-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            (source / 'common/common.cpp').write_text('dirty working tree bytes\\n')
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+            self.assertEqual((derived / 'common/common.cpp').read_bytes(), b'int pinned_source;\n')
+            self.assertFalse((derived / '.git').exists())
+
+    def test_provenance_fields_are_separate(self):
+        from inferswarm.operator.native_observer import full_build
+        body = full_build._provenance_body(
+            revision='r', tree='t', retained_patch_sha256='p',
+            transformed_manifest_sha256='m', transformed_sources=[{'path': 'x', 'sha256': 'a'}],
+            untransformed_inputs={'y': 'b'}, generated_inputs={'build-info.cpp': 'c'},
+            compiler_identity='compiler', link_inputs={'server': ['d']},
+            executable_sha256={'server': 'e'}, overlay_root='tree')
+        fields = ('pinned_base', 'retained_patch_sha256', 'transformed_manifest_sha256',
+                  'transformed_sources', 'untransformed_input_count',
+                  'untransformed_inputs_sha256', 'generated_inputs', 'compiler_identity',
+                  'link_inputs', 'executable_sha256')
+        for field in fields:
+            self.assertIn(field, body)
+        identities = [body['pinned_base']['revision'], body['retained_patch_sha256'],
+                      body['transformed_manifest_sha256'], body['transformed_sources'][0]['sha256'],
+                      body['generated_inputs'][0]['sha256'],
+                      body['executable_sha256']['server']]
+        self.assertEqual(len(set(identities)), len(identities))
+
 
 if __name__ == '__main__':
     unittest.main()

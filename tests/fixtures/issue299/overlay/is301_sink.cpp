@@ -13,3 +13,8 @@ extern "C" void is301_fact_num(const char * key, long long value) {
 extern "C" void is301_fact_str(const char * key, const char * value) {
     if (is301::enabled()) is301::facts().add(key, is301::quote(value));
 }
+extern "C" void is301_fact_alloc(long long buffer_bytes, const char * backend) {
+    if (is301::enabled()) is301::facts().append("allocations", std::string("{") +
+        is301::kv_str("backend", backend ? backend : "unknown") + "," +
+        is301::kv_num("buffer_bytes", buffer_bytes) + "}");
+}

@@ -10,6 +10,7 @@ int is301_is_enabled(void);
 void is301_record_event(const char * name);
 void is301_fact_num(const char * key, long long value);
 void is301_fact_str(const char * key, const char * value);
+void is301_fact_alloc(long long buffer_bytes, const char * backend);
 #ifdef __cplusplus
 }
 #endif

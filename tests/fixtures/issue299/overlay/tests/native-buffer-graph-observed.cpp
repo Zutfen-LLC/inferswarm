@@ -77,16 +77,32 @@ int main(int argc, char ** argv) {
     ggml_backend_tensor_get(a, readback, 0, sizeof(readback));
     assert(std::memcmp(readback, left, sizeof(left)) == 0);
     is301::stream().record("fixture_get");
-    assert(ggml_backend_graph_compute(backend, graph) == GGML_STATUS_SUCCESS);
+    // Mirror llama-server's real ordering: acceleration backend(s) first, the
+    // CPU backend LAST (ggml_backend_sched_new asserts a CPU final backend).
+    ggml_backend_t cpu_backend = ggml_backend_cpu_init();
+    assert(cpu_backend);
+    ggml_backend_cpu_set_n_threads(cpu_backend, 1);
+    ggml_backend_t backends[2];
+    int n_backends = 1;
+    if (rpc) { backends[0] = backend; backends[1] = cpu_backend; n_backends = 2; }
+    else { backends[0] = cpu_backend; ggml_backend_free(backend); backend = cpu_backend; }
+    ggml_backend_sched_t sched = ggml_backend_sched_new(backends, nullptr, n_backends, 8, false, false);
+    assert(sched);
+    assert(ggml_backend_sched_graph_compute_async(sched, graph) == GGML_STATUS_SUCCESS);
+    ggml_backend_sched_synchronize(sched);
     is301::stream().record("fixture_graph");
     ggml_backend_tensor_get(sum, readback, 0, sizeof(readback));
     assert(std::memcmp(readback, expected, sizeof(expected)) == 0);
     is301::stream().record("fixture_output_readback");
+    ggml_backend_sched_free(sched);
+    if (rpc) { ggml_backend_free(cpu_backend); }
     ggml_backend_buffer_free(buffer);
     ggml_free(ctx);
     ggml_backend_free(backend);
     emit("dynamic", "whole", true, false,
          (std::string(argv[2]) + "/dynamic-capture.json").c_str());
+    is301::export_capture("dynamic", "whole", true, false,
+                          rpc ? "fixture-rpc" : "fixture-cpu");
     std::printf("IS301 %s fixture PASS pid=%lld\n", rpc ? "RPC-loopback" : "CPU", is301::pid());
     return 0;
 }
