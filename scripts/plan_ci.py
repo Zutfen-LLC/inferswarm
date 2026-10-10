@@ -218,6 +218,7 @@ GROUP_TEST_MODULES = {
         "test_issue299_phased_observation",
         "test_issue299_native_build",
         "test_issue299_native_producer",
+        "test_issue301_budget_authorization",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).

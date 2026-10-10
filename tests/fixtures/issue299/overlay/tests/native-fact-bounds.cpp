@@ -1,5 +1,6 @@
 // Adversarial bounded-facts proof; the real allocation seam exercises the C shim.
 #include "is301_observer.h"
+#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -39,11 +40,26 @@ int main(int argc, char ** argv) {
     const std::string dir(argv[1]);
     is301::stream().record("fixture_fact_bounds");
     add_clean_facts();
-    is301::facts().append("oversized", std::string(4097, 'x'));
+    // Preserve the original first-element append refusal control.
+    const std::string append_before = is301::facts().canonical_object();
+    is301::facts().append("oversized", is301::quote(std::string(4097, 'x')));
+    assert(append_before == is301::facts().canonical_object());
+    assert(is301::facts().dropped == 1);
     write_capture(dir + "/fact-bounds-capture.json", capture("fact-bounds-bad"));
     is301::reset();
     is301::stream().record("fixture_fact_bounds");
     add_clean_facts();
+    is301::facts().add("overwrite-bound", is301::quote("small"));
+    const std::string before = is301::facts().canonical_object();
+    is301::facts().add("overwrite-bound", is301::quote(std::string(4097, 'x')));
+    assert(before == is301::facts().canonical_object());
+    assert(is301::facts().dropped == 1);
+    assert(is301::facts().overflowed);
+    write_capture(dir + "/fact-scalar-overwrite.json", capture("fact-scalar-overwrite"));
+    is301::reset();
+    is301::stream().record("fixture_fact_bounds");
+    add_clean_facts();
+    assert(is301::facts().dropped == 0 && !is301::facts().overflowed);
     write_capture(dir + "/fact-bounds-clean.json", capture("fact-bounds-clean"));
     std::puts("IS301 fact-bounds fixture PASS");
     return 0;

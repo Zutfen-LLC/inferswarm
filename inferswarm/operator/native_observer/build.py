@@ -5,7 +5,7 @@ Native compilation is explicit opt-in: python -m ...build --execute.
 """
 from contextlib import contextmanager
 import ctypes
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import fcntl
 import hashlib
 import json
@@ -90,6 +90,74 @@ class Workspace:
 
 
 CAMPAIGN = Workspace(SCRATCH)
+
+
+@dataclass(frozen=True)
+class Issue301Authorization:
+    """The user's one approved extension, not a configurable resource limit.
+
+    Pass explicitly as Supervisor(..., authorization=Issue301Authorization()).
+    validate(workspace, ledger_bytes) is pure and returns the validated ledger.
+    No alternative workspace, starting history, or ceiling can be supplied.
+    """
+    issue: int = field(default=301, init=False)
+    workspace_root: str = field(default='/home/zutfen/.hermes/cache/scratch/is299/native-build', init=False)
+    original_seconds: int = field(default=5400, init=False)
+    extra_seconds: int = field(default=1200, init=False)
+    ceiling_seconds: int = field(default=6600, init=False)
+    original_ledger_sha256: str = field(default='ca237e383609bef6c62414ef7c132e2d5716eb13a016e84960e67b0a326a5c04', init=False)
+    original_phase_prefix_sha256: str = field(default='d0f56ae803fbc8b50048b8d3ecd786c6bf43982898a0e6be0d8ee1fd98a0962a', init=False)
+    original_phase_count: int = field(default=94, init=False)
+    start_consumption_seconds: float = field(default=5328.017504271702, init=False)
+
+    def validate(self, workspace, ledger_bytes):
+        """Authenticate the original bytes or an unchanged prefix plus receipts."""
+        if str(workspace.root) != self.workspace_root:
+            raise BuildError('issue301 authorization requires the exact campaign workspace')
+        try:
+            if not isinstance(ledger_bytes, bytes) or len(ledger_bytes) > 4 << 20:
+                raise ValueError('missing or oversized original ledger')
+            ledger = json.loads(ledger_bytes)
+            if not isinstance(ledger, dict) or set(ledger) != {'elapsed_seconds', 'phases'}:
+                raise ValueError('invalid ledger fields')
+            def seconds(value):
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+                    raise ValueError('invalid elapsed seconds')
+                return value
+            elapsed = seconds(ledger['elapsed_seconds'])
+            phases = ledger['phases']
+            if not isinstance(phases, list) or len(phases) < self.original_phase_count:
+                raise ValueError('missing or truncated original ledger prefix')
+            required = {'elapsed_seconds', 'peak_sampled_rss_bytes', 'reason', 'root'}
+            for phase in phases:
+                if not isinstance(phase, dict) or not required <= set(phase) or set(phase) - required - {'status'}:
+                    raise ValueError('invalid phase fields')
+                seconds(phase['elapsed_seconds'])
+                peak = phase['peak_sampled_rss_bytes']
+                if isinstance(peak, bool) or not isinstance(peak, int) or peak < 0:
+                    raise ValueError('invalid sampled RSS')
+                if not isinstance(phase['root'], str) or not isinstance(phase['reason'], str) or ('status' in phase and not isinstance(phase['status'], str)):
+                    raise ValueError('invalid phase metadata')
+            total = math.fsum(phase['elapsed_seconds'] for phase in phases)
+            if not math.isclose(total, elapsed, rel_tol=0, abs_tol=1e-9):
+                raise ValueError('phase sum does not match cumulative elapsed seconds')
+            prefix = phases[:self.original_phase_count]
+            prefix_bytes = json.dumps(prefix, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+            if hashlib.sha256(prefix_bytes).hexdigest() != self.original_phase_prefix_sha256:
+                raise ValueError('original phase entries changed')
+            if not math.isclose(math.fsum(phase['elapsed_seconds'] for phase in prefix), self.start_consumption_seconds, rel_tol=0, abs_tol=1e-9):
+                raise ValueError('original consumption changed')
+            # Reconstruct the pinned original envelope on continuation, never
+            # truncate or write it. All original entries remain in the live list.
+            original = {'elapsed_seconds': self.start_consumption_seconds, 'phases': prefix}
+            original_bytes = (json.dumps(original, indent=2, sort_keys=True) + '\n').encode()
+            if hashlib.sha256(original_bytes).hexdigest() != self.original_ledger_sha256:
+                raise ValueError('original ledger digest changed')
+            if len(phases) == self.original_phase_count and hashlib.sha256(ledger_bytes).hexdigest() != self.original_ledger_sha256:
+                raise ValueError('original ledger bytes changed')
+            return ledger
+        except (ValueError, KeyError, TypeError, OverflowError) as error:
+            raise BuildError('invalid issue301 continuous ledger: ' + str(error)) from error
 
 
 def output_root(path, workspace=CAMPAIGN):
@@ -251,10 +319,18 @@ def group_rss(groups):
 
 class Supervisor:
     """One exclusive phase, serial children, hard exec limits, owned-group cleanup."""
-    def __init__(self, root, limits=None, *, workspace=CAMPAIGN):
+    def __init__(self, root, limits=None, *, workspace=CAMPAIGN, authorization=None):
         self.workspace = workspace
         self.root = output_root(root, workspace)
         self.limits = limits or Limits()
+        if authorization is not None:
+            if type(authorization) is not Issue301Authorization:
+                raise BuildError('unsupported cumulative budget authorization')
+            if self.limits.cumulative_seconds != authorization.original_seconds:
+                raise BuildError('issue301 authorization cannot override a tighter cumulative limit')
+        self.authorization = authorization
+        # Expanded authority is applied only after loading the continuous ledger.
+        self.cumulative_seconds = self.limits.cumulative_seconds
         self.rows = []
         self.active = {}
         self.servers = {}
@@ -270,8 +346,15 @@ class Supervisor:
 
     def _load_ledger(self):
         self.ledger_path = self.workspace.ledger
+        self.ledger = None
+        self.cumulative_seconds = self.limits.cumulative_seconds
         try:
-            if self.ledger_path.exists() or self.ledger_path.is_symlink():
+            if self.authorization is not None:
+                # Never initialize a missing extension ledger; authenticate the
+                # exact original history before permitting any new accounting.
+                ledger = self.authorization.validate(
+                    self.workspace, _read_bounded(self.ledger_path, 4 << 20))
+            elif self.ledger_path.exists() or self.ledger_path.is_symlink():
                 ledger = json.loads(_read_bounded(self.ledger_path, 4 << 20))
             else:
                 ledger = {'elapsed_seconds': 0, 'phases': []}
@@ -279,6 +362,8 @@ class Supervisor:
             if isinstance(elapsed, bool) or not isinstance(elapsed, (int, float)) or not math.isfinite(elapsed) or elapsed < 0 or not isinstance(ledger['phases'], list):
                 raise ValueError('invalid ledger fields')
             self.ledger = ledger
+            if self.authorization is not None:
+                self.cumulative_seconds = self.authorization.ceiling_seconds
         except (BuildError, ValueError, KeyError, TypeError) as error:
             raise BuildError('malformed build ledger: ' + str(error)) from error
 
@@ -305,7 +390,7 @@ class Supervisor:
         exhausted = False
         try:
             self._load_ledger()
-            if self.ledger['elapsed_seconds'] >= self.limits.cumulative_seconds:
+            if self.ledger['elapsed_seconds'] >= self.cumulative_seconds:
                 exhausted = True
                 raise BuildError('cumulative wall budget exhausted')
             # Process-wide policy is temporary. Supported commands do not detach;
@@ -323,6 +408,8 @@ class Supervisor:
                 raise BuildError('existing output directory; choose a fresh run') from error
             self.check_storage()
             dump(self.root / 'envelope.json', {'limits': asdict(self.limits),
+                 'authorization': asdict(self.authorization) if self.authorization is not None else None,
+                 'effective_cumulative_seconds': self.cumulative_seconds,
                  'start_unix': time.time(), 'meminfo': Path('/proc/meminfo').read_text(),
                  'disk': dict(zip(('total', 'used', 'free'), shutil.disk_usage(self.workspace.root))),
                  'rss_sampling_seconds': .05,
@@ -383,7 +470,7 @@ class Supervisor:
     def check(self):
         self._check_server_deadline()
         elapsed = time.monotonic() - self.start
-        if elapsed > self.limits.phase_seconds or elapsed + self.ledger['elapsed_seconds'] > self.limits.cumulative_seconds:
+        if elapsed > self.limits.phase_seconds or elapsed + self.ledger['elapsed_seconds'] > self.cumulative_seconds:
             raise BuildError('phase/cumulative wall budget exceeded')
         rss = group_rss(set(self.active))
         self.peak = max(self.peak, rss)

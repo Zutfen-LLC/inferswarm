@@ -102,38 +102,30 @@ class ProducerTests(unittest.TestCase):
             self.assertIsInstance(name, str) and self.assertTrue(name)
 
     def test_archive_membership_matches_link_inputs(self):
-        # The per-target backend-library archives must contain exactly the
-        # objects each link command consumes. Expected sets are derived from
-        # the recipe's own compile order (frozen closure), then the declared
-        # archive membership in execute() must equal them: index drift or
-        # accidental membership changes fail here.
+        # Offline recipe contract; no archives or native binaries are created.
         from inferswarm.operator.native_observer import full_build as fb
-        from pathlib import Path as _P
-        import inspect
         with tempfile.TemporaryDirectory() as tmp:
-            out = _P(tmp)
-            r = fb.assemble(_P('/nonexistent-tree'), out)
-            compiles = [c for c in r['commands'] if '-c' in c]
-            src_names = [c[c.index('-c') + 1].split('/')[-1] for c in compiles]
-            sink = src_names.index('is301_sink.cpp')
-            rpc_main = src_names.index('rpc-server.cpp')
-            ggml_last = max(i for i, n in enumerate(src_names)
-                            if n in ('transport.cpp', 'ggml-rpc.cpp'))
-            observed = src_names.index('native-buffer-graph-observed.cpp')
-            fact_bounds = src_names.index('native-fact-bounds.cpp')
-            ggml = set(range(ggml_last + 1))
-            server = set(range(len(compiles))) - {rpc_main, observed, fact_bounds}
-            expected = {'llama-server': server,
-                        'ggml-rpc-server': ggml | {sink} | {rpc_main},
-                        'fixture': ggml | {sink, observed},
-                        'fact-bounds': ggml | {sink, fact_bounds}}
-            for name, cmd in zip(('llama-server', 'ggml-rpc-server', 'fixture', 'fact-bounds'), r['commands'][-4:]):
-                objs = {int(_P(a).stem) for a in cmd if a.endswith('.o')}
-                self.assertEqual(objs, expected[name], name + ' link membership drift')
-            # Declared archive ranges in execute() must cover the same sets.
-            src_text = inspect.getsource(fb.execute)
-            self.assertIn("list(range(len(recipe['sources']) + 4))", src_text)
-            self.assertIn("list(range(ggml_count)) + [len(recipe['sources']) + 1]", src_text)
+            out = Path(tmp)
+            root = Path('/nonexistent-tree')
+            recipe = fb.assemble(root, out)
+            compiles = [c for c in recipe['commands'] if '-c' in c]
+            objects = {c[c.index('-c') + 1]: c[c.index('-o') + 1] for c in compiles}
+            mains = {'llama-server': 'tools/server/main.cpp',
+                     'ggml-rpc-server': 'tools/rpc/rpc-server.cpp',
+                     'native-buffer-graph-observed': 'tests/native-buffer-graph-observed.cpp',
+                     'native-fact-bounds': 'tests/native-fact-bounds.cpp',
+                     'native-export-claim': 'tests/native-export-claim.cpp'}
+            main_paths = {str(root / rel) for rel in mains.values()}
+            ggml = [obj for src, obj in objects.items() if src.startswith(str(root / 'ggml') + '/')]
+            ggml += [objects[str(root / 'is301_sink.cpp')]]
+            expected = {}
+            for name, main in mains.items():
+                members = [obj for src, obj in objects.items() if src not in main_paths] if name == 'llama-server' else ggml
+                expected[name] = members + [objects[str(root / main)]]
+            self.assertEqual(fb._link_membership(recipe), expected)
+            libraries = fb._archive_membership(recipe)
+            self.assertEqual(libraries['libggml-static.a'], ggml)
+            self.assertEqual(libraries['libllama-full.a'], expected['llama-server'][:-1])
 
     def test_manifest_emission_is_parseable(self):
         emit = getattr(self.producer, 'build_manifest_body', None)
@@ -404,5 +396,65 @@ class CorrectedProducerEvidenceTests(unittest.TestCase):
             contract.parse_observation(TransportReply(0, json.dumps(raw).encode()))
 
 
-if __name__ == '__main__':
-    unittest.main()
+class RoundTwoRegressionTests(unittest.TestCase):
+    repo = Path(__file__).resolve().parents[1]
+
+    def test_overwrite_bound_precedes_replacement(self):
+        header = (FIXTURES / 'overlay/is301_observer.h').read_text()
+        start = header.index('struct facts_builder {')
+        end = header.index('\n};', start)
+        source = header[start:end]
+        add_start = source.index('void add(const std::string & key')
+        add_body = source[add_start:]
+        self.assertLess(add_body.index('canonical_value.size() > FACT_BOUND'),
+                        add_body.index('row.second = canonical_value'))
+        self.assertIn('dropped++; overflowed = true;', add_body)
+
+    def test_fact_bounds_fixture_attempts_oversized_overwrite(self):
+        source = (FIXTURES / 'overlay/tests/native-fact-bounds.cpp').read_text()
+        # Source-bound offline gate only; native assertions run in parent build.
+        self.assertIn('facts().add("overwrite-bound", is301::quote("small"))', source)
+        self.assertIn('is301::quote(std::string(4097,', source)
+        self.assertIn('/fact-scalar-overwrite.json', source)
+        self.assertIn('facts().append("oversized", is301::quote(std::string(4097,', source)
+        self.assertIn('/fact-bounds-capture.json', source)
+        self.assertIn('before == is301::facts().canonical_object()', source)
+        self.assertIn('is301::facts().dropped == 1', source)
+
+    def test_header_claim_is_fixed_sentinel_bound_to_owner(self):
+        header = (FIXTURES / 'overlay/is301_observer.h').read_text()
+        self.assertIn('is301-claim', header)
+        self.assertIn('O_EXCL', header)
+        self.assertIn('std::to_string(process_id)', header)
+        self.assertNotRegex(header, r'participant\s*\+\s*"-"\s*\+\s*std::to_string\(process_id\)\s*\+\s*"-claim')
+
+    def test_native_claim_helper_exercises_real_export_and_fork(self):
+        # Feature-absence/source-binding RED is NOT native behavioral evidence.
+        path = FIXTURES / 'overlay/tests/native-export-claim.cpp'
+        self.assertTrue(path.is_file(), 'native adversarial claim helper missing')
+        source = path.read_text()
+        self.assertIn('is301::export_capture(', source)
+        self.assertIn('::fork()', source)
+        self.assertIn('::pipe(', source)
+        self.assertIn('::read(gate[0]', source)
+        self.assertIn('::write(gate[1]', source)
+        self.assertIn('owner == expected_owner', source)
+        self.assertIn('stale claim', source)
+        self.assertIn('inherited ownership', source)
+        header = (FIXTURES / 'overlay/is301_observer.h').read_text()
+        self.assertIn('/proc/self/stat', header)
+        self.assertIn('process_start_ticks()', header)
+        self.assertIn('owner_pid != process_id', header)
+        self.assertIn('owner_start != start_ticks', header)
+
+    def test_generator_mirrors_native_fixtures(self):
+        # Load constants without invoking generator main or any native command.
+        import runpy
+        from unittest import mock
+        import sys
+        with mock.patch.object(sys, 'argv', ['issue301_derive_overlay.py']):
+            generator = runpy.run_path(str(self.repo / 'scripts/issue301_derive_overlay.py'))
+        for constant, path in (('FACT_BOUNDS_CPP', 'native-fact-bounds.cpp'),
+                               ('EXPORT_CLAIM_CPP', 'native-export-claim.cpp')):
+            self.assertIn(constant, generator, 'native fixture generator missing')
+            self.assertEqual(generator[constant], (FIXTURES / 'overlay/tests' / path).read_text())

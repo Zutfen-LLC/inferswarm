@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 from pathlib import Path
 import subprocess
@@ -36,6 +37,7 @@ NEW_FILES = (
     'is301_sink.cpp',
     'tests/native-buffer-graph-observed.cpp',
     'tests/native-fact-bounds.cpp',
+    'tests/native-export-claim.cpp',
 )
 
 
@@ -82,9 +84,17 @@ def _manifest_rows(manifest):
 
 def verify_tree_inputs(tree, source) -> dict[str, str]:
     """Authenticate every materialized tree byte against pin/retained blobs."""
-    tree, source = Path(tree).resolve(), Path(source).resolve()
+    # Inspect the caller's root before resolve() can hide a symlink.
+    tree, source = Path(tree).absolute(), Path(source).resolve()
+    try:
+        if not stat.S_ISDIR(tree.lstat().st_mode):
+            raise OverlayError('dirty or foreign source input: overlay root')
+    except OSError as exc:
+        raise OverlayError('dirty or foreign source input: overlay root') from exc
     manifest_path = tree / 'native-observer-transformed.json'
     try:
+        if not stat.S_ISREG(manifest_path.lstat().st_mode):
+            raise OverlayError('dirty or foreign source input: native-observer-transformed.json')
         manifest = json.loads(manifest_path.read_text())
     except (OSError, ValueError) as exc:
         raise OverlayError('dirty or foreign source input: native-observer-transformed.json') from exc
@@ -98,15 +108,28 @@ def verify_tree_inputs(tree, source) -> dict[str, str]:
         for path in pinned
     }
     expected = set(pinned) | set(NEW_FILES) | {'native-observer-transformed.json'}
-    # Enumerate without following symlinks: every filesystem entry under the
-    # tree must be accounted for (dangling symlinks and unexpected types too).
+    expected_dirs = {str(parent) for path in expected
+                     for parent in Path(path).parents if str(parent) != '.'}
     actual = set()
-    for entry in tree.rglob('*'):
-        if entry.is_dir():
-            continue
-        actual.add(str(entry.relative_to(tree)))
-    actual = {a for a in actual if a != '.git' and not a.startswith('.git/')}
-
+    actual_dirs = set()
+    pending = [tree]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                rel = str(Path(entry.path).relative_to(tree))
+                mode = entry.stat(follow_symlinks=False).st_mode
+                if stat.S_ISDIR(mode):
+                    if rel not in expected_dirs:
+                        raise OverlayError('dirty or foreign source input: ' + rel)
+                    actual_dirs.add(rel)
+                    pending.append(Path(entry.path))
+                elif stat.S_ISREG(mode):
+                    actual.add(rel)
+                else:
+                    raise OverlayError('dirty or foreign source input (not a regular file): ' + rel)
+    if actual_dirs != expected_dirs:
+        raise OverlayError('dirty or foreign source input: missing directory')
 
     verified = {}
     for path in sorted(expected | actual):

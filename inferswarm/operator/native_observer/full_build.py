@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 from .build import (BuildError, Limits, PIN, SCRATCH, SOURCE, Supervisor,
-                    TREE, Workspace, dump, output_root)
+                    TREE, Workspace, compiled_inputs, dump, output_root)
 from . import overlay as overlay_module
 from .producer import build_manifest_body
 
@@ -136,63 +136,68 @@ def includes(root: Path, out: Path):
     return ggml_inc + [root, root / 'common', root / 'common/parsers',
                         root / 'vendor', root / 'vendor/hash',
                         root / 'src', root / 'src/models', root / 'include',
-                        root / 'tools/mtmd', root / 'tools/server', OVERLAY, out]
+                        root / 'tools/mtmd', root / 'tools/server', out]
 
 
 def assemble(root: Path, out: Path):
     """Ordered no-effects command list; one compile job, deterministic order."""
     root, out = Path(root).resolve(), Path(out).resolve()
     sources = list(closure(root))
-    commands = []
-    objects = []
-    serializable_sources = list(sources)
+    extras = ['build-info.cpp', 'is301_sink.cpp', 'vendor/cpp-httplib/httplib.cpp',
+              'tools/ui/ui.cpp', 'tools/server/main.cpp', 'tools/rpc/rpc-server.cpp',
+              'tests/native-buffer-graph-observed.cpp', 'tests/native-fact-bounds.cpp',
+              'tests/native-export-claim.cpp']
+    commands, objects = [], {}
     inc = [f'-I{p}' for p in includes(root, out)]
-    # One generated header dir (out) carries ggml-version.h, llama-version.h,
-    # build-info.cpp, ui.cpp/ui.h — derived from the pin's templates.
-    for index, rel in enumerate(sources + ['build-info.cpp', 'is301_sink.cpp',
-                                           'vendor/cpp-httplib/httplib.cpp',
-                                           'tools/ui/ui.cpp',
-                                           'tools/server/main.cpp',
-                                           'tools/rpc/rpc-server.cpp',
-                                           'tests/native-buffer-graph-observed.cpp',
-                                           'tests/native-fact-bounds.cpp']):
-        src = out / 'build-info.cpp' if rel == 'build-info.cpp' else (
-              out / 'ui.cpp' if rel == 'tools/ui/ui.cpp' else (
-              OVERLAY / 'is301_sink.cpp' if rel == 'is301_sink.cpp' else (
-              OVERLAY / 'tests/native-buffer-graph-observed.cpp'
-              if rel == 'tests/native-buffer-graph-observed.cpp' else (
-              OVERLAY / 'tests/native-fact-bounds.cpp'
-              if rel == 'tests/native-fact-bounds.cpp' else root / rel))))
+    for index, rel in enumerate(sources + extras):
+        src = (out / 'build-info.cpp' if rel == 'build-info.cpp' else
+               out / 'ui.cpp' if rel == 'tools/ui/ui.cpp' else root / rel)
         obj = out / f'{index:04d}.o'
         compiler = '/usr/bin/cc' if src.suffix == '.c' else '/usr/bin/c++'
         std = '-std=c11' if src.suffix == '.c' else '-std=c++17'
-        # sha1.c is compiled as CXX per vendor CMake (namespace clash guard).
         if src.name == 'sha1.c':
             compiler, std = '/usr/bin/c++', '-std=c++17'
-        commands.append([compiler, std, *CFLAGS, *inc, '-c', str(src), '-o', str(obj)])
-        objects.append(obj)
-    link = '/usr/bin/c++'
-    libs = ['-pthread', '-ldl', '-lm']
-    # llama-server: every object except the rpc-server/fact-bounds/fixture TUs.
-    server_objects = objects[:-3]
-    commands.append([link, *server_objects, *libs, '-o', str(out / 'llama-server')])
-    # ggml-rpc-server: GGML closure + sink only, per tools/rpc/CMakeLists
-    # (links ggml: ggml-base + cpu + rpc; no llama/common/server TUs).
-    ggml_count = len(GGML_BASE) + len(GGML_REG) + len(GGML_CPU) + len(GGML_RPC)
-    sink = objects[len(sources) + 1]  # is301_sink.cpp compiles right after build-info
-    rpc_main = objects[-3]            # tools/rpc/rpc-server.cpp TU
-    commands.append([link, *objects[:ggml_count], sink, rpc_main, *libs,
-                     '-o', str(out / 'ggml-rpc-server')])
-    sink = objects[len(sources) + 1]
-    commands.append([link, *objects[:ggml_count], sink, objects[-2], *libs,
-                     '-o', str(out / 'native-buffer-graph-observed')])
-    # Adversarial fact-bounds proof links the GGML closure + sink + its own TU.
-    commands.append([link, *objects[:ggml_count], sink, objects[-1], *libs,
-                     '-o', str(out / 'native-fact-bounds')])
-    for row in commands:
-        pass
-    return {'sources': serializable_sources,
-            'commands': [list(map(str, c)) for c in commands], 'flags': CFLAGS}
+        commands.append([compiler, std, *CFLAGS, *inc, '-MD', '-MF',
+                         str(obj.with_suffix('.d')), '-c', str(src), '-o', str(obj)])
+        objects[rel] = str(obj)
+    ggml_sources = [rel for rel in sources if rel.startswith('ggml/')]
+    ggml_members = [objects[rel] for rel in ggml_sources] + [objects['is301_sink.cpp']]
+    mains = {'llama-server': 'tools/server/main.cpp',
+             'ggml-rpc-server': 'tools/rpc/rpc-server.cpp',
+             'native-buffer-graph-observed': 'tests/native-buffer-graph-observed.cpp',
+             'native-fact-bounds': 'tests/native-fact-bounds.cpp',
+             'native-export-claim': 'tests/native-export-claim.cpp'}
+    server_members = [obj for rel, obj in objects.items() if rel not in set(mains.values())]
+    for target, main in mains.items():
+        members = server_members if target == 'llama-server' else ggml_members
+        commands.append(['/usr/bin/c++', *members, objects[main], '-pthread', '-ldl',
+                         '-lm', '-o', str(out / target)])
+    return {'sources': sources, 'commands': commands, 'flags': list(CFLAGS)}
+
+
+EXECUTABLES = ('llama-server', 'ggml-rpc-server', 'native-buffer-graph-observed',
+               'native-fact-bounds', 'native-export-claim')
+
+
+def _link_membership(recipe):
+    """Keep exact ordered object paths from actual linker commands."""
+    return {Path(command[command.index('-o') + 1]).name:
+            [arg for arg in command[:command.index('-o')] if arg.endswith('.o')]
+            for command in recipe['commands'] if '-o' in command and '-c' not in command
+            and Path(command[command.index('-o') + 1]).name in EXECUTABLES}
+
+
+def _archive_membership(recipe):
+    """Backend/library closures only: never executable main translation units."""
+    compiles = {c[c.index('-o') + 1]: Path(c[c.index('-c') + 1])
+                for c in recipe['commands'] if '-c' in c}
+    links = _link_membership(recipe)
+    server_main = next(obj for obj in links['llama-server']
+                       if compiles[obj].as_posix().endswith('/tools/server/main.cpp'))
+    rpc_main = next(obj for obj in links['ggml-rpc-server']
+                    if compiles[obj].as_posix().endswith('/tools/rpc/rpc-server.cpp'))
+    return {'libllama-full.a': [obj for obj in links['llama-server'] if obj != server_main],
+            'libggml-static.a': [obj for obj in links['ggml-rpc-server'] if obj != rpc_main]}
 
 
 def _render_templates(root: Path, out: Path):
@@ -277,6 +282,136 @@ def _verify_generated_inputs(generated):
             raise BuildError('dirty or foreign source input: ' + str(path))
 
 
+def _verify_include_paths(recipe, tree, output):
+    allowed = {Path(p).resolve() for p in includes(Path(tree).resolve(), Path(output).resolve())}
+    for command in recipe['commands']:
+        for arg in command:
+            if arg.startswith('-I'):
+                if not arg[2:] or Path(arg[2:]).resolve() not in allowed:
+                    raise BuildError('foreign include search path: ' + arg)
+            elif arg.startswith(('-isystem', '-iquote', '-idirafter', '-include',
+                                 '-imacros', '--sysroot', '-isysroot', '-B', '-specs')):
+                raise BuildError('foreign include/toolchain search option: ' + arg)
+
+
+def _freeze_system_inputs(supervisor):
+    """Freeze default C/C++ search trees BEFORE any translation unit compile.
+
+    Discover compiler-owned and platform include roots through the SAME
+    supervised sanitized environment, not ambient CPATH/CPLUS_INCLUDE_PATH.
+    Depfiles later select actual consumed headers from this frozen inventory.
+    """
+    roots = set()
+    for compiler, language in (('/usr/bin/cc', 'c'), ('/usr/bin/c++', 'c++')):
+        row = supervisor.run([compiler, '-E', '-v', '-x', language, '/dev/null',
+                              '-o', str(supervisor.root / ('include-probe-' + language))])
+        lines = Path(row['stderr']).read_text().splitlines()
+        active = False
+        for line in lines:
+            if line.strip() == '#include <...> search starts here:':
+                active = True
+            elif active and line.strip() == 'End of search list.':
+                active = False
+            elif active:
+                root = Path(line.strip())
+                if not root.is_absolute() or not root.is_dir():
+                    raise BuildError('unsupported compiler include root: ' + str(root))
+                roots.add(root.resolve())
+    if not roots:
+        raise BuildError('missing compiler include search inventory')
+    frozen = {}
+    for root in sorted(roots):
+        for path in sorted(root.rglob('*')):
+            if path.is_file():
+                actual = path.resolve()
+                frozen[str(actual)] = _digest_file(actual)
+    return frozen
+
+
+def _compiler_binary_identities(supervisor):
+    binaries = {'/usr/bin/cc', '/usr/bin/c++', '/usr/bin/ar'}
+    for compiler, programs in (('/usr/bin/cc', ('cc1', 'as', 'ld')),
+                                ('/usr/bin/c++', ('cc1plus', 'collect2'))):
+        for program in programs:
+            row = supervisor.run([compiler, '-print-prog-name=' + program])
+            path = Path(Path(row['stdout']).read_text().strip())
+            if not path.is_absolute():
+                path = Path('/usr/bin') / path
+            if not path.is_file():
+                raise BuildError('missing compiler binary: ' + str(path))
+            binaries.add(str(path))
+    return {name: {'path': str(Path(name).resolve()), 'sha256': _digest_file(Path(name))}
+            for name in sorted(binaries)}
+
+
+def _verify_compiler_binaries(identities):
+    for name, row in identities.items():
+        if str(Path(name).resolve()) != row['path'] or _digest_file(Path(name)) != row['sha256']:
+            raise BuildError('changed compiler binary: ' + name)
+
+
+def _verify_compiled_inputs(depfiles, cwd, frozen):
+    """Verify consumed depfile inputs against separated precompile inventories."""
+    actual = compiled_inputs(depfiles, cwd)
+    result = {kind: {} for kind in frozen}
+    for path, digest in actual.items():
+        kinds = [kind for kind, inventory in frozen.items() if path in inventory]
+        if len(kinds) != 1:
+            raise BuildError('unknown dependency (not frozen): ' + path)
+        kind = kinds[0]
+        if digest != frozen[kind][path]:
+            raise BuildError('changed dependency since precompile freeze: ' + path)
+        result[kind][path] = digest
+    return result
+
+
+def _sealed_record(path):
+    from ..profiles import canonical
+    record = json.loads(Path(path).read_bytes())
+    digest = record.get('terminal_digest')
+    if digest != hashlib.sha256(canonical({k: v for k, v in record.items()
+                                         if k != 'terminal_digest'})).hexdigest():
+        raise BuildError('invalid native capture seal: ' + str(path))
+    return record
+
+
+def _verify_fact_captures(directory):
+    from ..bindings import TransportReply
+    from ..phased_observation import parse_observation
+    for name in ('fact-bounds-capture.json', 'fact-scalar-overwrite.json'):
+        path = directory / name
+        record = _sealed_record(path)
+        if record['dropped_events'] != 1:
+            raise BuildError('native fact refusal completeness mismatch: ' + name)
+        if name == 'fact-scalar-overwrite.json':
+            if not record['overflow'] or record['facts'].get('overwrite-bound') != 'small':
+                raise BuildError('native scalar overwrite corrupted prior value')
+        try:
+            parse_observation(TransportReply(0, path.read_bytes()))
+        except ValueError:
+            pass
+        else:
+            raise BuildError('native overbound capture accepted: ' + name)
+    clean = parse_observation(TransportReply(0, (directory / 'fact-bounds-clean.json').read_bytes()))
+    if clean.dropped_events or clean.overflow:
+        raise BuildError('native clean capture is incomplete')
+
+
+def _verify_claim_proof(directory):
+    from ..bindings import TransportReply
+    from ..phased_observation import parse_observation
+    files = sorted(Path(directory).iterdir())
+    captures = [p for p in files if p.suffix == '.json']
+    if len(captures) != 1 or len(files) != 2 or not (directory / 'is301-claim').is_file():
+        raise BuildError('native two-process claim proof produced unexpected files')
+    owner = (directory / 'is301-claim').read_text().splitlines()
+    record = _sealed_record(captures[0])
+    process = record['facts']['process']
+    if owner != [str(process['pid']), str(process['start_ticks']), 'claim-race']:
+        raise BuildError('native claim owner identity mismatch')
+    parse_observation(TransportReply(0, captures[0].read_bytes()))
+
+
 def _toolchain_identity(supervisor: Supervisor):
     """Collect exact compiler identity through the supervised environment."""
     row = supervisor.run(['/usr/bin/c++', '--version'])
@@ -284,12 +419,13 @@ def _toolchain_identity(supervisor: Supervisor):
 
 
 def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
-            *, overlay_root=None, workspace: Workspace = CAMPAIGN):
+            *, overlay_root=None, workspace: Workspace = CAMPAIGN,
+            issue301_authorized_extension: bool = False):
     if workspace != CAMPAIGN:
         raise BuildError('unauthorized native workspace')
     output = output_root(output, workspace)
     source = Path(source).resolve()
-    tree = Path(overlay_root).resolve() if overlay_root else (SCRATCH / 'issue301-overlay-tree')
+    tree = Path(overlay_root).absolute() if overlay_root else (SCRATCH / 'issue301-overlay-tree')
     if tree.exists():
         overlay_module.authenticate(source)
     else:
@@ -300,18 +436,44 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
     untransformed_inputs = {path: digest for path, digest in authenticated_inputs.items()
                             if path not in transformed_paths and path != 'native-observer-transformed.json'}
     recipe = assemble(tree, output)
-    with Supervisor(output, workspace=workspace) as supervisor:
+    _verify_include_paths(recipe, tree, output)
+    if type(issue301_authorized_extension) is not bool:
+        raise BuildError('issue301 extension requires explicit boolean opt-in')
+    supervisor_options = {}
+    if issue301_authorized_extension:
+        from .build import Issue301Authorization
+        supervisor_options['authorization'] = Issue301Authorization()
+    with Supervisor(output, workspace=workspace, **supervisor_options) as supervisor:
         dump(output / 'recipe.json', recipe)
         _render_templates(tree, output)
         generated_paths = ('build-info.cpp', 'ggml-version.h', 'llama-version.h', 'ui.cpp', 'ui.h')
         generated_inputs = {str(output / name): _digest_file(output / name) for name in generated_paths}
         compiler = _toolchain_identity(supervisor)
+        compiler_binaries = _compiler_binary_identities(supervisor)
+        frozen = {'tree': {str(tree / path): digest for path, digest in authenticated_inputs.items()},
+                  'generated': generated_inputs, 'system': _freeze_system_inputs(supervisor)}
+        dump(output / 'precompile-inputs.json', frozen)
+        depfiles = []
         for command in recipe['commands']:
+            _verify_compiler_binaries(compiler_binaries)
             supervisor.run(command)
+            if '-c' in command:
+                dep = Path(command[command.index('-MF') + 1])
+                _verify_compiled_inputs([dep], output, frozen)
+                depfiles.append(dep)
+        consumed_inputs = _verify_compiled_inputs(depfiles, output, frozen)
         # Close the tampering window before any fixture execution or manifests.
         verify_tree_inputs(tree, source)
         _verify_generated_inputs(generated_inputs)
+        _verify_compiler_binaries(compiler_binaries)
+        # Bounded no-model executable smoke check: build identity only, no
+        # model loading, inference, device qualification or performance claim.
+        supervisor.run([str(output / 'llama-server'), '--version'],
+                       seconds=supervisor.limits.fixture_seconds)
         # Patched tiny fixture: CPU then RPC loopback, both observed.
+        export_root = output / 'exports'
+        for name in ('fixture-cpu', 'rpc-server', 'fixture-rpc'):
+            (export_root / name).mkdir(parents=True, exist_ok=True)
         cpu_dir = output / 'fixture-cpu'
         rpc_dir = output / 'fixture-rpc'
         cpu_dir.mkdir()
@@ -320,7 +482,6 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
                        seconds=supervisor.limits.fixture_seconds,
                        env_extra={'IS301_OBSERVE': '1',
                                   'IS301_EXPORT_DIR': str(output / 'exports' / 'fixture-cpu')})
-        (output / 'exports' / 'fixture-cpu').mkdir(parents=True, exist_ok=True)
         import socket
         with socket.socket() as reservation:
             reservation.bind(('127.0.0.1', 0))
@@ -328,12 +489,9 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         cmd = [str(output / 'ggml-rpc-server'), '-H', '127.0.0.1', '-p', str(port),
                '-d', 'CPU', '-t', '1']
         from .build import wait_listener
-        export_root = output / 'exports'
-        export_root.mkdir()
         with supervisor.server(cmd, env_extra={'IS301_OBSERVE': '1',
                                               'IS301_RPC_ENDPOINT': f'127.0.0.1:{port}',
                                               'IS301_EXPORT_DIR': str(export_root / 'rpc-server')}) as server:
-            (export_root / 'rpc-server').mkdir()
             wait_listener(supervisor, server, port)
             supervisor.run([str(output / 'native-buffer-graph-observed'), 'rpc', str(rpc_dir)],
                            seconds=supervisor.limits.fixture_seconds,
@@ -346,57 +504,71 @@ def execute(source: Path = SOURCE, output: Path = SCRATCH / 'issue301-full',
         supervisor.run([str(output / 'native-fact-bounds'), str(fact_bounds_dir)],
                        seconds=supervisor.limits.fixture_seconds,
                        env_extra={'IS301_OBSERVE': '1'})
-        # Per-executable /2 manifests from actual build facts.
-        manifests = {}
-        # Static per-target archives mirror the pin's CMake static libraries;
-        # each archive's bytes are its EXACT linked member objects. There are
-        # no dynamically loaded backend libraries in this CPU-only static
-        # build (no GGML_BACKEND_DL), and the manifests say so by naming the
-        # actual archives rather than a fabricated monolithic artifact.
-        import subprocess as _sp
-        ggml_count = len(GGML_BASE) + len(GGML_REG) + len(GGML_CPU) + len(GGML_RPC)
-        archive_members = {
-            'llama-server': ('libllama-full.a', list(range(len(recipe['sources']) + 4))),
-            'ggml-rpc-server': ('libggml-static.a',
-                                list(range(ggml_count)) + [len(recipe['sources']) + 1]),
-            'native-buffer-graph-observed': ('libggml-static.a',
-                                list(range(ggml_count)) + [len(recipe['sources']) + 1]),
-            'native-fact-bounds': ('libggml-static.a',
-                                list(range(ggml_count)) + [len(recipe['sources']) + 1]),
-        }
-        link_inputs = {}
-        executable_hashes = {}
-        for exe in ('llama-server', 'ggml-rpc-server', 'native-buffer-graph-observed',
-                    'native-fact-bounds'):
-            name, members = archive_members[exe]
-            objects = [output / f'{i:04d}.o' for i in members]
-            ordered_hashes = [_digest_file(obj) for obj in objects]
+        _verify_fact_captures(fact_bounds_dir)
+        claim_dir = export_root / 'claim-proof'
+        claim_dir.mkdir()
+        supervisor.run([str(output / 'native-export-claim'), str(claim_dir)],
+                       seconds=supervisor.limits.fixture_seconds,
+                       env_extra={'IS301_OBSERVE': '1', 'IS301_EXPORT_DIR': str(claim_dir)})
+        _verify_claim_proof(claim_dir)
+        # Create each distinct library closure once. These exclude executable
+        # mains; ordered full executable membership is recorded separately.
+        archive_members = _archive_membership(recipe)
+        archive_hashes = {}
+        for name, objects in archive_members.items():
+            archive = output / name
+            supervisor.run(['/usr/bin/ar', 'rc', str(archive), *objects])
+            listing = supervisor.run(['/usr/bin/ar', 't', str(archive)])
+            if Path(listing['stdout']).read_text().splitlines() != [Path(p).name for p in objects]:
+                raise BuildError('archive ordered membership mismatch: ' + name)
+            archive_hashes[name] = _digest_file(archive)
+        manifests, link_inputs, executable_hashes = {}, {}, {}
+        for exe, objects in _link_membership(recipe).items():
+            ordered_hashes = [_digest_file(Path(obj)) for obj in objects]
+            command = next(c for c in recipe['commands'] if '-c' not in c and
+                           Path(c[c.index('-o') + 1]).name == exe)
             link_inputs[exe] = {
-                'objects': [str(obj) for obj in objects],
+                'objects': objects, 'object_sha256': ordered_hashes, 'command': command,
                 'sha256': hashlib.sha256(b''.join(bytes.fromhex(d) for d in ordered_hashes)).hexdigest(),
             }
-            archive = output / name
-            _sp.run(['/usr/bin/ar', 'rc', str(archive), *[str(o) for o in objects]], check=True)
+            name = 'libllama-full.a' if exe == 'llama-server' else 'libggml-static.a'
             executable_hashes[exe] = _digest_file(output / exe)
             body = build_manifest_body(
-                compiler=compiler,
-                options=tuple(CFLAGS),
+                compiler=compiler, options=tuple(CFLAGS),
                 executable_sha256=executable_hashes[exe],
-                backend_libraries=((name, _digest_file(archive)),),
+                backend_libraries=((name, archive_hashes[name]),),
                 patch_sha256=manifest_meta['patch_sha256'],
-                transformed_manifest_sha256=_digest_file(
-                    FIXTURES / 'native-observer-transformed.json'))
+                transformed_manifest_sha256=_digest_file(tree / 'native-observer-transformed.json'))
             manifests[exe] = body
             dump(output / f'{exe}.build-manifest.json', body)
-        dump(output / 'provenance.json', _provenance_body(
+        provenance = _provenance_body(
             revision=overlay_module.PIN, tree=overlay_module.TREE,
             retained_patch_sha256=manifest_meta['patch_sha256'],
-            transformed_manifest_sha256=_digest_file(FIXTURES / 'native-observer-transformed.json'),
-            transformed_sources=manifest_meta['files'],
-            untransformed_inputs=untransformed_inputs,
+            transformed_manifest_sha256=_digest_file(tree / 'native-observer-transformed.json'),
+            transformed_sources=manifest_meta['files'], untransformed_inputs=untransformed_inputs,
             generated_inputs=generated_inputs, compiler_identity=compiler,
             link_inputs=link_inputs, executable_sha256=executable_hashes,
-            overlay_root=tree, legacy_compiler=compiler))
+            overlay_root=tree, legacy_compiler=compiler)
+        provenance.update({
+            'authenticated_tree_inputs': authenticated_inputs,
+            'consumed_inputs': consumed_inputs, 'compiler_binaries': compiler_binaries,
+            'compile_objects': [
+                {'command': c, 'object': c[c.index('-o') + 1],
+                 'sha256': _digest_file(Path(c[c.index('-o') + 1])),
+                 'depfile': c[c.index('-MF') + 1]}
+                for c in recipe['commands'] if '-c' in c],
+            'backend_archives': {name: {'objects': objects, 'sha256': archive_hashes[name]}
+                                 for name, objects in archive_members.items()},
+        })
+        # Recheck source/generated/consumed and archive bytes before publication.
+        verify_tree_inputs(tree, source)
+        _verify_generated_inputs(generated_inputs)
+        _verify_compiled_inputs(depfiles, output, frozen)
+        _verify_compiler_binaries(compiler_binaries)
+        for name, digest in archive_hashes.items():
+            if _digest_file(output / name) != digest:
+                raise BuildError('changed backend archive: ' + name)
+        dump(output / 'provenance.json', provenance)
     return output
 
 
@@ -407,8 +579,11 @@ if __name__ == '__main__':
     parser.add_argument('--source', type=Path, default=SOURCE)
     parser.add_argument('--output', type=Path, default=SCRATCH / 'issue301-full')
     parser.add_argument('--overlay-root', type=Path, default=None)
+    parser.add_argument('--issue301-authorized-extension', action='store_true',
+                        help='explicit #301 approval: 6600s on the pinned continuous ledger only')
     args = parser.parse_args()
     if args.execute:
-        print(execute(args.source, args.output, overlay_root=args.overlay_root))
+        print(execute(args.source, args.output, overlay_root=args.overlay_root,
+                      issue301_authorized_extension=args.issue301_authorized_extension))
     else:
         print(json.dumps(assemble(args.source, args.output), sort_keys=True, indent=2))

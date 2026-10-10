@@ -357,6 +357,56 @@ STOP item stands (~700-750s additional supervised budget required).
   derive script is verified idempotent (byte-stable regeneration).
 
 
+## Maintainer review 5480376929 — second correction and scoped build authorization
+
+The reviewed starting head is `7880aacaa78dddf893697352395d2d9502480ea6`.
+All corrections are additive; the expected main remains
+`008e0727a08191d7ba47c0b7ea28a6493e662de1`. This is still an OPEN/DRAFT,
+unmerged deliverable, not issue acceptance or physical qualification.
+
+The six findings are corrected offline: compilation consumes only the
+materialized authenticated tree and pre-frozen generated/system dependencies;
+one fixed export-directory claim binds PID/start ticks and refuses stale or
+inherited ownership; fresh execution prepares all export directories before
+launch; scalar bounds precede both insertion and replacement; no-follow
+enumeration refuses foreign directories and symlinks; complete ordered
+executable links remain separate from main-free archive membership.
+
+Parent validation: 418 tests in the complete `test_issue299_*.py` population,
+plus 25 isolated budget-authorization tests, passed with no skips. The affected
+native/budget population contains 114 tests. Doctor, retention, planner and
+workflow parity checks pass. Reviewed-source RED controls are retained as
+source-bound/feature-absence and behavioral controls as applicable; they are
+not described as native execution. Real two-process exporter and scalar
+replacement-refusal proofs are in the authenticated native fixture closure
+and remain unexecuted until the supervised build below.
+
+The user expressly authorized an additional 1200 cumulative seconds for #301,
+superseding the earlier stop-before-compilation instruction. The exact original
+ledger has 94 phases, 5328.017504271702 seconds, SHA-256
+`ca237e383609bef6c62414ef7c132e2d5716eb13a016e84960e67b0a326a5c04`.
+The issue-specific explicit authorization pins that history and workspace and
+permits a 6600-second cumulative ceiling, leaving 1271.982495728298 seconds
+before the attempt. The unrelated default remains 5400 seconds; all other
+resource limits are unchanged. No ledger history is recreated or substituted.
+
+The one-shot recipe was checked dry: 3595 authenticated tree files, 339
+translation units and five executable links. `llama-server` consumes 335
+ordered objects including its main. No prior full-closure objects are reused.
+Reproduction explicitly opts into this authorization:
+
+```
+.venv/bin/python -m inferswarm.operator.native_observer.full_build --execute \
+  --issue301-authorized-extension \
+  --overlay-root /home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-authenticated-tree \
+  --output /home/zutfen/.hermes/cache/scratch/is299/native-build/issue301-round2-full
+```
+
+At this checkpoint compilation has NOT started. Genuine historical captures
+and every historical phase remain unchanged. Native results, independent
+SPEC then QUALITY reviews and the final exact-head handoff will be recorded
+additively after execution. #302 remains blocked; #299 is open; #300 is untouched.
+
 ## Remaining work
 
 1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.

@@ -552,6 +552,439 @@ class NativeBuildTests(unittest.TestCase):
                 with self.assertRaisesRegex(ov.OverlayError, 'dangling'):
                     ov.verify_tree_inputs(derived, source)
 
+    def test_compile_inputs_come_only_from_materialized_tree(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            tree, out = root / 'tree', root / 'out'
+            recipe = fb.assemble(Path('/nonexistent-tree'), out)
+            forbidden = 'tests/fixtures/issue299/overlay'
+            self.assertFalse(any(forbidden in part for cmd in recipe['commands'] for part in cmd))
+            for cmd in recipe['commands']:
+                if '-c' in cmd:
+                    src = Path(cmd[cmd.index('-c') + 1]).resolve()
+                    self.assertTrue(src.is_relative_to(Path('/nonexistent-tree').resolve()) or src.is_relative_to(out))
+                for arg in cmd:
+                    if arg.startswith('-I'):
+                        inc = Path(arg[2:]).resolve()
+                        self.assertTrue(inc.is_relative_to(Path('/nonexistent-tree').resolve()) or inc.is_relative_to(out))
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_worktree_only_dirty_sink_cannot_reach_compilation(self):
+        # Review A: a dirty repo-worktree overlay file must be neither a
+        # compile input (assemble uses only tree/out paths) nor able to pass
+        # verification (materialized bytes are checked against the retained
+        # manifest digests).
+        from inferswarm.operator.native_observer import full_build as fb
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-sink-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            pinned_bytes = b'pinned sink bytes\n'
+            (ov.OVERLAY_DIR / 'is301_sink.cpp').write_bytes(pinned_bytes)
+            ov.NEW_FILES = ('is301_sink.cpp',)
+            manifest = json.loads((ov.FIXTURES / 'native-observer-transformed.json').read_text())
+            manifest['files'] = [{'path': 'is301_sink.cpp',
+                                  'sha256': hashlib.sha256(pinned_bytes).hexdigest()}]
+            (ov.FIXTURES / 'native-observer-transformed.json').write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+            derived = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, derived)
+                self.assertEqual((derived / 'is301_sink.cpp').read_bytes(), pinned_bytes)
+                # Dirty the WORKTREE copy only, after materialization: the
+                # materialized tree stays authenticated (verification passes)
+                # and — decisively — the dirty bytes cannot reach compilation
+                # because assemble() consumes only tree/out paths.
+                (ov.OVERLAY_DIR / 'is301_sink.cpp').write_bytes(b'foreign worktree bytes\n')
+                ov.verify_tree_inputs(derived, source)
+                # Dirty TREE copies are still refused (authentication holds).
+                (derived / 'is301_sink.cpp').write_bytes(b'foreign tree bytes\n')
+                with self.assertRaisesRegex(ov.OverlayError, 'is301_sink.cpp'):
+                    ov.verify_tree_inputs(derived, source)
+            recipe = fb.assemble(derived, root / 'out')
+            self.assertFalse(any(str(ov.OVERLAY_DIR) in part
+                                 for cmd in recipe['commands'] for part in cmd))
+            # The sink TU must compile from the authenticated TREE copy, not
+            # from any repository overlay path (old code compiled
+            # REPO/tests/fixtures/issue299/overlay/is301_sink.cpp).
+            sink_cmd = next(cmd for cmd in recipe['commands']
+                            if 'is301_sink.cpp' in ' '.join(cmd))
+            self.assertEqual(str(derived / 'is301_sink.cpp'),
+                             sink_cmd[sink_cmd.index('-c') + 1])
+
+    def test_symlink_to_existing_directory_is_refused(self):
+        from inferswarm.operator.native_observer import overlay
+        scratch = Path('/home/zutfen/.hermes/cache/scratch')
+        with tempfile.TemporaryDirectory(prefix='p1c-foreigndir-', dir=scratch) as tmp:
+            root = Path(tmp)
+            source, revision, tree = self.fake_pin(root)
+            ov = self.fake_overlay(source, revision, tree)
+            destination = root / 'derived'
+            with mock.patch.object(ov, 'PIN', revision), mock.patch.object(ov, 'TREE', tree):
+                ov.apply(source, destination)
+                target = root / 'somedir'
+                target.mkdir()
+                (destination / 'common/foreigndir').symlink_to(target, target_is_directory=True)
+                with self.assertRaisesRegex(ov.OverlayError, 'foreigndir'):
+                    ov.verify_tree_inputs(destination, source)
+
+    def test_foreign_empty_directory_is_refused(self):
+        source, revision, tree = self.fake_pin(self.workspace_root)
+        ov = self.fake_overlay(source, revision, tree)
+        derived = self.workspace_root / 'derived'
+        with mock.patch.object(ov, 'Path', wraps=Path):
+            # Materialize the tiny authenticated fixture without scratch policy.
+            import shutil
+            shutil.copytree(source / 'common', derived / 'common')
+            shutil.copyfile(ov.FIXTURES / 'native-observer-transformed.json',
+                            derived / 'native-observer-transformed.json')
+            ov.verify_tree_inputs(derived, source)
+            (derived / 'foreign-empty').mkdir()
+            with self.assertRaisesRegex(ov.OverlayError, 'foreign-empty'):
+                ov.verify_tree_inputs(derived, source)
+
+    def test_symlink_overlay_root_is_refused_without_following(self):
+        source, revision, tree = self.fake_pin(self.workspace_root)
+        ov = self.fake_overlay(source, revision, tree)
+        import shutil
+        derived = self.workspace_root / 'derived'
+        shutil.copytree(source / 'common', derived / 'common')
+        shutil.copyfile(ov.FIXTURES / 'native-observer-transformed.json',
+                        derived / 'native-observer-transformed.json')
+        link = self.workspace_root / 'linked-root'
+        for target in (derived, self.workspace_root / 'missing'):
+            link.symlink_to(target, target_is_directory=True)
+            with self.assertRaisesRegex(ov.OverlayError, 'root'):
+                ov.verify_tree_inputs(link, source)
+            link.unlink()
+
+    def test_link_membership_keeps_actual_non_numeric_object_paths(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        command = ['/usr/bin/c++', str(self.root / 'library-member.o'),
+                   str(self.root / 'server-main.o'), '-pthread', '-o',
+                   str(self.root / 'llama-server')]
+        self.assertEqual(fb._link_membership({'commands': [command]}),
+                         {'llama-server': command[1:3]})
+
+    def test_archive_membership_separates_main_translation_units(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        recipe = fb.assemble(self.source, self.root)
+        archives = fb._archive_membership(recipe)
+        compiled = {c[c.index('-o') + 1]: c[c.index('-c') + 1]
+                    for c in recipe['commands'] if '-c' in c}
+        self.assertEqual(set(archives), {'libggml-static.a', 'libllama-full.a'})
+        for members in archives.values():
+            self.assertTrue(members)
+            self.assertFalse(any(Path(compiled[p]).name in
+                ('main.cpp', 'rpc-server.cpp', 'native-buffer-graph-observed.cpp',
+                 'native-fact-bounds.cpp', 'native-export-claim.cpp') for p in members))
+        self.assertIn(str(self.source / 'is301_sink.cpp'),
+                      [compiled[p] for p in archives['libggml-static.a']])
+
+    def test_full_recipe_emits_system_inclusive_depfiles(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        recipe = fb.assemble(self.source, self.root)
+        for command in recipe['commands']:
+            if '-c' in command:
+                self.assertIn('-MD', command)
+                self.assertEqual(command[command.index('-MF') + 1],
+                                 str(Path(command[command.index('-o') + 1]).with_suffix('.d')))
+
+    def test_full_dependency_verification_uses_precompile_freeze(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        roots = {kind: self.workspace_root / kind for kind in ('tree', 'generated', 'system')}
+        inventories = {}
+        for kind, root in roots.items():
+            root.mkdir()
+            header = root / (kind + '.h')
+            header.write_text(kind)
+            inventories[kind] = {str(header): hashlib.sha256(header.read_bytes()).hexdigest()}
+        paths = [next(iter(items)) for items in inventories.values()]
+        dep = self.workspace_root / 'actual.d'
+        dep.write_text('object.o: ' + ' '.join(self.make_escape(p) for p in paths) + '\n')
+        actual = fb._verify_compiled_inputs([dep], self.workspace_root, inventories)
+        self.assertEqual(actual, inventories)
+        Path(paths[2]).write_text('changed since freeze')
+        with self.assertRaisesRegex(self.b.BuildError, 'changed dependency'):
+            fb._verify_compiled_inputs([dep], self.workspace_root, inventories)
+        Path(paths[2]).unlink()
+        with self.assertRaisesRegex(self.b.BuildError, 'missing dependency'):
+            fb._verify_compiled_inputs([dep], self.workspace_root, inventories)
+        foreign = self.workspace_root / 'foreign.h'
+        foreign.write_text('not frozen')
+        dep.write_text('object.o: ' + self.make_escape(foreign) + '\n')
+        with self.assertRaisesRegex(self.b.BuildError, 'unknown dependency'):
+            fb._verify_compiled_inputs([dep], self.workspace_root, inventories)
+        with self.assertRaisesRegex(self.b.BuildError, 'missing depfile'):
+            fb._verify_compiled_inputs([self.workspace_root / 'missing.d'], self.workspace_root, inventories)
+
+    def test_full_recipe_refuses_foreign_include_search(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        recipe = fb.assemble(self.source, self.root)
+        fb._verify_include_paths(recipe, self.source, self.root)
+        recipe['commands'][0].insert(1, '-I/foreign/mutable-include')
+        with self.assertRaisesRegex(self.b.BuildError, 'foreign include'):
+            fb._verify_include_paths(recipe, self.source, self.root)
+
+    def test_system_headers_are_frozen_before_depfile_verification(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        system = self.workspace_root / 'compiler-include'
+        system.mkdir()
+        header = system / 'system.h'
+        header.write_text('frozen compiler header')
+        listing = self.workspace_root / 'compiler.stderr'
+        listing.write_text('#include <...> search starts here:\n ' + str(system) + '\nEnd of search list.\n')
+        boundary = mock.Mock(root=self.workspace_root)
+        boundary.run.return_value = {'stderr': str(listing)}
+        frozen = fb._freeze_system_inputs(boundary)
+        self.assertEqual(frozen, {str(header): hashlib.sha256(header.read_bytes()).hexdigest()})
+        self.assertEqual(boundary.run.call_count, 2)
+        for call in boundary.run.call_args_list:
+            self.assertIn('-v', call.args[0])
+            self.assertIn('/dev/null', call.args[0])
+        header.write_text('changed after freeze')
+        dep = self.workspace_root / 'header.d'
+        dep.write_text('object.o: ' + str(header) + '\n')
+        with self.assertRaisesRegex(self.b.BuildError, 'changed dependency'):
+            fb._verify_compiled_inputs([dep], self.workspace_root, {'system': frozen})
+        listing.write_text('no compiler search roots')
+        with self.assertRaisesRegex(self.b.BuildError, 'missing compiler include'):
+            fb._freeze_system_inputs(boundary)
+
+    def test_compiler_binary_identity_is_frozen_and_rechecked(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        program = self.workspace_root / 'synthetic-compiler-program'
+        program.write_text('test boundary, never executed')
+        listing = self.workspace_root / 'compiler.stdout'
+        listing.write_text(str(program) + '\n')
+        boundary = mock.Mock()
+        boundary.run.return_value = {'stdout': str(listing)}
+        identities = fb._compiler_binary_identities(boundary)
+        self.assertEqual(identities[str(program)]['sha256'], hashlib.sha256(program.read_bytes()).hexdigest())
+        fb._verify_compiler_binaries(identities)
+        program.write_text('changed after compiler freeze')
+        with self.assertRaisesRegex(self.b.BuildError, 'changed compiler binary'):
+            fb._verify_compiler_binaries(identities)
+
+    def _synthetic_sealed_capture(self, path, **updates):
+        # Resealed retained envelope used only for Python verifier controls;
+        # these synthetic bytes are NOT proof of a native run.
+        from inferswarm.operator.profiles import canonical
+        fixture = Path(__file__).parent / 'fixtures/issue299/native-captures/fact-bounds/clean.json'
+        record = json.loads(fixture.read_bytes())
+        record.update(updates)
+        record['terminal_digest'] = hashlib.sha256(canonical({k: v for k, v in record.items()
+                                                             if k != 'terminal_digest'})).hexdigest()
+        path.write_text(json.dumps(record))
+        return record
+
+    def test_parent_fact_verifier_requires_preserved_scalar_and_valid_seal(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        append = self.workspace_root / 'fact-bounds-capture.json'
+        scalar = self.workspace_root / 'fact-scalar-overwrite.json'
+        clean = self.workspace_root / 'fact-bounds-clean.json'
+        self._synthetic_sealed_capture(append, dropped_events=1)
+        record = self._synthetic_sealed_capture(scalar, dropped_events=1, overflow=True,
+                                                facts={'overwrite-bound': 'small'})
+        self._synthetic_sealed_capture(clean)
+        fb._verify_fact_captures(self.workspace_root)
+        self._synthetic_sealed_capture(scalar, dropped_events=1, overflow=True,
+                                       facts={'overwrite-bound': 'corrupted'})
+        with self.assertRaisesRegex(self.b.BuildError, 'corrupted prior value'):
+            fb._verify_fact_captures(self.workspace_root)
+        scalar.write_text(json.dumps(record).replace('"small"', 'small'))
+        with self.assertRaises(json.JSONDecodeError):
+            fb._verify_fact_captures(self.workspace_root)
+        record['terminal_digest'] = 'f' * 64
+        scalar.write_text(json.dumps(record))
+        with self.assertRaisesRegex(self.b.BuildError, 'invalid native capture seal'):
+            fb._verify_fact_captures(self.workspace_root)
+
+    def test_parent_claim_verifier_binds_owner_to_capture(self):
+        from inferswarm.operator.native_observer import full_build as fb
+        capture = self.workspace_root / 'claim-race-123-0000.json'
+        self._synthetic_sealed_capture(capture, facts={'process': {'pid': 123, 'start_ticks': 456}})
+        claim = self.workspace_root / 'is301-claim'
+        claim.write_text('123\n456\nclaim-race\n')
+        fb._verify_claim_proof(self.workspace_root)
+        claim.write_text('123\n457\nclaim-race\n')
+        with self.assertRaisesRegex(self.b.BuildError, 'owner identity mismatch'):
+            fb._verify_claim_proof(self.workspace_root)
+        claim.write_text('123\n456\nclaim-race\n')
+        (self.workspace_root / 'foreign.tmp').write_text('unexpected')
+        with self.assertRaisesRegex(self.b.BuildError, 'unexpected files'):
+            fb._verify_claim_proof(self.workspace_root)
+
+    def test_execute_prepares_export_dirs_before_fixture_launch(self):
+        self._synthetic_execute_control()
+
+    def test_fresh_execute_archive_bytes_and_full_link_inputs_are_stable(self):
+        # Isolate F from the independently tested C directory-order defect.
+        self._synthetic_execute_control(archive_only=True)
+
+    def test_execute_refuses_depfile_drift_before_linking(self):
+        for failure in ('missing depfile', 'changed dependency', 'unknown dependency'):
+            with self.subTest(failure=failure):
+                self._synthetic_execute_control(dep_failure=failure)
+
+    def _synthetic_execute_control(self, *, archive_only=False, dep_failure=None):
+        # Review C: every export directory must exist before the fixture or
+        # daemon that writes into it is launched; no duplicate non-idempotent
+        # mkdir may remain. Proven with a fake supervisor that asserts, at the
+        # moment each env-carrying command runs, that its export dir exists.
+        import tempfile
+        from unittest import mock
+        from inferswarm.operator.native_observer import full_build as fb
+        from inferswarm.operator.native_observer.build import Workspace
+        scratch = self.workspace_root
+        with tempfile.TemporaryDirectory(prefix='p1c-order-', dir=scratch) as tmp:
+            root = Path(tmp)
+            workspace = Workspace(root / 'campaign')
+            output = root / 'campaign' / 'run1'
+
+            class FakeChild:
+                pid = 4242
+
+            class FakeSupervisor:
+                limits = type('L', (), {'fixture_seconds': 60})()
+                launched = []
+                archives = {}
+                archive_calls = []
+                link_commands = []
+
+                def __init__(self, out, workspace=None):
+                    Path(out).mkdir(parents=True, exist_ok=True)
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *exc):
+                    return False
+
+                def run(self, command, seconds=None, env_extra=None):
+                    # Materialize the command's declared output so downstream
+                    # provenance digesting sees real files (no compile happens).
+                    if '-o' in command:
+                        Path(command[command.index('-o') + 1]).parent.mkdir(
+                            parents=True, exist_ok=True)
+                        Path(command[command.index('-o') + 1]).write_bytes(('SYNTHETIC:' + ' '.join(command)).encode())
+                    if '-c' not in command and '-o' in command:
+                        self.link_commands.append(command)
+                    if '-MF' in command and dep_failure != 'missing depfile':
+                        dependency = output / 'ui.h'
+                        if dep_failure == 'changed dependency':
+                            dependency.write_text('mutated after precompile freeze')
+                        elif dep_failure == 'unknown dependency':
+                            dependency = root / 'unknown.h'
+                            dependency.write_text('not in any frozen inventory')
+                        Path(command[command.index('-MF') + 1]).write_text(
+                            'obj.o: ' + str(dependency) + '\n')
+                    if command[:2] == ['/usr/bin/ar', 'rc']:
+                        archive = Path(command[2])
+                        self.archives[str(archive)] = [Path(p).name for p in command[3:]]
+                        self.archive_calls.append(str(archive))
+                        archive.write_bytes(b'SYNTHETIC-ARCHIVE:' + b''.join(Path(p).read_bytes() for p in command[3:]))
+                    if command[:2] == ['/usr/bin/ar', 't']:
+                        listing = output / ('listing-' + Path(command[2]).name)
+                        listing.write_text('\n'.join(self.archives[command[2]]) + '\n')
+                        return {'stdout': str(listing)}
+                    if env_extra and 'IS301_EXPORT_DIR' in env_extra:
+                        export_dir = Path(env_extra['IS301_EXPORT_DIR'])
+                        if archive_only:
+                            export_dir.mkdir(parents=True, exist_ok=True)
+                        if not export_dir.is_dir():
+                            raise AssertionError(
+                                'export dir missing at launch: ' + str(export_dir))
+                        FakeSupervisor.launched.append(Path(command[0]).name)
+                    return {'command': list(map(str, command))}
+
+                class _ServerCtx:
+                    def __init__(self, sup, cmd, env_extra):
+                        self.sup, self.cmd, self.env_extra = sup, cmd, env_extra
+                        self.child = FakeChild()
+
+                    def __enter__(self):
+                        export_dir = Path(self.env_extra['IS301_EXPORT_DIR'])
+                        if archive_only:
+                            export_dir.mkdir(parents=True, exist_ok=True)
+                        if not export_dir.is_dir():
+                            raise AssertionError(
+                                'export dir missing at daemon start: ' + str(export_dir))
+                        FakeSupervisor.launched.append(Path(self.cmd[0]).name)
+                        return self.child
+
+                    def __exit__(self, *exc):
+                        return False
+
+                def server(self, command, env_extra=None):
+                    return FakeSupervisor._ServerCtx(self, command, env_extra)
+
+            def fake_render(tree, out):
+                for name in ('build-info.cpp', 'ggml-version.h',
+                             'llama-version.h', 'ui.cpp', 'ui.h'):
+                    (Path(out) / name).write_bytes(b'generated\n')
+
+            from inferswarm.operator.native_observer import build as build_module
+            original_mkdir = Path.mkdir
+            def controlled_mkdir(path, mode=0o777, parents=False, exist_ok=False):
+                if archive_only and path.is_relative_to(output / 'exports'):
+                    exist_ok = True
+                return original_mkdir(path, mode=mode, parents=parents, exist_ok=exist_ok)
+            with mock.patch.object(Path, 'mkdir', controlled_mkdir), \
+                 mock.patch.object(fb, 'CAMPAIGN', workspace), \
+                 mock.patch.object(fb, 'Supervisor', FakeSupervisor), \
+                 mock.patch.object(fb, '_render_templates', fake_render), \
+                 mock.patch.object(fb, '_toolchain_identity', return_value='synthetic-toolchain'), \
+                 mock.patch.object(fb, '_freeze_system_inputs', return_value={}, create=True), \
+                 mock.patch.object(fb, '_compiler_binary_identities', return_value={}, create=True), \
+                 mock.patch.object(fb, '_verify_claim_proof', create=True), \
+                 mock.patch.object(fb, '_verify_fact_captures', create=True), \
+                 mock.patch.object(fb, 'verify_tree_inputs', return_value={}), \
+                 mock.patch.object(fb.subprocess, 'run', side_effect=
+                     lambda command, **kwargs: FakeSupervisor.run(FakeSupervisor, command)), \
+                 mock.patch.object(fb, 'overlay_module') as fake_overlay_module, \
+                 mock.patch.object(build_module, 'wait_listener'):
+                fake_overlay_module.PIN = 'fake-pin'
+                fake_overlay_module.TREE = 'fake-tree'
+                fake_overlay_module.TRANSFORMED = ()
+                fake_overlay_module.NEW_FILES = ()
+                def fake_apply(source, tree):
+                    Path(tree).mkdir(parents=True)
+                    (Path(tree) / 'native-observer-transformed.json').write_text(json.dumps({
+                        'patch_sha256': 'a' * 64, 'files': []}))
+                fake_overlay_module.apply.side_effect = fake_apply
+                if dep_failure:
+                    with self.assertRaisesRegex(fb.BuildError, dep_failure):
+                        fb.execute(source=root / 'fake-source', output=output,
+                                   overlay_root=root / 'fake-tree', workspace=workspace)
+                    self.assertEqual(FakeSupervisor.launched, [])
+                    self.assertEqual(FakeSupervisor.link_commands, [])
+                    return
+                fb.execute(source=root / 'fake-source', output=output, overlay_root=root / 'fake-tree', workspace=workspace)
+            for name in ('fixture-cpu', 'rpc-server', 'fixture-rpc'):
+                self.assertTrue((output / 'exports' / name).is_dir(), name)
+            self.assertIn('native-buffer-graph-observed', FakeSupervisor.launched)
+            provenance = json.loads((output / 'provenance.json').read_text())
+            recipe = json.loads((output / 'recipe.json').read_text())
+            # Synthetic boundary artifacts exercise wiring, NEVER native evidence.
+            self.assertEqual(len(FakeSupervisor.archive_calls), len(set(FakeSupervisor.archive_calls)))
+            for exe, row in provenance['link_inputs'].items():
+                command = next(c for c in recipe['commands']
+                               if '-c' not in c and Path(c[c.index('-o') + 1]).name == exe)
+                self.assertEqual(row['command'], command)
+                self.assertEqual(row['objects'], [a for a in command if a.endswith('.o')])
+                self.assertEqual(row['object_sha256'], [hashlib.sha256(Path(p).read_bytes()).hexdigest()
+                                                        for p in row['objects']])
+                manifest = json.loads((output / (exe + '.build-manifest.json')).read_text())
+                for library in manifest['backend_libraries']:
+                    self.assertEqual(library['sha256'], hashlib.sha256((output / library['name']).read_bytes()).hexdigest())
+            compiles = {c[c.index('-o') + 1]: c[c.index('-c') + 1] for c in recipe['commands'] if '-c' in c}
+            server_sources = [compiles[o] for o in provenance['link_inputs']['llama-server']['objects']]
+            self.assertIn(str(root / 'fake-tree' / 'tools/server/main.cpp'), server_sources)
+            for members in FakeSupervisor.archives.values():
+                for member in members:
+                    self.assertNotIn(Path(compiles[str(output / member)]).name,
+                                     ('main.cpp', 'rpc-server.cpp', 'native-buffer-graph-observed.cpp',
+                                      'native-fact-bounds.cpp', 'native-export-claim.cpp'))

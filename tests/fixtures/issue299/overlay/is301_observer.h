@@ -19,6 +19,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -135,6 +137,22 @@ inline long long pid() {
 #endif
 }
 
+// Linux /proc field 22: kernel process-start clock ticks (not wall time).
+// Parse after the final ')' because comm can contain spaces/parentheses.
+inline std::string process_start_ticks() {
+    std::ifstream input("/proc/self/stat");
+    std::string line, value;
+    if (!std::getline(input, line)) return {};
+    const size_t end = line.rfind(')');
+    if (end == std::string::npos) return {};
+    std::istringstream fields(line.substr(end + 1));
+    for (int field = 3; field <= 22; ++field) {
+        if (!(fields >> value)) return {};
+    }
+    if (value.empty() || value.find_first_not_of("0123456789") != std::string::npos) return {};
+    return value;
+}
+
 inline long long now_ns() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -197,6 +215,8 @@ struct facts_builder {
     }
     void add(const std::string & key, const std::string & canonical_value) {
         std::lock_guard<std::mutex> lock(mu);
+        static const size_t FACT_BOUND = 4096;
+        if (canonical_value.size() > FACT_BOUND) { dropped++; overflowed = true; return; }
         for (auto & row : rows) {
             if (row.first == key) {
                 // Scalar overwrite onto an accumulated array would corrupt the
@@ -205,7 +225,6 @@ struct facts_builder {
                 row.second = canonical_value; return;
             }
         }
-        if (canonical_value.size() > 4096) { dropped++; return; }  // bounded scalar facts
         rows.emplace_back(key, canonical_value);
     }
     // Append one canonical element to the array value under key (bounded).
@@ -353,9 +372,23 @@ inline void export_capture(const char * phase, const char * stream_kind,
     if (export_dir.empty()) return;
     static const int MAX_EXPORTS = 64;
     static int export_counter = 0;
+    static long long owner_pid = 0;
+    static std::string owner_start;
+    // Reject fork reentry before touching an inherited mutex/state.
+    static const long long exporter_pid = pid();
+    const long long process_id = pid();
+    if (exporter_pid != process_id) {
+        std::fprintf(stderr, "is301: inherited export ownership refused\n");
+        return;
+    }
     static std::mutex export_mu;
     std::lock_guard<std::mutex> export_lock(export_mu);
-    const long long process_id = pid();
+    const std::string start_ticks = process_start_ticks();
+    if (start_ticks.empty() || (owner_pid != 0 &&
+        (owner_pid != process_id || owner_start != start_ticks))) {
+        std::fprintf(stderr, "is301: export owner identity mismatch\n");
+        return;
+    }
     if (export_counter >= MAX_EXPORTS) {
         std::fprintf(stderr, "is301: export cap reached\n");
         return;
@@ -366,17 +399,18 @@ inline void export_capture(const char * phase, const char * stream_kind,
         // so a shared directory cannot accumulate exports across processes.
         // A stale claim from a crashed process fails closed (controller owns
         // directory layout: one fresh directory per observed process).
-        const std::string claim = export_dir + "/" + participant + "-" +
-                                  std::to_string(process_id) + "-claim";
+        const std::string claim = export_dir + "/is301-claim";
         const int fd = ::open(claim.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
         if (fd < 0) {
             std::fprintf(stderr, "is301: export dir already claimed by another process\n");
             return;
         }
-        const std::string owner = std::to_string(process_id) + "\n";
-        const bool claimed = ::write(fd, owner.data(), owner.size()) >= 0;
+        const std::string owner = std::to_string(process_id) + "\n" + start_ticks + "\n" + participant + "\n";
+        const bool claimed = ::write(fd, owner.data(), owner.size()) == (ssize_t) owner.size();
         ::close(fd);
         if (!claimed) return;
+        owner_pid = process_id;
+        owner_start = start_ticks;
     }
     const int current = export_counter++;
     const std::string generation = std::string("exp-") + std::to_string(process_id) + "-" +

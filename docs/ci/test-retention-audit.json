@@ -4869,6 +4869,28 @@
    "replacement": null,
    "test_count_at_audit": 25
   },
+  "test_issue301_budget_authorization": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 25,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Explicit issue301 authorization extends only the authenticated continuous campaign ledger to 6600 seconds; unrelated limits remain unchanged.",
+   "lineage": "Issue #301 child of #299 native build authorization",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/native_observer/build.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline immutable historical ledger controls; tests never compile or consume the actual campaign ledger.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 25
+  },
   "test_issue299_native_build": {
    "baseline_group": "issue-99-103",
    "baseline_serial_seconds": null,
