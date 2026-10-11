@@ -49,8 +49,14 @@ class BoundedReadTests(unittest.TestCase):
 
     def test_transport_read_bytes_requires_explicit_bound(self):
         transport = SSHCollectorTransport()
-        with self.assertRaisesRegex(ValueError, 'bound|required'):
+        # The bound is a required keyword-only argument: a read without it
+        # cannot even be invoked, and an invalid bound refuses.
+        with self.assertRaises(TypeError):
             transport.read_bytes('unused', '/opt/observer/llama-server')
+        with self.assertRaisesRegex(ValueError, 'bound'):
+            transport.read_bytes('unused', '/opt/observer/llama-server', max_bytes=0)
+        with self.assertRaisesRegex(ValueError, 'bound'):
+            transport.read_bytes('unused', '/opt/observer/llama-server', max_bytes=None)
 
     def test_overbound_envelope_refuses_before_parsing(self):
         # A >8 MiB dynamic envelope must refuse at the transport bound,
@@ -81,7 +87,8 @@ class BoundedReadTests(unittest.TestCase):
         address = p.execution_address
         body = dict(LLAMA_MANIFEST, executable_sha256=hashlib.sha256(b'x' * ((300 << 20) + 1)).hexdigest())
         tree.put(address, ROLE_PATHS['client'][0], body)
-        tree.put(address, ROLE_PATHS['client'][1], b'x' * 64)
+        tree.put(address, ROLE_PATHS['client'][1],
+                 b'x' * (SSHCollectorTransport.EXECUTABLE_MAX_BYTES + 1))
         collector = NativeObserverCollector(RecordingCollectorTransport(tree),
                                             RecordingIdentityReader(),
                                             retained_builds={

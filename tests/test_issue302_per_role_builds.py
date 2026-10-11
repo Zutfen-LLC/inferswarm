@@ -115,15 +115,19 @@ class RecordingCollectorTransport(SSHCollectorTransport):
         self.tree = tree
         self.reads = []
 
-    def read_bytes(self, address, path):
+    def read_bytes(self, address, path, *, max_bytes=None):
         self.reads.append((address, path))
         try:
-            return self.tree.files[address][str(path)]
+            payload = self.tree.files[address][str(path)]
         except KeyError as exc:
             raise CollectorError(f'collector read failed ({address}:{path}): absent') from exc
+        if max_bytes is not None and len(payload) > max_bytes:
+            raise CollectorError(f'collector read exceeds family bound '
+                                 f'({address}:{path}): {max_bytes} bytes')
+        return payload
 
-    def read_json(self, address, path):
-        return json.loads(self.read_bytes(address, path).decode('utf-8'))
+    def read_json(self, address, path, *, max_bytes=None):
+        return json.loads(self.read_bytes(address, path, max_bytes=max_bytes).decode('utf-8'))
 
     def list_dir(self, address, path):
         try:

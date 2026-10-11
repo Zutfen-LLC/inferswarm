@@ -516,7 +516,8 @@ class OperatorRunner:
             # Same-request dynamic acceptance: the retained overlay exports
             # its terminal envelope at owned-process termination, so the
             # controller tears down the tunnel and owned processes first,
-            # then collects and reconciles before accepting output.
+            # then waits for the exact-owned terminal export fence before
+            # collecting and reconciling; only then is output accepted.
             if tunnel.poll() is None: tunnel.terminate()
             try: tunnel.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -531,9 +532,15 @@ class OperatorRunner:
                 start=row.get('start')
                 if type(start) is int and start>=0: start=str(start)
                 spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
+                label=NATIVE_LABELS['client' if p.role=='client' else 'remote']
+                # Deterministic terminal-export fence: the producer writes
+                # the envelope at termination, which may complete after the
+                # owned process exit is observed; wait bounded before
+                # collecting, refuse on missing/foreign exports.
+                self.collector.await_terminal_export(p,spawn,
+                    export_dirs[p.participant_id],label)
                 dynamic_evidence.append(self.collector.collect_dynamic(p,spawn,
-                    export_dirs[p.participant_id],plan.digest,invocation,
-                    NATIVE_LABELS['client' if p.role=='client' else 'remote']))
+                    export_dirs[p.participant_id],plan.digest,invocation,label))
             # Bind the request identity to OBSERVED native facts: the task id
             # and graph generations come from the collected evidence, never
             # from the controller's guesses. The HTTP response id binds the

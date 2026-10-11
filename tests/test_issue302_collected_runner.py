@@ -84,17 +84,21 @@ class RecordingCollectorTransport(SSHCollectorTransport):
         self.failures = failures or {}
         self.reads = []
 
-    def read_bytes(self, address, path):
+    def read_bytes(self, address, path, *, max_bytes=None):
         self.reads.append((address, path))
         if (address, path) in self.failures:
             raise self.failures[(address, path)]
         try:
-            return self.tree.files[address][str(path)]
+            payload = self.tree.files[address][str(path)]
         except KeyError as exc:
             raise CollectorError(f'collector read failed ({address}:{path}): absent') from exc
+        if max_bytes is not None and len(payload) > max_bytes:
+            raise CollectorError(f'collector read exceeds family bound '
+                                 f'({address}:{path}): {max_bytes} bytes')
+        return payload
 
-    def read_json(self, address, path):
-        raw = self.read_bytes(address, path)
+    def read_json(self, address, path, *, max_bytes=None):
+        raw = self.read_bytes(address, path, max_bytes=max_bytes)
         return json.loads(raw.decode('utf-8'))
 
     def list_dir(self, address, path):
@@ -1073,6 +1077,12 @@ class RecordingRunnerHarness:
                        expected_argv, export_dir=None):
         if self.static_error: raise self.static_error
         return self._evidence(p, spawn, expected_argv)
+
+    def await_terminal_export(self, p, spawn, export_dir, native_label, *,
+                              timeout=60.0, pause=0.2):
+        # Recording seam: the fence is exercised against the real collector
+        # in the bounded-collection tests; the runner harness stands in.
+        return [export_name(native_label, spawn.pid)]
 
     def collect_dynamic(self, p, spawn, export_dir, plan_digest, token, native_label):
         if self.dynamic_error:

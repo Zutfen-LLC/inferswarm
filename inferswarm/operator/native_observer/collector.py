@@ -39,26 +39,57 @@ class CollectorError(RuntimeError):
 
 
 class SSHCollectorTransport:
-    """Read-only SSH artifact reader (qualified source-transport pattern)."""
+    """Read-only SSH artifact reader (qualified source-transport pattern).
 
-    def read_bytes(self, address: str, path: str) -> bytes:
-        # base64 wraps arbitrary binary through the text-only SSH channel.
+    Every read is bounded by an explicit per-artifact family limit that is
+    enforced REMOTELY, before the payload is materialized: the remote
+    program refuses to emit more than the bound, so an overbound artifact
+    can never trigger an unbounded allocation or parse on the controller.
+    """
+
+    # Distinct per-artifact families: the plaintext ownership claim is a
+    # three-line file; build manifests are small JSON; native observation
+    # envelopes share the parser's 8 MiB cap; retained native executables
+    # get their own generous but finite cap.
+    CLAIM_MAX_BYTES = 4096
+    MANIFEST_MAX_BYTES = 1 << 20
+    ENVELOPE_MAX_BYTES = 8 << 20
+    EXECUTABLE_MAX_BYTES = 300 << 20
+
+    def read_bytes(self, address: str, path: str, *, max_bytes: int) -> bytes:
+        if type(max_bytes) is not int or max_bytes < 1:
+            raise ValueError('collector read requires an explicit positive bound')
+        # base64 wraps arbitrary binary through the text-only SSH channel;
+        # the remote program checks the actual size BEFORE reading, so the
+        # bound is enforced before materialization on either side.
         program = ("import base64,sys\n"
+                   "limit=int(sys.argv[2])\n"
+                   "import os\n"
+                   "size=os.path.getsize(sys.argv[1])\n"
+                   "if size>limit: sys.exit(3)\n"
                    "sys.stdout.write(base64.b64encode(open(sys.argv[1],'rb').read()).decode('ascii'))")
         proc = subprocess.run(
             ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', address,
-             'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)],
+             'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)
+             + ' ' + str(int(max_bytes))],
             capture_output=True, timeout=SSH_TIMEOUT_SECONDS)
+        if proc.returncode == 3:
+            raise CollectorError(f'collector read exceeds family bound '
+                                 f'({address}:{path}): {max_bytes} bytes')
         if proc.returncode != 0:
             raise CollectorError(f'collector read failed ({address}:{path}): {proc.stderr[-300:]!r}')
         import base64
         try:
-            return base64.b64decode(proc.stdout, validate=True)
+            payload = base64.b64decode(proc.stdout, validate=True)
         except Exception as exc:
             raise CollectorError(f'collector read returned invalid base64 ({address}:{path})') from exc
+        if len(payload) > max_bytes:
+            raise CollectorError(f'collector read exceeds family bound '
+                                 f'({address}:{path}): {max_bytes} bytes')
+        return payload
 
-    def read_json(self, address: str, path: str):
-        raw = self.read_bytes(address, path)
+    def read_json(self, address: str, path: str, *, max_bytes: int):
+        raw = self.read_bytes(address, path, max_bytes=max_bytes)
         try:
             return json.loads(raw.decode('utf-8'))
         except (UnicodeError, ValueError) as exc:
@@ -74,6 +105,13 @@ class SSHCollectorTransport:
         if proc.returncode != 0:
             raise CollectorError(f'collector listing failed ({address}:{path}): {proc.stderr[-300:]!r}')
         return [name for name in proc.stdout.splitlines() if name]
+
+
+# Distinct per-artifact read families, enforced before materialization.
+CLAIM_MAX_BYTES = SSHCollectorTransport.CLAIM_MAX_BYTES
+MANIFEST_MAX_BYTES = SSHCollectorTransport.MANIFEST_MAX_BYTES
+ENVELOPE_MAX_BYTES = SSHCollectorTransport.ENVELOPE_MAX_BYTES
+EXECUTABLE_MAX_BYTES = SSHCollectorTransport.EXECUTABLE_MAX_BYTES
 
 
 _IDENTITY_PROGRAM = ("import json,sys\n"
@@ -202,9 +240,11 @@ class NativeObserverCollector:
 
     def collect_build(self, participant, manifest_path,
                       executable_path) -> DerivedBuildEvidence:
-        body = self.transport.read_json(participant.execution_address, manifest_path)
+        body = self.transport.read_json(participant.execution_address, manifest_path,
+                                        max_bytes=SSHCollectorTransport.MANIFEST_MAX_BYTES)
         manifest = parse_build_manifest(body)
-        executable = self.transport.read_bytes(participant.execution_address, executable_path)
+        executable = self.transport.read_bytes(participant.execution_address, executable_path,
+                                               max_bytes=SSHCollectorTransport.EXECUTABLE_MAX_BYTES)
         import hashlib
         digest = hashlib.sha256(executable).hexdigest()
         if digest != manifest.executable_sha256:
@@ -242,13 +282,47 @@ class NativeObserverCollector:
                                  + ' closure for this role: ' + participant.participant_id)
         return DerivedBuildEvidence(manifest, digest)
 
+    def await_terminal_export(self, participant, spawn: OwnedSpawnFacts,
+                               export_dir: str, native_label: str, *,
+                               timeout: float = 60.0, pause: float = 0.2):
+        """Deterministic exact-owned terminal-export fence (#302 P2).
+
+        The retained producer writes its dynamic envelope at owned-process
+        termination (server_queue::terminate / RPC connection close), which
+        can land slightly AFTER the controller observed process exit. Before
+        any output is accepted, the controller waits (bounded) until the
+        export directory holds a terminal dynamic envelope belonging to THIS
+        owned spawn: filename '<label>-<pid>-%04d.json' with the owned pid.
+        Missing, foreign-pid, malformed-name or never-arriving exports are
+        named refusals, never silent acceptance.
+        """
+        import time as _time
+        deadline = _time.monotonic() + timeout
+        wanted = '%s-%d-' % (native_label, spawn.pid)
+        while True:
+            try:
+                names = self.transport.list_dir(participant.execution_address, export_dir)
+            except CollectorError:
+                names = []
+            terminal = [name for name in names
+                        if name.endswith('.json')
+                        and name.startswith(wanted)]
+            if terminal:
+                return sorted(terminal)
+            if _time.monotonic() >= deadline:
+                raise CollectorError(
+                    'terminal export for owned spawn did not complete before output '
+                    'acceptance: ' + participant.participant_id)
+            _time.sleep(pause)
+
     def collect_dynamic(self, participant, spawn: OwnedSpawnFacts, export_dir: str,
                         plan_digest: str, invocation_token: str,
                         native_label: str) -> ParticipantDynamicEvidence:
         # The retained producer writes the claim as plaintext
         # 'PID\nSTART_TICKS\nLABEL\n' (is301_observer.h export_capture).
         raw = self.transport.read_bytes(participant.execution_address,
-                                        str(Path(export_dir) / CLAIM_NAME))
+                                        str(Path(export_dir) / CLAIM_NAME),
+                                        max_bytes=SSHCollectorTransport.CLAIM_MAX_BYTES)
         try:
             text = raw.decode('utf-8')
             claim_pid, claim_start, claim_label = text.splitlines()[:3]
@@ -273,7 +347,8 @@ class NativeObserverCollector:
         dynamics = []
         for name in names:
             payload = self.transport.read_bytes(participant.execution_address,
-                                                str(Path(export_dir) / name))
+                                                str(Path(export_dir) / name),
+                                                max_bytes=SSHCollectorTransport.ENVELOPE_MAX_BYTES)
             candidate = parse_observation(TransportReply(0, payload))
             if candidate.phase == 'dynamic':
                 dynamics.append((name, candidate))
