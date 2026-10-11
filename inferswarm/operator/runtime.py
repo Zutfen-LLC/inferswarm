@@ -476,8 +476,7 @@ class OperatorRunner:
                 argv=client_argv if p.role=='client' else remote_argv
                 evidence=self.collector.collect_static(p,spawn,
                     observer_options['manifest_path'],observer_options['executable_path'],
-                    _sha256(sources[p.participant_id]),expected_argv=argv,
-                    export_dir=export_dirs[p.participant_id])
+                    _sha256(sources[p.participant_id]),expected_argv=argv)
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
             self._live(client,remote)
@@ -508,11 +507,10 @@ class OperatorRunner:
             try: tunnel.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 tunnel.kill(); tunnel.wait(timeout=5)
-            self.last_cleanup=self.leases.cleanup()
-            if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
-                raise RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
-            request_identity=RequestIdentity(invocation_token=invocation,request_nonce=request_nonce,
-                response_id=str(result_response['id']))
+            owned_cleanup=self.leases.cleanup()
+            self.last_cleanup=owned_cleanup
+            if any(row.get('lease')!='released' for row in owned_cleanup.values()):
+                raise RuntimeError(f'incomplete owned cleanup: {owned_cleanup}')
             dynamic_evidence=[]
             for p in plan.participants:
                 row=rows[p.participant_id]
@@ -522,6 +520,21 @@ class OperatorRunner:
                 dynamic_evidence.append(self.collector.collect_dynamic(p,spawn,
                     export_dirs[p.participant_id],plan.digest,invocation,
                     NATIVE_LABELS['client' if p.role=='client' else 'remote']))
+            # Bind the request identity to OBSERVED native facts: the task id
+            # and graph generations come from the collected evidence, never
+            # from the controller's guesses. The HTTP response id binds the
+            # output; the native task id binds the request.
+            client_evidence=next(e for e in dynamic_evidence
+                if e.participant_id==client.participant_id)
+            facts=thaw(client_evidence.observation.facts)
+            native_tasks=facts.get('tasks') or []
+            if len(native_tasks)!=1:
+                raise ValueError('dynamic reconciliation: request task binding ambiguous: '
+                                 'expected exactly one observed native task for this request')
+            request_identity=RequestIdentity(invocation_token=invocation,
+                request_nonce=request_nonce,
+                task_id=str(native_tasks[0]['task_id']),
+                response_id=str(result_response['id']))
             dynamic_receipt=self.dynamic_reconciler(plan,static_receipt,dynamic_evidence,
                 request_identity,**mode)
             # Recheck evidence freshness after blocking collection work.
@@ -551,7 +564,13 @@ class OperatorRunner:
                 cleanup_error=RuntimeError(f'SSH tunnel cleanup failed: {exc}')
                 cleanup_error.__cause__=exc
             finally:
-                try: self.last_cleanup=self.leases.cleanup()
+                try:
+                    # A completed mid-run cleanup released every lease; the
+                    # idempotent second pass returns {} and must NOT erase the
+                    # authoritative receipt.
+                    repeat=self.leases.cleanup()
+                    if repeat:
+                        self.last_cleanup=repeat
                 except BaseException as exc:
                     failure=RuntimeError(f'incomplete owned cleanup: {exc}')
                     failure.__cause__=cleanup_error or exc; cleanup_error=failure

@@ -530,11 +530,26 @@ spawn continuity with the static receipt; and output acceptance re-runs
 admission freshness after blocking collection, so evidence expiring during
 collection rejects the already-executed request's output.
 
-Verification after the correction pass: the expanded
-`tests/test_issue302_collected_runner.py` (25 tests, including the SPEC
-reproductions as regressions), all ten existing issue-299/301 suites, the
-retention audit, the CI planner self-check and the repository finalizer
-check pass locally at this working tree. This is a coding-progress record, not review or acceptance
+A second SPEC round (2026-10-11) returned NO-GO with four further verified
+findings, also corrected: the unproducible static-snapshot export requirement
+was removed (both retained production export sites emit dynamic envelopes
+only, so static admission rests on the independently collected identity,
+source-range and derived-build joins); dynamic envelopes are selected by
+parsing phase (a stale static file no longer breaks the dynamic count);
+request acceptance now REQUIRES the native task binding (exactly one
+observed task, bound from collected evidence, never dispatched unbound) and
+the response id; derived-build qualification additionally pins the retained
+build options and backend-library identities; native graph ids are treated
+as opaque runtime pointers (presence/status bound, not restated as bounded
+request generations); allocation backends must be native selector labels;
+transfer shapes must be real positive integers; and the mid-run owned-cleanup
+receipt is preserved instead of being erased by the idempotent final pass.
+
+Verification after both correction passes: the expanded
+`tests/test_issue302_collected_runner.py` (28 tests, including the SPEC
+reproductions from both rounds as regressions), all ten existing
+issue-299/301 suites, the retention audit, the CI planner self-check and the
+repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
 exact-head review, and the separately gated hosted final validation remain
 pending. #303 integration, #300 physical qualification and #299 closure are

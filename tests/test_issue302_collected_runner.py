@@ -140,15 +140,6 @@ class StaticReconciliationTests(unittest.TestCase):
     def build_evidence(self, participant):
         return contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256)
 
-    def static_snapshot(self, participant, token='inv-302'):
-        record = json.loads((ROUND2 / 'cpu-static.json').read_text())
-        record['participant_id'] = 'observer-static-' + participant.participant_id
-        record['invocation_token'] = token
-        record['plan_digest'] = '0' * 64
-        record['terminal_digest'] = hashlib.sha256(canonical(
-            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
-        return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
-
     def evidence_rows(self, token='inv-302'):
         rows = []
         for role in ('client', 'remote'):
@@ -156,8 +147,7 @@ class StaticReconciliationTests(unittest.TestCase):
             spawn = self.spawn(p, token)
             rows.append(contract.ParticipantStaticEvidence(
                 p.participant_id, self.identity(p, spawn), spawn, self.build_evidence(p),
-                sha256(self.source_receipts()[p.participant_id]),
-                self.static_snapshot(p, token)))
+                sha256(self.source_receipts()[p.participant_id])))
         return rows
 
     def source_receipts(self):
@@ -169,7 +159,7 @@ class StaticReconciliationTests(unittest.TestCase):
                                             mode='synthetic-test', clock=lambda: NOW)
         self.assertEqual(receipt.verdict, 'STATIC_ADMITTED')
         self.assertEqual(receipt.plan_digest, self.plan.digest)
-        self.assertEqual(dict(receipt.counts)['weights'], 1224)
+        self.assertEqual(dict(receipt.counts)['source-range-joined-weights'], 1224)
         self.assertFalse(receipt.execution_authorized)
 
     def test_missing_source_range_refuses_before_admission(self):
@@ -239,15 +229,6 @@ class DynamicReconciliationTests(unittest.TestCase):
     def spawn(self, participant, token='inv-302'):
         return contract.OwnedSpawnFacts(participant.participant_id, 4242, 'start-4242', token)
 
-    def static_snapshot(self, participant, token='inv-302'):
-        record = json.loads((ROUND2 / 'cpu-static.json').read_text())
-        record['participant_id'] = 'observer-static-' + participant.participant_id
-        record['invocation_token'] = token
-        record['plan_digest'] = '0' * 64
-        record['terminal_digest'] = hashlib.sha256(canonical(
-            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
-        return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
-
     def static_receipt(self, token='inv-302'):
         rows = []
         for role in ('client', 'remote'):
@@ -257,10 +238,9 @@ class DynamicReconciliationTests(unittest.TestCase):
                 p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
                 p.runtime_sha256, (p.runtime_executable, '--serve'),
                 freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
-            snapshot = self.static_snapshot(p, token)
             rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
                 spawn, contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256),
-                sha256(source_receipt(self.plan, p)), snapshot))
+                sha256(source_receipt(self.plan, p))))
         sources = {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
         return contract.reconcile_static(self.plan, rows, sources,
                                          mode='synthetic-test', clock=lambda: NOW)
@@ -295,7 +275,7 @@ class DynamicReconciliationTests(unittest.TestCase):
                 p.participant_id, observation, self.spawn(p, token), pid, start, native))
         return rows
 
-    def request(self, token='inv-302', task_id=None, response_id='resp-1'):
+    def request(self, token='inv-302', task_id='1', response_id='resp-1'):
         return contract.RequestIdentity(invocation_token=token, request_nonce='nonce-302',
                                         task_id=task_id, response_id=response_id)
 
@@ -365,7 +345,7 @@ class DynamicReconciliationTests(unittest.TestCase):
     def test_unobserved_graph_generation_refuses(self):
         rows = self.dynamic_rows()
         request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
-                                           response_id='resp-1', graph_generations=(7,))
+                                           response_id='resp-1', task_id='1', graph_generations=(7,))
         with self.assertRaisesRegex(ValueError, 'graph generation not observed'):
             contract.reconcile_dynamic(self.plan, self.static_receipt(), rows, request,
                                        mode='synthetic-test', clock=lambda: NOW)
@@ -415,16 +395,9 @@ def _static_receipt_for(plan, manifest, spawns):
             p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
             p.runtime_sha256, (p.runtime_executable, '--serve'),
             freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
-        snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
-        snapshot['participant_id'] = 'observer-static-' + p.participant_id
-        snapshot['invocation_token'] = 'inv-302'
-        snapshot['plan_digest'] = '0' * 64
-        snapshot['terminal_digest'] = hashlib.sha256(canonical(
-            {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
-        observation = contract.parse_observation(TransportReply(0, json.dumps(snapshot).encode()))
         static_rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
             spawn, contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
-            sha256(source_receipt(plan, p)), observation))
+            sha256(source_receipt(plan, p))))
     sources = {p.participant_id: source_receipt(plan, p) for p in plan.participants}
     return contract.reconcile_static(plan, static_rows, sources,
                                      mode='synthetic-test', clock=lambda: NOW)
@@ -520,8 +493,7 @@ class CollectorTests(unittest.TestCase):
         spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         evidence = collector.collect_static(p, spawn,
             '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
-            'a' * 64, expected_argv=(p.runtime_executable, '--serve'),
-            export_dir='/synthetic/exports-client')
+            'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
         self.assertEqual(evidence.build.manifest.manifest_sha256, manifest.manifest_sha256)
         self.assertIsNotNone(evidence.identity)
 
@@ -538,8 +510,7 @@ class CollectorTests(unittest.TestCase):
         with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
             collector.collect_static(p, spawn,
                 '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
-                'a' * 64, expected_argv=(p.runtime_executable, '--serve'),
-                export_dir='/synthetic/exports-client')
+                'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
 
     def test_tampered_executable_refuses(self):
         tree, manifest = self.tree_with_build()
@@ -677,11 +648,64 @@ class CollectedRunnerTests(unittest.TestCase):
     def test_foreign_claim_spawn_continuity_refuses(self):
         static, rows = _continuity_rows(self.plan)
         request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
-                                           response_id='resp-1')
+                                           response_id='resp-1', task_id='1')
         with self.assertRaisesRegex(ValueError,
                                     'spawn continuity with static admission mismatch'):
             contract.reconcile_dynamic(self.plan, static, rows, request,
                                        mode='synthetic-test', clock=lambda: NOW)
+
+    def test_foreign_build_options_and_backends_refuse(self):
+        # Correct patch/transformed/compiler pins must not admit foreign
+        # build options or backend library identities.
+        tree = VirtualHostTree()
+        for mutate in (lambda b: b.update(build_options=['-O2', '-FOREIGN']),
+                       lambda b: b.update(backend_libraries=[{'name': 'libFOREIGN.a',
+                                                              'sha256': '9' * 64}])):
+            body = dict(build_manifest_body())
+            body['executable_sha256'] = hashlib.sha256(b'x').hexdigest()
+            mutate(body)
+            p = next(p for p in self.plan.participants if p.role == 'client')
+            tree.put(p.execution_address, '/opt/observer/llama-server.build-manifest.json', body)
+            tree.put(p.execution_address, '/opt/observer/llama-server', b'x')
+            collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                                RecordingIdentityReader())
+            with self.assertRaisesRegex(CollectorError,
+                                        'retained|authenticated'):
+                collector.collect_build(p, '/opt/observer/llama-server.build-manifest.json',
+                                        '/opt/observer/llama-server')
+
+    def test_unbound_task_or_response_refuses_acceptance(self):
+        helper = DynamicReconciliationTests('test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        rows = tuple(helper.dynamic_rows('inv-302'))
+        base = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                        task_id='1', response_id='resp-1')
+        # A request whose task id was never observed refuses.
+        foreign = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                           task_id='999', response_id='resp-1')
+        with self.assertRaisesRegex(ValueError, 'request task not observed'):
+            contract.reconcile_dynamic(self.plan, static, rows, foreign,
+                                       mode='synthetic-test', clock=lambda: NOW)
+        # No task binding at all refuses.
+        unbound = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                           response_id='resp-1')
+        with self.assertRaisesRegex(ValueError, 'request task binding missing'):
+            contract.reconcile_dynamic(self.plan, static, rows, unbound,
+                                       mode='synthetic-test', clock=lambda: NOW)
+        # The fully bound request still accepts.
+        receipt = contract.reconcile_dynamic(self.plan, static, rows, base,
+                                             mode='synthetic-test', clock=lambda: NOW)
+        self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
+
+    def test_successful_cleanup_receipt_is_preserved(self):
+        h = RecordingRunnerHarness(self.plan)
+        result = h.runner().run(self.plan)
+        # The mid-run teardown receipt survives the idempotent final pass.
+        cleanup = result['cleanup']
+        self.assertTrue(cleanup)
+        self.assertTrue(all(row.get('lease') == 'released' for row in cleanup.values()))
 
     def test_resealed_foreign_manifest_refuses_in_collector(self):
         # A self-consistent but foreign overlay identity must refuse: the
@@ -741,16 +765,9 @@ class RecordingRunnerHarness:
             p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
             p.runtime_sha256, tuple(expected_argv) if expected_argv else (p.runtime_executable, '--serve'),
             freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
-        snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
-        snapshot['participant_id'] = 'observer-static-' + p.participant_id
-        snapshot['invocation_token'] = spawn.invocation_token
-        snapshot['plan_digest'] = '0' * 64
-        snapshot['terminal_digest'] = hashlib.sha256(canonical(
-            {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
-        observation = contract.parse_observation(TransportReply(0, json.dumps(snapshot).encode()))
         return contract.ParticipantStaticEvidence(p.participant_id, identity, spawn,
             contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
-            sha256(self.sources[p.participant_id]), observation)
+            sha256(self.sources[p.participant_id]))
 
     def _dynamic(self, p, spawn, native_label):
         name = 'cpu-dynamic.json' if p.role == 'client' else 'rpc-dynamic.json'

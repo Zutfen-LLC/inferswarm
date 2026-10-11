@@ -139,6 +139,8 @@ class ProcIdentityReader:
 RETAINED_PATCH_SHA256 = 'd471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef'
 RETAINED_TRANSFORMED_MANIFEST_SHA256 = 'f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7'
 RETAINED_COMPILER = 'c++ (Debian 14.2.0-19) 14.2.0'
+RETAINED_BUILD_OPTIONS = ('-O0', '-g0', '-pthread', '-D_GNU_SOURCE', '-D_XOPEN_SOURCE=600', '-DGGML_SCHED_MAX_COPIES=4', '-DGGML_USE_CPU', '-DGGML_USE_RPC', '-DLLAMA_SUBPROCESS', '-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576', '-DCPPHTTPLIB_LISTEN_BACKLOG=512', '-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768', '-DCPPHTTPLIB_TCP_NODELAY=1')
+RETAINED_BACKEND_LIBRARIES = (('libllama-full.a', '6bafcb05a5188e287117d5df9d2b36798bf95c92640317697b26d2af0f5138c6'),)
 
 
 class NativeObserverCollector:
@@ -151,8 +153,7 @@ class NativeObserverCollector:
 
     def collect_static(self, participant, spawn: OwnedSpawnFacts, manifest_path: str,
                        executable_path: str, source_receipt_digest: str, *,
-                       expected_argv: tuple[str, ...],
-                       export_dir: str | None = None) -> ParticipantStaticEvidence:
+                       expected_argv: tuple[str, ...]) -> ParticipantStaticEvidence:
         build = self.collect_build(participant, manifest_path, executable_path)
         identity = self.identity_reader.read(participant, spawn.pid,
             expected_executable=participant.runtime_executable,
@@ -161,36 +162,8 @@ class NativeObserverCollector:
         if identity.pid != spawn.pid or identity.start != spawn.start:
             raise CollectorError('owned identity pid/start mismatch: '
                                  + participant.participant_id)
-        observation = self.collect_static_snapshot(participant, spawn, export_dir)
         return ParticipantStaticEvidence(participant.participant_id, identity, spawn, build,
-                                         source_receipt_digest, observation)
-
-    def collect_static_snapshot(self, participant, spawn: OwnedSpawnFacts,
-                                export_dir: str | None) -> ParsedObservation:
-        """Collect the static inventory snapshot from the export directory.
-
-        The retained overlay emits its static snapshot at process start (the
-        tiny fixture emits it before the instrumented allocation; the server
-        emits it before the serve loop), so it is available pre-request.
-        """
-        if export_dir is None:
-            raise CollectorError('static snapshot export directory required: '
-                                 + participant.participant_id)
-        names = self.transport.list_dir(participant.execution_address, export_dir)
-        snapshots = [name for name in names if name.endswith('.json')
-                     and not name.startswith(CLAIM_NAME)]
-        if not snapshots:
-            raise CollectorError('static snapshot envelope missing: '
-                                 + participant.participant_id)
-        # The static snapshot is the first envelope the process writes; any
-        # dynamic envelope present at static-collection time is premature.
-        payload = self.transport.read_bytes(participant.execution_address,
-                                            str(Path(export_dir) / sorted(snapshots)[0]))
-        observation = parse_observation(TransportReply(0, payload))
-        if observation.phase != 'static':
-            raise CollectorError('static snapshot phase mismatch: '
-                                 + participant.participant_id)
-        return observation
+                                         source_receipt_digest)
 
     def collect_build(self, participant, manifest_path: str,
                       executable_path: str) -> DerivedBuildEvidence:
@@ -216,6 +189,12 @@ class NativeObserverCollector:
         if manifest.compiler != RETAINED_COMPILER:
             raise CollectorError('derived build compiler identity is not the retained '
                                  'authenticated #301 toolchain: ' + participant.participant_id)
+        if tuple(manifest.build_options) != RETAINED_BUILD_OPTIONS:
+            raise CollectorError('derived build options are not the retained '
+                                 'authenticated #301 recipe: ' + participant.participant_id)
+        if tuple(manifest.backend_libraries) != RETAINED_BACKEND_LIBRARIES:
+            raise CollectorError('derived build backend libraries are not the retained '
+                                 'authenticated #301 artifacts: ' + participant.participant_id)
         return DerivedBuildEvidence(manifest, digest)
 
     def collect_dynamic(self, participant, spawn: OwnedSpawnFacts, export_dir: str,
@@ -236,15 +215,24 @@ class NativeObserverCollector:
                 or claim_pid != spawn.pid or claim_start != spawn.start):
             raise CollectorError('export directory claim owner mismatch: '
                                  + participant.participant_id)
-        names = self.transport.list_dir(participant.execution_address, export_dir)
-        dynamic = [name for name in names if name.endswith('.json')
-                   and not name.startswith(CLAIM_NAME)]
-        if len(dynamic) != 1:
+        names = sorted(name for name in
+                       self.transport.list_dir(participant.execution_address, export_dir)
+                       if name.endswith('.json') and not name.startswith(CLAIM_NAME))
+        # Exactly one DYNAMIC envelope may exist per export directory: parse
+        # each candidate and refuse ambiguity; static-labeled files are not
+        # dynamic evidence and never satisfy this join.
+        dynamics = []
+        for name in names:
+            payload = self.transport.read_bytes(participant.execution_address,
+                                                str(Path(export_dir) / name))
+            candidate = parse_observation(TransportReply(0, payload))
+            if candidate.phase == 'dynamic':
+                dynamics.append((name, candidate))
+        if len(dynamics) != 1:
             raise CollectorError(f'export directory must hold exactly one dynamic envelope '
-                                 f'({participant.participant_id}): {dynamic}')
-        payload = self.transport.read_bytes(participant.execution_address,
-                                            str(Path(export_dir) / dynamic[0]))
-        observation = parse_observation(TransportReply(0, payload))
+                                 f'({participant.participant_id}): '
+                                 f'{[name for name, _ in dynamics]}')
+        observation = dynamics[0][1]
         # The retained overlay seals native envelopes with a zero plan digest
         # (the producer never sees the controller plan identity); the binding
         # to this invocation runs through the export claim checked above.
