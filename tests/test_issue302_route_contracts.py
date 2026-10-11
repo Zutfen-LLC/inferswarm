@@ -724,5 +724,87 @@ def _mutate(observation, mutate, replacement=None):
     return contract.parse_observation(TransportReply(0, json.dumps(seal(record)).encode()))
 
 
+def capture_for(plan, row):
+    from datetime import timedelta
+    return dict(observed_at=NOW.isoformat(), expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                capture_id='synthetic-capture-' + row.participant_id,
+                producer='synthetic-contract', plan_digest=plan.digest,
+                invocation_token=row.spawn.invocation_token, pid=row.spawn.pid, start=row.spawn.start,
+                build_digest=row.build.manifest.manifest_sha256,
+                source_digest=row.source_receipt_digest)
+
+
+class ExactStaticReceiptTests(unittest.TestCase):
+    """5483410569: complete receipt binding, immutable facts, live refusal."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = distinct_role_plan()
+
+    def test_inventory_and_host_fact_changes_change_receipt_digest(self):
+        from dataclasses import replace
+        baseline = static_receipt_for(self.plan, static_rows_for(self.plan))
+        for family in ('inventory', 'host'):
+            rows = static_rows_for(self.plan)
+            row = rows[0]
+            if family == 'inventory':
+                inv = row.observed_inventory
+                weights = list(inv.weights)
+                weights[0] = freeze(dict(thaw(weights[0]), capture_note='changed'))
+                rows[0] = replace(row, observed_inventory=replace(inv, weights=tuple(weights)))
+            else:
+                host = row.observed_host_facts
+                env = dict(thaw(host.observer_environment), CAPTURE_NOTE='changed')
+                rows[0] = replace(row, observed_host_facts=replace(host, observer_environment=env))
+            with self.subTest(family=family):
+                self.assertNotEqual(baseline.observation_digest,
+                                    static_receipt_for(self.plan, rows).observation_digest)
+
+    def test_host_environment_is_detached_and_immutable(self):
+        env = dict(IS301_OBSERVE='1', IS301_EXPORT_DIR='/synthetic/export')
+        host = contract.ObservedHostFacts('boot', 'topology', ('endpoint',), env,
+                                           'synthetic-contract')
+        env['IS301_OBSERVE'] = '0'
+        self.assertEqual(thaw(host.observer_environment)['IS301_OBSERVE'], '1')
+        self.assertNotIsInstance(host.observer_environment, dict)
+
+    def test_live_refuses_synthetic_unknown_and_missing_capture_provenance(self):
+        from dataclasses import replace
+        # Clock patched at its real-time seam, not injected through live API.
+        from unittest.mock import patch
+        sources = {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
+        for source in ('synthetic-contract', 'observed/unknown', 'unrecognized', 'native-observer/2'):
+            rows = static_rows_for(self.plan)
+            rows = [replace(r, observed_inventory=replace(r.observed_inventory, source=source),
+                               observed_host_facts=replace(r.observed_host_facts, source=source))
+                    for r in rows]
+            with self.subTest(source=source), patch.object(contract, '_static_observed_joins',
+                    return_value=q8_static_inventory(self.plan.config, metadata(), candidate=self.plan.candidate)):
+                with self.assertRaisesRegex(ValueError, 'provenance|capture'):
+                    contract.reconcile_static(self.plan, rows, sources, mode='live')
+
+    def test_capture_freshness_and_process_build_source_binding_refuse(self):
+        rows = static_rows_for(self.plan)
+        for field, value in (('observed_at', '2020-01-01T00:00:00Z'),
+                             ('expires_at', '2020-01-02T00:00:00Z'),
+                             ('pid', 999), ('start', 'foreign'),
+                             ('plan_digest', 'f' * 64), ('invocation_token', 'foreign'),
+                             ('build_digest', 'f' * 64), ('source_digest', 'f' * 64)):
+            rows = static_rows_for(self.plan)
+            for r in rows:
+                capture = capture_for(self.plan, r)
+                if r == rows[0]:
+                    capture[field] = value
+                object.__setattr__(r, 'capture', freeze(capture))
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'capture'):
+                static_receipt_for(self.plan, rows)
+
+    def test_dynamic_live_mode_alone_never_qualifies_physical_q8(self):
+        receipt = contract.reconcile_dynamic(self.plan,
+            static_receipt_for(self.plan, static_rows_for(self.plan)),
+            synthetic_dynamic_rows(self.plan), request_for(), mode='live')
+        self.assertFalse(receipt.physical_qualified)
+
+
 if __name__ == '__main__':
     unittest.main()
