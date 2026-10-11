@@ -2002,6 +2002,7 @@ def _dynamic_full_joins(plan, facts, client_id, request):
     participants = {p.participant_id: p for p in plan.participants}
     catalogs = {}
     routes = {}
+    route_positions = {}
     generations = set()
 
     def correlated(record, family):
@@ -2085,8 +2086,9 @@ def _dynamic_full_joins(plan, facts, client_id, request):
         if seen_states != {(key, name) for key in ubatch_catalog for name in expected_states}:
             raise ValueError('dynamic reconciliation: state lineage coverage mismatch')
         routes[participant_id] = {}
+        route_positions[participant_id] = {}
         seen_transfers = set()
-        for transfer in transfers_of(data):
+        for position, transfer in enumerate(transfers_of(data)):
             key = lineage_key(transfer, 'transfer')
             if key not in ubatch_catalog:
                 raise ValueError('dynamic reconciliation: transfer graph/ubatch lineage join mismatch')
@@ -2108,6 +2110,7 @@ def _dynamic_full_joins(plan, facts, client_id, request):
             if type(strides) is not list or len(strides) != len(transfer['shape']) or any(type(s) is not int or s < 1 for s in strides):
                 raise ValueError('dynamic reconciliation: transfer layout/stride join missing')
             routes[participant_id].setdefault(transfer['route_id'], []).append(transfer)
+            route_positions[participant_id].setdefault(transfer['route_id'], []).append(position)
     if request.graph_generations and set(request.graph_generations) != generations:
         raise ValueError('dynamic reconciliation: graph generation coverage not observed for this request')
     client_routes = routes[client_id]
@@ -2138,12 +2141,28 @@ def _dynamic_full_joins(plan, facts, client_id, request):
                 or any(not _same_json(remote[0].get(f), chain[0].get(f)) for f in material_fields)):
             raise ValueError('dynamic reconciliation: route server completion material join mismatch')
     for participant_id, participant_routes in routes.items():
-        completed_forward = set()
+        positions = route_positions[participant_id]
         for route_id, chain in participant_routes.items():
             if chain[0]['op'] in _SET_OPS:
-                completed_forward.add(route_id)
-            elif chain[0].get('depends_on_route') not in completed_forward:
+                continue
+            dependency = chain[0].get('depends_on_route')
+            if (type(dependency) is not str or not dependency
+                    or any(t.get('depends_on_route') != dependency for t in chain)):
+                raise ValueError('dynamic reconciliation: route return dependency leg join mismatch')
+            forward = participant_routes.get(dependency)
+            if forward is None or forward[0]['op'] not in _SET_OPS:
                 raise ValueError('dynamic reconciliation: route return-before-send dependency order missing')
+            if lineage_key(forward[0], 'route dependency') != lineage_key(chain[0], 'route return'):
+                raise ValueError('dynamic reconciliation: route return dependency graph/ubatch lineage join mismatch')
+            # Grouping establishes a complete material chain, not when it
+            # completed. Every return leg must follow its full input chain
+            # in this participant's observed transfer occurrence order.
+            if positions[dependency][-1] >= positions[route_id][0]:
+                raise ValueError('dynamic reconciliation: route return-before-send dependency order missing')
+    for route_id, chain in client_routes.items():
+        if (chain[0]['op'] in _GET_OPS
+                and remote_routes[route_id][0].get('depends_on_route') != chain[0].get('depends_on_route')):
+            raise ValueError('dynamic reconciliation: route return dependency remote/client join mismatch')
     response_rows = facts[client_id].get('responses')
     if not any(r.get('task_id') == task and r.get('request_nonce') == nonce
                and r.get('response_id') == request.response_id for r in response_rows):
