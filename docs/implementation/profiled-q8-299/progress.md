@@ -671,14 +671,22 @@ Additive RED-first offline corrections retain all accepted #301 artifacts:
   remote completion and response/output-readback custody. Missing native fields
   remain precise refusals; synthetic fixture fields are not native evidence.
 
-The scoped population now contains 118 #302 tests in the four already registered
+The scoped population now contains 130 #302 tests in the four already registered
 modules. Historical retention baselines are unchanged. Real RED logs and the
-507-test affected offline-suite results are retained outside the checkout at
+519-test affected offline-suite results are retained outside the checkout at
 `/home/zutfen/data/pr305-review5483410569/`; controller verification and
 independent exact-head SPEC/QUALITY decisions are recorded in the PR round
 report, not inferred from this implementation record. Native-build supervisor
 tests are excluded because this correction prohibits compilation/new ledgers;
 no full or hosted final validation is claimed.
+
+Independent SPEC review at `1020ec4` reproduced premature readback and a
+previous ubatch satisfying the next ubatch dependency. Additive RED `2723c77`
+and fix `3a73d13` retain the original reviewer failure inputs, use observed
+completion positions, and join every return leg to the same graph/ubatch
+dependency on both participants. Twelve new tests include actual runner
+rejection and legitimate multi-generation/interleaving controls. Changed-head
+independent SPEC/QUALITY review remains required; old approvals are not reused.
 
 The controller nonce remains absent from the sole HTTP generation body. No
 native HTTP/RPC carrier is selected or added. Production inventory/selectors
