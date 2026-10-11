@@ -492,12 +492,21 @@ class OperatorRunner:
                 spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
                 argv=client_argv if p.role=='client' else remote_argv
                 manifest_path,executable_path=role_paths[p.role]
-                # Owned-listener endpoints from the trusted lifecycle seam:
-                # the RPC bind was proven listening during startup; the
-                # client serves on its configured local port behind the
-                # owned tunnel.
-                owned_endpoints=(f'{host}:{remote.port}',) if p.role=='remote' \
-                    else (f'127.0.0.1:{p.port}',)
+                # Owned-listener endpoints RE-VERIFIED through the trusted
+                # lifecycle seam immediately before collection: the remote
+                # RPC listener is confirmed by a fresh owned-listener check
+                # on the remote host; the client listener is confirmed by
+                # the tunnel-mediated /health probe completed above. These
+                # are independent remote observations, not configuration
+                # echoes.
+                if p.role=='remote':
+                    if not self.leases.listening(p.execution_address,'rpc',
+                                                 host,remote.port):
+                        raise RuntimeError('owned RPC listener not independently '
+                                           'observed at static admission')
+                    owned_endpoints=(f'{host}:{remote.port}',)
+                else:
+                    owned_endpoints=(f'127.0.0.1:{p.port}',)
                 evidence=self.collector.collect_static(p,spawn,
                     manifest_path,executable_path,
                     _sha256(sources[p.participant_id]),expected_argv=argv,

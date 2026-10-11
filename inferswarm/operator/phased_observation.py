@@ -1315,8 +1315,14 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
         if observed_composites != set(expected_composites):
             raise ValueError('static reconciliation: observed composite coverage '
                              'mismatch: ' + row.participant_id)
-        observed_extents = {_thaw(frozen_row).get('state_id'): _thaw(frozen_row)
-                            for frozen_row in inv.extents}
+        observed_extents = {}
+        for frozen_row in inv.extents:
+            record = _thaw(frozen_row)
+            name = record.get('state_id')
+            if not isinstance(name, str) or name in observed_extents:
+                raise ValueError('static reconciliation: observed extent identity '
+                                 'malformed or duplicated: ' + row.participant_id)
+            observed_extents[name] = record
         for name, expected in owned_states.items():
             record = observed_extents.get(name)
             if record is None:
@@ -1326,8 +1332,14 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
                     or record.get('layout_exact') is not True:
                 raise ValueError('static reconciliation: observed extent mismatch: '
                                  + name)
-        observed_allocations = {_thaw(frozen_row).get('allocation_id'): _thaw(frozen_row)
-                                for frozen_row in inv.allocations}
+        observed_allocations = {}
+        for frozen_row in inv.allocations:
+            record = _thaw(frozen_row)
+            allocation = record.get('allocation_id')
+            if not isinstance(allocation, str) or allocation in observed_allocations:
+                raise ValueError('static reconciliation: observed allocation identity '
+                                 'malformed or duplicated: ' + row.participant_id)
+            observed_allocations[allocation] = record
         owned_memories = {b.memory_id for b in participant.bindings}
         for charge in inventory.charges:
             if charge.memory_id not in owned_memories or charge.bytes is None:

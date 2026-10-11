@@ -280,6 +280,25 @@ class StaticInventoryJoinTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'extent'):
             static_receipt_for(self.plan, rows)
 
+    def test_duplicated_extent_identity_refuses(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        extents = list(victim.observed_inventory.extents)
+        extents.append(extents[0])
+        object.__setattr__(victim.observed_inventory, 'extents', tuple(extents))
+        with self.assertRaisesRegex(ValueError, 'extent identity'):
+            static_receipt_for(self.plan, rows)
+
+    def test_duplicated_allocation_identity_refuses(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        allocations = list(victim.observed_inventory.allocations)
+        allocations.append(allocations[0])
+        object.__setattr__(victim.observed_inventory, 'allocations',
+                           tuple(allocations))
+        with self.assertRaisesRegex(ValueError, 'allocation identity'):
+            static_receipt_for(self.plan, rows)
+
     def test_allocation_headroom_mismatch_refuses(self):
         rows = static_rows_for(self.plan)
         victim = rows[0]
