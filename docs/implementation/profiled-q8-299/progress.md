@@ -651,6 +651,42 @@ facts; live STATIC_ADMITTED/DYNAMIC_ACCEPTED for the physical plan therefore
 remains refused until a separately authorized minimal overlay extension adds
 those emitters. Nothing in this round fabricates that evidence.
 
+## #302 exact-head correction (review 5483410569) — 2026-10-11
+
+The reviewed `3e40e2ede56e54a3d067846adc99f93c8f3d335e` remains an ancestor.
+Additive RED-first offline corrections retain all accepted #301 artifacts:
+
+- Static receipts bind immutable observed inventory and host facts, provenance,
+  capture freshness, process/spawn, build/source and plan/invocation identities.
+  Live synthetic/unknown/missing provenance refuses. Neither static nor dynamic
+  receipts grant physical Q8 qualification. The runner revalidates the exact
+  retained static evidence immediately before POST and after collection.
+- Persistent-state lower bounds no longer masquerade as actual base sizes.
+  Owner-scoped composites, padded extents, base/range/non-overlap and accounted
+  padding are joined to actual unique physical allocations. Actual per-phase
+  domain totals must satisfy measured capacity/available and policy/reserve
+  limits; foreign/unaccounted extents, mirrors and UNKNOWN headroom refuse.
+- Dynamic joins require observed task/nonce, graph and ubatch generations,
+  state authority, tensor/range/layout, ordered material route dependencies,
+  remote completion and response/output-readback custody. Missing native fields
+  remain precise refusals; synthetic fixture fields are not native evidence.
+
+The scoped population now contains 118 #302 tests in the four already registered
+modules. Historical retention baselines are unchanged. Real RED logs and the
+507-test affected offline-suite results are retained outside the checkout at
+`/home/zutfen/data/pr305-review5483410569/`; controller verification and
+independent exact-head SPEC/QUALITY decisions are recorded in the PR round
+report, not inferred from this implementation record. Native-build supervisor
+tests are excluded because this correction prohibits compilation/new ledgers;
+no full or hosted final validation is claimed.
+
+The controller nonce remains absent from the sole HTTP generation body. No
+native HTTP/RPC carrier is selected or added. Production inventory/selectors
+and causal request propagation still require the separately scoped decision in
+[native correlation authorization boundary](native-correlation-authorization.md).
+Terminal: `BLOCKED_ON_NATIVE_INSTRUMENTATION_AUTHORIZATION`, not completion of
+#302/#299. #303 stays pending; #300 and the historical #301 budget stay untouched.
+
 ## Remaining work
 
 1. Retain completed #301 producer/build (PR #304 merged) and the #302 offline
