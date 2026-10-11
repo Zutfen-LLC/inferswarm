@@ -25,6 +25,9 @@ from tests.issue299_fixture import NOW
 from tests.test_issue299_bindings import plan_fixture, source_receipt
 from tests.test_issue299_q8_plan import fully_bounded_mapping
 from tests.test_issue299_runtime import Harness, RecordingLifecycle
+from tests.test_issue302_route_contracts import (
+    observed_inventory_for, observed_host_facts_for, synthetic_dynamic_rows,
+    route_legs, seal as seal_route_record)
 
 ROUND2 = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/round2-native'
 CAPTURES = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/native-captures'
@@ -184,7 +187,9 @@ class StaticReconciliationTests(unittest.TestCase):
             spawn = self.spawn(p, token)
             rows.append(contract.ParticipantStaticEvidence(
                 p.participant_id, self.identity(p, spawn), spawn, self.build_evidence(p),
-                sha256(self.source_receipts()[p.participant_id])))
+                sha256(self.source_receipts()[p.participant_id]),
+                observed_inventory=observed_inventory_for(self.plan, p),
+                observed_host_facts=observed_host_facts_for(self.plan, p)))
         return rows
 
     def source_receipts(self):
@@ -272,40 +277,22 @@ class DynamicReconciliationTests(unittest.TestCase):
                 freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
             rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
                 spawn, contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256),
-                sha256(source_receipt(self.plan, p))))
+                sha256(source_receipt(self.plan, p)),
+                observed_inventory=observed_inventory_for(self.plan, p),
+                observed_host_facts=observed_host_facts_for(self.plan, p)))
         sources = {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
         return contract.reconcile_static(self.plan, rows, sources,
                                          mode='synthetic-test', clock=lambda: NOW)
 
     def dynamic_rows(self, token='inv-302', pid=4242, start='start-4242'):
-        rows = []
-        client = self.participant('client')
-        remote = self.participant('remote')
-        pairs = ((client, 'cpu-dynamic.json', 'llama-server'),
-                 (remote, 'rpc-dynamic.json', 'ggml-rpc-server'))
-        for p, name, native in pairs:
-            record = genuine_dynamic(name, native, token, pid)
-            if p.role == 'client':
-                # The genuine tiny-fixture captures predate server task
-                # instrumentation; splice the genuine native task/response/
-                # lifecycle fact shapes and re-seal before parsing.
-                record['facts']['tasks'] = [dict(task_id=1, response_id='unknown')]
-                record['facts']['responses'] = [dict(task_id=1)]
-                lifecycle = ('server_task_new_id', 'server_task_processed',
-                             'server_response_send')
-                record['sequence'] = ([dict(sequence=i, event=name)
-                                       for i, name in enumerate(lifecycle)]
-                    + [dict(sequence=i + len(lifecycle), event=row['event'])
-                       for i, row in enumerate(record['sequence'])])
-                record['event_count'] = len(record['sequence'])
-                record['terminal_sequence'] = record['event_count']
-                record['terminal_digest'] = hashlib.sha256(canonical(
-                    {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
-            observation = contract.parse_observation(
-                TransportReply(0, json.dumps(record).encode()))
-            rows.append(contract.ParticipantDynamicEvidence(
-                p.participant_id, observation, self.spawn(p, token), pid, start, native))
-        return rows
+        # Explicitly labeled SYNTHETIC route-contract evidence: the genuine
+        # tiny-fixture captures carry no request correlation or domain
+        # boundaries, so the acceptance control uses the labeled synthetic
+        # contract (genuine capture shapes retained for allocations and
+        # remote transfer records).
+        return synthetic_dynamic_rows(self.plan, token=token,
+                                      pids=dict(client=pid, remote=pid),
+                                      start=start)
 
     def request(self, token='inv-302', task_id='1', response_id='resp-1'):
         return contract.RequestIdentity(invocation_token=token, request_nonce='nonce-302',
@@ -359,7 +346,8 @@ class DynamicReconciliationTests(unittest.TestCase):
             lambda facts: facts.update(transfers=[r for r in facts['transfers']
                                                   if r['op'] not in ('get', 'rpc_get')]))
         from dataclasses import replace
-        with self.assertRaisesRegex(ValueError, 'output custody readback missing on loader'):
+        with self.assertRaisesRegex(ValueError,
+                                    'boundary missing|output custody readback'):
             contract.reconcile_dynamic(self.plan, self.static_receipt(),
                 (replace(client, observation=mutated), rows[1]), self.request(),
                 mode='synthetic-test', clock=lambda: NOW)
@@ -394,21 +382,9 @@ def _continuity_rows(plan):
         p = next(p for p in plan.participants if p.role == role)
         spawn = OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         spawns[p.participant_id] = spawn
-        record = genuine_dynamic(name, native, 'inv-302', 4242)
-        if role == 'client':
-            record['facts']['tasks'] = [dict(task_id=1, response_id='unknown')]
-            record['facts']['responses'] = [dict(task_id=1)]
-            lifecycle = ('server_task_new_id', 'server_task_processed', 'server_response_send')
-            record['sequence'] = ([dict(sequence=i, event=n) for i, n in enumerate(lifecycle)]
-                + [dict(sequence=i + len(lifecycle), event=r['event'])
-                   for i, r in enumerate(record['sequence'])])
-            record['event_count'] = len(record['sequence'])
-            record['terminal_sequence'] = record['event_count']
-            record['terminal_digest'] = hashlib.sha256(canonical(
-                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
-        observation = contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
-        rows.append(ParticipantDynamicEvidence(p.participant_id, observation, spawn,
-                                               4242, 'start-4242', native))
+        dyn = synthetic_dynamic_rows(plan, token='inv-302',
+                                     pids={role: 4242}, start='start-4242')
+        rows.extend(r for r in dyn if r.participant_id == p.participant_id)
     # A foreign dynamic spawn (pid 5555) breaking continuity with the static
     # receipt's spawn facts.
     wrong_client = rows[0]
@@ -429,7 +405,9 @@ def _static_receipt_for(plan, manifest, spawns):
             freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
         static_rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
             spawn, contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
-            sha256(source_receipt(plan, p))))
+            sha256(source_receipt(plan, p)),
+            observed_inventory=observed_inventory_for(plan, p),
+            observed_host_facts=observed_host_facts_for(plan, p)))
     sources = {p.participant_id: source_receipt(plan, p) for p in plan.participants}
     return contract.reconcile_static(plan, static_rows, sources,
                                      mode='synthetic-test', clock=lambda: NOW)
@@ -716,16 +694,16 @@ class CollectedRunnerTests(unittest.TestCase):
         helper.manifest = plan_bound_manifest(self.plan)
         static = helper.static_receipt('inv-302')
         rows = tuple(helper.dynamic_rows('inv-302'))
-        base = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+        base = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                         task_id='1', response_id='resp-1')
         # A request whose task id was never observed refuses.
-        foreign = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+        foreign = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                            task_id='999', response_id='resp-1')
         with self.assertRaisesRegex(ValueError, 'request task not observed'):
             contract.reconcile_dynamic(self.plan, static, rows, foreign,
                                        mode='synthetic-test', clock=lambda: NOW)
         # No task binding at all refuses.
-        unbound = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+        unbound = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                            response_id='resp-1')
         with self.assertRaisesRegex(ValueError, 'request task binding missing'):
             contract.reconcile_dynamic(self.plan, static, rows, unbound,
@@ -805,13 +783,15 @@ class CollectedRunnerTests(unittest.TestCase):
         client = rows[0]
         # Tasks [1, 2]; responses answer only task 2; request binds task 1.
         def mutate(facts):
-            facts['tasks'] = [dict(task_id=1, response_id='unknown'),
-                              dict(task_id=2, response_id='unknown')]
-            facts['responses'] = [dict(task_id=2)]
+            facts['tasks'] = [dict(task_id=1, response_id='unknown',
+                                   request_nonce='nonce-302'),
+                              dict(task_id=2, response_id='unknown',
+                                   request_nonce='nonce-302')]
+            facts['responses'] = [dict(task_id=2, request_nonce='nonce-302')]
         mutated = _mutate_observation(client.observation, mutate)
         from dataclasses import replace
         rows[0] = replace(client, observation=mutated)
-        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                            task_id='1', response_id='resp-1')
         with self.assertRaisesRegex(ValueError,
                                     'no observed response for the request task'):
@@ -823,7 +803,7 @@ class CollectedRunnerTests(unittest.TestCase):
         helper.plan = self.plan
         helper.manifest = plan_bound_manifest(self.plan)
         static = helper.static_receipt('inv-302')
-        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                            task_id='1', response_id='resp-1')
         rows = list(helper.dynamic_rows('inv-302'))
         client = rows[0]
@@ -1024,7 +1004,7 @@ class CollectedRunnerTests(unittest.TestCase):
             mutated = _mutate_observation(client.observation, mutate)
             from dataclasses import replace
             rows[0] = replace(client, observation=mutated)
-            request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+            request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
                                                task_id='1', response_id='resp-1')
             with self.subTest(status=repr(status)):
                 with self.assertRaisesRegex(ValueError, 'graph status not successful'):
@@ -1098,25 +1078,20 @@ class RecordingRunnerHarness:
             freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
         return contract.ParticipantStaticEvidence(p.participant_id, identity, spawn,
             contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
-            sha256(self.sources[p.participant_id]))
+            sha256(self.sources[p.participant_id]),
+            observed_inventory=observed_inventory_for(self.plan, p),
+            observed_host_facts=observed_host_facts_for(self.plan, p))
 
     def _dynamic(self, p, spawn, native_label):
-        name = 'cpu-dynamic.json' if p.role == 'client' else 'rpc-dynamic.json'
-        record = genuine_dynamic(name, native_label, spawn.invocation_token, spawn.pid)
-        if p.role == 'client':
-            record['facts']['tasks'] = [dict(task_id=1, response_id='unknown')]
-            record['facts']['responses'] = [dict(task_id=1)]
-            lifecycle = ('server_task_new_id', 'server_task_processed', 'server_response_send')
-            record['sequence'] = ([dict(sequence=i, event=name_) for i, name_ in enumerate(lifecycle)]
-                + [dict(sequence=i + len(lifecycle), event=row['event'])
-                   for i, row in enumerate(record['sequence'])])
-            record['event_count'] = len(record['sequence'])
-            record['terminal_sequence'] = record['event_count']
-            record['terminal_digest'] = hashlib.sha256(canonical(
-                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
-        observation = contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
-        return contract.ParticipantDynamicEvidence(p.participant_id, observation, spawn,
-            spawn.pid, spawn.start, native_label)
+        # Labeled SYNTHETIC route contract bound to the REAL owned spawn
+        # facts, invocation token and the runner's pinned request nonce;
+        # genuine captures cannot provide the request-correlated facts.
+        rows = synthetic_dynamic_rows(self.plan, token=spawn.invocation_token,
+                                      pids={p.role: spawn.pid},
+                                      start=spawn.start,
+                                      nonce='nonce-302')
+        row = next(r for r in rows if r.participant_id == p.participant_id)
+        return row
 
     def tunnel(self, *args):
         return self, 18080
@@ -1145,6 +1120,9 @@ class RecordingRunnerHarness:
         kwargs.update(overrides)
         self._runner = OperatorRunner(self, self.manager, self, self.tunnel,
                                       pause=lambda _: None, **kwargs)
+        # Deterministic offline nonce so the labeled synthetic dynamic
+        # evidence can carry the same request-correlation key.
+        self._runner.request_nonce = 'nonce-302'
         return self._runner
 
 

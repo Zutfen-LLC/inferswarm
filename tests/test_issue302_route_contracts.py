@@ -48,16 +48,21 @@ def bound_manifest_for(plan, participant):
     return contract.parse_build_manifest(body)
 
 
-def observed_inventory_for(plan):
-    """SYNTHETIC observed inventory exactly covering the calculated catalog.
+def observed_inventory_for(plan, participant):
+    """SYNTHETIC observed inventory for one participant's owned catalog.
 
     Labeled synthetic-contract evidence: each row mirrors what a capable
-    pre-request static observer would report for the frozen plan. It never
-    becomes live capability evidence (receipts stay non-authorizing).
+    pre-request static observer would report for this participant's owned
+    slice of the frozen plan. It never becomes live capability evidence
+    (receipts stay non-authorizing).
     """
     inv = q8_static_inventory(plan.config, metadata(), candidate=plan.candidate)
+    ids = {b.binding_id for b in participant.bindings}
+    memories = {b.memory_id for b in participant.bindings}
     states, extents = [], []
     for cache in inv.persistent_caches:
+        if cache.state.binding_id not in ids:
+            continue
         states.append(dict(state_id=cache.state.state_id,
                            binding_id=cache.state.binding_id,
                            memory_id=cache.state.memory_id,
@@ -72,7 +77,7 @@ def observed_inventory_for(plan):
                   for c in inv.logical_composites]
     weights = [dict(state_id=a.state_id, binding_id=a.binding_id,
                     memory_id=a.memory_id, observed_bytes=a.encoded_bytes)
-               for a in plan.candidate.assignments]
+               for a in plan.candidate.assignments if a.binding_id in ids]
     return contract.ObservedInventoryEvidence(
         weights=tuple(freeze(row) for row in weights),
         persistent_states=tuple(freeze(row) for row in states),
@@ -80,7 +85,8 @@ def observed_inventory_for(plan):
         extents=tuple(freeze(row) for row in extents),
         allocations=tuple(freeze(dict(
             allocation_id=c.allocation_id, memory_id=c.memory_id,
-            observed_bytes=c.bytes)) for c in inv.charges if c.bytes is not None),
+            observed_bytes=c.bytes)) for c in inv.charges
+            if c.bytes is not None and c.memory_id in memories),
         source='synthetic-contract')
 
 
@@ -97,12 +103,13 @@ def observed_host_facts_for(plan, participant):
         source='synthetic-contract')
 
 
-def static_rows_for(plan, *, token='inv-302', inventory=True, host_facts=True):
+def static_rows_for(plan, *, token='inv-302', inventory=True, host_facts=True,
+                    start=None):
     rows = []
     for participant in plan.participants:
         pid = 101 if participant.role == 'client' else 202
         spawn = contract.OwnedSpawnFacts(participant.participant_id, pid,
-                                         'start-%d' % pid, token)
+                                         start or 'start-%d' % pid, token)
         identity = ProcessIdentity(participant.participant_id,
             participant.host_id, participant.boot_epoch, participant.topology_epoch,
             pid, spawn.start, participant.runtime_executable,
@@ -115,7 +122,7 @@ def static_rows_for(plan, *, token='inv-302', inventory=True, host_facts=True):
             contract.DerivedBuildEvidence(bound_manifest_for(plan, participant),
                                           participant.runtime_sha256),
             sha256(source_receipt(plan, participant)),
-            observed_inventory=observed_inventory_for(plan) if inventory else None,
+            observed_inventory=observed_inventory_for(plan, participant) if inventory else None,
             observed_host_facts=observed_host_facts_for(plan, participant)
             if host_facts else None))
     return rows
@@ -127,31 +134,34 @@ def static_receipt_for(plan, rows, **kwargs):
                                      mode='synthetic-test', clock=lambda: NOW, **kwargs)
 
 
-def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu'):
+def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
+                           pids=None, start=None, nonce='nonce-302'):
     """SYNTHETIC labeled route evidence: nonce-correlated task and complete
     domain-boundary transfer legs for the requested route."""
     rows = []
     for participant in plan.participants:
-        pid = 101 if participant.role == 'client' else 202
+        pid = (pids or {}).get(participant.role,
+                               101 if participant.role == 'client' else 202)
+        row_start = start or 'start-%d' % pid
         spawn = contract.OwnedSpawnFacts(participant.participant_id, pid,
-                                         'start-%d' % pid, token)
+                                         row_start, token)
         if participant.role == 'client':
             facts = dict(
                 process=dict(pid=pid),
                 allocations=[dict(buffer_bytes=96, backend='CPU')],
                 tasks=[dict(task_id=1, response_id='unknown',
-                            request_nonce='nonce-302')],
-                responses=[dict(task_id=1, request_nonce='nonce-302')],
+                            request_nonce=nonce)],
+                responses=[dict(task_id=1, request_nonce=nonce)],
                 graphs=[dict(graph_id=94176060335536, nodes=1, splits=1,
                              status=0, ubatch_lineage='ub-1')],
                 ubatches=[dict(ubatch_id='ub-1', tokens=4,
-                               task_id=1, request_nonce='nonce-302')],
+                               task_id=1, request_nonce=nonce)],
                 tokens=[dict(token_count=4, task_id=1,
-                             request_nonce='nonce-302')],
-                state_lineage=[dict(task_id=1, request_nonce='nonce-302',
+                             request_nonce=nonce)],
+                state_lineage=[dict(task_id=1, request_nonce=nonce,
                                     states_touched=109)],
                 transfers=route_legs(route),
-                output_custody=[dict(task_id=1, request_nonce='nonce-302',
+                output_custody=[dict(task_id=1, request_nonce=nonce,
                                      readback_bytes=64)],
                 route_contract='synthetic/%s' % route)
             events = ['server_task_new_id', 'server_task_processed',
@@ -181,7 +191,7 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu'):
             TransportReply(0, json.dumps(seal(record)).encode()))
         rows.append(contract.ParticipantDynamicEvidence(
             participant.participant_id, observation, spawn, pid,
-            'start-%d' % pid,
+            row_start,
             'llama-server' if participant.role == 'client' else 'ggml-rpc-server'))
     return rows
 
@@ -218,8 +228,9 @@ def route_legs(route, *, remote=False):
                  boundary='a-staging-to-output', completed=True)]
 
 
-def request_for(token='inv-302', task_id='1', response_id='resp-1'):
-    return contract.RequestIdentity(invocation_token=token, request_nonce='nonce-302',
+def request_for(token='inv-302', task_id='1', response_id='resp-1',
+                nonce='nonce-302'):
+    return contract.RequestIdentity(invocation_token=token, request_nonce=nonce,
                                     task_id=task_id, response_id=response_id)
 
 
@@ -343,8 +354,9 @@ class DynamicRouteContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.plan = distinct_role_plan()
 
-    def static_receipt(self):
-        return static_receipt_for(self.plan, static_rows_for(self.plan))
+    def static_receipt(self, **kwargs):
+        rows = static_rows_for(self.plan, **kwargs)
+        return static_receipt_for(self.plan, rows)
 
     def test_complete_synthetic_route_contract_accepts(self):
         receipt = contract.reconcile_dynamic(self.plan, self.static_receipt(),

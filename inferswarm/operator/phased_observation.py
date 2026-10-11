@@ -15,7 +15,7 @@ import re
 from typing import Any, Mapping, NoReturn
 
 from .bindings import TransportReply
-from .profiles import FrozenMapping, canonical, integer, keys, thaw
+from .profiles import FrozenMapping, canonical, freeze, integer, keys, thaw
 from .config import ProfiledOperatorConfig
 from .metadata import MetadataIndex
 from .plan import ProfiledOperatorPlan, _profiled_digest_from_metadata
@@ -1015,6 +1015,69 @@ class DerivedBuildEvidence:
 
 
 @dataclass(frozen=True)
+class ObservedHostFacts:
+    """Independently observed host facts for one participant (#302 P1-C).
+
+    Every field must come from a trusted observation source (remote /proc,
+    owned-listener checks, observed process environment) — never from
+    participant configuration. ``None`` marks a fact no in-scope observer
+    can currently observe; reconciliation refuses on it and names the
+    smallest missing observer capability instead of echoing configuration.
+    """
+    boot_epoch: str | None
+    topology_epoch: str | None
+    listening: tuple[str, ...]
+    observer_environment: dict
+    source: str
+
+    def __post_init__(self):
+        for name in ('boot_epoch', 'topology_epoch'):
+            value = getattr(self, name)
+            if value is not None:
+                _text(value, 'observed ' + name)
+        if type(self.listening) is not tuple:
+            raise ValueError('observed listeners must be a tuple')
+        for endpoint in self.listening:
+            _text(endpoint, 'observed listener')
+        if type(self.observer_environment) is not dict:
+            raise ValueError('observed environment must be an object')
+        for key, value in self.observer_environment.items():
+            _text(key, 'observed environment key')
+            if type(value) is not str:
+                raise ValueError('observed environment value must be text')
+        _text(self.source, 'observed host facts source')
+
+
+@dataclass(frozen=True)
+class ObservedInventoryEvidence:
+    """Observed pre-request inventory for one participant (#302 P1-B).
+
+    Labeled observed facts joined against the CALCULATED inventory during
+    static admission. ``source`` labels the evidence origin (for offline
+    tests ``synthetic-contract``); calculated expectations never populate
+    these fields. The retained #301 producer cannot yet emit this family
+    before POST, so the production collector leaves it absent and static
+    reconciliation fails closed naming the missing capability.
+    """
+    weights: tuple[FrozenMapping, ...] = ()
+    persistent_states: tuple[FrozenMapping, ...] = ()
+    logical_composites: tuple[FrozenMapping, ...] = ()
+    extents: tuple[FrozenMapping, ...] = ()
+    allocations: tuple[FrozenMapping, ...] = ()
+    source: str = 'observed/unknown'
+
+    def __post_init__(self):
+        from .profiles import thaw as _thaw
+        _text(self.source, 'observed inventory source')
+        for name in ('weights', 'persistent_states', 'logical_composites',
+                     'extents', 'allocations'):
+            value = getattr(self, name)
+            if type(value) is not tuple:
+                raise ValueError('observed inventory ' + name + ' must be a tuple')
+            object.__setattr__(self, name, tuple(freeze(_thaw(row)) for row in value))
+
+
+@dataclass(frozen=True)
 class ParticipantStaticEvidence:
     """One participant's independently collected static admission evidence.
 
@@ -1022,12 +1085,17 @@ class ParticipantStaticEvidence:
     two production sites; there is no production static-snapshot producer, so
     static admission is built from independently collected process identity,
     verified source ranges and explicit derived-build qualification only.
+    ``observed_inventory``/``observed_host_facts`` carry the #302 P1-B/P1-C
+    observed families; absent observations refuse at reconciliation with the
+    smallest missing observer capability named, never a configuration echo.
     """
     participant_id: str
     identity: Any
     spawn: OwnedSpawnFacts
     build: DerivedBuildEvidence
     source_receipt_digest: str
+    observed_inventory: ObservedInventoryEvidence | None = None
+    observed_host_facts: ObservedHostFacts | None = None
 
 
 @dataclass(frozen=True)
@@ -1166,6 +1234,146 @@ def _plan_members_wire(plan):
     return [list(row) for row in _asdict(plan.model)['members']]
 
 
+def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
+    """#302 P1-B/P1-C: observed evidence joins, fail-closed.
+
+    The calculated inventory (q8_static_inventory) supplies EXPECTATIONS
+    only; every admission predicate about observed resources consumes the
+    independently collected ObservedInventoryEvidence/ObservedHostFacts on
+    each row. Missing observations refuse with the smallest missing
+    observer capability named; observed values must match the frozen plan.
+    """
+    from .profiles import thaw as _thaw
+    from .qwen_q8 import q8_static_inventory
+    if metadata_inventory is None:
+        from .metadata import load_metadata_index
+        from pathlib import Path as _Path
+        metadata_inventory = load_metadata_index(
+            _Path(plan.config.metadata.path), expected_sha256=plan.metadata.sha256)
+    inventory = q8_static_inventory(plan.config, metadata_inventory,
+                                    candidate=plan.candidate)
+    expected_states = {c.state.state_id: c for c in inventory.persistent_caches}
+    expected_composites = {c.state.state_id: c for c in inventory.logical_composites}
+    expected_weights = {a.state_id: a for a in plan.candidate.assignments}
+    for row in rows:
+        participant = participants[row.participant_id]
+        inv = row.observed_inventory
+        if inv is None:
+            raise ValueError(
+                'static reconciliation: observed persistent-state inventory '
+                'missing for ' + row.participant_id + '; smallest missing observer '
+                'capability: a pre-POST static export of allocation/state extents '
+                'in the #301 observation overlay (currently it exports '
+                'allocations only in terminal dynamic envelopes)')
+        if not isinstance(inv, ObservedInventoryEvidence):
+            raise ValueError('static reconciliation: typed observed inventory '
+                             'required: ' + row.participant_id)
+        observed_states = {}
+        for frozen_row in inv.persistent_states:
+            record = _thaw(frozen_row)
+            name = record.get('state_id')
+            if not isinstance(name, str) or name in observed_states:
+                raise ValueError('static reconciliation: observed state identity '
+                                 'malformed: ' + row.participant_id)
+            observed_states[name] = record
+        ids = {b.binding_id for b in participant.bindings}
+        owned_states = {name: expected_states[name] for name in expected_states
+                        if expected_states[name].state.binding_id in ids}
+        if set(observed_states) != set(owned_states):
+            raise ValueError('static reconciliation: observed state coverage '
+                             'mismatch (expected %d owned persistent-state expectations '
+                             'for %s, observed %d)'
+                             % (len(owned_states), row.participant_id, len(observed_states)))
+        for name, expected in owned_states.items():
+            record = observed_states[name]
+            for field, want in dict(binding_id=expected.state.binding_id,
+                    memory_id=expected.state.memory_id,
+                    native_name=expected.native_name,
+                    ggml_type=expected.ggml_type,
+                    native_dimensions=list(expected.native_dimensions)).items():
+                if record.get(field) != want:
+                    raise ValueError('static reconciliation: observed state '
+                                     + field + ' mismatch: ' + name)
+            if record.get('observed_bytes') is None:
+                raise ValueError('static reconciliation: observed state bytes '
+                                 'UNKNOWN refuses admission: ' + name)
+            if type(record.get('observed_bytes')) is not int \
+                    or record['observed_bytes'] != expected.state.lower_bound_bytes:
+                raise ValueError('static reconciliation: observed state bytes '
+                                 'mismatch: ' + name)
+        observed_composites = set()
+        for frozen_row in inv.logical_composites:
+            record = _thaw(frozen_row)
+            name = record.get('state_id')
+            if name not in expected_composites:
+                raise ValueError('static reconciliation: observed composite is not '
+                                 'an expected logical composite: ' + repr(name))
+            if record.get('observed') is not True:
+                raise ValueError('static reconciliation: observed composite not '
+                                 'confirmed observed: ' + name)
+            observed_composites.add(name)
+        if observed_composites != set(expected_composites):
+            raise ValueError('static reconciliation: observed composite coverage '
+                             'mismatch: ' + row.participant_id)
+        observed_extents = {_thaw(frozen_row).get('state_id'): _thaw(frozen_row)
+                            for frozen_row in inv.extents}
+        for name, expected in owned_states.items():
+            record = observed_extents.get(name)
+            if record is None:
+                raise ValueError('static reconciliation: observed extent missing: '
+                                 + name)
+            if record.get('base_buffer_bytes') != expected.state.lower_bound_bytes \
+                    or record.get('layout_exact') is not True:
+                raise ValueError('static reconciliation: observed extent mismatch: '
+                                 + name)
+        observed_allocations = {_thaw(frozen_row).get('allocation_id'): _thaw(frozen_row)
+                                for frozen_row in inv.allocations}
+        owned_memories = {b.memory_id for b in participant.bindings}
+        for charge in inventory.charges:
+            if charge.memory_id not in owned_memories or charge.bytes is None:
+                continue
+            if charge.allocation_id not in observed_allocations:
+                raise ValueError('static reconciliation: observed allocation '
+                                 'missing: ' + charge.allocation_id)
+            record = observed_allocations[charge.allocation_id]
+            if record.get('observed_bytes') != charge.bytes \
+                    or record.get('memory_id') != charge.memory_id:
+                raise ValueError('static reconciliation: observed allocation '
+                                 'mismatch: ' + charge.allocation_id)
+        host = row.observed_host_facts
+        if host is None:
+            raise ValueError('static reconciliation: observed host facts missing '
+                             'for ' + row.participant_id + '; smallest missing '
+                             'observer capability: independent remote host '
+                             'boot/topology/listener observation at collection '
+                             'time (currently only /proc process identity is read)')
+        if not isinstance(host, ObservedHostFacts):
+            raise ValueError('static reconciliation: typed observed host facts '
+                             'required: ' + row.participant_id)
+        if host.boot_epoch is None or host.boot_epoch != participant.boot_epoch:
+            raise ValueError('static reconciliation: observed boot epoch mismatch '
+                             'or UNKNOWN: ' + row.participant_id)
+        if host.topology_epoch is None \
+                or host.topology_epoch != participant.topology_epoch:
+            raise ValueError('static reconciliation: observed topology epoch '
+                             'mismatch or UNKNOWN: ' + row.participant_id)
+        endpoint = participant.rpc_endpoint if participant.rpc_endpoint is not None \
+            else '127.0.0.1:%d' % participant.port
+        if endpoint not in host.listening:
+            raise ValueError('static reconciliation: observed listener does not '
+                             'cover the configured participant endpoint: '
+                             + row.participant_id)
+        environment = host.observer_environment
+        if environment.get('IS301_OBSERVE') != '1' \
+                or 'IS301_EXPORT_DIR' not in environment:
+            raise ValueError('static reconciliation: observer environment not '
+                             'observed on the owned process: ' + row.participant_id)
+        if not expected_weights:
+            raise ValueError('static reconciliation: participant owns no weights: '
+                             + row.participant_id)
+    return inventory
+
+
 def _static_identity_join(plan, participants, rows, token):
     from .bindings import ProcessIdentity as _ProcessIdentity
     for row in rows:
@@ -1228,6 +1436,7 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
     _static_source_join(plan, participants, rows, source_receipts)
     _static_identity_join(plan, participants, rows, token)
     _static_build_join(plan, participants, rows)
+    inventory = _static_observed_joins(plan, participants, rows)
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
         material.append(dict(participant_id=row.participant_id,
@@ -1239,11 +1448,16 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
     counts = (('participants', len(rows)),
               ('source-range-joined-weights', len(plan.candidate.assignments)),
               ('expected-states', len(plan.candidate.required_state)),
-              ('boundaries', len(plan.candidate.boundaries)))
+              ('boundaries', len(plan.candidate.boundaries)),
+              ('observed-persistent-states', len(inventory.persistent_caches)),
+              ('observed-logical-composites', len(inventory.logical_composites)))
     spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
                           for row in rows))
     return PhaseReceipt(RECEIPT_SCHEMA, 'static', _STATIC_VERDICT, plan.digest, plan.selection,
-        token, _sha256(material), True, mode == 'live', False, None, counts, spawns)
+        token, _sha256(material), True, mode == 'live' and not any(
+            row.observed_inventory is not None
+            and row.observed_inventory.source == 'synthetic-contract'
+            for row in rows), False, None, counts, spawns)
 
 
 def _identity_wire_digest(identity):
@@ -1355,36 +1569,49 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
                                   for row in rows))
     if dynamic_spawns != tuple(static_receipt.spawn_facts):
         raise ValueError('dynamic reconciliation: spawn continuity with static admission mismatch')
-    # Same-request task/response and graph joins. The native producer emits
-    # response_id as the literal "unknown" at task-creation time; request
-    # binding is by the observed native task id (controller-side binding of
-    # the HTTP response id happens in the runner, not in native facts).
+    # Same-request task/response/graph/ubatch/token/state-lineage joins.
+    # The request nonce is the controller-side correlation key; the observed
+    # native task/response/ubatch/output-custody facts must carry it back.
+    # The native producer emits response_id as the literal "unknown" at
+    # task-creation time; request binding is by observed task id AND the
+    # request nonce correlation.
     client_facts = facts[client_id]
+    nonce = request_identity.request_nonce
     tasks = client_facts.get('tasks')
     if not isinstance(tasks, list) or not tasks:
         raise ValueError('dynamic reconciliation: request task facts missing')
+    correlated_tasks = set()
     observed_task_ids = set()
     for task in tasks:
         if not isinstance(task, dict) or type(task.get('task_id')) is not int:
             raise ValueError('dynamic reconciliation: request task record malformed')
         observed_task_ids.add(task['task_id'])
+        if task.get('request_nonce') == nonce:
+            correlated_tasks.add(task['task_id'])
     if request_identity.task_id not in {str(t) for t in observed_task_ids}:
         raise ValueError('dynamic reconciliation: request task not observed for this request')
+    if int(request_identity.task_id) not in correlated_tasks:
+        raise ValueError('dynamic reconciliation: request task lacks request '
+                         'correlation (observed nonce mismatch): no same-request '
+                         'identity join')
     request_task = int(request_identity.task_id)
     responses = client_facts.get('responses')
     if not isinstance(responses, list) or not responses:
         raise ValueError('dynamic reconciliation: response custody facts missing')
-    # The response custodian must have answered THE request's task; responses
-    # naming only other tasks do not establish this request's output custody.
+    # The response custodian must have answered THE request's task with the
+    # request's nonce; responses naming only other tasks or lacking the
+    # nonce do not establish this request's output custody.
     answered = set()
     for response in responses:
         if not isinstance(response, dict) or type(response.get('task_id')) is not int:
             raise ValueError('dynamic reconciliation: response task record malformed')
         if response['task_id'] not in observed_task_ids:
             raise ValueError('dynamic reconciliation: response task join mismatch')
-        answered.add(response['task_id'])
+        if response.get('request_nonce') == nonce:
+            answered.add(response['task_id'])
     if request_task not in answered:
-        raise ValueError('dynamic reconciliation: no observed response for the request task')
+        raise ValueError('dynamic reconciliation: no observed response for the '
+                         'request task with request correlation')
     graphs = client_facts.get('graphs')
     if not isinstance(graphs, list) or not graphs:
         raise ValueError('dynamic reconciliation: graph facts missing')
@@ -1399,24 +1626,85 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
             raise ValueError('dynamic reconciliation: graph identity missing')
         if type(graph.get('nodes')) is not int or graph['nodes'] < 1:
             raise ValueError('dynamic reconciliation: graph node count missing')
+        if graph.get('ubatch_lineage') in (None, 'unknown', ''):
+            raise ValueError('dynamic reconciliation: graph ubatch lineage UNKNOWN '
+                             'refuses same-request acceptance')
         observed_generations.add(graph['graph_id'])
     for generation in request_identity.graph_generations:
         if generation not in observed_generations:
             raise ValueError('dynamic reconciliation: graph generation not observed for this request')
+    # Ubatches and tokens must be correlated with the request nonce and the
+    # observed task; state lineage must cover the required-state catalog.
+    ubatches = client_facts.get('ubatches')
+    if not isinstance(ubatches, list) or not ubatches:
+        raise ValueError('dynamic reconciliation: ubatch lineage facts missing')
+    for ubatch in ubatches:
+        if not isinstance(ubatch, dict) or ubatch.get('task_id') != request_task \
+                or ubatch.get('request_nonce') != nonce:
+            raise ValueError('dynamic reconciliation: ubatch not correlated with '
+                             'the request task/nonce')
+        if type(ubatch.get('tokens')) is not int or ubatch['tokens'] < 1:
+            raise ValueError('dynamic reconciliation: ubatch token count missing')
+    tokens = client_facts.get('tokens')
+    if not isinstance(tokens, list) or not tokens:
+        raise ValueError('dynamic reconciliation: token facts missing')
+    for token_row in tokens:
+        if not isinstance(token_row, dict) or token_row.get('task_id') != request_task \
+                or token_row.get('request_nonce') != nonce:
+            raise ValueError('dynamic reconciliation: token facts not correlated '
+                             'with the request task/nonce')
+    lineage = client_facts.get('state_lineage')
+    if not isinstance(lineage, list) or not lineage:
+        raise ValueError('dynamic reconciliation: state lineage facts missing')
+    for row_lineage in lineage:
+        if not isinstance(row_lineage, dict) or row_lineage.get('task_id') != request_task \
+                or row_lineage.get('request_nonce') != nonce:
+            raise ValueError('dynamic reconciliation: state lineage not correlated '
+                             'with the request task/nonce')
     client_events = events[client_id]
     for required in ('server_task_new_id', 'server_task_processed', 'server_response_send'):
         if required not in client_events:
             raise ValueError('dynamic reconciliation: request lifecycle event missing: ' + required)
-    # Copy-route legs: B CPU -> A staging -> B CUDA requires both SET and GET
-    # families, with the output-custody readback on the client/loader side.
+    # Output custody for THIS request's task and nonce on the client side.
+    custody = client_facts.get('output_custody')
+    if not isinstance(custody, list) or not custody:
+        raise ValueError('dynamic reconciliation: output custody facts missing')
+    if not any(isinstance(row, dict) and row.get('task_id') == request_task
+               and row.get('request_nonce') == nonce
+               and type(row.get('readback_bytes')) is int
+               and row['readback_bytes'] > 0 for row in custody):
+        raise ValueError('dynamic reconciliation: output custody not bound to the '
+                         'request task/nonce')
+    # Route-correct copy-route legs. one-gpu requires every B CPU -> A
+    # staging -> B CUDA boundary on both SET and GET families with explicit
+    # domain endpoints; cpu-only requires CPU-domain legs only. Incidental
+    # CPU fixture activity never satisfies the CUDA-route predicate.
     all_transfers = [record for row in rows for record in transfers_of(facts[row.participant_id])]
     ops = {record.get('op') for record in all_transfers}
     if not any(op in _SET_OPS for op in ops):
         raise ValueError('dynamic reconciliation: copy route SET leg missing')
     if not any(op in _GET_OPS for op in ops):
         raise ValueError('dynamic reconciliation: copy route GET leg missing')
-    if not any(record.get('op') in _GET_OPS for record in transfers_of(client_facts)):
-        raise ValueError('dynamic reconciliation: output custody readback missing on loader')
+    if plan.selection == 'one-gpu':
+        required_boundaries = ('b-cpu-to-a-staging', 'a-staging-to-b-cuda',
+                               'b-cuda-to-a-staging', 'a-staging-to-output')
+        observed_boundaries = {record.get('boundary') for record in all_transfers
+                               if record.get('completed') is True}
+        for boundary in required_boundaries:
+            if boundary not in observed_boundaries:
+                raise ValueError('dynamic reconciliation: copy route boundary '
+                                 'missing for the one-gpu CUDA route: ' + boundary)
+        for record in all_transfers:
+            if type(record.get('bytes')) is not int or record['bytes'] < 1:
+                raise ValueError('dynamic reconciliation: transfer record without '
+                                 'material bytes')
+    else:
+        for record in all_transfers:
+            if record.get('boundary') != 'cpu-only' \
+                    or record.get('source_domain') not in ('B/cpu', 'A/cpu') \
+                    or record.get('dest_domain') not in ('B/cpu', 'A/cpu'):
+                raise ValueError('dynamic reconciliation: cpu-only route requires '
+                                 'CPU-domain boundary evidence')
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
         material.append(dict(participant_id=row.participant_id,

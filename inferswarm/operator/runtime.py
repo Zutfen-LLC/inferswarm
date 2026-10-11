@@ -139,6 +139,10 @@ class OperatorRunner:
         self.collector=collector
         self.static_reconciler=static_reconciler
         self.dynamic_reconciler=dynamic_reconciler
+        # Offline synthetic-correlation seam only: tests may pin the request
+        # nonce so labeled synthetic evidence can carry the same correlation
+        # key; production leaves this None and generates a fresh secret.
+        self.request_nonce=None
 
     def run(self,plan):
         if isinstance(plan,ProfiledOperatorPlan): return self._run_profiled(plan)
@@ -496,7 +500,7 @@ class OperatorRunner:
             self._live(client,remote)
             if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited before request')
             request=dict(plan.request)
-            request_nonce=secrets.token_hex(16)
+            request_nonce=self.request_nonce or secrets.token_hex(16)
             request_identity=RequestIdentity(invocation_token=invocation,request_nonce=request_nonce)
             # Recheck plan freshness after blocking liveness/tunnel work,
             # immediately before the sole POST; no transport work intervenes.
