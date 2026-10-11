@@ -1752,25 +1752,57 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     if not any(op in _GET_OPS for op in ops):
         raise ValueError('dynamic reconciliation: copy route GET leg missing')
     if plan.selection == 'one-gpu':
-        required_boundaries = ('b-cpu-to-a-staging', 'a-staging-to-b-cuda',
-                               'b-cuda-to-a-staging', 'a-staging-to-output')
-        observed_boundaries = {record.get('boundary') for record in all_transfers
-                               if record.get('completed') is True}
-        for boundary in required_boundaries:
-            if boundary not in observed_boundaries:
+        # Each required boundary must be satisfied by a transfer record that
+        # is completed AND joins the correct op family and source/destination
+        # domains; a record carrying the label with a wrong op, wrong domains
+        # or incomplete status cannot satisfy the predicate.
+        required_legs = (
+            ('b-cpu-to-a-staging', _SET_OPS, 'B/cpu', 'A/staging'),
+            ('a-staging-to-b-cuda', _SET_OPS, 'A/staging', 'B/cuda'),
+            ('b-cuda-to-a-staging', _GET_OPS, 'B/cuda', 'A/staging'),
+            ('a-staging-to-output', _GET_OPS, 'A/staging', 'A/cpu-output'),
+        )
+        for boundary, family, source, destination in required_legs:
+            satisfied = any(
+                record.get('boundary') == boundary
+                and record.get('completed') is True
+                and record.get('op') in family
+                and record.get('source_domain') == source
+                and record.get('dest_domain') == destination
+                and type(record.get('bytes')) is int and record['bytes'] >= 1
+                for record in all_transfers)
+            if not satisfied:
                 raise ValueError('dynamic reconciliation: copy route boundary '
-                                 'missing for the one-gpu CUDA route: ' + boundary)
+                                 'missing or not domain/op-joined for the one-gpu '
+                                 'CUDA route: ' + boundary)
+        # Every completed transfer must name a known boundary of this route;
+        # foreign labels are contradictions, not harmless surplus. The RPC
+        # participant observes its own side of the CPU->CUDA hop as a single
+        # b-cpu-to-b-cuda leg (remote backend perspective), so it is known.
+        known = {boundary for boundary, _, _, _ in required_legs} | {'b-cpu-to-b-cuda', 'b-cuda-to-b-cpu'}
         for record in all_transfers:
+            if record.get('completed') is True and record.get('boundary') not in known:
+                raise ValueError('dynamic reconciliation: completed transfer with '
+                                 'foreign boundary label refuses the one-gpu route: '
+                                 + repr(record.get('boundary')))
             if type(record.get('bytes')) is not int or record['bytes'] < 1:
                 raise ValueError('dynamic reconciliation: transfer record without '
                                  'material bytes')
     else:
+        seen_ops = set()
         for record in all_transfers:
             if record.get('boundary') != 'cpu-only' \
                     or record.get('source_domain') not in ('B/cpu', 'A/cpu') \
                     or record.get('dest_domain') not in ('B/cpu', 'A/cpu'):
                 raise ValueError('dynamic reconciliation: cpu-only route requires '
                                  'CPU-domain boundary evidence')
+            if record.get('completed') is True:
+                seen_ops.add(record.get('op'))
+        # Both legs must exist as completed CPU-domain transfers.
+        if not any(op in _SET_OPS for op in seen_ops):
+            raise ValueError('dynamic reconciliation: cpu-only route SET leg missing')
+        if not any(op in _GET_OPS for op in seen_ops):
+            raise ValueError('dynamic reconciliation: cpu-only route GET leg missing')
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
         material.append(dict(participant_id=row.participant_id,

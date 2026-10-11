@@ -598,6 +598,102 @@ class DynamicRouteContractTests(unittest.TestCase):
                 request_for(), mode='synthetic-test', clock=lambda: NOW)
 
 
+    def test_boundary_label_with_wrong_op_cannot_satisfy_route(self):
+        # The SET-direction staging leg relabeled onto a GET op must not
+        # satisfy the boundary: label alone is not a domain/op join.
+        rows = synthetic_dynamic_rows(self.plan)
+        facts = dict(thaw(rows[0].observation.facts))
+        mutated_transfers = []
+        for t in facts['transfers']:
+            t = dict(t)
+            if t['boundary'] == 'b-cpu-to-a-staging':
+                t['op'] = 'get'
+            mutated_transfers.append(t)
+        facts['transfers'] = mutated_transfers
+        mutated = _mutate(rows[0].observation, lambda f: None, replacement=facts)
+        from dataclasses import replace
+        rows = (replace(rows[0], observation=mutated), rows[1])
+        with self.assertRaisesRegex(ValueError,
+                                    'b-cpu-to-a-staging'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(), rows,
+                request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+    def test_boundary_label_with_wrong_domains_cannot_satisfy_route(self):
+        rows = synthetic_dynamic_rows(self.plan)
+        facts = dict(thaw(rows[0].observation.facts))
+        mutated_transfers = []
+        for t in facts['transfers']:
+            t = dict(t)
+            if t['boundary'] == 'a-staging-to-b-cuda':
+                t['dest_domain'] = 'A/cpu'
+            mutated_transfers.append(t)
+        facts['transfers'] = mutated_transfers
+        mutated = _mutate(rows[0].observation, lambda f: None, replacement=facts)
+        from dataclasses import replace
+        rows = (replace(rows[0], observation=mutated), rows[1])
+        with self.assertRaisesRegex(ValueError,
+                                    'a-staging-to-b-cuda'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(), rows,
+                request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+    def test_foreign_completed_boundary_label_refuses(self):
+        rows = synthetic_dynamic_rows(self.plan)
+        facts = dict(thaw(rows[0].observation.facts))
+        extra = dict(facts['transfers'][0], boundary='cuda-direct-magic',
+                     tensor='phantom')
+        facts['transfers'] = list(facts['transfers']) + [extra]
+        mutated = _mutate(rows[0].observation, lambda f: None, replacement=facts)
+        from dataclasses import replace
+        rows = (replace(rows[0], observation=mutated), rows[1])
+        with self.assertRaisesRegex(ValueError,
+                                    'foreign boundary label'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(), rows,
+                request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+    def test_cpu_only_route_requires_both_completed_legs(self):
+        from tests.test_issue299_q8_plan import fully_bounded_mapping
+        from tests.issue299_fixture import reseal_profiles, profile_digest
+        from inferswarm.operator.plan import build_plan
+        from inferswarm.operator.config import parse_config
+        from tests.test_issue302_per_role_builds import LLAMA_EXE_SHA, RPC_EXE_SHA
+        raw = fully_bounded_mapping('cpu-only')
+        raw['strategy_options']['observer'] = dict(
+            client_manifest_path='/opt/observer/llama-server.build-manifest.json',
+            client_executable_path='/opt/observer/llama-server',
+            remote_manifest_path='/opt/observer/ggml-rpc-server.build-manifest.json',
+            remote_executable_path='/opt/observer/ggml-rpc-server')
+        digests = {'A': LLAMA_EXE_SHA, 'B': RPC_EXE_SHA}
+        for participant in raw['participants']:
+            participant['runtime_sha256'] = digests[participant['host_id']]
+        for runtime in raw['profiles']['snapshot']['runtime_capabilities']:
+            participant = next(p2 for p2 in raw['participants']
+                               if p2['host_id'] == runtime['host_id'])
+            runtime['binary_sha256'] = participant['runtime_sha256']
+            for evidence in raw['profiles']['snapshot']['evidence']:
+                if evidence['evidence_id'] == 'synthetic-' + runtime['runtime_id']:
+                    evidence['dependencies'][
+                        'runtime:' + runtime['runtime_id'] + ':binary_sha256'] = participant['runtime_sha256']
+        reseal_profiles(raw['profiles']['snapshot'])
+        raw['profiles']['digest'] = profile_digest(raw['profiles']['snapshot'])
+        cpu_plan = build_plan(parse_config(raw, now=NOW, profile_mode='replay'), now=NOW)
+        cpu_static = static_receipt_for(cpu_plan, static_rows_for(cpu_plan))
+        # Strip every GET leg: cpu-only must refuse, not accept the SET remnant.
+        rows = synthetic_dynamic_rows(cpu_plan, route='cpu-only')
+        stripped = []
+        for row in rows:
+            facts = dict(thaw(row.observation.facts))
+            facts['transfers'] = [t for t in facts['transfers']
+                                  if t['op'] not in ('get', 'rpc_get')]
+            stripped.append(_mutate(row.observation, lambda f: None,
+                                    replacement=facts))
+        from dataclasses import replace
+        rows = tuple(replace(row, observation=mutated)
+                     for row, mutated in zip(rows, stripped))
+        with self.assertRaisesRegex(ValueError, 'GET leg missing'):
+            contract.reconcile_dynamic(cpu_plan, cpu_static, rows,
+                request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+
 def thaw(value):
     from inferswarm.operator.profiles import thaw as _thaw
     return _thaw(value)
