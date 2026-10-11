@@ -806,5 +806,65 @@ class ExactStaticReceiptTests(unittest.TestCase):
         self.assertFalse(receipt.physical_qualified)
 
 
+class ExactAllocationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = distinct_role_plan()
+
+    def mutate(self, rows, family, fn):
+        from dataclasses import replace
+        inv = rows[0].observed_inventory
+        records = [thaw(r) for r in getattr(inv, family)]
+        fn(records)
+        rows[0] = replace(rows[0], observed_inventory=replace(inv,
+            **{family: tuple(freeze(r) for r in records)}))
+
+    def test_composites_are_owned_once_not_replicated_per_participant(self):
+        from dataclasses import replace
+        inv = q8_static_inventory(self.plan.config, metadata(), candidate=self.plan.candidate)
+        rows = static_rows_for(self.plan)
+        for n, (row, p) in enumerate(zip(rows, self.plan.participants)):
+            names = {c.state.state_id for c in inv.logical_composites
+                     if c.state.binding_id in {b.binding_id for b in p.bindings}}
+            rows[n] = replace(row, observed_inventory=replace(row.observed_inventory,
+                logical_composites=tuple(r for r in row.observed_inventory.logical_composites
+                                        if thaw(r)['state_id'] in names)))
+        self.assertEqual(static_receipt_for(self.plan, rows).verdict, 'STATIC_ADMITTED')
+
+    def test_padded_native_extent_and_actual_allocation_admit(self):
+        rows = static_rows_for(self.plan)
+        self.mutate(rows, 'allocations', lambda a: a[0].update(observed_bytes=a[0]['observed_bytes'] + 64))
+        # Native padding is actual bytes, not an equality to a calculated lower bound.
+        self.assertEqual(static_receipt_for(self.plan, rows).verdict, 'STATIC_ADMITTED')
+
+    def test_foreign_physical_domain_refuses_even_with_matching_logical_memory(self):
+        rows = static_rows_for(self.plan)
+        self.mutate(rows, 'allocations', lambda a: a[0].update(physical_domain='foreign'))
+        with self.assertRaisesRegex(ValueError, 'physical domain'):
+            static_receipt_for(self.plan, rows)
+
+    def test_extent_outside_base_refuses(self):
+        rows = static_rows_for(self.plan)
+        self.mutate(rows, 'extents', lambda a: a[0].update(offset=a[0]['base_buffer_bytes']))
+        with self.assertRaisesRegex(ValueError, 'extent.*range|extent.*outside'):
+            static_receipt_for(self.plan, rows)
+
+    def test_extent_overlap_refuses(self):
+        rows = static_rows_for(self.plan)
+        self.mutate(rows, 'extents', lambda a: a[1].update(offset=0, allocation_id=a[0].get('allocation_id')))
+        with self.assertRaisesRegex(ValueError, 'extent.*overlap'):
+            static_receipt_for(self.plan, rows)
+
+    def test_actual_policy_capacity_and_available_headroom_refuse(self):
+        for field, value, reason in (('observed_bytes', 1 << 50, 'actual.*policy|actual.*capacity'),
+                                     ('available_bytes', 0, 'actual.*headroom'),
+                                     ('total_bytes', 1, 'actual.*capacity')):
+            rows = static_rows_for(self.plan)
+            self.mutate(rows, 'allocations', lambda a: [r.update(**{field: value})
+                for r in a if r['memory_id'] == 'A-ram' and r.get('role') != 'virtual'])
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, reason):
+                static_receipt_for(self.plan, rows)
+
+
 if __name__ == '__main__':
     unittest.main()
