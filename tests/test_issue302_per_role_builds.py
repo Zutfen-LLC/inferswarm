@@ -1,11 +1,13 @@
-"""RED regressions for maintainer review 5482179642 P1-A on PR #305.
+"""RED->GREEN regressions for maintainer review 5482179642 P1-A on PR #305.
 
 Per-role build identities: the collector path must bind the client to the
 retained llama-server manifest/executable (libllama-full.a closure) and the
 RPC participant to the retained ggml-rpc-server manifest/executable
 (libggml-static.a closure), with distinct per-role runtime digests. All
 remote content is SYNTHETIC except the two genuine retained #301 build
-manifests, whose overlay/backend identities are consumed verbatim.
+manifests, whose overlay/backend identities are consumed verbatim. The
+executable-byte pin is rebound to synthetic binaries through the collector's
+retained_builds seam exactly as production would pin the genuine bytes.
 """
 import hashlib
 import json
@@ -39,6 +41,8 @@ ROLE_PATHS = {
 }
 ROLE_EXECUTABLES = {'client': b'synthetic-llama-server-binary',
                     'remote': b'synthetic-rpc-server-binary'}
+SYNTHETIC_EXE_SHA = {role: hashlib.sha256(payload).hexdigest()
+                     for role, payload in ROLE_EXECUTABLES.items()}
 
 
 def per_role_observer_options():
@@ -46,6 +50,20 @@ def per_role_observer_options():
                 client_executable_path=ROLE_PATHS['client'][1],
                 remote_manifest_path=ROLE_PATHS['remote'][0],
                 remote_executable_path=ROLE_PATHS['remote'][1])
+
+
+def synthetic_retained_builds():
+    """The genuine overlay/backend-closure pins rebound to synthetic bytes."""
+    return {
+        'client': {'executable_name': 'llama-server',
+                   'executable_sha256': SYNTHETIC_EXE_SHA['client'],
+                   'backend_libraries': (('libllama-full.a',
+                     LLAMA_MANIFEST['backend_libraries'][0]['sha256']),)},
+        'remote': {'executable_name': 'ggml-rpc-server',
+                   'executable_sha256': SYNTHETIC_EXE_SHA['remote'],
+                   'backend_libraries': (('libggml-static.a',
+                     RPC_MANIFEST['backend_libraries'][0]['sha256']),)},
+    }
 
 
 def distinct_runtime_mapping():
@@ -119,9 +137,6 @@ class RecordingIdentityReader(ProcIdentityReader):
 
     def read(self, participant, pid, *, expected_executable, expected_sha256,
              expected_argv, visibility_environment=()):
-        # Observed image is the participant's actual deployed per-role
-        # executable; the role-swapped deployments are expected to refuse at
-        # the build join before this observation is trusted.
         return ProcessIdentity(participant.participant_id, participant.host_id,
             participant.boot_epoch, participant.topology_epoch, pid,
             'start-%d' % pid, expected_executable, expected_sha256,
@@ -132,26 +147,40 @@ class RecordingIdentityReader(ProcIdentityReader):
 
 def per_role_tree(plan):
     """Both hosts carry BOTH retained manifests and executables; role-correct
-    selection is the collector's job, path identity alone is not trust."""
+    selection is the collector's job, path identity alone is not trust.
+
+    The manifest bodies keep the genuine retained overlay/backend-closure
+    identities verbatim; only the executable-byte pin is rebound to the
+    synthetic binaries (the collector's retained_builds seam pins the same
+    synthetic digests, mirroring how production pins the genuine bytes)."""
     tree = VirtualHostTree()
+    bodies = {
+        'client': dict(LLAMA_MANIFEST, executable_sha256=SYNTHETIC_EXE_SHA['client']),
+        'remote': dict(RPC_MANIFEST, executable_sha256=SYNTHETIC_EXE_SHA['remote']),
+    }
     for participant in plan.participants:
         address = participant.execution_address
-        tree.put(address, ROLE_PATHS['client'][0], LLAMA_MANIFEST)
-        tree.put(address, ROLE_PATHS['remote'][0], RPC_MANIFEST)
+        tree.put(address, ROLE_PATHS['client'][0], bodies['client'])
+        tree.put(address, ROLE_PATHS['remote'][0], bodies['remote'])
         tree.put(address, ROLE_PATHS['client'][1], ROLE_EXECUTABLES['client'])
         tree.put(address, ROLE_PATHS['remote'][1], ROLE_EXECUTABLES['remote'])
     return tree
 
 
 def spawn_for(participant, token='inv-302'):
-    return contract.OwnedSpawnFacts(participant.participant_id,
-        101 if participant.role == 'client' else 202,
-        'start-%d' % (101 if participant.role == 'client' else 202), token)
+    pid = 101 if participant.role == 'client' else 202
+    return contract.OwnedSpawnFacts(participant.participant_id, pid,
+        'start-%d' % pid, token)
+
+
+def collector_for(tree):
+    return NativeObserverCollector(RecordingCollectorTransport(tree),
+                                   RecordingIdentityReader(),
+                                   retained_builds=synthetic_retained_builds())
 
 
 def collect_both(plan, tree):
-    collector = NativeObserverCollector(RecordingCollectorTransport(tree),
-                                        RecordingIdentityReader())
+    collector = collector_for(tree)
     evidence = []
     for participant in plan.participants:
         manifest_path, executable_path = ROLE_PATHS[participant.role]
@@ -162,7 +191,7 @@ def collect_both(plan, tree):
 
 
 class PerRoleBuildIdentityTests(unittest.TestCase):
-    """RED: P1-A — one shared observer identity cannot serve both roles."""
+    """P1-A — one shared observer identity cannot serve both roles."""
 
     @classmethod
     def setUpClass(cls):
@@ -183,10 +212,18 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
         client = self.participant('client')
         remote = self.participant('remote')
         by_id = {e.participant_id: e for e in collect_both(self.plan, tree)}
+        # The joined manifests are the genuine retained per-role bodies with
+        # only the executable-byte pin rebound to the synthetic binaries.
         self.assertEqual(by_id[client.participant_id].build.manifest.executable_sha256,
-                         LLAMA_EXE_SHA)
+                         SYNTHETIC_EXE_SHA['client'])
         self.assertEqual(by_id[remote.participant_id].build.manifest.executable_sha256,
-                         RPC_EXE_SHA)
+                         SYNTHETIC_EXE_SHA['remote'])
+        self.assertEqual(by_id[client.participant_id].build.manifest.backend_libraries,
+                         (('libllama-full.a',
+                           LLAMA_MANIFEST['backend_libraries'][0]['sha256']),))
+        self.assertEqual(by_id[remote.participant_id].build.manifest.backend_libraries,
+                         (('libggml-static.a',
+                           RPC_MANIFEST['backend_libraries'][0]['sha256']),))
         self.assertNotEqual(by_id[client.participant_id].build.manifest.manifest_sha256,
                             by_id[remote.participant_id].build.manifest.manifest_sha256)
 
@@ -195,10 +232,8 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
         # must refuse: the role's backend closure does not match.
         tree = per_role_tree(self.plan)
         client = self.participant('client')
-        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
-                                            RecordingIdentityReader())
-        with self.assertRaisesRegex(CollectorError,
-                                    'backend|retained|role'):
+        collector = collector_for(tree)
+        with self.assertRaisesRegex(CollectorError, 'for this role'):
             collector.collect_static(client, spawn_for(client),
                 ROLE_PATHS['remote'][0], ROLE_PATHS['remote'][1],
                 'a' * 64, expected_argv=(client.runtime_executable, '--serve'))
@@ -211,7 +246,7 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
             manifest_path=ROLE_PATHS['client'][0],
             executable_path=ROLE_PATHS['client'][1])
         with self.assertRaisesRegex(ValueError, 'observer'):
-            parse_config(raw, now=NOW, profile_mode='replay')
+            build_plan(parse_config(raw, now=NOW, profile_mode='replay'), now=NOW)
 
     def test_incomplete_role_coverage_refuses(self):
         raw = fully_bounded_mapping('one-gpu')
@@ -219,7 +254,7 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
             client_manifest_path=ROLE_PATHS['client'][0],
             client_executable_path=ROLE_PATHS['client'][1])
         with self.assertRaisesRegex(ValueError, 'observer'):
-            parse_config(raw, now=NOW, profile_mode='replay')
+            build_plan(parse_config(raw, now=NOW, profile_mode='replay'), now=NOW)
 
     def test_foreign_backend_closure_refuses(self):
         # The RPC role must close over libggml-static.a, not libllama-full.a.
@@ -228,12 +263,10 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
         address = remote.execution_address
         body = dict(RPC_MANIFEST)
         body['backend_libraries'] = [dict(name='libllama-full.a',
-            sha256=LLAMA_MANIFEST['backend_libraries'][0]['sha256'])]
-        body['executable_sha256'] = hashlib.sha256(
-            ROLE_EXECUTABLES['remote']).hexdigest()
+            sha256=RPC_MANIFEST['backend_libraries'][0]['sha256'])]
+        body['executable_sha256'] = SYNTHETIC_EXE_SHA['remote']
         tree.put(address, ROLE_PATHS['remote'][0], body)
-        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
-                                            RecordingIdentityReader())
+        collector = collector_for(tree)
         with self.assertRaisesRegex(CollectorError, 'backend'):
             collector.collect_static(remote, spawn_for(remote),
                 ROLE_PATHS['remote'][0], ROLE_PATHS['remote'][1],

@@ -131,6 +131,12 @@ def _static_options(value, path):
             _static_scalar(child, str, child_path)
         elif name == 'startup_timeout_seconds':
             _static_scalar(child, int, child_path)
+        elif name == 'observer':
+            _static_object(child, child_path)
+            for j, (key, leaf) in enumerate(child):
+                if key in ('client_manifest_path', 'client_executable_path',
+                           'remote_manifest_path', 'remote_executable_path'):
+                    _static_scalar(leaf, str, child_path + '[' + str(j) + '][1]')
         elif name in ('bounds', 'host_mirrors'):
             _static_tuple(child, child_path)
             for j, row in enumerate(child):

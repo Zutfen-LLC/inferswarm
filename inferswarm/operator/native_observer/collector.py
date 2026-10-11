@@ -138,21 +138,53 @@ class ProcIdentityReader:
 
 
 # Retained #301 derived-build artifacts the collector must authenticate
-# independently, mirroring tests/fixtures/issue299/round2-native/.
+# independently, mirroring tests/fixtures/issue299/round2-native/. The two
+# retained builds are genuinely distinct per role: the client runs
+# llama-server and closes over libllama-full.a; the RPC participant runs
+# ggml-rpc-server and closes over libggml-static.a. A shared deployment
+# identity or a swapped-role join must refuse.
 RETAINED_PATCH_SHA256 = 'd471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef'
 RETAINED_TRANSFORMED_MANIFEST_SHA256 = 'f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7'
 RETAINED_COMPILER = 'c++ (Debian 14.2.0-19) 14.2.0'
 RETAINED_BUILD_OPTIONS = ('-O0', '-g0', '-pthread', '-D_GNU_SOURCE', '-D_XOPEN_SOURCE=600', '-DGGML_SCHED_MAX_COPIES=4', '-DGGML_USE_CPU', '-DGGML_USE_RPC', '-DLLAMA_SUBPROCESS', '-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576', '-DCPPHTTPLIB_LISTEN_BACKLOG=512', '-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768', '-DCPPHTTPLIB_TCP_NODELAY=1')
-RETAINED_BACKEND_LIBRARIES = (('libllama-full.a', '6bafcb05a5188e287117d5df9d2b36798bf95c92640317697b26d2af0f5138c6'),)
+RETAINED_ROLE_BUILDS = {
+    'client': {
+        'executable_name': 'llama-server',
+        'executable_sha256': '1058266e497df92d919177702f55131b4675e107c2b316973ec72b35dd999987',
+        'backend_libraries': (('libllama-full.a', '6bafcb05a5188e287117d5df9d2b36798bf95c92640317697b26d2af0f5138c6'),),
+    },
+    'remote': {
+        'executable_name': 'ggml-rpc-server',
+        'executable_sha256': '5f535dd9693f6b82ce132c24566c662ad8b2c85aa25a863ddd741cae5af0bb35',
+        'backend_libraries': (('libggml-static.a', 'f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6'),),
+    },
+}
+
+
+def _retained_role_build(participant, retained_builds=None) -> dict:
+    role = participant.role
+    table = RETAINED_ROLE_BUILDS if retained_builds is None else retained_builds
+    retained = table.get(role)
+    if retained is None:
+        raise CollectorError('no retained derived-build identity for role: ' + str(role))
+    return retained
+
 
 
 class NativeObserverCollector:
     """Bounded collector joining native exports to owned lifecycle facts."""
 
     def __init__(self, transport: SSHCollectorTransport | None = None,
-                 identity_reader: ProcIdentityReader | None = None):
+                 identity_reader: ProcIdentityReader | None = None,
+                 retained_builds=None):
         self.transport = transport or SSHCollectorTransport()
         self.identity_reader = identity_reader or ProcIdentityReader(self.transport)
+        # The retained per-role build pins are production constants; the
+        # optional injection exists only so offline tests can rebind the
+        # executable-byte pin to synthetic binaries while keeping the
+        # genuine overlay/backend-closure identities.
+        self.retained_builds = RETAINED_ROLE_BUILDS if retained_builds is None else retained_builds
+
 
     def collect_static(self, participant, spawn: OwnedSpawnFacts, manifest_path: str,
                        executable_path: str, source_receipt_digest: str, *,
@@ -168,8 +200,8 @@ class NativeObserverCollector:
         return ParticipantStaticEvidence(participant.participant_id, identity, spawn, build,
                                          source_receipt_digest)
 
-    def collect_build(self, participant, manifest_path: str,
-                      executable_path: str) -> DerivedBuildEvidence:
+    def collect_build(self, participant, manifest_path,
+                      executable_path) -> DerivedBuildEvidence:
         body = self.transport.read_json(participant.execution_address, manifest_path)
         manifest = parse_build_manifest(body)
         executable = self.transport.read_bytes(participant.execution_address, executable_path)
@@ -178,10 +210,19 @@ class NativeObserverCollector:
         if digest != manifest.executable_sha256:
             raise CollectorError('derived build executable bytes do not match manifest: '
                                  + participant.participant_id)
-        # Explicit derived-build qualification: the manifest must descend from
-        # the retained authenticated #301 producer artifacts, not merely be
-        # self-consistent. A foreign patch/transformed/compiler/flag identity
-        # is a named refusal even when the executable bytes match.
+        # Explicit per-role derived-build qualification: the manifest must
+        # descend from the retained authenticated #301 producer artifacts
+        # for THIS participant's role (llama-server closes over
+        # libllama-full.a; ggml-rpc-server closes over libggml-static.a),
+        # not merely be self-consistent. A foreign patch/transformed/
+        # compiler/flag identity, a swapped role deployment, or a foreign
+        # backend closure is a named refusal even when the executable bytes
+        # match.
+        retained = _retained_role_build(participant, self.retained_builds)
+        if manifest.executable_sha256 != retained['executable_sha256']:
+            raise CollectorError('derived build executable identity is not the retained '
+                                 'authenticated #' + '301 ' + retained['executable_name']
+                                 + ' build for this role: ' + participant.participant_id)
         if manifest.patch_sha256 != RETAINED_PATCH_SHA256:
             raise CollectorError('derived build patch identity is not the retained '
                                  'authenticated #301 overlay: ' + participant.participant_id)
@@ -195,9 +236,10 @@ class NativeObserverCollector:
         if tuple(manifest.build_options) != RETAINED_BUILD_OPTIONS:
             raise CollectorError('derived build options are not the retained '
                                  'authenticated #301 recipe: ' + participant.participant_id)
-        if tuple(manifest.backend_libraries) != RETAINED_BACKEND_LIBRARIES:
+        if tuple(manifest.backend_libraries) != tuple(retained['backend_libraries']):
             raise CollectorError('derived build backend libraries are not the retained '
-                                 'authenticated #301 artifacts: ' + participant.participant_id)
+                                 'authenticated #' + '301 ' + retained['executable_name']
+                                 + ' closure for this role: ' + participant.participant_id)
         return DerivedBuildEvidence(manifest, digest)
 
     def collect_dynamic(self, participant, spawn: OwnedSpawnFacts, export_dir: str,

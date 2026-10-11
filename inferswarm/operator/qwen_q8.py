@@ -324,11 +324,17 @@ def _validate_options(config,metadata):
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
     observer=options.get('observer')
     if observer is not None:
-        # #302 explicit derived-build qualification for the collected /2 path.
-        # Optional: the legacy /1 observer path and all existing configs are
-        # unchanged; the collected runner refuses without it.
-        if not isinstance(observer,dict) or set(observer)!={'manifest_path','executable_path'}:
-            raise ValueError('observer options: exact manifest/executable deployment paths required')
+        # #302 explicit per-role derived-build qualification for the collected
+        # /2 path. The two retained #301 builds are genuinely distinct: the
+        # client runs llama-server (libllama-full.a closure) and the RPC
+        # participant runs ggml-rpc-server (libggml-static.a closure), so a
+        # single shared deployment identity can never express both. Optional:
+        # the legacy /1 observer path and all existing configs are unchanged;
+        # the collected runner refuses without it.
+        _OBSERVER_FIELDS=('client_manifest_path','client_executable_path',
+                          'remote_manifest_path','remote_executable_path')
+        if not isinstance(observer,dict) or set(observer)!=set(_OBSERVER_FIELDS):
+            raise ValueError('observer options: exact per-role manifest/executable deployment paths required')
         for value in observer.values():
             text(value,'observer deployment path')
     keys(options['bindings'],('loader','remote_cpu','remote_gpu') if config.selection=='one-gpu' else ('loader','remote_cpu'),'strategy bindings')

@@ -33,8 +33,10 @@ CAPTURES = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/native
 def collected_plan(selection='one-gpu'):
     raw = fully_bounded_mapping(selection)
     raw['strategy_options']['observer'] = dict(
-        manifest_path='/opt/observer/llama-server.build-manifest.json',
-        executable_path='/opt/observer/llama-server')
+        client_manifest_path='/opt/observer/llama-server.build-manifest.json',
+        client_executable_path='/opt/observer/llama-server',
+        remote_manifest_path='/opt/observer/ggml-rpc-server.build-manifest.json',
+        remote_executable_path='/opt/observer/ggml-rpc-server')
     return build_plan(plan_parse(raw), now=NOW)
 
 
@@ -104,6 +106,22 @@ class RecordingCollectorTransport(SSHCollectorTransport):
 
 def build_manifest_body(name='llama-server.build-manifest'):
     return json.loads((ROUND2 / f'{name}.json').read_text())
+
+
+def synthetic_retained_pins():
+    """Genuine overlay/backend-closure pins rebound to the synthetic test
+    binaries, mirroring how production pins the genuine retained bytes."""
+    body = build_manifest_body()
+    return {
+        'client': {'executable_name': 'llama-server',
+                   'executable_sha256': hashlib.sha256(b'synthetic-observer-binary').hexdigest(),
+                   'backend_libraries': ((r['name'], r['sha256'])
+                                         for r in body['backend_libraries'])},
+        'remote': {'executable_name': 'ggml-rpc-server',
+                   'executable_sha256': hashlib.sha256(b'synthetic-observer-binary').hexdigest(),
+                   'backend_libraries': (('libggml-static.a', 'f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6'),)},
+    }
+
 
 
 def genuine_dynamic(name, participant, token, pid):
@@ -498,7 +516,8 @@ class CollectorTests(unittest.TestCase):
     def test_collect_static_authenticates_bytes(self):
         tree, manifest = self.tree_with_build()
         transport = RecordingCollectorTransport(tree)
-        collector = NativeObserverCollector(transport, RecordingIdentityReader())
+        collector = NativeObserverCollector(transport, RecordingIdentityReader(),
+                                        retained_builds=synthetic_retained_pins())
         p = self.participant('client')
         spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         evidence = collector.collect_static(p, spawn,
@@ -516,7 +535,8 @@ class CollectorTests(unittest.TestCase):
         reader = RecordingIdentityReader(observations={
             (p.participant_id, 4242): dict(exe='/bin/false', argv=['/bin/false'],
                 sha256='f' * 64, start='start-4242', environ={})})
-        collector = NativeObserverCollector(RecordingCollectorTransport(tree), reader)
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree), reader,
+                                        retained_builds=synthetic_retained_pins())
         with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
             collector.collect_static(p, spawn,
                 '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
@@ -1014,12 +1034,13 @@ class CollectedRunnerTests(unittest.TestCase):
         tree = VirtualHostTree()
         body = dict(build_manifest_body())
         body['patch_sha256'] = 'e' * 64
-        body['executable_sha256'] = hashlib.sha256(b'x').hexdigest()
+        body['executable_sha256'] = hashlib.sha256(b'synthetic-observer-binary').hexdigest()
         p = next(p for p in self.plan.participants if p.role == 'client')
         tree.put(p.execution_address, '/opt/observer/llama-server.build-manifest.json', body)
-        tree.put(p.execution_address, '/opt/observer/llama-server', b'x')
+        tree.put(p.execution_address, '/opt/observer/llama-server', b'synthetic-observer-binary')
         collector = NativeObserverCollector(RecordingCollectorTransport(tree),
-                                            RecordingIdentityReader())
+                                            RecordingIdentityReader(),
+                                            retained_builds=synthetic_retained_pins())
         with self.assertRaisesRegex(CollectorError, 'patch identity is not the retained'):
             collector.collect_build(p, '/opt/observer/llama-server.build-manifest.json',
                                     '/opt/observer/llama-server')

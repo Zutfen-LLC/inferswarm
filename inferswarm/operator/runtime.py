@@ -421,9 +421,22 @@ class OperatorRunner:
         observer_options=options.get('observer')
         if not isinstance(observer_options,dict):
             raise ValueError('observer deployment options required for the collected /2 path')
-        for field in ('manifest_path','executable_path'):
+        # Per-role derived-build deployment identities: the client runs the
+        # retained llama-server build and the RPC participant runs the
+        # retained ggml-rpc-server build; a shared identity cannot express
+        # both and must refuse here before any spawn.
+        _ROLE_FIELDS=('client_manifest_path','client_executable_path',
+                      'remote_manifest_path','remote_executable_path')
+        if set(observer_options)!=set(_ROLE_FIELDS):
+            raise ValueError('observer deployment options: exact per-role '
+                             'manifest/executable deployment paths required')
+        for field in _ROLE_FIELDS:
             if not isinstance(observer_options.get(field),str) or not observer_options[field]:
                 raise ValueError('observer deployment option '+field+' required')
+        role_paths={'client':(observer_options['client_manifest_path'],
+                              observer_options['client_executable_path']),
+                    'remote':(observer_options['remote_manifest_path'],
+                              observer_options['remote_executable_path'])}
         remote_argv=(remote.runtime_executable,*spec.rpc_args,'--host',host,'--port',str(remote.port),
                      *(('--cache',) if cache_enabled else ()))
         client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
@@ -474,8 +487,9 @@ class OperatorRunner:
                 if type(start) is int and start>=0: start=str(start)
                 spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
                 argv=client_argv if p.role=='client' else remote_argv
+                manifest_path,executable_path=role_paths[p.role]
                 evidence=self.collector.collect_static(p,spawn,
-                    observer_options['manifest_path'],observer_options['executable_path'],
+                    manifest_path,executable_path,
                     _sha256(sources[p.participant_id]),expected_argv=argv)
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
