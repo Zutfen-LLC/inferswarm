@@ -115,7 +115,8 @@
     "test_issue299_phased_observation",
     "test_issue299_native_build",
     "test_issue299_native_producer",
-    "test_issue301_budget_authorization"
+    "test_issue301_budget_authorization",
+    "test_issue302_collected_runner"
    ]
   },
   "r8-qwen-lineage": {

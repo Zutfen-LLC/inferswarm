@@ -467,6 +467,62 @@ CPU Validation was dispatched. Collector/normal Q8 wiring and all physical,
 CUDA, route, real-model and performance qualification remain unproved.
 
 
+## #302 collected runner and phased reconciliation (2026-10-11)
+
+Status: coding complete on the #302 issue branch, not reviewed or merged. This
+implements the second remaining-delivery child of #299 from merged main
+`8ed795b01aca2cd720b70564228c244158739f9d` (#301/PR #304 retained in
+ancestry). No native build, model download, inference, GPU, deployment or
+merge occurred; the #301 native budget was not touched.
+
+What was implemented (offline integration only):
+
+- `reconcile_static` and `reconcile_dynamic` in `phased_observation.py` are
+  now real joins instead of unconditional refusals. Static admission requires
+  typed `ParticipantStaticEvidence` for every participant: complete verified
+  source ranges covering all 1,224 weight assignments joined to the typed
+  plan, owned spawn receipts equal to independently collected
+  `ProcessIdentity`, and an explicit `DerivedBuildEvidence` binding the
+  observer executable bytes to the pinned base revision/tree. Dynamic
+  acceptance requires a STATIC_ADMITTED receipt for the same plan and
+  invocation, terminal whole dynamic streams whose export-claim owner matches
+  the owned spawn, task/response fact joins, observed graph generations,
+  nonempty allocation records, and both GET/SET transfer families with the
+  loader-side output-custody readback. Every missing or contradictory fact
+  refuses with its name; no receipt ever carries execution authority.
+- A real bounded collector (`native_observer/collector.py`): read-only SSH
+  artifact reader in the qualified source-transport pattern, derived-build
+  authentication (manifest parsed with `parse_build_manifest` plus
+  independently read executable bytes), export-directory claim verification,
+  and a `/proc`-based independent identity reader.
+- The lifecycle `spawn` action accepts an invocation-owned
+  `IS301_EXPORT_DIR` so each owned process exports into its lease directory.
+- `OperatorRunner._run_profiled_collected`: complete static admission after
+  both owned processes are healthy and before the sole POST; same-request
+  dynamic reconciliation after the POST gating output acceptance (a dynamic
+  refusal means execution occurred and the output was rejected); the
+  last-moment admission/freshness recheck immediately before the POST is
+  preserved; exact-owned cleanup retained on every path.
+- Automatic wiring through ordinary `run_config` when the config's strategy
+  options carry the explicit `observer` deployment block (manifest and
+  executable paths); all legacy `/1` configs and behavior are unchanged, and
+  the `/1` path remains the default when no observer block is present.
+- The genuine retained #301 captures and build manifests in
+  `tests/fixtures/issue299/round2-native/` are replayed through the real
+  collector and reconcilers with recording SSH transports; the tiny CPU/RPC
+  fixture captures predate server task instrumentation, so client-side
+  task/response/lifecycle facts use the genuine native fact shapes spliced
+  and explicitly re-sealed (labeled SYNTHETIC in the module docstring).
+
+Verification so far: the new `tests/test_issue302_collected_runner.py`
+(21 tests), all ten existing issue-299/301 suites, the retention audit, the
+CI planner self-check and the repository finalizer check pass locally at this
+working tree. This is a coding-progress record, not review or acceptance
+evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
+exact-head review, and the separately gated hosted final validation remain
+pending. #303 integration, #300 physical qualification and #299 closure are
+not advanced by this record.
+
 ## Remaining work
 
 1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.
