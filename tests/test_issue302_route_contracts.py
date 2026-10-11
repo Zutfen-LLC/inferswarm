@@ -917,6 +917,14 @@ class ExactAllocationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'physical domain'):
             static_receipt_for(self.plan, rows)
 
+    def test_state_native_type_and_dimension_boolean_alias_refuse(self):
+        for mutate in (lambda r: r.update(ggml_type=False),
+                       lambda r: r['native_dimensions'].__setitem__(-1, True)):
+            rows = static_rows_for(self.plan)
+            self.mutate(rows, 'persistent_states', lambda a: mutate(a[0]))
+            with self.subTest(mutate=mutate), self.assertRaisesRegex(ValueError, 'observed state.*mismatch'):
+                static_receipt_for(self.plan, rows)
+
     def test_extent_outside_base_refuses(self):
         rows = static_rows_for(self.plan)
         self.mutate(rows, 'extents', lambda a: a[0].update(offset=a[0]['base_buffer_bytes']))
@@ -995,6 +1003,9 @@ class ExactDynamicCorrelationTests(unittest.TestCase):
         with self.subTest(case='return-before-send'):
             self.reject_mutation(lambda f: f.update(transfers=f['transfers'][2:] + f['transfers'][:2]),
                                  'route.*order')
+
+    def test_boolean_leg_index_cannot_equal_native_order(self):
+        self.reject_mutation(lambda f: f['transfers'][0].update(leg_index=False), 'route.*order')
 
     def test_transfer_native_range_capacity_and_tensor_generation_missing_refuse(self):
         for field in ('tensor_capacity_bytes', 'tensor_generation'):
