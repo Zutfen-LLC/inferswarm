@@ -642,6 +642,46 @@ class CollectedRunnerTests(unittest.TestCase):
         self.assertIs(result['execution_authorized'], False)
         self.assertTrue(all(row['lease'] == 'released' for row in result['cleanup'].values()))
 
+    def test_static_capture_expiry_after_liveness_means_zero_posts(self):
+        from dataclasses import replace
+        from datetime import timedelta
+        from tests.test_issue302_route_contracts import capture_for
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        original = h.collect_static
+        def collect(*args, **kwargs):
+            r = original(*args, **kwargs)
+            return replace(r, capture=freeze(capture_for(self.plan, r)))
+        h.collect_static = collect
+        original_live = runner._live
+        live_calls = []
+        def live(*args, **kwargs):
+            original_live(*args, **kwargs)
+            live_calls.append(1)
+            if len(live_calls) >= 3:
+                runner.clock = lambda: NOW + timedelta(minutes=6)
+        runner._live = live
+        with self.assertRaisesRegex(ValueError, 'capture.*expired|capture.*stale'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 0)
+
+    def test_static_evidence_drift_after_receipt_means_zero_posts(self):
+        from dataclasses import replace
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        original = runner.static_reconciler
+        def reconcile(plan, evidence, sources, **kwargs):
+            receipt = original(plan, evidence, sources, **kwargs)
+            # A producer changes collected evidence after the receipt.
+            evidence[0] = replace(evidence[0], observed_host_facts=replace(
+                evidence[0].observed_host_facts,
+                observer_environment=dict(IS301_OBSERVE='1', IS301_EXPORT_DIR='/changed')))
+            return receipt
+        runner.static_reconciler = reconcile
+        with self.assertRaisesRegex(ValueError, 'static evidence.*changed'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 0)
+
     def test_static_refusal_means_zero_posts(self):
         h = RecordingRunnerHarness(self.plan)
         h.static_error = ValueError('static reconciliation: derived build executable identity mismatch')
