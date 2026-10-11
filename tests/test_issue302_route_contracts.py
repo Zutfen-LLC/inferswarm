@@ -161,7 +161,7 @@ def static_receipt_for(plan, rows, **kwargs):
 
 
 def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
-                           pids=None, start=None, nonce='nonce-302'):
+                           pids=None, start=None, nonce='nonce-302', response_id='resp-1'):
     """SYNTHETIC labeled route evidence: nonce-correlated task and complete
     domain-boundary transfer legs for the requested route."""
     rows = []
@@ -205,6 +205,35 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
                 route_contract='synthetic/%s' % route)
             events = ['rpc_server_client', 'rpc_set_tensor', 'rpc_get_tensor',
                       'sched_graph_compute']
+        # Full SYNTHETIC producer-correlation catalog. These are test values,
+        # never additions to the accepted #301 producer or retained captures.
+        for graph in facts['graphs']:
+            graph.update(task_id=1, request_nonce=nonce, generation=1,
+                         ubatch_generation=1)
+        facts['ubatches'] = [dict(ubatch_id='ub-1', generation=1,
+            graph_generation=1, index=0, tokens=4, task_id=1, request_nonce=nonce)]
+        facts['tokens'] = [dict(token_count=4, ubatch_id='ub-1', ubatch_generation=1,
+            graph_generation=1, task_id=1, request_nonce=nonce)]
+        owned = {b.binding_id for b in participant.bindings}
+        facts['state_lineage'] = [dict(state_id=s.state_id, binding_id=s.binding_id,
+            authority_epoch=1, ubatch_id='ub-1', ubatch_generation=1,
+            graph_generation=1, task_id=1, request_nonce=nonce)
+            for s in plan.candidate.required_state if s.binding_id in owned]
+        for index, transfer in enumerate(facts['transfers']):
+            is_get = transfer['op'] in ('get', 'rpc_get')
+            transfer.update(graph_generation=1, ubatch_id='ub-1', ubatch_generation=1,
+                route_id='copy-out-1' if is_get else 'copy-in-1',
+                transfer_id=participant.role + '-transfer-' + str(index),
+                range_offset=0, range_bytes=transfer['bytes'],
+                strides=[4, 16, 16, 16], leg_index=(index % 2 if participant.role == 'client' and route != 'cpu-only' else 0))
+        if participant.role == 'client':
+            facts['responses'][0]['response_id'] = response_id
+            final = facts['transfers'][-1]
+            facts['output_custody'][0].update(response_id=response_id,
+                graph_generation=1, ubatch_id='ub-1', ubatch_generation=1,
+                transfer_id=final['transfer_id'], tensor=final['tensor'],
+                range_offset=final['range_offset'], range_bytes=final['range_bytes'],
+                shape=final['shape'], strides=final['strides'], output_domain=final['dest_domain'])
         record = dict(schema='inferswarm-native-observation/2', phase='dynamic',
             participant_id='llama-server' if participant.role == 'client'
             else 'ggml-rpc-server',
@@ -955,6 +984,28 @@ class ExactDynamicCorrelationTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.reject_mutation(lambda f: f['output_custody'][0].update(**{field: value}),
                                      'output custody.*join|output custody.*binding')
+
+    def test_remote_domain_and_cross_route_order_refuse(self):
+        self.reject_mutation(lambda f: f['transfers'][0].update(source_domain='A/cpu'),
+                             'route.*domain', participant=1)
+        self.reject_mutation(lambda f: f.update(transfers=f['transfers'][2:] + f['transfers'][:2]),
+                             'route.*order')
+
+    def test_transfer_native_range_capacity_and_tensor_generation_missing_refuse(self):
+        for field in ('tensor_capacity_bytes', 'tensor_generation'):
+            with self.subTest(field=field):
+                self.reject_mutation(lambda f: f['transfers'][0].pop(field, None),
+                                     'transfer.*range|transfer.*generation')
+
+    def test_dynamic_digest_binds_static_receipt_and_request_identity(self):
+        from dataclasses import replace
+        rows = synthetic_dynamic_rows(self.plan)
+        first = contract.reconcile_dynamic(self.plan, self.static, rows, request_for(),
+                                            mode='synthetic-test', clock=lambda: NOW)
+        second = contract.reconcile_dynamic(self.plan,
+            replace(self.static, observation_digest='e' * 64), rows, request_for(),
+            mode='synthetic-test', clock=lambda: NOW)
+        self.assertNotEqual(first.observation_digest, second.observation_digest)
 
     def test_state_lineage_requires_named_authority_catalog_not_count(self):
         self.reject_mutation(lambda f: f['state_lineage'].clear(), 'state lineage')
