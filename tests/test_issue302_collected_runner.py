@@ -25,6 +25,7 @@ from tests.issue299_fixture import NOW
 from tests.test_issue299_bindings import plan_fixture, source_receipt
 from tests.test_issue299_q8_plan import fully_bounded_mapping
 from tests.test_issue299_runtime import Harness, RecordingLifecycle
+from tests.test_issue302_per_role_builds import RecordingHostFactsReader
 from tests.test_issue302_route_contracts import (
     observed_inventory_for, observed_host_facts_for, synthetic_dynamic_rows,
     route_legs, seal as seal_route_record)
@@ -499,7 +500,8 @@ class CollectorTests(unittest.TestCase):
         tree, manifest = self.tree_with_build()
         transport = RecordingCollectorTransport(tree)
         collector = NativeObserverCollector(transport, RecordingIdentityReader(),
-                                        retained_builds=synthetic_retained_pins())
+                                        retained_builds=synthetic_retained_pins(),
+                                        host_facts_reader=RecordingHostFactsReader(self.plan))
         p = self.participant('client')
         spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         evidence = collector.collect_static(p, spawn,
@@ -518,7 +520,8 @@ class CollectorTests(unittest.TestCase):
             (p.participant_id, 4242): dict(exe='/bin/false', argv=['/bin/false'],
                 sha256='f' * 64, start='start-4242', environ={})})
         collector = NativeObserverCollector(RecordingCollectorTransport(tree), reader,
-                                        retained_builds=synthetic_retained_pins())
+                                        retained_builds=synthetic_retained_pins(),
+                                        host_facts_reader=RecordingHostFactsReader(self.plan))
         with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
             collector.collect_static(p, spawn,
                 '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
@@ -1054,7 +1057,7 @@ class RecordingRunnerHarness:
         return _copy.deepcopy(self.sources[p.participant_id])
 
     def collect_static(self, p, spawn, manifest_path, executable_path, digest, *,
-                       expected_argv, export_dir=None):
+                       expected_argv, export_dir=None, listener_endpoints=()):
         if self.static_error: raise self.static_error
         return self._evidence(p, spawn, expected_argv)
 

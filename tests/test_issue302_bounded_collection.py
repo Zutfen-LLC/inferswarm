@@ -22,8 +22,8 @@ from inferswarm.operator.native_observer.collector import (
 from tests.test_issue302_per_role_builds import (
     LLAMA_MANIFEST, RPC_MANIFEST, ROLE_PATHS, ROLE_EXECUTABLES,
     SYNTHETIC_EXE_SHA, VirtualHostTree, RecordingCollectorTransport,
-    RecordingIdentityReader, collector_for, distinct_role_plan,
-    synthetic_retained_builds)
+    RecordingHostFactsReader, RecordingIdentityReader, collector_for,
+    distinct_role_plan, synthetic_retained_builds)
 
 ROUND2 = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/round2-native'
 from tests.test_issue302_collected_runner import export_name, genuine_dynamic

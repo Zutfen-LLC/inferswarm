@@ -149,6 +149,28 @@ class RecordingIdentityReader(ProcIdentityReader):
             participant.rpc_endpoint)
 
 
+
+
+class RecordingHostFactsReader:
+    """Offline seam returning the plan-expected host facts."""
+
+    def __init__(self, plan):
+        self.plan = plan
+
+    def read(self, participant, *, listening=(), environment=None):
+        from inferswarm.operator.phased_observation import ObservedHostFacts
+        return ObservedHostFacts(
+            boot_epoch=participant.boot_epoch,
+            topology_epoch=participant.topology_epoch,
+            listening=tuple(listening) or (
+                (participant.rpc_endpoint,) if participant.rpc_endpoint
+                else ('127.0.0.1:%d' % participant.port,)),
+            observer_environment=dict(environment or {},
+                                      IS301_OBSERVE='1',
+                                      IS301_EXPORT_DIR='/synthetic/exports-x'),
+            source='synthetic-contract')
+
+
 def per_role_tree(plan):
     """Both hosts carry BOTH retained manifests and executables; role-correct
     selection is the collector's job, path identity alone is not trust.
@@ -177,14 +199,15 @@ def spawn_for(participant, token='inv-302'):
         'start-%d' % pid, token)
 
 
-def collector_for(tree):
+def collector_for(tree, plan=None):
     return NativeObserverCollector(RecordingCollectorTransport(tree),
                                    RecordingIdentityReader(),
-                                   retained_builds=synthetic_retained_builds())
+                                   retained_builds=synthetic_retained_builds(),
+                                   host_facts_reader=RecordingHostFactsReader(plan))
 
 
 def collect_both(plan, tree):
-    collector = collector_for(tree)
+    collector = collector_for(tree, plan)
     evidence = []
     for participant in plan.participants:
         manifest_path, executable_path = ROLE_PATHS[participant.role]

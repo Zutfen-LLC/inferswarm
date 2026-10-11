@@ -20,8 +20,8 @@ import subprocess
 from ..bindings import ProcessIdentity, TransportReply
 from ..profiles import canonical, freeze, sha256, thaw
 from ..phased_observation import (NativeBuildIdentity, OwnedSpawnFacts, DerivedBuildEvidence,
-    ParticipantStaticEvidence, ParticipantDynamicEvidence, ParsedObservation,
-    parse_build_manifest, parse_observation)
+    ObservedHostFacts, ParticipantStaticEvidence, ParticipantDynamicEvidence,
+    ParsedObservation, parse_build_manifest, parse_observation)
 
 # Native export labels written by the retained #301 observation overlay:
 # the client/server process exports as llama-server (server-queue.cpp) and
@@ -130,6 +130,57 @@ _IDENTITY_PROGRAM = ("import json,sys\n"
     "print(json.dumps({'start':start,'exe':exe,'argv':argv,'sha256':sha,'environ':env}))")
 
 
+_HOST_FACTS_PROGRAM = ("import json,sys\n"
+    "btime=None\n"
+    "for line in open('/proc/stat'):\n"
+    "    if line.startswith('btime '):\n"
+    "        btime=line.split()[1]\n"
+    "import hashlib,os,glob\n"
+    "h=hashlib.sha256()\n"
+    "for sub in ('cpu/cpu[0-9]*','node/node[0-9]*'):\n"
+    "    for path in sorted(glob.glob(os.path.join('/sys/devices/system',sub))):\n"
+    "        h.update(path.encode()); h.update(b'\\n')\n"
+    "print(json.dumps({'boot_epoch':btime,'topology_epoch':h.hexdigest()}))")
+
+
+class HostFactsReader:
+    """Independent remote host-facts reader (#302 P1-C).
+
+    Reads the boot epoch (/proc/stat btime) and a topology digest over the
+    same read-only SSH channel. Listener identity and the observer
+    environment are supplied by the caller from the trusted owned-listener
+    seam and the independently read process environment; every field is
+    joined against the frozen plan by reconciliation, never echoed.
+    """
+
+    def __init__(self, transport: SSHCollectorTransport | None = None):
+        self.transport = transport or SSHCollectorTransport()
+
+    def read(self, participant, *, listening=(), environment=None):
+        proc = subprocess.run(
+            ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
+             participant.execution_address,
+             'python3 -c ' + shlex.quote(_HOST_FACTS_PROGRAM)],
+            capture_output=True, text=True, timeout=SSH_TIMEOUT_SECONDS)
+        if proc.returncode != 0:
+            raise CollectorError('host facts read failed ('
+                                 + participant.participant_id + '): '
+                                 + repr(proc.stderr[-300:]))
+        try:
+            raw = json.loads(proc.stdout)
+        except ValueError as exc:
+            raise CollectorError('host facts read invalid reply ('
+                                 + participant.participant_id + ')') from exc
+        boot = raw.get('boot_epoch')
+        topology = raw.get('topology_epoch')
+        return ObservedHostFacts(
+            boot_epoch=str(boot) if boot is not None else None,
+            topology_epoch=str(topology) if topology is not None else None,
+            listening=tuple(listening),
+            observer_environment=dict(environment or {}),
+            source='remote-proc-observation')
+
+
 class ProcIdentityReader:
     """Independent /proc-based identity reader over the lifecycle transport.
 
@@ -214,9 +265,13 @@ class NativeObserverCollector:
 
     def __init__(self, transport: SSHCollectorTransport | None = None,
                  identity_reader: ProcIdentityReader | None = None,
-                 retained_builds=None):
+                 retained_builds=None, host_facts_reader: 'HostFactsReader | None' = None):
         self.transport = transport or SSHCollectorTransport()
         self.identity_reader = identity_reader or ProcIdentityReader(self.transport)
+        # Independent remote host-facts seam (#302 P1-C): boot/topology
+        # epochs observed at collection time, listener/environment joined by
+        # the caller from trusted seams.
+        self.host_facts_reader = host_facts_reader or HostFactsReader(self.transport)
         # The retained per-role build pins are production constants; the
         # optional injection exists only so offline tests can rebind the
         # executable-byte pin to synthetic binaries while keeping the
@@ -226,7 +281,8 @@ class NativeObserverCollector:
 
     def collect_static(self, participant, spawn: OwnedSpawnFacts, manifest_path: str,
                        executable_path: str, source_receipt_digest: str, *,
-                       expected_argv: tuple[str, ...]) -> ParticipantStaticEvidence:
+                       expected_argv: tuple[str, ...],
+                       listener_endpoints: tuple[str, ...] = ()) -> ParticipantStaticEvidence:
         build = self.collect_build(participant, manifest_path, executable_path)
         identity = self.identity_reader.read(participant, spawn.pid,
             expected_executable=participant.runtime_executable,
@@ -235,8 +291,15 @@ class NativeObserverCollector:
         if identity.pid != spawn.pid or identity.start != spawn.start:
             raise CollectorError('owned identity pid/start mismatch: '
                                  + participant.participant_id)
+        host_facts = self.host_facts_reader.read(participant,
+            listening=listener_endpoints or (),
+            environment=thaw(identity.visibility).get('environment'))
+        # The observed pre-request inventory family is deliberately absent:
+        # the retained #301 producer cannot emit it before POST, and
+        # reconciliation fails closed naming that missing capability.
         return ParticipantStaticEvidence(participant.participant_id, identity, spawn, build,
-                                         source_receipt_digest)
+                                         source_receipt_digest,
+                                         observed_host_facts=host_facts)
 
     def collect_build(self, participant, manifest_path,
                       executable_path) -> DerivedBuildEvidence:

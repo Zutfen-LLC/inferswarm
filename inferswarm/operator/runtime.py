@@ -492,9 +492,16 @@ class OperatorRunner:
                 spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
                 argv=client_argv if p.role=='client' else remote_argv
                 manifest_path,executable_path=role_paths[p.role]
+                # Owned-listener endpoints from the trusted lifecycle seam:
+                # the RPC bind was proven listening during startup; the
+                # client serves on its configured local port behind the
+                # owned tunnel.
+                owned_endpoints=(f'{host}:{remote.port}',) if p.role=='remote' \
+                    else (f'127.0.0.1:{p.port}',)
                 evidence=self.collector.collect_static(p,spawn,
                     manifest_path,executable_path,
-                    _sha256(sources[p.participant_id]),expected_argv=argv)
+                    _sha256(sources[p.participant_id]),expected_argv=argv,
+                    listener_endpoints=owned_endpoints)
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
             self._live(client,remote)
