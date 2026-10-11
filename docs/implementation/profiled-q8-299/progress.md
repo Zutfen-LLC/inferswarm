@@ -545,9 +545,20 @@ request generations); allocation backends must be native selector labels;
 transfer shapes must be real positive integers; and the mid-run owned-cleanup
 receipt is preserved instead of being erased by the idempotent final pass.
 
-Verification after both correction passes: the expanded
-`tests/test_issue302_collected_runner.py` (28 tests, including the SPEC
-reproductions from both rounds as regressions), all ten existing
+A third SPEC round (2026-10-11) returned NO-GO with four further verified
+findings, also corrected: the selected dynamic envelope is now bound to the
+owned directory claim on every identity surface (producer filename
+'<label>-<pid>-<ordinal>.json', generation 'exp-<pid>-...' and the in-envelope
+process census must all carry the claimed owned PID); a 'static'-labeled
+envelope carrying an event stream is refused as a disguised dynamic capture
+so a second stream cannot vanish from the population by relabeling; the
+response-custody join now requires an observed response for THE request's
+task (responses naming only other tasks refuse); and response task ids and
+graph status values must be exact integers (booleans and floats refuse).
+
+Verification after all three correction passes: the expanded
+`tests/test_issue302_collected_runner.py` (32 tests, including the SPEC
+reproductions from all three rounds as regressions), all ten existing
 issue-299/301 suites, the retention audit, the CI planner self-check and the
 repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer

@@ -1364,18 +1364,28 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
         observed_task_ids.add(task['task_id'])
     if request_identity.task_id not in {str(t) for t in observed_task_ids}:
         raise ValueError('dynamic reconciliation: request task not observed for this request')
+    request_task = int(request_identity.task_id)
     responses = client_facts.get('responses')
     if not isinstance(responses, list) or not responses:
         raise ValueError('dynamic reconciliation: response custody facts missing')
+    # The response custodian must have answered THE request's task; responses
+    # naming only other tasks do not establish this request's output custody.
+    answered = set()
     for response in responses:
-        if not isinstance(response, dict) or response.get('task_id') not in observed_task_ids:
+        if not isinstance(response, dict) or type(response.get('task_id')) is not int:
+            raise ValueError('dynamic reconciliation: response task record malformed')
+        if response['task_id'] not in observed_task_ids:
             raise ValueError('dynamic reconciliation: response task join mismatch')
+        answered.add(response['task_id'])
+    if request_task not in answered:
+        raise ValueError('dynamic reconciliation: no observed response for the request task')
     graphs = client_facts.get('graphs')
     if not isinstance(graphs, list) or not graphs:
         raise ValueError('dynamic reconciliation: graph facts missing')
     observed_generations = set()
     for graph in graphs:
-        if not isinstance(graph, dict) or graph.get('status') != 0:
+        if not isinstance(graph, dict) or type(graph.get('status')) is not int \
+                or graph['status'] != 0:
             raise ValueError('dynamic reconciliation: graph status not successful')
         # Native graph ids are runtime pointers (unbounded 64-bit); the value
         # is opaque, so only identity presence and a successful status count.

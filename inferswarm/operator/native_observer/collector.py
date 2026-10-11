@@ -218,9 +218,10 @@ class NativeObserverCollector:
         names = sorted(name for name in
                        self.transport.list_dir(participant.execution_address, export_dir)
                        if name.endswith('.json') and not name.startswith(CLAIM_NAME))
-        # Exactly one DYNAMIC envelope may exist per export directory: parse
-        # each candidate and refuse ambiguity; static-labeled files are not
-        # dynamic evidence and never satisfy this join.
+        # Every envelope in an owned export directory must be either the one
+        # DYNAMIC evidence stream or a legal static snapshot (fenced, empty
+        # zero interval). A 'static'-labeled envelope carrying an event
+        # stream is a disguised dynamic capture and refuses.
         dynamics = []
         for name in names:
             payload = self.transport.read_bytes(participant.execution_address,
@@ -228,11 +229,34 @@ class NativeObserverCollector:
             candidate = parse_observation(TransportReply(0, payload))
             if candidate.phase == 'dynamic':
                 dynamics.append((name, candidate))
+            elif not (candidate.stream_kind == 'snapshot' and candidate.snapshot_fence
+                      and candidate.terminal and candidate.event_count == 0):
+                raise CollectorError('export directory holds a disguised non-snapshot '
+                                     'envelope: ' + name)
         if len(dynamics) != 1:
             raise CollectorError(f'export directory must hold exactly one dynamic envelope '
                                  f'({participant.participant_id}): '
                                  f'{[name for name, _ in dynamics]}')
-        observation = dynamics[0][1]
+        name, observation = dynamics[0]
+        # Bind the selected envelope to the owned claim on every identity
+        # surface: the producer writes '<label>-<pid>-<ordinal>.json' and a
+        # generation 'exp-<pid>-<ordinal>-<ns>' derived from the SAME process.
+        stem = name[:-len('.json')]
+        expected_prefix = native_label + '-' + str(claim_pid) + '-'
+        if not stem.startswith(expected_prefix):
+            raise CollectorError('dynamic envelope filename does not match the owned '
+                                 'claim pid: ' + stem)
+        generation = observation.stream_generation
+        if not generation.startswith('exp-' + str(claim_pid) + '-') and \
+                not generation.startswith('gen-' + str(claim_pid) + '-'):
+            raise CollectorError('dynamic envelope generation does not match the owned '
+                                 'claim pid: ' + generation)
+        facts = thaw(observation.facts)
+        process = facts.get('process')
+        if isinstance(process, dict) and type(process.get('pid')) is int \
+                and process['pid'] != claim_pid:
+            raise CollectorError('dynamic envelope process census does not match the '
+                                 'owned claim pid: ' + participant.participant_id)
         # The retained overlay seals native envelopes with a zero plan digest
         # (the producer never sees the controller plan identity); the binding
         # to this invocation runs through the export claim checked above.
