@@ -261,8 +261,11 @@ class NativeObserverCollector:
         ordinal = int(match.group(3))
         generation = observation.stream_generation
         gen = re.fullmatch(r'exp-([0-9]+)-([0-9]+)-([0-9]+)', generation)
+        # std::to_string(now_ns()) never emits a leading zero on the suffix.
+        nanoseconds = None if gen is None else gen.group(3)
         if gen is None or gen.group(1) != str(claim_pid) \
-                or gen.group(2) != str(ordinal):
+                or gen.group(2) != str(ordinal) \
+                or (nanoseconds.startswith('0') and nanoseconds != '0'):
             raise CollectorError('dynamic envelope generation does not match the owned '
                                  'claim capture: ' + generation)
         facts = thaw(observation.facts)

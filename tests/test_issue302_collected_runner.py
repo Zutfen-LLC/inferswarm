@@ -914,6 +914,7 @@ class CollectedRunnerTests(unittest.TestCase):
             ('llama-server-4242-0000.json', 'exp-04242-0-966507438683494'),
             ('llama-server-4242-0000.json', 'exp-4242-0000-966507438683494'),
             ('llama-server-4242-0064.json', 'exp-4242-64-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-4242-0-0966507438683494'),
         ]
         for filename, generation in cases:
             record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)

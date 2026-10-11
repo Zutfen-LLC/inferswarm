@@ -573,9 +573,13 @@ ordinal, unpadded generation ordinal, both ordinals within the producer's
 64-export cap); Unicode digits, padded variants and beyond-cap ordinals
 refuse.
 
-Verification after all five correction passes: the expanded
+SPEC round 6 (2026-10-11) returned GO with one nonblocking MINOR, also
+corrected: the generation nanosecond suffix must be canonical (no leading
+zero; std::to_string never emits one).
+
+Verification after all six correction passes and the SPEC GO: the expanded
 `tests/test_issue302_collected_runner.py` (36 tests, including the SPEC
-reproductions from all five rounds as regressions), all ten existing
+reproductions from all six rounds as regressions), all ten existing
 issue-299/301 suites, the retention audit, the CI planner self-check and the
 repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
