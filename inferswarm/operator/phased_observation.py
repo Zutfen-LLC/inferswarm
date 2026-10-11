@@ -1310,21 +1310,26 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
                 raise ValueError('static reconciliation: observed state bytes '
                                  'UNKNOWN refuses admission: ' + name)
             if type(record.get('observed_bytes')) is not int \
-                    or record['observed_bytes'] != expected.state.lower_bound_bytes:
+                    or record['observed_bytes'] < expected.state.lower_bound_bytes:
                 raise ValueError('static reconciliation: observed state bytes '
                                  'mismatch: ' + name)
         observed_composites = set()
+        owned_composites = {name: c for name, c in expected_composites.items()
+                            if c.state.binding_id in ids}
         for frozen_row in inv.logical_composites:
             record = _thaw(frozen_row)
             name = record.get('state_id')
-            if name not in expected_composites:
+            if name not in owned_composites or name in observed_composites:
                 raise ValueError('static reconciliation: observed composite is not '
                                  'an expected logical composite: ' + repr(name))
             if record.get('observed') is not True:
                 raise ValueError('static reconciliation: observed composite not '
                                  'confirmed observed: ' + name)
+            expected = owned_composites[name].state
+            if record.get('binding_id') != expected.binding_id or record.get('memory_id') != expected.memory_id:
+                raise ValueError('static reconciliation: observed composite owner mismatch: ' + name)
             observed_composites.add(name)
-        if observed_composites != set(expected_composites):
+        if observed_composites != set(owned_composites):
             raise ValueError('static reconciliation: observed composite coverage '
                              'mismatch: ' + row.participant_id)
         observed_extents = {}
@@ -1340,8 +1345,7 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
             if record is None:
                 raise ValueError('static reconciliation: observed extent missing: '
                                  + name)
-            if record.get('base_buffer_bytes') != expected.state.lower_bound_bytes \
-                    or record.get('layout_exact') is not True:
+            if record.get('layout_exact') is not True:
                 raise ValueError('static reconciliation: observed extent mismatch: '
                                  + name)
         observed_allocations = {}
@@ -1352,15 +1356,18 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
                 raise ValueError('static reconciliation: observed allocation identity '
                                  'malformed or duplicated: ' + row.participant_id)
             observed_allocations[allocation] = record
-        owned_memories = {b.memory_id for b in participant.bindings}
+        owned_memories = {m.memory_id for m in plan.profiles.snapshot.memory_resources
+                          if m.host_id == participant.host_id}
         for charge in inventory.charges:
-            if charge.memory_id not in owned_memories or charge.bytes is None:
+            if charge.memory_id not in owned_memories:
                 continue
+            if charge.bytes is None:
+                raise ValueError('static reconciliation: observed allocation UNKNOWN: ' + charge.allocation_id)
             if charge.allocation_id not in observed_allocations:
                 raise ValueError('static reconciliation: observed allocation '
                                  'missing: ' + charge.allocation_id)
             record = observed_allocations[charge.allocation_id]
-            if record.get('observed_bytes') != charge.bytes \
+            if type(record.get('observed_bytes')) is not int or record['observed_bytes'] < charge.bytes \
                     or record.get('memory_id') != charge.memory_id:
                 raise ValueError('static reconciliation: observed allocation '
                                  'mismatch: ' + charge.allocation_id)
@@ -1426,10 +1433,102 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
             raise ValueError('static reconciliation: observed allocation coverage '
                              'mismatch (unexpected or missing allocations): '
                              + row.participant_id)
+        _static_actual_allocations(plan, inventory, observed_allocations, observed_extents,
+                                   observed_states, owned_composites, inv)
         if not expected_weights:
             raise ValueError('static reconciliation: participant owns no weights: '
                              + row.participant_id)
     return inventory
+
+
+def _static_actual_allocations(plan, inventory, allocations, extents, states, composites, inv):
+    """Account actual unique allocations, not descriptor estimates or labels."""
+    memories = {m.memory_id: m for m in plan.profiles.snapshot.memory_resources}
+    limits = {m.memory_id: m for m in plan.policy.memory_limits}
+    charges = {c.allocation_id: c for c in inventory.charges}
+    phase_allocations = {}
+    domain_metrics = {}
+    for name, record in allocations.items():
+        charge = charges[name]
+        memory = memories[charge.memory_id]
+        if record.get('physical_domain') != memory.physical_id:
+            raise ValueError('static reconciliation: allocation physical domain mismatch: ' + name)
+        if record.get('phase') != charge.phase or record.get('role') != charge.role:
+            raise ValueError('static reconciliation: allocation phase/role mismatch: ' + name)
+        physical = record.get('physical_allocation_id')
+        _text(physical, 'observed physical allocation identity')
+        amount = record['observed_bytes']
+        capacity, available = record.get('total_bytes'), record.get('available_bytes')
+        if type(capacity) is not int or capacity < 1 or type(available) is not int or not 0 <= available <= capacity:
+            raise ValueError('static reconciliation: actual allocation capacity/headroom UNKNOWN or inconsistent')
+        metrics = (capacity, available)
+        domain = memory.physical_id
+        if domain in domain_metrics and metrics != domain_metrics[domain]:
+            raise ValueError('static reconciliation: actual allocation capacity/headroom inconsistent across domain')
+        domain_metrics[domain] = metrics
+        if charge.role == 'virtual':
+            continue
+        key = (domain, charge.phase, physical)
+        signature = (amount, charge.role, charge.memory_id)
+        if key in phase_allocations:
+            previous_name, previous = phase_allocations[key]
+            # Only explicitly declared equal shared aliases can deduplicate.
+            if (previous != signature or not charge.shared_allocation_id
+                    or charge.shared_allocation_id != charges[previous_name].shared_allocation_id):
+                raise ValueError('static reconciliation: actual allocation unplanned mirror or inconsistent alias')
+        else:
+            phase_allocations[key] = (name, signature)
+    totals = {}
+    for (domain, phase, physical), (name, signature) in phase_allocations.items():
+        totals[domain, phase] = totals.get((domain, phase), 0) + signature[0]
+    for (domain, phase), amount in totals.items():
+        capacity, available = domain_metrics[domain]
+        domain_limits = [limits[m.memory_id] for m in memories.values()
+                         if m.physical_id == domain and m.memory_id in limits]
+        if not domain_limits:
+            raise ValueError('static reconciliation: actual allocation domain policy missing')
+        if amount > capacity:
+            raise ValueError('static reconciliation: actual allocation capacity exceeded: ' + domain)
+        if any(amount > limit.peak_bytes for limit in domain_limits):
+            raise ValueError('static reconciliation: actual allocation policy peak exceeded: ' + domain)
+        if any(available < limit.min_available_bytes or available - amount < limit.reserve_bytes
+               for limit in domain_limits):
+            raise ValueError('static reconciliation: actual allocation headroom/reserve deficit: ' + domain)
+    views = {}
+    for name, extent in extents.items():
+        allocation = extent.get('allocation_id')
+        base = allocations.get(allocation)
+        state = states[name]
+        if base is None or base['memory_id'] != state['memory_id'] or base['role'] == 'virtual':
+            raise ValueError('static reconciliation: observed extent unaccounted or foreign allocation: ' + name)
+        offset, length = extent.get('offset'), extent.get('length')
+        if (type(offset) is not int or offset < 0 or type(length) is not int
+                or length != state['observed_bytes'] or extent.get('base_buffer_bytes') != base['observed_bytes']
+                or offset + length > base['observed_bytes']):
+            raise ValueError('static reconciliation: observed extent range outside base or mismatch: ' + name)
+        views.setdefault(allocation, []).append((offset, offset + length, name))
+    for frozen in inv.logical_composites:
+        record = thaw(frozen)
+        name = record['state_id']
+        allocation = record.get('allocation_id')
+        base = allocations.get(allocation)
+        offset, length = record.get('offset'), record.get('observed_bytes')
+        if (base is None or base['memory_id'] != composites[name].state.memory_id
+                or base['role'] == 'virtual' or type(offset) is not int or offset < 0
+                or type(length) is not int or length < 1 or offset + length > base['observed_bytes']):
+            raise ValueError('static reconciliation: observed composite allocation/range UNKNOWN or mismatch: ' + name)
+        views.setdefault(allocation, []).append((offset, offset + length, name))
+    for allocation, intervals in views.items():
+        end = 0
+        used = 0
+        for start, stop, name in sorted(intervals):
+            if start < end:
+                raise ValueError('static reconciliation: observed extent overlap: ' + name)
+            end = stop
+            used += stop - start
+        padding = allocations[allocation].get('padding_bytes')
+        if type(padding) is not int or padding < 0 or used + padding != allocations[allocation]['observed_bytes']:
+            raise ValueError('static reconciliation: observed extent unaccounted base bytes: ' + allocation)
 
 
 def _static_identity_join(plan, participants, rows, token):

@@ -60,9 +60,14 @@ def observed_inventory_for(plan, participant):
     ids = {b.binding_id for b in participant.bindings}
     memories = {b.memory_id for b in participant.bindings}
     states, extents = [], []
+    offsets = {}
+    charges = {c.allocation_id: c for c in inv.charges}
     for cache in inv.persistent_caches:
         if cache.state.binding_id not in ids:
             continue
+        allocation = 'state-lower-bound:' + cache.state.binding_id + '/serve'
+        offset = offsets.get(allocation, 0)
+        offsets[allocation] = offset + cache.state.lower_bound_bytes
         states.append(dict(state_id=cache.state.state_id,
                            binding_id=cache.state.binding_id,
                            memory_id=cache.state.memory_id,
@@ -71,13 +76,20 @@ def observed_inventory_for(plan, participant):
                            native_dimensions=list(cache.native_dimensions),
                            observed_bytes=cache.state.lower_bound_bytes))
         extents.append(dict(state_id=cache.state.state_id,
-                            base_buffer_bytes=cache.state.lower_bound_bytes,
+                            allocation_id=allocation, offset=offset,
+                            length=cache.state.lower_bound_bytes,
+                            base_buffer_bytes=charges[allocation].bytes,
                             layout_exact=True))
-    composites = [dict(state_id=c.state.state_id, phase=c.phase, observed=True)
-                  for c in inv.logical_composites]
+    composites = [dict(state_id=c.state.state_id, phase=c.phase, observed=True,
+                       binding_id=c.state.binding_id, memory_id=c.state.memory_id,
+                       allocation_id=c.state.state_id + '/serve', offset=0,
+                       observed_bytes=charges[c.state.state_id + '/serve'].bytes)
+                  for c in inv.logical_composites if c.state.binding_id in ids]
     weights = [dict(state_id=a.state_id, binding_id=a.binding_id,
                     memory_id=a.memory_id, observed_bytes=a.encoded_bytes)
                for a in plan.candidate.assignments if a.binding_id in ids]
+    memories = {m.memory_id: m for m in plan.profiles.snapshot.memory_resources
+                if m.host_id == participant.host_id}
     return contract.ObservedInventoryEvidence(
         weights=tuple(freeze(row) for row in weights),
         persistent_states=tuple(freeze(row) for row in states),
@@ -85,8 +97,13 @@ def observed_inventory_for(plan, participant):
         extents=tuple(freeze(row) for row in extents),
         allocations=tuple(freeze(dict(
             allocation_id=c.allocation_id, memory_id=c.memory_id,
+            physical_domain=memories[c.memory_id].physical_id,
+            physical_allocation_id=c.memory_id + ':' + c.allocation_id.rsplit('/', 1)[0],
+            phase=c.phase, role=c.role, padding_bytes=0,
+            total_bytes=memories[c.memory_id].total_bytes,
+            available_bytes=memories[c.memory_id].available_bytes,
             observed_bytes=c.bytes)) for c in inv.charges
-            if c.bytes is not None and c.memory_id in memories),
+            if c.memory_id in memories),
         source='synthetic-contract')
 
 
@@ -315,7 +332,8 @@ class StaticInventoryJoinTests(unittest.TestCase):
         victim = rows[0]
         allocations = list(victim.observed_inventory.allocations)
         bad = dict(thaw(allocations[0]))
-        bad['observed_bytes'] = bad['observed_bytes'] + 1
+        # Above-bound padding is legal; this control targets below-bound bytes.
+        bad['observed_bytes'] = bad['observed_bytes'] - 1
         allocations[0] = freeze(bad)
         object.__setattr__(victim.observed_inventory, 'allocations', tuple(allocations))
         with self.assertRaisesRegex(ValueError, 'allocation'):
@@ -836,6 +854,30 @@ class ExactAllocationTests(unittest.TestCase):
         self.mutate(rows, 'allocations', lambda a: a[0].update(observed_bytes=a[0]['observed_bytes'] + 64))
         # Native padding is actual bytes, not an equality to a calculated lower bound.
         self.assertEqual(static_receipt_for(self.plan, rows).verdict, 'STATIC_ADMITTED')
+
+    def test_padded_state_extent_closes_against_actual_base(self):
+        rows = static_rows_for(self.plan)
+        target = thaw(rows[0].observed_inventory.extents[-1])
+        allocation = target['allocation_id']
+        self.mutate(rows, 'persistent_states', lambda a: a[-1].update(observed_bytes=a[-1]['observed_bytes'] + 64))
+        self.mutate(rows, 'extents', lambda a: [r.update(base_buffer_bytes=r['base_buffer_bytes'] + 64,
+            **({'length': r['length'] + 64} if r['state_id'] == target['state_id'] else {}))
+            for r in a if r['allocation_id'] == allocation])
+        self.mutate(rows, 'allocations', lambda a: [r.update(observed_bytes=r['observed_bytes'] + 64)
+            for r in a if r['allocation_id'] == allocation])
+        self.assertEqual(static_receipt_for(self.plan, rows).verdict, 'STATIC_ADMITTED')
+
+    def test_unaccounted_extent_and_hidden_mirror_refuse(self):
+        for family, mutate, reason in (
+            ('extents', lambda a: a[0].update(allocation_id='unaccounted'), 'unaccounted'),
+            ('allocations', lambda a: a[1].update(physical_allocation_id=a[0]['physical_allocation_id'],
+                                                phase=a[0]['phase']), 'phase/role|mirror'),
+            ('allocations', lambda a: a[0].update(observed_bytes=None), 'allocation'),
+        ):
+            rows = static_rows_for(self.plan)
+            self.mutate(rows, family, mutate)
+            with self.subTest(family=family), self.assertRaisesRegex(ValueError, reason):
+                static_receipt_for(self.plan, rows)
 
     def test_foreign_physical_domain_refuses_even_with_matching_logical_memory(self):
         rows = static_rows_for(self.plan)
