@@ -3044,29 +3044,6 @@
    "replacement": null,
    "test_count_at_audit": 28
   },
-  "test_issue291_final_validation_reuse": {
-   "baseline_group": "issue-213-gate-ordering",
-   "baseline_serial_seconds": 3.3,
-   "baseline_test_count": 73,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "issue-213-gate-ordering",
-   "invariant": "Hosted Final CPU Validation reuses only an independently verified, successful, physically executed exact-head receipt and otherwise runs the full suite, failing closed.",
-   "lineage": "hosted Final CPU Validation duplicate-dispatch dedup (#291)",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/final_validation_reuse.py",
-     "scripts/issue213_gate_orchestration.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "Current final-validation duplicate-dispatch gate.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 53
-  },
   "test_issue228_v2e_assembler": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 2.28,
@@ -4487,6 +4464,602 @@
    "replacement": null,
    "test_count_at_audit": 3
   },
+  "test_issue275_collector": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 collector preserves raw probe bytes, validates frozen device/process lineage, derives observations only from bytes, and fails closed on missing or contradictory evidence.",
+   "lineage": "Issue #275 first demonstration and retained-byte collector",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests cover the collector contract without physical execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
+  },
+  "test_issue275_demo": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 1,
+   "category": "EVIDENCE_INTEGRITY",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 first demonstration exercises the production collector entry point, byte-exact retained probe bundle and receipt, digest inventory, and fail-closed missing observation.",
+   "lineage": "Issue #275 first demonstration and retained-byte collector",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Deterministic CPU recording fixture only; no hardware or network access and no physical authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 1
+  },
+  "test_issue275_provenance": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 37,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #275 collector selection provenance: actual selector/ICD/backend/used-device identity derives only from collector-owned contemporaneous bytes (process environ, used-Vulkan-device observation, device census), receipt server_env selector/ICD values are claim-only cross-checks, and one unchanged process incarnation is bound across the capture window.",
+   "lineage": "Issue #275 round-3 provenance correction (RED-first regressions and negative controls)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue275_collector.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests cover observed-selection derivation, receipt claim-only semantics, incarnation closing, and the mandatory negative controls without physical execution authority.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 37
+  },
+  "test_issue276_byte_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 31.8,
+   "baseline_test_count": 34,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #276 retained-original byte admission: staged units are admitted only from recomputed digests and byte-re-derived identity (selector/ICD/backend/used device, process incarnation, exe/model binding, residency) with authored labels as cross-checks; cross-arm substitution, source reuse, relabeling, byte changes, non-FP32 rows, and invented seal authority are rejected through the production reader/admission entry point; the fixture-level origin boundary (fully authored self-consistent bundles admit; bilateral row permutations across arms admit) is pinned by explicit canary tests documented in the investigation.",
+   "lineage": "Issue #276 RED-first byte-admission path (retained originals -> staging -> reader -> admission)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue276_reader.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests exercise the complete capture-to-admission path through the #275 collector fixture harness without physical execution authority; the first demonstration is a registered CI test labeled fixture-only.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 34
+  },
+  "test_issue277_reference_first": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 110.0,
+   "baseline_test_count": 13,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #277 reference-first orchestration: primary/repeat determinism is derived only from independently admitted #276 row bytes for every frozen required case (case-256, case-1024, case-3072); the candidate executor callback is structurally unreachable until all reference cases are admitted and deterministic, a case-3072 reference mismatch blocks with zero candidate launches, missing/invalid reference evidence fails closed with a terminal distinct from an observed validly-admitted mismatch, candidate nondeterminism blocks pair comparison, and no caller boolean, forged verdict dictionary, mutated case list, or comparison-callback mutation can bypass admission or alter the record.",
+   "lineage": "Issue #277 RED-first reference-first gate derived from the #276 admitted-row interface",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue277_orchestrator.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive the production orchestration entry point with a recording executor and the #276 bundle machinery; success is a fixture candidate gate only and no physical result is claimed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 13
+  },
+  "test_issue278_integration": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 175.0,
+   "baseline_test_count": 9,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #278 integrated exact-head tooling chain: one production entry point composes the #275 collector capture (producer-injected, custody-layout cross-checked, per-unit inventory digest), a no-follow retained-originals census binding the byte population, the #276 verbatim stager and custody-bound byte-deriving reader, the #277 reference-first orchestrator (admission -> determinism -> gated candidate launches -> pair admission), and the #273 public reducer, which must fail closed on the in-memory fixture record; captures outside collector custody fail closed before any staging write, custody tamper between capture and staging fails closed, post-run staged-side or custody-side tamper fails closed at reevaluation, a collector-custody reference row drift blocks reference-first with zero candidate launches, and no caller boolean, verdict dictionary, or callback return can mint physical terminal authority; all evidence is labeled tooling/fixture validation.",
+   "lineage": "Issue #278 integration validation derived from the accepted #275 collector and reviewed #276/#277 interfaces",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue278_integration.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive the integrated production chain end to end with recording executor/comparison callbacks and the #276 bundle machinery; the completion status is explicitly tooling/fixture validation and no physical result is claimed. Review controls require final custody/reader verification after callbacks, identical reducer fail-closed guards on both entry points, fixture labels on blocked records, and honest observed launch counts.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 14
+  },
+  "test_issue280_admission": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Runner admission consumes a structured PASS/FAIL observer verdict mechanically validated from retained raw request bytes under the frozen physical #280 contract (the collector's existing substantive laws, reused; no second validator). Candidate cold must PASS before candidate warm executes; event-name presence alone never admits; absent retained bytes fail closed; wrong BDF/request binding, missing per-die completed compute, and invalid boundary attribution all STOP before candidate warm.",
+   "lineage": "Issue #284 round 2 observer admission gate",
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Pure CPU replay of synthetic retained-byte streams through the existing collector; no GPU, model, device, or network access."
+  },
+  "test_issue280_observer": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 19,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #280 bounded raw-log collector correlates request/graph, dispatched named weights, two BDFs, nonempty command submissions and existing-wait completion; reconciles preexecution logical-byte manifests, host staging, nonoverlapping boundary timing, prefill microbatches and actual sampled/EOS lengths; incomplete, malformed or unbound observations fail closed and CPU replay never grants physical authority.",
+   "lineage": "Issue #280 CPU-only same-request observer",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue280_observer.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Compiles a synthetic CPU recording producer using the identical raw emitter as source hooks, then exercises the real collector/parser. No GPU or model bytes are accessed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 19
+  },
+  "test_issue280_real_compat": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Exact retained physical R1 observer bytes must pass corrected PHYSICAL_280 offline admission before any injected launch; authenticated single-sequence witness, CPU_Mapped host accounting and tied output-role attacks remain fail-closed. Synthetic fixtures alone cannot establish producer/model compatibility.",
+   "lineage": "Issue #280 real R1 producer/collector/model compatibility correction",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-same-request-280/compatibility/"
+    ],
+    "scripts_imported": [
+     "scripts/issue280_observer.py",
+     "scripts/issue280_runner.py",
+     "scripts/issue280_compatibility.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "CPU-only retained-byte replay and producer metadata checks. No GPU, model, device or physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 30
+  },
+  "test_issue280_retention_fix": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
+   "lineage": "Issue #284 observer retention correction law",
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Reads the pinned public llama.cpp source bytes and the transform module; compiles nothing. Host-local pinned-source assertions skip when the pin is absent."
+  },
+  "test_issue280_runner": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 corrected campaign gate engine evaluates every frozen per-request acceptance/STOP condition synchronously before any subsequent launch: semantic task correctness, per-arm required observer evidence, peak-RSS retention, available health inputs; aborted slots are consumed with no automatic replacement; the matrix is the minimal 2-launch/4-request rerun contract. Fail-closed gate law, no physical execution.",
+   "lineage": "Issue #284 corrected campaign runner gates",
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Pure gate engine over an injected executor; no GPU, model, device, or network access. CPU-only unit tests drive fake executors through the STOP laws."
+  },
+  "test_issue280_source": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 6,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #280 exact-source additive overlay refuses pin/hash drift, preserves every original computation/transfer/wait byte, binds overlay and reconstructed full Git tree identities, keeps logging sinks translation-unit local, and registers CPU coverage without a physical launcher.",
+   "lineage": "Issue #280 pinned-source observation hooks",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue280_source.py",
+     "scripts/plan_ci.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Public-source-only transform tests are host-local when the pin is present; CPU logging sink and registration tests are portable. No Vulkan runtime is invoked and no physical evidence is claimed.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 6
+  },
+  "test_issue280_source_compat": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "The additive graph metadata successor emits complete unique sequence IDs from the pinned ubatch fields, preserves original overlay bytes, regenerates frozen source identities and exercises the actual insertion via CPU-only syntax/metadata probe; physical execution stays unauthorized.",
+   "lineage": "Issue #280 real R1 producer/collector/model compatibility correction",
+   "owned_surfaces": {
+    "evidence_read": [
+     "docs/investigations/vulkan-same-request-280/compatibility/"
+    ],
+    "scripts_imported": [
+     "scripts/issue280_source_compat.py",
+     "scripts/issue280_source.py"
+    ]
+   },
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "CPU-only retained-byte replay and producer metadata checks. No GPU, model, device or physical execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 12
+  },
+  "test_issue280_task_check": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 0.0,
+   "baseline_test_count": 0,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #284 frozen deterministic semantic task checker: exactly one three-field JSON object with exactly the frozen expected values per prompt; accepts Markdown fences and brief introductory prose; rejects wrong values (including P2 service=search), missing/extra fields, multiple objects, non-string values. Tolerance frozen before any rerun.",
+   "lineage": "Issue #284 frozen semantic task checker",
+   "pinned_by_evidence": [
+    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
+   ],
+   "rationale": "Pure string/JSON checker with frozen fixtures including two verbatim retained physical responses used as diagnostic observations only. No runtime or device access."
+  },
+  "test_issue289_launcher": {
+   "baseline_group": "r8i-qwen-qualification",
+   "baseline_serial_seconds": 124.0,
+   "baseline_test_count": 56,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "r8i-qwen-qualification",
+   "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws \u2014 the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed \u2014 a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch \u2014 no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
+   "lineage": "Issue #289 extraction of the session-local #280 r3 physical driver lifecycle (inferswarm05 driver.py sha256 2cc001b5...)",
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/issue289_launcher.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "CPU fixture tests drive two distinct loopback stub server subprocesses on the same port through the real gate engine (issue280_runner.run_campaign) and the real prelaunch compatibility gate; RED run reproduced the retained r3 terminal (stale-arm routing, 20/24 failing) before the GREEN fix (24/24 passing).",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 56
+  },
+  "test_issue291_final_validation_reuse": {
+   "baseline_group": "issue-213-gate-ordering",
+   "baseline_serial_seconds": 3.3,
+   "baseline_test_count": 73,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-213-gate-ordering",
+   "invariant": "Hosted Final CPU Validation reuses only an independently verified, successful, physically executed exact-head receipt and otherwise runs the full suite, failing closed.",
+   "lineage": "hosted Final CPU Validation duplicate-dispatch dedup (#291)",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "scripts/final_validation_reuse.py",
+     "scripts/issue213_gate_orchestration.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Current final-validation duplicate-dispatch gate.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 53
+  },
+  "test_issue299_admission": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 16,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Opaque phase-aware memory admission preserves unknown bounds, exact shared aliases, reserves, freshness and measured capability applicability.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/plan.py",
+     "inferswarm/operator/profiles.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective fixed-plan/admission contract; synthetic admission does not qualify physical runtime or memory fit.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 16
+  },
+  "test_issue299_bindings": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 40,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Independent owned CPU/CUDA physical-binding and complete tensor/buffer/state/copy observation reconciliation; absent observer and synthetic evidence cannot authorize live execution.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/bindings.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective strict observer contract and offline synthetic plumbing, not physical qualification or performance evidence.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 40
+  },
+  "test_issue299_metadata": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 25,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Bounded metadata-only Q8 reproduction authenticates exact public headers and complete tensor descriptors without downloading weights; legacy source parsing remains compatible.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/public-header-manifest.json",
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/metadata.py",
+     "inferswarm/operator/source.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective metadata and public provenance contract; no physical execution or full-weight qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 25
+  },
+  "test_issue301_budget_authorization": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 25,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Explicit issue301 authorization extends only the authenticated continuous campaign ledger to 6600 seconds; unrelated limits remain unchanged.",
+   "lineage": "Issue #301 child of #299 native build authorization",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/native_observer/build.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline immutable historical ledger controls; tests never compile or consume the actual campaign ledger.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 25
+  },
+  "test_issue299_native_build": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 34,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Portable isolated stock CPU/RPC command closure, complete dependency provenance, bounded synchronous supervision and evidence-preserving cleanup.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/native-buffer-graph.cpp"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/native_observer/build.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Canonical controls never compile native targets or require private source/campaign budget. Historical stock build is separate old-builder evidence, not observer or corrected-builder execution proof.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 34
+  },
+  "test_issue299_native_producer": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 14,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Retained genuine native observation captures parse under the frozen /2 contract; overlay/transformed-file identity; mutation negative controls refuse.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/native-buffer-graph.cpp"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/native_observer/build.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Canonical controls never compile native targets or require private source/campaign budget. Historical stock build is separate old-builder evidence, not observer or corrected-builder execution proof.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 16,
+   "current_test_count": 35
+  },
+  "test_issue299_phased_observation": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 55,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Immutable successor /2 build/request/stream identities, early bounded canonical accounting and incremental digest, detached closed-typed original-plan expectations; incomplete static/dynamic reconciliation always refuses.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/phased_observation.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline parser/value and pure expectation-contract proof only; retained original identity is not native provenance, dispatch/output acceptance or physical qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 76
+  },
+  "test_issue299_profiles": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 55,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Immutable resource profiles and strict config/3 bind physical identities, evidence applicability and freshness; one remote endpoint supports multiple physical bindings without changing legacy config/2.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [],
+    "scripts_imported": [
+     "inferswarm/operator/config.py",
+     "inferswarm/operator/profiles.py",
+     "tests/issue299_fixture.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective profile/config contract; synthetic and replay evidence never qualify live execution.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 55
+  },
+  "test_issue299_q8_plan": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 27,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Complete Q8 tensor/range/state ownership, pure native cache expectations and unresolved composites, strict typed workload/candidate identity, mechanical pure digest parity, explicit fixed selections and no fallback, and the finite pure startup expectation oracle over the retained original context.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/qwen_q8.py",
+     "inferswarm/operator/plan.py",
+     "inferswarm/operator/strategy.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective fixed-plan/admission, calculated inventory and pure startup expectation contracts; expectation descriptions and synthetic admission do not qualify allocation, physical runtime or memory fit.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 60
+  },
+  "test_issue299_runtime": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 36,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Production Q8 runner and SSH source serialization with fresh admission, independent owned observation, immutable native selection, no fallback, and exact-owned cleanup.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/runtime.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Offline actual-runner and small standalone-source integration proof; synthetic observations do not establish physical execution or qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 36
+  },
+  "test_issue299_source": {
+   "baseline_group": "issue-99-103",
+   "baseline_serial_seconds": null,
+   "baseline_test_count": 21,
+   "category": "CURRENT_CONTRACT",
+   "disposition": "retain",
+   "group": "issue-99-103",
+   "invariant": "Full-source Q8 member/header/assigned-state verification on both roles, exact optional CPU+CUDA cache identity, bounded standalone serialization and legacy preservation.",
+   "lineage": "Issue #299 profiled Q8 ordinary operator",
+   "named_by_evidence": [],
+   "owned_surfaces": {
+    "evidence_read": [
+     "tests/fixtures/issue299/q8-metadata.json"
+    ],
+    "scripts_imported": [
+     "inferswarm/operator/source.py"
+    ]
+   },
+   "pinned_by_evidence": [],
+   "rationale": "Prospective exact source/serialization contract; verified cache identity does not establish physical consumption or runtime qualification.",
+   "referenced_by_scripts": [],
+   "replacement": null,
+   "test_count_at_audit": 21
+  },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
    "baseline_serial_seconds": 0.17,
@@ -5640,313 +6213,6 @@
    "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
    "retired_in": "PR #247 correction round 1",
    "test_count_at_audit": null
-  },
-  "test_issue275_collector": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 19,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #275 collector preserves raw probe bytes, validates frozen device/process lineage, derives observations only from bytes, and fails closed on missing or contradictory evidence.",
-   "lineage": "Issue #275 first demonstration and retained-byte collector",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue275_collector.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests cover the collector contract without physical execution authority.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 19
-  },
-  "test_issue275_demo": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 1,
-   "category": "EVIDENCE_INTEGRITY",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #275 first demonstration exercises the production collector entry point, byte-exact retained probe bundle and receipt, digest inventory, and fail-closed missing observation.",
-   "lineage": "Issue #275 first demonstration and retained-byte collector",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue275_collector.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "Deterministic CPU recording fixture only; no hardware or network access and no physical authority.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 1
-  },
-  "test_issue275_provenance": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 37,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #275 collector selection provenance: actual selector/ICD/backend/used-device identity derives only from collector-owned contemporaneous bytes (process environ, used-Vulkan-device observation, device census), receipt server_env selector/ICD values are claim-only cross-checks, and one unchanged process incarnation is bound across the capture window.",
-   "lineage": "Issue #275 round-3 provenance correction (RED-first regressions and negative controls)",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue275_collector.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests cover observed-selection derivation, receipt claim-only semantics, incarnation closing, and the mandatory negative controls without physical execution authority.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 37
-  },
-  "test_issue276_byte_admission": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 31.8,
-   "baseline_test_count": 34,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #276 retained-original byte admission: staged units are admitted only from recomputed digests and byte-re-derived identity (selector/ICD/backend/used device, process incarnation, exe/model binding, residency) with authored labels as cross-checks; cross-arm substitution, source reuse, relabeling, byte changes, non-FP32 rows, and invented seal authority are rejected through the production reader/admission entry point; the fixture-level origin boundary (fully authored self-consistent bundles admit; bilateral row permutations across arms admit) is pinned by explicit canary tests documented in the investigation.",
-   "lineage": "Issue #276 RED-first byte-admission path (retained originals -> staging -> reader -> admission)",
-   "named_by_evidence": [],
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue276_reader.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests exercise the complete capture-to-admission path through the #275 collector fixture harness without physical execution authority; the first demonstration is a registered CI test labeled fixture-only.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 34
-  },
-  "test_issue277_reference_first": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 110.0,
-   "baseline_test_count": 13,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #277 reference-first orchestration: primary/repeat determinism is derived only from independently admitted #276 row bytes for every frozen required case (case-256, case-1024, case-3072); the candidate executor callback is structurally unreachable until all reference cases are admitted and deterministic, a case-3072 reference mismatch blocks with zero candidate launches, missing/invalid reference evidence fails closed with a terminal distinct from an observed validly-admitted mismatch, candidate nondeterminism blocks pair comparison, and no caller boolean, forged verdict dictionary, mutated case list, or comparison-callback mutation can bypass admission or alter the record.",
-   "lineage": "Issue #277 RED-first reference-first gate derived from the #276 admitted-row interface",
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue277_orchestrator.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests drive the production orchestration entry point with a recording executor and the #276 bundle machinery; success is a fixture candidate gate only and no physical result is claimed.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 13
-  },
-  "test_issue278_integration": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 175.0,
-   "baseline_test_count": 9,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #278 integrated exact-head tooling chain: one production entry point composes the #275 collector capture (producer-injected, custody-layout cross-checked, per-unit inventory digest), a no-follow retained-originals census binding the byte population, the #276 verbatim stager and custody-bound byte-deriving reader, the #277 reference-first orchestrator (admission -> determinism -> gated candidate launches -> pair admission), and the #273 public reducer, which must fail closed on the in-memory fixture record; captures outside collector custody fail closed before any staging write, custody tamper between capture and staging fails closed, post-run staged-side or custody-side tamper fails closed at reevaluation, a collector-custody reference row drift blocks reference-first with zero candidate launches, and no caller boolean, verdict dictionary, or callback return can mint physical terminal authority; all evidence is labeled tooling/fixture validation.",
-   "lineage": "Issue #278 integration validation derived from the accepted #275 collector and reviewed #276/#277 interfaces",
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue278_integration.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests drive the integrated production chain end to end with recording executor/comparison callbacks and the #276 bundle machinery; the completion status is explicitly tooling/fixture validation and no physical result is claimed. Review controls require final custody/reader verification after callbacks, identical reducer fail-closed guards on both entry points, fixture labels on blocked records, and honest observed launch counts.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 14
-  },
-  "test_issue280_observer": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 19,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #280 bounded raw-log collector correlates request/graph, dispatched named weights, two BDFs, nonempty command submissions and existing-wait completion; reconciles preexecution logical-byte manifests, host staging, nonoverlapping boundary timing, prefill microbatches and actual sampled/EOS lengths; incomplete, malformed or unbound observations fail closed and CPU replay never grants physical authority.",
-   "lineage": "Issue #280 CPU-only same-request observer",
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue280_observer.py"
-    ]
-   },
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ],
-   "rationale": "Compiles a synthetic CPU recording producer using the identical raw emitter as source hooks, then exercises the real collector/parser. No GPU or model bytes are accessed.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 19
-  },
-  "test_issue280_source": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 6,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #280 exact-source additive overlay refuses pin/hash drift, preserves every original computation/transfer/wait byte, binds overlay and reconstructed full Git tree identities, keeps logging sinks translation-unit local, and registers CPU coverage without a physical launcher.",
-   "lineage": "Issue #280 pinned-source observation hooks",
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue280_source.py",
-     "scripts/plan_ci.py"
-    ]
-   },
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ],
-   "rationale": "Public-source-only transform tests are host-local when the pin is present; CPU logging sink and registration tests are portable. No Vulkan runtime is invoked and no physical evidence is claimed.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 6
-  },
-  "test_issue280_admission": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "lineage": "Issue #284 round 2 observer admission gate",
-   "invariant": "Runner admission consumes a structured PASS/FAIL observer verdict mechanically validated from retained raw request bytes under the frozen physical #280 contract (the collector's existing substantive laws, reused; no second validator). Candidate cold must PASS before candidate warm executes; event-name presence alone never admits; absent retained bytes fail closed; wrong BDF/request binding, missing per-die completed compute, and invalid boundary attribution all STOP before candidate warm.",
-   "rationale": "Pure CPU replay of synthetic retained-byte streams through the existing collector; no GPU, model, device, or network access.",
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ]
-  },
-  "test_issue280_runner": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "lineage": "Issue #284 corrected campaign runner gates",
-   "invariant": "Issue #284 corrected campaign gate engine evaluates every frozen per-request acceptance/STOP condition synchronously before any subsequent launch: semantic task correctness, per-arm required observer evidence, peak-RSS retention, available health inputs; aborted slots are consumed with no automatic replacement; the matrix is the minimal 2-launch/4-request rerun contract. Fail-closed gate law, no physical execution.",
-   "rationale": "Pure gate engine over an injected executor; no GPU, model, device, or network access. CPU-only unit tests drive fake executors through the STOP laws.",
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ]
-  },
-  "test_issue280_task_check": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "lineage": "Issue #284 frozen semantic task checker",
-   "invariant": "Issue #284 frozen deterministic semantic task checker: exactly one three-field JSON object with exactly the frozen expected values per prompt; accepts Markdown fences and brief introductory prose; rejects wrong values (including P2 service=search), missing/extra fields, multiple objects, non-string values. Tolerance frozen before any rerun.",
-   "rationale": "Pure string/JSON checker with frozen fixtures including two verbatim retained physical responses used as diagnostic observations only. No runtime or device access.",
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ]
-  },
-  "test_issue280_real_compat": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Exact retained physical R1 observer bytes must pass corrected PHYSICAL_280 offline admission before any injected launch; authenticated single-sequence witness, CPU_Mapped host accounting and tied output-role attacks remain fail-closed. Synthetic fixtures alone cannot establish producer/model compatibility.",
-   "lineage": "Issue #280 real R1 producer/collector/model compatibility correction",
-   "owned_surfaces": {
-    "evidence_read": [
-     "docs/investigations/vulkan-same-request-280/compatibility/"
-    ],
-    "scripts_imported": [
-     "scripts/issue280_observer.py",
-     "scripts/issue280_runner.py",
-     "scripts/issue280_compatibility.py"
-    ]
-   },
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ],
-   "rationale": "CPU-only retained-byte replay and producer metadata checks. No GPU, model, device or physical execution.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 30
-  },
-  "test_issue280_source_compat": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "The additive graph metadata successor emits complete unique sequence IDs from the pinned ubatch fields, preserves original overlay bytes, regenerates frozen source identities and exercises the actual insertion via CPU-only syntax/metadata probe; physical execution stays unauthorized.",
-   "lineage": "Issue #280 real R1 producer/collector/model compatibility correction",
-   "owned_surfaces": {
-    "evidence_read": [
-     "docs/investigations/vulkan-same-request-280/compatibility/"
-    ],
-    "scripts_imported": [
-     "scripts/issue280_source_compat.py",
-     "scripts/issue280_source.py"
-    ]
-   },
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ],
-   "rationale": "CPU-only retained-byte replay and producer metadata checks. No GPU, model, device or physical execution.",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 12
-  },
-  "test_issue289_launcher": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 124.0,
-   "baseline_test_count": 56,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws — the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed — a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch — no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
-   "lineage": "Issue #289 extraction of the session-local #280 r3 physical driver lifecycle (inferswarm05 driver.py sha256 2cc001b5...)",
-   "owned_surfaces": {
-    "evidence_read": [],
-    "scripts_imported": [
-     "scripts/issue289_launcher.py"
-    ]
-   },
-   "pinned_by_evidence": [],
-   "rationale": "CPU fixture tests drive two distinct loopback stub server subprocesses on the same port through the real gate engine (issue280_runner.run_campaign) and the real prelaunch compatibility gate; RED run reproduced the retained r3 terminal (stale-arm routing, 20/24 failing) before the GREEN fix (24/24 passing).",
-   "referenced_by_scripts": [],
-   "replacement": null,
-   "test_count_at_audit": 56
-  },
-  "test_issue280_retention_fix": {
-   "baseline_group": "r8i-qwen-qualification",
-   "baseline_serial_seconds": 0.0,
-   "baseline_test_count": 0,
-   "category": "CURRENT_CONTRACT",
-   "disposition": "retain",
-   "group": "r8i-qwen-qualification",
-   "lineage": "Issue #284 observer retention correction law",
-   "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
-   "rationale": "Reads the pinned public llama.cpp source bytes and the transform module; compiles nothing. Host-local pinned-source assertions skip when the pin is absent.",
-   "pinned_by_evidence": [
-    "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
-   ]
   }
  },
  "retired_test_rows": "docs/ci/retired-test-rows.json",

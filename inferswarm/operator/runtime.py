@@ -1,6 +1,7 @@
 """One fixed-plan ordinary generation with verified sources and bounded ownership."""
 from __future__ import annotations
 from dataclasses import asdict
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
@@ -13,13 +14,17 @@ import urllib.request
 
 from .config import load_config
 from .lifecycle import LeaseManager,SSHTransport
-from .plan import build_plan
+from .plan import ProfiledOperatorPlan, build_plan, revalidate_admission
+from .profiles import canonical, freeze, thaw
+from . import bindings
 from .strategy import llama_cpp_spec
 
 ASSIGNMENT = re.compile(r'load_tensors: layer\s+(\d+) assigned to device (\S+), is_swa = [01]')
 
 
 def observed_placement(log,plan):
+    if isinstance(plan,ProfiledOperatorPlan):
+        raise ValueError('legacy-only layer logs; Q8 requires complete typed observations')
     spec=llama_cpp_spec(plan)
     client=next(p for p in plan.participants if p.role=='client')
     remote=next(p for p in plan.participants if p.role=='remote')
@@ -52,16 +57,48 @@ class SSHSourceTransport:
     def verify(self,part,plan,fnv_binary=None):
         from . import source
         program=Path(source.__file__).read_text(encoding='utf-8')
+        if isinstance(plan,ProfiledOperatorPlan):
+            if plan.strategy_id!='qwen38-q8-fixed/1': raise ValueError('unsupported profiled source strategy')
+            projected=source.q8_source_payload(plan)
+            selected=next(p for p in projected['participants'] if p['participant_id']==part.participant_id)
+            helper=None
+            if projected['rpc_cache'] and part.role=='remote':
+                if fnv_binary is None: raise ValueError('invocation-owned FNV helper required for enabled RPC cache')
+                path=Path(fnv_binary)
+                root=Path(part.lifecycle_dir)
+                if (not path.is_absolute() or path.name!='fnv-cache' or path.parent.parent!=root
+                        or path.parent.name in ('active','.','..') or '..' in path.parts):
+                    raise ValueError('invocation-owned FNV helper path required')
+                helper=str(path)
+                # Only provisioning is runtime-owned. The unchanged standalone
+                # Q8 verifier remains read-only and is invoked separately below.
+                setup=program.rsplit("if __name__=='__main__': main()",1)[0]+'\ncompile_fnv('+repr(helper)+')\n'
+                proc=self._call(part,setup,'')
+                if proc.returncode:
+                    raise RuntimeError(f'{part.role} source helper setup failed: {proc.stderr[-500:]}')
+            payload=dict(schema='q8-source-verification/1',participant=selected,
+                         plan_payload=projected,fnv_binary=helper)
+            proc=self._call(part,program,canonical(payload).decode('utf-8'))
+            try: result=json.loads(proc.stdout)
+            except ValueError as exc:
+                raise RuntimeError(f'{part.role} source verification failed: {proc.stderr[-500:]}') from exc
+            if proc.returncode or not isinstance(result,dict) or result.get('status')!='VERIFIED-not-consumed':
+                reason=result.get('reason',proc.stderr[-500:]) if isinstance(result,dict) else 'invalid Q8 source reply'
+                raise RuntimeError(f'{part.role} source verification failed (source transport exit {proc.returncode}): {reason}')
+            return result
         payload={'participant':asdict(part),'model':asdict(plan.model),
                  'placement':[asdict(x) for x in plan.placement],
                  'backend':asdict(plan.backend_options),'fnv_binary':fnv_binary}
-        remote_command='python3 -c '+shlex.quote(program)
-        proc=subprocess.run(['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10',part.execution_address,
-                             remote_command],input=json.dumps(payload),capture_output=True,text=True,timeout=1800)
+        proc=self._call(part,program,json.dumps(payload))
         try: result=json.loads(proc.stdout)
         except ValueError as exc: raise RuntimeError(f'{part.role} source verification failed: {proc.stderr[-500:]}') from exc
         if proc.returncode or 'error' in result: raise RuntimeError(f'{part.role} source verification failed: {result.get("error",proc.stderr[-500:])}')
         return result
+
+    def _call(self,part,program,payload):
+        remote_command='python3 -c '+shlex.quote(program)
+        return subprocess.run(['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10',part.execution_address,
+                               remote_command],input=payload,capture_output=True,text=True,timeout=1800)
 
 
 class JSONHTTP:
@@ -88,11 +125,16 @@ def ssh_tunnel(address,remote_port):
 
 
 class OperatorRunner:
-    def __init__(self,source,leases,http,tunnel_factory,pause=time.sleep):
+    def __init__(self,source,leases,http,tunnel_factory,pause=time.sleep,*,
+                 binding_transport=None,identity_reader=None,observation_mode='live',clock=None):
         self.source=source; self.leases=leases; self.http=http
         self.tunnel_factory=tunnel_factory; self.pause=pause; self.last_cleanup={}
+        # Internal synthetic plumbing only: run_config/CLI never exposes this.
+        self.binding_transport=binding_transport; self.identity_reader=identity_reader
+        self.observation_mode=observation_mode; self.clock=clock
 
     def run(self,plan):
+        if isinstance(plan,ProfiledOperatorPlan): return self._run_profiled(plan)
         # Pure admission before any mutation; no inventory/hostname substitution.
         spec=llama_cpp_spec(plan)
         client=next(p for p in plan.participants if p.role=='client')
@@ -175,6 +217,168 @@ class OperatorRunner:
         if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
             raise RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}') from error
         if error: raise error
+        result['cleanup']=self.last_cleanup
+        return result
+
+    def _profiled_admission(self,plan):
+        if self.observation_mode=='live':
+            if self.clock is not None: raise ValueError('live clock injection is prohibited')
+            # Explicitly do NOT pass the retained replay clock/profile_mode.
+            admission=revalidate_admission(plan)
+        elif self.observation_mode=='synthetic-test':
+            if not callable(self.clock): raise ValueError('synthetic test clock must be explicitly injected')
+            now=self.clock()
+            if not isinstance(now,datetime) or now.tzinfo is None or now.utcoffset()!=timezone.utc.utcoffset(now):
+                raise ValueError('observation clock must be timezone-aware UTC')
+            if any(e.source_scope!='synthetic' for e in plan.profiles.snapshot.evidence):
+                raise ValueError('synthetic test profile scope must be explicit')
+            admission=revalidate_admission(plan,now=now)
+        else: raise ValueError('unsupported observation mode')
+        if (admission.status!='ADMITTED' or not admission.structural_admissible
+                or admission.technical_feasibility!='FEASIBLE' or not admission.policy_eligible
+                or (self.observation_mode=='live' and not admission.execution_ready)):
+            raise ValueError('Q8 admission refused: '+('; '.join(admission.deficits) or admission.status))
+        return admission
+
+    def _owned_identity(self,part,row,argv,preflight):
+        # The actual spawn receipt (or manager's owned row) supplies PID/start.
+        if not isinstance(row,dict) or row.get('token')!=self.leases.token:
+            raise ValueError('owned process spawn receipt/token mismatch')
+        start=row.get('start')
+        if type(start) is int and start>=0: start=str(start)
+        if type(start) is not str or not start: raise ValueError('owned process opaque spawn start required')
+        captured=self.identity_reader(part,row.get('pid'))
+        expected=bindings.ProcessIdentity(part.participant_id,part.host_id,part.boot_epoch,
+            part.topology_epoch,row.get('pid'),start,part.runtime_executable,part.runtime_sha256,
+            argv,freeze(thaw(preflight.observed)['visibility']),part.rpc_endpoint)
+        if not isinstance(captured,bindings.ProcessIdentity) or captured!=expected:
+            raise ValueError('owned process actual spawn/frozen identity/visibility mismatch')
+        return captured
+
+    def _run_profiled(self,plan):
+        if plan.strategy_id!='qwen38-q8-fixed/1': raise ValueError('unsupported profiled runtime strategy')
+        if self.binding_transport is None or type(self.binding_transport) is bindings.BindingTransport:
+            raise ValueError(bindings.UNSUPPORTED_OBSERVER)
+        if not callable(self.identity_reader): raise ValueError('independent identity reader required; no host-query default')
+        admission=self._profiled_admission(plan)
+        mode=dict(mode=self.observation_mode,clock=self.clock)
+        preflights=bindings.preflight_bindings(plan,transport=self.binding_transport,**mode)
+        byid={r.participant_id:r for r in preflights}
+        spec=llama_cpp_spec(plan)
+        client=next(p for p in plan.participants if p.role=='client')
+        remote=next(p for p in plan.participants if p.role=='remote')
+        for part in (client,remote):
+            if Path(part.source_path).name!=plan.model.members[0][0]:
+                raise ValueError(part.role+' source_path must name first full GGUF member')
+        host,sep,port=remote.rpc_endpoint.rpartition(':')
+        if not sep or not host or not port.isdecimal() or int(port)!=remote.port:
+            raise ValueError('RPC endpoint must exactly match configured port')
+        if client.execution_address==remote.execution_address: raise ValueError('distinct explicit execution addresses required')
+        if client.lifecycle_dir==remote.lifecycle_dir: raise ValueError('distinct lifecycle directories required')
+        cache_enabled=thaw(plan.strategy_options)['rpc_cache']=='enabled'
+        remote_argv=(remote.runtime_executable,*spec.rpc_args,'--host',host,'--port',str(remote.port),
+                     *(('--cache',) if cache_enabled else ()))
+        client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
+        tunnel=None; error=None; result=None; cleanup_error=None
+        try:
+            self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
+            self.leases.acquire(client.execution_address,client.lifecycle_dir)
+            sources={p.participant_id:self.source.verify(p,plan,
+                str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
+                if p.role=='remote' and cache_enabled else None) for p in (remote,client)}
+            self.leases.port(remote.execution_address,host,remote.port)
+            self.leases.port(client.execution_address,'127.0.0.1',client.port)
+            rows={remote.participant_id:self.leases.spawn(remote.execution_address,'rpc',list(remote_argv),
+                cache=remote.cache_path if cache_enabled else None)}
+            rpc_deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                self._live(client,remote,client_started=False)
+                ready=self.leases.listening(remote.execution_address,'rpc',host,remote.port)
+                self._live(client,remote,client_started=False)
+                if time.monotonic()>rpc_deadline: raise TimeoutError('RPC owned listener startup timeout')
+                if ready: break
+                self.pause(.5)
+            rows[client.participant_id]=self.leases.spawn(client.execution_address,'client',list(client_argv))
+            # Own the opened tunnel before any health/identity/capture can fail.
+            opened=self.tunnel_factory(client.execution_address,client.port)
+            tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
+            base=f'http://127.0.0.1:{local_port}'
+            deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                self._live(client,remote)
+                if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during startup')
+                try:
+                    if self.http.get(base+'/health',timeout=2).get('status')=='ok': break
+                except (OSError,ValueError,urllib.error.URLError): pass
+                if time.monotonic()>deadline: raise TimeoutError('client startup health timeout')
+                self.pause(.5)
+            observations=[]
+            for p in plan.participants:
+                name='client' if p.role=='client' else 'rpc'
+                argv=client_argv if p.role=='client' else remote_argv
+                row=rows[p.participant_id]
+                manager_row=self.leases.owned.get(p.execution_address,{}).get(name)
+                if row is None: row=manager_row
+                elif manager_row is not None and row!=manager_row:
+                    raise ValueError('owned process spawn receipt/manager mismatch')
+                owned=self._owned_identity(p,row,argv,byid[p.participant_id])
+                observations.append(bindings.gather_owned_observation(p,plan,
+                    transport=self.binding_transport,owned=owned,owned_argv=argv,
+                    invocation_token=self.leases.token,identity_reader=self.identity_reader,**mode))
+            actual_bindings=bindings.reconcile_bindings(plan,observations,**mode)
+            material=bindings.reconcile_materialization(plan,observations,source_receipts=sources,**mode)
+            self._live(client,remote)
+            if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited before request')
+            request=dict(plan.request)
+            # Recheck plan and retained capture freshness after blocking liveness;
+            # no external transport/identity work may intervene before the POST.
+            admission=self._profiled_admission(plan)
+            actual_bindings=bindings.reconcile_bindings(plan,observations,**mode)
+            response=self.http.post(base+'/v1/chat/completions',
+                {'messages':[{'role':'user','content':request['prompt']}],
+                 'max_tokens':request['max_tokens'],'temperature':request['temperature'],
+                 'seed':request['seed'],'stream':False},timeout=900)
+            self._live(client,remote)
+            if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during request')
+            choice=response['choices'][0]; text=choice['message']['content']
+            if not isinstance(text,str) or not text or not choice['finish_reason'] or not response['id']:
+                raise ValueError('incomplete generation response')
+            def detached(value): return json.loads(canonical(thaw(asdict(value))))
+            result=dict(response_id=response['id'],text=text,finish_reason=choice['finish_reason'],
+                tokens=response['usage']['completion_tokens'],plan_id=plan.plan_id,plan_digest=plan.digest,
+                selection=plan.selection,admission=detached(admission),verified_backing=sources,
+                binding_preflight=[detached(r) for r in preflights],
+                observed_bindings=[detached(r) for r in actual_bindings],
+                observed_materialization=detached(material),observation_mode=self.observation_mode,
+                execution_ready=self.observation_mode=='live' and admission.execution_ready,
+                physical_qualified=material.physical_qualified,execution_authorized=False,
+                evidence_labels=list(material.evidence_classes),
+                nonclaims=['source authentication is not cache consumption or physical placement',
+                           'synthetic observations do not qualify physical execution',
+                           'no kernel, numerical, memory-fit or performance qualification'])
+        except BaseException as exc: error=exc
+        finally:
+            try:
+                if tunnel is not None:
+                    if tunnel.poll() is None: tunnel.terminate()
+                    try: tunnel.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        tunnel.kill(); tunnel.wait(timeout=5)
+            except BaseException as exc:
+                cleanup_error=RuntimeError(f'SSH tunnel cleanup failed: {exc}')
+                cleanup_error.__cause__=exc
+            finally:
+                try: self.last_cleanup=self.leases.cleanup()
+                except BaseException as exc:
+                    failure=RuntimeError(f'incomplete owned cleanup: {exc}')
+                    failure.__cause__=cleanup_error or exc; cleanup_error=failure
+            if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
+                failure=RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
+                failure.__cause__=cleanup_error; cleanup_error=failure
+        if error is not None:
+            if cleanup_error is not None: raise error from cleanup_error
+            raise error
+        if cleanup_error is not None: raise cleanup_error
         result['cleanup']=self.last_cleanup
         return result
 

@@ -26,7 +26,17 @@ class LaunchSpec:
     startup_timeout_seconds: int
     rpc_runtime: RuntimeBinding
 
+def candidates_for(config, metadata):
+    if config.strategy_id != 'qwen38-q8-fixed/1':
+        raise ValueError('unsupported strategy id')
+    from .qwen_q8 import q8_candidates
+    return q8_candidates(config, metadata)
+
+
 def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
+    if plan.strategy_id == 'qwen38-q8-fixed/1':
+        from .qwen_q8 import q8_llama_cpp_spec
+        return q8_llama_cpp_spec(plan)
     if plan.strategy_id != "llama.cpp": raise ValueError("unsupported strategy id")
     clients=[p for p in plan.participants if p.role=="client"]
     remotes=[p for p in plan.participants if p.role=="remote"]
@@ -85,4 +95,4 @@ def llama_cpp_spec(plan: OperatorPlan) -> LaunchSpec:
     args=("--rpc",remote.rpc_endpoint,"--device",f"{client.device},{remote.device}","--split-mode",opt.split_mode,"--tensor-split",",".join(format(x,".15g") for x in opt.tensor_split),"-ngl",str(opt.offload_tail),"-cmoe","-c",str(opt.context),"-np",str(opt.slots),"--no-warmup","-lv",str(opt.verbosity))
     return LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,remote.rpc_endpoint,f"{client.device},{remote.device}",args,tuple(expected),opt.context,opt.slots,opt.startup_timeout_seconds,RuntimeBinding(remote.role,remote.runtime_executable,remote.runtime_sha256))
 
-__all__=["ExpectedPlacement","LaunchSpec","llama_cpp_spec"]
+__all__=["ExpectedPlacement","LaunchSpec","llama_cpp_spec","candidates_for"]

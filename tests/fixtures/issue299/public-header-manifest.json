@@ -1,0 +1,77 @@
+{
+  "members": [
+    {
+      "header_sha256": "1393b18f5fc05a7b2e17d480ef7933aa1c400be511b2f0de0c18e2a8f45363d6",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00001-of-00006.gguf",
+      "object_bytes": 10946624,
+      "object_sha256": "2dabcbb53ca537a7947bc7d20414fd464eeaf4d66d43021b5b2556cc87544ad2",
+      "range_end": 10946617,
+      "range_start": 0,
+      "tensor_count": 0,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00001-of-00006.gguf"
+    },
+    {
+      "header_sha256": "c4f6af2a64fce038e65572189fb76448ff4a5102fbb32c472185664355d895ba",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00002-of-00006.gguf",
+      "object_bytes": 682434912,
+      "object_sha256": "494ca4ed3dbf97bc28da88af3890b8877b9032f909812d00c0526a9ca5e91d2e",
+      "range_end": 331,
+      "range_start": 0,
+      "tensor_count": 4,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00002-of-00006.gguf"
+    },
+    {
+      "header_sha256": "a0c549cedf05179c34faab89eb4537e157b3a65a88095e46e7c2486fab7a0c1b",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00003-of-00006.gguf",
+      "object_bytes": 54400261312,
+      "object_sha256": "34efd79a80a1ce540a517a5d56171924b66ce1c38b04c904f17ad6d8ef17cf20",
+      "range_end": 172,
+      "range_start": 0,
+      "tensor_count": 1,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00003-of-00006.gguf"
+    },
+    {
+      "header_sha256": "1649c5b437a79d421378c5c650414c79bfc55bb639b4a403c3d14064cc831b73",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00004-of-00006.gguf",
+      "object_bytes": 49446841216,
+      "object_sha256": "bfa634025fabbd2658bf7694bc80b90e571699c768723f844c934c7ef06c691a",
+      "range_end": 28140,
+      "range_start": 0,
+      "tensor_count": 444,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00004-of-00006.gguf"
+    },
+    {
+      "header_sha256": "4964cffe16b75a997d34c43d1b343690a226a2ddacb2e555951e71d0c2a47024",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00005-of-00006.gguf",
+      "object_bytes": 49668930400,
+      "object_sha256": "232a8f14cc0fa4262e7efe8593774b136fe40909e39c7a020342ddaa27259a97",
+      "range_end": 29255,
+      "range_start": 0,
+      "tensor_count": 458,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00005-of-00006.gguf"
+    },
+    {
+      "header_sha256": "5d02a2d43c4247c7fb7f778ece3dd5077b9491e1dfd09941847a113f1050c777",
+      "member": "Qwen3.8-Flash-Next-Q8_0-00006-of-00006.gguf",
+      "object_bytes": 34015618784,
+      "object_sha256": "538a93bca918064983409a41187ad4c68640f9aced6f29564da8f551bf86d7a5",
+      "range_end": 20316,
+      "range_start": 0,
+      "tensor_count": 317,
+      "url": "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/38bb39ee97821de2c9009abb7e93950eec396e66/Q8_0/Qwen3.8-Flash-Next-Q8_0-00006-of-00006.gguf"
+    }
+  ],
+  "provenance": {
+    "census_git_commit": "008e0727a08191d7ba47c0b7ea28a6493e662de1",
+    "census_path": "docs/investigations/qwen38-flash-next-r8-a/gguf-census.json",
+    "census_sha256": "5664961903f0b6afd1066ac88d287471231c962604fe7e7176f2b3f41ee43fe1",
+    "claim": "Header SHA-256 authenticates metadata only; LFS SHA-256 is attributable full-object identity, not independent weight verification.",
+    "issue": "Zutfen-LLC/inferswarm#299"
+  },
+  "schema": "public-gguf-headers/1",
+  "source": {
+    "representation": "Q8_0",
+    "revision": "38bb39ee97821de2c9009abb7e93950eec396e66",
+    "source_id": "unsloth/Qwen3.8-Flash-Next-GGUF"
+  }
+}

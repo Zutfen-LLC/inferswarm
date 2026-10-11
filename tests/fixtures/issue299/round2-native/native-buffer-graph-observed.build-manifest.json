@@ -1,0 +1,31 @@
+{
+  "backend_libraries": [
+    {
+      "name": "libggml-static.a",
+      "sha256": "f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6"
+    }
+  ],
+  "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "build_options": [
+    "-O0",
+    "-g0",
+    "-pthread",
+    "-D_GNU_SOURCE",
+    "-D_XOPEN_SOURCE=600",
+    "-DGGML_SCHED_MAX_COPIES=4",
+    "-DGGML_USE_CPU",
+    "-DGGML_USE_RPC",
+    "-DLLAMA_SUBPROCESS",
+    "-DCPPHTTPLIB_FORM_URL_ENCODED_PAYLOAD_MAX_LENGTH=1048576",
+    "-DCPPHTTPLIB_LISTEN_BACKLOG=512",
+    "-DCPPHTTPLIB_REQUEST_URI_MAX_LENGTH=32768",
+    "-DCPPHTTPLIB_TCP_NODELAY=1"
+  ],
+  "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "executable_sha256": "0776ef2268bb0b59e174f882242322ad0f401ea01ca567a691cb50f8347a0968",
+  "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+  "protocol": "inferswarm-native-observation/2",
+  "schema": "q8-native-build-manifest/2",
+  "transformed_manifest_sha256": "f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7"
+}

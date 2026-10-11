@@ -1,0 +1,56 @@
+{
+  "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "files": [
+    {
+      "path": "ggml/src/ggml-alloc.c",
+      "sha256": "97e83026c72d1df175063a260b630cab4883dec2676fa5ca48a877984af0ba8c"
+    },
+    {
+      "path": "ggml/src/ggml-backend.cpp",
+      "sha256": "43059967ecd446d160a14b50374158d339214633f62270e4a6f78970e6a09761"
+    },
+    {
+      "path": "ggml/src/ggml-rpc/ggml-rpc.cpp",
+      "sha256": "356c6d66244615def8dad00be7392e8da8f2b81f768ed6c0c45752b2f879c75e"
+    },
+    {
+      "path": "is301_c_shim.h",
+      "sha256": "055662930422870ad604102d4294b0cdf758fb62810f47fe41642de3a031e00e"
+    },
+    {
+      "path": "is301_sink.cpp",
+      "sha256": "5fa23725a84a6675f4158a0eaa3aacbc0f5c69792535f37a6712bae5f29cf114"
+    },
+    {
+      "path": "src/llama-kv-cache.cpp",
+      "sha256": "e68aae83d625d7ed4e490e4bcedea053025e8ba5c9557882946f0b306410a78a"
+    },
+    {
+      "path": "src/llama-model-loader.cpp",
+      "sha256": "51b11d434994a25de46d6c8ec856eba5f5ccac7aa44832ca36f6e0def56255b7"
+    },
+    {
+      "path": "tests/native-buffer-graph-observed.cpp",
+      "sha256": "b0710142764a31696fb3c4c8dd50742e1d61efc7618411d4894e04dd00601abc"
+    },
+    {
+      "path": "tests/native-export-claim.cpp",
+      "sha256": "15b2bd7cdf1ed55aae22cdaa889088af199c0114586405c894eeaf6f0d357c6b"
+    },
+    {
+      "path": "tests/native-fact-bounds.cpp",
+      "sha256": "2821dbfe026e8e52d3b88bdbe9248858693c6116a4fd8641d5ca651a50922b47"
+    },
+    {
+      "path": "tools/server/server-queue.cpp",
+      "sha256": "a59ce916ce0e8f9e43a8155017a2a0c714d27fb9796da33550a78aa7d05dec0d"
+    },
+    {
+      "path": "is301_observer.h",
+      "sha256": "b5be7e87dde9bd0725f56253d123be30a29689284aaef6345e6b2bee30bcd9f2"
+    }
+  ],
+  "patch_sha256": "d471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef",
+  "schema": "native-observer-transformed/1"
+}
