@@ -169,7 +169,8 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
                              request_nonce=nonce)],
                 state_lineage=[dict(task_id=1, request_nonce=nonce,
                                     states_touched=109)],
-                transfers=route_legs(route),
+                transfers=[dict(t, task_id=1, request_nonce=nonce)
+                           for t in route_legs(route)],
                 output_custody=[dict(task_id=1, request_nonce=nonce,
                                      readback_bytes=64)],
                 route_contract='synthetic/%s' % route)
@@ -182,7 +183,8 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
                 allocations=[dict(buffer_bytes=96, backend='RPC0[host-b:5000]')],
                 graphs=[dict(graph_id=94018699154864, nodes=1, splits=1,
                              status=0, ubatch_lineage='ub-1')],
-                transfers=route_legs(route, remote=True),
+                transfers=[dict(t, task_id=1, request_nonce=nonce)
+                           for t in route_legs(route, remote=True)],
                 route_contract='synthetic/%s' % route)
             events = ['rpc_server_client', 'rpc_set_tensor', 'rpc_get_tensor',
                       'sched_graph_compute']
@@ -505,7 +507,7 @@ class DynamicRouteContractTests(unittest.TestCase):
         mutated = _mutate(rows[0].observation, lambda f: None, replacement=facts)
         from dataclasses import replace
         rows = (replace(rows[0], observation=mutated), rows[1])
-        with self.assertRaisesRegex(ValueError, 'boundary|route'):
+        with self.assertRaisesRegex(ValueError, 'boundary|route|transfer request'):
             contract.reconcile_dynamic(self.plan, self.static_receipt(), rows,
                 request_for(), mode='synthetic-test', clock=lambda: NOW)
 
@@ -580,7 +582,7 @@ class DynamicRouteContractTests(unittest.TestCase):
             mode='synthetic-test', clock=lambda: NOW)
         self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
         # The same CPU-only evidence on the one-gpu plan refuses.
-        with self.assertRaisesRegex(ValueError, 'boundary|route'):
+        with self.assertRaisesRegex(ValueError, 'boundary|route|transfer request'):
             contract.reconcile_dynamic(self.plan, self.static_receipt(),
                 synthetic_dynamic_rows(self.plan, route='cpu-only'), request_for(),
                 mode='synthetic-test', clock=lambda: NOW)

@@ -1746,6 +1746,16 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     # domain endpoints; cpu-only requires CPU-domain legs only. Incidental
     # CPU fixture activity never satisfies the CUDA-route predicate.
     all_transfers = [record for row in rows for record in transfers_of(facts[row.participant_id])]
+    # Every transfer must be attributable to this request, not merely carry a
+    # matching boundary label. The collector must supply producer-observed
+    # task/nonce values; absence is not repaired from controller context.
+    nonce = request_identity.request_nonce
+    for record in all_transfers:
+        if (type(record.get('task_id')) is not int
+                or record.get('task_id') != request_task
+                or record.get('request_nonce') != nonce):
+            raise ValueError('dynamic reconciliation: transfer request task/nonce '
+                             'correlation missing or foreign')
     ops = {record.get('op') for record in all_transfers}
     if not any(op in _SET_OPS for op in ops):
         raise ValueError('dynamic reconciliation: copy route SET leg missing')
