@@ -19,7 +19,8 @@ import subprocess
 from ..bindings import ProcessIdentity, TransportReply
 from ..profiles import canonical, freeze, sha256, thaw
 from ..phased_observation import (NativeBuildIdentity, OwnedSpawnFacts, DerivedBuildEvidence,
-    ParticipantStaticEvidence, ParticipantDynamicEvidence, parse_build_manifest, parse_observation)
+    ParticipantStaticEvidence, ParticipantDynamicEvidence, ParsedObservation,
+    parse_build_manifest, parse_observation)
 
 # Native export labels written by the retained #301 observation overlay:
 # the client/server process exports as llama-server (server-queue.cpp) and
@@ -72,33 +73,40 @@ class SSHCollectorTransport:
         return [name for name in proc.stdout.splitlines() if name]
 
 
+_IDENTITY_PROGRAM = ("import json,sys\n"
+    "pid=sys.argv[1]\n"
+    "fields=open(f'/proc/{pid}/stat').read().rsplit(') ',1)[1].split()\n"
+    "start=fields[19]\n"
+    "exe=__import__('os').path.realpath(f'/proc/{pid}/exe')\n"
+    "raw=open(f'/proc/{pid}/cmdline','rb').read().split(b'\\0')\n"
+    "argv=[p.decode('utf-8','surrogateescape') for p in raw if p]\n"
+    "env={}\n"
+    "for line in open(f'/proc/{pid}/environ','rb').read().split(b'\\0'):\n"
+    "    if b'=' in line:\n"
+    "        k,v=line.split(b'=',1); env[k.decode('utf-8','surrogateescape')]=v.decode('utf-8','surrogateescape')\n"
+    "import hashlib\n"
+    "sha=hashlib.sha256(open(exe,'rb').read()).hexdigest()\n"
+    "print(json.dumps({'start':start,'exe':exe,'argv':argv,'sha256':sha,'environ':env}))")
+
+
 class ProcIdentityReader:
     """Independent /proc-based identity reader over the lifecycle transport.
 
-    Reads pid/start/executable/argv/environ for the exact PID and compares
-    every field against the controller's frozen expectations; it never
-    trusts observer-supplied identity fields.
+    Reads pid/start/executable/argv/environ for the exact PID and hashes the
+    actual executable bytes. Every field is independently observed and
+    compared against the controller's frozen expectations by the caller;
+    configured values are never echoed in place of observations.
     """
 
     def __init__(self, transport: SSHCollectorTransport | None = None):
         self.transport = transport or SSHCollectorTransport()
 
-    PROGRAM = ("import json,sys\n"
-               "pid=sys.argv[1]\n"
-               "fields=open(f'/proc/{pid}/stat').read().rsplit(') ',1)[1].split()\n"
-               "start=fields[19]\n"
-               "raw=open(f'/proc/{pid}/cmdline','rb').read().split(b'\\0')\n"
-               "argv=[p.decode('utf-8','surrogateescape') for p in raw if p]\n"
-               "env={}\n"
-               "for line in open(f'/proc/{pid}/environ','rb').read().split(b'\\0'):\n"
-               "    if b'=' in line:\n"
-               "        k,v=line.split(b'=',1); env[k.decode('utf-8','surrogateescape')]=v.decode('utf-8','surrogateescape')\n"
-               "print(json.dumps({'start':start,'argv':argv,'environ':env}))")
-
-    def read(self, participant, pid: int) -> ProcessIdentity:
+    def read(self, participant, pid: int, *, expected_executable: str,
+             expected_sha256: str, expected_argv: tuple[str, ...],
+             visibility_environment: tuple[str, ...] = ()) -> ProcessIdentity:
         proc = subprocess.run(
             ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', participant.execution_address,
-             'python3 -c ' + shlex.quote(self.PROGRAM) + ' ' + str(int(pid))],
+             'python3 -c ' + shlex.quote(_IDENTITY_PROGRAM) + ' ' + str(int(pid))],
             capture_output=True, text=True, timeout=SSH_TIMEOUT_SECONDS)
         if proc.returncode != 0:
             raise CollectorError(f'identity read failed ({participant.participant_id}): {proc.stderr[-300:]!r}')
@@ -106,27 +114,83 @@ class ProcIdentityReader:
             raw = json.loads(proc.stdout)
         except ValueError as exc:
             raise CollectorError(f'identity read invalid reply ({participant.participant_id})') from exc
-        # Filter the environment to the controlled visibility keys.
+        # Independent observations must equal the frozen expectations; a
+        # mismatch is a named refusal, never an echo of configured values.
+        observed = (raw.get('exe'), tuple(raw.get('argv', ())), raw.get('sha256'), raw.get('start'))
+        expected = (expected_executable, tuple(expected_argv), expected_sha256)
+        if observed[0] != expected[0]:
+            raise CollectorError(f'identity executable mismatch ({participant.participant_id}): '
+                                 f'{observed[0]!r} != {expected[0]!r}')
+        if observed[1] != expected[1]:
+            raise CollectorError(f'identity argv mismatch ({participant.participant_id})')
+        if observed[2] != expected[2]:
+            raise CollectorError(f'identity executable bytes mismatch ({participant.participant_id})')
         environment = {k: v for k, v in raw.get('environ', {}).items()
-                       if k in ('GGML_BACKEND_PATH', 'IS301_EXPORT_DIR', 'LLAMA_CACHE')}
+                       if k in visibility_environment or k in ('IS301_EXPORT_DIR', 'IS301_OBSERVE')}
         return ProcessIdentity(participant.participant_id, participant.host_id,
-            participant.boot_epoch, participant.topology_epoch, int(pid), str(raw['start']),
-            participant.runtime_executable, participant.runtime_sha256,
+            participant.boot_epoch, participant.topology_epoch, int(pid), str(observed[3]),
+            expected_executable, expected_sha256,
             tuple(raw['argv']), freeze(dict(native=[], visible=[], environment=environment)),
             participant.rpc_endpoint)
+
+
+# Retained #301 derived-build artifacts the collector must authenticate
+# independently, mirroring tests/fixtures/issue299/round2-native/.
+RETAINED_PATCH_SHA256 = 'd471abb83e3c911ed5bcc812c04bb8bb36a062183cea1e2f79b4f80fe482d2ef'
+RETAINED_TRANSFORMED_MANIFEST_SHA256 = 'f03cc3272424082c1657588d341bd18bfa399ba54fe05e3bb85021d626fb84f7'
+RETAINED_COMPILER = 'c++ (Debian 14.2.0-19) 14.2.0'
 
 
 class NativeObserverCollector:
     """Bounded collector joining native exports to owned lifecycle facts."""
 
-    def __init__(self, transport: SSHCollectorTransport | None = None):
+    def __init__(self, transport: SSHCollectorTransport | None = None,
+                 identity_reader: ProcIdentityReader | None = None):
         self.transport = transport or SSHCollectorTransport()
+        self.identity_reader = identity_reader or ProcIdentityReader(self.transport)
 
     def collect_static(self, participant, spawn: OwnedSpawnFacts, manifest_path: str,
-                       executable_path: str, source_receipt_digest: str) -> ParticipantStaticEvidence:
-        manifest = self.collect_build(participant, manifest_path, executable_path)
-        return ParticipantStaticEvidence(participant.participant_id, None, spawn, manifest,
-                                         source_receipt_digest)
+                       executable_path: str, source_receipt_digest: str, *,
+                       expected_argv: tuple[str, ...],
+                       export_dir: str | None = None) -> ParticipantStaticEvidence:
+        build = self.collect_build(participant, manifest_path, executable_path)
+        identity = self.identity_reader.read(participant, spawn.pid,
+            expected_executable=participant.runtime_executable,
+            expected_sha256=participant.runtime_sha256,
+            expected_argv=expected_argv)
+        if identity.pid != spawn.pid or identity.start != spawn.start:
+            raise CollectorError('owned identity pid/start mismatch: '
+                                 + participant.participant_id)
+        observation = self.collect_static_snapshot(participant, spawn, export_dir)
+        return ParticipantStaticEvidence(participant.participant_id, identity, spawn, build,
+                                         source_receipt_digest, observation)
+
+    def collect_static_snapshot(self, participant, spawn: OwnedSpawnFacts,
+                                export_dir: str | None) -> ParsedObservation:
+        """Collect the static inventory snapshot from the export directory.
+
+        The retained overlay emits its static snapshot at process start (the
+        tiny fixture emits it before the instrumented allocation; the server
+        emits it before the serve loop), so it is available pre-request.
+        """
+        if export_dir is None:
+            raise CollectorError('static snapshot export directory required: '
+                                 + participant.participant_id)
+        names = self.transport.list_dir(participant.execution_address, export_dir)
+        snapshots = [name for name in names if name.endswith('.json')
+                     and not name.startswith(CLAIM_NAME)]
+        if not snapshots:
+            raise CollectorError('static snapshot envelope missing: '
+                                 + participant.participant_id)
+        # The static snapshot is the first envelope the process writes; any
+        # dynamic envelope present at static-collection time is premature.
+        payload = self.transport.read_bytes(participant.execution_address,
+                                            str(Path(export_dir) / sorted(snapshots)[0]))
+        observation = parse_observation(TransportReply(0, payload))
+        if observation.phase != 'static':
+            raise CollectorError('static snapshot phase mismatch: '
+                                 + participant.participant_id)
+        return observation
 
     def collect_build(self, participant, manifest_path: str,
                       executable_path: str) -> DerivedBuildEvidence:
@@ -138,15 +202,38 @@ class NativeObserverCollector:
         if digest != manifest.executable_sha256:
             raise CollectorError('derived build executable bytes do not match manifest: '
                                  + participant.participant_id)
+        # Explicit derived-build qualification: the manifest must descend from
+        # the retained authenticated #301 producer artifacts, not merely be
+        # self-consistent. A foreign patch/transformed/compiler/flag identity
+        # is a named refusal even when the executable bytes match.
+        if manifest.patch_sha256 != RETAINED_PATCH_SHA256:
+            raise CollectorError('derived build patch identity is not the retained '
+                                 'authenticated #301 overlay: ' + participant.participant_id)
+        if manifest.transformed_manifest_sha256 != RETAINED_TRANSFORMED_MANIFEST_SHA256:
+            raise CollectorError('derived build transformed-manifest identity is not the '
+                                 'retained authenticated #301 overlay: '
+                                 + participant.participant_id)
+        if manifest.compiler != RETAINED_COMPILER:
+            raise CollectorError('derived build compiler identity is not the retained '
+                                 'authenticated #301 toolchain: ' + participant.participant_id)
         return DerivedBuildEvidence(manifest, digest)
 
     def collect_dynamic(self, participant, spawn: OwnedSpawnFacts, export_dir: str,
                         plan_digest: str, invocation_token: str,
                         native_label: str) -> ParticipantDynamicEvidence:
-        claim = self.transport.read_json(participant.execution_address,
-                                         str(Path(export_dir) / CLAIM_NAME))
-        if (claim.get('participant') != native_label
-                or int(claim['pid']) != spawn.pid or str(claim['start_ticks']) != spawn.start):
+        # The retained producer writes the claim as plaintext
+        # 'PID\nSTART_TICKS\nLABEL\n' (is301_observer.h export_capture).
+        raw = self.transport.read_bytes(participant.execution_address,
+                                        str(Path(export_dir) / CLAIM_NAME))
+        try:
+            text = raw.decode('utf-8')
+            claim_pid, claim_start, claim_label = text.splitlines()[:3]
+            claim_pid = int(claim_pid)
+        except (UnicodeError, ValueError) as exc:
+            raise CollectorError('export claim malformed: '
+                                 + participant.participant_id) from exc
+        if (claim_label != native_label
+                or claim_pid != spawn.pid or claim_start != spawn.start):
             raise CollectorError('export directory claim owner mismatch: '
                                  + participant.participant_id)
         names = self.transport.list_dir(participant.execution_address, export_dir)
@@ -164,8 +251,7 @@ class NativeObserverCollector:
         if observation.plan_digest != plan_digest and observation.plan_digest != '0' * 64:
             raise CollectorError('observation plan digest mismatch: ' + participant.participant_id)
         return ParticipantDynamicEvidence(participant.participant_id, observation, spawn,
-                                          int(claim['pid']), str(claim['start_ticks']),
-                                          native_label)
+                                          claim_pid, claim_start, native_label)
 
 
 __all__ = ['CollectorError', 'SSHCollectorTransport', 'ProcIdentityReader', 'NativeObserverCollector',

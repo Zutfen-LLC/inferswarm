@@ -473,9 +473,11 @@ class OperatorRunner:
                 start=row.get('start')
                 if type(start) is int and start>=0: start=str(start)
                 spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
+                argv=client_argv if p.role=='client' else remote_argv
                 evidence=self.collector.collect_static(p,spawn,
                     observer_options['manifest_path'],observer_options['executable_path'],
-                    _sha256(sources[p.participant_id]))
+                    _sha256(sources[p.participant_id]),expected_argv=argv,
+                    export_dir=export_dirs[p.participant_id])
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
             self._live(client,remote)
@@ -495,10 +497,22 @@ class OperatorRunner:
             choice=response['choices'][0]; text=choice['message']['content']
             if not isinstance(text,str) or not text or not choice['finish_reason'] or not response['id']:
                 raise ValueError('incomplete generation response')
-            # Same-request dynamic reconciliation after the POST: the request
-            # executed; acceptance of its output is decided here.
+            # The response arrived; from here a failure means the request
+            # executed but its output is REJECTED, which is raised truthfully.
+            result_choice=choice; result_text=text; result_response=response
+            # Same-request dynamic acceptance: the retained overlay exports
+            # its terminal envelope at owned-process termination, so the
+            # controller tears down the tunnel and owned processes first,
+            # then collects and reconciles before accepting output.
+            if tunnel.poll() is None: tunnel.terminate()
+            try: tunnel.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                tunnel.kill(); tunnel.wait(timeout=5)
+            self.last_cleanup=self.leases.cleanup()
+            if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
+                raise RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
             request_identity=RequestIdentity(invocation_token=invocation,request_nonce=request_nonce,
-                response_id=str(response['id']))
+                response_id=str(result_response['id']))
             dynamic_evidence=[]
             for p in plan.participants:
                 row=rows[p.participant_id]
@@ -510,7 +524,10 @@ class OperatorRunner:
                     NATIVE_LABELS['client' if p.role=='client' else 'remote']))
             dynamic_receipt=self.dynamic_reconciler(plan,static_receipt,dynamic_evidence,
                 request_identity,**mode)
+            # Recheck evidence freshness after blocking collection work.
+            admission=self._profiled_admission(plan)
             def detached(value): return json.loads(canonical(thaw(asdict(value))))
+            response=result_response; choice=result_choice; text=result_text
             result=dict(response_id=response['id'],text=text,finish_reason=choice['finish_reason'],
                 tokens=response['usage']['completion_tokens'],plan_id=plan.plan_id,plan_digest=plan.digest,
                 selection=plan.selection,admission=detached(admission),verified_backing=sources,
@@ -519,7 +536,6 @@ class OperatorRunner:
                 execution_ready=self.observation_mode=='live' and admission.execution_ready,
                 physical_qualified=static_receipt.physical_qualified,
                 execution_authorized=False,
-                evidence_labels=list(static_receipt.counts and () or ()),
                 nonclaims=['source authentication is not cache consumption or physical placement',
                            'dynamic acceptance is not execution authorization; output accepted, execution already occurred',
                            'synthetic full-Q8 scenarios remain synthetic; no live capability evidence'])

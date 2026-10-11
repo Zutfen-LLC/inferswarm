@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from inferswarm.operator import phased_observation as contract
+from inferswarm.operator.phased_observation import ParticipantDynamicEvidence
 from inferswarm.operator.bindings import ProcessIdentity, TransportReply
 from inferswarm.operator.native_observer.collector import (
     CollectorError, NativeObserverCollector, NATIVE_LABELS, ProcIdentityReader,
@@ -129,7 +130,8 @@ class StaticReconciliationTests(unittest.TestCase):
     def spawn(self, participant, token='inv-302'):
         return contract.OwnedSpawnFacts(participant.participant_id, 4242, 'start-4242', token)
 
-    def identity(self, participant, spawn, argv=('/opt/observer/llama-server', '--serve')):
+    def identity(self, participant, spawn, argv=None):
+        argv = argv or (participant.runtime_executable, '--serve')
         return ProcessIdentity(participant.participant_id, participant.host_id,
             participant.boot_epoch, participant.topology_epoch, spawn.pid, spawn.start,
             participant.runtime_executable, participant.runtime_sha256, argv,
@@ -138,6 +140,15 @@ class StaticReconciliationTests(unittest.TestCase):
     def build_evidence(self, participant):
         return contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256)
 
+    def static_snapshot(self, participant, token='inv-302'):
+        record = json.loads((ROUND2 / 'cpu-static.json').read_text())
+        record['participant_id'] = 'observer-static-' + participant.participant_id
+        record['invocation_token'] = token
+        record['plan_digest'] = '0' * 64
+        record['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+        return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+
     def evidence_rows(self, token='inv-302'):
         rows = []
         for role in ('client', 'remote'):
@@ -145,7 +156,8 @@ class StaticReconciliationTests(unittest.TestCase):
             spawn = self.spawn(p, token)
             rows.append(contract.ParticipantStaticEvidence(
                 p.participant_id, self.identity(p, spawn), spawn, self.build_evidence(p),
-                sha256(self.source_receipts()[p.participant_id])))
+                sha256(self.source_receipts()[p.participant_id]),
+                self.static_snapshot(p, token)))
         return rows
 
     def source_receipts(self):
@@ -227,6 +239,15 @@ class DynamicReconciliationTests(unittest.TestCase):
     def spawn(self, participant, token='inv-302'):
         return contract.OwnedSpawnFacts(participant.participant_id, 4242, 'start-4242', token)
 
+    def static_snapshot(self, participant, token='inv-302'):
+        record = json.loads((ROUND2 / 'cpu-static.json').read_text())
+        record['participant_id'] = 'observer-static-' + participant.participant_id
+        record['invocation_token'] = token
+        record['plan_digest'] = '0' * 64
+        record['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+        return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+
     def static_receipt(self, token='inv-302'):
         rows = []
         for role in ('client', 'remote'):
@@ -234,11 +255,12 @@ class DynamicReconciliationTests(unittest.TestCase):
             spawn = self.spawn(p, token)
             identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
                 p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
-                p.runtime_sha256, ('/opt/observer/llama-server', '--serve'),
+                p.runtime_sha256, (p.runtime_executable, '--serve'),
                 freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+            snapshot = self.static_snapshot(p, token)
             rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
                 spawn, contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256),
-                sha256(source_receipt(self.plan, p))))
+                sha256(source_receipt(self.plan, p)), snapshot))
         sources = {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
         return contract.reconcile_static(self.plan, rows, sources,
                                          mode='synthetic-test', clock=lambda: NOW)
@@ -343,10 +365,69 @@ class DynamicReconciliationTests(unittest.TestCase):
     def test_unobserved_graph_generation_refuses(self):
         rows = self.dynamic_rows()
         request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
-                                           graph_generations=(7,))
+                                           response_id='resp-1', graph_generations=(7,))
         with self.assertRaisesRegex(ValueError, 'graph generation not observed'):
             contract.reconcile_dynamic(self.plan, self.static_receipt(), rows, request,
                                        mode='synthetic-test', clock=lambda: NOW)
+
+
+def _continuity_rows(plan):
+    """Static receipt with spawn pid 4242; dynamic rows claim spawn pid 5555."""
+    from inferswarm.operator.phased_observation import OwnedSpawnFacts
+    manifest = plan_bound_manifest(plan)
+    rows = []
+    spawns = {}
+    for role, name, native in (('client', 'cpu-dynamic.json', 'llama-server'),
+                               ('remote', 'rpc-dynamic.json', 'ggml-rpc-server')):
+        p = next(p for p in plan.participants if p.role == role)
+        spawn = OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        spawns[p.participant_id] = spawn
+        record = genuine_dynamic(name, native, 'inv-302', 4242)
+        if role == 'client':
+            record['facts']['tasks'] = [dict(task_id=1, response_id='unknown')]
+            record['facts']['responses'] = [dict(task_id=1)]
+            lifecycle = ('server_task_new_id', 'server_task_processed', 'server_response_send')
+            record['sequence'] = ([dict(sequence=i, event=n) for i, n in enumerate(lifecycle)]
+                + [dict(sequence=i + len(lifecycle), event=r['event'])
+                   for i, r in enumerate(record['sequence'])])
+            record['event_count'] = len(record['sequence'])
+            record['terminal_sequence'] = record['event_count']
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+        observation = contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+        rows.append(ParticipantDynamicEvidence(p.participant_id, observation, spawn,
+                                               4242, 'start-4242', native))
+    # A foreign dynamic spawn (pid 5555) breaking continuity with the static
+    # receipt's spawn facts.
+    wrong_client = rows[0]
+    wrong = ParticipantDynamicEvidence(wrong_client.participant_id, wrong_client.observation,
+        OwnedSpawnFacts(wrong_client.participant_id, 5555, 'start-5555', 'inv-302'),
+        5555, 'start-5555', wrong_client.native_participant)
+    static = _static_receipt_for(plan, manifest, spawns)
+    return static, (wrong, rows[1])
+
+
+def _static_receipt_for(plan, manifest, spawns):
+    static_rows = []
+    for p in plan.participants:
+        spawn = spawns[p.participant_id]
+        identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
+            p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
+            p.runtime_sha256, (p.runtime_executable, '--serve'),
+            freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+        snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
+        snapshot['participant_id'] = 'observer-static-' + p.participant_id
+        snapshot['invocation_token'] = 'inv-302'
+        snapshot['plan_digest'] = '0' * 64
+        snapshot['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
+        observation = contract.parse_observation(TransportReply(0, json.dumps(snapshot).encode()))
+        static_rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
+            spawn, contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
+            sha256(source_receipt(plan, p)), observation))
+    sources = {p.participant_id: source_receipt(plan, p) for p in plan.participants}
+    return contract.reconcile_static(plan, static_rows, sources,
+                                     mode='synthetic-test', clock=lambda: NOW)
 
 
 def _mutate_observation(observation, mutate):
@@ -361,6 +442,40 @@ def _mutate_observation(observation, mutate):
     return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
 
 
+class RecordingIdentityReader(ProcIdentityReader):
+    """Recording /proc identity seam; independently returns observed facts."""
+
+    def __init__(self, observations=None, failures=None):
+        self.observations = observations or {}
+        self.failures = failures or {}
+
+    def read(self, participant, pid, *, expected_executable, expected_sha256,
+             expected_argv, visibility_environment=()):
+        key = (participant.participant_id, pid)
+        if key in self.failures:
+            raise self.failures[key]
+        observed = self.observations.get(key)
+        if observed is None:
+            observed = dict(exe=expected_executable, argv=list(expected_argv),
+                            sha256=expected_sha256, start='start-%d' % pid,
+                            environ={})
+        # Faithful to the production reader: independent observations are
+        # compared against the frozen expectations, mismatches refuse.
+        if observed['exe'] != expected_executable:
+            raise CollectorError(f'identity executable mismatch ({participant.participant_id})')
+        if tuple(observed['argv']) != tuple(expected_argv):
+            raise CollectorError(f'identity argv mismatch ({participant.participant_id})')
+        if observed['sha256'] != expected_sha256:
+            raise CollectorError(f'identity executable bytes mismatch ({participant.participant_id})')
+        return ProcessIdentity(participant.participant_id, participant.host_id,
+            participant.boot_epoch, participant.topology_epoch, pid,
+            observed['start'], observed['exe'], observed['sha256'],
+            tuple(observed['argv']), freeze(dict(native=[], visible=[],
+            environment={k: v for k, v in observed['environ'].items()
+                         if k in ('IS301_EXPORT_DIR', 'IS301_OBSERVE')})),
+            participant.rpc_endpoint)
+
+
 class CollectorTests(unittest.TestCase):
     """The real collector against a recording virtual-host tree."""
 
@@ -373,51 +488,78 @@ class CollectorTests(unittest.TestCase):
     def participant(self, role):
         return next(p for p in self.plan.participants if p.role == role)
 
-    def tree_with_build(self, manifest=None, executable=None):
+    def tree_with_build(self, manifest=None, executable=None, with_static=True):
         tree = VirtualHostTree()
         body = self.manifest_body if manifest is None else manifest
-        # Bind the manifest to the actual synthetic executable bytes.
-        executable = executable if executable is not None else b'synthetic-observer-binary'
-        digest = hashlib.sha256(executable).hexdigest()
         body = dict(body)
-        body['executable_sha256'] = digest
-        body['backend_libraries'] = body['backend_libraries']
+        if executable is None:
+            executable = b'synthetic-observer-binary'
+        body['executable_sha256'] = hashlib.sha256(executable).hexdigest()
         from inferswarm.operator.phased_observation import parse_build_manifest
         manifest = parse_build_manifest(body)
         addr = self.participant('client').execution_address
         tree.put(addr, '/opt/observer/llama-server.build-manifest.json', body)
         tree.put(addr, '/opt/observer/llama-server', executable)
+        if with_static:
+            export = '/synthetic/exports-client'
+            snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
+            snapshot['participant_id'] = 'observer-static-x'
+            snapshot['invocation_token'] = 'inv-302'
+            snapshot['plan_digest'] = '0' * 64
+            snapshot['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(addr, export + '/observer-0000.json', snapshot)
+            tree.put_dir(addr, export, ['observer-0000.json'])
         return tree, manifest
 
     def test_collect_static_authenticates_bytes(self):
         tree, manifest = self.tree_with_build()
         transport = RecordingCollectorTransport(tree)
-        collector = NativeObserverCollector(transport)
+        collector = NativeObserverCollector(transport, RecordingIdentityReader())
         p = self.participant('client')
         spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         evidence = collector.collect_static(p, spawn,
             '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
-            'a' * 64)
+            'a' * 64, expected_argv=(p.runtime_executable, '--serve'),
+            export_dir='/synthetic/exports-client')
         self.assertEqual(evidence.build.manifest.manifest_sha256, manifest.manifest_sha256)
+        self.assertIsNotNone(evidence.identity)
+
+    def test_identity_reader_mismatch_refuses_instead_of_echoing(self):
+        tree, _ = self.tree_with_build()
+        p = self.participant('client')
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        # An independent observation reporting a foreign image must refuse,
+        # never fall back to the configured executable digest.
+        reader = RecordingIdentityReader(observations={
+            (p.participant_id, 4242): dict(exe='/bin/false', argv=['/bin/false'],
+                sha256='f' * 64, start='start-4242', environ={})})
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree), reader)
+        with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
+            collector.collect_static(p, spawn,
+                '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
+                'a' * 64, expected_argv=(p.runtime_executable, '--serve'),
+                export_dir='/synthetic/exports-client')
 
     def test_tampered_executable_refuses(self):
         tree, manifest = self.tree_with_build()
         addr = self.participant('client').execution_address
         tree.files[addr]['/opt/observer/llama-server'] = b'tampered'
-        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                            RecordingIdentityReader())
         p = self.participant('client')
         spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
         with self.assertRaisesRegex(CollectorError, 'executable bytes do not match manifest'):
             collector.collect_static(p, spawn,
                 '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
-                'a' * 64)
+                'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
 
     def test_claim_owner_mismatch_refuses(self):
         tree, _ = self.tree_with_build()
         p = self.participant('client')
         export = '/synthetic/lease/token/exports-client'
         tree.put(p.execution_address, export + '/is301-claim',
-                 dict(pid=4242, start_ticks='start-4242', participant='llama-server'))
+                 '4242\nstart-4242\nllama-server\n'.encode())
         envelope = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
         tree.put(p.execution_address, export + '/llama-server-0000.json', envelope)
         tree.put_dir(p.execution_address, export, ['is301-claim', 'llama-server-0000.json'])
@@ -428,7 +570,7 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(evidence.native_participant, 'llama-server')
         # Wrong pid in claim refuses.
         tree.put(p.execution_address, export + '/is301-claim',
-                 dict(pid=9999, start_ticks='start-4242', participant='llama-server'))
+                 '9999\nstart-4242\nllama-server\n'.encode())
         with self.assertRaisesRegex(CollectorError, 'claim owner mismatch'):
             collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
                                       NATIVE_LABELS['client'])
@@ -438,7 +580,7 @@ class CollectorTests(unittest.TestCase):
         p = self.participant('client')
         export = '/synthetic/lease/token/exports-client'
         tree.put(p.execution_address, export + '/is301-claim',
-                 dict(pid=4242, start_ticks='start-4242', participant='llama-server'))
+                 '4242\nstart-4242\nllama-server\n'.encode())
         tree.put(p.execution_address, export + '/llama-server-0000.json',
                  genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
         tree.put(p.execution_address, export + '/llama-server-0001.json',
@@ -456,7 +598,7 @@ class CollectorTests(unittest.TestCase):
         p = self.participant('client')
         export = '/synthetic/lease/token/exports-client'
         tree.put(p.execution_address, export + '/is301-claim',
-                 dict(pid=4242, start_ticks='start-4242', participant='llama-server'))
+                 '4242\nstart-4242\nllama-server\n'.encode())
         tree.put(p.execution_address, export + '/llama-server-0000.json',
                  genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
         tree.put_dir(p.execution_address, export, ['is301-claim', 'llama-server-0000.json'])
@@ -519,6 +661,45 @@ class CollectedRunnerTests(unittest.TestCase):
             h.runner().run(self.plan)
         self.assertEqual(h.posts, 1)
 
+    def test_profile_expiry_during_dynamic_collection_refuses_output(self):
+        from datetime import timedelta
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        def collect_dynamic(p, spawn, export_dir, plan_digest, token, native_label):
+            # Profiles expire while the controller blocks collecting evidence.
+            runner.clock = lambda: NOW + timedelta(days=1)
+            return h._dynamic(p, spawn, native_label)
+        h.collect_dynamic = collect_dynamic
+        with self.assertRaisesRegex(ValueError, 'expired|stale'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 1)
+
+    def test_foreign_claim_spawn_continuity_refuses(self):
+        static, rows = _continuity_rows(self.plan)
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                           response_id='resp-1')
+        with self.assertRaisesRegex(ValueError,
+                                    'spawn continuity with static admission mismatch'):
+            contract.reconcile_dynamic(self.plan, static, rows, request,
+                                       mode='synthetic-test', clock=lambda: NOW)
+
+    def test_resealed_foreign_manifest_refuses_in_collector(self):
+        # A self-consistent but foreign overlay identity must refuse: the
+        # derived build must descend from the retained authenticated #301
+        # producer artifacts.
+        tree = VirtualHostTree()
+        body = dict(build_manifest_body())
+        body['patch_sha256'] = 'e' * 64
+        body['executable_sha256'] = hashlib.sha256(b'x').hexdigest()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        tree.put(p.execution_address, '/opt/observer/llama-server.build-manifest.json', body)
+        tree.put(p.execution_address, '/opt/observer/llama-server', b'x')
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                            RecordingIdentityReader())
+        with self.assertRaisesRegex(CollectorError, 'patch identity is not the retained'):
+            collector.collect_build(p, '/opt/observer/llama-server.build-manifest.json',
+                                    '/opt/observer/llama-server')
+
 
 class RecordingRunnerHarness:
     """Actual OperatorRunner over the recording lifecycle with a recording
@@ -543,9 +724,10 @@ class RecordingRunnerHarness:
         import copy as _copy
         return _copy.deepcopy(self.sources[p.participant_id])
 
-    def collect_static(self, p, spawn, manifest_path, executable_path, digest):
+    def collect_static(self, p, spawn, manifest_path, executable_path, digest, *,
+                       expected_argv, export_dir=None):
         if self.static_error: raise self.static_error
-        return self._evidence(p, spawn)
+        return self._evidence(p, spawn, expected_argv)
 
     def collect_dynamic(self, p, spawn, export_dir, plan_digest, token, native_label):
         if self.dynamic_error:
@@ -553,15 +735,22 @@ class RecordingRunnerHarness:
             raise self.dynamic_error
         return self._dynamic(p, spawn, native_label)
 
-    def _evidence(self, p, spawn):
+    def _evidence(self, p, spawn, expected_argv=None):
         manifest = plan_bound_manifest(self.plan)
         identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
             p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
-            p.runtime_sha256, (p.runtime_executable, '--serve'),
+            p.runtime_sha256, tuple(expected_argv) if expected_argv else (p.runtime_executable, '--serve'),
             freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+        snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
+        snapshot['participant_id'] = 'observer-static-' + p.participant_id
+        snapshot['invocation_token'] = spawn.invocation_token
+        snapshot['plan_digest'] = '0' * 64
+        snapshot['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
+        observation = contract.parse_observation(TransportReply(0, json.dumps(snapshot).encode()))
         return contract.ParticipantStaticEvidence(p.participant_id, identity, spawn,
             contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
-            sha256(self.sources[p.participant_id]))
+            sha256(self.sources[p.participant_id]), observation)
 
     def _dynamic(self, p, spawn, native_label):
         name = 'cpu-dynamic.json' if p.role == 'client' else 'rpc-dynamic.json'

@@ -954,7 +954,7 @@ def parse_observation(reply: TransportReply) -> ParsedObservation:
 
 @dataclass(frozen=True)
 class PhaseReceipt:
-    """Reserved structural receipt, not authority; no reconciler creates one yet."""
+    """Structural receipt binding spawn facts; never execution authority."""
     schema: str
     phase: str
     verdict: str
@@ -967,6 +967,7 @@ class PhaseReceipt:
     execution_authorized: bool
     request_identity: RequestIdentity | None = None
     counts: tuple[tuple[str, int], ...] = ()
+    spawn_facts: tuple[tuple[str, int, str], ...] = ()
 
 
 class IncompleteReconciliation(ValueError):
@@ -1015,16 +1016,17 @@ class ParticipantStaticEvidence:
     spawn: OwnedSpawnFacts
     build: DerivedBuildEvidence
     source_receipt_digest: str
-    observation: ParsedObservation | None = None
+    observation: ParsedObservation
 
     def __post_init__(self):
         _text(self.participant_id, 'static evidence participant')
         _digest(self.source_receipt_digest, 'static evidence source receipt digest')
-        if self.observation is not None:
-            if type(self.observation) is not ParsedObservation:
-                raise ValueError('static evidence: typed observation required')
-            if self.observation.phase != 'static':
-                raise ValueError('static evidence: static phase required')
+        if type(self.observation) is not ParsedObservation:
+            raise ValueError('static evidence: typed static observation required')
+        if self.observation.phase != 'static':
+            raise ValueError('static evidence: static phase required')
+        if self.observation.stream_kind != 'snapshot' or not self.observation.snapshot_fence:
+            raise ValueError('static evidence: static snapshot fence required')
 
 
 @dataclass(frozen=True)
@@ -1089,6 +1091,9 @@ def _static_evidence_rows(plan, evidence):
     for row in evidence:
         if type(row) is not ParticipantStaticEvidence:
             raise ValueError('static reconciliation: typed participant evidence required')
+        if type(row.spawn) is not OwnedSpawnFacts:
+            raise ValueError('static reconciliation: owned spawn receipt required: '
+                             + repr(row.participant_id))
         rows.append(row)
     ids = [row.participant_id for row in rows]
     participants = {p.participant_id: p for p in plan.participants}
@@ -1179,8 +1184,22 @@ def _static_identity_join(plan, participants, rows, token):
                 raise ValueError('static reconciliation: owned identity mismatch: ' + field + ': ' + row.participant_id)
         if identity.pid != spawn.pid or identity.start != spawn.start:
             raise ValueError('static reconciliation: owned identity pid/start mismatch: ' + row.participant_id)
-        if not identity.effective_argv:
-            raise ValueError('static reconciliation: owned effective argv required: ' + row.participant_id)
+        # The observed effective argv must contain the frozen runtime
+        # executable; a foreign process image is a named refusal.
+        if not identity.effective_argv or identity.effective_argv[0] != participant.runtime_executable:
+            raise ValueError('static reconciliation: owned process image mismatch: ' + row.participant_id)
+
+
+def _static_observation_join(plan, participants, rows):
+    digests = set()
+    for row in rows:
+        observation = row.observation
+        if observation.plan_digest not in (plan.digest, '0' * 64):
+            raise ValueError('static reconciliation: observation plan digest mismatch: '
+                             + row.participant_id)
+        digests.add(observation.terminal_digest)
+    if len(digests) != len(rows):
+        raise ValueError('static reconciliation: duplicate static observation evidence')
 
 
 def _static_build_join(plan, participants, rows):
@@ -1219,6 +1238,7 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
     participants, rows, token = _static_evidence_rows(plan, evidence)
     _static_source_join(plan, participants, rows, source_receipts)
     _static_identity_join(plan, participants, rows, token)
+    _static_observation_join(plan, participants, rows)
     _static_build_join(plan, participants, rows)
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
@@ -1233,8 +1253,10 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
               ('weights', len(plan.candidate.assignments)),
               ('persistent-states-and-composites', len(plan.candidate.required_state)),
               ('boundaries', len(plan.candidate.boundaries)))
+    spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
+                          for row in rows))
     return PhaseReceipt(RECEIPT_SCHEMA, 'static', _STATIC_VERDICT, plan.digest, plan.selection,
-        token, _sha256(material), True, mode == 'live', False, None, counts)
+        token, _sha256(material), True, mode == 'live', False, None, counts, spawns)
 
 
 def _identity_wire_digest(identity):
@@ -1284,12 +1306,18 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     if (static_receipt.schema != RECEIPT_SCHEMA or static_receipt.phase != 'static'
             or static_receipt.verdict != _STATIC_VERDICT):
         raise ValueError('dynamic reconciliation: static admission receipt required')
+    if not static_receipt.observations_valid:
+        raise ValueError('dynamic reconciliation: static receipt observations invalid')
+    if not static_receipt.spawn_facts:
+        raise ValueError('dynamic reconciliation: static receipt spawn facts missing')
     if static_receipt.plan_digest != plan.digest or static_receipt.selection != plan.selection:
         raise ValueError('dynamic reconciliation: static receipt plan identity mismatch')
     if type(request_identity) is not RequestIdentity:
         raise ValueError('dynamic reconciliation: typed request identity required')
     if static_receipt.invocation_token != request_identity.invocation_token:
         raise ValueError('dynamic reconciliation: invocation token mismatch')
+    if request_identity.response_id is None:
+        raise ValueError('dynamic reconciliation: request response binding missing')
     if type(evidence) not in (tuple, list) or not evidence:
         raise ValueError('dynamic reconciliation: typed participant evidence required')
     rows = []
@@ -1318,12 +1346,18 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
         if not isinstance(allocations, list) or not allocations:
             raise ValueError('dynamic reconciliation: allocation catalog incomplete: ' + row.participant_id)
         for record in allocations:
-            if not isinstance(record, dict) or type(record.get('buffer_bytes')) is not int or record['buffer_bytes'] < 1:
+            if (not isinstance(record, dict) or type(record.get('buffer_bytes')) is not int
+                    or record['buffer_bytes'] < 1
+                    or not isinstance(record.get('backend'), str) or not record['backend']):
                 raise ValueError('dynamic reconciliation: allocation record incomplete: ' + row.participant_id)
         for record in transfers_of(facts[row.participant_id]):
             wire_bytes += _integer(record.get('bytes'), 'dynamic transfer bytes', minimum=0)
     if len(tokens) != 1 or tokens.pop() != request_identity.invocation_token:
         raise ValueError('dynamic reconciliation: invocation token mismatch')
+    dynamic_spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
+                                  for row in rows))
+    if dynamic_spawns != tuple(static_receipt.spawn_facts):
+        raise ValueError('dynamic reconciliation: spawn continuity with static admission mismatch')
     # Same-request task/response and graph joins. The native producer emits
     # response_id as the literal "unknown" at task-creation time; request
     # binding is by the observed native task id (controller-side binding of
@@ -1352,8 +1386,11 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     for graph in graphs:
         if not isinstance(graph, dict) or graph.get('status') != 0:
             raise ValueError('dynamic reconciliation: graph status not successful')
-        if type(graph.get('graph_id')) is int:
-            observed_generations.add(graph['graph_id'])
+        if type(graph.get('graph_id')) is not int or graph['graph_id'] < 1:
+            raise ValueError('dynamic reconciliation: graph identity missing')
+        if type(graph.get('nodes')) is not int or graph['nodes'] < 1:
+            raise ValueError('dynamic reconciliation: graph node count missing')
+        observed_generations.add(graph['graph_id'])
     for generation in request_identity.graph_generations:
         if generation not in observed_generations:
             raise ValueError('dynamic reconciliation: graph generation not observed for this request')
@@ -1389,11 +1426,17 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
 
 def transfers_of(facts):
     transfers = facts.get('transfers')
-    if not isinstance(transfers, list):
+    if not isinstance(transfers, list) or not transfers:
         raise ValueError('dynamic reconciliation: transfer facts missing')
     for record in transfers:
         if not isinstance(record, dict):
             raise ValueError('dynamic reconciliation: transfer record malformed')
+        if type(record.get('bytes')) is not int or record['bytes'] < 1:
+            raise ValueError('dynamic reconciliation: transfer record without material bytes')
+        if not isinstance(record.get('shape'), list) or not record['shape']:
+            raise ValueError('dynamic reconciliation: transfer record without observed shape')
+        if not isinstance(record.get('op'), str) or not record['op']:
+            raise ValueError('dynamic reconciliation: transfer record without op')
     return transfers
 
 

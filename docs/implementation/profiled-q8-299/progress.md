@@ -514,10 +514,27 @@ What was implemented (offline integration only):
   task/response/lifecycle facts use the genuine native fact shapes spliced
   and explicitly re-sealed (labeled SYNTHETIC in the module docstring).
 
-Verification so far: the new `tests/test_issue302_collected_runner.py`
-(21 tests), all ten existing issue-299/301 suites, the retention audit, the
-CI planner self-check and the repository finalizer check pass locally at this
-working tree. This is a coding-progress record, not review or acceptance
+The first independent SPEC review (2026-10-11) returned NO-GO with verified
+findings, all corrected in this working tree: the collected path now performs
+an independent /proc identity read compared against frozen expectations
+(never echoing configured values); the collector consumes the producer's
+actual plaintext PID/START/LABEL claim protocol and creates the export
+directory with `IS301_OBSERVE=1`; dynamic collection happens after owned
+teardown because the overlay exports at process termination; static evidence
+requires the collected static snapshot and spawn-receipt cross-checks;
+derived-build qualification additionally binds the retained authenticated
+#301 patch/transformed/compiler identities (a self-consistent foreign
+manifest refuses); dynamic evidence requires material transfers (nonzero
+bytes, observed shapes), material graph records, response binding, and
+spawn continuity with the static receipt; and output acceptance re-runs
+admission freshness after blocking collection, so evidence expiring during
+collection rejects the already-executed request's output.
+
+Verification after the correction pass: the expanded
+`tests/test_issue302_collected_runner.py` (25 tests, including the SPEC
+reproductions as regressions), all ten existing issue-299/301 suites, the
+retention audit, the CI planner self-check and the repository finalizer
+check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
 exact-head review, and the separately gated hosted final validation remain
 pending. #303 integration, #300 physical qualification and #299 closure are
