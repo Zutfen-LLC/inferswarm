@@ -577,11 +577,22 @@ SPEC round 6 (2026-10-11) returned GO with one nonblocking MINOR, also
 corrected: the generation nanosecond suffix must be canonical (no leading
 zero; std::to_string never emits one).
 
-Verification after all six correction passes and the SPEC GO: the expanded
-`tests/test_issue302_collected_runner.py` (36 tests, including the SPEC
-reproductions from all six rounds as regressions), all ten existing
-issue-299/301 suites, the retention audit, the CI planner self-check and the
-repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
+Independent QUALITY review (2026-10-11) returned APPROVED with four
+nonblocking MINOR findings, all addressed: direct production-seam boundary
+regressions added for the real identity reader, run_config wiring, lifecycle
+observer enablement/export-dir creation and exact-integer graph-status
+typing (40 tests total); the retention audit's current bookkeeping updated to
+40 while retaining the 21-method historical baseline; runtime-contract.md
+supersession wording records the implemented joins with live authority still
+refused; and the dead test-setup debris was removed with the
+executable-digest test renamed to what it pins.
+
+Verification after all six correction passes, the SPEC GO and the QUALITY
+APPROVAL: the expanded `tests/test_issue302_collected_runner.py` (40 tests,
+including the SPEC reproductions from all rounds as regressions), all ten
+existing issue-299/301 suites, the retention audit, the CI planner
+self-check, the status sync and the repository finalizer check pass locally
+at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
 exact-head review, and the separately gated hosted final validation remain
 pending. #303 integration, #300 physical qualification and #299 closure are
@@ -589,7 +600,12 @@ not advanced by this record.
 
 ## Remaining work
 
-1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.
+1. ~~Implement and review the approved successor observation contract, native
+   producer, real collector, independent identity reader and normal-runner
+   wiring.~~ Done for #301 (producer/build, PR #304 merged) and #302
+   (collector/reconcilers/normal wiring; SPEC GO and QUALITY APPROVED; the
+   CLI/examples/receipts child #303 and the separately gated hosted final
+   validation remain). CUDA/physical qualification remains #300.
 2. Add and review the no-effects plan-only CLI.
 3. Add and review reproducible illustrative one-GPU/CPU-only examples, receipts and documentation.
 4. Complete documentation/status impact checks and independent original-acceptance integration review.

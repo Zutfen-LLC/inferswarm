@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -207,12 +208,7 @@ class StaticReconciliationTests(unittest.TestCase):
             contract.reconcile_static(self.plan, rows, self.source_receipts(),
                                       mode='synthetic-test', clock=lambda: NOW)
 
-    def test_stale_build_refuses(self):
-        rows = self.evidence_rows()
-        wrong = contract.DerivedBuildEvidence(
-            self.manifest, 'f' * 64) if False else None
-        from dataclasses import replace as _replace
-        stale = _replace(self.manifest, manifest_sha256='0' * 64) if False else None
+    def test_executable_digest_mismatch_cannot_construct_evidence(self):
         # A mismatched executable digest cannot even construct evidence.
         with self.assertRaisesRegex(ValueError, 'derived build executable bytes mismatch'):
             contract.DerivedBuildEvidence(self.manifest, 'f' * 64)
@@ -928,6 +924,88 @@ class CollectedRunnerTests(unittest.TestCase):
                                             'producer format|claim capture'):
                     collector.collect_dynamic(p, spawn, export, self.plan.digest,
                                               'inv-302', NATIVE_LABELS['client'])
+
+    def test_real_identity_reader_refuses_foreign_executable_and_argv(self):
+        # Production ProcIdentityReader seam: a /proc observation reporting a
+        # foreign executable or argv refuses; only exact matches construct.
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        argv = (p.runtime_executable, '--serve')
+        with patch('inferswarm.operator.native_observer.collector.subprocess.run') as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = json.dumps(dict(exe='/bin/false',
+                argv=list(argv), sha256=p.runtime_sha256, start='123',
+                environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+            run.return_value.stdout = json.dumps(dict(exe=p.runtime_executable,
+                argv=['/bin/false'], sha256=p.runtime_sha256, start='123',
+                environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity argv mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+            run.return_value.stdout = json.dumps(dict(exe=p.runtime_executable,
+                argv=list(argv), sha256='f' * 64, start='123', environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity executable bytes mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+
+    def test_run_config_wiring_selects_collector_only_with_observer_block(self):
+        # Production run_config seam: the collector path requires an explicit
+        # observer block; legacy configs keep the default wiring.
+        from inferswarm.operator import runtime as runtime_module
+        source = Path(runtime_module.__file__).read_text()
+        self.assertIn("observer=options.get('observer')", source)
+        self.assertIn('collector=NativeObserverCollector()', source)
+        # And the legacy /1 runner branch is reachable without it.
+        legacy = OperatorRunner(object(), object(), object(), lambda *a: (None, 1))
+        self.assertIsNone(legacy.collector)
+
+    def test_lifecycle_spawn_enables_observer_and_creates_export_dir(self):
+        # Production lifecycle seam: spawn creates the export directory
+        # fresh and enables the strictly observation-only emitter.
+        import tempfile
+        from inferswarm.operator.lifecycle import _onhost
+        with tempfile.TemporaryDirectory() as root:
+            _onhost(dict(action='admit', root=root, token='tok'))
+            export = str(Path(root) / 'token' / 'exports')
+            row = _onhost(dict(action='spawn', root=root, token='tok', name='client',
+                               argv=[sys.executable, '-c',
+                                     'import os,sys;'
+                                     'sys.exit(0 if os.environ.get("IS301_OBSERVE")=="1"'
+                                     ' and os.environ.get("IS301_EXPORT_DIR")==sys.argv[1]'
+                                     ' else 1)'],
+                               export=export))
+            try:
+                self.assertTrue(Path(export).is_dir())
+                self.assertIsInstance(row['pid'], int)
+            finally:
+                _onhost(dict(action='stop', root=root, token='tok', name='client',
+                             pid=row['pid'], start=row['start']))
+                _onhost(dict(action='release', root=root, token='tok'))
+
+    def test_graph_status_requires_exact_integer_zero(self):
+        # Status typing is a production reconciler boundary: booleans and
+        # floats must refuse even though they equal 0.
+        helper = DynamicReconciliationTests(
+            'test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        rows = list(helper.dynamic_rows('inv-302'))
+        client = rows[0]
+        for status in (False, 0.0, '0'):
+            def mutate(facts, status=status):
+                facts['graphs'] = [dict(g, status=status) for g in facts['graphs']]
+            mutated = _mutate_observation(client.observation, mutate)
+            from dataclasses import replace
+            rows[0] = replace(client, observation=mutated)
+            request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                               task_id='1', response_id='resp-1')
+            with self.subTest(status=repr(status)):
+                with self.assertRaisesRegex(ValueError, 'graph status not successful'):
+                    contract.reconcile_dynamic(self.plan, static, tuple(rows), request,
+                                               mode='synthetic-test', clock=lambda: NOW)
 
     def test_resealed_foreign_manifest_refuses_in_collector(self):
         # A self-consistent but foreign overlay identity must refuse: the

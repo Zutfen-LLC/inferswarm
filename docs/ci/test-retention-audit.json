@@ -5086,7 +5086,8 @@
    "rationale": "Offline collected-runner integration over genuine retained #301 captures with recording transports; synthetic plans and spliced task facts are explicitly labeled and never become live capability evidence.",
    "referenced_by_scripts": [],
    "replacement": null,
-   "test_count_at_audit": 21
+   "test_count_at_audit": 21,
+   "current_test_count": 40
   },
   "test_issue35_corrections": {
    "baseline_group": "vulkan-v0-b",
