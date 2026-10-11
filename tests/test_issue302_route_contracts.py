@@ -908,5 +908,59 @@ class ExactAllocationTests(unittest.TestCase):
                 static_receipt_for(self.plan, rows)
 
 
+class ExactDynamicCorrelationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = distinct_role_plan()
+        cls.static = static_receipt_for(cls.plan, static_rows_for(cls.plan))
+
+    def reject_mutation(self, mutate, reason, participant=0):
+        from dataclasses import replace
+        rows = synthetic_dynamic_rows(self.plan)
+        rows[participant] = replace(rows[participant], observation=_mutate(rows[participant].observation, mutate))
+        with self.assertRaisesRegex(ValueError, reason):
+            contract.reconcile_dynamic(self.plan, self.static, rows, request_for(),
+                                       mode='synthetic-test', clock=lambda: NOW)
+
+    def test_foreign_and_missing_graph_task_nonce_refuse_on_every_participant(self):
+        for participant in (0, 1):
+            for field, value in (('task_id', 999), ('request_nonce', 'foreign'), ('task_id', None)):
+                with self.subTest(participant=participant, field=field):
+                    self.reject_mutation(lambda f: f['graphs'][0].update(**{field: value}),
+                                         'graph.*task/nonce', participant)
+
+    def test_missing_explicit_graph_generation_refuses(self):
+        self.reject_mutation(lambda f: f['graphs'][0].pop('generation', None), 'graph.*generation')
+
+    def test_foreign_ubatch_generation_and_lineage_refuse(self):
+        for field, value in (('ubatch_lineage', 'foreign'), ('ubatch_generation', 999)):
+            with self.subTest(field=field):
+                self.reject_mutation(lambda f: f['graphs'][0].update(**{field: value}), 'graph.*ubatch')
+
+    def test_transfer_tensor_range_and_generation_are_not_labels(self):
+        for field, value in (('tensor', 'foreign'), ('range_offset', 999),
+                             ('graph_generation', 999), ('ubatch_generation', 999),
+                             ('strides', [1, 2]), ('range_bytes', 1)):
+            with self.subTest(field=field):
+                self.reject_mutation(lambda f: f['transfers'][1].update(**{field: value}),
+                                     'transfer.*join|route.*join|transfer.*lineage|transfer.*range')
+
+    def test_reversed_material_legs_refuse(self):
+        self.reject_mutation(lambda f: f['transfers'].reverse(), 'route.*order')
+
+    def test_output_custody_response_tensor_range_readback_join_refuse(self):
+        for field, value in (('response_id', 'foreign'), ('tensor', 'foreign'),
+                             ('range_offset', 999), ('graph_generation', 999),
+                             ('readback_bytes', 1), ('transfer_id', 'foreign')):
+            with self.subTest(field=field):
+                self.reject_mutation(lambda f: f['output_custody'][0].update(**{field: value}),
+                                     'output custody.*join|output custody.*binding')
+
+    def test_state_lineage_requires_named_authority_catalog_not_count(self):
+        self.reject_mutation(lambda f: f['state_lineage'].clear(), 'state lineage')
+        self.reject_mutation(lambda f: f['state_lineage'][0].update(state_id='foreign'),
+                             'state lineage.*coverage|state lineage.*identity')
+
+
 if __name__ == '__main__':
     unittest.main()
