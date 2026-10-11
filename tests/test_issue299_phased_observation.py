@@ -106,17 +106,17 @@ class BehavioralRegressionTests(unittest.TestCase):
 
     def test_static_partial_reconciler_refuses_otherwise_valid_inventory(self):
         plan, stream, sources = static_fixture()
-        with self.assertRaisesRegex(ValueError, 'static incomplete reconciliation'):
+        with self.assertRaisesRegex(ValueError, 'static reconciliation: typed profiled plan required'):
             contract.reconcile_static(plan, (stream,), sources)
 
     def test_dynamic_partial_reconciler_refuses_otherwise_valid_terminal(self):
         plan, static, stream, request = dynamic_fixture()
-        with self.assertRaisesRegex(ValueError, 'dynamic incomplete reconciliation'):
+        with self.assertRaisesRegex(ValueError, 'dynamic reconciliation: typed profiled plan required'):
             contract.reconcile_dynamic(plan, static, (stream,), request)
 
     def test_empty_dynamic_catalog_cannot_mint_acceptance(self):
         plan, static, stream, request = dynamic_fixture(empty=True)
-        with self.assertRaisesRegex(ValueError, 'dynamic incomplete reconciliation'):
+        with self.assertRaisesRegex(ValueError, 'dynamic reconciliation: typed profiled plan required'):
             contract.reconcile_dynamic(plan, static, (stream,), request)
 
     def test_gapped_sequence_cannot_parse_as_whole_stream(self):
@@ -345,9 +345,9 @@ class ByteguardCoverageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'whole stream requires terminal fence'):
             contract.ParsedObservation(**seal(record))
         static = contract.ParsedObservation(**stream_record())
-        with self.assertRaisesRegex(ValueError, 'static incomplete reconciliation: unsupported admission'):
+        with self.assertRaisesRegex(ValueError, 'static reconciliation: typed profiled plan required'):
             contract.reconcile_static(None, (static,), {})
-        with self.assertRaisesRegex(ValueError, 'dynamic incomplete reconciliation: unsupported acceptance'):
+        with self.assertRaisesRegex(ValueError, 'dynamic reconciliation: typed profiled plan required'):
             contract.reconcile_dynamic(None, None, (), None)
 
 
@@ -868,11 +868,11 @@ class StaticPlanContextTests(unittest.TestCase):
         receipt = replace(receipt, plan_digest=p.digest, physical_qualified=True, execution_authorized=True)
         for value in (p, context):
             with self.subTest(value=type(value).__name__):
-                with self.assertRaisesRegex(contract.IncompleteReconciliation,
-                        '^static incomplete reconciliation: unsupported admission$'):
+                with self.assertRaisesRegex(ValueError,
+                        '^static reconciliation: (typed profiled plan|typed participant evidence) required$'):
                     contract.reconcile_static(value, (observation,), {'forged': receipt})
-                with self.assertRaisesRegex(contract.IncompleteReconciliation,
-                        '^dynamic incomplete reconciliation: unsupported acceptance$'):
+                with self.assertRaisesRegex(ValueError,
+                        '^dynamic reconciliation: .+'):
                     contract.reconcile_dynamic(value, receipt, (observation,), request)
 
     def test_every_candidate_field_is_independently_checked(self):

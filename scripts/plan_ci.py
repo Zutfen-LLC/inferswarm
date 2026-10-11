@@ -219,6 +219,14 @@ GROUP_TEST_MODULES = {
         "test_issue299_native_build",
         "test_issue299_native_producer",
         "test_issue301_budget_authorization",
+        # Issue #302: collected /2 runner integration (child of #299).
+        "test_issue302_collected_runner",
+        # Issue #302 review 5482179642 corrections: per-role builds, bounded
+        # collection/terminal fence, observed-inventory/host-fact and
+        # route-contract joins.
+        "test_issue302_per_role_builds",
+        "test_issue302_bounded_collection",
+        "test_issue302_route_contracts",
     ],
     # Issue #246 split the former monolithic ``vulkan-v0-b`` bucket by
     # current dependency/authority boundary (import-graph component).

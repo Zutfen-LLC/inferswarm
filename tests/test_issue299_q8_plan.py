@@ -1300,9 +1300,9 @@ class Q8StartupOracleTests(unittest.TestCase):
             for spy in spies: spy.assert_not_called()
         self.assertEqual(tuple(inspect.signature(q.derive_q8_startup_oracle).parameters),
                          ('plan', 'metadata', 'original_plan_digest', 'startup'))
-        with self.assertRaisesRegex(phase.IncompleteReconciliation, '^static incomplete reconciliation: unsupported admission$'):
+        with self.assertRaisesRegex(ValueError, 'static reconciliation: typed profiled plan required'):
             phase.reconcile_static(actual, (), {})
-        with self.assertRaisesRegex(phase.IncompleteReconciliation, '^dynamic incomplete reconciliation: unsupported acceptance$'):
+        with self.assertRaisesRegex(ValueError, 'dynamic reconciliation: typed profiled plan required'):
             phase.reconcile_dynamic(actual, None, (), None)
         for forbidden in ('capacity_bytes', 'observations', 'catalog', 'clock', 'receipt'):
             with self.subTest(forbidden=forbidden), self.assertRaises(TypeError):

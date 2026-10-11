@@ -1,0 +1,1269 @@
+"""Issue #302 collected /2 integration; all evidence explicitly SYNTHETIC
+except the genuine retained native captures and build manifests, which are
+replayed through recording SSH transports. No native build, no model, no
+inference, no physical execution.
+"""
+import copy
+import hashlib
+import json
+from pathlib import Path
+import sys
+import unittest
+from unittest.mock import patch
+
+from inferswarm.operator import phased_observation as contract
+from inferswarm.operator.phased_observation import ParticipantDynamicEvidence
+from inferswarm.operator.bindings import ProcessIdentity, TransportReply
+from inferswarm.operator.native_observer.collector import (
+    CollectorError, NativeObserverCollector, NATIVE_LABELS, ProcIdentityReader,
+    SSHCollectorTransport)
+from inferswarm.operator.plan import build_plan
+from inferswarm.operator.profiles import canonical, freeze, sha256, thaw
+from inferswarm.operator.runtime import OperatorRunner, SSHSourceTransport
+from inferswarm.operator.lifecycle import LeaseManager
+from tests.issue299_fixture import NOW
+from tests.test_issue299_bindings import plan_fixture, source_receipt
+from tests.test_issue299_q8_plan import fully_bounded_mapping
+from tests.test_issue299_runtime import Harness, RecordingLifecycle
+from tests.test_issue302_per_role_builds import RecordingHostFactsReader
+from tests.test_issue302_route_contracts import (
+    observed_inventory_for, observed_host_facts_for, synthetic_dynamic_rows,
+    route_legs, seal as seal_route_record)
+
+ROUND2 = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/round2-native'
+CAPTURES = Path(__file__).resolve().parents[1] / 'tests/fixtures/issue299/native-captures'
+
+
+def collected_plan(selection='one-gpu'):
+    raw = fully_bounded_mapping(selection)
+    raw['strategy_options']['observer'] = dict(
+        client_manifest_path='/opt/observer/llama-server.build-manifest.json',
+        client_executable_path='/opt/observer/llama-server',
+        remote_manifest_path='/opt/observer/ggml-rpc-server.build-manifest.json',
+        remote_executable_path='/opt/observer/ggml-rpc-server')
+    return build_plan(plan_parse(raw), now=NOW)
+
+
+def plan_bound_manifest(plan):
+    """Genuine #301 manifest body rebound to the synthetic plan runtime.
+
+    The production law binds manifest.executable_sha256 to the participant's
+    runtime binary; the synthetic plan's runtime digest is fabricated, so the
+    genuine body is re-sealed against it for reconciler tests only. The
+    collector tests below keep the genuine manifest and authenticate actual
+    bytes.
+    """
+    body = build_manifest_body()
+    client = next(p for p in plan.participants if p.role == 'client')
+    remote = next(p for p in plan.participants if p.role == 'remote')
+    assert client.runtime_sha256 == remote.runtime_sha256
+    body['executable_sha256'] = client.runtime_sha256
+    return contract.parse_build_manifest(body)
+
+
+def plan_parse(raw):
+    from inferswarm.operator.config import parse_config
+    return parse_config(raw, now=NOW, profile_mode='replay')
+
+
+class VirtualHostTree:
+    """A fake per-address filesystem served to the collector over SSH."""
+
+    def __init__(self):
+        self.files = {}   # address -> {path: bytes}
+        self.dirs = {}    # address -> {path: [names]}
+
+    def put(self, address, path, payload):
+        if isinstance(payload, (dict, list)):
+            payload = canonical(payload)
+        self.files.setdefault(address, {})[str(path)] = payload
+
+    def put_dir(self, address, path, names):
+        self.dirs.setdefault(address, {})[str(path)] = sorted(names)
+
+
+class RecordingCollectorTransport(SSHCollectorTransport):
+    def __init__(self, tree: VirtualHostTree, failures=None):
+        self.tree = tree
+        self.failures = failures or {}
+        self.reads = []
+
+    def read_bytes(self, address, path, *, max_bytes=None):
+        self.reads.append((address, path))
+        if (address, path) in self.failures:
+            raise self.failures[(address, path)]
+        try:
+            payload = self.tree.files[address][str(path)]
+        except KeyError as exc:
+            raise CollectorError(f'collector read failed ({address}:{path}): absent') from exc
+        if max_bytes is not None and len(payload) > max_bytes:
+            raise CollectorError(f'collector read exceeds family bound '
+                                 f'({address}:{path}): {max_bytes} bytes')
+        return payload
+
+    def read_json(self, address, path, *, max_bytes=None):
+        raw = self.read_bytes(address, path, max_bytes=max_bytes)
+        return json.loads(raw.decode('utf-8'))
+
+    def list_dir(self, address, path):
+        try:
+            return list(self.tree.dirs[address][str(path)])
+        except KeyError as exc:
+            raise CollectorError(f'collector listing failed ({address}:{path}): absent') from exc
+
+
+def build_manifest_body(name='llama-server.build-manifest'):
+    return json.loads((ROUND2 / f'{name}.json').read_text())
+
+
+def synthetic_retained_pins():
+    """Genuine overlay/backend-closure pins rebound to the synthetic test
+    binaries, mirroring how production pins the genuine retained bytes."""
+    body = build_manifest_body()
+    return {
+        'client': {'executable_name': 'llama-server',
+                   'executable_sha256': hashlib.sha256(b'synthetic-observer-binary').hexdigest(),
+                   'backend_libraries': ((r['name'], r['sha256'])
+                                         for r in body['backend_libraries'])},
+        'remote': {'executable_name': 'ggml-rpc-server',
+                   'executable_sha256': hashlib.sha256(b'synthetic-observer-binary').hexdigest(),
+                   'backend_libraries': (('libggml-static.a', 'f516d3630131a2309f3845cf3c204cc74738836e288d4ee7f313ef3728dbeff6'),)},
+    }
+
+
+
+def genuine_dynamic(name, participant, token, pid):
+    """Re-seal a genuine retained capture against the test identity.
+
+    The generation is re-derived exactly as the producer does
+    ('exp-<pid>-<ordinal>-<ns>') so the collector's claim binding sees the
+    same identity surfaces a live export would carry.
+    """
+    record = json.loads((ROUND2 / name).read_text())
+    record['participant_id'] = participant
+    record['invocation_token'] = token
+    record['plan_digest'] = '0' * 64
+    record['stream_generation'] = f'exp-{pid}-0-966507438683494'
+    record['facts'] = dict(record['facts'])
+    if isinstance(record['facts'].get('process'), dict):
+        record['facts']['process'] = dict(record['facts']['process'], pid=pid)
+    record['terminal_digest'] = hashlib.sha256(canonical(
+        {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+    return record
+
+
+def export_name(native_label, pid, ordinal=0):
+    """Genuine producer filename: '<label>-<pid>-%04d.json'."""
+    return f'{native_label}-{pid}-{ordinal:04d}.json'
+
+
+def observed_visibility(participant):
+    """OBSERVED effective selectors a capable observer reports for the
+    frozen plan (mirrors the /1 binding-preflight visibility contract)."""
+    bindings = sorted(participant.bindings, key=lambda b: b.visible_selector)
+    return freeze(dict(native=[b.native_selector for b in bindings],
+                       visible=[b.visible_selector for b in bindings],
+                       environment={}))
+
+
+class StaticReconciliationTests(unittest.TestCase):
+    """Genuine build manifests joined to synthetic plans; SYNTHETIC plans."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = collected_plan('one-gpu')
+        cls.manifest = plan_bound_manifest(cls.plan)
+
+    def participant(self, role):
+        return next(p for p in self.plan.participants if p.role == role)
+
+    def spawn(self, participant, token='inv-302'):
+        return contract.OwnedSpawnFacts(participant.participant_id, 4242, 'start-4242', token)
+
+    def identity(self, participant, spawn, argv=None):
+        argv = argv or (participant.runtime_executable, '--serve')
+        return ProcessIdentity(participant.participant_id, participant.host_id,
+            participant.boot_epoch, participant.topology_epoch, spawn.pid, spawn.start,
+            participant.runtime_executable, participant.runtime_sha256, argv,
+            observed_visibility(participant), participant.rpc_endpoint)
+
+    def build_evidence(self, participant):
+        return contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256)
+
+    def evidence_rows(self, token='inv-302'):
+        rows = []
+        for role in ('client', 'remote'):
+            p = self.participant(role)
+            spawn = self.spawn(p, token)
+            rows.append(contract.ParticipantStaticEvidence(
+                p.participant_id, self.identity(p, spawn), spawn, self.build_evidence(p),
+                sha256(self.source_receipts()[p.participant_id]),
+                observed_inventory=observed_inventory_for(self.plan, p),
+                observed_host_facts=observed_host_facts_for(self.plan, p)))
+        return rows
+
+    def source_receipts(self):
+        return {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
+
+    def test_complete_static_path_admits_with_genuine_manifest(self):
+        receipt = contract.reconcile_static(self.plan, self.evidence_rows(),
+                                            self.source_receipts(),
+                                            mode='synthetic-test', clock=lambda: NOW)
+        self.assertEqual(receipt.verdict, 'STATIC_ADMITTED')
+        self.assertEqual(receipt.plan_digest, self.plan.digest)
+        self.assertEqual(dict(receipt.counts)['source-range-joined-weights'], 1224)
+        self.assertFalse(receipt.execution_authorized)
+
+    def test_missing_source_range_refuses_before_admission(self):
+        sources = self.source_receipts()
+        victim = next(p for p in self.plan.participants if p.role == 'remote')
+        receipt = sources[victim.participant_id]
+        receipt['range_identities'].pop()
+        # The controller-collected digest still describes the complete receipt,
+        # so the tampered ranges fail the digest join first.
+        rows = self.evidence_rows()
+        with self.assertRaisesRegex(ValueError, 'source receipt digest mismatch'):
+            contract.reconcile_static(self.plan, rows, sources,
+                                      mode='synthetic-test', clock=lambda: NOW)
+        # With a correctly recomputed digest, the coverage mismatch refuses.
+        sources[victim.participant_id] = dict(receipt)
+        rows = self.evidence_rows()
+        for row in rows:
+            if row.participant_id == victim.participant_id:
+                object.__setattr__(row, 'source_receipt_digest', sha256(receipt))
+        with self.assertRaisesRegex(ValueError, 'source range coverage mismatch'):
+            contract.reconcile_static(self.plan, rows, sources,
+                                      mode='synthetic-test', clock=lambda: NOW)
+
+    def test_forged_identity_pid_refuses(self):
+        rows = self.evidence_rows()
+        victim = self.participant('remote')
+        for row in rows:
+            if row.participant_id == victim.participant_id:
+                object.__setattr__(row, 'identity', replace_pid(row.identity, row.spawn.pid + 1))
+        with self.assertRaisesRegex(ValueError, 'owned identity pid/start mismatch'):
+            contract.reconcile_static(self.plan, rows, self.source_receipts(),
+                                      mode='synthetic-test', clock=lambda: NOW)
+
+    def test_executable_digest_mismatch_cannot_construct_evidence(self):
+        # A mismatched executable digest cannot even construct evidence.
+        with self.assertRaisesRegex(ValueError, 'derived build executable bytes mismatch'):
+            contract.DerivedBuildEvidence(self.manifest, 'f' * 64)
+
+    def test_coverage_gap_refuses(self):
+        rows = self.evidence_rows()[:-1]
+        with self.assertRaisesRegex(ValueError, 'participant coverage mismatch'):
+            contract.reconcile_static(self.plan, rows, self.source_receipts(),
+                                      mode='synthetic-test', clock=lambda: NOW)
+
+
+def replace_pid(identity, pid):
+    from dataclasses import replace
+    return replace(identity, pid=pid)
+
+
+class DynamicReconciliationTests(unittest.TestCase):
+    """Genuine retained dynamic captures joined to a synthetic request."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = collected_plan('one-gpu')
+        cls.manifest = plan_bound_manifest(cls.plan)
+
+    def participant(self, role):
+        return next(p for p in self.plan.participants if p.role == role)
+
+    def spawn(self, participant, token='inv-302'):
+        return contract.OwnedSpawnFacts(participant.participant_id, 4242, 'start-4242', token)
+
+    def static_receipt(self, token='inv-302'):
+        rows = []
+        for role in ('client', 'remote'):
+            p = self.participant(role)
+            spawn = self.spawn(p, token)
+            identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
+                p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
+                p.runtime_sha256, (p.runtime_executable, '--serve'),
+                observed_visibility(p), p.rpc_endpoint)
+            rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
+                spawn, contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256),
+                sha256(source_receipt(self.plan, p)),
+                observed_inventory=observed_inventory_for(self.plan, p),
+                observed_host_facts=observed_host_facts_for(self.plan, p)))
+        sources = {p.participant_id: source_receipt(self.plan, p) for p in self.plan.participants}
+        return contract.reconcile_static(self.plan, rows, sources,
+                                         mode='synthetic-test', clock=lambda: NOW)
+
+    def dynamic_rows(self, token='inv-302', pid=4242, start='start-4242'):
+        # Explicitly labeled SYNTHETIC route-contract evidence: the genuine
+        # tiny-fixture captures carry no request correlation or domain
+        # boundaries, so the acceptance control uses the labeled synthetic
+        # contract (genuine capture shapes retained for allocations and
+        # remote transfer records).
+        return synthetic_dynamic_rows(self.plan, token=token,
+                                      pids=dict(client=pid, remote=pid),
+                                      start=start)
+
+    def request(self, token='inv-302', task_id='1', response_id='resp-1'):
+        return contract.RequestIdentity(invocation_token=token, request_nonce='nonce-302',
+                                        task_id=task_id, response_id=response_id)
+
+    def test_complete_dynamic_path_accepts_with_genuine_captures(self):
+        receipt = contract.reconcile_dynamic(self.plan, self.static_receipt(),
+            self.dynamic_rows(), self.request(), mode='synthetic-test', clock=lambda: NOW)
+        self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
+        self.assertFalse(receipt.execution_authorized)
+        self.assertGreater(dict(receipt.counts)['transfers'], 0)
+
+    def test_wrong_token_refuses(self):
+        with self.assertRaisesRegex(ValueError, 'invocation token mismatch'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(),
+                self.dynamic_rows(), self.request(token='other'),
+                mode='synthetic-test', clock=lambda: NOW)
+
+    def test_claim_pid_mismatch_refuses_at_construction(self):
+        rows = self.dynamic_rows()
+        from dataclasses import replace
+        with self.assertRaisesRegex(ValueError, 'export claim does not match owned spawn'):
+            contract.ParticipantDynamicEvidence(rows[0].participant_id, rows[0].observation,
+                rows[0].spawn, rows[0].claim_pid + 1, rows[0].claim_start,
+                rows[0].native_participant)
+
+    def test_dropped_stream_refuses_at_parse(self):
+        rows = self.dynamic_rows()
+        record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+        record['dropped_events'] = 1
+        record['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+        with self.assertRaisesRegex(ValueError, 'dropped events refuse completeness'):
+            contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+
+    def test_truncated_stream_refuses_at_parse(self):
+        # A gap inside the declared interval: honest re-seal, dishonest rows.
+        record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+        gap = record['sequence'].pop(3)
+        record['event_count'] = len(record['sequence'])
+        record['terminal_sequence'] = record['event_count']
+        record['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+        with self.assertRaisesRegex(ValueError, 'contiguous declared interval'):
+            contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+
+    def test_missing_get_leg_refuses(self):
+        rows = self.dynamic_rows()
+        client = rows[0]
+        mutated = _mutate_observation(client.observation,
+            lambda facts: facts.update(transfers=[r for r in facts['transfers']
+                                                  if r['op'] not in ('get', 'rpc_get')]))
+        from dataclasses import replace
+        with self.assertRaisesRegex(ValueError,
+                                    'boundary missing|output custody readback'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(),
+                (replace(client, observation=mutated), rows[1]), self.request(),
+                mode='synthetic-test', clock=lambda: NOW)
+
+    def test_missing_task_facts_refuse(self):
+        rows = self.dynamic_rows()
+        mutated = _mutate_observation(rows[0].observation,
+            lambda facts: facts.pop('tasks') if 'tasks' in facts else None)
+        from dataclasses import replace
+        with self.assertRaisesRegex(ValueError, 'request task facts missing'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(),
+                (replace(rows[0], observation=mutated), rows[1]), self.request(),
+                mode='synthetic-test', clock=lambda: NOW)
+
+    def test_unobserved_graph_generation_refuses(self):
+        rows = self.dynamic_rows()
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                           response_id='resp-1', task_id='1', graph_generations=(7,))
+        with self.assertRaisesRegex(ValueError, 'graph generation not observed'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(), rows, request,
+                                       mode='synthetic-test', clock=lambda: NOW)
+
+
+def _continuity_rows(plan):
+    """Static receipt with spawn pid 4242; dynamic rows claim spawn pid 5555."""
+    from inferswarm.operator.phased_observation import OwnedSpawnFacts
+    manifest = plan_bound_manifest(plan)
+    rows = []
+    spawns = {}
+    for role, name, native in (('client', 'cpu-dynamic.json', 'llama-server'),
+                               ('remote', 'rpc-dynamic.json', 'ggml-rpc-server')):
+        p = next(p for p in plan.participants if p.role == role)
+        spawn = OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        spawns[p.participant_id] = spawn
+        dyn = synthetic_dynamic_rows(plan, token='inv-302',
+                                     pids={role: 4242}, start='start-4242')
+        rows.extend(r for r in dyn if r.participant_id == p.participant_id)
+    # A foreign dynamic spawn (pid 5555) breaking continuity with the static
+    # receipt's spawn facts.
+    wrong_client = rows[0]
+    wrong = ParticipantDynamicEvidence(wrong_client.participant_id, wrong_client.observation,
+        OwnedSpawnFacts(wrong_client.participant_id, 5555, 'start-5555', 'inv-302'),
+        5555, 'start-5555', wrong_client.native_participant)
+    static = _static_receipt_for(plan, manifest, spawns)
+    return static, (wrong, rows[1])
+
+
+def _static_receipt_for(plan, manifest, spawns):
+    static_rows = []
+    for p in plan.participants:
+        spawn = spawns[p.participant_id]
+        identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
+            p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
+            p.runtime_sha256, (p.runtime_executable, '--serve'),
+            observed_visibility(p), p.rpc_endpoint)
+        static_rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
+            spawn, contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
+            sha256(source_receipt(plan, p)),
+            observed_inventory=observed_inventory_for(plan, p),
+            observed_host_facts=observed_host_facts_for(plan, p)))
+    sources = {p.participant_id: source_receipt(plan, p) for p in plan.participants}
+    return contract.reconcile_static(plan, static_rows, sources,
+                                     mode='synthetic-test', clock=lambda: NOW)
+
+
+def _mutate_observation(observation, mutate):
+    """Re-seal a parsed observation with mutated facts; honest tampering."""
+    from dataclasses import fields as _fields
+    record = {f.name: getattr(observation, f.name) for f in _fields(observation)}
+    record['sequence'] = [dict(row) for row in observation.sequence]
+    record['facts'] = json.loads(json.dumps(thaw(observation.facts)))
+    mutate(record['facts'])
+    record['terminal_digest'] = hashlib.sha256(canonical(
+        {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+    return contract.parse_observation(TransportReply(0, json.dumps(record).encode()))
+
+
+class RecordingIdentityReader(ProcIdentityReader):
+    """Recording /proc identity seam; independently returns observed facts."""
+
+    def __init__(self, observations=None, failures=None):
+        self.observations = observations or {}
+        self.failures = failures or {}
+
+    def read(self, participant, pid, *, expected_executable, expected_sha256,
+             expected_argv, visibility_environment=()):
+        key = (participant.participant_id, pid)
+        if key in self.failures:
+            raise self.failures[key]
+        observed = self.observations.get(key)
+        if observed is None:
+            observed = dict(exe=expected_executable, argv=list(expected_argv),
+                            sha256=expected_sha256, start='start-%d' % pid,
+                            environ={})
+        # Faithful to the production reader: independent observations are
+        # compared against the frozen expectations, mismatches refuse.
+        if observed['exe'] != expected_executable:
+            raise CollectorError(f'identity executable mismatch ({participant.participant_id})')
+        if tuple(observed['argv']) != tuple(expected_argv):
+            raise CollectorError(f'identity argv mismatch ({participant.participant_id})')
+        if observed['sha256'] != expected_sha256:
+            raise CollectorError(f'identity executable bytes mismatch ({participant.participant_id})')
+        return ProcessIdentity(participant.participant_id, participant.host_id,
+            participant.boot_epoch, participant.topology_epoch, pid,
+            observed['start'], observed['exe'], observed['sha256'],
+            tuple(observed['argv']), freeze(dict(native=[], visible=[],
+            environment={k: v for k, v in observed['environ'].items()
+                         if k in ('IS301_EXPORT_DIR', 'IS301_OBSERVE')})),
+            participant.rpc_endpoint)
+
+
+class CollectorTests(unittest.TestCase):
+    """The real collector against a recording virtual-host tree."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = collected_plan('one-gpu')
+        cls.manifest_body = build_manifest_body()
+        cls.executable = (ROUND2 / 'native-export-claim.build-manifest.json').read_bytes()
+
+    def participant(self, role):
+        return next(p for p in self.plan.participants if p.role == role)
+
+    def tree_with_build(self, manifest=None, executable=None, with_static=True):
+        tree = VirtualHostTree()
+        body = self.manifest_body if manifest is None else manifest
+        body = dict(body)
+        if executable is None:
+            executable = b'synthetic-observer-binary'
+        body['executable_sha256'] = hashlib.sha256(executable).hexdigest()
+        from inferswarm.operator.phased_observation import parse_build_manifest
+        manifest = parse_build_manifest(body)
+        addr = self.participant('client').execution_address
+        tree.put(addr, '/opt/observer/llama-server.build-manifest.json', body)
+        tree.put(addr, '/opt/observer/llama-server', executable)
+        if with_static:
+            export = '/synthetic/exports-client'
+            snapshot = json.loads((ROUND2 / 'cpu-static.json').read_text())
+            snapshot['participant_id'] = 'observer-static-x'
+            snapshot['invocation_token'] = 'inv-302'
+            snapshot['plan_digest'] = '0' * 64
+            snapshot['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in snapshot.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(addr, export + '/observer-0000.json', snapshot)
+            tree.put_dir(addr, export, ['observer-0000.json'])
+        return tree, manifest
+
+    def test_collect_static_authenticates_bytes(self):
+        tree, manifest = self.tree_with_build()
+        transport = RecordingCollectorTransport(tree)
+        collector = NativeObserverCollector(transport, RecordingIdentityReader(),
+                                        retained_builds=synthetic_retained_pins(),
+                                        host_facts_reader=RecordingHostFactsReader(self.plan))
+        p = self.participant('client')
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        evidence = collector.collect_static(p, spawn,
+            '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
+            'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
+        self.assertEqual(evidence.build.manifest.manifest_sha256, manifest.manifest_sha256)
+        self.assertIsNotNone(evidence.identity)
+
+    def test_identity_reader_mismatch_refuses_instead_of_echoing(self):
+        tree, _ = self.tree_with_build()
+        p = self.participant('client')
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        # An independent observation reporting a foreign image must refuse,
+        # never fall back to the configured executable digest.
+        reader = RecordingIdentityReader(observations={
+            (p.participant_id, 4242): dict(exe='/bin/false', argv=['/bin/false'],
+                sha256='f' * 64, start='start-4242', environ={})})
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree), reader,
+                                        retained_builds=synthetic_retained_pins(),
+                                        host_facts_reader=RecordingHostFactsReader(self.plan))
+        with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
+            collector.collect_static(p, spawn,
+                '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
+                'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
+
+    def test_tampered_executable_refuses(self):
+        tree, manifest = self.tree_with_build()
+        addr = self.participant('client').execution_address
+        tree.files[addr]['/opt/observer/llama-server'] = b'tampered'
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                            RecordingIdentityReader())
+        p = self.participant('client')
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'executable bytes do not match manifest'):
+            collector.collect_static(p, spawn,
+                '/opt/observer/llama-server.build-manifest.json', '/opt/observer/llama-server',
+                'a' * 64, expected_argv=(p.runtime_executable, '--serve'))
+
+    def test_claim_owner_mismatch_refuses(self):
+        tree, _ = self.tree_with_build()
+        p = self.participant('client')
+        export = '/synthetic/lease/token/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        envelope = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242), envelope)
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', export_name('llama-server', 4242)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        evidence = collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                              NATIVE_LABELS['client'])
+        self.assertEqual(evidence.native_participant, 'llama-server')
+        # Wrong pid in claim refuses.
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '9999\nstart-4242\nllama-server\n'.encode())
+        with self.assertRaisesRegex(CollectorError, 'claim owner mismatch'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_two_envelopes_refuse(self):
+        tree, _ = self.tree_with_build()
+        p = self.participant('client')
+        export = '/synthetic/lease/token/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 0),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 1),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        tree.put_dir(p.execution_address, export, ['is301-claim',
+                     export_name('llama-server', 4242, 0), export_name('llama-server', 4242, 1)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'exactly one dynamic envelope'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_foreign_nonzero_plan_digest_refuses(self):
+        tree, _ = self.tree_with_build()
+        p = self.participant('client')
+        export = '/synthetic/lease/token/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', export_name('llama-server', 4242)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        # The genuine envelope carries the zero placeholder: a controller
+        # presenting a nonzero plan digest must still refuse because the
+        # envelope cannot be bound to it.
+        envelope = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+        envelope['plan_digest'] = 'c' * 64
+        envelope['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in envelope.items() if k != 'terminal_digest'})).hexdigest()
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242), envelope)
+        with self.assertRaisesRegex(CollectorError, 'plan digest mismatch'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+
+class CollectedRunnerTests(unittest.TestCase):
+    """The actual runner through the collected /2 path with recording seams.
+
+    Only the collector/identity seams are recording doubles; the runner,
+    lease manager, reconcilers and receipt construction are the real ones.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = collected_plan('one-gpu')
+
+    def test_one_post_static_before_dynamic_after_and_owned_cleanup(self):
+        h = RecordingRunnerHarness(self.plan)
+        h.collect_dynamic_marker = []
+        original = h.collect_dynamic
+        def collect_dynamic(*args, **kwargs):
+            h.collect_dynamic_marker.append(h.posts)
+            return original(*args, **kwargs)
+        h.collect_dynamic = collect_dynamic
+        result = h.runner().run(self.plan)
+        self.assertEqual(h.posts, 1)
+        # Both participants collected after the single POST.
+        self.assertEqual(h.collect_dynamic_marker, [1, 1])
+        self.assertEqual(result['static_receipt']['verdict'], 'STATIC_ADMITTED')
+        self.assertEqual(result['dynamic_receipt']['verdict'], 'DYNAMIC_ACCEPTED')
+        self.assertIs(result['execution_authorized'], False)
+        self.assertTrue(all(row['lease'] == 'released' for row in result['cleanup'].values()))
+
+    def test_static_capture_expiry_after_liveness_means_zero_posts(self):
+        from dataclasses import replace
+        from datetime import timedelta
+        from tests.test_issue302_route_contracts import capture_for
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        original = h.collect_static
+        def collect(*args, **kwargs):
+            r = original(*args, **kwargs)
+            return replace(r, capture=freeze(capture_for(self.plan, r)))
+        h.collect_static = collect
+        original_live = runner._live
+        live_calls = []
+        def live(*args, **kwargs):
+            original_live(*args, **kwargs)
+            live_calls.append(1)
+            if len(live_calls) >= 3:
+                runner.clock = lambda: NOW + timedelta(minutes=6)
+        runner._live = live
+        with self.assertRaisesRegex(ValueError, 'capture.*expired|capture.*stale'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 0)
+
+    def test_static_evidence_drift_after_receipt_means_zero_posts(self):
+        from dataclasses import replace
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        original = runner.static_reconciler
+        def reconcile(plan, evidence, sources, **kwargs):
+            receipt = original(plan, evidence, sources, **kwargs)
+            # A producer changes collected evidence after the receipt.
+            evidence[0] = replace(evidence[0], observed_host_facts=replace(
+                evidence[0].observed_host_facts,
+                observer_environment=dict(IS301_OBSERVE='1', IS301_EXPORT_DIR='/changed')))
+            return receipt
+        runner.static_reconciler = reconcile
+        with self.assertRaisesRegex(ValueError, 'static evidence.*changed'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 0)
+
+    def test_static_refusal_means_zero_posts(self):
+        h = RecordingRunnerHarness(self.plan)
+        h.static_error = ValueError('static reconciliation: derived build executable identity mismatch')
+        runner = h.runner()
+        with self.assertRaisesRegex(ValueError, 'derived build executable identity mismatch'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 0)
+        self.assertTrue(all(row['lease'] == 'released' for row in runner.last_cleanup.values()))
+
+    def test_dynamic_refusal_reports_executed_but_rejected(self):
+        h = RecordingRunnerHarness(self.plan)
+        h.dynamic_error = ValueError('dynamic reconciliation: request task facts missing')
+        with self.assertRaisesRegex(ValueError, 'request task facts missing'):
+            h.runner().run(self.plan)
+        self.assertEqual(h.posts, 1)
+
+    def assert_causal_output_rejected(self, mutate, reason):
+        from dataclasses import replace
+        h = RecordingRunnerHarness(self.plan)
+        original = h.collect_dynamic
+        def collect_dynamic(p, *args, **kwargs):
+            row = original(p, *args, **kwargs)
+            return replace(row, observation=_mutate_observation(row.observation,
+                lambda f: mutate(f, p.role)))
+        h.collect_dynamic = collect_dynamic
+        runner = h.runner()
+        with self.assertRaisesRegex(ValueError, reason):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 1)  # HTTP output exists, but is never accepted.
+        self.assertTrue(runner.last_cleanup)
+        self.assertTrue(all(row['lease'] == 'released'
+                            for row in runner.last_cleanup.values()))
+
+    def test_actual_runner_rejects_readback_before_final_forward_leg(self):
+        def mutate(facts, role):
+            if role == 'client':
+                facts['transfers'] = [facts['transfers'][i] for i in (0, 2, 3, 1)]
+        self.assert_causal_output_rejected(mutate, 'route.*dependency.*order')
+
+    def test_actual_runner_rejects_previous_generation_dependency(self):
+        from tests.test_issue302_route_contracts import add_synthetic_route_occurrence
+        def mutate(facts, role):
+            add_synthetic_route_occurrence(facts)
+            half = len(facts['transfers']) // 2
+            later = facts['transfers'][half:]
+            returns = [t for t in later if t['depends_on_route'] is not None]
+            sends = [t for t in later if t['depends_on_route'] is None]
+            for transfer in returns:
+                transfer['depends_on_route'] = 'copy-in-1'
+            facts['transfers'] = facts['transfers'][:half] + returns + sends
+        self.assert_causal_output_rejected(mutate, 'route.*dependency.*lineage')
+
+    def assert_client_leg_field_output_rejected(self, field):
+        """Actual runner: one recording POST, no output, both leases released."""
+        from dataclasses import replace
+        from tests.test_issue302_route_contracts import add_synthetic_route_occurrence
+        for selection in ('one-gpu', 'cpu-only'):
+            plan = self.plan if selection == 'one-gpu' else collected_plan(selection)
+            legs = 4 if selection == 'one-gpu' else 2
+            for occurrence in (0, 1):
+                for leg in range(legs):
+                    values = ('opposite', 'unknown') if field == 'op' else ('B/cuda' if selection == 'cpu-only' else 'A/cpu',)
+                    for value in values:
+                        with self.subTest(selection=selection, occurrence=occurrence,
+                                          leg=leg, field=field, value=value):
+                            h = RecordingRunnerHarness(plan)
+                            original = h.collect_dynamic
+                            def collect_dynamic(p, *args, **kwargs):
+                                row = original(p, *args, **kwargs)
+                                def mutate(facts):
+                                    add_synthetic_route_occurrence(facts)
+                                    if p.role == 'client':
+                                        transfer = facts['transfers'][occurrence * legs + leg]
+                                        bad = ('get' if transfer['op'] == 'set' else 'set') if value == 'opposite' else value
+                                        transfer[field] = bad
+                                return replace(row, observation=_mutate_observation(row.observation, mutate))
+                            h.collect_dynamic = collect_dynamic
+                            runner = h.runner()
+                            returned = []
+                            with self.assertRaisesRegex(ValueError, 'route|CPU-domain|output custody'):
+                                returned.append(runner.run(plan))
+                            self.assertEqual(returned, [])
+                            self.assertEqual(h.posts, 1)
+                            self.assertEqual(set(runner.last_cleanup),
+                                             {p.execution_address for p in plan.participants})
+                            self.assertTrue(all(row['lease'] == 'released'
+                                                for row in runner.last_cleanup.values()))
+
+    def test_actual_runner_rejects_every_client_leg_wrong_operation_family(self):
+        self.assert_client_leg_field_output_rejected('op')
+
+    def test_actual_runner_rejects_every_client_leg_wrong_source_domain(self):
+        self.assert_client_leg_field_output_rejected('source_domain')
+
+    def test_actual_runner_rejects_every_client_leg_wrong_destination_domain(self):
+        self.assert_client_leg_field_output_rejected('dest_domain')
+
+    def test_profile_expiry_during_dynamic_collection_refuses_output(self):
+        from datetime import timedelta
+        h = RecordingRunnerHarness(self.plan)
+        runner = h.runner()
+        def collect_dynamic(p, spawn, export_dir, plan_digest, token, native_label):
+            # Profiles expire while the controller blocks collecting evidence.
+            runner.clock = lambda: NOW + timedelta(days=1)
+            return h._dynamic(p, spawn, native_label)
+        h.collect_dynamic = collect_dynamic
+        with self.assertRaisesRegex(ValueError, 'expired|stale'):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 1)
+
+    def test_foreign_claim_spawn_continuity_refuses(self):
+        static, rows = _continuity_rows(self.plan)
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='n',
+                                           response_id='resp-1', task_id='1')
+        with self.assertRaisesRegex(ValueError,
+                                    'spawn continuity with static admission mismatch'):
+            contract.reconcile_dynamic(self.plan, static, rows, request,
+                                       mode='synthetic-test', clock=lambda: NOW)
+
+    def test_foreign_build_options_and_backends_refuse(self):
+        # Correct patch/transformed/compiler pins must not admit foreign
+        # build options or backend library identities.
+        tree = VirtualHostTree()
+        for mutate in (lambda b: b.update(build_options=['-O2', '-FOREIGN']),
+                       lambda b: b.update(backend_libraries=[{'name': 'libFOREIGN.a',
+                                                              'sha256': '9' * 64}])):
+            body = dict(build_manifest_body())
+            body['executable_sha256'] = hashlib.sha256(b'x').hexdigest()
+            mutate(body)
+            p = next(p for p in self.plan.participants if p.role == 'client')
+            tree.put(p.execution_address, '/opt/observer/llama-server.build-manifest.json', body)
+            tree.put(p.execution_address, '/opt/observer/llama-server', b'x')
+            collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                                RecordingIdentityReader())
+            with self.assertRaisesRegex(CollectorError,
+                                        'retained|authenticated'):
+                collector.collect_build(p, '/opt/observer/llama-server.build-manifest.json',
+                                        '/opt/observer/llama-server')
+
+    def test_unbound_task_or_response_refuses_acceptance(self):
+        helper = DynamicReconciliationTests('test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        rows = tuple(helper.dynamic_rows('inv-302'))
+        base = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                        task_id='1', response_id='resp-1')
+        # A request whose task id was never observed refuses.
+        foreign = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                           task_id='999', response_id='resp-1')
+        with self.assertRaisesRegex(ValueError, 'request task not observed'):
+            contract.reconcile_dynamic(self.plan, static, rows, foreign,
+                                       mode='synthetic-test', clock=lambda: NOW)
+        # No task binding at all refuses.
+        unbound = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                           response_id='resp-1')
+        with self.assertRaisesRegex(ValueError, 'request task binding missing'):
+            contract.reconcile_dynamic(self.plan, static, rows, unbound,
+                                       mode='synthetic-test', clock=lambda: NOW)
+        # The fully bound request still accepts.
+        receipt = contract.reconcile_dynamic(self.plan, static, rows, base,
+                                             mode='synthetic-test', clock=lambda: NOW)
+        self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
+
+    def test_successful_cleanup_receipt_is_preserved(self):
+        h = RecordingRunnerHarness(self.plan)
+        result = h.runner().run(self.plan)
+        # The mid-run teardown receipt survives the idempotent final pass.
+        cleanup = result['cleanup']
+        self.assertTrue(cleanup)
+        self.assertTrue(all(row.get('lease') == 'released' for row in cleanup.values()))
+
+    def test_foreign_envelope_pid_binding_refuses(self):
+        # An envelope whose filename/generation/process census belong to a
+        # foreign PID must refuse even when the directory claim is owned.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        # Filename carries foreign pid 99999 but a valid-looking ordinal.
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 99999),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 99999))
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', export_name('llama-server', 99999)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'filename does not match the owned'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+        # Matching filename but generation from a foreign pid also refuses.
+        record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 99999)
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242),
+                 record)
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', export_name('llama-server', 4242)])
+        with self.assertRaisesRegex(CollectorError, 'generation does not match the owned'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_disguised_static_dynamic_stream_refuses(self):
+        # A second dynamic envelope re-labeled 'static' with a full event
+        # stream must refuse instead of vanishing from the population.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 0),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        disguised = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+        disguised['phase'] = 'static'
+        disguised['terminal_digest'] = hashlib.sha256(canonical(
+            {k: v for k, v in disguised.items() if k != 'terminal_digest'})).hexdigest()
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 1),
+                 disguised)
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', export_name('llama-server', 4242, 0),
+                      export_name('llama-server', 4242, 1)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'disguised non-snapshot'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_response_for_other_task_does_not_accept(self):
+        helper = DynamicReconciliationTests('test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        rows = list(helper.dynamic_rows('inv-302'))
+        client = rows[0]
+        # Tasks [1, 2]; responses answer only task 2; request binds task 1.
+        def mutate(facts):
+            facts['tasks'] = [dict(task_id=1, response_id='unknown',
+                                   request_nonce='nonce-302'),
+                              dict(task_id=2, response_id='unknown',
+                                   request_nonce='nonce-302')]
+            facts['responses'] = [dict(task_id=2, request_nonce='nonce-302')]
+        mutated = _mutate_observation(client.observation, mutate)
+        from dataclasses import replace
+        rows[0] = replace(client, observation=mutated)
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                           task_id='1', response_id='resp-1')
+        with self.assertRaisesRegex(ValueError,
+                                    'no observed response for the request task'):
+            contract.reconcile_dynamic(self.plan, static, tuple(rows), request,
+                                       mode='synthetic-test', clock=lambda: NOW)
+
+    def test_boolean_and_float_task_and_status_scalars_refuse(self):
+        helper = DynamicReconciliationTests('test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                           task_id='1', response_id='resp-1')
+        rows = list(helper.dynamic_rows('inv-302'))
+        client = rows[0]
+        for mutate, reason in (
+            (lambda f: f['responses'].__setitem__(0, dict(task_id=True)),
+             'response task record malformed'),
+            (lambda f: f['responses'].__setitem__(0, dict(task_id=1.0)),
+             'response task record malformed'),
+        ):
+            mutated = _mutate_observation(client.observation, mutate)
+            from dataclasses import replace
+            rows[0] = replace(client, observation=mutated)
+            with self.assertRaisesRegex(ValueError, reason):
+                contract.reconcile_dynamic(self.plan, static, tuple(rows), request,
+                                           mode='synthetic-test', clock=lambda: NOW)
+
+    def test_malformed_process_census_refuses(self):
+        # A present census with a string/float/bool/scalar pid refuses.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        for bad in ('99999', 99999.0, True, 99999):
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['facts'] = dict(record['facts'])
+            if isinstance(bad, str) or isinstance(bad, bool) or isinstance(bad, float):
+                record['facts']['process'] = dict(record['facts'].get('process') or {}, pid=bad)
+            else:
+                record['facts']['process'] = dict(record['facts'].get('process') or {}, pid=bad)
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242),
+                     record)
+            tree.put_dir(p.execution_address, export,
+                         ['is301-claim', export_name('llama-server', 4242)])
+            with self.assertRaisesRegex(CollectorError,
+                                        'process census (malformed|does not match)'):
+                collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                          NATIVE_LABELS['client'])
+
+    def test_claim_prefixed_second_dynamic_stream_cannot_hide(self):
+        # A second envelope named 'is301-claim-shadow.json' is inspected like
+        # any other JSON; two dynamic streams refuse for ambiguity.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 0),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        shadow = genuine_dynamic('cpu-dynamic.json', 'ggml-rpc-server', 'inv-302', 4242)
+        tree.put(p.execution_address, export + '/is301-claim-shadow.json', shadow)
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', 'is301-claim-shadow.json',
+                      export_name('llama-server', 4242, 0)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'exactly one dynamic envelope'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_filename_and_generation_format_strictly_enforced(self):
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        cases = [
+            ('llama-server-4242-garbage.json', 'exp-4242-0-966507438683494',
+             'producer format'),
+            (export_name('llama-server', 4242, 63), 'exp-4242-0-966507438683494',
+             'generation does not match the owned'),
+            (export_name('llama-server', 4242), 'exp-4242-',
+             'generation does not match the owned'),
+            (export_name('llama-server', 4242), 'gen-4242-0-966507438683494',
+             'generation does not match the owned'),
+        ]
+        for filename, generation, reason in cases:
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['stream_generation'] = generation
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + filename, record)
+            tree.put_dir(p.execution_address, export, ['is301-claim', filename])
+            with self.subTest(filename=filename, generation=generation):
+                with self.assertRaisesRegex(CollectorError, reason):
+                    collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                              NATIVE_LABELS['client'])
+
+    def test_noncanonical_ascii_format_refuses(self):
+        # Unicode digits, padded pids/ordinals and beyond-cap ordinals are
+        # not producer-emittable and must refuse.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        cases = [
+            ('llama-server-\u0664\u0662\u0664\u0662-0000.json', 'exp-4242-0-966507438683494'),
+            ('llama-server-04242-0000.json', 'exp-4242-0-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-04242-0-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-4242-0000-966507438683494'),
+            ('llama-server-4242-0064.json', 'exp-4242-64-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-4242-0-0966507438683494'),
+        ]
+        for filename, generation in cases:
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['stream_generation'] = generation
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + filename, record)
+            tree.put_dir(p.execution_address, export, ['is301-claim', filename])
+            with self.subTest(filename=filename, generation=generation):
+                with self.assertRaisesRegex(CollectorError,
+                                            'producer format|claim capture'):
+                    collector.collect_dynamic(p, spawn, export, self.plan.digest,
+                                              'inv-302', NATIVE_LABELS['client'])
+
+    def test_real_identity_reader_refuses_foreign_executable_and_argv(self):
+        # Production ProcIdentityReader seam: a /proc observation reporting a
+        # foreign executable or argv refuses; only exact matches construct.
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        argv = (p.runtime_executable, '--serve')
+        with patch('inferswarm.operator.native_observer.collector.subprocess.run') as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = json.dumps(dict(exe='/bin/false',
+                argv=list(argv), sha256=p.runtime_sha256, start='123',
+                environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity executable mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+            run.return_value.stdout = json.dumps(dict(exe=p.runtime_executable,
+                argv=['/bin/false'], sha256=p.runtime_sha256, start='123',
+                environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity argv mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+            run.return_value.stdout = json.dumps(dict(exe=p.runtime_executable,
+                argv=list(argv), sha256='f' * 64, start='123', environ={}))
+            with self.assertRaisesRegex(CollectorError, 'identity executable bytes mismatch'):
+                ProcIdentityReader().read(p, 4242, expected_executable=p.runtime_executable,
+                    expected_sha256=p.runtime_sha256, expected_argv=argv)
+
+    def test_run_config_wiring_selects_collector_only_with_observer_block(self):
+        # Production run_config seam: the collector path requires an explicit
+        # observer block; legacy configs keep the default wiring.
+        from inferswarm.operator import runtime as runtime_module
+        source = Path(runtime_module.__file__).read_text()
+        self.assertIn("observer=options.get('observer')", source)
+        self.assertIn('collector=NativeObserverCollector()', source)
+        # And the legacy /1 runner branch is reachable without it.
+        legacy = OperatorRunner(object(), object(), object(), lambda *a: (None, 1))
+        self.assertIsNone(legacy.collector)
+
+    def test_lifecycle_spawn_enables_observer_and_creates_export_dir(self):
+        # Production lifecycle seam: spawn creates the export directory
+        # fresh and enables the strictly observation-only emitter.
+        import tempfile
+        from inferswarm.operator.lifecycle import _onhost
+        with tempfile.TemporaryDirectory() as root:
+            _onhost(dict(action='admit', root=root, token='tok'))
+            export = str(Path(root) / 'token' / 'exports')
+            row = _onhost(dict(action='spawn', root=root, token='tok', name='client',
+                               argv=[sys.executable, '-c',
+                                     'import os,sys;'
+                                     'sys.exit(0 if os.environ.get("IS301_OBSERVE")=="1"'
+                                     ' and os.environ.get("IS301_EXPORT_DIR")==sys.argv[1]'
+                                     ' else 1)'],
+                               export=export))
+            try:
+                self.assertTrue(Path(export).is_dir())
+                self.assertIsInstance(row['pid'], int)
+            finally:
+                _onhost(dict(action='stop', root=root, token='tok', name='client',
+                             pid=row['pid'], start=row['start']))
+                # stop sends TERM, it is not an exit/reaping fence. The fixture
+                # owns this local child and must wait before releasing its lease.
+                from inferswarm.operator.lifecycle import _CHILDREN
+                child = _CHILDREN.pop(row['pid'], None)
+                if child is not None:
+                    child.wait(timeout=5)
+                _onhost(dict(action='release', root=root, token='tok'))
+
+    def test_graph_status_requires_exact_integer_zero(self):
+        # Status typing is a production reconciler boundary: booleans and
+        # floats must refuse even though they equal 0.
+        helper = DynamicReconciliationTests(
+            'test_complete_dynamic_path_accepts_with_genuine_captures')
+        helper.plan = self.plan
+        helper.manifest = plan_bound_manifest(self.plan)
+        static = helper.static_receipt('inv-302')
+        rows = list(helper.dynamic_rows('inv-302'))
+        client = rows[0]
+        for status in (False, 0.0, '0'):
+            def mutate(facts, status=status):
+                facts['graphs'] = [dict(g, status=status) for g in facts['graphs']]
+            mutated = _mutate_observation(client.observation, mutate)
+            from dataclasses import replace
+            rows[0] = replace(client, observation=mutated)
+            request = contract.RequestIdentity(invocation_token='inv-302', request_nonce='nonce-302',
+                                               task_id='1', response_id='resp-1')
+            with self.subTest(status=repr(status)):
+                with self.assertRaisesRegex(ValueError, 'graph status not successful'):
+                    contract.reconcile_dynamic(self.plan, static, tuple(rows), request,
+                                               mode='synthetic-test', clock=lambda: NOW)
+
+    def test_resealed_foreign_manifest_refuses_in_collector(self):
+        # A self-consistent but foreign overlay identity must refuse: the
+        # derived build must descend from the retained authenticated #301
+        # producer artifacts.
+        tree = VirtualHostTree()
+        body = dict(build_manifest_body())
+        body['patch_sha256'] = 'e' * 64
+        body['executable_sha256'] = hashlib.sha256(b'synthetic-observer-binary').hexdigest()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        tree.put(p.execution_address, '/opt/observer/llama-server.build-manifest.json', body)
+        tree.put(p.execution_address, '/opt/observer/llama-server', b'synthetic-observer-binary')
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree),
+                                            RecordingIdentityReader(),
+                                            retained_builds=synthetic_retained_pins())
+        with self.assertRaisesRegex(CollectorError, 'patch identity is not the retained'):
+            collector.collect_build(p, '/opt/observer/llama-server.build-manifest.json',
+                                    '/opt/observer/llama-server')
+
+
+class RecordingRunnerHarness:
+    """Actual OperatorRunner over the recording lifecycle with a recording
+    collector; source receipts come from the synthetic fixture builder."""
+
+    def __init__(self, plan, token='inv-302-runner'):
+        from tests.test_issue299_bindings import source_receipt as _sr
+        self.plan = plan
+        self.events = []
+        self.transport = RecordingLifecycle(self.events)
+        from inferswarm.operator.lifecycle import LeaseManager
+        self.manager = LeaseManager(self.transport, token, stop_timeout=0)
+        self.sources = {p.participant_id: _sr(plan, p) for p in plan.participants}
+        self.static_error = None
+        self.dynamic_error = None
+        self.posts = 0
+        self.static_before_post = None
+        self.dynamic_after_post = None
+        self.clock = lambda: NOW
+
+    def verify(self, p, plan, fnv_binary=None):
+        import copy as _copy
+        return _copy.deepcopy(self.sources[p.participant_id])
+
+    def collect_static(self, p, spawn, manifest_path, executable_path, digest, *,
+                       expected_argv, export_dir=None, listener_endpoints=()):
+        if self.static_error: raise self.static_error
+        return self._evidence(p, spawn, expected_argv)
+
+    def await_terminal_export(self, p, spawn, export_dir, native_label, *,
+                              timeout=60.0, pause=0.2):
+        # Recording seam: the fence is exercised against the real collector
+        # in the bounded-collection tests; the runner harness stands in.
+        return [export_name(native_label, spawn.pid)]
+
+    def collect_dynamic(self, p, spawn, export_dir, plan_digest, token, native_label):
+        if self.dynamic_error:
+            self.dynamic_error_runtime = self.dynamic_error
+            raise self.dynamic_error
+        return self._dynamic(p, spawn, native_label)
+
+    def _evidence(self, p, spawn, expected_argv=None):
+        manifest = plan_bound_manifest(self.plan)
+        identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
+            p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
+            p.runtime_sha256, tuple(expected_argv) if expected_argv else (p.runtime_executable, '--serve'),
+            observed_visibility(p), p.rpc_endpoint)
+        return contract.ParticipantStaticEvidence(p.participant_id, identity, spawn,
+            contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
+            sha256(self.sources[p.participant_id]),
+            observed_inventory=observed_inventory_for(self.plan, p),
+            observed_host_facts=observed_host_facts_for(self.plan, p))
+
+    def _dynamic(self, p, spawn, native_label):
+        # Labeled SYNTHETIC route contract bound to the REAL owned spawn
+        # facts, invocation token and the runner's pinned request nonce;
+        # genuine captures cannot provide the request-correlated facts.
+        rows = synthetic_dynamic_rows(self.plan, token=spawn.invocation_token,
+                                      pids={p.role: spawn.pid},
+                                      start=spawn.start,
+                                      nonce='nonce-302', response_id='reply-302')
+        row = next(r for r in rows if r.participant_id == p.participant_id)
+        return row
+
+    def tunnel(self, *args):
+        return self, 18080
+
+    def poll(self): return None
+    def terminate(self): pass
+    def wait(self, timeout=None): return 0
+
+    def get(self, url, timeout):
+        return {'status': 'ok'}
+
+    def post(self, url, data, timeout):
+        self.posts += 1
+        self.static_before_post = self.static_before_post is not None or True
+        return {'id': 'reply-302', 'choices': [{'message': {'content': 'fixture'}, 'finish_reason': 'stop'}],
+                'usage': {'completion_tokens': 1}}
+
+    def runner_ref(self):
+        return self._runner
+
+    def runner(self, **overrides):
+        from inferswarm.operator.phased_observation import reconcile_static, reconcile_dynamic
+        kwargs = dict(collector=self, static_reconciler=reconcile_static,
+                      dynamic_reconciler=reconcile_dynamic,
+                      observation_mode='synthetic-test', clock=self.clock)
+        kwargs.update(overrides)
+        self._runner = OperatorRunner(self, self.manager, self, self.tunnel,
+                                      pause=lambda _: None, **kwargs)
+        # Deterministic offline nonce so the labeled synthetic dynamic
+        # evidence can carry the same request-correlation key.
+        self._runner.request_nonce = 'nonce-302'
+        return self._runner
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -467,9 +467,252 @@ CPU Validation was dispatched. Collector/normal Q8 wiring and all physical,
 CUDA, route, real-model and performance qualification remain unproved.
 
 
+## #302 collected runner and phased reconciliation (2026-10-11)
+
+Status: coding complete on the #302 issue branch, not reviewed or merged. This
+implements the second remaining-delivery child of #299 from merged main
+`8ed795b01aca2cd720b70564228c244158739f9d` (#301/PR #304 retained in
+ancestry). No native build, model download, inference, GPU, deployment or
+merge occurred; the #301 native budget was not touched.
+
+What was implemented (offline integration only):
+
+- `reconcile_static` and `reconcile_dynamic` in `phased_observation.py` are
+  now real joins instead of unconditional refusals. Static admission requires
+  typed `ParticipantStaticEvidence` for every participant: complete verified
+  source ranges covering all 1,224 weight assignments joined to the typed
+  plan, owned spawn receipts equal to independently collected
+  `ProcessIdentity`, and an explicit `DerivedBuildEvidence` binding the
+  observer executable bytes to the pinned base revision/tree. Dynamic
+  acceptance requires a STATIC_ADMITTED receipt for the same plan and
+  invocation, terminal whole dynamic streams whose export-claim owner matches
+  the owned spawn, task/response fact joins, observed graph generations,
+  nonempty allocation records, and both GET/SET transfer families with the
+  loader-side output-custody readback. Every missing or contradictory fact
+  refuses with its name; no receipt ever carries execution authority.
+- A real bounded collector (`native_observer/collector.py`): read-only SSH
+  artifact reader in the qualified source-transport pattern, derived-build
+  authentication (manifest parsed with `parse_build_manifest` plus
+  independently read executable bytes), export-directory claim verification,
+  and a `/proc`-based independent identity reader.
+- The lifecycle `spawn` action accepts an invocation-owned
+  `IS301_EXPORT_DIR` so each owned process exports into its lease directory.
+- `OperatorRunner._run_profiled_collected`: complete static admission after
+  both owned processes are healthy and before the sole POST; same-request
+  dynamic reconciliation after the POST gating output acceptance (a dynamic
+  refusal means execution occurred and the output was rejected); the
+  last-moment admission/freshness recheck immediately before the POST is
+  preserved; exact-owned cleanup retained on every path.
+- Automatic wiring through ordinary `run_config` when the config's strategy
+  options carry the explicit `observer` deployment block (manifest and
+  executable paths); all legacy `/1` configs and behavior are unchanged, and
+  the `/1` path remains the default when no observer block is present.
+- The genuine retained #301 captures and build manifests in
+  `tests/fixtures/issue299/round2-native/` are replayed through the real
+  collector and reconcilers with recording SSH transports; the tiny CPU/RPC
+  fixture captures predate server task instrumentation, so client-side
+  task/response/lifecycle facts use the genuine native fact shapes spliced
+  and explicitly re-sealed (labeled SYNTHETIC in the module docstring).
+
+The first independent SPEC review (2026-10-11) returned NO-GO with verified
+findings, all corrected in this working tree: the collected path now performs
+an independent /proc identity read compared against frozen expectations
+(never echoing configured values); the collector consumes the producer's
+actual plaintext PID/START/LABEL claim protocol and creates the export
+directory with `IS301_OBSERVE=1`; dynamic collection happens after owned
+teardown because the overlay exports at process termination; static evidence
+requires the collected static snapshot and spawn-receipt cross-checks;
+derived-build qualification additionally binds the retained authenticated
+#301 patch/transformed/compiler identities (a self-consistent foreign
+manifest refuses); dynamic evidence requires material transfers (nonzero
+bytes, observed shapes), material graph records, response binding, and
+spawn continuity with the static receipt; and output acceptance re-runs
+admission freshness after blocking collection, so evidence expiring during
+collection rejects the already-executed request's output.
+
+A second SPEC round (2026-10-11) returned NO-GO with four further verified
+findings, also corrected: the unproducible static-snapshot export requirement
+was removed (both retained production export sites emit dynamic envelopes
+only, so static admission rests on the independently collected identity,
+source-range and derived-build joins); dynamic envelopes are selected by
+parsing phase (a stale static file no longer breaks the dynamic count);
+request acceptance now REQUIRES the native task binding (exactly one
+observed task, bound from collected evidence, never dispatched unbound) and
+the response id; derived-build qualification additionally pins the retained
+build options and backend-library identities; native graph ids are treated
+as opaque runtime pointers (presence/status bound, not restated as bounded
+request generations); allocation backends must be native selector labels;
+transfer shapes must be real positive integers; and the mid-run owned-cleanup
+receipt is preserved instead of being erased by the idempotent final pass.
+
+A third SPEC round (2026-10-11) returned NO-GO with four further verified
+findings, also corrected: the selected dynamic envelope is now bound to the
+owned directory claim on every identity surface (producer filename
+'<label>-<pid>-<ordinal>.json', generation 'exp-<pid>-...' and the in-envelope
+process census must all carry the claimed owned PID); a 'static'-labeled
+envelope carrying an event stream is refused as a disguised dynamic capture
+so a second stream cannot vanish from the population by relabeling; the
+response-custody join now requires an observed response for THE request's
+task (responses naming only other tasks refuse); and response task ids and
+graph status values must be exact integers (booleans and floats refuse).
+
+A fourth SPEC round (2026-10-11) returned NO-GO with two further verified
+findings and one strictness gap, all corrected: a present process census is
+now mandatory-shaped (exact dict with an exact-int pid; malformed or
+contradictory values refuse with no absent-census escape once the key
+exists); only the exact plaintext claim filename is excluded from envelope
+inspection, so a claim-prefixed second dynamic stream cannot hide; and the
+filename/generation binding now enforces the exact producer format
+('<label>-<pid>-%04d.json' / 'exp-<pid>-<ordinal>-<ns>') with the filename
+ordinal and generation ordinal proven identical.
+
+A fifth SPEC round (2026-10-11) found one remaining MINOR strictness gap,
+corrected: the filename/generation binding now accepts only canonical ASCII
+producer output (unpadded decimal pids, zero-padded four-digit filename
+ordinal, unpadded generation ordinal, both ordinals within the producer's
+64-export cap); Unicode digits, padded variants and beyond-cap ordinals
+refuse.
+
+SPEC round 6 (2026-10-11) returned GO with one nonblocking MINOR, also
+corrected: the generation nanosecond suffix must be canonical (no leading
+zero; std::to_string never emits one).
+
+Independent QUALITY review (2026-10-11) returned APPROVED with four
+nonblocking MINOR findings, all addressed: direct production-seam boundary
+regressions added for the real identity reader, run_config wiring, lifecycle
+observer enablement/export-dir creation and exact-integer graph-status
+typing (40 tests total); the retention audit's current bookkeeping updated to
+40 while retaining the 21-method historical baseline; runtime-contract.md
+supersession wording records the implemented joins with live authority still
+refused; and the dead test-setup debris was removed with the
+executable-digest test renamed to what it pins.
+
+Verification after all six correction passes, the SPEC GO and the QUALITY
+APPROVAL: the expanded `tests/test_issue302_collected_runner.py` (40 tests,
+including the SPEC reproductions from all rounds as regressions), all ten
+existing issue-299/301 suites, the retention audit, the CI planner
+self-check, the status sync and the repository finalizer check pass locally
+at this working tree. This is a coding-progress record, not review or acceptance
+evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
+exact-head review, and the separately gated hosted final validation remain
+pending. #303 integration, #300 physical qualification and #299 closure are
+not advanced by this record.
+
+## #302 maintainer correction round (review 5482179642) — 2026-10-11
+
+The maintainer exact-head review of PR #305 at `0293bee` returned NO-GO with
+P1-A/P1-B/P1-C/P1-D and P2 findings. Correction commits (RED first, then
+GREEN) on the same branch:
+
+- **P1-A per-role builds**: the shared observer deployment identity is
+  replaced by explicit validated per-role paths; the collector authenticates
+  each role's own retained #301 closure (client/llama-server ->
+  `libllama-full.a`, RPC participant/ggml-rpc-server -> `libggml-static.a`)
+  and refuses swapped manifests, foreign closures and incomplete coverage.
+  Offline tests exercise both genuinely distinct retained manifests with the
+  executable-byte pin rebound through an explicit `retained_builds` seam.
+- **P1-B observed inventory admission**: typed `ObservedInventoryEvidence`
+  (states/composites/extents/allocations) is joined against the calculated
+  inventory; missing observations refuse BEFORE POST naming the smallest
+  missing observer capability (a pre-POST static export in the #301
+  overlay). Labeled `synthetic-contract` evidence proves the predicates
+  offline; production stays fail-closed.
+- **P1-C independent host facts**: `HostFactsReader` observes boot epoch
+  (`/proc/stat` btime) and a `/sys` topology digest over the read-only SSH
+  channel; listener endpoints come from the trusted owned-lifecycle seam and
+  the observer environment from the independently read process environment.
+  All are joined against the frozen plan; UNKNOWN or mismatched values
+  refuse.
+- **P1-D route-correct dynamic contract**: acceptance requires the
+  request-nonce-correlated task/response/ubatch/token/state-lineage/output-
+  custody facts, successful graphs with non-UNKNOWN ubatch lineage, and the
+  complete `b-cpu-to-a-staging`/`a-staging-to-b-cuda` +
+  `b-cuda-to-a-staging`/`a-staging-to-output` boundary legs for one-gpu;
+  cpu-only is a separate explicit CPU-domain contract. Incidental CPU
+  fixture activity can no longer satisfy the CUDA route (the prior
+  false-positive control is replaced by the labeled synthetic-contract
+  proof).
+- **P2 bounded collection and terminal fence**: every SSH read carries a
+  per-artifact family bound enforced remotely before materialization
+  (claim 4 KiB / manifest 1 MiB / envelope 8 MiB / executable 300 MiB), and
+  an exact-owned terminal-export fence runs between owned teardown and
+  collection (late/missing/foreign/malformed exports refuse).
+
+Validation at this round: all #302 suites (75 tests across four modules),
+the #299 phased/bindings/q8-plan/runtime/source/admission suites, the #301
+budget suite, the retention audit and the CI planner self-check pass
+locally. No native build, model download, inference, GPU, deployment,
+hosted validation or merge occurred; the #301 native ledger
+(6360.491934636724/6600, issue-specific) was not touched.
+
+Named remaining limitation (fail-closed): the retained #301 producer cannot
+emit a pre-POST static inventory export or request-correlated native task
+facts; live STATIC_ADMITTED/DYNAMIC_ACCEPTED for the physical plan therefore
+remains refused until a separately authorized minimal overlay extension adds
+those emitters. Nothing in this round fabricates that evidence.
+
+## #302 exact-head correction (review 5483410569) — 2026-10-11
+
+The reviewed `3e40e2ede56e54a3d067846adc99f93c8f3d335e` remains an ancestor.
+Additive RED-first offline corrections retain all accepted #301 artifacts:
+
+- Static receipts bind immutable observed inventory and host facts, provenance,
+  capture freshness, process/spawn, build/source and plan/invocation identities.
+  Live synthetic/unknown/missing provenance refuses. Neither static nor dynamic
+  receipts grant physical Q8 qualification. The runner revalidates the exact
+  retained static evidence immediately before POST and after collection.
+- Persistent-state lower bounds no longer masquerade as actual base sizes.
+  Owner-scoped composites, padded extents, base/range/non-overlap and accounted
+  padding are joined to actual unique physical allocations. Actual per-phase
+  domain totals must satisfy measured capacity/available and policy/reserve
+  limits; foreign/unaccounted extents, mirrors and UNKNOWN headroom refuse.
+- Dynamic joins require observed task/nonce, graph and ubatch generations,
+  state authority, tensor/range/layout, ordered material route dependencies,
+  remote completion and response/output-readback custody. Missing native fields
+  remain precise refusals; synthetic fixture fields are not native evidence.
+
+The scoped population now contains 142 #302 tests in the four already registered
+modules. Historical retention baselines are unchanged. Real RED logs and the
+531-test affected offline-suite results are retained outside the checkout at
+`/home/zutfen/data/pr305-review5483410569/`; controller verification and
+independent exact-head SPEC/QUALITY decisions are recorded in the PR round
+report, not inferred from this implementation record. Native-build supervisor
+tests are excluded because this correction prohibits compilation/new ledgers;
+no full or hosted final validation is claimed.
+
+Independent SPEC review at `1020ec4` reproduced premature readback and a
+previous ubatch satisfying the next ubatch dependency. Additive RED `2723c77`
+and fix `3a73d13` retain the original reviewer failure inputs, use observed
+completion positions, and join every return leg to the same graph/ubatch
+dependency on both participants. Twelve new tests include actual runner
+rejection and legitimate multi-generation/interleaving controls. Changed-head
+independent SPEC/QUALITY review remains required; old approvals are not reused.
+
+Independent QUALITY review at `eb8a3cb` then reproduced an earlier valid route
+masking a later client leg's wrong operation or physical endpoint. RED
+`b566496` and fix `afdc985` validate every client material leg per occurrence,
+including output returns. The family matrix retains the original reviewer
+inputs and covers actual-runner rejected output without changing transport,
+remote completion, causal joins or CPU-only semantics. SPEC and QUALITY must
+both renew at the final head; earlier approvals are historical only.
+
+The controller nonce remains absent from the sole HTTP generation body. No
+native HTTP/RPC carrier is selected or added. Production inventory/selectors
+and causal request propagation still require the separately scoped decision in
+[native correlation authorization boundary](native-correlation-authorization.md).
+Terminal: `BLOCKED_ON_NATIVE_INSTRUMENTATION_AUTHORIZATION`, not completion of
+#302/#299. #303 stays pending; #300 and the historical #301 budget stay untouched.
+
 ## Remaining work
 
-1. Implement and review the approved successor observation contract, native producer, real collector, independent identity reader and normal-runner wiring. Verify actual CPU-native fixtures within recorded limits; report CUDA/physical qualification separately. No production-complete handoff while implementation gaps remain.
+1. Retain completed #301 producer/build (PR #304 merged) and the #302 offline
+   collector/reconciliation/normal-runner framework, but finish the separately
+   authorized native inventory, selector and controller-to-native correlation
+   implementation before claiming #302 usable-runner acceptance. Review
+   `5483410569` supersedes the earlier offline GO as a completion decision;
+   [native authorization boundary](native-correlation-authorization.md) records
+   the unresolved seam. #302 and #299 remain open, #303 integration pending,
+   and #300 physical qualification unchanged.
 2. Add and review the no-effects plan-only CLI.
 3. Add and review reproducible illustrative one-GPU/CPU-only examples, receipts and documentation.
 4. Complete documentation/status impact checks and independent original-acceptance integration review.
