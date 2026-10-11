@@ -1303,7 +1303,7 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
                     native_name=expected.native_name,
                     ggml_type=expected.ggml_type,
                     native_dimensions=list(expected.native_dimensions)).items():
-                if record.get(field) != want:
+                if not _same_json(record.get(field), want):
                     raise ValueError('static reconciliation: observed state '
                                      + field + ' mismatch: ' + name)
             if record.get('observed_bytes') is None:
@@ -2121,7 +2121,9 @@ def _dynamic_full_joins(plan, facts, client_id, request):
         forward = chain[0]['op'] in _SET_OPS
         labels = (('b-cpu-to-a-staging', 'a-staging-to-b-cuda') if forward else
                   ('b-cuda-to-a-staging', 'a-staging-to-output')) if plan.selection == 'one-gpu' else ('cpu-only',)
-        if tuple(t['boundary'] for t in chain) != labels or [t.get('leg_index') for t in chain] != list(range(len(chain))):
+        if (tuple(t['boundary'] for t in chain) != labels
+                or any(type(t.get('leg_index')) is not int for t in chain)
+                or [t.get('leg_index') for t in chain] != list(range(len(chain)))):
             raise ValueError('dynamic reconciliation: route material leg order/occurrence mismatch')
         for transfer in chain:
             if any(not _same_json(transfer.get(f), chain[0].get(f)) for f in material_fields):

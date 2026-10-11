@@ -173,6 +173,28 @@ class TerminalExportFenceTests(unittest.TestCase):
                                         timeout=5.0, pause=0.01)
         self.assertGreaterEqual(state['calls'], 3)
 
+    def test_collected_retained_export_cannot_invent_missing_request_correlation(self):
+        from tests.test_issue302_route_contracts import static_rows_for, static_receipt_for, request_for
+        p = self.participant('client')
+        tree, export = self.tree_with_terminal_export(p, pid=101, start='start-101')
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 101, 'start-101', 'inv-302')
+        evidence = collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                              NATIVE_LABELS['client'])
+        from inferswarm.operator.profiles import thaw
+        facts = thaw(evidence.observation.facts)
+        self.assertNotIn('tasks', facts)
+        self.assertTrue(all('request_nonce' not in g for g in facts['graphs']))
+        # Real consumer, no native task/nonce synthesized from controller context.
+        from tests.test_issue302_route_contracts import synthetic_dynamic_rows
+        rows = synthetic_dynamic_rows(self.plan)
+        rows[0] = evidence
+        static = static_receipt_for(self.plan, static_rows_for(self.plan))
+        from tests.issue299_fixture import NOW
+        with self.assertRaisesRegex(ValueError, 'request correlation|request task'):
+            contract.reconcile_dynamic(self.plan, static, rows, request_for(),
+                                       mode='synthetic-test', clock=lambda: NOW)
+
     def test_fence_missing_export_refuses(self):
         p = self.participant('client')
         tree = VirtualHostTree()
