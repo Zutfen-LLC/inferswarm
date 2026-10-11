@@ -1023,6 +1023,34 @@ class ExactDynamicCorrelationTests(unittest.TestCase):
             mode='synthetic-test', clock=lambda: NOW)
         self.assertNotEqual(first.observation_digest, second.observation_digest)
 
+    def test_multiple_graph_and_ubatch_generations_remain_request_owned(self):
+        import copy
+        from dataclasses import replace
+        rows = synthetic_dynamic_rows(self.plan)
+        def add_generation(facts):
+            graph = dict(facts['graphs'][0], graph_id=facts['graphs'][0]['graph_id'] + 1,
+                         generation=2, ubatch_lineage='ub-2', ubatch_generation=2)
+            facts['graphs'].append(graph)
+            facts['ubatches'].append(dict(facts['ubatches'][0], ubatch_id='ub-2',
+                generation=2, graph_generation=2, index=1))
+            facts['tokens'].append(dict(facts['tokens'][0], ubatch_id='ub-2',
+                ubatch_generation=2, graph_generation=2))
+            for family in ('state_lineage', 'transfers', 'output_custody'):
+                for record in copy.deepcopy(facts.get(family, [])):
+                    record.update(ubatch_id='ub-2', ubatch_generation=2, graph_generation=2)
+                    if 'transfer_id' in record:
+                        record['transfer_id'] += '-2'
+                    if 'route_id' in record:
+                        record['route_id'] += '-2'
+                    if record.get('depends_on_route'):
+                        record['depends_on_route'] += '-2'
+                    facts[family].append(record)
+        rows = [replace(r, observation=_mutate(r.observation, add_generation)) for r in rows]
+        request = replace(request_for(), graph_generations=(1, 2))
+        receipt = contract.reconcile_dynamic(self.plan, self.static, rows, request,
+                                            mode='synthetic-test', clock=lambda: NOW)
+        self.assertEqual(receipt.request_identity.graph_generations, (1, 2))
+
     def test_state_lineage_requires_named_authority_catalog_not_count(self):
         self.reject_mutation(lambda f: f['state_lineage'].clear(), 'state lineage')
         self.reject_mutation(lambda f: f['state_lineage'][0].update(state_id='foreign'),

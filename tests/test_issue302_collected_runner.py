@@ -1038,6 +1038,12 @@ class CollectedRunnerTests(unittest.TestCase):
             finally:
                 _onhost(dict(action='stop', root=root, token='tok', name='client',
                              pid=row['pid'], start=row['start']))
+                # stop sends TERM, it is not an exit/reaping fence. The fixture
+                # owns this local child and must wait before releasing its lease.
+                from inferswarm.operator.lifecycle import _CHILDREN
+                child = _CHILDREN.pop(row['pid'], None)
+                if child is not None:
+                    child.wait(timeout=5)
                 _onhost(dict(action='release', root=root, token='tok'))
 
     def test_graph_status_requires_exact_integer_zero(self):
