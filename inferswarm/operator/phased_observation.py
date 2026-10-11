@@ -1988,7 +1988,9 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
               ('transfers', len(all_transfers)),
               ('wire_bytes', wire_bytes))
     return PhaseReceipt(RECEIPT_SCHEMA, 'dynamic', _DYNAMIC_VERDICT, plan.digest, plan.selection,
-        request_identity.invocation_token, _sha256(material), True, False, False,
+        request_identity.invocation_token, _sha256(dict(participants=material,
+            static_observation_digest=static_receipt.observation_digest,
+            request_identity=_evidence_wire(request_identity))), True, False, False,
         RequestIdentity(request_identity.invocation_token, request_identity.request_nonce,
                         request_identity.task_id, request_identity.response_id, bound_generations), counts)
 
@@ -2094,8 +2096,13 @@ def _dynamic_full_joins(plan, facts, client_id, request):
                 raise ValueError('dynamic reconciliation: transfer occurrence duplicate or incomplete')
             seen_transfers.add(transfer['transfer_id'])
             offset, amount = transfer.get('range_offset'), transfer.get('range_bytes')
+            capacity = transfer.get('tensor_capacity_bytes')
+            tensor_generation = transfer.get('tensor_generation')
+            if type(tensor_generation) is not int or tensor_generation < 0:
+                raise ValueError('dynamic reconciliation: transfer tensor generation missing')
             if (type(offset) is not int or offset < 0 or type(amount) is not int
-                    or amount != transfer['bytes']):
+                    or amount != transfer['bytes'] or type(capacity) is not int
+                    or capacity < 1 or offset + amount > capacity):
                 raise ValueError('dynamic reconciliation: transfer material range join mismatch')
             strides = transfer.get('strides')
             if type(strides) is not list or len(strides) != len(transfer['shape']) or any(type(s) is not int or s < 1 for s in strides):
@@ -2108,7 +2115,7 @@ def _dynamic_full_joins(plan, facts, client_id, request):
     remote_routes = routes[remote_id]
     if set(client_routes) != set(remote_routes):
         raise ValueError('dynamic reconciliation: route occurrence remote/client join coverage mismatch')
-    material_fields = ('tensor', 'range_offset', 'range_bytes', 'shape', 'strides',
+    material_fields = ('tensor', 'tensor_generation', 'range_offset', 'range_bytes', 'shape', 'strides',
                        'graph_generation', 'ubatch_id', 'ubatch_generation')
     for route_id, chain in client_routes.items():
         forward = chain[0]['op'] in _SET_OPS
@@ -2120,11 +2127,21 @@ def _dynamic_full_joins(plan, facts, client_id, request):
             if any(not _same_json(transfer.get(f), chain[0].get(f)) for f in material_fields):
                 raise ValueError('dynamic reconciliation: route material tensor/range/generation join mismatch')
         remote = remote_routes[route_id]
+        source, destination = (('B/cpu', 'B/cuda') if forward else ('B/cuda', 'B/cpu')) if plan.selection == 'one-gpu' else ('B/cpu', 'B/cpu')
+        if any(t.get('source_domain') != source or t.get('dest_domain') != destination for t in remote):
+            raise ValueError('dynamic reconciliation: route server physical domain join mismatch')
         remote_label = ('b-cpu-to-b-cuda' if forward else 'b-cuda-to-b-cpu') if plan.selection == 'one-gpu' else 'cpu-only'
         if (len(remote) != 1 or remote[0]['boundary'] != remote_label
                 or remote[0]['op'] not in (_SET_OPS if forward else _GET_OPS)
                 or any(not _same_json(remote[0].get(f), chain[0].get(f)) for f in material_fields)):
             raise ValueError('dynamic reconciliation: route server completion material join mismatch')
+    for participant_id, participant_routes in routes.items():
+        completed_forward = set()
+        for route_id, chain in participant_routes.items():
+            if chain[0]['op'] in _SET_OPS:
+                completed_forward.add(route_id)
+            elif chain[0].get('depends_on_route') not in completed_forward:
+                raise ValueError('dynamic reconciliation: route return-before-send dependency order missing')
     response_rows = facts[client_id].get('responses')
     if not any(r.get('task_id') == task and r.get('request_nonce') == nonce
                and r.get('response_id') == request.response_id for r in response_rows):

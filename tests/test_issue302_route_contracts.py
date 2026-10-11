@@ -222,6 +222,8 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
         for index, transfer in enumerate(facts['transfers']):
             is_get = transfer['op'] in ('get', 'rpc_get')
             transfer.update(graph_generation=1, ubatch_id='ub-1', ubatch_generation=1,
+                tensor_generation=1, tensor_capacity_bytes=transfer['bytes'],
+                depends_on_route='copy-in-1' if is_get else None,
                 route_id='copy-out-1' if is_get else 'copy-in-1',
                 transfer_id=participant.role + '-transfer-' + str(index),
                 range_offset=0, range_bytes=transfer['bytes'],
@@ -233,6 +235,7 @@ def synthetic_dynamic_rows(plan, *, token='inv-302', route='one-gpu',
                 graph_generation=1, ubatch_id='ub-1', ubatch_generation=1,
                 transfer_id=final['transfer_id'], tensor=final['tensor'],
                 range_offset=final['range_offset'], range_bytes=final['range_bytes'],
+                tensor_generation=final['tensor_generation'],
                 shape=final['shape'], strides=final['strides'], output_domain=final['dest_domain'])
         record = dict(schema='inferswarm-native-observation/2', phase='dynamic',
             participant_id='llama-server' if participant.role == 'client'
@@ -986,10 +989,12 @@ class ExactDynamicCorrelationTests(unittest.TestCase):
                                      'output custody.*join|output custody.*binding')
 
     def test_remote_domain_and_cross_route_order_refuse(self):
-        self.reject_mutation(lambda f: f['transfers'][0].update(source_domain='A/cpu'),
-                             'route.*domain', participant=1)
-        self.reject_mutation(lambda f: f.update(transfers=f['transfers'][2:] + f['transfers'][:2]),
-                             'route.*order')
+        with self.subTest(case='remote-domain'):
+            self.reject_mutation(lambda f: f['transfers'][0].update(source_domain='A/cpu'),
+                                 'route.*domain', participant=1)
+        with self.subTest(case='return-before-send'):
+            self.reject_mutation(lambda f: f.update(transfers=f['transfers'][2:] + f['transfers'][:2]),
+                                 'route.*order')
 
     def test_transfer_native_range_capacity_and_tensor_generation_missing_refuse(self):
         for field in ('tensor_capacity_bytes', 'tensor_generation'):
