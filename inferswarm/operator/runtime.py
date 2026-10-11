@@ -521,6 +521,10 @@ class OperatorRunner:
             # Recheck plan freshness after blocking liveness/tunnel work,
             # immediately before the sole POST; no transport work intervenes.
             admission=self._profiled_admission(plan)
+            fresh_static=reconcile_static(plan,static_evidence,sources,
+                mode=self.observation_mode,clock=self.clock)
+            if fresh_static != static_receipt:
+                raise ValueError('static evidence changed after admission receipt')
             response=self.http.post(base+'/v1/chat/completions',
                 {'messages':[{'role':'user','content':request['prompt']}],
                  'max_tokens':request['max_tokens'],'temperature':request['temperature'],
@@ -576,6 +580,10 @@ class OperatorRunner:
                 request_nonce=request_nonce,
                 task_id=str(native_tasks[0]['task_id']),
                 response_id=str(result_response['id']))
+            fresh_static=reconcile_static(plan,static_evidence,sources,
+                mode=self.observation_mode,clock=self.clock)
+            if fresh_static != static_receipt:
+                raise ValueError('static evidence changed during dynamic collection')
             dynamic_receipt=self.dynamic_reconciler(plan,static_receipt,dynamic_evidence,
                 request_identity,**mode)
             # Recheck evidence freshness after blocking collection work.
