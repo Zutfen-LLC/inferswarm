@@ -598,6 +598,59 @@ exact-head review, and the separately gated hosted final validation remain
 pending. #303 integration, #300 physical qualification and #299 closure are
 not advanced by this record.
 
+## #302 maintainer correction round (review 5482179642) — 2026-10-11
+
+The maintainer exact-head review of PR #305 at `0293bee` returned NO-GO with
+P1-A/P1-B/P1-C/P1-D and P2 findings. Correction commits (RED first, then
+GREEN) on the same branch:
+
+- **P1-A per-role builds**: the shared observer deployment identity is
+  replaced by explicit validated per-role paths; the collector authenticates
+  each role's own retained #301 closure (client/llama-server ->
+  `libllama-full.a`, RPC participant/ggml-rpc-server -> `libggml-static.a`)
+  and refuses swapped manifests, foreign closures and incomplete coverage.
+  Offline tests exercise both genuinely distinct retained manifests with the
+  executable-byte pin rebound through an explicit `retained_builds` seam.
+- **P1-B observed inventory admission**: typed `ObservedInventoryEvidence`
+  (states/composites/extents/allocations) is joined against the calculated
+  inventory; missing observations refuse BEFORE POST naming the smallest
+  missing observer capability (a pre-POST static export in the #301
+  overlay). Labeled `synthetic-contract` evidence proves the predicates
+  offline; production stays fail-closed.
+- **P1-C independent host facts**: `HostFactsReader` observes boot epoch
+  (`/proc/stat` btime) and a `/sys` topology digest over the read-only SSH
+  channel; listener endpoints come from the trusted owned-lifecycle seam and
+  the observer environment from the independently read process environment.
+  All are joined against the frozen plan; UNKNOWN or mismatched values
+  refuse.
+- **P1-D route-correct dynamic contract**: acceptance requires the
+  request-nonce-correlated task/response/ubatch/token/state-lineage/output-
+  custody facts, successful graphs with non-UNKNOWN ubatch lineage, and the
+  complete `b-cpu-to-a-staging`/`a-staging-to-b-cuda` +
+  `b-cuda-to-a-staging`/`a-staging-to-output` boundary legs for one-gpu;
+  cpu-only is a separate explicit CPU-domain contract. Incidental CPU
+  fixture activity can no longer satisfy the CUDA route (the prior
+  false-positive control is replaced by the labeled synthetic-contract
+  proof).
+- **P2 bounded collection and terminal fence**: every SSH read carries a
+  per-artifact family bound enforced remotely before materialization
+  (claim 4 KiB / manifest 1 MiB / envelope 8 MiB / executable 300 MiB), and
+  an exact-owned terminal-export fence runs between owned teardown and
+  collection (late/missing/foreign/malformed exports refuse).
+
+Validation at this round: all #302 suites (75 tests across four modules),
+the #299 phased/bindings/q8-plan/runtime/source/admission suites, the #301
+budget suite, the retention audit and the CI planner self-check pass
+locally. No native build, model download, inference, GPU, deployment,
+hosted validation or merge occurred; the #301 native ledger
+(6360.491934636724/6600, issue-specific) was not touched.
+
+Named remaining limitation (fail-closed): the retained #301 producer cannot
+emit a pre-POST static inventory export or request-correlated native task
+facts; live STATIC_ADMITTED/DYNAMIC_ACCEPTED for the physical plan therefore
+remains refused until a separately authorized minimal overlay extension adds
+those emitters. Nothing in this round fabricates that evidence.
+
 ## Remaining work
 
 1. ~~Implement and review the approved successor observation contract, native
