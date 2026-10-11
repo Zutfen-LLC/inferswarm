@@ -898,6 +898,36 @@ class CollectedRunnerTests(unittest.TestCase):
                     collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
                                               NATIVE_LABELS['client'])
 
+    def test_noncanonical_ascii_format_refuses(self):
+        # Unicode digits, padded pids/ordinals and beyond-cap ordinals are
+        # not producer-emittable and must refuse.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        cases = [
+            ('llama-server-\u0664\u0662\u0664\u0662-0000.json', 'exp-4242-0-966507438683494'),
+            ('llama-server-04242-0000.json', 'exp-4242-0-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-04242-0-966507438683494'),
+            ('llama-server-4242-0000.json', 'exp-4242-0000-966507438683494'),
+            ('llama-server-4242-0064.json', 'exp-4242-64-966507438683494'),
+        ]
+        for filename, generation in cases:
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['stream_generation'] = generation
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + filename, record)
+            tree.put_dir(p.execution_address, export, ['is301-claim', filename])
+            with self.subTest(filename=filename, generation=generation):
+                with self.assertRaisesRegex(CollectorError,
+                                            'producer format|claim capture'):
+                    collector.collect_dynamic(p, spawn, export, self.plan.digest,
+                                              'inv-302', NATIVE_LABELS['client'])
+
     def test_resealed_foreign_manifest_refuses_in_collector(self):
         # A self-consistent but foreign overlay identity must refuse: the
         # derived build must descend from the retained authenticated #301

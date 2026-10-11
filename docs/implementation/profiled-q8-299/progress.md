@@ -566,9 +566,16 @@ filename/generation binding now enforces the exact producer format
 ('<label>-<pid>-%04d.json' / 'exp-<pid>-<ordinal>-<ns>') with the filename
 ordinal and generation ordinal proven identical.
 
-Verification after all four correction passes: the expanded
-`tests/test_issue302_collected_runner.py` (35 tests, including the SPEC
-reproductions from all four rounds as regressions), all ten existing
+A fifth SPEC round (2026-10-11) found one remaining MINOR strictness gap,
+corrected: the filename/generation binding now accepts only canonical ASCII
+producer output (unpadded decimal pids, zero-padded four-digit filename
+ordinal, unpadded generation ordinal, both ordinals within the producer's
+64-export cap); Unicode digits, padded variants and beyond-cap ordinals
+refuse.
+
+Verification after all five correction passes: the expanded
+`tests/test_issue302_collected_runner.py` (36 tests, including the SPEC
+reproductions from all five rounds as regressions), all ten existing
 issue-299/301 suites, the retention audit, the CI planner self-check and the
 repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer

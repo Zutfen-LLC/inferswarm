@@ -29,6 +29,8 @@ from ..phased_observation import (NativeBuildIdentity, OwnedSpawnFacts, DerivedB
 NATIVE_LABELS = {'client': 'llama-server', 'remote': 'ggml-rpc-server'}
 SSH_TIMEOUT_SECONDS = 120
 CLAIM_NAME = 'is301-claim'
+# Producer export cap: is301_observer.h export_capture MAX_EXPORTS.
+MAX_EXPORTS = 64
 MANIFEST_SUFFIX = '.build-manifest.json'
 
 
@@ -246,15 +248,21 @@ class NativeObserverCollector:
         # surface. The producer writes '<label>-<pid>-%04d.json' and a
         # generation 'exp-<pid>-<ordinal>-<ns>' from the SAME capture: exact
         # full-format match, same owned pid AND same ordinal on both surfaces.
-        match = re.fullmatch(r'([A-Za-z0-9_.-]+)-(\d+)-(\d{4})', name[:-len('.json')])
+        # Canonical ASCII producer format only: the filename ordinal is a
+        # zero-padded %04d, the pid/ordinals in both surfaces are unpadded
+        # decimal, and the ordinal lies within the producer's 64-export cap.
+        match = re.fullmatch(r'([A-Za-z0-9_.-]+)-([0-9]+)-([0-9]{4})', name[:-len('.json')])
         if match is None or match.group(1) != native_label \
-                or int(match.group(2)) != claim_pid:
+                or match.group(2) != str(claim_pid) \
+                or match.group(3) != '%04d' % int(match.group(3)) \
+                or int(match.group(3)) >= MAX_EXPORTS:
             raise CollectorError('dynamic envelope filename does not match the owned '
                                  'claim producer format: ' + name)
         ordinal = int(match.group(3))
         generation = observation.stream_generation
-        gen = re.fullmatch(r'exp-(\d+)-(\d+)-(\d+)', generation)
-        if gen is None or int(gen.group(1)) != claim_pid or int(gen.group(2)) != ordinal:
+        gen = re.fullmatch(r'exp-([0-9]+)-([0-9]+)-([0-9]+)', generation)
+        if gen is None or gen.group(1) != str(claim_pid) \
+                or gen.group(2) != str(ordinal):
             raise CollectorError('dynamic envelope generation does not match the owned '
                                  'claim capture: ' + generation)
         facts = thaw(observation.facts)
