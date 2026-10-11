@@ -1854,7 +1854,10 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
         if graph.get('ubatch_lineage') in (None, 'unknown', ''):
             raise ValueError('dynamic reconciliation: graph ubatch lineage UNKNOWN '
                              'refuses same-request acceptance')
-        observed_generations.add(graph['graph_id'])
+        generation = graph.get('generation')
+        if type(generation) is not int or generation < 0:
+            raise ValueError('dynamic reconciliation: graph explicit generation missing')
+        observed_generations.add(generation)
     for generation in request_identity.graph_generations:
         if generation not in observed_generations:
             raise ValueError('dynamic reconciliation: graph generation not observed for this request')
@@ -1972,6 +1975,7 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
             raise ValueError('dynamic reconciliation: cpu-only route SET leg missing')
         if not any(op in _GET_OPS for op in seen_ops):
             raise ValueError('dynamic reconciliation: cpu-only route GET leg missing')
+    bound_generations = _dynamic_full_joins(plan, facts, client_id, request_identity)
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
         material.append(dict(participant_id=row.participant_id,
@@ -1985,7 +1989,165 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
               ('wire_bytes', wire_bytes))
     return PhaseReceipt(RECEIPT_SCHEMA, 'dynamic', _DYNAMIC_VERDICT, plan.digest, plan.selection,
         request_identity.invocation_token, _sha256(material), True, False, False,
-        request_identity, counts)
+        RequestIdentity(request_identity.invocation_token, request_identity.request_nonce,
+                        request_identity.task_id, request_identity.response_id, bound_generations), counts)
+
+
+def _dynamic_full_joins(plan, facts, client_id, request):
+    """Join every producer occurrence; never fill absent native fields."""
+    task = int(request.task_id)
+    nonce = request.request_nonce
+    participants = {p.participant_id: p for p in plan.participants}
+    catalogs = {}
+    routes = {}
+    generations = set()
+
+    def correlated(record, family):
+        if (type(record) is not dict or type(record.get('task_id')) is not int
+                or record['task_id'] != task or record.get('request_nonce') != nonce):
+            raise ValueError('dynamic reconciliation: ' + family + ' task/nonce correlation missing or foreign')
+
+    def lineage_key(record, family):
+        generation = record.get('graph_generation')
+        ubatch = record.get('ubatch_id')
+        ub_generation = record.get('ubatch_generation')
+        if (type(generation) is not int or generation < 0 or type(ub_generation) is not int
+                or ub_generation < 0 or type(ubatch) is not str or ubatch in ('', 'unknown')):
+            raise ValueError('dynamic reconciliation: ' + family + ' lineage/generation missing')
+        return generation, ubatch, ub_generation
+
+    for participant_id, data in facts.items():
+        graphs = data.get('graphs')
+        ubatches = data.get('ubatches')
+        if type(graphs) is not list or not graphs or type(ubatches) is not list or not ubatches:
+            raise ValueError('dynamic reconciliation: graph/ubatch catalog missing: ' + participant_id)
+        graph_keys = set()
+        for graph in graphs:
+            correlated(graph, 'graph')
+            generation = graph.get('generation')
+            if type(generation) is not int or generation < 0:
+                raise ValueError('dynamic reconciliation: graph explicit generation missing')
+            if type(graph.get('status')) is not int or graph['status'] != 0:
+                raise ValueError('dynamic reconciliation: graph status not successful')
+            key = lineage_key(dict(graph, graph_generation=generation,
+                                   ubatch_id=graph.get('ubatch_lineage')), 'graph ubatch')
+            if key in graph_keys:
+                raise ValueError('dynamic reconciliation: graph generation/ubatch duplicate')
+            graph_keys.add(key)
+            generations.add(generation)
+        ubatch_catalog = {}
+        indexes = []
+        for ubatch in ubatches:
+            correlated(ubatch, 'ubatch')
+            key = lineage_key(dict(ubatch, ubatch_generation=ubatch.get('generation')), 'ubatch')
+            if key not in graph_keys or key in ubatch_catalog:
+                raise ValueError('dynamic reconciliation: graph ubatch generation/lineage join mismatch')
+            if type(ubatch.get('tokens')) is not int or ubatch['tokens'] < 1:
+                raise ValueError('dynamic reconciliation: ubatch token count missing')
+            index = ubatch.get('index')
+            if type(index) is not int or index < 0:
+                raise ValueError('dynamic reconciliation: ubatch ordered index missing')
+            indexes.append(index)
+            ubatch_catalog[key] = ubatch
+        if set(ubatch_catalog) != graph_keys or indexes != list(range(len(indexes))):
+            raise ValueError('dynamic reconciliation: graph ubatch coverage/order mismatch')
+        catalogs[participant_id] = ubatch_catalog
+        token_rows = data.get('tokens')
+        if type(token_rows) is not list or not token_rows:
+            raise ValueError('dynamic reconciliation: token lineage catalog missing')
+        seen_tokens = set()
+        for token in token_rows:
+            correlated(token, 'token')
+            key = lineage_key(token, 'token')
+            if key not in ubatch_catalog or key in seen_tokens or type(token.get('token_count')) is not int or token['token_count'] != ubatch_catalog[key]['tokens']:
+                raise ValueError('dynamic reconciliation: token ubatch count/lineage join mismatch')
+            seen_tokens.add(key)
+        if seen_tokens != set(ubatch_catalog):
+            raise ValueError('dynamic reconciliation: token ubatch coverage mismatch')
+        owned = {b.binding_id for b in participants[participant_id].bindings}
+        expected_states = {s.state_id: s for s in plan.candidate.required_state if s.binding_id in owned}
+        lineage = data.get('state_lineage')
+        if type(lineage) is not list or not lineage:
+            raise ValueError('dynamic reconciliation: state lineage catalog missing')
+        seen_states = set()
+        for state in lineage:
+            correlated(state, 'state lineage')
+            key = lineage_key(state, 'state lineage')
+            name = state.get('state_id')
+            if name not in expected_states or key not in ubatch_catalog or (key, name) in seen_states:
+                raise ValueError('dynamic reconciliation: state lineage identity/coverage mismatch')
+            if (state.get('binding_id') != expected_states[name].binding_id
+                    or type(state.get('authority_epoch')) is not int or state['authority_epoch'] < 0):
+                raise ValueError('dynamic reconciliation: state lineage authority epoch/owner UNKNOWN or mismatch')
+            seen_states.add((key, name))
+        if seen_states != {(key, name) for key in ubatch_catalog for name in expected_states}:
+            raise ValueError('dynamic reconciliation: state lineage coverage mismatch')
+        routes[participant_id] = {}
+        seen_transfers = set()
+        for transfer in transfers_of(data):
+            key = lineage_key(transfer, 'transfer')
+            if key not in ubatch_catalog:
+                raise ValueError('dynamic reconciliation: transfer graph/ubatch lineage join mismatch')
+            for field in ('tensor', 'route_id', 'transfer_id'):
+                _text(transfer.get(field), 'dynamic transfer ' + field + ' join')
+            if transfer['transfer_id'] in seen_transfers or transfer.get('completed') is not True:
+                raise ValueError('dynamic reconciliation: transfer occurrence duplicate or incomplete')
+            seen_transfers.add(transfer['transfer_id'])
+            offset, amount = transfer.get('range_offset'), transfer.get('range_bytes')
+            if (type(offset) is not int or offset < 0 or type(amount) is not int
+                    or amount != transfer['bytes']):
+                raise ValueError('dynamic reconciliation: transfer material range join mismatch')
+            strides = transfer.get('strides')
+            if type(strides) is not list or len(strides) != len(transfer['shape']) or any(type(s) is not int or s < 1 for s in strides):
+                raise ValueError('dynamic reconciliation: transfer layout/stride join missing')
+            routes[participant_id].setdefault(transfer['route_id'], []).append(transfer)
+    if request.graph_generations and set(request.graph_generations) != generations:
+        raise ValueError('dynamic reconciliation: graph generation coverage not observed for this request')
+    client_routes = routes[client_id]
+    remote_id = next(p.participant_id for p in plan.participants if p.role == 'remote')
+    remote_routes = routes[remote_id]
+    if set(client_routes) != set(remote_routes):
+        raise ValueError('dynamic reconciliation: route occurrence remote/client join coverage mismatch')
+    material_fields = ('tensor', 'range_offset', 'range_bytes', 'shape', 'strides',
+                       'graph_generation', 'ubatch_id', 'ubatch_generation')
+    for route_id, chain in client_routes.items():
+        forward = chain[0]['op'] in _SET_OPS
+        labels = (('b-cpu-to-a-staging', 'a-staging-to-b-cuda') if forward else
+                  ('b-cuda-to-a-staging', 'a-staging-to-output')) if plan.selection == 'one-gpu' else ('cpu-only',)
+        if tuple(t['boundary'] for t in chain) != labels or [t.get('leg_index') for t in chain] != list(range(len(chain))):
+            raise ValueError('dynamic reconciliation: route material leg order/occurrence mismatch')
+        for transfer in chain:
+            if any(not _same_json(transfer.get(f), chain[0].get(f)) for f in material_fields):
+                raise ValueError('dynamic reconciliation: route material tensor/range/generation join mismatch')
+        remote = remote_routes[route_id]
+        remote_label = ('b-cpu-to-b-cuda' if forward else 'b-cuda-to-b-cpu') if plan.selection == 'one-gpu' else 'cpu-only'
+        if (len(remote) != 1 or remote[0]['boundary'] != remote_label
+                or remote[0]['op'] not in (_SET_OPS if forward else _GET_OPS)
+                or any(not _same_json(remote[0].get(f), chain[0].get(f)) for f in material_fields)):
+            raise ValueError('dynamic reconciliation: route server completion material join mismatch')
+    response_rows = facts[client_id].get('responses')
+    if not any(r.get('task_id') == task and r.get('request_nonce') == nonce
+               and r.get('response_id') == request.response_id for r in response_rows):
+        raise ValueError('dynamic reconciliation: response custody response binding missing or foreign')
+    custody = facts[client_id]['output_custody']
+    output_transfers = {t['transfer_id']: t for chain in client_routes.values() for t in chain
+                        if t['op'] in _GET_OPS and (t['boundary'] == 'a-staging-to-output' or plan.selection == 'cpu-only')}
+    seen_output = set()
+    for output in custody:
+        correlated(output, 'output custody')
+        transfer = output_transfers.get(output.get('transfer_id'))
+        if (transfer is None or output.get('response_id') != request.response_id
+                or type(output.get('readback_bytes')) is not int
+                or output['readback_bytes'] != transfer['bytes']
+                or output.get('output_domain') != transfer['dest_domain']
+                or any(not _same_json(output.get(f), transfer.get(f)) for f in material_fields if f != 'route_id')):
+            raise ValueError('dynamic reconciliation: output custody response/tensor/range/readback join mismatch')
+        if output['transfer_id'] in seen_output:
+            raise ValueError('dynamic reconciliation: output custody duplicate binding')
+        seen_output.add(output['transfer_id'])
+    if seen_output != set(output_transfers):
+        raise ValueError('dynamic reconciliation: output custody readback transfer coverage join missing')
+    return tuple(sorted(generations))
 
 
 def transfers_of(facts):

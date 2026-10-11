@@ -1141,7 +1141,7 @@ class RecordingRunnerHarness:
         rows = synthetic_dynamic_rows(self.plan, token=spawn.invocation_token,
                                       pids={p.role: spawn.pid},
                                       start=spawn.start,
-                                      nonce='nonce-302')
+                                      nonce='nonce-302', response_id='reply-302')
         row = next(r for r in rows if r.participant_id == p.participant_id)
         return row
 
