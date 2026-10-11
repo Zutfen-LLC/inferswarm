@@ -103,6 +103,15 @@ def observed_host_facts_for(plan, participant):
         source='synthetic-contract')
 
 
+def observed_visibility(participant):
+    """OBSERVED effective selectors a capable observer reports for the
+    frozen plan (mirrors the /1 binding-preflight visibility contract)."""
+    bindings = sorted(participant.bindings, key=lambda b: b.visible_selector)
+    return freeze(dict(native=[b.native_selector for b in bindings],
+                       visible=[b.visible_selector for b in bindings],
+                       environment={}))
+
+
 def static_rows_for(plan, *, token='inv-302', inventory=True, host_facts=True,
                     start=None):
     rows = []
@@ -115,7 +124,7 @@ def static_rows_for(plan, *, token='inv-302', inventory=True, host_facts=True,
             pid, spawn.start, participant.runtime_executable,
             participant.runtime_sha256,
             (participant.runtime_executable, '--serve'),
-            freeze(dict(native=[], visible=[], environment={})),
+            observed_visibility(participant),
             participant.rpc_endpoint)
         rows.append(contract.ParticipantStaticEvidence(
             participant.participant_id, identity, spawn,
@@ -308,6 +317,80 @@ class StaticInventoryJoinTests(unittest.TestCase):
         allocations[0] = freeze(bad)
         object.__setattr__(victim.observed_inventory, 'allocations', tuple(allocations))
         with self.assertRaisesRegex(ValueError, 'allocation'):
+            static_receipt_for(self.plan, rows)
+
+
+    def test_unobserved_visibility_refuses_with_named_capability(self):
+        # Empty visibility (what the production /proc reader reports today)
+        # must refuse static admission naming the missing observer
+        # capability — never silently accept the configured selectors.
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        from dataclasses import replace as _replace
+        blank = _replace(victim.identity,
+                         visibility=freeze(dict(native=[], visible=[],
+                                                environment={})))
+        object.__setattr__(victim, 'identity', blank)
+        with self.assertRaisesRegex(ValueError,
+                                    'effective device visibility not independently '
+                                    'observed.*native/visible selector observation'):
+            static_receipt_for(self.plan, rows)
+
+    def test_mismatched_visibility_refuses(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        from dataclasses import replace as _replace
+        foreign = _replace(victim.identity,
+                           visibility=freeze(dict(native=['CUDA9'],
+                                                  visible=['RPC9'],
+                                                  environment={})))
+        object.__setattr__(victim, 'identity', foreign)
+        with self.assertRaisesRegex(ValueError,
+                                    'effective device visibility not independently '
+                                    'observed'):
+            static_receipt_for(self.plan, rows)
+
+    def test_unexpected_observed_extent_refuses(self):
+        # Surplus extent evidence is a contradiction, not harmless.
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        extents = list(victim.observed_inventory.extents)
+        foreign = dict(thaw(extents[0]))
+        foreign['state_id'] = foreign['state_id'] + '-phantom'
+        extents.append(freeze(foreign))
+        object.__setattr__(victim.observed_inventory, 'extents', tuple(extents))
+        with self.assertRaisesRegex(ValueError, 'extent coverage'):
+            static_receipt_for(self.plan, rows)
+
+    def test_unexpected_observed_allocation_refuses(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        allocations = list(victim.observed_inventory.allocations)
+        foreign = dict(thaw(allocations[0]))
+        foreign['allocation_id'] = foreign['allocation_id'] + '-phantom'
+        allocations.append(freeze(foreign))
+        object.__setattr__(victim.observed_inventory, 'allocations',
+                           tuple(allocations))
+        with self.assertRaisesRegex(ValueError, 'allocation coverage'):
+            static_receipt_for(self.plan, rows)
+
+    def test_missing_observed_weight_refuses(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        weights = list(victim.observed_inventory.weights)
+        object.__setattr__(victim.observed_inventory, 'weights', weights[:-1])
+        with self.assertRaisesRegex(ValueError, 'observed weight coverage'):
+            static_receipt_for(self.plan, rows)
+
+    def test_wrong_observed_weight_bytes_refuse(self):
+        rows = static_rows_for(self.plan)
+        victim = rows[0]
+        weights = list(victim.observed_inventory.weights)
+        bad = dict(thaw(weights[0]))
+        bad['observed_bytes'] = bad['observed_bytes'] + 1
+        weights[0] = freeze(bad)
+        object.__setattr__(victim.observed_inventory, 'weights', tuple(weights))
+        with self.assertRaisesRegex(ValueError, 'observed weight identity'):
             static_receipt_for(self.plan, rows)
 
 

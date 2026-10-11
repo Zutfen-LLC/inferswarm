@@ -1380,6 +1380,40 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
                 or 'IS301_EXPORT_DIR' not in environment:
             raise ValueError('static reconciliation: observer environment not '
                              'observed on the owned process: ' + row.participant_id)
+        owned_weights = {name: expected_weights[name] for name in expected_weights
+                         if expected_weights[name].binding_id in ids}
+        observed_weights = {}
+        for frozen_row in inv.weights:
+            record = _thaw(frozen_row)
+            name = record.get('state_id')
+            if not isinstance(name, str) or name in observed_weights:
+                raise ValueError('static reconciliation: observed weight identity '
+                                 'malformed or duplicated: ' + row.participant_id)
+            observed_weights[name] = record
+        if set(observed_weights) != set(owned_weights):
+            raise ValueError('static reconciliation: observed weight coverage '
+                             'mismatch (expected %d owned weights for %s, observed %d)'
+                             % (len(owned_weights), row.participant_id,
+                                len(observed_weights)))
+        for name, expected in owned_weights.items():
+            record = observed_weights[name]
+            if (record.get('binding_id') != expected.binding_id
+                    or record.get('memory_id') != expected.memory_id
+                    or record.get('observed_bytes') != expected.encoded_bytes):
+                raise ValueError('static reconciliation: observed weight identity '
+                                 'or bytes mismatch: ' + name)
+        # Extras are contradictions, not harmless surplus.
+        if set(observed_extents) != set(owned_states):
+            raise ValueError('static reconciliation: observed extent coverage '
+                             'mismatch (unexpected or missing extents): '
+                             + row.participant_id)
+        expected_allocations = {charge.allocation_id for charge in inventory.charges
+                                if charge.memory_id in owned_memories
+                                and charge.bytes is not None}
+        if set(observed_allocations) != expected_allocations:
+            raise ValueError('static reconciliation: observed allocation coverage '
+                             'mismatch (unexpected or missing allocations): '
+                             + row.participant_id)
         if not expected_weights:
             raise ValueError('static reconciliation: participant owns no weights: '
                              + row.participant_id)
@@ -1409,6 +1443,23 @@ def _static_identity_join(plan, participants, rows, token):
         # executable; a foreign process image is a named refusal.
         if not identity.effective_argv or identity.effective_argv[0] != participant.runtime_executable:
             raise ValueError('static reconciliation: owned process image mismatch: ' + row.participant_id)
+        # Effective device visibility must be OBSERVED and equal the frozen
+        # configured selectors. The /proc identity reader cannot currently
+        # observe native/visible selectors, so production refuses here with
+        # the smallest missing observer capability named — an empty or
+        # mismatched visibility is never silently accepted.
+        from .profiles import thaw as _thawx
+        visibility = _thawx(identity.visibility)
+        expected_native = sorted(b.native_selector for b in participant.bindings)
+        expected_visible = sorted(b.visible_selector for b in participant.bindings)
+        observed_native = sorted(visibility.get('native') or [])
+        observed_visible = sorted(visibility.get('visible') or [])
+        if observed_native != expected_native or observed_visible != expected_visible:
+            raise ValueError(
+                'static reconciliation: effective device visibility not independently '
+                'observed for ' + row.participant_id + '; smallest missing observer '
+                'capability: native/visible selector observation of the owned process '
+                '(the /proc identity reader currently reports none)')
 
 
 def _static_build_join(plan, participants, rows):
@@ -1605,7 +1656,10 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     if int(request_identity.task_id) not in correlated_tasks:
         raise ValueError('dynamic reconciliation: request task lacks request '
                          'correlation (observed nonce mismatch): no same-request '
-                         'identity join')
+                         'identity join; smallest missing observer capability: '
+                         'request-nonce correlation emitted in native task/response '
+                         'facts by the retained #301 producer (controller-side '
+                         'binding alone cannot join them)')
     request_task = int(request_identity.task_id)
     responses = client_facts.get('responses')
     if not isinstance(responses, list) or not responses:

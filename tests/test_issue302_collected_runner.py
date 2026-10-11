@@ -157,6 +157,15 @@ def export_name(native_label, pid, ordinal=0):
     return f'{native_label}-{pid}-{ordinal:04d}.json'
 
 
+def observed_visibility(participant):
+    """OBSERVED effective selectors a capable observer reports for the
+    frozen plan (mirrors the /1 binding-preflight visibility contract)."""
+    bindings = sorted(participant.bindings, key=lambda b: b.visible_selector)
+    return freeze(dict(native=[b.native_selector for b in bindings],
+                       visible=[b.visible_selector for b in bindings],
+                       environment={}))
+
+
 class StaticReconciliationTests(unittest.TestCase):
     """Genuine build manifests joined to synthetic plans; SYNTHETIC plans."""
 
@@ -176,7 +185,7 @@ class StaticReconciliationTests(unittest.TestCase):
         return ProcessIdentity(participant.participant_id, participant.host_id,
             participant.boot_epoch, participant.topology_epoch, spawn.pid, spawn.start,
             participant.runtime_executable, participant.runtime_sha256, argv,
-            freeze(dict(native=[], visible=[], environment={})), participant.rpc_endpoint)
+            observed_visibility(participant), participant.rpc_endpoint)
 
     def build_evidence(self, participant):
         return contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256)
@@ -275,7 +284,7 @@ class DynamicReconciliationTests(unittest.TestCase):
             identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
                 p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
                 p.runtime_sha256, (p.runtime_executable, '--serve'),
-                freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+                observed_visibility(p), p.rpc_endpoint)
             rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
                 spawn, contract.DerivedBuildEvidence(self.manifest, self.manifest.executable_sha256),
                 sha256(source_receipt(self.plan, p)),
@@ -403,7 +412,7 @@ def _static_receipt_for(plan, manifest, spawns):
         identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
             p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
             p.runtime_sha256, (p.runtime_executable, '--serve'),
-            freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+            observed_visibility(p), p.rpc_endpoint)
         static_rows.append(contract.ParticipantStaticEvidence(p.participant_id, identity,
             spawn, contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
             sha256(source_receipt(plan, p)),
@@ -1078,7 +1087,7 @@ class RecordingRunnerHarness:
         identity = ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch,
             p.topology_epoch, spawn.pid, spawn.start, p.runtime_executable,
             p.runtime_sha256, tuple(expected_argv) if expected_argv else (p.runtime_executable, '--serve'),
-            freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+            observed_visibility(p), p.rpc_endpoint)
         return contract.ParticipantStaticEvidence(p.participant_id, identity, spawn,
             contract.DerivedBuildEvidence(manifest, manifest.executable_sha256),
             sha256(self.sources[p.participant_id]),
