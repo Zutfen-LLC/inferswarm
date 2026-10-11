@@ -698,6 +698,42 @@ class CollectedRunnerTests(unittest.TestCase):
             h.runner().run(self.plan)
         self.assertEqual(h.posts, 1)
 
+    def assert_causal_output_rejected(self, mutate, reason):
+        from dataclasses import replace
+        h = RecordingRunnerHarness(self.plan)
+        original = h.collect_dynamic
+        def collect_dynamic(p, *args, **kwargs):
+            row = original(p, *args, **kwargs)
+            return replace(row, observation=_mutate_observation(row.observation,
+                lambda f: mutate(f, p.role)))
+        h.collect_dynamic = collect_dynamic
+        runner = h.runner()
+        with self.assertRaisesRegex(ValueError, reason):
+            runner.run(self.plan)
+        self.assertEqual(h.posts, 1)  # HTTP output exists, but is never accepted.
+        self.assertTrue(runner.last_cleanup)
+        self.assertTrue(all(row['lease'] == 'released'
+                            for row in runner.last_cleanup.values()))
+
+    def test_actual_runner_rejects_readback_before_final_forward_leg(self):
+        def mutate(facts, role):
+            if role == 'client':
+                facts['transfers'] = [facts['transfers'][i] for i in (0, 2, 3, 1)]
+        self.assert_causal_output_rejected(mutate, 'route.*dependency.*order')
+
+    def test_actual_runner_rejects_previous_generation_dependency(self):
+        from tests.test_issue302_route_contracts import add_synthetic_route_occurrence
+        def mutate(facts, role):
+            add_synthetic_route_occurrence(facts)
+            half = len(facts['transfers']) // 2
+            later = facts['transfers'][half:]
+            returns = [t for t in later if t['depends_on_route'] is not None]
+            sends = [t for t in later if t['depends_on_route'] is None]
+            for transfer in returns:
+                transfer['depends_on_route'] = 'copy-in-1'
+            facts['transfers'] = facts['transfers'][:half] + returns + sends
+        self.assert_causal_output_rejected(mutate, 'route.*dependency.*lineage')
+
     def test_profile_expiry_during_dynamic_collection_refuses_output(self):
         from datetime import timedelta
         h = RecordingRunnerHarness(self.plan)

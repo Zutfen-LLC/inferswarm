@@ -1057,5 +1057,165 @@ class ExactDynamicCorrelationTests(unittest.TestCase):
                              'state lineage.*coverage|state lineage.*identity')
 
 
+def add_synthetic_route_occurrence(facts, *, graph_generation=2, ubatch_id='ub-2',
+                                   ubatch_generation=2):
+    """Add a complete SYNTHETIC occurrence without changing task/nonce."""
+    import copy
+    facts['graphs'].append(dict(facts['graphs'][0],
+        graph_id=facts['graphs'][0]['graph_id'] + 1, generation=graph_generation,
+        ubatch_lineage=ubatch_id, ubatch_generation=ubatch_generation))
+    facts['ubatches'].append(dict(facts['ubatches'][0], ubatch_id=ubatch_id,
+        generation=ubatch_generation, graph_generation=graph_generation, index=1))
+    facts['tokens'].append(dict(facts['tokens'][0], ubatch_id=ubatch_id,
+        ubatch_generation=ubatch_generation, graph_generation=graph_generation))
+    for family in ('state_lineage', 'transfers', 'output_custody'):
+        for record in copy.deepcopy(facts.get(family, [])):
+            record.update(ubatch_id=ubatch_id, ubatch_generation=ubatch_generation,
+                          graph_generation=graph_generation)
+            for field in ('transfer_id', 'route_id', 'depends_on_route'):
+                if record.get(field):
+                    record[field] += '-2'
+            facts[family].append(record)
+
+
+class CausalRouteCompletionTests(unittest.TestCase):
+    """SPEC NO-GO: occurrence positions and same-ubatch dependency edges."""
+
+    @classmethod
+    def setUpClass(cls):
+        from tests.test_issue302_collected_runner import collected_plan
+        cls.plans = {'one-gpu': distinct_role_plan(),
+                     'cpu-only': collected_plan('cpu-only')}
+        cls.statics = {selection: static_receipt_for(plan, static_rows_for(plan))
+                       for selection, plan in cls.plans.items()}
+
+    def reconcile(self, selection, rows):
+        return contract.reconcile_dynamic(self.plans[selection], self.statics[selection],
+            rows, request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+    def mutate_rows(self, selection, mutate, participants=(0, 1)):
+        from dataclasses import replace
+        rows = synthetic_dynamic_rows(self.plans[selection], route=selection)
+        for participant in participants:
+            row = rows[participant]
+            rows[participant] = replace(row, observation=_mutate(row.observation, mutate))
+        return rows
+
+    def test_client_return_requires_final_forward_leg_already_completed(self):
+        # Within-chain leg order stays valid. Only observed occurrence order changes.
+        for order in ([0, 2, 3, 1], [0, 2, 1, 3]):
+            with self.subTest(order=order):
+                rows = self.mutate_rows('one-gpu',
+                    lambda f: f.update(transfers=[f['transfers'][i] for i in order]), (0,))
+                with self.assertRaisesRegex(ValueError, 'route.*dependency.*order'):
+                    self.reconcile('one-gpu', rows)
+
+    def test_remote_and_cpu_only_return_before_send_refuse(self):
+        for selection, participants in (('one-gpu', (1,)),
+                                         ('cpu-only', (0,)), ('cpu-only', (1,))):
+            with self.subTest(selection=selection, participants=participants):
+                rows = self.mutate_rows(selection, lambda f: f['transfers'].reverse(),
+                                        participants)
+                with self.assertRaisesRegex(ValueError, 'route.*dependency.*order'):
+                    self.reconcile(selection, rows)
+
+    def reject_previous_occurrence(self, **lineage):
+        from dataclasses import replace
+        for selection in self.plans:
+            valid = self.mutate_rows(selection,
+                lambda f: add_synthetic_route_occurrence(f, **lineage))
+            self.assertEqual(self.reconcile(selection, valid).verdict, 'DYNAMIC_ACCEPTED')
+            for participant in (0, 1):
+                def mutate(facts):
+                    original = facts['transfers'][:len(facts['transfers']) // 2]
+                    later = facts['transfers'][len(original):]
+                    sends = [t for t in later if t['depends_on_route'] is None]
+                    returns = [t for t in later if t['depends_on_route'] is not None]
+                    for transfer in returns:
+                        transfer['depends_on_route'] = 'copy-in-1'
+                    facts['transfers'] = original + returns + sends
+                # Both catalogs contain the next occurrence; only one participant's
+                # dependency is corrupted so each consumer path is tested independently.
+                rows = list(valid)
+                row = rows[participant]
+                rows[participant] = replace(row, observation=_mutate(row.observation, mutate))
+                with self.subTest(selection=selection, participant=participant, lineage=lineage):
+                    with self.assertRaisesRegex(ValueError, 'route.*dependency.*lineage'):
+                        self.reconcile(selection, rows)
+
+    def test_previous_graph_generation_cannot_satisfy_dependency(self):
+        self.reject_previous_occurrence(graph_generation=2, ubatch_id='ub-1',
+                                        ubatch_generation=1)
+
+    def test_previous_ubatch_identity_cannot_satisfy_dependency(self):
+        self.reject_previous_occurrence(graph_generation=1, ubatch_id='ub-2',
+                                        ubatch_generation=1)
+
+    def test_previous_ubatch_generation_cannot_satisfy_dependency(self):
+        self.reject_previous_occurrence(graph_generation=1, ubatch_id='ub-1',
+                                        ubatch_generation=2)
+
+    def test_both_participants_previous_generation_dependency_refuses(self):
+        def mutate(facts):
+            add_synthetic_route_occurrence(facts)
+            later = facts['transfers'][len(facts['transfers']) // 2:]
+            returns = [t for t in later if t['depends_on_route'] is not None]
+            sends = [t for t in later if t['depends_on_route'] is None]
+            for transfer in returns:
+                transfer['depends_on_route'] = 'copy-in-1'
+            facts['transfers'] = facts['transfers'][:len(later)] + returns + sends
+        for selection in self.plans:
+            with self.subTest(selection=selection):
+                with self.assertRaisesRegex(ValueError, 'route.*dependency.*lineage'):
+                    self.reconcile(selection, self.mutate_rows(selection, mutate))
+
+    def test_every_client_return_leg_names_the_same_dependency(self):
+        for dependency in (None, 'foreign-route'):
+            with self.subTest(dependency=dependency):
+                rows = self.mutate_rows('one-gpu',
+                    lambda f: f['transfers'][-1].update(depends_on_route=dependency), (0,))
+                with self.assertRaisesRegex(ValueError, 'route.*dependency.*join'):
+                    self.reconcile('one-gpu', rows)
+
+    def test_client_and_remote_return_name_the_same_intended_dependency(self):
+        def add_other_send(facts):
+            import copy
+            sends = [copy.deepcopy(t) for t in facts['transfers']
+                     if t['depends_on_route'] is None]
+            for transfer in sends:
+                transfer['route_id'] = 'other-send'
+                transfer['transfer_id'] += '-other'
+            facts['transfers'] = sends + facts['transfers']
+        for selection in self.plans:
+            rows = self.mutate_rows(selection, add_other_send)
+            from dataclasses import replace
+            def change_remote(facts):
+                facts['transfers'][-1]['depends_on_route'] = 'other-send'
+            rows[1] = replace(rows[1], observation=_mutate(rows[1].observation, change_remote))
+            with self.subTest(selection=selection):
+                with self.assertRaisesRegex(ValueError, 'route.*dependency.*join'):
+                    self.reconcile(selection, rows)
+
+    def test_interleaved_sends_accept_return_after_its_own_full_input_chain(self):
+        from dataclasses import replace
+        rows = self.mutate_rows('one-gpu', add_synthetic_route_occurrence)
+        # The route inserted first completes last. Generation 2's full send
+        # precedes its return, even while generation 1's input remains pending.
+        for participant, order in ((0, [0, 4, 5, 6, 7, 1, 2, 3]),
+                                    (1, [2, 3, 0, 1])):
+            row = rows[participant]
+            rows[participant] = replace(row, observation=_mutate(row.observation,
+                lambda f: f.update(transfers=[f['transfers'][i] for i in order])))
+        self.assertEqual(self.reconcile('one-gpu', rows).verdict, 'DYNAMIC_ACCEPTED')
+
+    def test_multiple_occurrences_remain_accepted_on_both_selections(self):
+        for selection in self.plans:
+            with self.subTest(selection=selection):
+                rows = self.mutate_rows(selection, add_synthetic_route_occurrence)
+                receipt = self.reconcile(selection, rows)
+                self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
+                self.assertEqual(receipt.request_identity.graph_generations, (1, 2))
+
+
 if __name__ == '__main__':
     unittest.main()
