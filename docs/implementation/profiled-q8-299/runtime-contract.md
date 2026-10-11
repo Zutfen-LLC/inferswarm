@@ -12,13 +12,20 @@ below. That addition separates pinned base source from derived patch/build
 identities and phases static admission before dispatch from dynamic acceptance
 after execution. The preceding fixed `/1` source analysis and the historical
 citations/digests below remain unchanged; they do not describe a derived `/2`
-artifact. The current `/2` implementation supplies the identity/parser and pure
-expectation foundations plus, since issue #302, the complete collected
-admission/acceptance joins (`reconcile_static`/`reconcile_dynamic`) wired
-through ordinary `run_config` behind the explicit observer deployment block.
-Offline synthetic-contract admission and acceptance are implemented; live
-physical execution, #300 qualification and execution authorization remain
-refused and separately gated.
+artifact. The current `/2` implementation supplies identity/parser and pure
+expectation foundations, collected reconciliation predicates, and ordinary
+`run_config` wiring behind the explicit observer deployment block. These are a
+staged offline, fail-closed framework, not a usable production Q8 path or #302
+completion. Maintainer review `5483410569` at `3e40e2ede56e54a3d067846adc99f93c8f3d335e`
+identified remaining receipt, correlation and allocation-accounting corrections.
+Synthetic-contract evidence is admissible only in `synthetic-test`, never live.
+Static admission does not grant physical Q8 qualification; #300 remains separate.
+The current producer cannot supply complete owned pre-POST inventory/selectors
+or carry the controller nonce through HTTP/native/RPC request execution. See
+[native correlation authorization boundary](native-correlation-authorization.md)
+for the exact missing correlation requirement and separately proposed source,
+capture and supervised-build slice. No new native transport is implemented or
+authorized by these offline corrections.
 
 ## Authenticated identities and evidence scope
 

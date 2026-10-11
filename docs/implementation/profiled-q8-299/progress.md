@@ -653,12 +653,14 @@ those emitters. Nothing in this round fabricates that evidence.
 
 ## Remaining work
 
-1. ~~Implement and review the approved successor observation contract, native
-   producer, real collector, independent identity reader and normal-runner
-   wiring.~~ Done for #301 (producer/build, PR #304 merged) and #302
-   (collector/reconcilers/normal wiring; SPEC GO and QUALITY APPROVED; the
-   CLI/examples/receipts child #303 and the separately gated hosted final
-   validation remain). CUDA/physical qualification remains #300.
+1. Retain completed #301 producer/build (PR #304 merged) and the #302 offline
+   collector/reconciliation/normal-runner framework, but finish the separately
+   authorized native inventory, selector and controller-to-native correlation
+   implementation before claiming #302 usable-runner acceptance. Review
+   `5483410569` supersedes the earlier offline GO as a completion decision;
+   [native authorization boundary](native-correlation-authorization.md) records
+   the unresolved seam. #302 and #299 remain open, #303 integration pending,
+   and #300 physical qualification unchanged.
 2. Add and review the no-effects plan-only CLI.
 3. Add and review reproducible illustrative one-GPU/CPU-only examples, receipts and documentation.
 4. Complete documentation/status impact checks and independent original-acceptance integration review.
