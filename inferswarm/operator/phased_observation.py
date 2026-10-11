@@ -1027,7 +1027,7 @@ class ObservedHostFacts:
     boot_epoch: str | None
     topology_epoch: str | None
     listening: tuple[str, ...]
-    observer_environment: dict
+    observer_environment: FrozenMapping
     source: str
 
     def __post_init__(self):
@@ -1039,13 +1039,15 @@ class ObservedHostFacts:
             raise ValueError('observed listeners must be a tuple')
         for endpoint in self.listening:
             _text(endpoint, 'observed listener')
-        if type(self.observer_environment) is not dict:
+        environment = thaw(self.observer_environment)
+        if type(environment) is not dict:
             raise ValueError('observed environment must be an object')
-        for key, value in self.observer_environment.items():
+        for key, value in environment.items():
             _text(key, 'observed environment key')
             if type(value) is not str:
                 raise ValueError('observed environment value must be text')
         _text(self.source, 'observed host facts source')
+        object.__setattr__(self, 'observer_environment', _snapshot(environment))
 
 
 @dataclass(frozen=True)
@@ -1074,7 +1076,10 @@ class ObservedInventoryEvidence:
             value = getattr(self, name)
             if type(value) is not tuple:
                 raise ValueError('observed inventory ' + name + ' must be a tuple')
-            object.__setattr__(self, name, tuple(freeze(_thaw(row)) for row in value))
+            for row in value:
+                if type(row) not in (dict, FrozenMapping):
+                    raise ValueError('observed inventory row must be an object')
+            object.__setattr__(self, name, tuple(_snapshot(_thaw(row)) for row in value))
 
 
 @dataclass(frozen=True)
@@ -1096,6 +1101,13 @@ class ParticipantStaticEvidence:
     source_receipt_digest: str
     observed_inventory: ObservedInventoryEvidence | None = None
     observed_host_facts: ObservedHostFacts | None = None
+    capture: FrozenMapping | None = None
+
+    def __post_init__(self):
+        if self.capture is not None:
+            if type(self.capture) not in (dict, FrozenMapping):
+                raise ValueError('static capture must be an object')
+            object.__setattr__(self, 'capture', _snapshot(thaw(self.capture)))
 
 
 @dataclass(frozen=True)
@@ -1375,7 +1387,7 @@ def _static_observed_joins(plan, participants, rows, metadata_inventory=None):
             raise ValueError('static reconciliation: observed listener does not '
                              'cover the configured participant endpoint: '
                              + row.participant_id)
-        environment = host.observer_environment
+        environment = _thaw(host.observer_environment)
         if environment.get('IS301_OBSERVE') != '1' \
                 or 'IS301_EXPORT_DIR' not in environment:
             raise ValueError('static reconciliation: observer environment not '
@@ -1482,6 +1494,52 @@ _SET_OPS = ('set', 'rpc_set')
 _GET_OPS = ('get', 'rpc_get')
 
 
+def _static_capture_join(plan, rows, mode, now):
+    """Fresh independent capture joins; labels are not authentication or #300."""
+    from .profiles import utc_timestamp, validate_profiles
+    for row in rows:
+        origins = (getattr(row.observed_inventory, 'source', None),
+                   getattr(row.observed_host_facts, 'source', None))
+        if mode == 'live' and origins != ('native-observer/2', 'proc-owned/2'):
+            raise ValueError('static reconciliation: evidence provenance missing, synthetic or unknown: '
+                             + row.participant_id)
+        if mode == 'synthetic-test' and any(origin not in (None, 'synthetic-contract') for origin in origins):
+            raise ValueError('static reconciliation: synthetic evidence provenance must be explicit')
+        capture = row.capture
+        if capture is None:
+            if mode == 'live':
+                raise ValueError('static reconciliation: independent capture provenance missing: '
+                                 + row.participant_id)
+            continue
+        capture = thaw(capture)
+        required = ('observed_at', 'expires_at', 'capture_id', 'producer', 'plan_digest',
+                    'invocation_token', 'pid', 'start', 'build_digest', 'source_digest')
+        keys(capture, required, 'static capture')
+        for key, expected in dict(plan_digest=plan.digest,
+                invocation_token=row.spawn.invocation_token, pid=row.spawn.pid, start=row.spawn.start,
+                build_digest=row.build.manifest.manifest_sha256,
+                source_digest=row.source_receipt_digest,
+                producer='native-observer/2' if mode == 'live' else 'synthetic-contract').items():
+            if not _same_json(capture[key], expected):
+                raise ValueError('static reconciliation: capture ' + key + ' mismatch')
+        _text(capture['capture_id'], 'static capture identity')
+        observed = utc_timestamp(capture['observed_at'])
+        expires = utc_timestamp(capture['expires_at'])
+        if observed > now or expires <= now or expires <= observed or (now - observed).total_seconds() > plan.policy.max_age_seconds:
+            raise ValueError('static reconciliation: capture stale, expired or future')
+    if mode == 'live':
+        from dataclasses import replace
+        deficits = validate_profiles(plan.profiles.snapshot, now=now, policy=plan.policy,
+                                     subject=replace(plan.candidate.subject, mode='live'))
+        if deficits:
+            raise ValueError('static reconciliation: capture profile freshness/provenance: ' + '; '.join(deficits))
+
+
+def _evidence_wire(value):
+    from dataclasses import asdict
+    return thaw(asdict(value)) if value is not None else None
+
+
 def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None):
     """Complete static admission over independently collected evidence.
 
@@ -1494,11 +1552,12 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
     """
     from .bindings import _now as _binding_now
     from .profiles import sha256 as _sha256, canonical as _canonical, thaw as _thaw
-    _binding_now(mode, clock)
+    now = _binding_now(mode, clock)
     participants, rows, token = _static_evidence_rows(plan, evidence)
     _static_source_join(plan, participants, rows, source_receipts)
     _static_identity_join(plan, participants, rows, token)
     _static_build_join(plan, participants, rows)
+    _static_capture_join(plan, rows, mode, now)
     inventory = _static_observed_joins(plan, participants, rows)
     material = []
     for row in sorted(rows, key=lambda r: r.participant_id):
@@ -1507,7 +1566,11 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
             spawn_pid=row.spawn.pid, spawn_start=row.spawn.start,
             build_manifest=manifest_wire(row.build.manifest),
             executable_sha256=row.build.executable_sha256,
-            source_receipt_digest=row.source_receipt_digest))
+            source_receipt_digest=row.source_receipt_digest,
+            observed_inventory=_evidence_wire(row.observed_inventory),
+            observed_host_facts=_evidence_wire(row.observed_host_facts),
+            capture=thaw(row.capture), invocation_token=row.spawn.invocation_token,
+            plan_digest=plan.digest))
     counts = (('participants', len(rows)),
               ('source-range-joined-weights', len(plan.candidate.assignments)),
               ('expected-states', len(plan.candidate.required_state)),
@@ -1517,10 +1580,7 @@ def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None
     spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
                           for row in rows))
     return PhaseReceipt(RECEIPT_SCHEMA, 'static', _STATIC_VERDICT, plan.digest, plan.selection,
-        token, _sha256(material), True, mode == 'live' and not any(
-            row.observed_inventory is not None
-            and row.observed_inventory.source == 'synthetic-contract'
-            for row in rows), False, None, counts, spawns)
+        token, _sha256(material), True, False, False, None, counts, spawns)
 
 
 def _identity_wire_digest(identity):
@@ -1825,7 +1885,7 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
               ('transfers', len(all_transfers)),
               ('wire_bytes', wire_bytes))
     return PhaseReceipt(RECEIPT_SCHEMA, 'dynamic', _DYNAMIC_VERDICT, plan.digest, plan.selection,
-        request_identity.invocation_token, _sha256(material), True, mode == 'live', False,
+        request_identity.invocation_token, _sha256(material), True, False, False,
         request_identity, counts)
 
 
