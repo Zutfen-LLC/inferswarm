@@ -320,7 +320,17 @@ def _validate_options(config,metadata):
     if config.strategy_id!=STRATEGY_ID: raise ValueError('unsupported strategy id')
     if config.selection not in ('one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
     options=thaw(config.strategy_options)
-    keys(options,('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds'),'strategy options')
+    base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
+    keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
+    observer=options.get('observer')
+    if observer is not None:
+        # #302 explicit derived-build qualification for the collected /2 path.
+        # Optional: the legacy /1 observer path and all existing configs are
+        # unchanged; the collected runner refuses without it.
+        if not isinstance(observer,dict) or set(observer)!={'manifest_path','executable_path'}:
+            raise ValueError('observer options: exact manifest/executable deployment paths required')
+        for value in observer.values():
+            text(value,'observer deployment path')
     keys(options['bindings'],('loader','remote_cpu','remote_gpu') if config.selection=='one-gpu' else ('loader','remote_cpu'),'strategy bindings')
     if options['route'] not in ('client-mediated','server-local'): raise ValueError('unsupported explicit copy route')
     if options['source_contract']!='full-source-both-hosts/1': raise ValueError('unsupported full-source backing contract')

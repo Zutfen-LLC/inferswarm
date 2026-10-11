@@ -12,9 +12,13 @@ below. That addition separates pinned base source from derived patch/build
 identities and phases static admission before dispatch from dynamic acceptance
 after execution. The preceding fixed `/1` source analysis and the historical
 citations/digests below remain unchanged; they do not describe a derived `/2`
-artifact. The current `/2` implementation supplies **identity/parser and pure
-expectation foundations only**: both incomplete reconcilers refuse, so it
-cannot admit dispatch or accept output.
+artifact. The current `/2` implementation supplies the identity/parser and pure
+expectation foundations plus, since issue #302, the complete collected
+admission/acceptance joins (`reconcile_static`/`reconcile_dynamic`) wired
+through ordinary `run_config` behind the explicit observer deployment block.
+Offline synthetic-contract admission and acceptance are implemented; live
+physical execution, #300 qualification and execution authorization remain
+refused and separately gated.
 
 ## Authenticated identities and evidence scope
 
@@ -482,16 +486,15 @@ value records graph IDs, not the still-pending graph/ubatch lineage/count/token
 catalog or response-custody proof. A later immutable value can record new facts
 without changing the original dispatch identity.
 
-`reconcile_static` always raises `IncompleteReconciliation` with
-`static incomplete reconciliation: unsupported admission`.
-`reconcile_dynamic` always raises it with
-`dynamic incomplete reconciliation: unsupported acceptance`, even for an empty
-catalog or a caller-forged positive static receipt. Neither creates
-`STATIC_ADMITTED` or `DYNAMIC_ACCEPTED`. The reserved `PhaseReceipt` is a
-structural value, not authority; parsing or direct construction of any value
-cannot unlock dispatch/output. The old partial routines were removed rather
-than retained as pretend complete acceptance. Clock/mode arguments cannot
-bypass these unconditional refusals.
+Historical note (superseded by issue #302): through the parser-only slice,
+`reconcile_static` raised `IncompleteReconciliation` with `static incomplete
+reconciliation: unsupported admission` and `reconcile_dynamic` with `dynamic
+incomplete reconciliation: unsupported acceptance`. Since #302 both
+reconcilers perform the complete collected joins and refuse fail-closed with
+named reasons on any missing, stale or contradictory evidence; `PhaseReceipt`
+values they create are structural records, never authority, and parsing or
+direct construction of any value still cannot unlock dispatch/output.
+Clock/mode arguments cannot bypass the fail-closed predicates.
 
 The original full matrix remains mandatory, **pending**:
 

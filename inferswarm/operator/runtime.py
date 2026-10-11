@@ -14,6 +14,7 @@ import urllib.request
 
 from .config import load_config
 from .lifecycle import LeaseManager,SSHTransport
+from .native_observer.collector import NATIVE_LABELS
 from .plan import ProfiledOperatorPlan, build_plan, revalidate_admission
 from .profiles import canonical, freeze, thaw
 from . import bindings
@@ -126,12 +127,18 @@ def ssh_tunnel(address,remote_port):
 
 class OperatorRunner:
     def __init__(self,source,leases,http,tunnel_factory,pause=time.sleep,*,
-                 binding_transport=None,identity_reader=None,observation_mode='live',clock=None):
+                 binding_transport=None,identity_reader=None,observation_mode='live',clock=None,
+                 collector=None,static_reconciler=None,dynamic_reconciler=None):
         self.source=source; self.leases=leases; self.http=http
         self.tunnel_factory=tunnel_factory; self.pause=pause; self.last_cleanup={}
         # Internal synthetic plumbing only: run_config/CLI never exposes this.
         self.binding_transport=binding_transport; self.identity_reader=identity_reader
         self.observation_mode=observation_mode; self.clock=clock
+        # #302 real collector path: production wiring supplies these through
+        # run_config; tests inject recording doubles.
+        self.collector=collector
+        self.static_reconciler=static_reconciler
+        self.dynamic_reconciler=dynamic_reconciler
 
     def run(self,plan):
         if isinstance(plan,ProfiledOperatorPlan): return self._run_profiled(plan)
@@ -257,6 +264,8 @@ class OperatorRunner:
 
     def _run_profiled(self,plan):
         if plan.strategy_id!='qwen38-q8-fixed/1': raise ValueError('unsupported profiled runtime strategy')
+        if self.collector is not None:
+            return self._run_profiled_collected(plan)
         if self.binding_transport is None or type(self.binding_transport) is bindings.BindingTransport:
             raise ValueError(bindings.UNSUPPORTED_OBSERVER)
         if not callable(self.identity_reader): raise ValueError('independent identity reader required; no host-query default')
@@ -382,6 +391,199 @@ class OperatorRunner:
         result['cleanup']=self.last_cleanup
         return result
 
+    def _run_profiled_collected(self,plan):
+        """#302 production path: real collector, phased /2 reconciliation.
+
+        Complete static admission runs over independently collected evidence
+        after both owned processes are healthy and before the sole POST; the
+        same-request dynamic reconciliation runs after the POST and gates
+        output acceptance. A dynamic refusal means execution occurred but the
+        output is rejected, which is reported truthfully.
+        """
+        from .phased_observation import (OwnedSpawnFacts, RequestIdentity,
+            reconcile_static, reconcile_dynamic)
+        from .profiles import sha256 as _sha256
+        admission=self._profiled_admission(plan)
+        mode=dict(mode=self.observation_mode,clock=self.clock)
+        spec=llama_cpp_spec(plan)
+        client=next(p for p in plan.participants if p.role=='client')
+        remote=next(p for p in plan.participants if p.role=='remote')
+        for part in (client,remote):
+            if Path(part.source_path).name!=plan.model.members[0][0]:
+                raise ValueError(part.role+' source_path must name first full GGUF member')
+        host,sep,port=remote.rpc_endpoint.rpartition(':')
+        if not sep or not host or not port.isdecimal() or int(port)!=remote.port:
+            raise ValueError('RPC endpoint must exactly match configured port')
+        if client.execution_address==remote.execution_address: raise ValueError('distinct explicit execution addresses required')
+        if client.lifecycle_dir==remote.lifecycle_dir: raise ValueError('distinct lifecycle directories required')
+        cache_enabled=thaw(plan.strategy_options)['rpc_cache']=='enabled'
+        options=thaw(plan.strategy_options)
+        observer_options=options.get('observer')
+        if not isinstance(observer_options,dict):
+            raise ValueError('observer deployment options required for the collected /2 path')
+        for field in ('manifest_path','executable_path'):
+            if not isinstance(observer_options.get(field),str) or not observer_options[field]:
+                raise ValueError('observer deployment option '+field+' required')
+        remote_argv=(remote.runtime_executable,*spec.rpc_args,'--host',host,'--port',str(remote.port),
+                     *(('--cache',) if cache_enabled else ()))
+        client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
+        tunnel=None; error=None; result=None; cleanup_error=None
+        try:
+            self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
+            self.leases.acquire(client.execution_address,client.lifecycle_dir)
+            sources={p.participant_id:self.source.verify(p,plan,
+                str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
+                if p.role=='remote' and cache_enabled else None) for p in (remote,client)}
+            self.leases.port(remote.execution_address,host,remote.port)
+            self.leases.port(client.execution_address,'127.0.0.1',client.port)
+            invocation=self.leases.token
+            export_dirs={
+                remote.participant_id:str(Path(self.leases.invocation_dir(remote.execution_address))/'exports-rpc'),
+                client.participant_id:str(Path(self.leases.invocation_dir(client.execution_address))/'exports-client')}
+            rows={remote.participant_id:self.leases.spawn(remote.execution_address,'rpc',list(remote_argv),
+                cache=remote.cache_path if cache_enabled else None,export=export_dirs[remote.participant_id])}
+            rpc_deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                self._live(client,remote,client_started=False)
+                ready=self.leases.listening(remote.execution_address,'rpc',host,remote.port)
+                self._live(client,remote,client_started=False)
+                if time.monotonic()>rpc_deadline: raise TimeoutError('RPC owned listener startup timeout')
+                if ready: break
+                self.pause(.5)
+            rows[client.participant_id]=self.leases.spawn(client.execution_address,'client',list(client_argv),
+                export=export_dirs[client.participant_id])
+            # Own the opened tunnel before any health/identity/capture can fail.
+            opened=self.tunnel_factory(client.execution_address,client.port)
+            tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
+            base=f'http://127.0.0.1:{local_port}'
+            deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                self._live(client,remote)
+                if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during startup')
+                try:
+                    if self.http.get(base+'/health',timeout=2).get('status')=='ok': break
+                except (OSError,ValueError,urllib.error.URLError): pass
+                if time.monotonic()>deadline: raise TimeoutError('client startup health timeout')
+                self.pause(.5)
+            # Complete static admission before the sole POST: independently
+            # collected identity/build/source joins for every participant.
+            static_evidence=[]
+            for p in plan.participants:
+                row=rows[p.participant_id]
+                start=row.get('start')
+                if type(start) is int and start>=0: start=str(start)
+                spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
+                argv=client_argv if p.role=='client' else remote_argv
+                evidence=self.collector.collect_static(p,spawn,
+                    observer_options['manifest_path'],observer_options['executable_path'],
+                    _sha256(sources[p.participant_id]),expected_argv=argv)
+                static_evidence.append(evidence)
+            static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
+            self._live(client,remote)
+            if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited before request')
+            request=dict(plan.request)
+            request_nonce=secrets.token_hex(16)
+            request_identity=RequestIdentity(invocation_token=invocation,request_nonce=request_nonce)
+            # Recheck plan freshness after blocking liveness/tunnel work,
+            # immediately before the sole POST; no transport work intervenes.
+            admission=self._profiled_admission(plan)
+            response=self.http.post(base+'/v1/chat/completions',
+                {'messages':[{'role':'user','content':request['prompt']}],
+                 'max_tokens':request['max_tokens'],'temperature':request['temperature'],
+                 'seed':request['seed'],'stream':False},timeout=900)
+            self._live(client,remote)
+            if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during request')
+            choice=response['choices'][0]; text=choice['message']['content']
+            if not isinstance(text,str) or not text or not choice['finish_reason'] or not response['id']:
+                raise ValueError('incomplete generation response')
+            # The response arrived; from here a failure means the request
+            # executed but its output is REJECTED, which is raised truthfully.
+            result_choice=choice; result_text=text; result_response=response
+            # Same-request dynamic acceptance: the retained overlay exports
+            # its terminal envelope at owned-process termination, so the
+            # controller tears down the tunnel and owned processes first,
+            # then collects and reconciles before accepting output.
+            if tunnel.poll() is None: tunnel.terminate()
+            try: tunnel.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                tunnel.kill(); tunnel.wait(timeout=5)
+            owned_cleanup=self.leases.cleanup()
+            self.last_cleanup=owned_cleanup
+            if any(row.get('lease')!='released' for row in owned_cleanup.values()):
+                raise RuntimeError(f'incomplete owned cleanup: {owned_cleanup}')
+            dynamic_evidence=[]
+            for p in plan.participants:
+                row=rows[p.participant_id]
+                start=row.get('start')
+                if type(start) is int and start>=0: start=str(start)
+                spawn=OwnedSpawnFacts(p.participant_id,row['pid'],start,invocation)
+                dynamic_evidence.append(self.collector.collect_dynamic(p,spawn,
+                    export_dirs[p.participant_id],plan.digest,invocation,
+                    NATIVE_LABELS['client' if p.role=='client' else 'remote']))
+            # Bind the request identity to OBSERVED native facts: the task id
+            # and graph generations come from the collected evidence, never
+            # from the controller's guesses. The HTTP response id binds the
+            # output; the native task id binds the request.
+            client_evidence=next(e for e in dynamic_evidence
+                if e.participant_id==client.participant_id)
+            facts=thaw(client_evidence.observation.facts)
+            native_tasks=facts.get('tasks') or []
+            if len(native_tasks)!=1:
+                raise ValueError('dynamic reconciliation: request task binding ambiguous: '
+                                 'expected exactly one observed native task for this request')
+            request_identity=RequestIdentity(invocation_token=invocation,
+                request_nonce=request_nonce,
+                task_id=str(native_tasks[0]['task_id']),
+                response_id=str(result_response['id']))
+            dynamic_receipt=self.dynamic_reconciler(plan,static_receipt,dynamic_evidence,
+                request_identity,**mode)
+            # Recheck evidence freshness after blocking collection work.
+            admission=self._profiled_admission(plan)
+            def detached(value): return json.loads(canonical(thaw(asdict(value))))
+            response=result_response; choice=result_choice; text=result_text
+            result=dict(response_id=response['id'],text=text,finish_reason=choice['finish_reason'],
+                tokens=response['usage']['completion_tokens'],plan_id=plan.plan_id,plan_digest=plan.digest,
+                selection=plan.selection,admission=detached(admission),verified_backing=sources,
+                static_receipt=detached(static_receipt),dynamic_receipt=detached(dynamic_receipt),
+                observation_mode=self.observation_mode,
+                execution_ready=self.observation_mode=='live' and admission.execution_ready,
+                physical_qualified=static_receipt.physical_qualified,
+                execution_authorized=False,
+                nonclaims=['source authentication is not cache consumption or physical placement',
+                           'dynamic acceptance is not execution authorization; output accepted, execution already occurred',
+                           'synthetic full-Q8 scenarios remain synthetic; no live capability evidence'])
+        except BaseException as exc: error=exc
+        finally:
+            try:
+                if tunnel is not None:
+                    if tunnel.poll() is None: tunnel.terminate()
+                    try: tunnel.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        tunnel.kill(); tunnel.wait(timeout=5)
+            except BaseException as exc:
+                cleanup_error=RuntimeError(f'SSH tunnel cleanup failed: {exc}')
+                cleanup_error.__cause__=exc
+            finally:
+                try:
+                    # A completed mid-run cleanup released every lease; the
+                    # idempotent second pass returns {} and must NOT erase the
+                    # authoritative receipt.
+                    repeat=self.leases.cleanup()
+                    if repeat:
+                        self.last_cleanup=repeat
+                except BaseException as exc:
+                    failure=RuntimeError(f'incomplete owned cleanup: {exc}')
+                    failure.__cause__=cleanup_error or exc; cleanup_error=failure
+            if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
+                failure=RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
+                failure.__cause__=cleanup_error; cleanup_error=failure
+        if error is not None:
+            if cleanup_error is not None: raise error from cleanup_error
+            raise error
+        if cleanup_error is not None: raise cleanup_error
+        result['cleanup']=self.last_cleanup
+        return result
+
     def _live(self,client,remote,client_started=True):
         if not self.leases.alive(remote.execution_address,'rpc'): raise RuntimeError('remote participant lost')
         if client_started and not self.leases.alive(client.execution_address,'client'):
@@ -391,5 +593,19 @@ class OperatorRunner:
 def run_config(path):
     plan=build_plan(load_config(path))
     manager=LeaseManager(SSHTransport(),secrets.token_hex(16))
-    runner=OperatorRunner(SSHSourceTransport(),manager,JSONHTTP(),ssh_tunnel)
+    observer=None
+    if isinstance(plan,ProfiledOperatorPlan):
+        options=thaw(plan.strategy_options)
+        observer=options.get('observer') if isinstance(options,dict) else None
+    if observer:
+        # #302 production collected /2 path: real SSH collector, independent
+        # /proc identity reader and phased reconciliation through ordinary
+        # run_config. Legacy /1 observer wiring stays unchanged.
+        from .native_observer.collector import NativeObserverCollector
+        from .phased_observation import reconcile_static, reconcile_dynamic
+        runner=OperatorRunner(SSHSourceTransport(),manager,JSONHTTP(),ssh_tunnel,
+            collector=NativeObserverCollector(),static_reconciler=reconcile_static,
+            dynamic_reconciler=reconcile_dynamic)
+    else:
+        runner=OperatorRunner(SSHSourceTransport(),manager,JSONHTTP(),ssh_tunnel)
     return runner.run(plan)

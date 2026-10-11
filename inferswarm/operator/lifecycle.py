@@ -103,6 +103,12 @@ def _onhost(p):
         if record.exists() or log.exists(): raise ValueError('process record/log already exists')
         env=os.environ.copy()
         if p.get('cache'): env['LLAMA_CACHE']=p['cache']
+        if p.get('export'):
+            # The observation overlay claims the directory itself via
+            # O_CREAT|O_EXCL; the controller owns creating it fresh and
+            # enabling the strictly observation-only emitter.
+            export_root=Path(p['export']); export_root.mkdir(parents=True,exist_ok=False)
+            env['IS301_EXPORT_DIR']=p['export']; env['IS301_OBSERVE']='1'
         with log.open('xb') as f:
             child=subprocess.Popen(p['argv'],stdin=subprocess.DEVNULL,stdout=f,stderr=subprocess.STDOUT,
                                    close_fds=True,start_new_session=True,env=env)
@@ -193,8 +199,8 @@ class LeaseManager:
     def invocation_dir(self,address):
         return str(Path(self.leases[address])/self.token)
 
-    def spawn(self,address,name,argv,cache=None):
-        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache)
+    def spawn(self,address,name,argv,cache=None,export=None):
+        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache,export=export)
         self.owned[address][name]=result
         return result
 

@@ -954,7 +954,7 @@ def parse_observation(reply: TransportReply) -> ParsedObservation:
 
 @dataclass(frozen=True)
 class PhaseReceipt:
-    """Reserved structural receipt, not authority; no reconciler creates one yet."""
+    """Structural receipt binding spawn facts; never execution authority."""
     schema: str
     phase: str
     verdict: str
@@ -967,24 +967,492 @@ class PhaseReceipt:
     execution_authorized: bool
     request_identity: RequestIdentity | None = None
     counts: tuple[tuple[str, int], ...] = ()
+    spawn_facts: tuple[tuple[str, int, str], ...] = ()
 
 
 class IncompleteReconciliation(ValueError):
-    """The parser-only implementation cannot issue admission or acceptance."""
+    """A named reconciliation predicate is unimplemented or unevidenced."""
 
 
-def reconcile_static(plan, observations, source_receipts, *, mode='live', clock=None):
-    """Fail closed until the full inventory/source/identity/resource gate exists."""
-    raise IncompleteReconciliation('static incomplete reconciliation: unsupported admission')
+@dataclass(frozen=True)
+class OwnedSpawnFacts:
+    """Controller-side spawn receipt facts; never observer-supplied."""
+    participant_id: str
+    pid: int
+    start: str
+    invocation_token: str
+
+    def __post_init__(self):
+        _text(self.participant_id, 'spawn participant')
+        integer(self.pid, 'spawn pid', minimum=1)
+        _text(self.start, 'spawn start')
+        _text(self.invocation_token, 'spawn invocation token')
 
 
-def reconcile_dynamic(plan, static_receipt, observations, request_identity, *, mode='live', clock=None):
-    """Fail closed until complete same-request graph/state/copy/output proof exists."""
-    raise IncompleteReconciliation('dynamic incomplete reconciliation: unsupported acceptance')
+@dataclass(frozen=True)
+class DerivedBuildEvidence:
+    """Explicit derived-build qualification joins, independently collected.
+
+    The manifest is an authenticated ``q8-native-build-manifest/2`` identity;
+    ``executable_sha256`` is independently read from the actual executable
+    bytes by the collector, never taken from the manifest alone.
+    """
+    manifest: NativeBuildIdentity
+    executable_sha256: str
+
+    def __post_init__(self):
+        if type(self.manifest) is not NativeBuildIdentity:
+            raise ValueError('derived build evidence: typed manifest required')
+        _digest(self.executable_sha256, 'derived build executable digest')
+        if self.executable_sha256 != self.manifest.executable_sha256:
+            raise ValueError('derived build executable bytes mismatch')
+
+
+@dataclass(frozen=True)
+class ParticipantStaticEvidence:
+    """One participant's independently collected static admission evidence.
+
+    The retained #301 overlay emits only terminal dynamic envelopes from its
+    two production sites; there is no production static-snapshot producer, so
+    static admission is built from independently collected process identity,
+    verified source ranges and explicit derived-build qualification only.
+    """
+    participant_id: str
+    identity: Any
+    spawn: OwnedSpawnFacts
+    build: DerivedBuildEvidence
+    source_receipt_digest: str
+
+
+@dataclass(frozen=True)
+class ParticipantDynamicEvidence:
+    """One participant's collected same-request dynamic evidence.
+
+    The native envelope's ``participant_id``/``invocation_token`` are
+    producer-local labels (e.g. ``llama-server``); the controller binding is
+    the invocation-owned export claim, whose pid/start must equal the owned
+    spawn receipt facts, and whose claimed native label must equal the
+    envelope's own participant label.
+    """
+    participant_id: str
+    observation: ParsedObservation
+    spawn: OwnedSpawnFacts
+    claim_pid: int
+    claim_start: str
+    native_participant: str
+
+    def __post_init__(self):
+        _text(self.participant_id, 'dynamic evidence participant')
+        if type(self.observation) is not ParsedObservation:
+            raise ValueError('dynamic evidence: typed observation required')
+        if self.observation.phase != 'dynamic':
+            raise ValueError('dynamic evidence: dynamic phase required')
+        if self.observation.stream_kind != 'whole' or not self.observation.terminal:
+            raise ValueError('dynamic evidence: terminal whole stream required')
+        if type(self.spawn) is not OwnedSpawnFacts:
+            raise ValueError('dynamic evidence: typed spawn receipt required')
+        if self.spawn.participant_id != self.participant_id:
+            raise ValueError('dynamic evidence: spawn participant mismatch')
+        _text(self.native_participant, 'dynamic evidence native participant')
+        if self.native_participant != self.observation.participant_id:
+            raise ValueError('dynamic evidence: envelope label does not match export claim')
+        from .profiles import integer
+        integer(self.claim_pid, 'dynamic evidence claim pid', minimum=1)
+        _text(self.claim_start, 'dynamic evidence claim start')
+        if self.claim_pid != self.spawn.pid or self.claim_start != self.spawn.start:
+            raise ValueError('dynamic evidence: export claim does not match owned spawn')
+
+
+_SOURCE_RECEIPT_FIELDS = ('schema', 'participant_id', 'status', 'plan_digest', 'metadata_digest',
+    'source_identity', 'runtime_sha256', 'range_identities', 'physical_observation', 'cache_consumed')
+_SOURCE_RANGE_FIELDS = ('state_id', 'member', 'offset', 'length', 'sha256', 'binding_id',
+    'memory_id', 'authority', 'cache_eligible', 'cache_key')
+
+
+def _same_json(actual, expected):
+    from .profiles import canonical as _canonical, thaw as _thaw
+    return _canonical(_thaw(actual)) == _canonical(_thaw(expected))
+
+
+def _static_evidence_rows(plan, evidence):
+    from .plan import ProfiledOperatorPlan as _Plan
+    if type(plan) is not _Plan:
+        raise ValueError('static reconciliation: typed profiled plan required')
+    if plan.strategy_id != 'qwen38-q8-fixed/1':
+        raise ValueError('static reconciliation: unsupported profiled strategy')
+    if type(evidence) not in (tuple, list) or not evidence:
+        raise ValueError('static reconciliation: typed participant evidence required')
+    rows = []
+    for row in evidence:
+        if type(row) is not ParticipantStaticEvidence:
+            raise ValueError('static reconciliation: typed participant evidence required')
+        if type(row.spawn) is not OwnedSpawnFacts:
+            raise ValueError('static reconciliation: owned spawn receipt required: '
+                             + repr(row.participant_id))
+        rows.append(row)
+    ids = [row.participant_id for row in rows]
+    participants = {p.participant_id: p for p in plan.participants}
+    if set(ids) != set(participants) or len(ids) != len(set(ids)):
+        raise ValueError('static reconciliation: participant coverage mismatch')
+    tokens = {row.spawn.invocation_token for row in rows}
+    if len(tokens) != 1:
+        raise ValueError('static reconciliation: invocation token mismatch')
+    return participants, rows, tokens.pop()
+
+
+def _static_source_join(plan, participants, rows, source_receipts):
+    from .profiles import sha256 as _sha256
+    if type(source_receipts) is not dict:
+        raise ValueError('static reconciliation: source receipt mapping required')
+    if set(source_receipts) != set(participants):
+        raise ValueError('static reconciliation: source receipt coverage mismatch')
+    global_ranges = set()
+    for row in rows:
+        participant = participants[row.participant_id]
+        receipt = source_receipts[row.participant_id]
+        if not isinstance(receipt, dict) or any(field not in receipt for field in _SOURCE_RECEIPT_FIELDS):
+            raise ValueError('static reconciliation: source receipt identity missing: ' + row.participant_id)
+        checks = dict(schema='q8-source-receipt/1', participant_id=row.participant_id,
+            status='VERIFIED-not-consumed', plan_digest=plan.digest, metadata_digest=plan.metadata.digest,
+            source_identity={k: getattr(plan.model, k) for k in ('source_id', 'revision', 'representation')},
+            runtime_sha256=participant.runtime_sha256, physical_observation=False, cache_consumed=False)
+        for field, want in checks.items():
+            if not _same_json(receipt[field], want):
+                raise ValueError('static reconciliation: source receipt identity mismatch: ' + row.participant_id)
+        if not _same_json(receipt.get('member_identities'), _plan_members_wire(plan)):
+            raise ValueError('static reconciliation: source receipt member mismatch: ' + row.participant_id)
+        if _sha256(receipt) != row.source_receipt_digest:
+            raise ValueError('static reconciliation: source receipt digest mismatch: ' + row.participant_id)
+        ids = {b.binding_id for b in participant.bindings}
+        assignments = {a.state_id: a for a in plan.candidate.assignments if a.binding_id in ids}
+        if not assignments:
+            raise ValueError('static reconciliation: participant owns no weights: ' + row.participant_id)
+        indexed = {}
+        for r in receipt['range_identities']:
+            if not isinstance(r, dict) or 'state_id' not in r:
+                raise ValueError('static reconciliation: source range identity required: ' + row.participant_id)
+            name = r['state_id']
+            if name in indexed:
+                raise ValueError('static reconciliation: duplicate source range: ' + name)
+            indexed[name] = r
+        if set(indexed) != set(assignments):
+            raise ValueError('static reconciliation: source range coverage mismatch: ' + row.participant_id)
+        for name, assignment in assignments.items():
+            r = indexed[name]
+            if any(field not in r for field in _SOURCE_RANGE_FIELDS):
+                raise ValueError('static reconciliation: source range fields: ' + name)
+            for field, want in dict(member=assignment.member, offset=assignment.absolute_offset,
+                    length=assignment.encoded_bytes, binding_id=assignment.binding_id,
+                    memory_id=assignment.memory_id, authority=assignment.authority).items():
+                if not _same_json(r[field], want):
+                    raise ValueError('static reconciliation: source range mismatch: ' + name)
+            if type(r['cache_eligible']) is not bool:
+                raise ValueError('static reconciliation: source cache flag: ' + name)
+            if name in global_ranges:
+                raise ValueError('static reconciliation: duplicate global source range: ' + name)
+            global_ranges.add(name)
+    if global_ranges != {a.state_id for a in plan.candidate.assignments}:
+        raise ValueError('static reconciliation: complete weight coverage mismatch')
+
+
+def _plan_members_wire(plan):
+    from dataclasses import asdict as _asdict
+    return [list(row) for row in _asdict(plan.model)['members']]
+
+
+def _static_identity_join(plan, participants, rows, token):
+    from .bindings import ProcessIdentity as _ProcessIdentity
+    for row in rows:
+        participant = participants[row.participant_id]
+        spawn = row.spawn
+        if spawn.participant_id != row.participant_id or spawn.invocation_token != token:
+            raise ValueError('static reconciliation: spawn receipt identity mismatch: ' + row.participant_id)
+        identity = row.identity
+        if type(identity) is not _ProcessIdentity:
+            raise ValueError('static reconciliation: typed owned identity required: ' + row.participant_id)
+        expected = dict(participant_id=participant.participant_id, host_id=participant.host_id,
+            boot_epoch=participant.boot_epoch, topology_epoch=participant.topology_epoch,
+            executable=participant.runtime_executable, binary_sha256=participant.runtime_sha256,
+            endpoint=participant.rpc_endpoint)
+        for field, want in expected.items():
+            if getattr(identity, field) != want:
+                raise ValueError('static reconciliation: owned identity mismatch: ' + field + ': ' + row.participant_id)
+        if identity.pid != spawn.pid or identity.start != spawn.start:
+            raise ValueError('static reconciliation: owned identity pid/start mismatch: ' + row.participant_id)
+        # The observed effective argv must contain the frozen runtime
+        # executable; a foreign process image is a named refusal.
+        if not identity.effective_argv or identity.effective_argv[0] != participant.runtime_executable:
+            raise ValueError('static reconciliation: owned process image mismatch: ' + row.participant_id)
+
+
+def _static_build_join(plan, participants, rows):
+    from .qwen_q8 import RUNTIME_PIN, RUNTIME_TREE
+    for row in rows:
+        participant = participants[row.participant_id]
+        build = row.build
+        if type(build) is not DerivedBuildEvidence:
+            raise ValueError('static reconciliation: derived build evidence required: ' + row.participant_id)
+        manifest = build.manifest
+        if manifest.executable_sha256 != participant.runtime_sha256:
+            raise ValueError('static reconciliation: derived build executable identity mismatch: ' + row.participant_id)
+        if manifest.base_revision != RUNTIME_PIN or manifest.base_tree != RUNTIME_TREE:
+            raise ValueError('static reconciliation: derived build does not descend from the pinned base: ' + row.participant_id)
+
+
+_STATIC_VERDICT = 'STATIC_ADMITTED'
+_DYNAMIC_VERDICT = 'DYNAMIC_ACCEPTED'
+_SET_OPS = ('set', 'rpc_set')
+_GET_OPS = ('get', 'rpc_get')
+
+
+def reconcile_static(plan, evidence, source_receipts, *, mode='live', clock=None):
+    """Complete static admission over independently collected evidence.
+
+    Joins the typed plan's calculated inventory with independently collected
+    per-participant evidence: complete verified source ranges over every
+    weight assignment, owned spawn/identity equality, and the explicit
+    derived-build qualification binding the observer binary to the pinned
+    base. Any missing, stale or contradictory fact refuses with its name;
+    a receipt never authorizes execution.
+    """
+    from .bindings import _now as _binding_now
+    from .profiles import sha256 as _sha256, canonical as _canonical, thaw as _thaw
+    _binding_now(mode, clock)
+    participants, rows, token = _static_evidence_rows(plan, evidence)
+    _static_source_join(plan, participants, rows, source_receipts)
+    _static_identity_join(plan, participants, rows, token)
+    _static_build_join(plan, participants, rows)
+    material = []
+    for row in sorted(rows, key=lambda r: r.participant_id):
+        material.append(dict(participant_id=row.participant_id,
+            identity_digest=_identity_wire_digest(row.identity),
+            spawn_pid=row.spawn.pid, spawn_start=row.spawn.start,
+            build_manifest=manifest_wire(row.build.manifest),
+            executable_sha256=row.build.executable_sha256,
+            source_receipt_digest=row.source_receipt_digest))
+    counts = (('participants', len(rows)),
+              ('source-range-joined-weights', len(plan.candidate.assignments)),
+              ('expected-states', len(plan.candidate.required_state)),
+              ('boundaries', len(plan.candidate.boundaries)))
+    spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
+                          for row in rows))
+    return PhaseReceipt(RECEIPT_SCHEMA, 'static', _STATIC_VERDICT, plan.digest, plan.selection,
+        token, _sha256(material), True, mode == 'live', False, None, counts, spawns)
+
+
+def _identity_wire_digest(identity):
+    from .profiles import sha256 as _sha256
+    from dataclasses import asdict as _asdict
+    payload = _asdict(identity)
+    payload['effective_argv'] = list(payload['effective_argv'])
+    payload['visibility'] = _visibility_wire(payload['visibility'])
+    return _sha256(payload)
+
+
+def _visibility_wire(value):
+    from .profiles import thaw as _thaw
+    out = _thaw(value)
+    if isinstance(out, dict):
+        return {k: (list(v) if isinstance(v, (list, tuple)) else dict(v) if isinstance(v, dict) else v)
+                for k, v in out.items()}
+    return out
+
+
+def manifest_wire(manifest):
+    body = {name: getattr(manifest, name) for name in BUILD_COMPONENTS if name != 'backend_libraries'}
+    body['build_options'] = list(manifest.build_options)
+    body['backend_libraries'] = [{'name': n, 'sha256': d} for n, d in manifest.backend_libraries]
+    body['manifest_sha256'] = manifest.manifest_sha256
+    return body
+
+
+def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode='live', clock=None):
+    """Same-request dynamic acceptance over collected native evidence.
+
+    Requires a STATIC_ADMITTED receipt for the same plan and invocation,
+    terminal whole dynamic streams for every participant, the actual
+    task/response and graph-generation facts for this request, nonempty
+    allocation catalogs, and both GET/SET copy legs with the client-side
+    output-custody readback. A verdict accepts output only; execution
+    already occurred and is never authorized here.
+    """
+    from .bindings import _now as _binding_now
+    from .plan import ProfiledOperatorPlan as _Plan
+    from .profiles import sha256 as _sha256, thaw as _thaw, integer as _integer
+    _binding_now(mode, clock)
+    if type(plan) is not _Plan or plan.strategy_id != 'qwen38-q8-fixed/1':
+        raise ValueError('dynamic reconciliation: typed profiled plan required')
+    if type(static_receipt) is not PhaseReceipt:
+        raise ValueError('dynamic reconciliation: typed static receipt required')
+    if (static_receipt.schema != RECEIPT_SCHEMA or static_receipt.phase != 'static'
+            or static_receipt.verdict != _STATIC_VERDICT):
+        raise ValueError('dynamic reconciliation: static admission receipt required')
+    if not static_receipt.observations_valid:
+        raise ValueError('dynamic reconciliation: static receipt observations invalid')
+    if not static_receipt.spawn_facts:
+        raise ValueError('dynamic reconciliation: static receipt spawn facts missing')
+    if static_receipt.plan_digest != plan.digest or static_receipt.selection != plan.selection:
+        raise ValueError('dynamic reconciliation: static receipt plan identity mismatch')
+    if type(request_identity) is not RequestIdentity:
+        raise ValueError('dynamic reconciliation: typed request identity required')
+    if static_receipt.invocation_token != request_identity.invocation_token:
+        raise ValueError('dynamic reconciliation: invocation token mismatch')
+    if request_identity.response_id is None:
+        raise ValueError('dynamic reconciliation: request response binding missing')
+    if request_identity.task_id is None:
+        raise ValueError('dynamic reconciliation: request task binding missing: '
+                         'bind the observed native task id from collected evidence, '
+                         'never dispatch without it')
+    if type(evidence) not in (tuple, list) or not evidence:
+        raise ValueError('dynamic reconciliation: typed participant evidence required')
+    rows = []
+    for row in evidence:
+        if type(row) is not ParticipantDynamicEvidence:
+            raise ValueError('dynamic reconciliation: typed participant evidence required')
+        rows.append(row)
+    participants = {p.participant_id: p for p in plan.participants}
+    ids = [row.participant_id for row in rows]
+    if set(ids) != set(participants) or len(ids) != len(set(ids)):
+        raise ValueError('dynamic reconciliation: participant coverage mismatch')
+    client_id = next(p.participant_id for p in plan.participants if p.role == 'client')
+    events = {}
+    facts = {}
+    wire_bytes = 0
+    tokens = set()
+    for row in rows:
+        observation = row.observation
+        tokens.add(row.spawn.invocation_token)
+        if observation.participant_id != row.native_participant:
+            raise ValueError('dynamic reconciliation: observation label mismatch: ' + row.participant_id)
+        facts[row.participant_id] = _thaw(observation.facts)
+        events[row.participant_id] = tuple(item['event'] for item in
+                                           [_sequence_wire(item) for item in observation.sequence])
+        allocations = facts[row.participant_id].get('allocations')
+        if not isinstance(allocations, list) or not allocations:
+            raise ValueError('dynamic reconciliation: allocation catalog incomplete: ' + row.participant_id)
+        for record in allocations:
+            if (not isinstance(record, dict) or type(record.get('buffer_bytes')) is not int
+                    or record['buffer_bytes'] < 1):
+                raise ValueError('dynamic reconciliation: allocation record incomplete: ' + row.participant_id)
+            backend = record.get('backend')
+            # Native backend labels are 'CPU' or ordinal RPC registration
+            # names ('RPC0[host:port]'); anything else is not a native fact.
+            if (not isinstance(backend, str) or not backend
+                    or (backend != 'CPU' and not backend.startswith('RPC'))):
+                raise ValueError('dynamic reconciliation: allocation backend not a native '
+                                 'selector label: ' + row.participant_id)
+        for record in transfers_of(facts[row.participant_id]):
+            wire_bytes += _integer(record.get('bytes'), 'dynamic transfer bytes', minimum=0)
+    if len(tokens) != 1 or tokens.pop() != request_identity.invocation_token:
+        raise ValueError('dynamic reconciliation: invocation token mismatch')
+    dynamic_spawns = tuple(sorted((row.spawn.participant_id, row.spawn.pid, row.spawn.start)
+                                  for row in rows))
+    if dynamic_spawns != tuple(static_receipt.spawn_facts):
+        raise ValueError('dynamic reconciliation: spawn continuity with static admission mismatch')
+    # Same-request task/response and graph joins. The native producer emits
+    # response_id as the literal "unknown" at task-creation time; request
+    # binding is by the observed native task id (controller-side binding of
+    # the HTTP response id happens in the runner, not in native facts).
+    client_facts = facts[client_id]
+    tasks = client_facts.get('tasks')
+    if not isinstance(tasks, list) or not tasks:
+        raise ValueError('dynamic reconciliation: request task facts missing')
+    observed_task_ids = set()
+    for task in tasks:
+        if not isinstance(task, dict) or type(task.get('task_id')) is not int:
+            raise ValueError('dynamic reconciliation: request task record malformed')
+        observed_task_ids.add(task['task_id'])
+    if request_identity.task_id not in {str(t) for t in observed_task_ids}:
+        raise ValueError('dynamic reconciliation: request task not observed for this request')
+    request_task = int(request_identity.task_id)
+    responses = client_facts.get('responses')
+    if not isinstance(responses, list) or not responses:
+        raise ValueError('dynamic reconciliation: response custody facts missing')
+    # The response custodian must have answered THE request's task; responses
+    # naming only other tasks do not establish this request's output custody.
+    answered = set()
+    for response in responses:
+        if not isinstance(response, dict) or type(response.get('task_id')) is not int:
+            raise ValueError('dynamic reconciliation: response task record malformed')
+        if response['task_id'] not in observed_task_ids:
+            raise ValueError('dynamic reconciliation: response task join mismatch')
+        answered.add(response['task_id'])
+    if request_task not in answered:
+        raise ValueError('dynamic reconciliation: no observed response for the request task')
+    graphs = client_facts.get('graphs')
+    if not isinstance(graphs, list) or not graphs:
+        raise ValueError('dynamic reconciliation: graph facts missing')
+    observed_generations = set()
+    for graph in graphs:
+        if not isinstance(graph, dict) or type(graph.get('status')) is not int \
+                or graph['status'] != 0:
+            raise ValueError('dynamic reconciliation: graph status not successful')
+        # Native graph ids are runtime pointers (unbounded 64-bit); the value
+        # is opaque, so only identity presence and a successful status count.
+        if type(graph.get('graph_id')) is not int or graph['graph_id'] < 1:
+            raise ValueError('dynamic reconciliation: graph identity missing')
+        if type(graph.get('nodes')) is not int or graph['nodes'] < 1:
+            raise ValueError('dynamic reconciliation: graph node count missing')
+        observed_generations.add(graph['graph_id'])
+    for generation in request_identity.graph_generations:
+        if generation not in observed_generations:
+            raise ValueError('dynamic reconciliation: graph generation not observed for this request')
+    client_events = events[client_id]
+    for required in ('server_task_new_id', 'server_task_processed', 'server_response_send'):
+        if required not in client_events:
+            raise ValueError('dynamic reconciliation: request lifecycle event missing: ' + required)
+    # Copy-route legs: B CPU -> A staging -> B CUDA requires both SET and GET
+    # families, with the output-custody readback on the client/loader side.
+    all_transfers = [record for row in rows for record in transfers_of(facts[row.participant_id])]
+    ops = {record.get('op') for record in all_transfers}
+    if not any(op in _SET_OPS for op in ops):
+        raise ValueError('dynamic reconciliation: copy route SET leg missing')
+    if not any(op in _GET_OPS for op in ops):
+        raise ValueError('dynamic reconciliation: copy route GET leg missing')
+    if not any(record.get('op') in _GET_OPS for record in transfers_of(client_facts)):
+        raise ValueError('dynamic reconciliation: output custody readback missing on loader')
+    material = []
+    for row in sorted(rows, key=lambda r: r.participant_id):
+        material.append(dict(participant_id=row.participant_id,
+            claim_pid=row.claim_pid, claim_start=row.claim_start,
+            observation_digest=row.observation.terminal_digest,
+            events=len(events[row.participant_id])))
+    counts = (('participants', len(rows)),
+              ('tasks', 1),
+              ('graphs', len(graphs)),
+              ('transfers', len(all_transfers)),
+              ('wire_bytes', wire_bytes))
+    return PhaseReceipt(RECEIPT_SCHEMA, 'dynamic', _DYNAMIC_VERDICT, plan.digest, plan.selection,
+        request_identity.invocation_token, _sha256(material), True, mode == 'live', False,
+        request_identity, counts)
+
+
+def transfers_of(facts):
+    transfers = facts.get('transfers')
+    if not isinstance(transfers, list) or not transfers:
+        raise ValueError('dynamic reconciliation: transfer facts missing')
+    for record in transfers:
+        if not isinstance(record, dict):
+            raise ValueError('dynamic reconciliation: transfer record malformed')
+        if type(record.get('bytes')) is not int or record['bytes'] < 1:
+            raise ValueError('dynamic reconciliation: transfer record without material bytes')
+        shape = record.get('shape')
+        if (not isinstance(shape, list) or not shape
+                or any(type(dim) is not int or dim < 1 for dim in shape)):
+            raise ValueError('dynamic reconciliation: transfer record without observed shape')
+        if not isinstance(record.get('op'), str) or not record['op']:
+            raise ValueError('dynamic reconciliation: transfer record without op')
+    return transfers
+
+
+def _sequence_wire(item):
+    from .profiles import thaw as _thaw
+    return _thaw(item)
 
 
 __all__ = ['BUILD_SCHEMA', 'RECEIPT_SCHEMA', 'NATIVE_STREAM_SCHEMA',
            'NativeBuildIdentity', 'RequestIdentity', 'ParsedObservation', 'PhaseReceipt',
            'IncompleteReconciliation', 'parse_build_manifest', 'native_build_matches',
            'require_native_build_match', 'parse_observation', 'reconcile_static', 'reconcile_dynamic',
-           'StaticPlanContext', 'derive_static_plan_context']
+           'StaticPlanContext', 'derive_static_plan_context', 'OwnedSpawnFacts', 'DerivedBuildEvidence',
+           'ParticipantStaticEvidence', 'ParticipantDynamicEvidence']
