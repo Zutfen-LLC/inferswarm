@@ -460,6 +460,18 @@ class DynamicRouteContractTests(unittest.TestCase):
         rows = static_rows_for(self.plan, **kwargs)
         return static_receipt_for(self.plan, rows)
 
+    def test_transfer_with_foreign_request_correlation_refuses(self):
+        rows = synthetic_dynamic_rows(self.plan)
+        facts = dict(thaw(rows[0].observation.facts))
+        facts['transfers'] = [dict(t, task_id=999, request_nonce='foreign')
+                              for t in facts['transfers']]
+        mutated = _mutate(rows[0].observation, lambda f: None, replacement=facts)
+        from dataclasses import replace
+        rows = (replace(rows[0], observation=mutated), rows[1])
+        with self.assertRaisesRegex(ValueError, 'transfer.*request|foreign'):
+            contract.reconcile_dynamic(self.plan, self.static_receipt(), rows,
+                request_for(), mode='synthetic-test', clock=lambda: NOW)
+
     def test_complete_synthetic_route_contract_accepts(self):
         receipt = contract.reconcile_dynamic(self.plan, self.static_receipt(),
             synthetic_dynamic_rows(self.plan), request_for(),
