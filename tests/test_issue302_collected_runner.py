@@ -734,6 +734,51 @@ class CollectedRunnerTests(unittest.TestCase):
             facts['transfers'] = facts['transfers'][:half] + returns + sends
         self.assert_causal_output_rejected(mutate, 'route.*dependency.*lineage')
 
+    def assert_client_leg_field_output_rejected(self, field):
+        """Actual runner: one recording POST, no output, both leases released."""
+        from dataclasses import replace
+        from tests.test_issue302_route_contracts import add_synthetic_route_occurrence
+        for selection in ('one-gpu', 'cpu-only'):
+            plan = self.plan if selection == 'one-gpu' else collected_plan(selection)
+            legs = 4 if selection == 'one-gpu' else 2
+            for occurrence in (0, 1):
+                for leg in range(legs):
+                    values = ('opposite', 'unknown') if field == 'op' else ('B/cuda' if selection == 'cpu-only' else 'A/cpu',)
+                    for value in values:
+                        with self.subTest(selection=selection, occurrence=occurrence,
+                                          leg=leg, field=field, value=value):
+                            h = RecordingRunnerHarness(plan)
+                            original = h.collect_dynamic
+                            def collect_dynamic(p, *args, **kwargs):
+                                row = original(p, *args, **kwargs)
+                                def mutate(facts):
+                                    add_synthetic_route_occurrence(facts)
+                                    if p.role == 'client':
+                                        transfer = facts['transfers'][occurrence * legs + leg]
+                                        bad = ('get' if transfer['op'] == 'set' else 'set') if value == 'opposite' else value
+                                        transfer[field] = bad
+                                return replace(row, observation=_mutate_observation(row.observation, mutate))
+                            h.collect_dynamic = collect_dynamic
+                            runner = h.runner()
+                            returned = []
+                            with self.assertRaisesRegex(ValueError, 'route|CPU-domain|output custody'):
+                                returned.append(runner.run(plan))
+                            self.assertEqual(returned, [])
+                            self.assertEqual(h.posts, 1)
+                            self.assertEqual(set(runner.last_cleanup),
+                                             {p.execution_address for p in plan.participants})
+                            self.assertTrue(all(row['lease'] == 'released'
+                                                for row in runner.last_cleanup.values()))
+
+    def test_actual_runner_rejects_every_client_leg_wrong_operation_family(self):
+        self.assert_client_leg_field_output_rejected('op')
+
+    def test_actual_runner_rejects_every_client_leg_wrong_source_domain(self):
+        self.assert_client_leg_field_output_rejected('source_domain')
+
+    def test_actual_runner_rejects_every_client_leg_wrong_destination_domain(self):
+        self.assert_client_leg_field_output_rejected('dest_domain')
+
     def test_profile_expiry_during_dynamic_collection_refuses_output(self):
         from datetime import timedelta
         h = RecordingRunnerHarness(self.plan)

@@ -1217,5 +1217,140 @@ class CausalRouteCompletionTests(unittest.TestCase):
                 self.assertEqual(receipt.request_identity.graph_generations, (1, 2))
 
 
+class PerOccurrenceClientLegTests(unittest.TestCase):
+    """QUALITY Q1: exemplars cannot validate another material occurrence.
+
+    All mutations are resealed SYNTHETIC observations passed through the real
+    parser and reconciler. Graph/ubatch, range and dependency joins stay intact.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from tests.test_issue302_collected_runner import collected_plan
+        cls.plans = {'one-gpu': distinct_role_plan(),
+                     'cpu-only': collected_plan('cpu-only')}
+        cls.statics = {selection: static_receipt_for(plan, static_rows_for(plan))
+                       for selection, plan in cls.plans.items()}
+
+    def rows_for(self, selection):
+        from dataclasses import replace
+        return [replace(row, observation=_mutate(row.observation,
+                    add_synthetic_route_occurrence))
+                for row in synthetic_dynamic_rows(self.plans[selection], route=selection)]
+
+    def reconcile(self, selection, rows):
+        return contract.reconcile_dynamic(self.plans[selection], self.statics[selection],
+            rows, request_for(), mode='synthetic-test', clock=lambda: NOW)
+
+    def reject_leg_field(self, field, participant=0):
+        from dataclasses import replace
+        for selection in self.plans:
+            valid = self.rows_for(selection)
+            self.assertEqual(self.reconcile(selection, valid).verdict, 'DYNAMIC_ACCEPTED')
+            facts = contract._sequence_wire(valid[participant].observation.facts)
+            half = len(facts['transfers']) // 2
+            for occurrence in (0, 1):
+                for leg in range(half):
+                    index = occurrence * half + leg
+                    transfer = facts['transfers'][index]
+                    if field == 'op':
+                        family = ('set', 'rpc_set') if transfer['op'] in ('set', 'rpc_set') else ('get', 'rpc_get')
+                        values = [op for op in ('set', 'rpc_set', 'get', 'rpc_get', 'unknown')
+                                  if op not in family]
+                    else:
+                        values = [domain for domain in
+                                  ('B/cpu', 'A/cpu', 'A/staging', 'B/cuda', 'A/cpu-output', None)
+                                  if domain != transfer[field] and
+                                  (selection != 'cpu-only' or participant == 1
+                                   or domain not in ('B/cpu', 'A/cpu'))]
+                    for value in values:
+                        with self.subTest(selection=selection, participant=participant,
+                                          occurrence=occurrence, leg=leg, field=field, value=value):
+                            rows = list(valid)
+                            rows[participant] = replace(valid[participant], observation=_mutate(
+                                valid[participant].observation,
+                                lambda f: f['transfers'][index].update(**{field: value})))
+                            with self.assertRaisesRegex(ValueError, 'route|CPU-domain|output custody'):
+                                self.reconcile(selection, rows)
+
+    def test_every_client_leg_operation_family_in_every_occurrence(self):
+        self.reject_leg_field('op')
+
+    def test_every_client_leg_source_domain_in_every_occurrence(self):
+        self.reject_leg_field('source_domain')
+
+    def test_every_client_leg_destination_domain_in_every_occurrence(self):
+        self.reject_leg_field('dest_domain')
+
+    def test_remote_operation_family_remains_checked_per_occurrence(self):
+        self.reject_leg_field('op', participant=1)
+
+    def test_remote_source_domain_remains_checked_per_occurrence(self):
+        self.reject_leg_field('source_domain', participant=1)
+
+    def test_remote_destination_domain_remains_checked_per_occurrence(self):
+        self.reject_leg_field('dest_domain', participant=1)
+
+    def test_additional_valid_preceding_copy_cannot_mask_a_later_client_leg(self):
+        import copy
+        from dataclasses import replace
+        rows = self.rows_for('one-gpu')
+        def add_preceding_copy(facts):
+            half = len(facts['transfers']) // 2
+            for family, originals in (('transfers', facts['transfers'][:half]),
+                                      ('output_custody', facts.get('output_custody', [])[:1])):
+                extra = copy.deepcopy(originals)
+                for record in extra:
+                    for field in ('transfer_id', 'route_id', 'depends_on_route'):
+                        if record.get(field):
+                            record[field] += '-extra'
+                facts.setdefault(family, [])[:0] = extra
+        rows = [replace(r, observation=_mutate(r.observation, add_preceding_copy)) for r in rows]
+        self.assertEqual(self.reconcile('one-gpu', rows).verdict, 'DYNAMIC_ACCEPTED')
+        for leg in range(4):
+            for field in ('op', 'source_domain', 'dest_domain'):
+                original = contract._sequence_wire(rows[0].observation.facts)['transfers'][8 + leg]
+                value = ('get' if original['op'] == 'set' else 'set') if field == 'op' else 'A/cpu'
+                with self.subTest(leg=leg, field=field):
+                    bad = list(rows)
+                    bad[0] = replace(rows[0], observation=_mutate(rows[0].observation,
+                        lambda f: f['transfers'][8 + leg].update(**{field: value})))
+                    with self.assertRaisesRegex(ValueError, 'route|output custody'):
+                        self.reconcile('one-gpu', bad)
+
+    def test_operation_family_aliases_preserve_multiple_generations_and_interleaving(self):
+        from dataclasses import replace
+        for selection in self.plans:
+            rows = self.rows_for(selection)
+            for participant, row in enumerate(rows):
+                def mutate(facts):
+                    for t in facts['transfers']:
+                        t['op'] = 'rpc_set' if t['op'] in ('set', 'rpc_set') else 'rpc_get'
+                    order = ([0, 4, 5, 6, 7, 1, 2, 3] if participant == 0 else [2, 3, 0, 1]) if selection == 'one-gpu' else [2, 3, 0, 1]
+                    facts['transfers'] = [facts['transfers'][i] for i in order]
+                rows[participant] = replace(row, observation=_mutate(row.observation, mutate))
+            with self.subTest(selection=selection):
+                receipt = self.reconcile(selection, rows)
+                self.assertEqual(receipt.verdict, 'DYNAMIC_ACCEPTED')
+                self.assertEqual(receipt.request_identity.graph_generations, (1, 2))
+                self.assertFalse(receipt.physical_qualified)
+                self.assertFalse(receipt.execution_authorized)
+
+    def test_cpu_only_client_cpu_domain_semantics_are_preserved(self):
+        from dataclasses import replace
+        valid = self.rows_for('cpu-only')
+        for source in ('A/cpu', 'B/cpu'):
+            for destination in ('A/cpu', 'B/cpu'):
+                def mutate(facts):
+                    for t in facts['transfers']:
+                        t.update(source_domain=source, dest_domain=destination)
+                    for output in facts['output_custody']:
+                        output['output_domain'] = destination
+                rows = list(valid)
+                rows[0] = replace(valid[0], observation=_mutate(valid[0].observation, mutate))
+                with self.subTest(source=source, destination=destination):
+                    self.assertEqual(self.reconcile('cpu-only', rows).verdict, 'DYNAMIC_ACCEPTED')
+
+
 if __name__ == '__main__':
     unittest.main()
