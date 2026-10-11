@@ -11,6 +11,7 @@ mirroring the qualified source-transport pattern.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 import shlex
@@ -215,9 +216,12 @@ class NativeObserverCollector:
                 or claim_pid != spawn.pid or claim_start != spawn.start):
             raise CollectorError('export directory claim owner mismatch: '
                                  + participant.participant_id)
+        # Only the exact plaintext claim file is excluded; every other JSON
+        # file is inspected so a second stream cannot hide behind a
+        # claim-prefixed name.
         names = sorted(name for name in
                        self.transport.list_dir(participant.execution_address, export_dir)
-                       if name.endswith('.json') and not name.startswith(CLAIM_NAME))
+                       if name.endswith('.json') and name != CLAIM_NAME)
         # Every envelope in an owned export directory must be either the one
         # DYNAMIC evidence stream or a legal static snapshot (fenced, empty
         # zero interval). A 'static'-labeled envelope carrying an event
@@ -239,24 +243,32 @@ class NativeObserverCollector:
                                  f'{[name for name, _ in dynamics]}')
         name, observation = dynamics[0]
         # Bind the selected envelope to the owned claim on every identity
-        # surface: the producer writes '<label>-<pid>-<ordinal>.json' and a
-        # generation 'exp-<pid>-<ordinal>-<ns>' derived from the SAME process.
-        stem = name[:-len('.json')]
-        expected_prefix = native_label + '-' + str(claim_pid) + '-'
-        if not stem.startswith(expected_prefix):
+        # surface. The producer writes '<label>-<pid>-%04d.json' and a
+        # generation 'exp-<pid>-<ordinal>-<ns>' from the SAME capture: exact
+        # full-format match, same owned pid AND same ordinal on both surfaces.
+        match = re.fullmatch(r'([A-Za-z0-9_.-]+)-(\d+)-(\d{4})', name[:-len('.json')])
+        if match is None or match.group(1) != native_label \
+                or int(match.group(2)) != claim_pid:
             raise CollectorError('dynamic envelope filename does not match the owned '
-                                 'claim pid: ' + stem)
+                                 'claim producer format: ' + name)
+        ordinal = int(match.group(3))
         generation = observation.stream_generation
-        if not generation.startswith('exp-' + str(claim_pid) + '-') and \
-                not generation.startswith('gen-' + str(claim_pid) + '-'):
+        gen = re.fullmatch(r'exp-(\d+)-(\d+)-(\d+)', generation)
+        if gen is None or int(gen.group(1)) != claim_pid or int(gen.group(2)) != ordinal:
             raise CollectorError('dynamic envelope generation does not match the owned '
-                                 'claim pid: ' + generation)
+                                 'claim capture: ' + generation)
         facts = thaw(observation.facts)
         process = facts.get('process')
-        if isinstance(process, dict) and type(process.get('pid')) is int \
-                and process['pid'] != claim_pid:
-            raise CollectorError('dynamic envelope process census does not match the '
-                                 'owned claim pid: ' + participant.participant_id)
+        # A present process census is mandatory-shaped: exact dict with an
+        # exact-int pid equal to the owned claim. Malformed or contradictory
+        # values refuse; there is no absent-census escape once the key exists.
+        if 'process' in facts:
+            if not isinstance(process, dict) or type(process.get('pid')) is not int:
+                raise CollectorError('dynamic envelope process census malformed: '
+                                     + participant.participant_id)
+            if process['pid'] != claim_pid:
+                raise CollectorError('dynamic envelope process census does not match the '
+                                     'owned claim pid: ' + participant.participant_id)
         # The retained overlay seals native envelopes with a zero plan digest
         # (the producer never sees the controller plan identity); the binding
         # to this invocation runs through the export claim checked above.

@@ -820,6 +820,84 @@ class CollectedRunnerTests(unittest.TestCase):
                 contract.reconcile_dynamic(self.plan, static, tuple(rows), request,
                                            mode='synthetic-test', clock=lambda: NOW)
 
+    def test_malformed_process_census_refuses(self):
+        # A present census with a string/float/bool/scalar pid refuses.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        for bad in ('99999', 99999.0, True, 99999):
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['facts'] = dict(record['facts'])
+            if isinstance(bad, str) or isinstance(bad, bool) or isinstance(bad, float):
+                record['facts']['process'] = dict(record['facts'].get('process') or {}, pid=bad)
+            else:
+                record['facts']['process'] = dict(record['facts'].get('process') or {}, pid=bad)
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242),
+                     record)
+            tree.put_dir(p.execution_address, export,
+                         ['is301-claim', export_name('llama-server', 4242)])
+            with self.assertRaisesRegex(CollectorError,
+                                        'process census (malformed|does not match)'):
+                collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                          NATIVE_LABELS['client'])
+
+    def test_claim_prefixed_second_dynamic_stream_cannot_hide(self):
+        # A second envelope named 'is301-claim-shadow.json' is inspected like
+        # any other JSON; two dynamic streams refuse for ambiguity.
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        tree.put(p.execution_address, export + '/' + export_name('llama-server', 4242, 0),
+                 genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242))
+        shadow = genuine_dynamic('cpu-dynamic.json', 'ggml-rpc-server', 'inv-302', 4242)
+        tree.put(p.execution_address, export + '/is301-claim-shadow.json', shadow)
+        tree.put_dir(p.execution_address, export,
+                     ['is301-claim', 'is301-claim-shadow.json',
+                      export_name('llama-server', 4242, 0)])
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        with self.assertRaisesRegex(CollectorError, 'exactly one dynamic envelope'):
+            collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                      NATIVE_LABELS['client'])
+
+    def test_filename_and_generation_format_strictly_enforced(self):
+        tree = VirtualHostTree()
+        p = next(p for p in self.plan.participants if p.role == 'client')
+        export = '/synthetic/exports-client'
+        tree.put(p.execution_address, export + '/is301-claim',
+                 '4242\nstart-4242\nllama-server\n'.encode())
+        collector = NativeObserverCollector(RecordingCollectorTransport(tree))
+        spawn = contract.OwnedSpawnFacts(p.participant_id, 4242, 'start-4242', 'inv-302')
+        cases = [
+            ('llama-server-4242-garbage.json', 'exp-4242-0-966507438683494',
+             'producer format'),
+            (export_name('llama-server', 4242, 63), 'exp-4242-0-966507438683494',
+             'generation does not match the owned'),
+            (export_name('llama-server', 4242), 'exp-4242-',
+             'generation does not match the owned'),
+            (export_name('llama-server', 4242), 'gen-4242-0-966507438683494',
+             'generation does not match the owned'),
+        ]
+        for filename, generation, reason in cases:
+            record = genuine_dynamic('cpu-dynamic.json', 'llama-server', 'inv-302', 4242)
+            record['stream_generation'] = generation
+            record['terminal_digest'] = hashlib.sha256(canonical(
+                {k: v for k, v in record.items() if k != 'terminal_digest'})).hexdigest()
+            tree.put(p.execution_address, export + '/' + filename, record)
+            tree.put_dir(p.execution_address, export, ['is301-claim', filename])
+            with self.subTest(filename=filename, generation=generation):
+                with self.assertRaisesRegex(CollectorError, reason):
+                    collector.collect_dynamic(p, spawn, export, self.plan.digest, 'inv-302',
+                                              NATIVE_LABELS['client'])
+
     def test_resealed_foreign_manifest_refuses_in_collector(self):
         # A self-consistent but foreign overlay identity must refuse: the
         # derived build must descend from the retained authenticated #301

@@ -556,9 +556,19 @@ response-custody join now requires an observed response for THE request's
 task (responses naming only other tasks refuse); and response task ids and
 graph status values must be exact integers (booleans and floats refuse).
 
-Verification after all three correction passes: the expanded
-`tests/test_issue302_collected_runner.py` (32 tests, including the SPEC
-reproductions from all three rounds as regressions), all ten existing
+A fourth SPEC round (2026-10-11) returned NO-GO with two further verified
+findings and one strictness gap, all corrected: a present process census is
+now mandatory-shaped (exact dict with an exact-int pid; malformed or
+contradictory values refuse with no absent-census escape once the key
+exists); only the exact plaintext claim filename is excluded from envelope
+inspection, so a claim-prefixed second dynamic stream cannot hide; and the
+filename/generation binding now enforces the exact producer format
+('<label>-<pid>-%04d.json' / 'exp-<pid>-<ordinal>-<ns>') with the filename
+ordinal and generation ordinal proven identical.
+
+Verification after all four correction passes: the expanded
+`tests/test_issue302_collected_runner.py` (35 tests, including the SPEC
+reproductions from all four rounds as regressions), all ten existing
 issue-299/301 suites, the retention audit, the CI planner self-check and the
 repository finalizer check pass locally at this working tree. This is a coding-progress record, not review or acceptance
 evidence: SPEC/QUALITY review at the dependency-complete boundary, maintainer
