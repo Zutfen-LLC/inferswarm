@@ -2128,7 +2128,25 @@ def _dynamic_full_joins(plan, facts, client_id, request):
                 or any(type(t.get('leg_index')) is not int for t in chain)
                 or [t.get('leg_index') for t in chain] != list(range(len(chain)))):
             raise ValueError('dynamic reconciliation: route material leg order/occurrence mismatch')
-        for transfer in chain:
+        family = _SET_OPS if forward else _GET_OPS
+        client_domains = (('B/cpu', 'A/staging'), ('A/staging', 'B/cuda')) if forward else (
+            ('B/cuda', 'A/staging'), ('A/staging', 'A/cpu-output'))
+        # Global boundary exemplars do not validate this route occurrence.
+        # Join every client leg, including the output return, before using its
+        # material identity or dependency edges. CPU-only keeps its CPU-domain
+        # contract; it never inherits the one-gpu staging/CUDA endpoints.
+        for leg_index, transfer in enumerate(chain):
+            if transfer['op'] not in family:
+                raise ValueError('dynamic reconciliation: route client operation family join mismatch')
+            if plan.selection == 'one-gpu':
+                source, destination = client_domains[leg_index]
+                domains_match = (transfer.get('source_domain') == source
+                                 and transfer.get('dest_domain') == destination)
+            else:
+                domains_match = (transfer.get('source_domain') in ('B/cpu', 'A/cpu')
+                                 and transfer.get('dest_domain') in ('B/cpu', 'A/cpu'))
+            if not domains_match:
+                raise ValueError('dynamic reconciliation: route client physical domain join mismatch')
             if any(not _same_json(transfer.get(f), chain[0].get(f)) for f in material_fields):
                 raise ValueError('dynamic reconciliation: route material tensor/range/generation join mismatch')
         remote = remote_routes[route_id]
