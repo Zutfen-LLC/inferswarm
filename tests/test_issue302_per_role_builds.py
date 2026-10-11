@@ -300,5 +300,58 @@ class PerRoleBuildIdentityTests(unittest.TestCase):
                 'a' * 64, expected_argv=(remote.runtime_executable, '--serve'))
 
 
+# Off-repo location of the retained #301 native build outputs (the accepted
+# PR #304 build tree). The genuine binaries are large and live outside the
+# repository; when absent (e.g. CI) the genuine-positive test skips rather
+# than fabricating bytes.
+import os
+RETAINED_BUILD_ROOT = os.environ.get(
+    'INFERSWARM_RETAINED_NATIVE_BUILD',
+    '/home/zutfen/data/inferswarm-pr304-round2/build')
+
+
+class GenuineRetainedBinaryTests(unittest.TestCase):
+    """Positive join against the ACTUAL retained #301 native executables."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.plan = distinct_role_plan()
+        cls.binaries = {
+            'client': Path(RETAINED_BUILD_ROOT) / 'llama-server',
+            'remote': Path(RETAINED_BUILD_ROOT) / 'ggml-rpc-server',
+        }
+
+    def participant(self, role):
+        return next(p for p in self.plan.participants if p.role == role)
+
+    def test_genuine_retained_binaries_join_their_role_manifests(self):
+        import hashlib
+        for role, binary in self.binaries.items():
+            if not binary.is_file():
+                raise unittest.SkipTest(
+                    'retained native binary absent: ' + str(binary))
+            payload = binary.read_bytes()
+            manifest_body = dict(LLAMA_MANIFEST if role == 'client' else RPC_MANIFEST)
+            # Genuine bytes must match the retained manifest verbatim.
+            self.assertEqual(hashlib.sha256(payload).hexdigest(),
+                             manifest_body['executable_sha256'])
+            tree = VirtualHostTree()
+            participant = self.participant(role)
+            tree.put(participant.execution_address, ROLE_PATHS[role][0], manifest_body)
+            tree.put(participant.execution_address, ROLE_PATHS[role][1], payload)
+            collector = NativeObserverCollector(
+                RecordingCollectorTransport(tree), RecordingIdentityReader(),
+                host_facts_reader=RecordingHostFactsReader(self.plan))
+            evidence = collector.collect_static(
+                participant, spawn_for(participant),
+                ROLE_PATHS[role][0], ROLE_PATHS[role][1], 'a' * 64,
+                expected_argv=(participant.runtime_executable, '--serve'))
+            self.assertEqual(evidence.build.executable_sha256,
+                             manifest_body['executable_sha256'])
+            self.assertEqual(evidence.build.manifest.backend_libraries,
+                             tuple((r['name'], r['sha256'])
+                                   for r in manifest_body['backend_libraries']))
+
+
 if __name__ == '__main__':
     unittest.main()

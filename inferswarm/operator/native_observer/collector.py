@@ -64,10 +64,9 @@ class SSHCollectorTransport:
         # bound is enforced before materialization on either side.
         program = ("import base64,sys\n"
                    "limit=int(sys.argv[2])\n"
-                   "import os\n"
-                   "size=os.path.getsize(sys.argv[1])\n"
-                   "if size>limit: sys.exit(3)\n"
-                   "sys.stdout.write(base64.b64encode(open(sys.argv[1],'rb').read()).decode('ascii'))")
+                   "data=open(sys.argv[1],'rb').read(limit+1)\n"
+                   "if len(data)>limit: sys.exit(3)\n"
+                   "sys.stdout.write(base64.b64encode(data).decode('ascii'))")
         proc = subprocess.run(
             ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', address,
              'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)
@@ -371,7 +370,24 @@ class NativeObserverCollector:
                         if name.endswith('.json')
                         and name.startswith(wanted)]
             if terminal:
-                return sorted(terminal)
+                # The envelope must actually be the terminal dynamic stream
+                # of this owned spawn, not a name-shaped placeholder; a
+                # partially-written file (still .tmp or nonterminal) keeps
+                # waiting until the deadline.
+                try:
+                    for name in sorted(terminal):
+                        payload = self.transport.read_bytes(
+                            participant.execution_address,
+                            str(Path(export_dir) / name),
+                            max_bytes=SSHCollectorTransport.ENVELOPE_MAX_BYTES)
+                        candidate = parse_observation(TransportReply(0, payload))
+                        if (candidate.phase == 'dynamic'
+                                and candidate.stream_kind == 'whole'
+                                and candidate.terminal
+                                and candidate.participant_id == native_label):
+                            return sorted(terminal)
+                except CollectorError:
+                    pass
             if _time.monotonic() >= deadline:
                 raise CollectorError(
                     'terminal export for owned spawn did not complete before output '
