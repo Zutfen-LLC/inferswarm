@@ -290,7 +290,9 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
     binary = out_dir / ("moe_overlap_harness_cuda" if cuda else "moe_overlap_harness")
     link = [cxx, *flags, "-std=c++17", *[str(o) for o in objects]]
     if cuda:
-        link += ["-L/usr/local/cuda/lib64", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"]
+        # VMM is enabled at this pin unless GGML_CUDA_NO_VMM is defined.
+        # Mirror its ggml-cuda/CMakeLists.txt CUDA::cuda_driver dependency.
+        link += ["-L/usr/local/cuda/lib64", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos", "-lcuda"]
     link += ["-o", str(binary)]
     print("linking", binary.name)
     subprocess.run(link, check=True)

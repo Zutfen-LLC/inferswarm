@@ -29,6 +29,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
 BUILD_PY = REPO / "tools" / "moe-overlap" / "build.py"
@@ -572,3 +573,183 @@ class TestBuildCacheAndStatusControls(unittest.TestCase):
     @staticmethod
     def harness_path() -> str:
         return _harness_path()
+
+
+class TestBuildCommands(unittest.TestCase):
+    def test_cuda_driver_dependency_and_registration(self):
+        """Capture commands without nvcc: VMM needs the driver, and every
+        CUDA/host TU must retain compile-time backend registration."""
+        spec = importlib.util.spec_from_file_location("moe_build_commands", BUILD_PY)
+        build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(build)
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / "source"
+            for rel in ("ggml/src/ggml-cuda/ggml-cuda.cu",
+                        "ggml/src/ggml-cuda/top-k.cu",
+                        "ggml/src/ggml-cuda/template-instances/mmq-instance.cu"):
+                p = source / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.touch()
+            for cuda in (False, True):
+                with self.subTest(cuda=cuda):
+                    commands = []
+                    with mock.patch.object(build, "pick_compiler", return_value="c++"), \
+                         mock.patch.object(build, "sha256_file", return_value="source-hash"), \
+                         mock.patch.object(build.shutil, "which", return_value="nvcc"), \
+                         mock.patch.object(build.subprocess, "run", side_effect=lambda cmd, **kw: commands.append(cmd)):
+                        build.build(source, Path(td) / str(cuda), jobs=2, cuda=cuda)
+                    compiles = [c for c in commands if "-c" in c]
+                    link = commands[-1]
+                    self.assertEqual(len(compiles), len(build.C_SOURCES) + len(build.CXX_SOURCES) + 1 + (3 if cuda else 0))
+                    self.assertEqual("-lcuda" in link, cuda)
+                    for c in compiles:
+                        self.assertEqual("-DGGML_USE_CUDA" in c, cuda)
+                        self.assertNotIn("-DGGML_CUDA_NO_VMM", c)
+                    if cuda:
+                        for lib in ("-lcuda", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"):
+                            self.assertIn(lib, link)
+                            self.assertGreater(link.index(lib), max(i for i, arg in enumerate(link) if arg.endswith(".o")))
+
+
+# Link wrappers inject a returned native failure after the real CPU compute.
+# Its outputs are still numerically correct: this exposes false PASS in the
+# replay/negative-control paths even when stale data happens to compare equal.
+# Log reads, further computes and frees after failure, and model an outstanding
+# secondary submission until synchronize, to check the join-before-free path.
+_STATUS_FAILURE_SHIM = r'''
+#include "ggml-backend.h"
+#include <cstdio>
+#include <cstdlib>
+static int calls = 0;
+static bool failed = false;
+static ggml_backend_t pending = nullptr;
+static void log(const char * action) {
+    FILE * f = fopen(std::getenv("MOE_TEST_LOG"), "a");
+    if (f) { fprintf(f, "%s\n", action); fclose(f); }
+}
+static enum ggml_status result(enum ggml_status st) {
+    if (failed) log("compute_after_failure");
+    if (++calls == std::atoi(std::getenv("MOE_TEST_FAIL_CALL"))) {
+        failed = true;
+        log("failure");
+        return GGML_STATUS_FAILED;
+    }
+    return st;
+}
+extern "C" {
+enum ggml_status __real_ggml_backend_graph_compute(ggml_backend_t, ggml_cgraph *);
+enum ggml_status __real_ggml_backend_graph_compute_async(ggml_backend_t, ggml_cgraph *);
+void __real_ggml_backend_tensor_get(const ggml_tensor *, void *, size_t, size_t);
+void __real_ggml_backend_tensor_get_async(ggml_backend_t, const ggml_tensor *, void *, size_t, size_t);
+void __real_ggml_backend_synchronize(ggml_backend_t);
+void __real_ggml_backend_buffer_free(ggml_backend_buffer_t);
+enum ggml_status __wrap_ggml_backend_graph_compute(ggml_backend_t b, ggml_cgraph * g) {
+    return result(__real_ggml_backend_graph_compute(b, g));
+}
+enum ggml_status __wrap_ggml_backend_graph_compute_async(ggml_backend_t b, ggml_cgraph * g) {
+    pending = b;
+    return result(__real_ggml_backend_graph_compute_async(b, g));
+}
+void __wrap_ggml_backend_tensor_get(const ggml_tensor * t, void * p, size_t o, size_t s) {
+    if (failed) log("read_after_failure");
+    __real_ggml_backend_tensor_get(t, p, o, s);
+}
+void __wrap_ggml_backend_tensor_get_async(ggml_backend_t b, const ggml_tensor * t, void * p, size_t o, size_t s) {
+    if (failed) log("read_after_failure");
+    __real_ggml_backend_tensor_get_async(b, t, p, o, s);
+}
+void __wrap_ggml_backend_synchronize(ggml_backend_t b) {
+    __real_ggml_backend_synchronize(b);
+    if (pending == b) { pending = nullptr; if (failed) log("joined"); }
+    if (failed) log("synchronized");
+}
+void __wrap_ggml_backend_buffer_free(ggml_backend_buffer_t b) {
+    if (failed && b) log(pending ? "free_before_join" : "released");
+    __real_ggml_backend_buffer_free(b);
+}
+}
+'''
+
+
+@unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
+class TestReturnedComputeFailures(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        binary = Path(_harness_path())
+        spec = importlib.util.spec_from_file_location("moe_failure_build", BUILD_PY)
+        build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(build)
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.tmp.cleanup)
+        td = Path(cls.tmp.name)
+        shim = td / "status_failure.cpp"
+        shim.write_text(_STATUS_FAILURE_SHIM)
+        source = build.ensure_source(build.DEFAULT_CACHE)
+        cxx = build.pick_compiler("c++")
+        obj = td / "status_failure.o"
+        subprocess.run([cxx, "-std=c++17", f"-I{source / 'ggml/include'}", "-c", str(shim), "-o", str(obj)], check=True)
+        objects = [binary.parent / (s.replace("/", "__") + ".o") for s in build.C_SOURCES + build.CXX_SOURCES]
+        objects += [binary.parent / "moe_overlap_harness.o", obj]
+        wrappers = ["graph_compute", "graph_compute_async", "tensor_get", "tensor_get_async", "synchronize", "buffer_free"]
+        cls.harness = str(td / "returned_failure_harness")
+        subprocess.run([cxx, *build.BASE_FLAGS, *map(str, objects),
+                        *[f"-Wl,--wrap=ggml_backend_{name}" for name in wrappers],
+                        "-o", cls.harness], check=True)
+
+    def _assert_failure(self, call, stage, completed_reps, pending=False):
+        log = Path(self.tmp.name) / f"call-{call}.log"
+        serial, overlap = log.with_suffix(".serial"), log.with_suffix(".overlap")
+        env = dict(os.environ, MOE_TEST_FAIL_CALL=str(call), MOE_TEST_LOG=str(log))
+        r = subprocess.run([self.harness, "--synthetic", "--experts", "12", "--tokens", "1",
+                            "--split", "6", "--threads", "2", "--secondary-threads", "2",
+                            "--warmup", "1", "--reps", "2", "--self-check-negative",
+                            "--dump-serial", str(serial), "--dump-overlap", str(overlap)],
+                           env=env, capture_output=True, text=True, timeout=120)
+        doc = _doc(r)
+        self.assertEqual(r.returncode, 3, r.stderr)
+        self.assertFalse(doc["verdict"]["pass"])
+        self.assertIn(f"graph compute failed: {stage} (ggml_status=-1)", doc["verdict"]["reason"])
+        self.assertEqual(len(doc["reps"]), completed_reps)
+        self.assertNotIn("negative_control", doc)
+        self.assertNotIn("output_dumps", doc)
+        self.assertFalse(serial.exists())
+        self.assertFalse(overlap.exists())
+        self.assertTrue(doc["resources_released"])
+        actions = log.read_text().splitlines()
+        self.assertEqual(actions.count("failure"), 1)
+        self.assertNotIn("read_after_failure", actions)
+        self.assertNotIn("compute_after_failure", actions)
+        self.assertNotIn("free_before_join", actions)
+        self.assertIn("synchronized", actions)
+        self.assertIn("released", actions)
+        self.assertLess(actions.index("synchronized"), actions.index("released"))
+        if pending:
+            self.assertIn("joined", actions)
+            self.assertLess(actions.index("joined"), actions.index("released"))
+        return doc
+
+    # A split repetition has nine native calls: router, reference, shared,
+    # serial(primary/shared/secondary), overlap(secondary-async/primary/shared).
+    # Warmup and replay execute the same sequence; measured rep 1 reverses arms.
+    def test_measured_returned_failures(self):
+        stages = ["router", "reference", "shared", "primary experts", "shared", "secondary experts",
+                  "secondary experts (async)", "primary experts", "shared"]
+        for offset, stage in enumerate(stages, 1):
+            with self.subTest(stage=stage, call=9 + offset):
+                doc = self._assert_failure(9 + offset, stage, 0, pending=offset >= 7)
+                self.assertNotIn("determinism_recheck", doc)
+        # CPU failure while secondary work is pending in the overlap-first rep.
+        self._assert_failure(18 + 5, "primary experts", 1, pending=True)
+
+    def test_determinism_replay_returned_failures(self):
+        for offset, stage in ((1, "router"), (2, "reference"), (3, "shared"),
+                              (7, "secondary experts (async)"), (8, "primary experts"), (9, "shared")):
+            with self.subTest(stage=stage):
+                doc = self._assert_failure(27 + offset, stage, 2, pending=offset >= 7)
+                self.assertNotIn("determinism_recheck", doc)
+
+    def test_negative_control_returned_failures(self):
+        for offset, stage in enumerate(("router", "reference", "shared", "primary experts", "secondary experts"), 1):
+            with self.subTest(stage=stage):
+                doc = self._assert_failure(36 + offset, stage, 2)
+                self.assertTrue(doc["determinism_recheck"]["serial_bitwise"])

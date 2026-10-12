@@ -671,6 +671,7 @@ struct StageTimes {
 // the run before any output is compared or reused (no stale outputs).
 static bool g_compute_failed = false;
 static std::string g_compute_fail_stage;
+struct ComputeFailure {};
 
 static void check_compute(enum ggml_status st, const char * stage) {
     if (st != GGML_STATUS_SUCCESS && !g_compute_failed) {
@@ -678,6 +679,9 @@ static void check_compute(enum ggml_status st, const char * stage) {
         g_compute_fail_stage = std::string(stage) + " (ggml_status=" + std::to_string((int)st) + ")";
         fprintf(stderr, "error: graph compute failed at %s\n", g_compute_fail_stage.c_str());
     }
+    // Unwind to the owning repetition/control before any tensor read, combine
+    // or comparison. That owner joins both backends while its buffers live.
+    if (g_compute_failed) throw ComputeFailure{};
 }
 
 struct Harness {
@@ -796,6 +800,16 @@ int run_harness(Harness & H) {
     J.end();
 
     // ---- execution helpers ---------------------------------------------------
+    auto record_compute_failure = [&]() {
+        // A CPU failure can occur while secondary copies/kernels are pending;
+        // even a failed async submission may have enqueued some work. Join both
+        // before freeing plans or letting their host input/output vectors die.
+        ggml_backend_synchronize(H.cpu_bk);
+        ggml_backend_synchronize(H.sec_bk);
+        all_pass = false;
+        fail_reason = "graph compute failed: " + g_compute_fail_stage;
+    };
+
     auto run_router = [&](ArmContext & A) {
         double s = now_ms();
         ggml_backend_tensor_set(H.router_plan.in_cur, A.cur.data(), 0, sizeof(float) * A.cur.size());
@@ -940,75 +954,68 @@ int run_harness(Harness & H) {
 
     // one repetition: router once, reference once, both arms (order alternates)
     auto run_rep = [&](ArmContext & A, RepResult & R, bool serial_first, bool validate) {
-        R.router_ms = run_router(A);
-        partition_routing(A, H.T, H.split);
-        // fail-closed routed-work assertion: every token routes exactly N_USED
-        // experts across the two devices; nothing may skip or duplicate work.
-        R.counts_ok = (A.k_cpu_real + A.k_sec_real) == N_USED * H.T;
-        R.k_cpu = A.k_cpu; R.k_sec = A.k_sec;
-        R.k_cpu_real = A.k_cpu_real; R.k_sec_real = A.k_sec_real;
-        R.single_device = (A.k_sec == 0);
-
-        double b0 = now_ms();
         Plan pcpu, psec;
-        if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
-        if (A.k_sec > 0) psec = build_expert_plan(H.sec_bk, H.sec, A.k_sec, H.T, false);
-        R.build_ms = now_ms() - b0;
-        if ((A.k_cpu > 0 && !pcpu.ok()) || (A.k_sec > 0 && !psec.ok())) {
-            if (validate) { all_pass = false; fail_reason = "arm plan allocation failed"; }
-        }
+        try {
+            if (g_compute_failed) throw ComputeFailure{};
+            R.router_ms = run_router(A);
+            partition_routing(A, H.T, H.split);
+            // fail-closed routed-work assertion: every token routes exactly N_USED
+            // experts across the two devices; nothing may skip or duplicate work.
+            R.counts_ok = (A.k_cpu_real + A.k_sec_real) == N_USED * H.T;
+            R.k_cpu = A.k_cpu; R.k_sec = A.k_sec;
+            R.k_cpu_real = A.k_cpu_real; R.k_sec_real = A.k_sec_real;
+            R.single_device = (A.k_sec == 0);
 
-        if (g_compute_failed) {
-            // a failed compute leaves stale/unwritable outputs: refuse to run
-            // or compare anything further; the run fails with the stage name
-            if (validate) {
+            double b0 = now_ms();
+            if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
+            if (A.k_sec > 0) psec = build_expert_plan(H.sec_bk, H.sec, A.k_sec, H.T, false);
+            R.build_ms = now_ms() - b0;
+            if ((A.k_cpu > 0 && !pcpu.ok()) || (A.k_sec > 0 && !psec.ok())) {
                 all_pass = false;
-                if (fail_reason.empty()) fail_reason = "graph compute failed: " + g_compute_fail_stage;
+                fail_reason = "arm plan allocation failed";
+                pcpu.free_plan();
+                psec.free_plan();
+                return false;
             }
+
+            bool cross = (A.k_sec > 0) && (H.secondary_kind != "cpu");
+            run_reference(A, R.ref_out, R.ref_planes);
+            if (serial_first) {
+                run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
+                run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
+            } else {
+                run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
+                run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
+            }
+            R.serial_ms = R.st_serial.total_ms;
+            R.overlap_ms = R.st_overlap.total_ms;
+
+            if (validate) {
+                R.serial_vs_ref = validate_vs_reference(R.serial_out, R.ref_out, R.ref_planes, N_USED, H.T, cross);
+                R.overlap_vs_serial = validate_bitwise(R.overlap_out, R.serial_out);
+                bool ok = R.counts_ok && R.serial_vs_ref.pass && R.overlap_vs_serial.pass;
+                if (R.single_device) {
+                    // strict identity: single-device serial must match the
+                    // reference bit-for-bit (same kernels, order and backend)
+                    bool bw = (R.serial_out.size() == R.ref_out.size());
+                    for (size_t i = 0; bw && i < R.serial_out.size(); ++i)
+                        if (R.serial_out[i] != R.ref_out[i]) bw = false;
+                    if (!bw) { ok = false; if (fail_reason.empty()) fail_reason = "single-device serial not bitwise-identical to reference"; }
+                }
+                if (!ok) {
+                    all_pass = false;
+                    if (fail_reason.empty()) fail_reason = "validation failed";
+                }
+            }
+        } catch (const ComputeFailure &) {
+            record_compute_failure();
             pcpu.free_plan();
             psec.free_plan();
-            return;
-        }
-        bool cross = (A.k_sec > 0) && (H.secondary_kind != "cpu");
-        run_reference(A, R.ref_out, R.ref_planes);
-        if (serial_first) {
-            run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
-            run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
-        } else {
-            run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
-            run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
-        }
-        R.serial_ms = R.st_serial.total_ms;
-        R.overlap_ms = R.st_overlap.total_ms;
-
-        if (g_compute_failed) {
-            if (validate) {
-                all_pass = false;
-                if (fail_reason.empty()) fail_reason = "graph compute failed: " + g_compute_fail_stage;
-            }
-            pcpu.free_plan();
-            psec.free_plan();
-            return;
-        }
-        if (validate) {
-            R.serial_vs_ref = validate_vs_reference(R.serial_out, R.ref_out, R.ref_planes, N_USED, H.T, cross);
-            R.overlap_vs_serial = validate_bitwise(R.overlap_out, R.serial_out);
-            bool ok = R.counts_ok && R.serial_vs_ref.pass && R.overlap_vs_serial.pass;
-            if (R.single_device) {
-                // strict identity: single-device serial must match the
-                // reference bit-for-bit (same kernels, order and backend)
-                bool bw = (R.serial_out.size() == R.ref_out.size());
-                for (size_t i = 0; bw && i < R.serial_out.size(); ++i)
-                    if (R.serial_out[i] != R.ref_out[i]) bw = false;
-                if (!bw) { ok = false; if (fail_reason.empty()) fail_reason = "single-device serial not bitwise-identical to reference"; }
-            }
-            if (!ok) {
-                all_pass = false;
-                if (fail_reason.empty()) fail_reason = "validation failed";
-            }
+            return false;
         }
         pcpu.free_plan();
         psec.free_plan();
+        return true;
     };
 
     auto make_input = [&](ArmContext & A, int rep, bool & ok) {
@@ -1032,7 +1039,7 @@ int run_harness(Harness & H) {
         run_rep(A, R, true, /*validate=*/false);
         if (g_compute_failed) {
             fprintf(stderr, "error: warmup compute failed: %s\n", g_compute_fail_stage.c_str());
-            return 4;
+            break;
         }
     }
 
@@ -1048,14 +1055,13 @@ int run_harness(Harness & H) {
     // ---- timed repetitions ----------------------------------------------------
     std::vector<RepResult> results;
     J.begin_arr("reps");
-    for (int r = 0; r < H.reps; ++r) {
+    for (int r = 0; r < H.reps && !g_compute_failed; ++r) {
         ArmContext A;
         RepResult R;
         bool ok = false;
         make_input(A, r, ok);
         if (!ok) return 4;
-        run_rep(A, R, /*serial_first=*/ (r % 2) == 0, /*validate=*/true);
-        if (g_compute_failed) break;
+        if (!run_rep(A, R, /*serial_first=*/ (r % 2) == 0, /*validate=*/true)) break;
         // isolation: distinct generated inputs must produce distinct reference
         // outputs. With --inputs-file every repetition replays the same
         // captured activations by definition, so distinctness is not a valid
@@ -1104,9 +1110,84 @@ int run_harness(Harness & H) {
     }
     J.end_arr();
 
+    // determinism/reuse recheck: rep 0's inputs must reproduce rep 0 exactly
+    if (!g_compute_failed && !results.empty()) {
+        ArmContext A;
+        RepResult R;
+        bool ok = false;
+        make_input(A, 0, ok);
+        if (!ok) return 4;
+        if (run_rep(A, R, true, /*validate=*/false)) {
+            bool bw = (R.ref_out.size() == results[0].ref_out.size());
+            for (size_t i = 0; bw && i < R.ref_out.size(); ++i) if (R.ref_out[i] != results[0].ref_out[i]) bw = false;
+            bool bw_serial = (R.serial_out.size() == results[0].serial_out.size());
+            for (size_t i = 0; bw_serial && i < R.serial_out.size(); ++i) if (R.serial_out[i] != results[0].serial_out[i]) bw_serial = false;
+            J.begin("determinism_recheck");
+            J.boolean("reference_bitwise", bw);
+            J.boolean("serial_bitwise", bw_serial);
+            J.end();
+            if (!bw || !bw_serial) { all_pass = false; if (fail_reason.empty()) fail_reason = "determinism recheck failed (stale buffer reuse suspected)"; }
+        }
+    }
+
+    // ---- negative control (comparator sensitivity) -----------------------------
+    if (H.negative_control && !g_compute_failed) {
+        // Recompute the serial output with the shared branch omitted from the
+        // combine; the validator must reject it. Proves a missing branch
+        // cannot silently pass.
+        ArmContext A;
+        bool ok = false;
+        make_input(A, 0, ok);
+        if (!ok) return 4;
+        Plan pcpu, psec;
+        auto run_negative = [&]() {
+            run_router(A);
+            partition_routing(A, H.T, H.split);
+            if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
+            if (A.k_sec > 0) psec = build_expert_plan(H.sec_bk, H.sec, A.k_sec, H.T, false);
+            if ((A.k_cpu > 0 && !pcpu.ok()) || (A.k_sec > 0 && !psec.ok())) {
+                all_pass = false;
+                fail_reason = "negative-control plan allocation failed";
+                return;
+            }
+            std::vector<float> ref_out, ref_planes;
+            run_reference(A, ref_out, ref_planes);
+            std::vector<float> partial_cpu((size_t)(N_EMBD * H.T), 0.0f), partial_sec((size_t)(N_EMBD * H.T), 0.0f);
+            if (pcpu.ok()) {
+                set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
+                check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
+                ggml_backend_synchronize(H.cpu_bk);
+                ggml_backend_tensor_get(pcpu.out, partial_cpu.data(), 0, sizeof(float) * partial_cpu.size());
+            }
+            if (psec.ok()) {
+                set_plan_inputs_blocking(psec, A, A.ids_sec, A.w_sec);
+                check_compute(ggml_backend_graph_compute(H.sec_bk, psec.gf), "secondary experts");
+                ggml_backend_synchronize(H.sec_bk);
+                ggml_backend_tensor_get(psec.out, partial_sec.data(), 0, sizeof(float) * partial_sec.size());
+            }
+            std::vector<float> no_shared((size_t)(N_EMBD * H.T), 0.0f);
+            for (size_t i = 0; i < no_shared.size(); ++i) no_shared[i] = partial_cpu[i] + partial_sec[i];
+            bool cross = (A.k_sec > 0) && (H.secondary_kind != "cpu");
+            CheckResult neg = validate_vs_reference(no_shared, ref_out, ref_planes, N_USED, H.T, cross);
+            J.begin("negative_control");
+            J.str("perturbation", "shared branch omitted from combine");
+            J.boolean("comparator_rejected", !neg.pass);
+            J.num("max_ratio", neg.max_ratio);
+            J.end();
+            if (neg.pass) { all_pass = false; if (fail_reason.empty()) fail_reason = "negative control NOT rejected (comparator insensitive)"; }
+        };
+        try {
+            run_negative();
+        } catch (const ComputeFailure &) {
+            record_compute_failure();
+        }
+        pcpu.free_plan();
+        psec.free_plan();
+    }
+
     // optional last-rep arm-output dumps for external validation (F32,
     // little-endian, [N_EMBD * T]); only valid when the run is not failed
-    if ((!H.dump_serial.empty() || !H.dump_overlap.empty()) && !results.empty()) {
+    if ((!H.dump_serial.empty() || !H.dump_overlap.empty()) && all_pass && !g_compute_failed && !results.empty()) {
         auto dump = [](const std::string & path, const std::vector<float> & v, bool & ok) {
             if (path.empty()) return;
             FILE * f = fopen(path.c_str(), "wb");
@@ -1124,68 +1205,6 @@ int run_harness(Harness & H) {
         J.num("elements", (double)(N_EMBD * H.T));
         J.end();
         if (!dump_ok) { all_pass = false; if (fail_reason.empty()) fail_reason = "output dump failed"; }
-    }
-
-    // determinism/reuse recheck: rep 0's inputs must reproduce rep 0 exactly
-    if (!g_compute_failed) {
-        ArmContext A;
-        RepResult R;
-        bool ok = false;
-        make_input(A, 0, ok);
-        if (!ok) return 4;
-        run_rep(A, R, true, /*validate=*/false);
-        bool bw = (R.ref_out.size() == results[0].ref_out.size());
-        for (size_t i = 0; bw && i < R.ref_out.size(); ++i) if (R.ref_out[i] != results[0].ref_out[i]) bw = false;
-        bool bw_serial = (R.serial_out.size() == results[0].serial_out.size());
-        for (size_t i = 0; bw_serial && i < R.serial_out.size(); ++i) if (R.serial_out[i] != results[0].serial_out[i]) bw_serial = false;
-        J.begin("determinism_recheck");
-        J.boolean("reference_bitwise", bw);
-        J.boolean("serial_bitwise", bw_serial);
-        J.end();
-        if (!bw || !bw_serial) { all_pass = false; if (fail_reason.empty()) fail_reason = "determinism recheck failed (stale buffer reuse suspected)"; }
-    }
-
-    // ---- negative control (comparator sensitivity) -----------------------------
-    if (H.negative_control && !g_compute_failed) {
-        // Recompute the serial output with the shared branch omitted from the
-        // combine; the validator must reject it. Proves a missing branch
-        // cannot silently pass.
-        ArmContext A;
-        bool ok = false;
-        make_input(A, 0, ok);
-        if (!ok) return 4;
-        run_router(A);
-        partition_routing(A, H.T, H.split);
-        Plan pcpu, psec;
-        if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
-        if (A.k_sec > 0) psec = build_expert_plan(H.sec_bk, H.sec, A.k_sec, H.T, false);
-        std::vector<float> ref_out, ref_planes;
-        run_reference(A, ref_out, ref_planes);
-        std::vector<float> partial_cpu((size_t)(N_EMBD * H.T), 0.0f), partial_sec((size_t)(N_EMBD * H.T), 0.0f);
-        if (pcpu.ok()) {
-            set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
-            check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
-            ggml_backend_synchronize(H.cpu_bk);
-            ggml_backend_tensor_get(pcpu.out, partial_cpu.data(), 0, sizeof(float) * partial_cpu.size());
-        }
-        if (psec.ok()) {
-            set_plan_inputs_blocking(psec, A, A.ids_sec, A.w_sec);
-            check_compute(ggml_backend_graph_compute(H.sec_bk, psec.gf), "secondary experts");
-            ggml_backend_synchronize(H.sec_bk);
-            ggml_backend_tensor_get(psec.out, partial_sec.data(), 0, sizeof(float) * partial_sec.size());
-        }
-        std::vector<float> no_shared((size_t)(N_EMBD * H.T), 0.0f);
-        for (size_t i = 0; i < no_shared.size(); ++i) no_shared[i] = partial_cpu[i] + partial_sec[i];
-        bool cross = (A.k_sec > 0) && (H.secondary_kind != "cpu");
-        CheckResult neg = validate_vs_reference(no_shared, ref_out, ref_planes, N_USED, H.T, cross);
-        J.begin("negative_control");
-        J.str("perturbation", "shared branch omitted from combine");
-        J.boolean("comparator_rejected", !neg.pass);
-        J.num("max_ratio", neg.max_ratio);
-        J.end();
-        if (neg.pass) { all_pass = false; if (fail_reason.empty()) fail_reason = "negative control NOT rejected (comparator insensitive)"; }
-        pcpu.free_plan();
-        psec.free_plan();
     }
 
     // ---- summary ----------------------------------------------------------------
@@ -1208,6 +1227,10 @@ int run_harness(Harness & H) {
         J.end();
     }
 
+    if (g_compute_failed) {
+        all_pass = false;
+        fail_reason = "graph compute failed: " + g_compute_fail_stage;
+    }
     J.begin("verdict");
     J.boolean("pass", all_pass);
     J.num("warmup_runs", (double)warmup_runs);
