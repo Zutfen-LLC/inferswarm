@@ -729,6 +729,15 @@ static void partition_routing(ArmContext & A, int64_t T, int64_t split, int64_t 
 //   {"n_expert": E, "split": S, "tokens": T, "n_used": U,
 //    "ids":   [U*T global expert ids, id + t*U layout],
 //    "weights": [U*T F32-as-uint32 bit patterns, same layout]}
+// Cardinality contract: partition_routing consumes routing with the FIXED
+// top-10 stride N_USED (this harness models the qwen4exp router's
+// argsort_top_k(probs, 10); it is not a general top-k partitioner). The seam
+// therefore requires n_used == N_USED exactly and rejects any other
+// cardinality as an explicit input error BEFORE partitioning: a shorter
+// array would make the fixed-stride counting loop read past the caller's
+// input (demonstrated: AddressSanitizer heap-buffer-overflow at the
+// partition_routing first counting loop with n_used=4), and a longer one
+// would silently mis-stride tokens.
 static int unit_routing_run() {
     // Minimal JSON object parser for this fixed schema (numbers + flat int
     // arrays). Not a general parser: any deviation from the schema is an
@@ -766,9 +775,15 @@ static int unit_routing_run() {
         !parse_num("tokens", T) || !parse_num("n_used", n_used) ||
         !parse_uint_array("ids", ids_in) || !parse_uint_array("weights", w_in))
         return fail("missing field");
-    if (n_used < 1 || n_used > 64 || T < 1 || T > 4096 || n_expert < 1 ||
-        n_expert > 4096 || split < 0 || split > n_expert)
+    if (n_expert < 1 || n_expert > 4096 || split < 0 || split > n_expert ||
+        T < 1 || T > 4096)
         return fail("geometry out of range");
+    // Fixed-cardinality contract: partition_routing reads exactly N_USED ids
+    // per token (see above); anything else is rejected before partitioning.
+    if (n_used != N_USED)
+        return fail("n_used must equal the harness's fixed top-10 routing "
+                    "cardinality (N_USED=10); other cardinalities are not "
+                    "supported by this seam");
     if ((int64_t)ids_in.size() != n_used * T || (int64_t)w_in.size() != n_used * T)
         return fail("array size mismatch");
     for (uint32_t id : ids_in) if (id >= (uint32_t)n_expert) return fail("id out of range");

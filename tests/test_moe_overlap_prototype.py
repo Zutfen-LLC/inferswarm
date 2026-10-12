@@ -387,7 +387,10 @@ class TestPaddingInvariant(unittest.TestCase):
 class TestRoutingUnitSeam(unittest.TestCase):
     """MOE_OVERLAP_UNIT_ROUTING=1 drives partition_routing directly over
     crafted routing (no backends): boundary geometries and the explicit
-    rejection of unrepresentable/duplicate routing."""
+    rejection of unrepresentable/duplicate routing. The seam's cardinality
+    contract is FIXED at the harness's top-10 routing (n_used == 10, matching
+    the qwen4exp argsort_top_k(probs, 10) the production path feeds
+    partition_routing); any other n_used is an explicit input error."""
 
     @classmethod
     def setUpClass(cls):
