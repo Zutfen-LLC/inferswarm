@@ -433,24 +433,54 @@ class TestRoutingUnitSeam(unittest.TestCase):
         self.assertEqual(doc["routing"]["k_cpu"], 5)
         self.assertEqual(doc["routing"]["k_sec"], 5)
 
-    def test_duplicate_genuine_id_rejected(self):
+    def test_duplicate_genuine_id_rejected_valid_geometry(self):
         """A router that selected the same expert twice in one token violates
         the top-k uniqueness contract: fail closed (exit 5), never present
-        duplicate ids to the native op."""
+        duplicate ids to the native op. The fixture carries ten valid-range
+        entries (the seam's fixed top-10 contract) with one deliberate
+        duplicate, and the assertion pins the DUPLICATE-specific rejection
+        reason so an unrepresentable-geometry rejection cannot satisfy it."""
+        ids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 8]  # expert 8 twice; all in range
+        payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 10,
+                   "ids": ids,
+                   "weights": [_f32_bits(0.1 * (i + 1) + 0.02) for i in range(10)]}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 5)
+        self.assertIn("top-k uniqueness", r.stderr)
+        self.assertNotIn("unrepresentable", r.stderr)
+
+    def test_seam_rejects_out_of_range_ids(self):
+        payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 10,
+                   "ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 12],
+                   "weights": [_f32_bits(0.25)] * 10}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 5)
+        self.assertIn("input error", r.stderr)
+
+    def test_seam_rejects_cardinality_below_contract(self):
+        """n_used < 10 is an input contract violation: partition_routing
+        indexes routing with the fixed N_USED=10 stride, so a shorter
+        array would read past the caller's input. It must be rejected as
+        an explicit input error BEFORE any partitioning."""
         payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 4,
                    "ids": [3, 3, 2, 7],
                    "weights": [_f32_bits(0.25)] * 4}
         r = self._seam(payload)
         self.assertEqual(r.returncode, 5)
-        self.assertIn("top-k uniqueness", r.stderr)
+        self.assertIn("input error", r.stderr)
+        self.assertIn("n_used", r.stderr)
 
-    def test_seam_rejects_out_of_range_ids(self):
-        payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 4,
-                   "ids": [3, 2, 1, 12],
-                   "weights": [_f32_bits(0.25)] * 4}
+    def test_seam_rejects_cardinality_above_contract(self):
+        """n_used > 10 must likewise be rejected as an explicit input error
+        (with a matching-length input array) before any partitioning."""
+        ids = list(range(11))  # 11 valid ids, array length matches n_used
+        payload = {"n_expert": 16, "split": 8, "tokens": 1, "n_used": 11,
+                   "ids": ids,
+                   "weights": [_f32_bits(0.25)] * 11}
         r = self._seam(payload)
         self.assertEqual(r.returncode, 5)
         self.assertIn("input error", r.stderr)
+        self.assertIn("n_used", r.stderr)
 
 
 if __name__ == "__main__":
