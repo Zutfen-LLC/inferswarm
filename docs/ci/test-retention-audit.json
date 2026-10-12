@@ -5618,6 +5618,27 @@
       "replacement": null,
       "test_count_at_audit": 19
     },
+    "test_moe_overlap_prototype": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 7,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "The MoE overlap prototype harness (tools/moe-overlap) executes identical routed-expert and shared-branch work in serial and overlapped schedules with correct dependency ordering, exact routed-work accounting, bitwise overlapped-vs-serial equality, pre-declared derived reference tolerances, per-repetition isolation, comparator sensitivity and fail-closed error propagation.",
+      "lineage": "MoE overlap prototype investigation (issue #300 follow-on; offline coding deliverable)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/moe-overlap/build.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "SYNTHETIC offline correctness only (see tools/moe-overlap/README.md): establishes no performance result, physical qualification, or campaign authority; overlap timing is meaningless with a CPU secondary backend and the harness asserts that disclaimer.",
+      "replacement": null,
+      "test_count_at_audit": 7
+    },
     "test_plan_ci": {
       "baseline_group": "repo-integrity",
       "baseline_serial_seconds": 0.61,

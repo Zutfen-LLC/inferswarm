@@ -184,6 +184,10 @@ GROUP_TEST_MODULES = {
         # CPU Validation (duplicate-dispatch dedup, fail closed).
         "test_issue291_final_validation_reuse",
     ],
+    # MoE overlap prototype (tools/moe-overlap): offline harness correctness.
+    "moe-overlap-prototype": [
+        "test_moe_overlap_prototype",
+    ],
     "issue-187-r7a": [
         "test_issue187_r7a",
     ],
@@ -390,6 +394,11 @@ GROUP_INVARIANTS = {
     "issue-213-gate-ordering":
         "Current campaign gate-ordering doctrine: exact-head suite "
         "receipts and hosted Final CPU Validation.",
+    "moe-overlap-prototype":
+        "Offline correctness of the MoE overlap prototype harness: identical "
+        "routed-expert/shared-branch work in serial and overlapped schedules, "
+        "dependency ordering, routed-work accounting, comparator sensitivity "
+        "and fail-closed behavior. No performance or authority claim.",
     "issue-187-r7a":
         "R7-A DeepSeek static census authority feeding the open R7 track.",
     "issue-209-r7b":
@@ -435,6 +444,9 @@ PATH_GROUPS = {
     "scripts/check_ci_test_retention.py": ["repo-integrity"],  # + authority -> full
     # Issue #255 product operator and additive evidence, selected with source-policy tests.
     "tools/issue255_mvp/": ["issue-99-103"],
+    # MoE overlap prototype (offline harness + build recipe + docs).
+    "tools/moe-overlap/": ["moe-overlap-prototype"],
+    "tests/test_moe_overlap_prototype.py": ["moe-overlap-prototype"],
     "docs/implementation/two-host-mvp-255/": ["issue-99-103"],
     "docs/implementation/ordinary-operator-path-268/": ["issue-99-103"],
     "inferswarm/operator/": ["issue-99-103"],
