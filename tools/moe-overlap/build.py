@@ -44,29 +44,39 @@ PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 TARBALL_SHA256 = "03fb04316eb32a7b7347004a79a8dd60531c02f5a064d853fed3b53828951723"
 TARBALL_URL = f"https://github.com/ggml-org/llama.cpp/archive/{PIN}.tar.gz"
 
-# Selected complete-file SHA-256 identities of the pinned tree, from the
-# accepted #299 runtime contract table
-# (docs/implementation/profiled-q8-299/runtime-contract.md). The source cache
-# and any MOE_OVERLAP_SOURCE override are verified against these before use;
-# a local override with the claimed identity but different bytes is refused.
-PIN_FILE_DIGESTS = {
-    "ggml/src/ggml-backend.cpp":
-        "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
-    "ggml/src/ggml-cuda/ggml-cuda.cu":
-        "523470d6604755b82d0208414ce40f1378941b10bc1349763bbdf02edaab96c4",
-    "ggml/src/ggml-cuda/common.cuh":
-        "a210a71f965419ab55cce071b900df118c2520c1566ea5e066d8be078d05644a2",
-    "ggml/src/ggml-cuda/top-k.cu":
-        "e8fd64d90d021e5d0549e6c529619a782a050df3e309ac0881512a5490a5c89",
-    "ggml/src/ggml-rpc/ggml-rpc.cpp":
-        "07ca713158d222959b44e5e74e0bee83119212aad85750ff6240773365c0b2d9",
-    "src/models/qwen4exp.cpp":
-        "e08619e298fdc0b66ae3c0a3ca5d692e23d7261121c4f481689b59655870ba33",
-    "src/llama-model.cpp":
-        "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
-    "src/llama-arch.cpp":
-        "1a480fc48ba76a4e24119d65fbca67905cdd641953ec0eaae878b3c0af560c5c",
-}
+# The source tree is identity-verified on every use against the complete-file
+# SHA-256 table of the accepted #299 runtime contract
+# (docs/implementation/profiled-q8-299/runtime-contract.md), parsed at runtime
+# from that authority file — no hand-transcribed digests (a mistyped constant
+# in an earlier revision slipped through a marker shortcut locally and was
+# caught only by a fresh runner cache).
+CONTRACT_PATH = Path(__file__).resolve().parents[2] / "docs/implementation/profiled-q8-299/runtime-contract.md"
+CONTRACT_VERIFY_FILES = [
+    "ggml/src/ggml-backend.cpp",
+    "ggml/src/ggml-cuda/ggml-cuda.cu",
+    "ggml/src/ggml-cuda/common.cuh",
+    "ggml/src/ggml-cuda/top-k.cu",
+    "ggml/src/ggml-rpc/ggml-rpc.cpp",
+    "src/models/qwen4exp.cpp",
+    "src/llama-model.cpp",
+    "src/llama-arch.cpp",
+]
+
+
+def _contract_digests() -> dict:
+    import re as _re
+    text = CONTRACT_PATH.read_text()
+    table = {}
+    for m in _re.finditer(r"^\| `([^`]+)` \| `([0-9a-f]{64})` \|$",
+                          text, _re.MULTILINE):
+        table[m.group(1)] = m.group(2)
+    if not table:
+        raise SystemExit(f"cannot parse digest table from {CONTRACT_PATH}")
+    missing = [f for f in CONTRACT_VERIFY_FILES if f not in table]
+    if missing:
+        raise SystemExit(f"contract table lacks: {missing}")
+    return {f: table[f] for f in CONTRACT_VERIFY_FILES}
+
 
 REPO = Path(__file__).resolve().parents[2]
 HARNESS = REPO / "tools" / "moe-overlap" / "moe_overlap_harness.cpp"
@@ -103,7 +113,7 @@ def sha256_file(path: Path) -> str:
 
 def verify_pin_identity(root: Path) -> None:
     """Verify the tree really is the pin via the #299 contract digests."""
-    for rel, want in PIN_FILE_DIGESTS.items():
+    for rel, want in _contract_digests().items():
         p = root / rel
         if not p.is_file():
             raise SystemExit(f"pin identity check: missing {rel} in {root}")
@@ -166,8 +176,13 @@ def ensure_source(cache: Path) -> Path:
         # a source override must still prove it IS the pin, not just claim it
         verify_pin_identity(root)
         return root
+    # identity is verified on every use (cheap: a handful of files); a stale
+    # marker must never shortcut it — a mistyped digest in an earlier revision
+    # slipped through exactly such a shortcut locally and was only caught by a
+    # fresh runner cache
     marker = root / ".pin-ok"
     if marker.is_file():
+        verify_pin_identity(root)
         return root
     tarball = Path(os.environ["MOE_OVERLAP_TARBALL"]) if os.environ.get("MOE_OVERLAP_TARBALL") else cache / "pin.tar.gz"
     if not tarball.is_file():
