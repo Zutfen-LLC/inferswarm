@@ -3,25 +3,33 @@
 
 Bounded engineering support for tools/moe-overlap (prototype; no campaign
 authority implied). Downloads the pinned llama.cpp source tarball exactly once
-into a cache directory (sha256-pinned), then compiles the harness plus the
-minimal ggml CPU translation-unit closure with the same direct-GCC recipe
-approach as inferswarm/operator/native_observer/build.py (no CMake, no
-installs, no persistent artifacts outside the cache).
+into a cache directory (sha256-pinned), verifies the tree against selected
+complete-file digests recorded in the accepted #299 runtime contract, then
+compiles the harness plus the ggml CPU translation-unit closure with a direct
+GCC/Clang recipe (no CMake, no installs, no persistent artifacts outside the
+cache). Object files carry stamps (source hash + flags + compiler) and are
+rebuilt whenever any of those changes — a stale cached build cannot silently
+test old code.
 
 CPU-only is the default (offline validation). --cuda additionally compiles the
-CUDA TU closure for the hardware host (requires nvcc and the CUDA toolkit);
-it is a build action only and never runs the harness.
+complete CUDA closure at this pin (every ggml/src/ggml-cuda/*.cu plus the
+template-instance TUs, as the pin's own CMake GLOBs do) with GGML_USE_CUDA
+defined at compile time for every TU so backend registration is enabled; it is
+a build action only and never runs the harness.
 
 Usage:
   python3 tools/moe-overlap/build.py [--cache DIR] [--cuda] [--jobs N]
 
 Environment:
-  MOE_OVERLAP_SOURCE   existing extracted llama.cpp pin root (skips download)
+  MOE_OVERLAP_SOURCE   existing extracted llama.cpp pin root (identity-verified,
+                       never trusted by path alone)
   MOE_OVERLAP_TARBALL  existing pin tarball path (skips download, still verified)
+  MOE_OVERLAP_OPT      optimization level override (default -O3; tests may use -O1)
 """
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import os
 import shutil
@@ -35,6 +43,30 @@ from urllib.request import urlopen
 PIN = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 TARBALL_SHA256 = "03fb04316eb32a7b7347004a79a8dd60531c02f5a064d853fed3b53828951723"
 TARBALL_URL = f"https://github.com/ggml-org/llama.cpp/archive/{PIN}.tar.gz"
+
+# Selected complete-file SHA-256 identities of the pinned tree, from the
+# accepted #299 runtime contract table
+# (docs/implementation/profiled-q8-299/runtime-contract.md). The source cache
+# and any MOE_OVERLAP_SOURCE override are verified against these before use;
+# a local override with the claimed identity but different bytes is refused.
+PIN_FILE_DIGESTS = {
+    "ggml/src/ggml-backend.cpp":
+        "a39c4fe81b043c7e8616ebe57afb75d727c692fe3b26c3e9bc2ddde3c6991041",
+    "ggml/src/ggml-cuda/ggml-cuda.cu":
+        "523470d6604755b82d0208414ce40f1378941b10bc1349763bbdf02edaab96c4",
+    "ggml/src/ggml-cuda/common.cuh":
+        "a210a71f965419ab55cce071b900df118c2520c1566ea5e066d8be078d05644a2",
+    "ggml/src/ggml-cuda/top-k.cu":
+        "e8fd64d90d021e5d0549e6c529619a782a050df3e309ac0881512a5490a5c89",
+    "ggml/src/ggml-rpc/ggml-rpc.cpp":
+        "07ca713158d222959b44e5e74e0bee83119212aad85750ff6240773365c0b2d9",
+    "src/models/qwen4exp.cpp":
+        "e08619e298fdc0b66ae3c0a3ca5d692e23d7261121c4f481689b59655870ba33",
+    "src/llama-model.cpp":
+        "dc852c79709927631135ff9482e7fa7597d9b975a1867eb49003c14f93594ad3",
+    "src/llama-arch.cpp":
+        "1a480fc48ba76a4e24119d65fbca67905cdd641953ec0eaae878b3c0af560c5c",
+}
 
 REPO = Path(__file__).resolve().parents[2]
 HARNESS = REPO / "tools" / "moe-overlap" / "moe_overlap_harness.cpp"
@@ -53,13 +85,11 @@ CXX_SOURCES = ["ggml/src/ggml.cpp", "ggml/src/ggml-backend.cpp", "ggml/src/ggml-
                "ggml/src/ggml-cpu/ggml-cpu.cpp", "ggml/src/ggml-cpu/traits.cpp",
                "ggml/src/ggml-cpu/binary-ops.cpp", "ggml/src/ggml-cpu/unary-ops.cpp",
                "ggml/src/ggml-cpu/vec.cpp", "ggml/src/ggml-cpu/ops.cpp"]
-CUDA_SOURCES = ["ggml/src/ggml-cuda/ggml-cuda.cu"]  # the pin builds one fat CUDA TU
 
 BASE_FLAGS = ["-O3", "-pthread", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
               "-DGGML_SCHED_MAX_COPIES=4", "-DGGML_USE_CPU"]
 # Tests may trade optimization for compile time; hardware runs keep -O3.
-OPT = os.environ.get("MOE_OVERLAP_OPT", "-O3")
-BASE_FLAGS[0] = OPT
+BASE_FLAGS[0] = os.environ.get("MOE_OVERLAP_OPT", "-O3")
 INCLUDES = ["ggml/include", "ggml/src", "ggml/src/ggml-cpu", "ggml/src/ggml-cpu/include"]
 
 
@@ -71,6 +101,19 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def verify_pin_identity(root: Path) -> None:
+    """Verify the tree really is the pin via the #299 contract digests."""
+    for rel, want in PIN_FILE_DIGESTS.items():
+        p = root / rel
+        if not p.is_file():
+            raise SystemExit(f"pin identity check: missing {rel} in {root}")
+        got = sha256_file(p)
+        if got != want:
+            raise SystemExit(
+                f"pin identity check FAILED for {rel}: {got} != {want} "
+                f"(source tree is not llama.cpp {PIN[:12]}; refusing to build)")
+
+
 def pick_compiler(kind: str) -> str:
     """Prefer $CC/$CXX; otherwise pick the first candidate that can compile.
 
@@ -80,24 +123,22 @@ def pick_compiler(kind: str) -> str:
     env = os.environ.get("CC" if kind == "c" else "CXX")
     if env:
         return env
+    import tempfile
     for cand in (["gcc", "clang", "cc"] if kind == "c" else ["g++", "clang++", "c++"]):
         if not shutil.which(cand):
             continue
-        src = out_smoke = None
-        import tempfile
         with tempfile.NamedTemporaryFile("w", suffix=(".c" if kind == "c" else ".cpp"), delete=False) as f:
             f.write("int main(void){return 0;}\n" if kind == "c" else "int main(){return 0;}\n")
             src = f.name
-        out_smoke = src + ".o"
+        out = src + ".o"
         try:
-            r = subprocess.run([cand, "-c", src, "-o", out_smoke],
-                               capture_output=True, timeout=60)
+            r = subprocess.run([cand, "-c", src, "-o", out], capture_output=True, timeout=60)
             if r.returncode == 0:
                 return cand
         except subprocess.TimeoutExpired:
             pass
         finally:
-            for p in (src, out_smoke):
+            for p in (src, out):
                 try:
                     os.unlink(p)
                 except OSError:
@@ -112,7 +153,7 @@ def write_ggml_version(source: Path, out_dir: Path) -> None:
         header.parent.mkdir(parents=True, exist_ok=True)
         header.write_text(
             "#pragma once\n\n"
-            f'#define GGML_VERSION "0.24.0"\n'
+            '#define GGML_VERSION "0.24.0"\n'
             f'#define GGML_COMMIT "{PIN[:7]}"\n')
 
 
@@ -122,6 +163,8 @@ def ensure_source(cache: Path) -> Path:
         root = Path(os.environ["MOE_OVERLAP_SOURCE"])
         if not (root / "ggml" / "src" / "ggml.c").is_file():
             raise SystemExit(f"MOE_OVERLAP_SOURCE invalid: {root}")
+        # a source override must still prove it IS the pin, not just claim it
+        verify_pin_identity(root)
         return root
     marker = root / ".pin-ok"
     if marker.is_file():
@@ -139,8 +182,21 @@ def ensure_source(cache: Path) -> Path:
         with tarfile.open(tarball, "r:gz") as t:
             t.extractall(cache)
         (cache / f"llama.cpp-{PIN}").rename(root)
+    verify_pin_identity(root)
     marker.write_text(PIN + "\n")
     return root
+
+
+def cuda_sources(source: Path) -> list[str]:
+    """The pin's CUDA closure: every top-level .cu plus the template-instance
+    TUs its own CMakeLists GLOBs (fattn-tile*, fattn-mma*, mmq*, mmf*)."""
+    top = sorted(str(p.relative_to(source)) for p in
+                 (source / "ggml/src/ggml-cuda").glob("*.cu"))
+    inst = sorted(str(p.relative_to(source)) for p in
+                  (source / "ggml/src/ggml-cuda/template-instances").glob("*.cu"))
+    if not top or not inst:
+        raise SystemExit("unexpected source layout: no CUDA TUs found")
+    return top + inst
 
 
 def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
@@ -148,20 +204,47 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
     cc = pick_compiler("c")
     cxx = pick_compiler("c++")
     write_ggml_version(source, out_dir)
+    flags = list(BASE_FLAGS)
+    if cuda:
+        # compile-time for every TU: ggml-backend-reg.cpp registers the CUDA
+        # backend only under this define, so it cannot be a link-time-only flag
+        flags.append("-DGGML_USE_CUDA")
     inc = [f"-I{out_dir / 'generated'}"] + [f"-I{source / p}" for p in INCLUDES]
-    print(f"compilers: CC={cc} CXX={cxx}")
+    print(f"compilers: CC={cc} CXX={cxx} opt={flags[0]} cuda={cuda}")
 
-    objects: list[Path] = []
+    stamp_dir = out_dir / "stamps"
+    stamp_dir.mkdir(exist_ok=True)
 
     def obj_path(rel: str) -> Path:
         return out_dir / (rel.replace("/", "__") + ".o")
 
+    def compile_one(cmd_prefix, src_str, o, extra_flags, nvcc=False):
+        src = Path(src_str)
+        src_path = source / src if not src.is_absolute() else src
+        key_src = HARNESS if src_path == HARNESS else src_path
+        used = list(flags) if not nvcc else list(NVCC_FLAGS)
+        key = hashlib.sha256(
+            ("|".join([sha256_file(key_src), " ".join(used), " ".join(extra_flags),
+                       " ".join(cmd_prefix)])).encode()).hexdigest()
+        stamp = stamp_dir / (o.name + ".stamp")
+        if o.is_file() and stamp.is_file() and stamp.read_text() == key:
+            return  # unchanged source, flags and compiler: reuse the object
+        cmd = [*cmd_prefix, *used, *extra_flags, *inc, "-c", str(src_path), "-o", str(o)]
+        subprocess.run(cmd, check=True)
+        stamp.write_text(key)
+
+    # nvcc does not forward arbitrary host flags; the CUDA TUs get their own set
+    NVCC_FLAGS = ["-O3", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
+                  "-DGGML_SCHED_MAX_COPIES=4", "-DGGML_USE_CUDA"]
+
     jobs_list = []
+    objects: list[Path] = []
+
     for s in C_SOURCES:
         o = obj_path(s)
         objects.append(o)
-        flags = ["-std=c17"] if s.endswith(".c") else ["-std=c++17"]
-        jobs_list.append(([cc if s.endswith(".c") else cxx], s, o, flags))
+        jobs_list.append(([cc if s.endswith(".c") else cxx], s, o,
+                          ["-std=c17"] if s.endswith(".c") else ["-std=c++17"]))
     for s in CXX_SOURCES:
         o = obj_path(s)
         objects.append(o)
@@ -170,36 +253,27 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
     objects.append(harness_o)
     jobs_list.append(([cxx], str(HARNESS), harness_o, ["-std=c++17"]))
 
-    def compile_one(cmd_prefix, src, o, std):
-        if o.is_file():
-            return
-        src_path = source / src if not src.startswith("/") else Path(src)
-        cmd = [*cmd_prefix, *BASE_FLAGS, *std, *inc, "-c", str(src_path), "-o", str(o)]
-        subprocess.run(cmd, check=True)
+    if cuda:
+        nvcc = shutil.which("nvcc") or shutil.which("/usr/local/cuda/bin/nvcc")
+        if not nvcc:
+            raise SystemExit("nvcc not found; CUDA build requires the CUDA toolkit")
+        print(f"nvcc: {len(cuda_sources(source))} CUDA translation units")
+        # nvcc compiles are large; run them with bounded parallelism
+        with ThreadPoolExecutor(max_workers=max(1, min(jobs, 8))) as ex:
+            futs = [ex.submit(compile_one, [nvcc], s, obj_path(s),
+                              ["-std=c++17", "-arch=sm_86", "--compiler-options", "-fPIC"], True)
+                    for s in cuda_sources(source)]
+            for f in futs:
+                f.result()
+        objects.extend(obj_path(s) for s in cuda_sources(source))
 
     with ThreadPoolExecutor(max_workers=jobs) as ex:
         futs = [ex.submit(compile_one, *j) for j in jobs_list]
         for f in futs:
             f.result()
 
-    if cuda:
-        nvcc = shutil.which("nvcc") or shutil.which("/usr/local/cuda/bin/nvcc")
-        if not nvcc:
-            raise SystemExit("nvcc not found; CUDA build requires the CUDA toolkit")
-        cuda_flags = ["-O3", "-std=c++17", "--compiler-options", "-fPIC",
-                      "-DGGML_SCHED_MAX_COPIES=4", "-arch=sm_86"]
-        for s in CUDA_SOURCES:
-            o = obj_path(s)
-            objects.append(o)
-            cmd = [nvcc, *cuda_flags, *inc, "-c", str(source / s), "-o", str(o)]
-            print("nvcc:", s)
-            subprocess.run(cmd, check=True)
-
     binary = out_dir / ("moe_overlap_harness_cuda" if cuda else "moe_overlap_harness")
-    link = [cxx, *BASE_FLAGS, "-std=c++17"]
-    if cuda:
-        link.append("-DGGML_USE_CUDA")
-    link += [str(o) for o in objects]
+    link = [cxx, *flags, "-std=c++17", *[str(o) for o in objects]]
     if cuda:
         link += ["-L/usr/local/cuda/lib64", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"]
     link += ["-o", str(binary)]

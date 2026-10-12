@@ -29,14 +29,20 @@ kernels and precision:
 - **serial**: every stage fully synchronized before the next (blocking input
   copies → compute → synchronize → blocking reads, separately for the CPU
   subset, the activation upload, the GPU subset and the read-back).
-- **overlapped**: the activation H2D sets, the secondary-device expert graph
-  and the D2H read-back are enqueued in order on the secondary backend's
-  stream (`ggml_backend_tensor_set_async` → `ggml_backend_graph_compute_async`
-  → `ggml_backend_tensor_get_async`); the CPU expert subset and the shared
-  branch run on the CPU backend's host threadpool concurrently; a single
-  `ggml_backend_synchronize` joins. Dependencies stay ordered because copies,
-  kernels and read-back share one device stream; work is only called
-  "overlapped" because this ordering genuinely permits concurrent execution.
+- **overlapped**: the activation H2D sets and the secondary-device expert
+  graph are enqueued on the secondary backend's stream
+  (`ggml_backend_tensor_set_async` → `ggml_backend_graph_compute_async`);
+  the CPU expert subset and the shared branch then run on the CPU backend's
+  host threadpool concurrently with the secondary stream; only after the CPU
+  work completes is the D2H read-back issued
+  (`ggml_backend_tensor_get_async` into a pageable host buffer, then
+  `ggml_backend_synchronize`). The read-back is deliberately deferred: CUDA
+  documents that an async copy with a pageable destination may block the host
+  until it completes, so enqueueing it before the CPU branch could silently
+  serialize the arm and masquerade as a negative overlap result. Dependencies
+  stay ordered because the copies, kernels and read-back share one device
+  stream; work is only called "overlapped" because this ordering genuinely
+  permits concurrent execution.
 
 Ownership is fixed for both arms: the CPU backend owns experts `[0, split)`
 (plus router and shared expert), the secondary backend owns a resident device
@@ -128,11 +134,39 @@ needs.
 
 - `moe_overlap_harness.cpp` — the harness (single translation unit).
 - `build.py` — fetches the sha256-pinned source tarball once into the user
-  cache, compiles the minimal ggml CPU closure plus the harness with a direct
-  GCC/Clang recipe (no CMake, no installs), `--cuda` adds the CUDA closure for
-  the hardware host. `MOE_OVERLAP_OPT` overrides the optimization level.
+  cache, verifies the extracted tree against selected complete-file digests
+  from the accepted #299 runtime contract (an `MOE_OVERLAP_SOURCE` override
+  must prove the same identity or the build refuses), and compiles the
+  minimal ggml CPU closure plus the harness with a direct GCC/Clang recipe
+  (no CMake, no installs). Objects carry stamps (source hash + flags +
+  compiler) and are rebuilt on any change — a stale cached build cannot test
+  old code. `--cuda` compiles the complete CUDA closure at this pin (every
+  `ggml/src/ggml-cuda/*.cu` plus the `template-instances/*.cu` TUs the pin's
+  own CMake GLOBs) with `GGML_USE_CUDA` defined at compile time for every TU
+  (backend registration in `ggml-backend-reg.cpp` is gated on that define, so
+  it cannot be a link-time-only flag). No CUDA toolchain exists in the offline
+  container, so the `--cuda` build remains compile-verified only on the
+  hardware host. `MOE_OVERLAP_OPT` overrides the optimization level.
 - `offline-validation/` — retained offline run reports (SYNTHETIC weights and
   inputs; reduced smoke + full-authentic-shape decode/prefill runs).
+
+Additional offline controls exercised by
+`tests/test_moe_overlap_prototype.py`:
+
+- **GGUF loader regression**: a small authentic-geometry fixture GGUF
+  (n_expert = 12, tensors with distinct crafted contents, alphabetical file
+  order deliberately different from the loader's internal order) is replayed
+  with crafted activations (`--inputs-file`, quantization-exact by
+  construction) and the dumped arm outputs are checked against an independent
+  F64 block reference computed directly from the fixture bytes (including the
+  modeled Q8_0 activation quantization of the down-projection inputs).
+  Demonstrated to fail against the pre-fix sequential-append loader.
+- **compute-status failure injection** (`--self-check-status-negative`): a
+  failed graph compute terminates the run non-passing with the stage recorded;
+  outputs are never compared on stale results, and non-finite values can never
+  satisfy a tolerance comparison.
+- **build-cache invalidation**: an object whose stamp no longer matches its
+  source/flags/compiler is rebuilt; unchanged objects are reused.
 - `hardware-recipe.md` — the proposed, separately authorized hardware steps.
 - `../../tests/test_moe_overlap_prototype.py` — offline tests.
 
@@ -147,7 +181,9 @@ timing is meaningless by construction and is not reported as a result):
   tolerance).
 - full-authentic prefill (`--tokens 128 --split 256 --reps 5`): all gates
   pass; routed counts exactly 1280/1280; padding overhead reported per rep.
-- `tests/test_moe_overlap_prototype.py`: 7/7 pass.
+- `tests/test_moe_overlap_prototype.py`: 12/12 pass, including the real-file
+  GGUF fixture loader regression (verified to fail against the pre-fix
+  loader) and the fresh-build/stale-cache control.
 
 ## Limitations
 
@@ -168,5 +204,8 @@ timing is meaningless by construction and is not reported as a result):
   changes `k`); build time is measured and reported separately from the
   block-execution comparison and models precompiled-graph selection, not
   block execution.
-- The harness is a prototype: fail-closed errors are preferred, but it has
-  not been through production hardening, fuzzing, or sanitizer campaigns.
+- The harness is a prototype: fail-closed errors and status checks are
+  preferred, but it has not been through production hardening, fuzzing, or
+  sanitizer campaigns. The CUDA closure is enumerated from the pin's own
+  CMake GLOBs and defines, but has not been compiled here (no nvcc in the
+  offline container); the hardware host build is its first compile check.

@@ -5621,7 +5621,7 @@
     "test_moe_overlap_prototype": {
       "baseline_group": "moe-overlap-prototype",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 7,
+      "baseline_test_count": 12,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "moe-overlap-prototype",
@@ -5637,7 +5637,7 @@
       "pinned_by_evidence": [],
       "rationale": "SYNTHETIC offline correctness only (see tools/moe-overlap/README.md): establishes no performance result, physical qualification, or campaign authority; overlap timing is meaningless with a CPU secondary backend and the harness asserts that disclaimer.",
       "replacement": null,
-      "test_count_at_audit": 7
+      "test_count_at_audit": 12
     },
     "test_plan_ci": {
       "baseline_group": "repo-integrity",

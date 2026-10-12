@@ -225,16 +225,16 @@ struct Weights {
         struct gguf_init_params ip = { /*no_alloc =*/ true, /*ctx =*/ nullptr };
         gguf_context * g = gguf_init_from_file(path.c_str(), ip);
         if (!g) { err = "gguf_init_from_file failed: " + path; return false; }
-        struct Want { const char * suffix; ggml_type type; int64_t ne1, ne2; };
+        struct Want { const char * suffix; ggml_type type; };
         std::vector<Want> want = {
-            {"ffn_gate_inp.weight",       GGML_TYPE_F32, 0,           0},         // [N_EMBD, n_expert]
-            {"ffn_gate_inp_shexp.weight", GGML_TYPE_F32, 0,           0},         // [N_EMBD]
-            {"ffn_up_exps.weight",        GGML_TYPE_Q8_0, N_FF,       0},         // [N_EMBD, N_FF, n_expert]
-            {"ffn_gate_exps.weight",      GGML_TYPE_Q8_0, N_FF,       0},
-            {"ffn_down_exps.weight",      GGML_TYPE_Q8_0, N_EMBD,     0},         // [N_FF, N_EMBD, n_expert]
-            {"ffn_up_shexp.weight",       GGML_TYPE_Q8_0, N_FF,       0},         // [N_EMBD, N_FF]
-            {"ffn_gate_shexp.weight",     GGML_TYPE_Q8_0, N_FF,       0},
-            {"ffn_down_shexp.weight",     GGML_TYPE_Q8_0, N_EMBD,     0},         // [N_FF, N_EMBD]
+            {"ffn_gate_inp.weight",       GGML_TYPE_F32},
+            {"ffn_gate_inp_shexp.weight", GGML_TYPE_F32},
+            {"ffn_up_exps.weight",        GGML_TYPE_Q8_0},
+            {"ffn_gate_exps.weight",      GGML_TYPE_Q8_0},
+            {"ffn_down_exps.weight",      GGML_TYPE_Q8_0},
+            {"ffn_up_shexp.weight",       GGML_TYPE_Q8_0},
+            {"ffn_gate_shexp.weight",     GGML_TYPE_Q8_0},
+            {"ffn_down_shexp.weight",     GGML_TYPE_Q8_0},
         };
         std::vector<int64_t> ids((size_t)want.size(), -1);
         // first pass: presence, type, and the routed-expert count from the router
@@ -246,26 +246,10 @@ struct Weights {
             if (gguf_get_tensor_type(g, id) != want[i].type) {
                 err = std::string("type mismatch for ") + name; gguf_free(g); return false;
             }
-            const int64_t * ne = gguf_get_tensor_ne(g, id);
-            bool is_router = (i == 0);
-            bool is_exps   = strstr(want[i].suffix, "_exps.weight") != nullptr;
-            bool ok = (ne[0] == N_EMBD || (strcmp(want[i].suffix, "ffn_down_exps.weight") == 0 && ne[0] == N_FF)
-                                          || (strcmp(want[i].suffix, "ffn_down_shexp.weight") == 0 && ne[0] == N_FF));
-            if (is_router) { n_expert = ne[1]; }
-            if (want[i].ne1 != 0) ok = ok && (ne[1] == want[i].ne1);
-            else if (is_router) ok = ok && ne[1] > N_USED;
-            else ok = ok && (ne[1] == 1 || ne[1] == N_EMBD || ne[1] == N_FF); // 1D F32 vectors
-            if (is_exps) ok = ok && ne[2] > 1;
-            (void)is_exps;
-            if (!ok) {
-                char b[256];
-                snprintf(b, sizeof b, "shape mismatch for blk.%d.%s: ne=[%lld,%lld,%lld]",
-                         layer, want[i].suffix, (long long)ne[0], (long long)ne[1], (long long)ne[2]);
-                err = b; gguf_free(g); return false;
-            }
+            if (i == 0) n_expert = gguf_get_tensor_ne(g, id)[1];
             ids[i] = id;
         }
-        // second pass: exact shapes now that n_expert is known + byte ranges
+        // second pass: exact shapes now that n_expert is known + file extents
         FILE * f = fopen(path.c_str(), "rb");
         if (!f) { err = "cannot reopen shard: " + path; gguf_free(g); return false; }
         struct Src { size_t file_off, bytes; };
@@ -274,11 +258,25 @@ struct Weights {
         size_t total = 0;
         for (size_t i = 0; i < want.size(); ++i) {
             const int64_t * ne = gguf_get_tensor_ne(g, ids[i]);
-            bool is_exps = strstr(want[i].suffix, "_exps.weight") != nullptr;
-            if (is_exps && ne[2] != n_expert) {
+            const char * sfx = want[i].suffix;
+            bool is_router   = strcmp(sfx, "ffn_gate_inp.weight") == 0;
+            bool is_shgate_w = strcmp(sfx, "ffn_gate_inp_shexp.weight") == 0;
+            bool is_exps     = strstr(sfx, "_exps.weight") != nullptr;
+            bool is_down     = strncmp(sfx, "ffn_down", 8) == 0; // down: [N_FF, N_EMBD, ...]
+            int64_t e0 = is_down ? N_FF : N_EMBD;
+            int64_t e1 = is_down ? N_EMBD : (is_router ? n_expert : N_FF);
+            bool ok;
+            if (is_shgate_w) {
+                ok = (ne[0] == N_EMBD) && ne[1] <= 1; // 1D F32 vector
+            } else {
+                ok = (ne[0] == e0) && (ne[1] == e1);
+                if (is_exps) ok = ok && (ne[2] == n_expert);
+            }
+            if (!ok) {
                 char b[256];
-                snprintf(b, sizeof b, "expert-count mismatch for blk.%d.%s: ne2=%lld expected %lld",
-                         layer, want[i].suffix, (long long)ne[2], (long long)n_expert);
+                snprintf(b, sizeof b, "shape mismatch for blk.%d.%s: ne=[%lld,%lld,%lld] (expected [%lld,%lld,%lld])",
+                         layer, sfx, (long long)ne[0], (long long)ne[1], (long long)ne[2],
+                         (long long)e0, (long long)e1, (long long)(is_exps ? n_expert : 0));
                 err = b; fclose(f); gguf_free(g); return false;
             }
             srcs[i].bytes = gguf_get_tensor_size(g, ids[i]);
@@ -287,13 +285,22 @@ struct Weights {
         }
         store.assign(total, 0);
         create_tensors();
-        size_t pos = 0;
+        // Read each tensor's bytes directly into ITS tensor's storage. The
+        // tensors' in-store layout (create_tensors) need not match the file
+        // order; per-tensor reads make the byte-to-tensor assignment explicit.
+        ggml_tensor * targets[8] = { router, sh_gate_w, up, gate, down, sh_up, sh_gate, sh_down };
         for (size_t i = 0; i < srcs.size(); ++i) {
+            size_t expect = ggml_nbytes(targets[i]);
+            if (srcs[i].bytes != expect) {
+                char b[256];
+                snprintf(b, sizeof b, "byte-size mismatch for blk.%d.%s: file %zu vs tensor %zu",
+                         layer, want[i].suffix, srcs[i].bytes, expect);
+                err = b; fclose(f); gguf_free(g); return false;
+            }
             if (fseeko(f, (off_t)srcs[i].file_off, SEEK_SET) != 0) { err = "fseeko failed"; fclose(f); gguf_free(g); return false; }
-            if (fread(store.data() + pos, 1, srcs[i].bytes, f) != srcs[i].bytes) {
+            if (fread(targets[i]->data, 1, srcs[i].bytes, f) != srcs[i].bytes) {
                 err = std::string("short read for blk.") + want[i].suffix; fclose(f); gguf_free(g); return false;
             }
-            pos += srcs[i].bytes;
         }
         fclose(f);
         gguf_free(g);
@@ -562,7 +569,12 @@ static CheckResult validate_vs_reference(const std::vector<float> & got,
                 l1 += std::fabs((double)planes[(size_t)(e + i * N_EMBD + t * N_EMBD * k_ref)]);
             double tol = assoc * l1 + quant_headroom * l1;
             if (tol <= 0.0) tol = assoc; // all-zero planes: pure rounding scale
-            double d = std::fabs((double)got[(size_t)(e + t * N_EMBD)] - (double)ref[(size_t)(e + t * N_EMBD)]);
+            double g = (double)got[(size_t)(e + t * N_EMBD)];
+            double q = (double)ref[(size_t)(e + t * N_EMBD)];
+            // non-finite outputs can never satisfy a tolerance comparison
+            // (NaN comparisons are false); refuse them explicitly
+            if (!std::isfinite(g) || !std::isfinite(q)) { r.pass = false; g = q = 0.0; }
+            double d = std::fabs(g - q);
             r.n++;
             if (d > r.max_abs) r.max_abs = d;
             double ratio = d / tol;
@@ -655,6 +667,19 @@ struct StageTimes {
     double h2d_ms = 0, cpu_ms = 0, sec_ms = 0, d2h_ms = 0, combine_ms = 0, total_ms = 0;
 };
 
+// Compute-status failure propagation: a non-success graph compute must abort
+// the run before any output is compared or reused (no stale outputs).
+static bool g_compute_failed = false;
+static std::string g_compute_fail_stage;
+
+static void check_compute(enum ggml_status st, const char * stage) {
+    if (st != GGML_STATUS_SUCCESS && !g_compute_failed) {
+        g_compute_failed = true;
+        g_compute_fail_stage = std::string(stage) + " (ggml_status=" + std::to_string((int)st) + ")";
+        fprintf(stderr, "error: graph compute failed at %s\n", g_compute_fail_stage.c_str());
+    }
+}
+
 struct Harness {
     std::string mode = "synthetic";
     std::string gguf_path;
@@ -669,6 +694,8 @@ struct Harness {
     std::string inputs_file;
     std::string json_path;
     bool negative_control = false;
+    bool status_negative = false;
+    std::string dump_serial, dump_overlap; // last-rep arm outputs (F32)
 
     ggml_backend_t cpu_bk = nullptr, sec_bk = nullptr;
     Weights W;
@@ -772,7 +799,7 @@ int run_harness(Harness & H) {
     auto run_router = [&](ArmContext & A) {
         double s = now_ms();
         ggml_backend_tensor_set(H.router_plan.in_cur, A.cur.data(), 0, sizeof(float) * A.cur.size());
-        ggml_backend_graph_compute(H.cpu_bk, H.router_plan.gf);
+        check_compute(ggml_backend_graph_compute(H.cpu_bk, H.router_plan.gf), "router");
         ggml_backend_synchronize(H.cpu_bk);
         A.ids.resize((size_t)(N_USED * H.T));
         A.rweights.resize((size_t)(N_USED * H.T));
@@ -783,7 +810,7 @@ int run_harness(Harness & H) {
 
     auto compute_shared_blocking = [&](ArmContext & A, std::vector<float> & sh) {
         ggml_backend_tensor_set(H.shared_plan.in_cur, A.cur.data(), 0, sizeof(float) * A.cur.size());
-        ggml_backend_graph_compute(H.cpu_bk, H.shared_plan.gf);
+        check_compute(ggml_backend_graph_compute(H.cpu_bk, H.shared_plan.gf), "shared");
         ggml_backend_synchronize(H.cpu_bk);
         sh.resize((size_t)(N_EMBD * H.T));
         ggml_backend_tensor_get(H.shared_plan.out, sh.data(), 0, sizeof(float) * sh.size());
@@ -795,7 +822,7 @@ int run_harness(Harness & H) {
         ggml_backend_tensor_set(H.ref_plan.in_cur, A.cur.data(), 0, sizeof(float) * A.cur.size());
         ggml_backend_tensor_set(H.ref_plan.in_ids, A.ids.data(), 0, sizeof(int32_t) * A.ids.size());
         ggml_backend_tensor_set(H.ref_plan.in_w, A.rweights.data(), 0, sizeof(float) * A.rweights.size());
-        ggml_backend_graph_compute(H.cpu_bk, H.ref_plan.gf);
+        check_compute(ggml_backend_graph_compute(H.cpu_bk, H.ref_plan.gf), "reference");
         ggml_backend_synchronize(H.cpu_bk);
         ref_out.resize((size_t)(N_EMBD * H.T));
         ref_planes.resize((size_t)(N_EMBD * N_USED * H.T));
@@ -824,7 +851,7 @@ int run_harness(Harness & H) {
         double c0 = now_ms();
         if (pcpu.ok()) {
             set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
-            ggml_backend_graph_compute(H.cpu_bk, pcpu.gf);
+            check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
             ggml_backend_synchronize(H.cpu_bk);
             A.partial_cpu.resize((size_t)(N_EMBD * H.T));
             ggml_backend_tensor_get(pcpu.out, A.partial_cpu.data(), 0, sizeof(float) * A.partial_cpu.size());
@@ -839,7 +866,7 @@ int run_harness(Harness & H) {
             ggml_backend_synchronize(H.sec_bk);
             st.h2d_ms = now_ms() - h0;
             double g0 = now_ms();
-            ggml_backend_graph_compute(H.sec_bk, psec.gf);
+            check_compute(ggml_backend_graph_compute(H.sec_bk, psec.gf), "secondary experts");
             ggml_backend_synchronize(H.sec_bk);
             st.sec_ms = now_ms() - g0;
             double d0 = now_ms();
@@ -855,7 +882,13 @@ int run_harness(Harness & H) {
         st.total_ms = now_ms() - s;
     };
 
-    // overlapped arm: secondary stream work enqueued, CPU runs concurrently
+    // overlapped arm: secondary stream work enqueued, CPU runs concurrently.
+    // The D2H read-back is deliberately issued only AFTER the CPU-side work:
+    // the destination is ordinary pageable host memory, and CUDA documents
+    // that an async copy with a pageable destination may block the host until
+    // the copy completes. Enqueueing it before the CPU branch could silently
+    // serialize the whole arm and masquerade as a negative overlap result.
+    // Stream ordering still guarantees the read happens after the kernels.
     auto run_overlap = [&](ArmContext & A, Plan & pcpu, Plan & psec, std::vector<float> & out, StageTimes & st) {
         double s = now_ms();
         if (psec.ok()) {
@@ -865,16 +898,15 @@ int run_harness(Harness & H) {
             ggml_backend_tensor_set_async(H.sec_bk, psec.in_w, A.w_sec.data(), 0, sizeof(float) * A.w_sec.size());
             st.h2d_ms = now_ms() - h0; // submission time only (async)
             A.partial_sec.resize((size_t)(N_EMBD * H.T));
-            ggml_backend_graph_compute_async(H.sec_bk, psec.gf);
-            // D2H read-back enqueued on the same device stream, after kernels
-            ggml_backend_tensor_get_async(H.sec_bk, psec.out, A.partial_sec.data(), 0, sizeof(float) * A.partial_sec.size());
+            check_compute(ggml_backend_graph_compute_async(H.sec_bk, psec.gf), "secondary experts (async)");
         } else {
             A.partial_sec.assign((size_t)(N_EMBD * H.T), 0.0f);
         }
+        // CPU expert subset + shared branch run while the secondary stream works
         double c0 = now_ms();
         if (pcpu.ok()) {
             set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
-            ggml_backend_graph_compute(H.cpu_bk, pcpu.gf);
+            check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
             ggml_backend_synchronize(H.cpu_bk);
             A.partial_cpu.resize((size_t)(N_EMBD * H.T));
             ggml_backend_tensor_get(pcpu.out, A.partial_cpu.data(), 0, sizeof(float) * A.partial_cpu.size());
@@ -883,10 +915,13 @@ int run_harness(Harness & H) {
         }
         compute_shared_blocking(A, A.shared_out);
         st.cpu_ms = now_ms() - c0;
+        // join: D2H read-back (pageable host destination) issued here, after
+        // the CPU-side work, then wait for the secondary stream to complete
         if (psec.ok()) {
-            double w0 = now_ms();
+            double d0 = now_ms();
+            ggml_backend_tensor_get_async(H.sec_bk, psec.out, A.partial_sec.data(), 0, sizeof(float) * A.partial_sec.size());
             ggml_backend_synchronize(H.sec_bk);
-            st.sec_ms = now_ms() - w0; // join wait beyond the CPU-side work
+            st.d2h_ms = now_ms() - d0;
         }
         double k0 = now_ms();
         combine(A, out);
@@ -923,6 +958,17 @@ int run_harness(Harness & H) {
             if (validate) { all_pass = false; fail_reason = "arm plan allocation failed"; }
         }
 
+        if (g_compute_failed) {
+            // a failed compute leaves stale/unwritable outputs: refuse to run
+            // or compare anything further; the run fails with the stage name
+            if (validate) {
+                all_pass = false;
+                if (fail_reason.empty()) fail_reason = "graph compute failed: " + g_compute_fail_stage;
+            }
+            pcpu.free_plan();
+            psec.free_plan();
+            return;
+        }
         bool cross = (A.k_sec > 0) && (H.secondary_kind != "cpu");
         run_reference(A, R.ref_out, R.ref_planes);
         if (serial_first) {
@@ -935,6 +981,15 @@ int run_harness(Harness & H) {
         R.serial_ms = R.st_serial.total_ms;
         R.overlap_ms = R.st_overlap.total_ms;
 
+        if (g_compute_failed) {
+            if (validate) {
+                all_pass = false;
+                if (fail_reason.empty()) fail_reason = "graph compute failed: " + g_compute_fail_stage;
+            }
+            pcpu.free_plan();
+            psec.free_plan();
+            return;
+        }
         if (validate) {
             R.serial_vs_ref = validate_vs_reference(R.serial_out, R.ref_out, R.ref_planes, N_USED, H.T, cross);
             R.overlap_vs_serial = validate_bitwise(R.overlap_out, R.serial_out);
@@ -966,13 +1021,28 @@ int run_harness(Harness & H) {
     };
 
     // ---- warmup (discarded; warms allocator, code paths and device graphs) --
-    if (H.warmup > 0) {
+    int warmup_runs = 0;
+    for (int w = 0; w < H.warmup; ++w) {
+        ++warmup_runs;
         ArmContext A;
         RepResult R;
         bool ok = false;
         make_input(A, -1, ok);
         if (!ok) return 4;
         run_rep(A, R, true, /*validate=*/false);
+        if (g_compute_failed) {
+            fprintf(stderr, "error: warmup compute failed: %s\n", g_compute_fail_stage.c_str());
+            return 4;
+        }
+    }
+
+    // optional status-failure injection control: prove that a failed compute
+    // refuses to reach any comparison (the run must terminate non-passing
+    // with the stage recorded; no stale-output use)
+    bool status_negative = H.status_negative;
+    if (status_negative) {
+        g_compute_failed = true;
+        g_compute_fail_stage = "injected failure (self-check-status-negative)";
     }
 
     // ---- timed repetitions ----------------------------------------------------
@@ -985,8 +1055,12 @@ int run_harness(Harness & H) {
         make_input(A, r, ok);
         if (!ok) return 4;
         run_rep(A, R, /*serial_first=*/ (r % 2) == 0, /*validate=*/true);
-        // isolation: distinct inputs must produce distinct reference outputs
-        if (r > 0) {
+        if (g_compute_failed) break;
+        // isolation: distinct generated inputs must produce distinct reference
+        // outputs. With --inputs-file every repetition replays the same
+        // captured activations by definition, so distinctness is not a valid
+        // demand there (the determinism recheck below still applies).
+        if (r > 0 && H.inputs_file.empty()) {
             bool differ = false;
             for (size_t i = 0; i < R.ref_out.size(); ++i)
                 if (R.ref_out[i] != results.back().ref_out[i]) { differ = true; break; }
@@ -1010,7 +1084,7 @@ int run_harness(Harness & H) {
         J.begin("overlap_stages");
         J.num("h2d_submit_ms", R.st_overlap.h2d_ms);
         J.num("cpu_ms", R.st_overlap.cpu_ms);
-        J.num("sec_wait_ms", R.st_overlap.sec_ms);
+        J.num("d2h_ms", R.st_overlap.d2h_ms);
         J.num("combine_ms", R.st_overlap.combine_ms);
         J.end();
         J.num("k_cpu", (double)R.k_cpu);
@@ -1030,8 +1104,30 @@ int run_harness(Harness & H) {
     }
     J.end_arr();
 
+    // optional last-rep arm-output dumps for external validation (F32,
+    // little-endian, [N_EMBD * T]); only valid when the run is not failed
+    if ((!H.dump_serial.empty() || !H.dump_overlap.empty()) && !results.empty()) {
+        auto dump = [](const std::string & path, const std::vector<float> & v, bool & ok) {
+            if (path.empty()) return;
+            FILE * f = fopen(path.c_str(), "wb");
+            if (!f) { ok = false; return; }
+            fwrite(v.data(), sizeof(float), v.size(), f);
+            fclose(f);
+        };
+        bool dump_ok = !g_compute_failed;
+        dump(H.dump_serial, results.back().serial_out, dump_ok);
+        dump(H.dump_overlap, results.back().overlap_out, dump_ok);
+        J.begin("output_dumps");
+        J.boolean("ok", dump_ok);
+        if (!H.dump_serial.empty()) J.str("serial", H.dump_serial);
+        if (!H.dump_overlap.empty()) J.str("overlap", H.dump_overlap);
+        J.num("elements", (double)(N_EMBD * H.T));
+        J.end();
+        if (!dump_ok) { all_pass = false; if (fail_reason.empty()) fail_reason = "output dump failed"; }
+    }
+
     // determinism/reuse recheck: rep 0's inputs must reproduce rep 0 exactly
-    {
+    if (!g_compute_failed) {
         ArmContext A;
         RepResult R;
         bool ok = false;
@@ -1050,7 +1146,7 @@ int run_harness(Harness & H) {
     }
 
     // ---- negative control (comparator sensitivity) -----------------------------
-    if (H.negative_control) {
+    if (H.negative_control && !g_compute_failed) {
         // Recompute the serial output with the shared branch omitted from the
         // combine; the validator must reject it. Proves a missing branch
         // cannot silently pass.
@@ -1068,13 +1164,13 @@ int run_harness(Harness & H) {
         std::vector<float> partial_cpu((size_t)(N_EMBD * H.T), 0.0f), partial_sec((size_t)(N_EMBD * H.T), 0.0f);
         if (pcpu.ok()) {
             set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
-            ggml_backend_graph_compute(H.cpu_bk, pcpu.gf);
+            check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
             ggml_backend_synchronize(H.cpu_bk);
             ggml_backend_tensor_get(pcpu.out, partial_cpu.data(), 0, sizeof(float) * partial_cpu.size());
         }
         if (psec.ok()) {
             set_plan_inputs_blocking(psec, A, A.ids_sec, A.w_sec);
-            ggml_backend_graph_compute(H.sec_bk, psec.gf);
+            check_compute(ggml_backend_graph_compute(H.sec_bk, psec.gf), "secondary experts");
             ggml_backend_synchronize(H.sec_bk);
             ggml_backend_tensor_get(psec.out, partial_sec.data(), 0, sizeof(float) * partial_sec.size());
         }
@@ -1114,6 +1210,12 @@ int run_harness(Harness & H) {
 
     J.begin("verdict");
     J.boolean("pass", all_pass);
+    J.num("warmup_runs", (double)warmup_runs);
+    if (H.status_negative) {
+        // expected outcome of the injection: the run refuses to pass and the
+        // reason names the injected failed stage (never a comparison result)
+        J.boolean("status_negative_control_refused", !all_pass && fail_reason.find("injected failure") != std::string::npos);
+    }
     J.str("reason", all_pass ? "all correctness gates passed" : fail_reason);
     J.str("timing_claim",
           H.secondary_kind == "cuda"
@@ -1183,13 +1285,17 @@ int main(int argc, char ** argv) {
         else if (a == "--inputs-file") H.inputs_file = next("--inputs-file");
         else if (a == "--json") H.json_path = next("--json");
         else if (a == "--self-check-negative") H.negative_control = true;
+        else if (a == "--self-check-status-negative") H.status_negative = true;
+        else if (a == "--dump-serial") H.dump_serial = next("--dump-serial");
+        else if (a == "--dump-overlap") H.dump_overlap = next("--dump-overlap");
         else if (a == "--list-devices") return list_devices();
         else if (a == "--help" || a == "-h") {
             printf("usage: %s [--gguf <shard> --layer N | --synthetic [--experts N] [--seed S]]\n"
                    "  --tokens T (1 = decode, 128 = prefill) [--split S] [--secondary cpu|cuda]\n"
                    "  [--threads N] [--secondary-threads N] [--warmup W] [--reps R]\n"
                    "  [--inputs-file <f32 block activations>] [--json out.json]\n"
-                   "  [--self-check-negative] [--list-devices]\n", argv[0]);
+                   "  [--self-check-negative] [--self-check-status-negative]\n"
+                   "  [--dump-serial PATH] [--dump-overlap PATH] [--list-devices]\n", argv[0]);
             return 0;
         }
         else { fprintf(stderr, "error: unknown arg %s\n", a.c_str()); return 2; }

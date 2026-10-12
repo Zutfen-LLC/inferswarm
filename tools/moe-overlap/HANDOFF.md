@@ -93,6 +93,48 @@ warranted; this handoff plus the directory README/recipe carry the
 documentation. `hardware-recipe.md` is explicitly a proposal that grants no
 execution authority; issue #300 remains open and untouched.
 
+## Review corrections (PR #307, second head)
+
+The maintainer's exact-head review of `cb2ad082` returned NO-GO with five
+findings and two test-contract issues. All are addressed in this head:
+
+1. **P1 GGUF loader byte-to-tensor assignment** (router/shared-gate bytes were
+   read into expert-bank storage): the loader now reads each tensor's bytes
+   directly into its own tensor storage, independent of file order. A new
+   offline fixture GGUF (distinct contents per tensor, alphabetical file
+   order, authentic geometry) with an independent F64 block reference now
+   guards this: **demonstrated to fail against the pre-fix loader** (both
+   fixture tests fail with the reverted sequential-append assignment, pass
+   with the fix).
+2. **P1 CUDA build completeness**: `--cuda` now compiles every
+   `ggml/src/ggml-cuda/*.cu` plus the 120 `template-instances/*.cu` TUs the
+   pin's own CMake GLOBs enumerate, and `GGML_USE_CUDA` is defined at compile
+   time for every TU (registration in `ggml-backend-reg.cpp` is compile-gated).
+   No nvcc exists in the offline container, so this remains
+   compile-verified-on-hardware-host only — stated in the README.
+3. **Overlap defeat via pageable D2H**: the D2H read-back is now issued only
+   after the CPU-side work completes (CUDA documents that async copies with
+   pageable destinations may block the host). Stage reporting now exposes
+   `d2h_ms` for the deferred read-back/join.
+4. **P2 stale cached builds**: objects carry stamps (source hash + flags +
+   compiler); mismatches rebuild. `MOE_OVERLAP_SOURCE` overrides are verified
+   against selected complete-file digests from the accepted #299 runtime
+   contract — a tree claiming the pin identity with different bytes is
+   refused (demonstrated). A test proves reuse-when-unchanged and
+   rebuild-on-stamp-mismatch.
+5. **P2 ignored compute statuses**: every graph compute is status-checked; a
+   failure aborts before any output comparison (no stale-output use), and
+   non-finite outputs can never satisfy a tolerance comparison. A
+   failure-injection control (`--self-check-status-negative`) proves the
+   refusal path end-to-end.
+6. **Test contracts**: `--warmup N` now runs N warmup repetitions (reported as
+   `verdict.warmup_runs` and asserted), and repeated `--inputs-file`
+   repetitions no longer demand distinct outputs (identical captured inputs
+   are expected; the bitwise determinism recheck still applies).
+
+Offline results at this head: 12/12 tests pass; retained full-shape SYNTHETIC
+decode/prefill reports regenerated with all gates green.
+
 ## For the reviewer
 
 - Focused diff: `git diff main -- tools/moe-overlap tests/test_moe_overlap_prototype.py scripts/plan_ci.py scripts/ci_groups.json docs/ci/test-retention-audit.json .github/workflows/ci.yml`.
