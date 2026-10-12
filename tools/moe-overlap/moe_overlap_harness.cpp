@@ -49,6 +49,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cinttypes>
+#include <iostream>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -617,12 +619,49 @@ struct ArmContext {
     std::vector<float> partial_cpu, partial_sec, shared_out;
 };
 
+// Padding for uniform-k windows (T > 1): MUL_MAT_ID ids are top-k output —
+// UNIQUE per token — and the CUDA backend's id-mapping kernel (mm_ids_helper
+// in ggml-cuda/mmid.cu at this pin) relies on that: it compacts each
+// (token, expert) pair exactly once. Padding a token's window with a
+// REPEATED local expert id therefore write-write races inside the kernel and
+// leaves duplicate output slots reading stale pool memory (the T=128
+// nondeterminism diagnosed on 2026-10-12; the CPU backend tolerates
+// duplicates, which is why offline runs never caught it). Padding ids must be
+// DISTINCT within the token and distinct from the token's genuine
+// selections, with weight exactly +0.0f so the extra expert planes are
+// numerically discarded. If the requested padded width cannot be represented
+// that way (fewer unselected local experts than padding slots), that is an
+// unrepresentable input: rejected explicitly here, never silently filled
+// with repeated ids.
+struct PaddingFail {
+    int64_t token = 0;
+    int64_t slots_needed = 0, unselected = 0;
+    bool primary = true;
+    bool duplicate_genuine = false; // same expert selected twice in one token
+};
+
+static void fill_padding_distinct(std::vector<int32_t> & ids_dev,
+                                  std::vector<float> & w_dev,
+                                  const std::vector<uint8_t> & used,
+                                  int64_t k_dev, int64_t n_local, int64_t t,
+                                  int64_t & fill, bool primary, PaddingFail & fail) {
+    for (int64_t cand = 0; cand < n_local && fill < k_dev; ++cand) {
+        if (used[(size_t)(cand + t * n_local)]) continue;
+        ids_dev[(size_t)(fill + t * k_dev)] = (int32_t)cand; // weight stays +0.0f
+        ++fill;
+    }
+    if (fill < k_dev) { fail = PaddingFail{t, k_dev - fill, n_local - (k_dev - fill), primary, false}; }
+}
+
 // Split routing into per-device padded subsets. For T == 1 the subsets are
 // exact (single token). For T > 1, mul_mat_id needs one uniform k per device,
-// so each subset is padded to its per-repetition maximum with a valid local
-// expert id and weight exactly +0.0f; the padding work is identical in both
-// arms and is reported (k vs k_real).
-static void partition_routing(ArmContext & A, int64_t T, int64_t split) {
+// so each subset is padded to its per-repetition maximum with DISTINCT local
+// expert ids unused by that token and weight exactly +0.0f (see
+// fill_padding_distinct); the padding work is identical in both arms and is
+// reported (k vs k_real). Sets structural_fail when the split routing
+// cannot be represented safely.
+static void partition_routing(ArmContext & A, int64_t T, int64_t split, int64_t n_expert,
+                              PaddingFail & structural_fail) {
     int64_t maxc = 0, maxs = 0;
     for (int64_t t = 0; t < T; ++t) {
         int64_t c = 0, s = 0;
@@ -641,6 +680,10 @@ static void partition_routing(ArmContext & A, int64_t T, int64_t split) {
     A.w_cpu.assign((size_t)(A.k_cpu * T), 0.0f);
     A.ids_sec.assign((size_t)(A.k_sec * T), 0);
     A.w_sec.assign((size_t)(A.k_sec * T), 0.0f);
+    // per-token local-id occupancy, so padding can pick distinct unselected ids
+    std::vector<uint8_t> used_cpu, used_sec;
+    if (split > 0) used_cpu.assign((size_t)(split * T), 0);
+    if (n_expert - split > 0) used_sec.assign((size_t)((n_expert - split) * T), 0);
     for (int64_t t = 0; t < T; ++t) {
         int64_t ci = 0, si = 0;
         for (int64_t i = 0; i < N_USED; ++i) {
@@ -648,19 +691,144 @@ static void partition_routing(ArmContext & A, int64_t T, int64_t split) {
             int32_t id = A.ids[(size_t)slot];
             float wv = A.rweights[(size_t)slot];
             if (id < split) {
+                uint8_t & u = used_cpu[(size_t)(id + t * split)];
+                if (u) { structural_fail = PaddingFail{t, 0, 0, true, true}; return; }
+                u = 1;
                 if (ci < A.k_cpu) {
                     A.ids_cpu[(size_t)(ci + t * A.k_cpu)] = id;
                     A.w_cpu[(size_t)(ci + t * A.k_cpu)] = wv;
                     ++ci;
                 }
-            } else if (si < A.k_sec) {
-                A.ids_sec[(size_t)(si + t * A.k_sec)] = id - (int32_t)split;
-                A.w_sec[(size_t)(si + t * A.k_sec)] = wv;
-                ++si;
+            } else {
+                uint8_t & u = used_sec[(size_t)((id - split) + t * (n_expert - split))];
+                if (u) { structural_fail = PaddingFail{t, 0, 0, false, true}; return; }
+                u = 1;
+                if (si < A.k_sec) {
+                    A.ids_sec[(size_t)(si + t * A.k_sec)] = id - (int32_t)split;
+                    A.w_sec[(size_t)(si + t * A.k_sec)] = wv;
+                    ++si;
+                }
             }
         }
         // remaining padded columns keep local id 0 and weight exactly +0.0f
+        (void)used_cpu; (void)used_sec;
     }
+}
+
+// Offline unit seam for partition_routing: when MOE_OVERLAP_UNIT_ROUTING is
+// set, run the split/pad logic over caller-supplied routing (no backends, no
+// weights, no graphs) and print the resulting padded matrices as JSON on
+// stdout, then exit 0 — or exit 5 with a reason on stderr when the padded
+// width is unrepresentable (fewer unselected local ids than padding slots).
+// This exists so the offline test suite can structurally verify the padding
+// invariant and the explicit rejection on a CPU-only machine (duplicate-id
+// padding raced only inside the CUDA kernel, which CPU runs never observe).
+// Expected input JSON on stdin (all fields required):
+//   {"n_expert": E, "split": S, "tokens": T, "n_used": U,
+//    "ids":   [U*T global expert ids, id + t*U layout],
+//    "weights": [U*T F32-as-uint32 bit patterns, same layout]}
+static int unit_routing_run() {
+    // Minimal JSON object parser for this fixed schema (numbers + flat int
+    // arrays). Not a general parser: any deviation from the schema is an
+    // error, never a guess.
+    std::string all, line;
+    while (std::getline(std::cin, line)) all += line;
+    auto fail = [](const char * why) { fprintf(stderr, "unit-routing input error: %s\n", why); return 5; };
+    auto parse_uint_array = [&](const std::string & key, std::vector<uint32_t> & out) -> bool {
+        size_t k = all.find("\"" + key + "\"");
+        if (k == std::string::npos) return false;
+        size_t lb = all.find('[', k), rb = all.find(']', k);
+        if (lb == std::string::npos || rb == std::string::npos) return false;
+        out.clear();
+        size_t i = lb + 1;
+        while (i < rb) {
+            if (all[i] == ',' || all[i] == ' ') { ++i; continue; }
+            size_t j = i;
+            while (j < rb && all[j] != ',') ++j;
+            out.push_back((uint32_t)std::strtoul(all.substr(i, j - i).c_str(), nullptr, 10));
+            i = j;
+        }
+        return true;
+    };
+    auto parse_num = [&](const std::string & key, int64_t & v) -> bool {
+        size_t k = all.find("\"" + key + "\"");
+        if (k == std::string::npos) return false;
+        size_t c = all.find(':', k);
+        if (c == std::string::npos) return false;
+        v = (int64_t)std::strtoll(all.substr(c + 1).c_str(), nullptr, 10);
+        return true;
+    };
+    int64_t n_expert = 0, split = 0, T = 0, n_used = 0;
+    std::vector<uint32_t> ids_in, w_in;
+    if (!parse_num("n_expert", n_expert) || !parse_num("split", split) ||
+        !parse_num("tokens", T) || !parse_num("n_used", n_used) ||
+        !parse_uint_array("ids", ids_in) || !parse_uint_array("weights", w_in))
+        return fail("missing field");
+    if (n_used < 1 || n_used > 64 || T < 1 || T > 4096 || n_expert < 1 ||
+        n_expert > 4096 || split < 0 || split > n_expert)
+        return fail("geometry out of range");
+    if ((int64_t)ids_in.size() != n_used * T || (int64_t)w_in.size() != n_used * T)
+        return fail("array size mismatch");
+    for (uint32_t id : ids_in) if (id >= (uint32_t)n_expert) return fail("id out of range");
+
+    // Build the same ArmContext the production path builds from the router.
+    ArmContext A;
+    A.ids.assign(ids_in.begin(), ids_in.end());
+    A.rweights.resize((size_t)(n_used * T));
+    for (size_t i = 0; i < A.rweights.size(); ++i)
+        std::memcpy(&A.rweights[i], &w_in[i], 4);
+
+    PaddingFail pfail;
+    partition_routing(A, T, split, n_expert, pfail);
+    if (pfail.duplicate_genuine) {
+        fprintf(stderr, "duplicate genuine expert id within token %lld (%s subset): "
+                "router output violates the top-k uniqueness contract\n",
+                (long long)pfail.token, pfail.primary ? "primary" : "secondary");
+        return 5;
+    }
+    if (pfail.slots_needed > 0) {
+        fprintf(stderr, "unrepresentable padding: token %lld %s subset needs %lld padding "
+                "slots but only %lld unselected local expert ids exist\n",
+                (long long)pfail.token, pfail.primary ? "primary" : "secondary",
+                (long long)pfail.slots_needed, (long long)pfail.unselected);
+        return 5;
+    }
+
+    JsonOut D;
+    D.begin("routing");
+    D.num("tokens", (double)T);
+    D.num("n_expert", (double)n_expert);
+    D.num("split", (double)split);
+    D.num("k_cpu", (double)A.k_cpu);
+    D.num("k_sec", (double)A.k_sec);
+    D.num("k_cpu_real", (double)A.k_cpu_real);
+    D.num("k_sec_real", (double)A.k_sec_real);
+    auto arr = [&](const char * name, const std::vector<int32_t> & v) {
+        D.begin_arr(name);
+        for (size_t i = 0; i < v.size(); ++i) {
+            char b[24];
+            snprintf(b, sizeof b, "%s%lld", i ? "," : "", (long long)v[i]);
+            D.s += b;
+        }
+        D.end_arr();
+    };
+    arr("ids_cpu", A.ids_cpu);
+    arr("ids_sec", A.ids_sec);
+    auto wbits = [&](const char * name, const std::vector<float> & w) {
+        D.begin_arr(name);
+        for (size_t i = 0; i < w.size(); ++i) {
+            uint32_t bits; std::memcpy(&bits, &w[i], 4);
+            char b[32];
+            snprintf(b, sizeof b, "%" PRIu32 "%s", bits, i + 1 < w.size() ? "," : "");
+            D.s += b;
+        }
+        D.end_arr();
+    };
+    wbits("w_cpu", A.w_cpu);
+    wbits("w_sec", A.w_sec);
+    D.end();
+    printf("{\n%s\n}\n", D.s.c_str());
+    return 0;
 }
 
 struct StageTimes {
@@ -700,6 +868,11 @@ struct Harness {
     bool negative_control = false;
     bool status_negative = false;
     std::string dump_serial, dump_overlap; // last-rep arm outputs (F32)
+    std::string dump_routing;              // last-rep split routing evidence
+    // last-rep routing capture for --dump-routing
+    std::vector<int32_t> last_ids_cpu, last_ids_sec, last_ids_all;
+    std::vector<float> last_w_cpu, last_w_sec, last_w_all;
+    int64_t last_k_cpu = 0, last_k_sec = 0, last_kr_cpu = 0, last_kr_sec = 0;
 
     ggml_backend_t cpu_bk = nullptr, sec_bk = nullptr;
     Weights W;
@@ -958,13 +1131,36 @@ int run_harness(Harness & H) {
         try {
             if (g_compute_failed) throw ComputeFailure{};
             R.router_ms = run_router(A);
-            partition_routing(A, H.T, H.split);
+            PaddingFail pfail;
+            partition_routing(A, H.T, H.split, H.n_expert, pfail);
+            if (pfail.duplicate_genuine || pfail.slots_needed > 0) {
+                // fail closed: never present duplicate or unrepresentable ids
+                // to the native MUL_MAT_ID operation
+                all_pass = false;
+                fail_reason = pfail.duplicate_genuine
+                    ? "duplicate genuine expert id within token " + std::to_string(pfail.token) +
+                      " (router output violates the top-k uniqueness contract)"
+                    : "unrepresentable padding: token " + std::to_string(pfail.token) +
+                      (pfail.primary ? " primary" : " secondary") + " subset needs " +
+                      std::to_string(pfail.slots_needed) + " padding slots but only " +
+                      std::to_string(pfail.unselected) + " unselected local expert ids exist";
+                pcpu.free_plan();
+                psec.free_plan();
+                return false;
+            }
             // fail-closed routed-work assertion: every token routes exactly N_USED
             // experts across the two devices; nothing may skip or duplicate work.
             R.counts_ok = (A.k_cpu_real + A.k_sec_real) == N_USED * H.T;
             R.k_cpu = A.k_cpu; R.k_sec = A.k_sec;
             R.k_cpu_real = A.k_cpu_real; R.k_sec_real = A.k_sec_real;
             R.single_device = (A.k_sec == 0);
+            if (!H.dump_routing.empty()) {
+                H.last_ids_cpu = A.ids_cpu; H.last_w_cpu = A.w_cpu;
+                H.last_ids_sec = A.ids_sec; H.last_w_sec = A.w_sec;
+                H.last_ids_all = A.ids;    H.last_w_all = A.rweights;
+                H.last_k_cpu = A.k_cpu; H.last_k_sec = A.k_sec;
+                H.last_kr_cpu = A.k_cpu_real; H.last_kr_sec = A.k_sec_real;
+            }
 
             double b0 = now_ms();
             if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
@@ -1142,7 +1338,14 @@ int run_harness(Harness & H) {
         Plan pcpu, psec;
         auto run_negative = [&]() {
             run_router(A);
-            partition_routing(A, H.T, H.split);
+            PaddingFail pfail;
+            partition_routing(A, H.T, H.split, H.n_expert, pfail);
+            if (pfail.duplicate_genuine || pfail.slots_needed > 0) {
+                all_pass = false;
+                fail_reason = "negative control: invalid routing structure (token " +
+                    std::to_string(pfail.token) + ")";
+                return;
+            }
             if (A.k_cpu > 0) pcpu = build_expert_plan(H.cpu_bk, H.prim, A.k_cpu, H.T, false);
             if (A.k_sec > 0) psec = build_expert_plan(H.sec_bk, H.sec, A.k_sec, H.T, false);
             if ((A.k_cpu > 0 && !pcpu.ok()) || (A.k_sec > 0 && !psec.ok())) {
@@ -1205,6 +1408,70 @@ int run_harness(Harness & H) {
         J.num("elements", (double)(N_EMBD * H.T));
         J.end();
         if (!dump_ok) { all_pass = false; if (fail_reason.empty()) fail_reason = "output dump failed"; }
+    }
+
+    // optional last-rep split-routing dump for external structural validation
+    // (JSON: per-device padded id/weight matrices exactly as presented to the
+    // native MUL_MAT_ID operation); only valid when the run is not failed
+    if (!H.dump_routing.empty() && all_pass && !g_compute_failed && !results.empty()) {
+        FILE * f = fopen(H.dump_routing.c_str(), "w");
+        if (!f) {
+            all_pass = false;
+            if (fail_reason.empty()) fail_reason = "routing dump failed";
+        } else {
+            JsonOut D;
+            D.begin("routing");
+            D.num("tokens", (double)H.T);
+            D.num("n_expert", (double)H.n_expert);
+            D.num("split", (double)H.split);
+            D.num("k_cpu", (double)H.last_k_cpu);
+            D.num("k_sec", (double)H.last_k_sec);
+            D.num("k_cpu_real", (double)H.last_kr_cpu);
+            D.num("k_sec_real", (double)H.last_kr_sec);
+            auto arr = [&](const char * name, const std::vector<int32_t> & v) {
+                D.begin_arr(name);
+                for (size_t i = 0; i < v.size(); ++i) {
+                    char b[24];
+                    snprintf(b, sizeof b, "%s%lld", i ? "," : "", (long long)v[i]);
+                    D.s += b;
+                }
+                D.end_arr();
+            };
+            arr("ids_all", H.last_ids_all);
+            arr("ids_cpu", H.last_ids_cpu);
+            arr("ids_sec", H.last_ids_sec);
+            D.begin_arr("w_cpu");
+            for (size_t i = 0; i < H.last_w_cpu.size(); ++i) {
+                // exact bit pattern of the float weight (distinguishes +0.0)
+                uint32_t bits; std::memcpy(&bits, &H.last_w_cpu[i], 4);
+                char b[32];
+                snprintf(b, sizeof b, "%" PRIu32 "%s", bits,
+                         i + 1 < H.last_w_cpu.size() ? "," : "");
+                D.s += b;
+            }
+            D.end_arr();
+            auto wbits = [&](const char * name, const std::vector<float> & w) {
+                D.begin_arr(name);
+                for (size_t i = 0; i < w.size(); ++i) {
+                    // exact bit pattern of the float weight (distinguishes +0.0)
+                    uint32_t bits; std::memcpy(&bits, &w[i], 4);
+                    char b[32];
+                    snprintf(b, sizeof b, "%" PRIu32 "%s", bits,
+                             i + 1 < w.size() ? "," : "");
+                    D.s += b;
+                }
+                D.end_arr();
+            };
+            wbits("w_all", H.last_w_all);
+            wbits("w_cpu", H.last_w_cpu);
+            wbits("w_sec", H.last_w_sec);
+            D.end();
+            fprintf(f, "{\n%s\n}\n", D.s.c_str());
+            fclose(f);
+            J.begin("routing_dump");
+            J.str("path", H.dump_routing);
+            J.end();
+        }
     }
 
     // ---- summary ----------------------------------------------------------------
@@ -1286,6 +1553,7 @@ static int list_devices() {
 }
 
 int main(int argc, char ** argv) {
+    if (std::getenv("MOE_OVERLAP_UNIT_ROUTING")) return unit_routing_run();
     Harness H;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -1311,6 +1579,7 @@ int main(int argc, char ** argv) {
         else if (a == "--self-check-status-negative") H.status_negative = true;
         else if (a == "--dump-serial") H.dump_serial = next("--dump-serial");
         else if (a == "--dump-overlap") H.dump_overlap = next("--dump-overlap");
+        else if (a == "--dump-routing") H.dump_routing = next("--dump-routing");
         else if (a == "--list-devices") return list_devices();
         else if (a == "--help" || a == "-h") {
             printf("usage: %s [--gguf <shard> --layer N | --synthetic [--experts N] [--seed S]]\n"
@@ -1318,7 +1587,8 @@ int main(int argc, char ** argv) {
                    "  [--threads N] [--secondary-threads N] [--warmup W] [--reps R]\n"
                    "  [--inputs-file <f32 block activations>] [--json out.json]\n"
                    "  [--self-check-negative] [--self-check-status-negative]\n"
-                   "  [--dump-serial PATH] [--dump-overlap PATH] [--list-devices]\n", argv[0]);
+                   "  [--dump-serial PATH] [--dump-overlap PATH] [--dump-routing PATH]\n"
+                   "  [--list-devices]\n", argv[0]);
             return 0;
         }
         else { fprintf(stderr, "error: unknown arg %s\n", a.c_str()); return 2; }

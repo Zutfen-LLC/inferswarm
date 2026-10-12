@@ -193,6 +193,266 @@ class TestMoEOverlapPrototype(unittest.TestCase):
         self.assertEqual(len(doc["reps"]), 3)
 
 
+
+# ---------------------------------------------------------------------------
+# Padding-invariant regressions (2026-10-12 T=128 hardware diagnosis).
+#
+# The harness used to pad uniform-k MUL_MAT_ID windows with a REPEATED local
+# expert id 0 (weight +0.0f). ggml's CUDA id-mapping kernel (mm_ids_helper)
+# assumes top-k-unique ids per token: duplicates write-write race and leave
+# output columns reading stale pool memory (compute-sanitizer: 538 hazards;
+# 309760/327680 elements divergent across identical serial replays; T=128
+# serial_vs_ref max_abs ~0.15). The CPU backend tolerates duplicates, which
+# is exactly why CPU numerical success could never catch it: the contract is
+# STRUCTURAL. These tests therefore validate the routing structure itself —
+# through the live harness (--dump-routing) and a unit seam
+# (MOE_OVERLAP_UNIT_ROUTING=1, stdin routing JSON) — and embed the REAL
+# retained pre-fix routing dump as the RED control.
+# ---------------------------------------------------------------------------
+
+import struct as _struct
+
+
+def _f32_bits(v: float) -> int:
+    return _struct.unpack("<I", _struct.pack("<f", v))[0]
+
+
+_POS_ZERO_BITS = _f32_bits(0.0)  # 0; -0.0 is distinct (0x80000000)
+
+
+def check_routing_structure(doc: dict, n_used: int = 10):
+    """Validate a routing dump against the MUL_MAT_ID padding contract.
+
+    For each token and device: every genuine (router-selected) local expert id
+    appears exactly once with its exact router weight bits; all remaining
+    slots are distinct unselected local ids with weight bits exactly +0.0;
+    every id in the window is unique and in range.
+    """
+    r = doc["routing"] if "routing" in doc else doc
+    T, split, n_expert = r["tokens"], r["split"], r["n_expert"]
+    k_cpu, k_sec = r["k_cpu"], r["k_sec"]
+    assert len(r["ids_cpu"]) == k_cpu * T, "ids_cpu size"
+    assert len(r["w_cpu"]) == k_cpu * T, "w_cpu size"
+    assert len(r["ids_sec"]) == k_sec * T, "ids_sec size"
+    assert len(r["w_sec"]) == k_sec * T, "w_sec size"
+    n_local_sec = n_expert - split
+    for t in range(T):
+        for dev, (ids_key, w_key, n_local, off) in {
+            "cpu": ("ids_cpu", "w_cpu", split, 0),
+            "sec": ("ids_sec", "w_sec", n_local_sec, split),
+        }.items():
+            window = r[ids_key][t * r["k_" + dev]:(t + 1) * r["k_" + dev]]
+            wbits = r[w_key][t * r["k_" + dev]:(t + 1) * r["k_" + dev]]
+            # unique and in-range ids (the CUDA kernel contract)
+            assert len(set(window)) == len(window), \
+                f"token {t} {dev}: duplicate ids in window {window}"
+            assert all(0 <= i < n_local for i in window), \
+                f"token {t} {dev}: id out of range in {window}"
+            # genuine selections preserved exactly once with exact weights
+            genuine = {}
+            for i in range(n_used):
+                gid = r["ids_all"][i + t * n_used]
+                if off <= gid < off + n_local:
+                    genuine[gid - off] = r["w_all"][i + t * n_used]
+            for gid, wbits_router in genuine.items():
+                assert window.count(gid) == 1, \
+                    f"token {t} {dev}: genuine id {gid} not present exactly once"
+                idx = window.index(gid)
+                assert wbits[idx] == wbits_router, \
+                    f"token {t} {dev}: genuine id {gid} weight bits changed"
+            # every non-genuine slot: distinct unselected id, weight exactly +0.0
+            for idx, lid in enumerate(window):
+                if lid in genuine:
+                    continue
+                assert lid not in genuine
+                assert wbits[idx] == _POS_ZERO_BITS, \
+                    f"token {t} {dev}: padding slot {idx} weight is not +0.0f"
+
+
+# REAL routing dump produced by the PRE-FIX binary (duplicate-id padding):
+# tools/moe-overlap build at PR #307 head 3e7df34, CPU closure, seed default,
+# --experts 12 --tokens 8 --split 6 --reps 1. Token 0 ids_cpu
+# [3,2,4,0,0,0]: genuine 0 padded with TWO MORE 0s — the exact defect.
+_PRE_FIX_ROUTING_RED = {"tokens":8,"n_expert":12,"split":6,"k_cpu":6,"k_sec":6,"k_cpu_real":36,"k_sec_real":44,"ids_all":[3,7,11,2,10,6,4,8,0,9,11,8,7,2,9,4,6,3,0,1,11,0,3,7,6,2,1,10,8,9,7,8,3,1,4,11,10,5,6,9,5,1,7,6,4,10,9,2,11,8,8,7,11,6,3,2,10,4,9,5,9,4,2,8,10,6,0,3,5,1,2,3,4,9,1,11,10,5,8,7],"ids_cpu":[3,2,4,0,0,0,2,4,3,0,1,0,0,3,2,1,0,0,3,1,4,5,0,0,5,1,4,2,0,0,3,2,4,5,0,0,4,2,0,3,5,1,2,3,4,1,5,0],"ids_sec":[1,5,4,0,2,3,5,2,1,3,0,0,5,1,0,4,2,3,1,2,5,4,0,3,1,0,4,3,5,2,2,1,5,0,4,3,3,2,4,0,0,0,3,5,4,2,1,0],"w_cpu":[1052930330,1034057461,1028316283,1025074614,0,0,1032606431,1026915402,1023374977,1023199277,1014733066,0,1041772163,1041481085,1036309424,1030858472,0,0,1043459516,1035090905,1033273418,1027082950,0,0,1048765975,1047071271,1032219683,1025567991,0,0,1037021889,1033736161,1027430268,1016503663,0,0,1046980499,1041185685,1028179567,1025317222,1025208656,1021339702,1044770640,1042686920,1040385583,1036026135,1031340947,0],"w_all":[1052930330,1043872993,1034360442,1034057461,1032356670,1028998133,1028316283,1025432199,1025074614,1024393635,1055267202,1044179439,1035300812,1032606431,1027848610,1026915402,1025624916,1023374977,1023199277,1014733066,1046254057,1041772163,1041481085,1040822103,1037537718,1036309424,1030858472,1028878720,1021407589,1016159780,1048789797,1045099774,1043459516,1035090905,1033273418,1031893508,1027390184,1027082950,1024680845,1017883852,1048765975,1047071271,1041217378,1041100936,1032219683,1031888253,1025596669,1025567991,1014836792,1014200605,1050042753,1042497385,1039086573,1037283521,1037021889,1033736161,1027435247,1027430268,1025087116,1016503663,1048780137,1046980499,1041185685,1035219280,1033070836,1032152876,1028179567,1025317222,1025208656,1021339702,1044770640,1042686920,1040385583,1039055155,1036026135,1035003489,1032177488,1031340947,1030300540,1024828379],"w_sec":[1043872993,1034360442,1032356670,1028998133,1025432199,1024393635,1055267202,1044179439,1035300812,1027848610,1025624916,0,1046254057,1040822103,1037537718,1028878720,1021407589,1016159780,1048789797,1045099774,1031893508,1027390184,1024680845,1017883852,1041217378,1041100936,1031888253,1025596669,1014836792,1014200605,1050042753,1042497385,1039086573,1037283521,1027435247,1025087116,1048780137,1035219280,1033070836,1032152876,0,0,1039055155,1035003489,1032177488,1030300540,1024828379,0]}
+
+
+@unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
+class TestPaddingInvariant(unittest.TestCase):
+    """The routing presented to native MUL_MAT_ID must satisfy the padding
+    contract on every device subset (the CUDA mm_ids_helper uniqueness
+    assumption). CPU numerics never catch its violation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.harness = _harness_path()
+
+    def _routing_doc(self, *args):
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, "routing.json")
+            r = _run(self.harness, *args, "--dump-routing", path)
+            self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+            with open(path) as f:
+                return json.load(f), _doc(r)
+
+    def test_uneven_padding_structure_with_expert_zero_selected(self):
+        """T=8, 12 experts, split 6: per-token selection counts vary (padding
+        exists on both devices), expert 0 is genuinely selected by some token,
+        and the full structural contract holds."""
+        doc, full = self._routing_doc("--experts", "12", "--tokens", "8",
+                                      "--split", "6", "--reps", "2",
+                                      "--secondary-threads", "2")
+        r = doc["routing"]
+        # uneven selections genuinely pad (k > per-token genuine somewhere)
+        per_token = []
+        for t in range(r["tokens"]):
+            per_token.append(sum(1 for i in range(10)
+                                 if r["ids_all"][i + t * 10] < r["split"]))
+        self.assertGreater(max(per_token) - min(per_token), 0,
+                           "fixture must exercise uneven counts")
+        # expert 0 genuinely selected in some token (padding must not use it there)
+        self.assertTrue(any(r["ids_all"][i + t * 10] == 0
+                            for t in range(r["tokens"]) for i in range(10)))
+        check_routing_structure(doc)
+        # identical padded work in both arms: one partition feeds both arms,
+        # and the same run proves overlap == serial bitwise
+        self.assertTrue(full["verdict"]["pass"])
+        for rep in full["reps"]:
+            self.assertTrue(rep["checks"]["overlap_vs_serial_bitwise"])
+
+    def test_empty_and_full_subsets(self):
+        """split 0 (empty primary subset) and full split (empty secondary)
+        must produce well-formed (possibly empty) padded matrices."""
+        doc, _ = self._routing_doc("--experts", "12", "--tokens", "4",
+                                   "--split", "0", "--reps", "1",
+                                   "--secondary-threads", "2")
+        self.assertEqual(doc["routing"]["k_cpu"], 0)
+        self.assertEqual(doc["routing"]["ids_cpu"], [])
+        check_routing_structure(doc)
+        doc, _ = self._routing_doc("--experts", "12", "--tokens", "4",
+                                   "--split", "12", "--reps", "1",
+                                   "--secondary-threads", "2")
+        self.assertEqual(doc["routing"]["k_sec"], 0)
+        check_routing_structure(doc)
+
+    def test_exact_single_token_no_padding(self):
+        """T=1 subsets are exact: k equals the genuine count, no padding."""
+        doc, _ = self._routing_doc("--experts", "12", "--tokens", "1",
+                                   "--split", "6", "--reps", "1",
+                                   "--secondary-threads", "2")
+        r = doc["routing"]
+        self.assertEqual(r["k_cpu"] + r["k_sec"], 10)
+        check_routing_structure(doc)
+
+    def test_pre_fix_duplicate_padding_is_rejected_by_checker(self):
+        """RED control: the REAL retained pre-fix routing dump (repeated
+        local id 0 padding) must fail the structural check."""
+        with self.assertRaises(AssertionError) as cm:
+            check_routing_structure(_PRE_FIX_ROUTING_RED)
+        self.assertIn("duplicate ids", str(cm.exception))
+
+    def test_checker_catches_weight_and_genuine_mutations(self):
+        """Mutations of a VALID dump each violate exactly one contract clause."""
+        doc, _ = self._routing_doc("--experts", "12", "--tokens", "8",
+                                   "--split", "6", "--reps", "1",
+                                   "--secondary-threads", "2")
+        import copy
+        # padding weight not +0.0 (set one zero-weight slot to 1.0 bits)
+        d = copy.deepcopy(doc)
+        r = d["routing"]
+        idx = r["w_cpu"].index(0)
+        r["w_cpu"][idx] = _f32_bits(1.0)
+        with self.assertRaises(AssertionError) as cm:
+            check_routing_structure(d)
+        self.assertIn("+0.0f", str(cm.exception))
+        # genuine id dropped (replaced by another unselected id)
+        d = copy.deepcopy(doc)
+        r = d["routing"]
+        t = next(t for t in range(r["tokens"])
+                 if any(r["ids_all"][i + t * 10] < r["split"] for i in range(10)))
+        gid = next(r["ids_all"][i + t * 10] for i in range(10) if r["ids_all"][i + t * 10] < r["split"])
+        pos = r["ids_cpu"].index(gid, t * r["k_cpu"])
+        r["ids_cpu"][pos] = (gid + 1) % r["split"] if (gid + 1) % r["split"] != gid else gid + 2
+        with self.assertRaises(AssertionError):
+            check_routing_structure(d)
+        # id out of range
+        d = copy.deepcopy(doc)
+        d["routing"]["ids_sec"][0] = d["routing"]["n_expert"]
+        with self.assertRaises(AssertionError) as cm:
+            check_routing_structure(d)
+        self.assertIn("out of range", str(cm.exception))
+
+
+@unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
+class TestRoutingUnitSeam(unittest.TestCase):
+    """MOE_OVERLAP_UNIT_ROUTING=1 drives partition_routing directly over
+    crafted routing (no backends): boundary geometries and the explicit
+    rejection of unrepresentable/duplicate routing."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.harness = _harness_path()
+
+    def _seam(self, payload: dict):
+        env = dict(os.environ, MOE_OVERLAP_UNIT_ROUTING="1")
+        return subprocess.run([self.harness], input=json.dumps(payload),
+                              capture_output=True, text=True, env=env, timeout=60)
+
+    def test_crafted_routing_contract(self):
+        """Uneven counts, expert 0 genuinely selected on both devices, empty
+        subsets on both sides across tokens; output satisfies the contract."""
+        # 12 experts, split 5; token 0: 3 primary + 7 secondary; token 1:
+        # 5 primary (all) + 5 secondary; token 2: 1 primary + 9 secondary.
+        ids = [
+            [0, 7, 2, 8, 9, 10, 11, 3, 4, 5],    # 0 genuinely selected (primary)
+            [0, 1, 2, 3, 4, 8, 9, 10, 11, 5],    # full primary subset
+            [7, 0, 6, 8, 9, 10, 11, 5, 1, 4],    # 0 genuinely selected, 1 primary
+        ]
+        w = [[_f32_bits(0.1 * (i + 1) + 0.05) for i in range(10)] for _ in range(3)]
+        payload = {"n_expert": 12, "split": 5, "tokens": 3, "n_used": 10,
+                   "ids": [x for row in ids for x in row],
+                   "weights": [x for row in w for x in row]}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        doc = json.loads(r.stdout)
+        rt = doc["routing"]
+        self.assertEqual(rt["k_cpu"], 5)   # max primary count (token 1, full subset)
+        self.assertEqual(rt["k_sec"], 7)   # max secondary count (token 2: 7 of 7)
+        # mirror the router selections into the dump schema and validate
+        rt["ids_all"] = payload["ids"]
+        rt["w_all"] = payload["weights"]
+        check_routing_structure(doc)
+
+    def test_t1_exact_subsets_via_seam(self):
+        payload = {"n_expert": 12, "split": 5, "tokens": 1, "n_used": 10,
+                   "ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                   "weights": [_f32_bits(0.05 * (i + 1)) for i in range(10)]}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        doc = json.loads(r.stdout)
+        self.assertEqual(doc["routing"]["k_cpu"], 5)
+        self.assertEqual(doc["routing"]["k_sec"], 5)
+
+    def test_duplicate_genuine_id_rejected(self):
+        """A router that selected the same expert twice in one token violates
+        the top-k uniqueness contract: fail closed (exit 5), never present
+        duplicate ids to the native op."""
+        payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 4,
+                   "ids": [3, 3, 2, 7],
+                   "weights": [_f32_bits(0.25)] * 4}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 5)
+        self.assertIn("top-k uniqueness", r.stderr)
+
+    def test_seam_rejects_out_of_range_ids(self):
+        payload = {"n_expert": 12, "split": 6, "tokens": 1, "n_used": 4,
+                   "ids": [3, 2, 1, 12],
+                   "weights": [_f32_bits(0.25)] * 4}
+        r = self._seam(payload)
+        self.assertEqual(r.returncode, 5)
+        self.assertIn("input error", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
 
