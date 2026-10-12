@@ -710,8 +710,10 @@ static void partition_routing(ArmContext & A, int64_t T, int64_t split, int64_t 
                 }
             }
         }
-        // remaining padded columns keep local id 0 and weight exactly +0.0f
-        (void)used_cpu; (void)used_sec;
+        // remaining padded columns carry weight exactly +0.0f and DISTINCT
+        // unselected local expert ids (never a repeated id: see above)
+        if (A.k_cpu > 0) fill_padding_distinct(A.ids_cpu, A.w_cpu, used_cpu, A.k_cpu, split, t, ci, true, structural_fail);
+        if (A.k_sec > 0) fill_padding_distinct(A.ids_sec, A.w_sec, used_sec, A.k_sec, n_expert - split, t, si, false, structural_fail);
     }
 }
 

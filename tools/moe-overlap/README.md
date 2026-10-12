@@ -95,8 +95,13 @@ needs.
 - **T=1 (decode)**: the per-device expert subsets are exact (one token).
 - **T=128 (prefill)**: `mul_mat_id` requires one uniform expert count `k` per
   device across all tokens, while per-token routing varies. Each subset is
-  padded to its per-repetition maximum with a valid local expert id and weight
-  exactly `+0.0f`. The padding work is identical in both arms, is real executed
+  padded to its per-repetition maximum with a **distinct** local expert id
+  unused by that token (never a repeated id: MUL_MAT_ID ids are top-k output,
+  unique per token, and the CUDA id-mapping kernel `mm_ids_helper` relies on
+  that — duplicate padding ids raced there and caused the T=128
+  nondeterminism diagnosed on 2026-10-12) and weight exactly `+0.0f`. An
+  unrepresentable padded width (fewer unselected local ids than padding
+  slots) or a duplicate genuine id fails closed with an explicit reason. The padding work is identical in both arms, is real executed
   work (it is measured), and is reported per repetition (`k_cpu`/`k_sec` vs
   `k_cpu_real`/`k_sec_real`) so the overhead is never hidden. At `--split 256`
   the offline prefill run measured 612+668 real selections padded to 8×128 and
