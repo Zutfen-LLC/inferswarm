@@ -1213,6 +1213,40 @@ class TestSchedulingEquivalenceContract(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertTrue(any("non-finite" in p for p in result["problems"]), result["problems"])
         (case / "rep-0-serial.f32").write_bytes(serial.tobytes())
+        # 6. incomplete export: a required file is missing
+        (case / "rep-0-sec.f32").unlink()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("incomplete capture" in p for p in result["problems"]), result["problems"])
+
+    def test_malformed_repetition_documents_refused_not_crashed(self):
+        """Structurally malformed run documents keep the fail-closed library
+        behavior: INVALID_OR_INCOMPLETE, never an exception; and non-integer
+        repetition index values never receive a scheduling verdict."""
+        for edit, desc in (
+            (lambda m: m["reps"].__setitem__(0, None), "null record"),
+            (lambda m: m["reps"].__setitem__(0, "bad"), "string record"),
+            (lambda m: m["reps"].__setitem__(0, 0), "integer record"),
+            (lambda m: m.__setitem__("config", None), "null config"),
+            (lambda m: m["reps"][0].__setitem__("rep", False), "bool index"),
+            (lambda m: m["reps"][0].__setitem__("rep", 0.0), "float index"),
+        ):
+            with self.subTest(malformed=desc):
+                case = self._copy()
+                self._edit_run_json(case, edit)
+                result = self.checker.check_case(case)
+                if "index" in desc:
+                    self.assertEqual(result["status"], "UNSUPPORTED_SCOPE", desc)
+                    self.assertEqual(result["native_outcome"], "NOT_ASSESSED")
+                else:
+                    self.assertEqual(result["status"], "INVALID_OR_INCOMPLETE", desc)
+                self.assertNotEqual(result["status"], "SCHEDULING_EQUIVALENT")
+                self.assertFalse(result["hardware_qualified"])
+        # A missing run.json is likewise refused, not a crash.
+        case = self._copy()
+        (case / "run.json").unlink()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "INVALID_OR_INCOMPLETE")
 
     def test_single_repetition_native_pass_scheduling_equivalent(self):
         """Positive control at the supported cardinality: a genuine

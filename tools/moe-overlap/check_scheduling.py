@@ -118,7 +118,7 @@ def check_case(case) -> dict:
     """
     try:
         return _check_case(case)
-    except (ValueError, KeyError, OSError, TypeError) as exc:
+    except (ValueError, KeyError, OSError, TypeError, AttributeError) as exc:
         return {"contract": CONTRACT, "status": "INVALID_OR_INCOMPLETE",
                 "hardware_qualified": False, "error": str(exc)}
 
@@ -149,22 +149,31 @@ def _unsupported_scope(case, detail: str) -> dict:
 def _check_case(case) -> dict:
     case = Path(case)
     report = json.loads((case / "run.json").read_text())
-    c = report["config"]
+    if not isinstance(report, dict):
+        raise ValueError("malformed run document: run.json is not a JSON object")
+    c = report.get("config")
+    if not isinstance(c, dict):
+        raise ValueError("malformed run document: config is not an object")
     # One-repetition scope gate — BEFORE native failure classification. Only
-    # an integer 1 (bools rejected) with exactly one index-0 repetition
-    # record may receive a scheduling verdict; the run report is re-read
-    # from the case so the cardinality is never truncated to its first
-    # repetition and never reinterpreted as a single case.
-    reps = report.get("reps")
-    reps_records = reps if isinstance(reps, list) else None
+    # an integer 1 (bools rejected) with exactly one repetition record whose
+    # index is the integer 0 (again bools/floats rejected) may receive a
+    # scheduling verdict; the run report is re-read from the case so the
+    # cardinality is never truncated to its first repetition and never
+    # reinterpreted as a single case. Structurally malformed documents
+    # (non-object config or repetition records) stay INVALID_OR_INCOMPLETE,
+    # matching the fail-closed library behavior of the pre-scope checker.
+    reps_records = report.get("reps")
+    if isinstance(reps_records, list) and not all(isinstance(r, dict) for r in reps_records):
+        raise ValueError("malformed run document: repetition record is not an object")
     if (type(c.get("reps")) is not int or c.get("reps") != 1
-            or reps_records is None or len(reps_records) != 1
-            or reps_records[0].get("rep") != 0):
+            or not isinstance(reps_records, list) or len(reps_records) != 1
+            or type(reps_records[0].get("rep")) is not int
+            or reps_records[0]["rep"] != 0):
         return _unsupported_scope(
             case,
             "moe-scheduling-equivalence/1 supports one-repetition smoke cases "
             f"only; found config.reps={c.get('reps')!r} with "
-            f"{len(reps_records) if reps_records is not None else 'no'} repetition "
+            f"{len(reps_records) if isinstance(reps_records, list) else 'no'} repetition "
             "record(s); refusing before native failure classification")
     problems: list[str] = []
     T, E, split = c["tokens"], c["n_expert"], c["split"]
@@ -298,7 +307,7 @@ def main():
     args = ap.parse_args()
     try:
         result = check_case(args.case)
-    except (ValueError, KeyError, OSError, TypeError) as exc:
+    except (ValueError, KeyError, OSError, TypeError, AttributeError) as exc:
         result = {"contract": CONTRACT, "status": "INVALID_OR_INCOMPLETE",
                   "hardware_qualified": False, "error": str(exc)}
     text = json.dumps(result, indent=2, allow_nan=False) + "\n"
