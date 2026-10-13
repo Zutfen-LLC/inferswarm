@@ -13,8 +13,10 @@ pending**. Use the untimed export/check commands in
 [`numerical-reference.md`](numerical-reference.md); it also documents missing
 whole-fixture weights, reserved inputs and the separate proposed criterion.
 No hardware run is part of the
-offline correction task. CUDA builds still require the externally documented
-nvcc-wrapper/libcuda-link amendments; build-system repair is out of scope.
+offline correction task. The repaired `build.py` includes the previously
+external nvcc definitions and driver-link resolution. A separate clean CUDA
+build and no-model discovery check are still required at the reviewed head;
+offline command-construction tests do not qualify either.
 
 ## Next proposed experiment (T=128, scheduling contract; NOT authorized)
 
@@ -69,11 +71,9 @@ authorization, on the hardware host, at the then-reviewed PR head:
 
 1. **Binary**: the retained split=48 binaries predate the
    `cpu_experts_ms`/`shared_ms` timers and do NOT contain them. The harness
-   translation unit must be recompiled and relinked first (single-TU compile
-   with the retained include set and recorded base flags, then the retained
-   amended link line with exactly two substitutions — harness object path and
-   output binary path — asserted to match exactly once; write to a NEW binary
-   name, never overwrite a preserved tested executable). Budget ~1 minute.
+   translation unit must be recompiled and relinked first using `build.py`
+   as below, in a NEW cache directory; never overwrite a preserved tested
+   executable. A clean full build needs the separate build allowance below.
 2. **Frozen input**: reuse the same frozen per-repetition activation capture
    as the 2026-10-13 T=128 split=48 session (`--inputs-file`, F32
    `[2560×128]`), identity proven by sha256 against the retained t48
@@ -128,7 +128,8 @@ recipe; the existing toolchain that built the accepted binaries is assumed.
 cd <inferswarm checkout at the reviewed commit>
 ARCHIVE=/path/to/retained/llama.cpp-b29c606e28a01b1bc8c1351026a0fa6e616bf6c4.tar.gz
 RUN_DIR=$(mktemp -d "$HOME/.cache/moe-overlap-pr307.XXXXXX")
-env -u MOE_OVERLAP_SOURCE -u MOE_OVERLAP_OPT MOE_OVERLAP_TARBALL="$ARCHIVE" \
+env -u MOE_OVERLAP_SOURCE -u MOE_OVERLAP_OPT -u MOE_OVERLAP_CUDA_DRIVER \
+    MOE_OVERLAP_TARBALL="$ARCHIVE" \
     python3 tools/moe-overlap/build.py --cache "$RUN_DIR" --cuda --jobs 2
 B="$RUN_DIR/build-cuda/moe_overlap_harness_cuda"
 ```
@@ -140,6 +141,9 @@ contract file digests, and compile into an empty build directory. If the
 archive is absent, fetch the pinned source archive once within the separately
 authorized handoff; no toolchain installation is part of this recipe. Record
 compiler identity (`nvcc --version`, `gcc --version`, `g++ --version`).
+Use the real nvcc executable on PATH, with no injection wrapper. `build.py`
+passes the chosen C++ compiler to nvcc via `-ccbin` and includes compiler
+versions in object stamps.
 
 The current recipe compiles the CPU closure plus all 188 CUDA translation
 units at this pin (top-level `.cu` files and template instances), using `-O3`
@@ -150,6 +154,38 @@ the runtime/cuBLAS libraries. CUDA compilation runs first, with
 command above therefore permits two concurrent compiles in each phase. It
 builds one CUDA executable containing both arms and the CPU reference. A
 separate CPU fallback/comparison build is unnecessary.
+
+`--extended-lambda` and the default Flash Attention selection come from this
+exact source pin (`ggml/src/ggml-cuda/CMakeLists.txt`, `ggml/CMakeLists.txt`,
+`ggml/cmake/common.cmake`): `q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16`, with
+all 49 K/V pair definitions set explicitly to 0 or 1. The recipe preserves
+the tested optimization/math behavior. No external flag wrapper or manual
+relink is needed. Driver resolution first preserves ordinary `-lcuda` when
+it finds a usable development library; runtime-only installs use a validated
+`libcuda.so.1` path from compiler search or `ldconfig -p`. For a nonstandard
+installation, set `MOE_OVERLAP_CUDA_DRIVER=/absolute/path/to/libcuda.so.1`
+instead of unsetting it above. The selected path must be an ELF library that
+links the VMM symbol; toolkit `stubs` paths (including symlink targets) are
+rejected. No system symlinks, installs or loader configuration edits belong
+in this recipe. Linking is not evidence that a GPU is available.
+
+The historical full CUDA compile took approximately **47 minutes at two
+jobs**. A 30-minute combined build/run allowance is inadequate. Propose a
+separate **75-minute build-only allowance**, to be frozen with independent
+RAM/disk ceilings and an external deadline in the authorized handoff. The
+existing ≤30-minute workload-session limit begins after build/discovery;
+experimental repetitions, timing and correctness criteria remain unchanged.
+
+For the separately dispatched **clean build / no-model verification**:
+record `git rev-parse HEAD` and verify it equals the exact reviewed #307 SHA;
+run the fresh-cache build above under the frozen build-only deadline; retain
+the full build log, selected driver path, source/archive and compiler identities
+and final binary SHA-256; then run `"$B" --list-devices` and retain stdout,
+stderr and exit status. Require exactly one CPU and one CUDA GPU on the
+subject host. STOP on build/link failure, missing GPU, identity drift or
+resource/deadline breach. This handoff ends at discovery: do not retrieve
+weights or run model workloads. Propagation to stacked PR #308 is a later
+reviewed step.
 
 Complete CUDA compilation/linking and its peak RAM/disk use are unverified by
 the offline correction tests. Earlier estimates for one fat CUDA TU do not
@@ -230,7 +266,8 @@ criterion.
 ## Resource bounds and stop conditions
 
 - One process per shape; sequential; no services, daemons, RAM disks or
-  persistent state. Total wall-clock budget: ≤ 30 minutes including builds.
+  persistent state. Workload-session wall-clock budget: ≤ 30 minutes after
+  build/discovery; the clean build has the separate allowance above.
 - Freeze separate build and execution RAM/VRAM/disk ceilings plus an external
   supervisor/deadline mechanism in the authorized handoff before launch.
   Admission floors are not ceilings, and the harness itself does not enforce

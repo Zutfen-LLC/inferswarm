@@ -197,14 +197,27 @@ is documented in [`numerical-reference.md`](numerical-reference.md).
   must prove the same identity or the build refuses), and compiles the
   minimal ggml CPU closure plus the harness with a direct GCC/Clang recipe
   (no CMake, no installs). Objects carry stamps (source hash + flags +
-  compiler) and are rebuilt on any change — a stale cached build cannot test
+  resolved compiler/version, including nvcc's selected host compiler) and are
+  rebuilt on any change — a stale cached build cannot test
   old code. `--cuda` compiles the complete CUDA closure at this pin (every
   `ggml/src/ggml-cuda/*.cu` plus the `template-instances/*.cu` TUs the pin's
   own CMake GLOBs) with `GGML_USE_CUDA` defined at compile time for every TU
   (backend registration in `ggml-backend-reg.cpp` is gated on that define, so
-  it cannot be a link-time-only flag). No CUDA toolchain exists in the offline
-  container, so the `--cuda` build remains compile-verified only on the
-  hardware host. `MOE_OVERLAP_OPT` overrides the optimization level.
+  it cannot be a link-time-only flag). The recipe includes `--extended-lambda`
+  and the pin's default `GGML_CUDA_FA_QUANTS` string plus all 49 explicit K/V
+  combination definitions; optimization/math flags remain as previously
+  tested. It needs no external nvcc wrapper or manual relink. Driver lookup
+  preserves `-lcuda` for usable development libraries, otherwise links a
+  validated `libcuda.so.1` path from compiler search or the loader cache.
+  `MOE_OVERLAP_CUDA_DRIVER` can select an explicit real driver library;
+  missing/invalid libraries and toolkit `stubs` paths are refused before
+  compilation. The link probe checks the VMM dependency without running it;
+  it does not establish device readiness. The repaired recipe still needs a
+  separate clean CUDA build and no-model `--list-devices` check on hardware
+  (see [`hardware-recipe.md`](hardware-recipe.md)). The historical full CUDA
+  compile took approximately 47 minutes at two jobs; allow a separate build
+  window, not a 30-minute combined build/run budget. `MOE_OVERLAP_OPT`
+  overrides the host optimization level.
 - `offline-validation/` — retained offline run reports (SYNTHETIC weights and
   inputs; reduced smoke + full-authentic-shape decode/prefill runs).
 
@@ -240,6 +253,10 @@ Additional offline controls exercised by
   satisfy a tolerance comparison.
 - **build-cache invalidation**: an object whose stamp no longer matches its
   source/flags/compiler is rebuilt; unchanged objects are reused.
+- **CUDA recipe regression**: offline recording toolchains verify compile
+  definitions, backend registration, library order, development/versioned
+  driver selection, invalid/stub/missing driver refusal and cache invalidation.
+  Fake libraries/toolchains establish neither CUDA compilation nor discovery.
 - `hardware-recipe.md` — the proposed, separately authorized hardware steps.
 - `../../tests/test_moe_overlap_prototype.py` — offline tests.
 
@@ -280,5 +297,5 @@ timing is meaningless by construction and is not reported as a result):
 - The harness is a prototype: fail-closed errors and status checks are
   preferred, but it has not been through production hardening, fuzzing, or
   sanitizer campaigns. The CUDA closure is enumerated from the pin's own
-  CMake GLOBs and defines, but has not been compiled here (no nvcc in the
-  offline container); the hardware host build is its first compile check.
+  CMake GLOBs and defines. The repaired build recipe has not been compiled
+  here (no nvcc on Valinor); a separate clean hardware build remains required.
