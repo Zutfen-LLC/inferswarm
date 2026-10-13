@@ -16,6 +16,47 @@ No hardware run is part of the
 offline correction task. CUDA builds still require the externally documented
 nvcc-wrapper/libcuda-link amendments; build-system repair is out of scope.
 
+## Next proposed experiment (T=128, scheduling contract; NOT authorized)
+
+One fresh T=128 case under `moe-scheduling-equivalence/1`, retaining **all**
+numerical diagnostics (legacy CPU-unsplit and `moe-operand-reference/2`
+reports must be produced and retained whatever they say):
+
+1. **Seed guard**: before launch, confirm the reserved seed `0x30712801`
+   remains unconsumed (search retained provenance/run records for the seed;
+   the GGUF native report does not echo it — record it in the dispatch
+   provenance manually). If any retained case already used it, STOP and
+   report; do not substitute silently.
+2. **Export**: run the existing T=128 command shape with
+   `--dump-reference-case NEW_CASE --seed 0x30712801 --self-check-negative`
+   (fresh `NEW_CASE`, never reused). Complete export requirements: `run.json`
+   plus, for every repetition, `rep-N-cur.f32`, `rep-N-ids.i32`,
+   `rep-N-weights.f32`, `rep-N-cpu.f32`, `rep-N-sec.f32`, `rep-N-shared.f32`,
+   `rep-N-serial.f32`, `rep-N-overlap.f32`; the native JSON report; and both
+   numerical reports (`check_reference.py` → `NEW_CASE/reference.json`).
+   Missing, malformed or non-finite exports are STOP conditions, not retries.
+3. **Verdicts**: run `check_scheduling.py NEW_CASE` (expect
+   `SCHEDULING_EQUIVALENT` if the native schedule/replay/control gates hold)
+   and retain its JSON beside the numerical reports. A scheduling PASS with
+   numerical FAILs is a valid outcome; record it as exactly that.
+4. **STOP conditions**: any native compute/status failure, routing defect,
+   nondeterminism, failed negative control, incomplete/missing export file,
+   or non-finite output → retain everything, STOP, report. Exit 3 with
+   `reason: "validation failed"` and only the legacy numerical comparison
+   failing is NOT a stop by itself — classify it via
+   `check_scheduling.py`'s `native_outcome` and continue the offline checks.
+   No tolerance widening, seed change or rerun-to-repair.
+5. A later **performance comparison** may proceed only after a separately
+   authorized scheduling test passes. One prospective placement, selected to
+   balance measured CPU/GPU work at T=128 (split 256 measured 166.4 ms CPU
+   vs 16.8 ms GPU per rep): **a smaller `--split`** (the CPU backend owns
+   experts `[0, split)`, the GPU owns `[split, 512)`, so a smaller split moves
+   expert planes onto the GPU) is the first candidate to examine, because the
+   CPU subset dominates the critical path ~10:1. Equal expert counts must not
+   be described as balanced execution time — measured stage times, not expert
+   counts, define balance. No tuning sweep, scheduler change or multi-GPU
+   support is proposed or implemented here.
+
 ## Objective and success question
 
 Does overlapping CPU expert computation, GPU expert computation and activation

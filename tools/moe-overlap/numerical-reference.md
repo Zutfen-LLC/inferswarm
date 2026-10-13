@@ -39,6 +39,54 @@ shapes/subjects fail closed. This is not a universal CUDA shape dispatcher.
 GPU compiler arithmetic, nonlinear implementation differences and held-out
 behavior still require physical validation. No native quantizer was changed.
 
+## Retained T=1 diagnosis (offline, 2026-10-13; no hardware access)
+
+The latest retained T=1 hardware case passed native scheduling, replay and the
+legacy numerical gates but failed `moe-operand-reference/2`. Offline analysis
+of that retained case (controller evidence package
+`offline-5db3de7-20261013`, reproduced once against the original verified
+GGUF) established:
+
+- **Scalar CPU Q8 projections**: the examined build performs source-order
+  **F32 scaled-block accumulation with separate multiply/add** per block —
+  disassembly confirms F32 combined scale, integer-to-F32 conversion, separate
+  `mulss`/`addss`, no fused multiply-add. The reference's exact integer dots
+  with F64 scale/sum (and an earlier F32-accumulator hypothesis) do not match
+  this arithmetic.
+- **Shared-gate dot**: scalar **F32 products accumulated in F64 in source
+  order, then cast to F32**. (An F32 accumulator was an incorrect earlier
+  hypothesis; it is withdrawn here.)
+- **Shared sigmoid** uses `1.f/(1.f+expf(-x))` with **expf/F32 boundaries**;
+  the examined **SwiGLU** (640 elements) uses the **SSE2 vector exponential
+  polynomial** (no FMA, divide then multiply), not scalar `expf`.
+- **The retained shared-branch discrepancy is explained by one FP16 stored
+  scale boundary, not integer-code changes**: zero of 640 down-input integer
+  codes change; exactly one of 20 stored FP16 scales flips (the two candidate
+  F32 scales sit one F32 ULP either side of the FP16 rounding midpoint).
+  Propagating only that scale change predicts the observed worst-element
+  error to 0.06% of its magnitude; the full source/object-justified CPU
+  reconstruction reproduces the captured shared output **bit-for-bit**.
+- **CUDA remains conditional**: source-guided MMVQ models (warp partial dots,
+  sequential warp addition, XOR reduction, `roundf(x/d)` Q8_1 codes, fp16
+  stored scales, float `expf`/divide) predict a similar single stored-scale
+  flip on one expert, but the compiled contraction, division lowering and
+  device `expf` are **not established from the binary**; no bitwise CUDA
+  reconstruction exists. The missing adjudicating evidence (native
+  expert-288/token-0/slot-6 down-input block-6 bytes and per-expert planes)
+  was never captured and no new capture is authorized.
+
+These findings motivate separating scheduling equivalence
+([`check_scheduling.py`](check_scheduling.py), contract
+`moe-scheduling-equivalence/1`) from backend numerical qualification. They do
+**not** widen any threshold: the retained `/2` FAIL (CUDA secondary
+6.40e-6, shared 4.51e-5 over-tolerance) remains FAIL. An isolated
+projection-accumulation correction exists as a diagnostic patch outside the
+repository and is deliberately **not applied**: adopting it alone would not
+make the oracle a complete CPU/CUDA instruction emulation (the mathematical
+F64 reference stays a mathematical reference), and no fitted amplification,
+forced equality, output substitution, expert skipping or quantization change
+is authorized.
+
 ## Contract and retained diagnostic
 
 The native **`legacy-cpu-unsplit/1`** formula, `serial_vs_ref_*` fields,
@@ -153,6 +201,11 @@ its reason and the independent report: do not blanket-ignore native failures.
 The checker rejects incomplete/status/schedule/replay/control failures even
 when legacy numerics also fail. Keep both reports and all failed records.
 Repeat once for T=1 with `--tokens 1 --seed 0x30700101` and a fresh CASE.
+For every such case also run `check_scheduling.py CASE` and retain its
+scheduling verdict beside the numerical reports (see
+[`scheduling-contract.md`](scheduling-contract.md)); the operator recipe for
+the next T=128 case lives in
+[`hardware-recipe.md`](hardware-recipe.md).
 A passing smoke does not itself qualify hardware. A clean post-fix CUDA
 racecheck also remains outstanding; no new GPU/native capture is required by
 this coding task.

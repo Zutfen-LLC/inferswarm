@@ -128,6 +128,16 @@ status and always reports `hardware_qualified: false`; it requires the native
 schedule, routing, replay, error/status and shared-omission control checks.
 Supported modes are explicit and unsupported subjects/shapes are rejected.
 
+A **separate, narrower verdict** — `moe-scheduling-equivalence/1`
+([`check_scheduling.py`](check_scheduling.py),
+[`scheduling-contract.md`](scheduling-contract.md)) — checks only that the two
+scheduling arms executed identical work with bitwise-identical outputs,
+reusing the same exports. It can PASS while both numerical diagnostics stay
+FAIL; it never claims backend correctness or hardware qualification, and both
+arms can share a numerical defect. The retained T=1 diagnosis (one FP16
+stored-scale boundary in the CPU shared branch; CUDA explanation conditional)
+is documented in [`numerical-reference.md`](numerical-reference.md).
+
 - CPU and CUDA activation operands differ at this pin. CPU Q8_0 and CUDA
   MMVQ store fp16 activation scales; CUDA MMQ's Q8_0 D4 path stores fp32
   scales. Arithmetic and integer rounding also depend on the selected kernel
@@ -159,6 +169,9 @@ Supported modes are explicit and unsupported subjects/shapes are rejected.
 - `operand_reference.py` / `check_reference.py` — independent Q8 operand
   reconstruction and a block-specific offline check, reusing the repository's
   bounded GGUF index. No native backend generates the expected values.
+- `check_scheduling.py` — the separately versioned scheduling-equivalence
+  verdict (`moe-scheduling-equivalence/1`) over the same exports; read-only,
+  no new capture (see [`scheduling-contract.md`](scheduling-contract.md)).
 - `build.py` — fetches the sha256-pinned source tarball once into the user
   cache, verifies the extracted tree against selected complete-file digests
   from the accepted #299 runtime contract (an `MOE_OVERLAP_SOURCE` override

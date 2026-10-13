@@ -837,6 +837,16 @@ def _operand_tools():
     return importlib.import_module("operand_reference"), importlib.import_module("check_reference")
 
 
+def _scheduling_checker():
+    """Import tools/moe-overlap/check_scheduling.py as a module (mirrors
+    _operand_tools; the checker shares the operand_reference import path)."""
+    import importlib
+    directory = str(REPO / "tools" / "moe-overlap")
+    if directory not in sys.path:
+        sys.path.insert(0, directory)
+    return importlib.import_module("check_scheduling")
+
+
 class TestBackendOperandReference(unittest.TestCase):
     """Small independent math controls; no captured or held-out inputs."""
     def test_quantizer_modes_ties_zero_and_scale_storage(self):
@@ -1021,6 +1031,243 @@ class TestMoEOverlapGGUFLoader(unittest.TestCase):
         meta["config"]["reference_secondary_mode"] = "unknown"
         (case / "run.json").write_text(json.dumps(meta))
         with self.assertRaisesRegex(ValueError, "mode"): checker.check_case(case, gguf)
+
+
+@unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
+class TestSchedulingEquivalenceContract(unittest.TestCase):
+    """moe-scheduling-equivalence/1: a separately versioned verdict that the
+    serial and overlapped arms executed identical work and produced
+    bitwise-identical outputs. Deliberately narrow: it must PASS while the
+    numerical diagnostics stay FAIL, must reject evidence gaps and execution
+    failures, must never set hardware_qualified, and must never rewrite the
+    retained numerical reports."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.harness = _harness_path()
+        cls.tmp = tempfile.TemporaryDirectory()
+        td = cls.tmp.name
+        cls.checker = _scheduling_checker()
+        cls.gguf = os.path.join(td, "scheduling-fixture.gguf")
+        cls.inputs = os.path.join(td, "act.f32")
+        write_fixture_gguf(cls.gguf)
+        write_fixture_inputs(cls.inputs)
+        # Zero the F32 shared gate to zero logits (sigmoid=1/2) so the
+        # harness's omitted-shared negative control stays informative.
+        import importlib
+        ref = importlib.import_module("check_reference")
+        loader = ref.GGUFWeights(cls.gguf, 2, FIXTURE_EXPERTS)
+        row = loader.rows["blk.2.ffn_gate_inp_shexp.weight"]
+        loader.close()
+        with open(cls.gguf, "r+b") as f:
+            f.seek(row.absolute_offset)
+            f.write(bytes(row.encoded_bytes))
+        cls.case = Path(td) / "reference-case"
+        r = _run(cls.harness, "--gguf", cls.gguf, "--layer", "2", "--tokens", "1",
+                 "--split", "6", "--reps", "2", "--warmup", "0",
+                 "--inputs-file", cls.inputs, "--self-check-negative",
+                 "--dump-reference-case", str(cls.case))
+        assert r.returncode == 0, r.stderr[-2000:]
+        doc = _doc(r)
+        assert doc["verdict"]["pass"] is True
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    _copy_seq = 0
+
+    def _copy(self) -> Path:
+        """Fresh mutable copy of the retained export (unique per call)."""
+        import shutil
+        type(self)._copy_seq += 1
+        dst = Path(self.tmp.name) / f"case-{self._testMethodName}-{self._copy_seq}"
+        shutil.copytree(self.case, dst)
+        return dst
+
+    def _edit_run_json(self, case: Path, fn) -> dict:
+        meta = json.loads((case / "run.json").read_text())
+        fn(meta)
+        (case / "run.json").write_text(json.dumps(meta))
+        return meta
+
+    def test_scheduling_pass_with_numerical_fail_retained(self):
+        """Scheduling PASS while both numerical diagnostics stay FAIL: the
+        legacy comparison is the only failing native diagnostic, and a FAILed
+        operand reference is retained beside it."""
+        case = self._copy()
+
+        def make_legacy_only(meta):
+            meta["verdict"]["pass"] = False
+            meta["verdict"]["reason"] = "validation failed"
+            meta["reps"][0]["checks"]["serial_vs_ref_pass"] = False
+            meta["reps"][0]["checks"]["legacy_cpu_unsplit_diagnostic"]["pass"] = False
+        self._edit_run_json(case, make_legacy_only)
+        (case / "reference.json").write_text(json.dumps(
+            {"contract": "moe-operand-reference/2", "pass": False, "status": "FAIL",
+             "reps": [{"rep": 0, "max_abs": 4.511685386133883e-05}]}))
+        before = (case / "run.json").read_bytes()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "SCHEDULING_EQUIVALENT", result["problems"])
+        self.assertEqual(result["native_outcome"], "LEGACY_NUMERICAL_ONLY_FAIL")
+        self.assertFalse(result["hardware_qualified"])
+        # legacy FAIL preserved verbatim at both levels, never rewritten
+        self.assertFalse(result["legacy_cpu_unsplit_verdict"]["pass"])
+        self.assertFalse(result["reps"][0]["legacy_cpu_unsplit_diagnostic"]["pass"])
+        self.assertEqual(result["moe_operand_reference_status"], "FAIL")
+        # the checker is read-only: retained reports are untouched
+        self.assertEqual((case / "run.json").read_bytes(), before)
+
+    def test_rejects_changed_inputs_routing_ownership_or_incomplete_workload(self):
+        import numpy as np
+        case = self._copy()
+        # Changed/non-finite input operands are rejected.
+        cur = np.frombuffer((case / "rep-0-cur.f32").read_bytes(), dtype="<f4").copy()
+        (case / "rep-0-cur.f32").write_bytes(
+            np.array([np.float32("nan")] + cur[1:].tolist(), dtype="<f4").tobytes())
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("non-finite" in p for p in result["problems"]), result["problems"])
+        (case / "rep-0-cur.f32").write_bytes(cur.tobytes())
+        # Ownership split: native accounting inconsistent with routing bytes.
+        def bump(meta):
+            meta["reps"][0]["k_cpu_real"] += 1
+        self._edit_run_json(case, bump)
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("ownership split inconsistent" in p for p in result["problems"]))
+        def unbump(meta):
+            meta["reps"][0]["k_cpu_real"] -= 1
+        self._edit_run_json(case, unbump)
+        self.assertEqual(self.checker.check_case(case)["status"], "SCHEDULING_EQUIVALENT")
+        # Incomplete workload: dropping a genuine slot duplicates an expert id.
+        ids = np.frombuffer((case / "rep-0-ids.i32").read_bytes(), dtype="<i4").copy()
+        ids[0] = ids[1]
+        (case / "rep-0-ids.i32").write_bytes(ids.tobytes())
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("duplicate selected expert" in p for p in result["problems"]))
+        # Routing tampering across the ownership boundary is also caught via
+        # the k_real cross-check (a moved expert changes the split accounting).
+        ids2 = np.frombuffer((case / "rep-0-ids.i32").read_bytes(), dtype="<i4").copy()
+        ids2[0] = (ids2[0] + 3) % 12  # rewrites a slot to another expert
+        (case / "rep-0-ids.i32").write_bytes(ids2.tobytes())
+        result = self.checker.check_case(case)
+        self.assertIn(result["status"], ("FAIL", "INVALID_OR_INCOMPLETE"))
+
+    def test_rejects_unequal_outputs_replay_compute_missing_shared_nonfinite_incomplete(self):
+        import numpy as np
+        case = self._copy()
+        # 1. unequal arm outputs
+        overlap = np.frombuffer((case / "rep-0-overlap.f32").read_bytes(), dtype="<f4").copy()
+        mutated = overlap.copy()
+        mutated[0] += 1.0
+        (case / "rep-0-overlap.f32").write_bytes(mutated.tobytes())
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("outputs differ" in p for p in result["problems"]))
+        (case / "rep-0-overlap.f32").write_bytes(overlap.tobytes())
+        # 2. failed same-input replay/determinism
+        def break_replay(meta):
+            meta["determinism_recheck"] = {"reference_bitwise": False, "serial_bitwise": True}
+        self._edit_run_json(case, break_replay)
+        result = self.checker.check_case(case)
+        self.assertEqual(result["native_outcome"], "EXECUTION_FAILURE")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("replay/determinism" in p for p in result["problems"]))
+        # 3. native compute/status failure (not a legacy-numerical exit)
+        def compute_fail(meta):
+            meta["verdict"]["pass"] = False
+            meta["verdict"]["reason"] = "graph compute failed: shared"
+        self._edit_run_json(case, compute_fail)
+        result = self.checker.check_case(case)
+        self.assertNotEqual(result["native_outcome"], "LEGACY_NUMERICAL_ONLY_FAIL")
+        self.assertEqual(result["native_outcome"], "EXECUTION_FAILURE")
+        self.assertEqual(result["status"], "FAIL")
+        # 4. missing shared work: zeroed shared branch breaks combine identity
+        def restore(meta):
+            meta["verdict"]["pass"] = True
+            meta["verdict"]["reason"] = "all correctness gates passed"
+            meta["determinism_recheck"] = {"reference_bitwise": True, "serial_bitwise": True}
+        self._edit_run_json(case, restore)
+        shared = np.frombuffer((case / "rep-0-shared.f32").read_bytes(), dtype="<f4").copy()
+        (case / "rep-0-shared.f32").write_bytes(np.zeros_like(shared).tobytes())
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("not composed of retained partials" in p for p in result["problems"]))
+        (case / "rep-0-shared.f32").write_bytes(shared.tobytes())
+        # 5. non-finite exported output
+        serial = np.frombuffer((case / "rep-0-serial.f32").read_bytes(), dtype="<f4")
+        poisoned = serial.copy()
+        poisoned[0] = np.float32("inf")
+        (case / "rep-0-serial.f32").write_bytes(poisoned.tobytes())
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("non-finite" in p for p in result["problems"]))
+        (case / "rep-0-serial.f32").write_bytes(serial.tobytes())
+        # 6. incomplete export: a required file is missing
+        (case / "rep-1-sec.f32").unlink()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("incomplete capture" in p for p in result["problems"]))
+
+    def test_legacy_numerical_only_exit_distinguished_from_execution_failure(self):
+        case = self._copy()
+
+        def legacy_only(meta):
+            meta["verdict"]["pass"] = False
+            meta["verdict"]["reason"] = "validation failed"
+        self._edit_run_json(case, legacy_only)
+        result = self.checker.check_case(case)
+        # exit-3 with the legacy comparison as the only failing diagnostic is
+        # NOT an execution failure, and scheduling equivalence still holds
+        self.assertEqual(result["native_outcome"], "LEGACY_NUMERICAL_ONLY_FAIL")
+        self.assertEqual(result["status"], "SCHEDULING_EQUIVALENT")
+
+        def schedule_gate_fails(meta):
+            meta["verdict"]["pass"] = False
+            meta["verdict"]["reason"] = "validation failed"
+            meta["reps"][0]["checks"]["overlap_vs_serial_bitwise"] = False
+            meta["reps"][0]["checks"]["overlap_vs_serial_pass"] = False
+        case2 = self._copy()
+        self._edit_run_json(case2, schedule_gate_fails)
+        result = self.checker.check_case(case2)
+        self.assertEqual(result["native_outcome"], "EXECUTION_FAILURE")
+        self.assertEqual(result["status"], "FAIL")
+
+        def control_fails(meta):
+            meta["negative_control"] = {"comparator_rejected": False}
+        case3 = self._copy()
+        self._edit_run_json(case3, control_fails)
+        result = self.checker.check_case(case3)
+        self.assertEqual(result["native_outcome"], "EXECUTION_FAILURE")
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("negative control" in p for p in result["problems"]))
+
+    def test_preserves_historical_reports_and_hardware_unqualified(self):
+        case = self._copy()
+        # A retained FAILed operand reference is preserved verbatim and a
+        # scheduling PASS never upgrades it or claims hardware qualification.
+        (case / "reference.json").write_text(json.dumps(
+            {"contract": "moe-operand-reference/2", "pass": False, "status": "FAIL",
+             "reps": [{"rep": 0, "max_abs": 6.404588930308819e-06},
+                      {"rep": 0, "max_abs": 4.511685386133883e-05}]}))
+        before_ref = (case / "reference.json").read_bytes()
+        before_run = (case / "run.json").read_bytes()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "SCHEDULING_EQUIVALENT")
+        self.assertEqual(result["moe_operand_reference_status"], "FAIL")
+        self.assertFalse(result["hardware_qualified"])
+        self.assertEqual((case / "reference.json").read_bytes(), before_ref)
+        self.assertEqual((case / "run.json").read_bytes(), before_run)
+        # explicit scope limits in every report
+        joined = " ".join(result["scope_limits"]).lower()
+        for phrase in ("hardware", "numerical", "model"):
+            self.assertIn(phrase, joined)
+        # missing operand reference is reported as not requested, not FAIL
+        (case / "reference.json").unlink()
+        result = self.checker.check_case(case)
+        self.assertEqual(result["moe_operand_reference_status"], "NOT_REQUESTED")
 
 
 @unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")

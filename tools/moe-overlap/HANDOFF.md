@@ -7,19 +7,22 @@ Review-facing summary of this branch's deliverable. Full detail lives in
 
 ## Verdict
 
-**Independent operand reference implemented; hardware acceptance pending.**
-The 2026-10-13 correction adds an untimed harness export and independent
-CPU/CUDA/shared block reconstruction from original Q8_0 weights and F32 inputs.
-Its proposed empirical criterion and status are separate from the unchanged
-legacy CPU-unsplit verdict. The available seven-expert development slice
-reconstructs locally; whole failing-fixture verification needs missing
-CPU/shared weights. See [`numerical-reference.md`](numerical-reference.md)
-for exact limits, inspected archive integrity and reserved seeds. Historical
-T=128 FAIL records remain FAIL; offline work establishes no hardware
-qualification or execution authority.
+**Scheduling equivalence separated from backend numerical qualification;
+hardware acceptance still pending.** The 2026-10-13/14 correction adds
+`moe-scheduling-equivalence/1` (`check_scheduling.py`, read-only over the
+existing exports): a narrow verdict that the serial and overlapped arms
+executed identical work with bitwise-identical outputs. It can PASS while the
+legacy CPU-unsplit and `moe-operand-reference/2` diagnostics stay FAIL, and it
+never sets `hardware_qualified`. The retained T=1 offline diagnosis (one FP16
+stored-scale boundary in the CPU shared branch — integer codes unchanged;
+CUDA explanation conditional on uncaptured device evidence) is documented in
+`numerical-reference.md`. Historical FAIL records remain FAIL.
 
-The earlier feasibility and offline results below describe the original
-prototype deliverable, not acceptance under the proposed reference contract.
+The independent operand reference of the prior head remains implemented with
+physical validation pending; whole failing-fixture verification still needs
+missing CPU/shared weights. The earlier feasibility and offline results below
+describe the original prototype deliverable, not acceptance under any
+reference contract.
 
 ## Phase 1 feasibility findings (decision: proceed)
 
@@ -142,6 +145,52 @@ findings and two test-contract issues. All are addressed in this head:
 
 Offline results at this head: 12/12 tests pass; retained full-shape SYNTHETIC
 decode/prefill reports regenerated with all gates green.
+
+## Scheduling/numerical separation (PR #307, third head)
+
+Maintainer-revised scope: the experiment asks whether overlapping identical
+CPU/GPU work improves block latency; independently reproducing every backend's
+floating-point implementation drifted beyond that question. This head adds a
+small, explicit separation:
+
+- `tools/moe-overlap/check_scheduling.py` — `moe-scheduling-equivalence/1`,
+  a separately versioned verdict over the SAME exports (`run.json` +
+  `rep-N-*` bytes), read-only, reusing existing harness output. PASS requires
+  same inputs/routing/ownership/workload (re-derived from bytes and
+  cross-checked against native accounting), bitwise-identical arm outputs,
+  arm outputs equal to the F32 combine of retained partials + shared,
+  native replay/determinism, compute/status completeness and the omitted-work
+  negative control. `hardware_qualified` is always false; both arms can share
+  a numerical defect. Native FAILs are classified
+  (`LEGACY_NUMERICAL_ONLY_FAIL` vs `EXECUTION_FAILURE`) — exit 3 is never
+  blanket-ignored and a legacy-numerical-only failure is not an execution
+  failure.
+- `tools/moe-overlap/scheduling-contract.md` — the contract, PASS
+  requirements, construction-invariant scope limits, and what PASS does not
+  mean.
+- `numerical-reference.md` — retained T=1 diagnosis documented accurately
+  (scalar CPU Q8 = source-order F32 scaled-block accumulation with separate
+  mul/add; shared-gate dot = F32 products in an F64 source-order accumulator
+  then F32 cast — the F32-accumulator hypothesis is withdrawn; shared
+  sigmoid expf/F32, SwiGLU SSE2 polynomial; one FP16 stored-scale boundary
+  with zero integer-code changes explains the shared-branch discrepancy;
+  CUDA conditional). The isolated projection-accumulation diagnostic patch
+  stays unapplied; the mathematical F64 reference stays a mathematical
+  reference. Legacy and `/2` formulas, reports and FAIL records unchanged.
+- `hardware-recipe.md` — next proposed (NOT authorized) T=128 experiment
+  under the scheduling contract: seed guard for `0x30712801`, complete export
+  requirements, verdicts to retain, STOP conditions, and one prospective
+  split placement grounded in the measured 166.4 ms CPU vs 16.8 ms GPU stage
+  times (smaller `--split` moves expert planes to the GPU; equal expert
+  counts are not balanced execution time). Known CUDA build-recipe gap
+  (nvcc-wrapper/libcuda-link amendments, build-system repair) stays explicit
+  and remains required before merge.
+
+Tests: `tests.test_moe_overlap_prototype` 42/42 at this head (37 prior + 5
+new scheduling-contract tests: scheduling PASS with retained numerical FAIL,
+routing/ownership/workload rejections, output/replay/compute/shared/nonfinite/
+incomplete rejections, legacy-only vs execution-failure classification,
+historical-report preservation and hardware-unqualified status).
 
 ## For the reviewer
 
