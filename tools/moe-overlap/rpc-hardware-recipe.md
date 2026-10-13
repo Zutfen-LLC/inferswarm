@@ -13,8 +13,9 @@ source verified per `build.py` (commit + tree digests).
   `--secondary rpc --rpc-endpoint HOST:PORT`. Owns routing, the shared
   branch, the CPU expert subset (empty at `--split 0`), both scheduling arms,
   all validation and reporting. One process, one connection.
-- **Worker** (GPU host, e.g. inferswarm01/03/04): runs `moe_rpc_worker`
-  (built with `build.py --cuda --rpc-worker`). Serves exactly one backend
+- **Worker** (GPU host, e.g. inferswarm01/03/04): runs `moe_rpc_worker_cuda`
+  (built with `build.py --cuda --rpc-worker`; the CPU-device build for
+  offline loopback tests is `moe_rpc_worker`). Serves exactly one backend
   device over the pinned RPC protocol v6.0.0 (TCP). Binds `127.0.0.1` by
   default — for cross-host use pass `--host <lan-ip>` and keep the port on
   the homelab LAN/VLAN only (the pin's rpc-server prints the same
@@ -46,10 +47,11 @@ Record binary sha256s, the pinned source verification output, and
 ## Session sequence
 
 1. **Startup order and readiness.** Start the worker first:
-   `moe_rpc_worker --host <ip> --port <port> --device CUDA0` (exact device
-   name from `--list-devices`). Readiness = the `RPC_WORKER device=…` banner
-   PLUS a TCP LISTEN row for the bind address (do not probe the protocol
-   port with a connect-and-close; it emits an RPC protocol error). External
+   `moe_rpc_worker_cuda --host <ip> --port <port> --device CUDA0` (exact
+   device name from `--list-devices`). Readiness = the `RPC_WORKER device=…`
+   banner PLUS a TCP LISTEN row for the bind address (do not probe the
+   protocol port with a connect-and-close; it emits an RPC protocol error).
+   External
    bound: `TimeoutStartSec` via systemd-run, or a shell `timeout`.
 2. **Setup/residency (measured separately).** The harness's load phase
    uploads the three Q8_0 expert-slice tensors once
@@ -78,12 +80,14 @@ Record binary sha256s, the pinned source verification output, and
 6. **Resource bounds and cleanup.** Run each phase under a unit that bounds
    the RUN, not just startup: `sudo systemd-run --unit=… --property=Type=oneshot
    --property=MemoryMax=16G --property=MemorySwapMax=0
-   --property=RuntimeMaxSec=<ceiling> --property=TimeoutStartSec=<start-ceiling>
-   --wait bash -c '… ; echo $?>run.rc'`. With the default `Type=simple`,
-   `TimeoutStartSec` expires once the process has merely STARTED and does not
-   bound execution — `RuntimeMaxSec` (plus `Type=oneshot`, where
-   `TimeoutStartSec` covers the whole run) is what limits a stall (no hard
-   cancellation exists in the transport; the unit kill is the bound).
+   --property=TimeoutStartSec=<ceiling> --wait bash -c '… ; echo $?>run.rc'`.
+   With `Type=oneshot`, `TimeoutStartSec` covers the ENTIRE run (the service
+   stays "activating" until the command exits), so it is the execution
+   ceiling that actually kills a stalled RPC wait; with the default
+   `Type=simple` it expires once the process has merely STARTED and bounds
+   nothing afterwards (and `RuntimeMaxSec` has no effect on oneshot units,
+   so it is deliberately not used here). No hard cancellation exists in the
+   transport — the unit kill is the bound.
    Sample GPU temp/util, MemAvailable and cgroup peak externally.
    Cleanup: terminate the harness first (it closes the connection, which
    frees all remote buffers), then SIGTERM the worker by exact PID, verify
