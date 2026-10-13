@@ -23,6 +23,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import math
 import os
 import subprocess
 import sys
@@ -200,6 +201,90 @@ class TestMoEOverlapPrototype(unittest.TestCase):
         self.assertTrue(doc["verdict"]["pass"])
         self.assertEqual(len(doc["reps"]), 3)
 
+
+@unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
+class TestCpuStageSubTimers(unittest.TestCase):
+    """cpu_ms substage attribution (cpu_experts_ms / shared_ms).
+
+    The aggregate cpu_ms timer keeps its original boundaries; the two new
+    fields only observe the existing contiguous regions inside it (CPU-owned
+    expert branch; shared FFN/gate branch). These are offline CPU-secondary
+    runs: they verify the fields are emitted, finite, nonnegative, bound to
+    the intended regions and that an empty CPU expert subset reports zero
+    without skipping shared work. They establish nothing about CUDA timing
+    accuracy, and assert no wall-clock performance thresholds.
+    """
+
+    SERIAL_STAGE_KEYS = ("h2d_ms", "cpu_ms", "cpu_experts_ms", "shared_ms",
+                         "sec_ms", "d2h_ms", "combine_ms")
+    OVERLAP_STAGE_KEYS = ("h2d_submit_ms", "cpu_ms", "cpu_experts_ms",
+                          "shared_ms", "d2h_ms", "combine_ms")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.harness = _harness_path()
+
+    @staticmethod
+    def _finite_nonnegative(x):
+        return isinstance(x, (int, float)) and math.isfinite(x) and x >= 0
+
+    def test_substage_fields_emitted_finite_and_schema_stable(self):
+        """Both arms emit the new fields; the existing aggregate fields and
+        their names are unchanged (additive schema only), values finite and
+        nonnegative, and the negative control still rejects."""
+        r = _run(self.harness, "--experts", "32", "--tokens", "4", "--split", "16",
+                 "--reps", "2", "--secondary-threads", "2", "--self-check-negative")
+        self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+        doc = _doc(r)
+        self.assertTrue(doc["verdict"]["pass"])
+        self.assertTrue(doc["negative_control"]["comparator_rejected"])
+        for rep in doc["reps"]:
+            self.assertEqual(tuple(rep["serial_stages"]), self.SERIAL_STAGE_KEYS)
+            self.assertEqual(tuple(rep["overlap_stages"]), self.OVERLAP_STAGE_KEYS)
+            for stages in (rep["serial_stages"], rep["overlap_stages"]):
+                for key in ("cpu_ms", "cpu_experts_ms", "shared_ms"):
+                    self.assertTrue(self._finite_nonnegative(stages[key]), key)
+
+    def test_nonempty_regions_measured_inside_aggregate(self):
+        """With a genuinely split routing both substage regions do real work
+        (strictly positive) and their sum cannot exceed the enclosing cpu_ms
+        window by more than timer overhead (the two regions are the existing
+        contiguous, disjoint blocks inside the original cpu_ms boundaries)."""
+        r = _run(self.harness, "--experts", "32", "--tokens", "4", "--split", "16",
+                 "--reps", "2", "--secondary-threads", "2")
+        self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+        doc = _doc(r)
+        self.assertTrue(doc["verdict"]["pass"])
+        for rep in doc["reps"]:
+            self.assertGreaterEqual(rep["k_cpu"], 1)
+            self.assertGreaterEqual(rep["k_sec"], 1)
+            for stages in (rep["serial_stages"], rep["overlap_stages"]):
+                self.assertGreater(stages["cpu_experts_ms"], 0.0)
+                self.assertGreater(stages["shared_ms"], 0.0)
+                self.assertGreater(stages["cpu_ms"], 0.0)
+                # subregions lie inside the aggregate window; only timer
+                # overhead and inter-region gaps can make cpu_ms larger
+                self.assertLessEqual(stages["cpu_experts_ms"] + stages["shared_ms"],
+                                     stages["cpu_ms"] + 0.5)
+
+    def test_empty_cpu_expert_subset_zero_without_skipping_shared(self):
+        """split=0 empties the CPU expert subset: cpu_experts_ms is exactly
+        zero in both arms, while the shared branch still runs and is measured,
+        the aggregate cpu_ms keeps its meaning, and all gates still pass."""
+        r = _run(self.harness, "--experts", "32", "--tokens", "4", "--split", "0",
+                 "--reps", "2", "--secondary-threads", "2")
+        self.assertEqual(r.returncode, 0, r.stderr[-2000:])
+        doc = _doc(r)
+        self.assertTrue(doc["verdict"]["pass"])
+        for rep in doc["reps"]:
+            self.assertEqual(rep["k_cpu"], 0)
+            for stages in (rep["serial_stages"], rep["overlap_stages"]):
+                self.assertEqual(stages["cpu_experts_ms"], 0.0)
+                self.assertGreater(stages["shared_ms"], 0.0)
+                self.assertGreater(stages["cpu_ms"], 0.0)
+            self.assertTrue(rep["checks"]["routed_counts_ok"])
+            self.assertTrue(rep["checks"]["serial_vs_ref_pass"])
+            self.assertTrue(rep["checks"]["overlap_vs_serial_bitwise"])
 
 
 # ---------------------------------------------------------------------------

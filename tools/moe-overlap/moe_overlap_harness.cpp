@@ -850,6 +850,15 @@ static int unit_routing_run() {
 
 struct StageTimes {
     double h2d_ms = 0, cpu_ms = 0, sec_ms = 0, d2h_ms = 0, combine_ms = 0, total_ms = 0;
+    // Substage attribution of the aggregate cpu_ms region (observation only:
+    // no new synchronization, copies or compute were added to produce them).
+    // cpu_experts_ms covers the CPU-owned expert branch's existing input
+    // setup/copy, compute, synchronization and output readback; shared_ms
+    // covers the shared FFN/gate branch's existing input setup/copy, compute,
+    // synchronization and output readback. Each stays 0 when its region is
+    // not executed (empty CPU expert subset). Their sum need not equal
+    // cpu_ms exactly (timer overhead + work between the two regions).
+    double cpu_experts_ms = 0, shared_ms = 0;
 };
 
 // Compute-status failure propagation: a non-success graph compute must abort
@@ -1085,15 +1094,21 @@ int run_harness(Harness & H) {
         double s = now_ms();
         double c0 = now_ms();
         if (pcpu.ok()) {
+            double e0 = now_ms();
             set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
             check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
             ggml_backend_synchronize(H.cpu_bk);
             A.partial_cpu.resize((size_t)(N_EMBD * H.T));
             ggml_backend_tensor_get(pcpu.out, A.partial_cpu.data(), 0, sizeof(float) * A.partial_cpu.size());
+            st.cpu_experts_ms = now_ms() - e0;
         } else {
             A.partial_cpu.assign((size_t)(N_EMBD * H.T), 0.0f);
         }
-        compute_shared_blocking(A, A.shared_out);
+        {
+            double sh0 = now_ms();
+            compute_shared_blocking(A, A.shared_out);
+            st.shared_ms = now_ms() - sh0;
+        }
         st.cpu_ms = now_ms() - c0;
         if (psec.ok()) {
             double h0 = now_ms();
@@ -1140,15 +1155,21 @@ int run_harness(Harness & H) {
         // CPU expert subset + shared branch run while the secondary stream works
         double c0 = now_ms();
         if (pcpu.ok()) {
+            double e0 = now_ms();
             set_plan_inputs_blocking(pcpu, A, A.ids_cpu, A.w_cpu);
             check_compute(ggml_backend_graph_compute(H.cpu_bk, pcpu.gf), "primary experts");
             ggml_backend_synchronize(H.cpu_bk);
             A.partial_cpu.resize((size_t)(N_EMBD * H.T));
             ggml_backend_tensor_get(pcpu.out, A.partial_cpu.data(), 0, sizeof(float) * A.partial_cpu.size());
+            st.cpu_experts_ms = now_ms() - e0;
         } else {
             A.partial_cpu.assign((size_t)(N_EMBD * H.T), 0.0f);
         }
-        compute_shared_blocking(A, A.shared_out);
+        {
+            double sh0 = now_ms();
+            compute_shared_blocking(A, A.shared_out);
+            st.shared_ms = now_ms() - sh0;
+        }
         st.cpu_ms = now_ms() - c0;
         // join: D2H read-back (pageable host destination) issued here, after
         // the CPU-side work, then wait for the secondary stream to complete
@@ -1354,6 +1375,8 @@ int run_harness(Harness & H) {
         J.begin("serial_stages");
         J.num("h2d_ms", R.st_serial.h2d_ms);
         J.num("cpu_ms", R.st_serial.cpu_ms);
+        J.num("cpu_experts_ms", R.st_serial.cpu_experts_ms);
+        J.num("shared_ms", R.st_serial.shared_ms);
         J.num("sec_ms", R.st_serial.sec_ms);
         J.num("d2h_ms", R.st_serial.d2h_ms);
         J.num("combine_ms", R.st_serial.combine_ms);
@@ -1361,6 +1384,8 @@ int run_harness(Harness & H) {
         J.begin("overlap_stages");
         J.num("h2d_submit_ms", R.st_overlap.h2d_ms);
         J.num("cpu_ms", R.st_overlap.cpu_ms);
+        J.num("cpu_experts_ms", R.st_overlap.cpu_experts_ms);
+        J.num("shared_ms", R.st_overlap.shared_ms);
         J.num("d2h_ms", R.st_overlap.d2h_ms);
         J.num("combine_ms", R.st_overlap.combine_ms);
         J.end();

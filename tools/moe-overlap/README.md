@@ -109,6 +109,25 @@ needs.
   scheduler; that is out of scope for this prototype and is listed under
   limitations.
 
+## Stage timing attribution (`cpu_experts_ms` / `shared_ms`)
+
+`cpu_ms` remains the aggregate CPU-stage elapsed time with its original outer
+boundaries and meaning. Each repetition's `serial_stages` and `overlap_stages`
+additionally report two observation-only substages of that same region:
+`cpu_experts_ms` (the CPU-owned expert branch's existing input setup/copy,
+compute, synchronization and output readback) and `shared_ms` (the shared
+FFN/gate branch's existing input setup/copy, compute, synchronization and
+output readback). These are wall-clock regions, **not pure kernel times** —
+each includes its branch's copies and synchronization. Their purpose is to
+identify whether CPU experts or shared work dominates the CPU stage (padding
+performs the full expert computation before its zero routing weight applies,
+so it lands in `cpu_experts_ms`). Their sum need not equal `cpu_ms` exactly
+(timer overhead, work between the regions); an empty CPU expert subset reports
+`cpu_experts_ms = 0` while shared work is still measured. No synchronization,
+copies, compute or ordering were added to produce these fields. Overlap-arm
+timing identifies the critical-path stages of this schedule only; it does not
+establish total GPU utilization.
+
 ## Numerical criteria (fixed before any comparison)
 
 The existing comparison is **`legacy-cpu-unsplit/1`**. Its formula and verdict

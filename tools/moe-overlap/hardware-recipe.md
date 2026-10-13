@@ -62,6 +62,39 @@ reports must be produced and retained whatever they say):
    counts, define balance. No tuning sweep, scheduler change or multi-GPU
    support is proposed or implemented here.
 
+## Next proposed timing run (T=128, split=48, stage attribution; NOT authorized)
+
+Prepared instructions only — nothing here has been executed. After separate
+authorization, on the hardware host, at the then-reviewed PR head:
+
+1. **Binary**: the retained split=48 binaries predate the
+   `cpu_experts_ms`/`shared_ms` timers and do NOT contain them. The harness
+   translation unit must be recompiled and relinked first (single-TU compile
+   with the retained include set and recorded base flags, then the retained
+   amended link line with exactly two substitutions — harness object path and
+   output binary path — asserted to match exactly once; write to a NEW binary
+   name, never overwrite a preserved tested executable). Budget ~1 minute.
+2. **Frozen input**: reuse the same frozen per-repetition activation capture
+   as the 2026-10-13 T=128 split=48 session (`--inputs-file`, F32
+   `[2560×128]`), identity proven by sha256 against the retained t48
+   evidence record before launch; label the run a seeded reproduction. That
+   session's experiment seed `0x30712801` is already consumed — do not reuse
+   it for a fresh seeded case; inputs come from the capture, not a new seed.
+3. **Scheduling smoke first**: one `--reps 1 --dump-reference-case NEW_CASE
+   --split 48 --inputs-file <frozen capture> --self-check-negative` run, then
+   `check_scheduling.py NEW_CASE` must report `SCHEDULING_EQUIVALENT` before
+   any timing is considered (all numerical diagnostics retained whatever
+   they say; the legacy numerical FAIL classification path is unchanged).
+4. **Then the existing paired-timing protocol**: the accepted alternating-arm
+   shape — `--split 48 --tokens 128 --reps 10 --warmup 3 --threads 14
+   --secondary cuda --inputs-file <frozen capture> --self-check-negative`,
+   serial-first/overlap-first alternating per repetition, correctness gates
+   per run as below. The new substage fields (`cpu_experts_ms`, `shared_ms`,
+   in both `serial_stages` and `overlap_stages`) are the point of the run:
+   they attribute the ~66 ms CPU stage between CPU expert work (including
+   padding) and shared-branch work. No threshold, tolerance or schedule
+   change accompanies them.
+
 ## Objective and success question
 
 Does overlapping CPU expert computation, GPU expert computation and activation
@@ -180,11 +213,17 @@ is not comparator rejection; failed runs do not emit arm-output dumps.
 
 Per run: `summary` (medians/mins, `overlap_to_serial_ratio`,
 `serial_minus_overlap_ms`), per-repetition `serial_ms`/`overlap_ms` and the
-stage breakdowns (serial: h2d/cpu/sec/d2h/combine; overlapped:
-h2d_submit/cpu/d2h/combine), `load.weights_ms`, `load.secondary_slice_ms`,
-plus `config` for the identity echo. Interpretation guardrails: the serial arm
+stage breakdowns (serial: h2d/cpu/cpu_experts/shared/sec/d2h/combine;
+overlapped: h2d_submit/cpu/cpu_experts/shared/d2h/combine), `load.weights_ms`,
+`load.secondary_slice_ms`, plus `config` for the identity echo. `cpu_ms`
+stays the aggregate CPU-stage elapsed time; `cpu_experts_ms` and `shared_ms`
+split that region into the CPU-owned expert branch and the shared FFN/gate
+branch (each including its existing copies and synchronization — not pure
+kernel times) so the next run can identify which side dominates; their sum
+need not equal `cpu_ms` exactly. Interpretation guardrails: the serial arm
 is the in-process reference for the scheduling delta only; neither arm is a
-full-model tokens/s claim. GPU utilization, if desired, is optional supporting
+full-model tokens/s claim, and the overlap timing does not establish total
+GPU utilization. GPU utilization, if desired, is optional supporting
 evidence (`nvidia-smi dmon` sampling around the runs) and never the success
 criterion.
 
