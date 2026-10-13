@@ -1,159 +1,178 @@
-# Backend operand reference handoff (PR #307)
+# Independent backend operand reference (PR #307)
 
-Status on 2026-10-13: **partial offline correction; full reference blocked**.
-The branch was based on live PR head
-`9ace4700e8c3a315f1cdf4b56c797905396b337a`. No inference host was accessed,
-no GPU or model download was used, and no hardware validation was performed.
+`moe-operand-reference/2` is implemented as an **offline, block-scoped
+empirical check**, with physical validation still pending. It independently
+computes expected outputs from original Q8_0 weight bytes, captured F32 inputs
+and the original token/slot routing. It never calls a native backend to
+produce expected values. It covers all ten selected experts, both ownership
+subsets, the CPU shared branch, and both final scheduling-arm outputs.
 
-## What is implemented
+## Scope and numerical modes
 
-The existing independent loader-fixture dot now rounds the activation
-reciprocal multiplication to F32 before `roundf`, matching the pin's scalar
-CPU quantizer. Previously Python multiplied in F64, which changes codes near
-half ties. It explicitly supports only `cpu-scalar-q8_0` and rejects AVX,
-CUDA and unknown modes. Its weights have scale 1 and its initial activations
-are quantization-exact; it is not a reference for arbitrary real GGUF weights.
-The ordinary loader fixture has a saturated router, so its numerical check
-does not prove that all ten nonzero expert contributions are present. A small
-development fixture now covers that sensitivity separately.
-
-New reports name the existing native-CPU comparison `legacy-cpu-unsplit/1`
-and repeat its unchanged metrics under `legacy_cpu_unsplit_diagnostic`.
-The original `serial_vs_ref_*` fields and their effect on `verdict.pass`
-remain intact. Historical reports are untouched. The proposed independent
-contract has a separate identifier, `moe-operand-reference/2-proposed`, and
-reports `NOT_IMPLEMENTED`; a legacy PASS is not a PASS under that contract.
-Serial/overlap bitwise equality, replay, routing, ownership, shared branch,
-quantization, status/error checks and their execution paths are unchanged.
-
-## Source facts and unresolved scope
+`operand_reference.py` adapts the portable t128r2 quantizers and the existing
+CPU loader-fixture FFN reference. It fixes signed Q8 decoding, block layouts,
+weight-scale indexing and duplicate scale application in the supplied script.
+Projection dots use exact per-block integer sums and F64 accumulation, with
+explicit F32 graph intermediates before SwiGLU and down-input quantization.
+The packs it computes are **predictions, not captured device bytes**.
 
 At native pin `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`:
 
-| Path | Code arithmetic | Stored activation scale | Local source |
-|---|---|---|---|
-| CPU scalar Q8_0 | F32 `d=amax/127`, `id=1/d`, `x*id`, ties away | fp16 | `ggml/src/ggml-quants.c`, `quantize_row_q8_0_ref` |
-| CPU AVX Q8_0 | F32 `id=127/amax`, `x*id`, ties to even | fp16 | `ggml/src/ggml-cpu/arch/x86/quants.c`, `quantize_row_q8_0` |
-| CUDA MMVQ Q8_1 | `d=amax/127`, `roundf(x/d)` | fp16 | `ggml/src/ggml-cuda/quantize.cu`, `quantize_q8_1` |
-| CUDA MMQ Q8_1 D4 for Q8_0 weights | `d_inv=127/amax`, `roundf(x*d_inv)`, `d=1/d_inv` | fp32 | `ggml/src/ggml-cuda/quantize.cu`, `quantize_mmq_q8_1`; layout in `mmq.cuh` |
+| Mode | Code arithmetic | Stored activation scale |
+|---|---|---|
+| `cpu-scalar-q8_0` | F32 `d=amax/127`, `id=1/d`, `x*id`, ties away | fp16 |
+| `cpu-avx-q8_0` | F32 `id=127/amax`, `x*id`, ties to even | fp16 |
+| `cuda-mmvq-q8_1` | F32 `d=amax/127`, `roundf(x/d)` | fp16 |
+| `cuda-mmq-d4` | F32 `d_inv=127/amax`, `roundf(x*d_inv)`, `d=1/d_inv` | fp32 |
 
-This table describes source paths, not a verified universal shape dispatcher.
-Actual CPU compiler flags and CUDA kernel selection, architecture, fusion,
-mapping and reciprocal behavior must be established for the named executable.
-T=1 and T=128 alone do not identify every supported path. Future references
-must record and check the actual mode per projection and reject unrecognized
-modes. The shared branch needs its own CPU reference. A CPU-owned subset and
-a CUDA-owned subset contain different experts and cannot serve as each
-other's expected output.
+Source: `ggml-quants.c:quantize_row_q8_0_ref`,
+`ggml-cpu/arch/x86/quants.c:quantize_row_q8_0`, and
+`ggml-cuda/quantize.cu:quantize_q8_1/quantize_mmq_q8_1` (`mmq.cuh` selects D4
+for Q8_0). Unknown reference modes are rejected.
 
-The maintainer reports that an external source-faithful reconstruction of one
-frozen T=128 failure matched CPU planes to 1.7e-8, CUDA partial to 3.3e-8,
-and their delta to 4.3e-8 unexplained. These are **reported fixture-specific
-observations, not locally inspected artifacts or error bounds**. The original
-session did not capture native packed activation codes/scales: its packs were
-reconstructed offline. Preserve that distinction when transferring evidence.
-The original
-CPU-versus-CUDA max_abs 0.0004935832694 / max_ratio 1.765354018 remains a
-FAIL under the legacy criterion. [Comment 6134734665](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6134734665)
-withdraws the inverse-minimum-router-weight derivation. No fitted 32x
-allowance or additional `2^-6 * weighted_L1` term is adopted here.
+The harness exporter supports only T=1 and T=128, the existing 2560/640 block,
+x86 CPU, and either a CPU secondary or the named CUDA0 RTX 3060 subject.
+It records the linked CPU closure's compiled AVX features; the CPU TUs must
+have coherent flags, as in the existing build recipe. CUDA source dispatch
+at this pin is MMVQ for T=1 and MMQ D4 for T=128 on this subject. Unsupported
+shapes/subjects fail closed. This is not a universal CUDA shape dispatcher.
+GPU compiler arithmetic, nonlinear implementation differences and held-out
+behavior still require physical validation. No native quantizer was changed.
 
-## Smallest portable handoff
+## Contract and retained diagnostic
 
-No relevant reconstruction/capture was found in the accessible local task
-directories or caches. `/home/zutfen/.hermes/cache/evidence/pr-307/` is absent
-on this computer. The reported controller directory
-`/home/zutfen/.hermes/cache/evidence/pr-307/t128r2-20261013/` and inferswarm01
-directory `/home/hermes/moe-pr307/diag-t128/t128r2/` were not inspected.
+The native **`legacy-cpu-unsplit/1`** formula, `serial_vs_ref_*` fields,
+`legacy_cpu_unsplit_diagnostic`, verdict and historical reports are unchanged.
+A legacy FAIL stays FAIL. [Comment 6134734665](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6134734665)
+withdraws the inverse-minimum-weight derivation; the fitted 32x / extra
+`2^-6 * weighted_L1` allowance in the transferred report is not adopted.
 
-Provide locally, without a full model or new host run:
+`check_reference.py` produces a separate `/2` report, preserving the legacy
+verdict/diagnostic and reporting `PROPOSED_EMPIRICAL_PASS`, `FAIL`, or
+`INVALID_OR_INCOMPLETE`. **`hardware_qualified` is always false**: a numerical
+check is not qualification or execution authority. The harness reports
+`EXTERNAL_CHECK_PENDING` when exporting; it cannot declare an independent
+PASS itself. Without an export, the new contract is `NOT_REQUESTED`.
 
-1. The vetted reconstruction script and only its imported local helpers;
-   its exact invocation, dependencies, pin/build identity, and hashes.
-2. The smallest existing self-contained reproduction slice: pre-quantization
-   activations and Q8_0 weight bytes **including block scales** for one named
-   expert/token/slot through up, gate, SwiGLU and down; routing ID and exact
-   F32 weight and matching retained CPU/CUDA stage outputs. Include
-   dimensions/strides and compact-to-original mapping. Include retained
-   **offline-reconstructed** codes/scales, clearly labeled, or the inputs
-   needed to regenerate them. Native packs were not captured in the reported
-   session; do not require a new GPU/native capture to package this bundle.
-3. If the script requires complete-subset reduction inputs, include precisely
-   those existing selected-expert tensors/activations/planes and the shared
-   branch inputs/output, or document that dependency before copying. One
-   expert proves a stage reconstruction, not the ten-expert block combine.
-   Include the original failing JSON, frozen-input hash and provenance/seed.
+For each CPU/secondary/shared partial and each final arm, the fixed criterion is
 
-Exact remote filenames cannot be named until the script's dependency list is
-available. Do not substitute backend-generated outputs for independently
-computed expected values. Retained stage outputs check the reconstruction's
-numerical/mapping fidelity; predicted packs are not direct observations of
-native operands. Full references must compute their own projection/nonlinear
-inputs from the original weights and activations. Adapting the vetted script is the
-next step; duplicating an engine is outside this correction.
+```
+abs(observed - independent_expected) <= 2^-23 + 2^-19 * independent_plane_mass
+```
 
-## Criteria and reserved inputs
+Mass is the elementwise sum of absolute independently computed, router-weighted
+planes belonging to that partial; shared mass is its absolute contribution.
+Final mass includes both expert subsets and shared. These constants were
+chosen before evaluating the transferred fixture or any held-out run: one
+F32 epsilon absolute plus sixteen F32 epsilons of plane mass. This is narrow
+**empirical headroom for accumulation/nonlinear implementation differences
+after operand reconstruction**, not a bound on quantization error propagated
+through the FFN. Cancellation and quantizer boundaries can invalidate a case;
+retain FAIL rather than fitting a larger constant. No universal theorem or
+error ceiling is claimed.
 
-No full-block/backend tolerance is responsibly declared while that reference
-is missing. Before any subsequent held-out hardware run, freeze a new criterion
-with a narrow rationale for accumulation and nonlinear implementation error
-after operands match. A block/backend empirical criterion is permissible if
-labeled as such, but neither observed fixture agreement nor weighted-plane
-L1 alone proves a uniform bound. Do not tune constants until the known case
-passes, or relabel it held-out.
+Every native routing/scheduling/replay/status check must still succeed, as
+must `--self-check-negative`. The checker verifies exported arm bytes are
+bit-identical and compares the CPU subset, secondary subset, shared branch
+and final outputs separately. Missing data/weights, wrong shapes, unknown
+modes, nonfinite operands or native error/status failures cannot fall back to
+the legacy CPU output. Expected values never use captured partials/planes.
 
-The existing crafted CPU loader-fixture criterion remains relative error
-`<5e-5` (denominator floor `1e-9`) and absolute error `<5e-3` for the split
-case. These retained empirical thresholds accommodate F32 nonlinear ops vs
-the F64 reference for that fixture only; they are not a CUDA or arbitrary
-real-weight accumulation bound. The 32-element operand tests use exact
-hand-computed codes/scales. The tiny block's analytic F64 check allows only
-12-decimal-place arithmetic-order agreement before testing sensitivity.
+## Portable bundle inspected locally
 
-Reserve these explicit `--seed` values for later validation with the existing
-real GGUF weights, layer 2, split 256, one measured repetition per seed:
+Archive: `inferswarm-pr307-t128r2-reference.zip`.
+Computed SHA-256:
+`b886a71e7ad36f324515294ee687613052733bbcd4e3817749d0f8bf0d194dd2`.
+No independently supplied expected archive hash exists; this is local
+integrity, not external authentication. Safe extraction found 50 regular
+files; all 49 entries in `SHA256SUMS` match (the manifest excludes itself).
+No bundled shell script or native executable was run.
+
+The bundle is complete for seven CUDA-owned experts of **frame 61 only**.
+Its `recon/recon1.py` is not a functioning reproduction of the reported full
+comparison: an impossible reshape, unsigned-code decoding, malformed scale
+axes, double-applied scales and incorrect gate-scale selection occur before
+its missing SwiGLU/down/comparison implementation. The declared
+`recon/attribution.npy` is absent. The source-corrected adapter, rather than
+that broken script, computes the following **CALCULATED offline comparisons
+against retained observed arrays**:
+
+- CPU weighted planes: max absolute difference `1.4901161193847656e-8`.
+- CPU same-seven-expert partial: `1.5308614820241928e-8`.
+- CUDA MMQ same-seven-expert partial: `3.133027348667383e-8`.
+- Predicted initial CPU/CUDA integer codes: zero differences on this input.
+
+This verifies only the available development slice, not a whole-block PASS,
+native pack identity, a universal mechanism bound or T=128 qualification.
+The observed original max_abs `0.0004935832694`, ratio `1.765354018` remains
+FAIL under the legacy contract. Captured CPU and CUDA subsets are different
+experts; comparisons above reconstruct the **same** seven experts.
+
+Smallest missing full-frame-61 inputs, from existing GGUF bytes (no GPU run):
+
+- up/gate/down Q8_0 extracts for experts **44, 106, 253**;
+- shared up/gate/down Q8_0 tensors;
+- F32 `ffn_gate_inp_shexp.weight` (2560 values).
+
+Those 13 extracts total **20,899,840 bytes**. The complete working
+reconstruction/cell history used for the transferred report is also requested
+for provenance comparison. For all 128 captured tokens, 393 unique experts
+are selected; only seven have extracts. A full known-fixture replay needs
+all selected weights and shared, or the original existing shard. The checker
+can read that shard selectively via the repository's existing bounded GGUF
+index. No full-model download is needed. Do not treat captured CPU/shared
+outputs as a substitute for missing independent reference weights.
+
+Use the controller/Hermes evidence copy first; inferswarm01 only for missing
+existing files. Reconstructed packs are optional, labeled as predictions;
+native packs were never captured and a new capture is not a packaging
+prerequisite. Preserve relative paths, a dependency list and SHA-256 manifest.
+
+## Later physical validation (not run here)
+
+The exporter adds only host writes outside arm timings, with no graph, kernel,
+ownership or scheduling API changes. Export runs explicitly disclaim timing
+as performance evidence. Use a new directory per process; never reuse stale
+cases. Keep the existing CUDA nvcc-wrapper/libcuda-link amendments; this
+change does not migrate or repair the build system.
+
+After separate hardware authorization, for one numerical smoke case:
+
+```bash
+# B, GGUF and CPU/thread settings come from the existing authorized recipe.
+# CASE must not already exist. Use the actual reviewed SHA and pinned weights.
+"$B" --gguf "$GGUF" --layer 2 --tokens 128 --split 256 --secondary cuda \
+  --threads 14 --warmup 0 --reps 1 --seed 0x30712801 \
+  --self-check-negative --dump-reference-case "$CASE" --json native.json
+python3 tools/moe-overlap/check_reference.py "$CASE" --gguf "$GGUF" \
+  --json "$CASE/reference.json"
+```
+
+The native command can exit 3 for its retained legacy numerical FAIL. Inspect
+its reason and the independent report: do not blanket-ignore native failures.
+The checker rejects incomplete/status/schedule/replay/control failures even
+when legacy numerics also fail. Keep both reports and all failed records.
+Repeat once for T=1 with `--tokens 1 --seed 0x30700101` and a fresh CASE.
+A passing smoke does not itself qualify hardware. A clean post-fix CUDA
+racecheck also remains outstanding; no new GPU/native capture is required by
+this coding task.
+
+Reserved held-out seed set (not generated or used by these tests):
 
 | Tokens | Reserved seeds |
 |---|---|
 | T=1 | `0x30700101`, `0x30700102`, `0x30700103` |
 | T=128 | `0x30712801`, `0x30712802`, `0x30712803` |
 
-These seeds have not been generated or used by this change's tests. Development
-inputs are the existing crafted loader fixture, new small deterministic
-fixtures, and the harness's existing default seed `0x4953573030303033`.
-The externally inspected frozen failure is consumed development evidence;
-its seed/input hash is currently unavailable here. Verify the reserved seeds
-against external provenance and compare input hashes before calling them
-held-out. If previously consumed, record that and reserve fresh values before
-the new criterion is validated. Record the seed explicitly in the run
-manifest/command: the current GGUF report does not echo `--seed`.
+Development inputs are crafted offline fixtures and the transferred consumed
+failure (`cur.f32` SHA `fc72b57256e32b5c5e1403228da12ace1ddd7e1969f0fa156bb11256b8683c1d`,
+default seed lineage `0x4953573030303033`). Check external provenance/input
+hashes before claiming the reserved seeds are held-out. Record the seed in
+run provenance because GGUF native reports do not echo it. STOP on a failed
+new-contract case; do not widen the criterion or retry until PASS.
 
-## Smallest next physical step (after the blocker is resolved)
-
-First adapt and verify the portable reconstruction offline and freeze its
-mode dispatch and criterion. Then, under separately established hardware
-authority, perform one T=1 and one T=128 reference-validation smoke run at
-the new reviewed SHA using the first reserved seed for each shape. Use the
-existing harness invocation (`--gguf`, `--layer 2`, `--split 256`,
-`--secondary cuda`, `--seed`, `--warmup 0`, `--reps 1`, `--self-check-negative`)
-and the vetted capture/reconstruction's documented invocation. A complete
-copy-paste reference-validation command is blocked on that script; the
-repository's present dumps omit internal codes/scales and failed runs do not
-emit arm outputs. Use the vetted script's existing reconstruction/capture
-requirements; reconstructed packs must remain labeled as predictions, and
-their absence from native captures is not a packaging blocker. Existing final
-output dumps alone cannot complete the new validation.
-
-Check each backend against independently computed operands for the same
-expert/token/slot, every selected expert and the shared branch, plus strict
-serial/overlap bitwise equality and replay. Retain both contract statuses and
-the unchanged legacy diagnostic, including FAIL. STOP and preserve any failed
-case. Only after that smoke succeeds should the remaining reserved seeds be
-used once each. Neither offline CI nor a successful known-fixture replay
-qualifies T=128. The clean post-fix CUDA racecheck remains outstanding.
-
-CUDA builds still need the externally documented nvcc-wrapper/libcuda-link
-amendments. This change does not repair `build.py`, dispatch Final CPU
-Validation, run the campaign, grant execution authority, merge the PR or close
-an issue. No living project-status claim changes: this is local prototype
-preparation with an explicit blocker, not new acceptance or capability evidence.
+No inference host was accessed, no GPU or model download was used, and no
+hardware run, native-kernel change, Final CPU Validation dispatch, merger or
+issue closure occurred. Documentation impact is confined to this prototype:
+there is no new accepted capability, gate result or execution authority to
+record in living project status.

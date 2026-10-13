@@ -61,6 +61,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <sys/stat.h>
 
 // ---------------------------------------------------------------------------
 // Authentic qwen4exp Q8_0 block geometry (authenticated #299 census:
@@ -885,6 +886,8 @@ struct Harness {
     bool status_negative = false;
     std::string dump_serial, dump_overlap; // last-rep arm outputs (F32)
     std::string dump_routing;              // last-rep split routing evidence
+    std::string reference_case;             // untimed export for independent checker
+    std::string reference_cpu_mode, reference_secondary_mode;
     // last-rep routing capture for --dump-routing
     std::vector<int32_t> last_ids_cpu, last_ids_sec, last_ids_all;
     std::vector<float> last_w_cpu, last_w_sec, last_w_all;
@@ -902,6 +905,23 @@ int run_harness(Harness & H) {
     JsonOut & J = H.J;
     bool all_pass = true;
     std::string fail_reason;
+    if (!H.reference_case.empty()) {
+        if (H.T != 1 && H.T != 128) {
+            fprintf(stderr, "error: operand reference supports only T=1 and T=128\n"); return 4;
+        }
+#if defined(__x86_64__) || defined(__i386__)
+        // Query the linked CPU closure, not the harness TU's compiler flags.
+        H.reference_cpu_mode = (ggml_cpu_has_avx() || ggml_cpu_has_avx2())
+            ? "cpu-avx-q8_0" : "cpu-scalar-q8_0";
+#else
+        fprintf(stderr, "error: unsupported CPU reference quantizer architecture\n"); return 4;
+#endif
+        H.reference_secondary_mode = H.secondary_kind == "cpu" ? H.reference_cpu_mode
+            : (H.T == 1 ? "cuda-mmvq-q8_1" : "cuda-mmq-d4");
+        if (mkdir(H.reference_case.c_str(), 0700) != 0) {
+            fprintf(stderr, "error: reference-case directory must be new and creatable\n"); return 4;
+        }
+    }
 
     // ---- backends ----------------------------------------------------------
     ggml_backend_dev_t cpu_dev = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
@@ -918,6 +938,10 @@ int run_harness(Harness & H) {
         if (!gpu) {
             fprintf(stderr, "error: no CUDA/GPU backend device available (fail-closed; no CPU fallback)\n");
             return 4;
+        }
+        if (!H.reference_case.empty() && (std::string(ggml_backend_dev_description(gpu)) != "NVIDIA GeForce RTX 3060"
+                || std::string(ggml_backend_dev_name(gpu)) != "CUDA0")) {
+            fprintf(stderr, "error: unsupported CUDA reference subject (requires RTX 3060)\n"); return 4;
         }
         H.sec_bk = ggml_backend_dev_init(gpu, nullptr);
         if (!H.sec_bk) { fprintf(stderr, "error: gpu backend init failed\n"); return 4; }
@@ -977,8 +1001,13 @@ int run_harness(Harness & H) {
     J.str("secondary_kind", H.secondary_kind);
     J.str("secondary_backend", H.sec_bk ? ggml_backend_name(H.sec_bk) : "(none)");
     J.str("reference_comparison", "legacy-cpu-unsplit/1");
-    J.str("backend_operand_reference_contract", "moe-operand-reference/2-proposed");
-    J.str("backend_operand_reference_status", "NOT_IMPLEMENTED");
+    J.str("backend_operand_reference_contract", "moe-operand-reference/2");
+    J.str("backend_operand_reference_status", H.reference_case.empty() ? "NOT_REQUESTED" : "EXTERNAL_CHECK_PENDING");
+    if (!H.reference_case.empty()) {
+        J.str("reference_cpu_mode", H.reference_cpu_mode);
+        J.str("reference_secondary_mode", H.reference_secondary_mode);
+        J.str("reference_case", H.reference_case);
+    }
     J.num("primary_threads", H.threads);
     J.num("secondary_threads", H.secondary_kind == "cpu" ? H.secondary_threads : 0);
     J.num("warmup", H.warmup);
@@ -1144,8 +1173,31 @@ int run_harness(Harness & H) {
         bool counts_ok = false, single_device = false;
     };
 
+    // Untimed host exports only; graph structure, kernels and schedule are
+    // unchanged. Even a legacy numerical FAIL can be independently checked.
+    auto export_arm = [&](ArmContext & A, const std::vector<float> & out, int rep, const char * arm) {
+        if (H.reference_case.empty() || rep < 0 || g_compute_failed) return;
+        auto write = [&](const std::string & suffix, const void * data, size_t bytes) {
+            std::string path = H.reference_case + "/rep-" + std::to_string(rep) + "-" + suffix;
+            FILE * f = fopen(path.c_str(), "wb");
+            if (!f) { all_pass = false; fail_reason = "reference-case export failed"; return; }
+            bool ok = fwrite(data, 1, bytes, f) == bytes;
+            if (fclose(f) != 0) ok = false;
+            if (!ok) { all_pass = false; fail_reason = "reference-case export failed"; }
+        };
+        if (std::string(arm) == "serial") {
+            write("cur.f32", A.cur.data(), A.cur.size() * sizeof(float));
+            write("ids.i32", A.ids.data(), A.ids.size() * sizeof(int32_t));
+            write("weights.f32", A.rweights.data(), A.rweights.size() * sizeof(float));
+            write("cpu.f32", A.partial_cpu.data(), A.partial_cpu.size() * sizeof(float));
+            write("sec.f32", A.partial_sec.data(), A.partial_sec.size() * sizeof(float));
+            write("shared.f32", A.shared_out.data(), A.shared_out.size() * sizeof(float));
+        }
+        write(std::string(arm) + ".f32", out.data(), out.size() * sizeof(float));
+    };
+
     // one repetition: router once, reference once, both arms (order alternates)
-    auto run_rep = [&](ArmContext & A, RepResult & R, bool serial_first, bool validate) {
+    auto run_rep = [&](ArmContext & A, RepResult & R, bool serial_first, bool validate, int capture_rep = -1) {
         Plan pcpu, psec;
         try {
             if (g_compute_failed) throw ComputeFailure{};
@@ -1197,10 +1249,14 @@ int run_harness(Harness & H) {
             run_reference(A, R.ref_out, R.ref_planes);
             if (serial_first) {
                 run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
+                export_arm(A, R.serial_out, capture_rep, "serial");
                 run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
+                export_arm(A, R.overlap_out, capture_rep, "overlap");
             } else {
                 run_overlap(A, pcpu, psec, R.overlap_out, R.st_overlap);
+                export_arm(A, R.overlap_out, capture_rep, "overlap");
                 run_serial(A, pcpu, psec, R.serial_out, R.st_serial);
+                export_arm(A, R.serial_out, capture_rep, "serial");
             }
             R.serial_ms = R.st_serial.total_ms;
             R.overlap_ms = R.st_overlap.total_ms;
@@ -1276,7 +1332,7 @@ int run_harness(Harness & H) {
         bool ok = false;
         make_input(A, r, ok);
         if (!ok) return 4;
-        if (!run_rep(A, R, /*serial_first=*/ (r % 2) == 0, /*validate=*/true)) break;
+        if (!run_rep(A, R, /*serial_first=*/ (r % 2) == 0, /*validate=*/true, r)) break;
         // isolation: distinct generated inputs must produce distinct reference
         // outputs. With --inputs-file every repetition replays the same
         // captured activations by definition, so distinctness is not a valid
@@ -1533,7 +1589,8 @@ int run_harness(Harness & H) {
     }
     J.str("reason", all_pass ? "all correctness gates passed" : fail_reason);
     J.str("timing_claim",
-          H.secondary_kind == "cuda"
+          !H.reference_case.empty() ? "untimed numerical-reference exports present: timing is NOT performance evidence"
+          : H.secondary_kind == "cuda"
               ? "single-node CPU/GPU overlap measurement (hardware run)"
               : "secondary is a CPU backend: scheduling/dependency correctness only; overlap timing is NOT meaningful offline (thread pools contend on one host)");
     J.end();
@@ -1551,6 +1608,14 @@ int run_harness(Harness & H) {
     J.boolean("resources_released", true);
 
     std::string json = "{\n" + J.s + "\n}\n";
+    if (!H.reference_case.empty()) {
+        std::string path = H.reference_case + "/run.json";
+        FILE * f = fopen(path.c_str(), "wb");
+        if (!f) { fprintf(stderr, "error: cannot write reference-case run.json\n"); return 4; }
+        bool ok = fwrite(json.data(), 1, json.size(), f) == json.size();
+        if (fclose(f) != 0) ok = false;
+        if (!ok) { fprintf(stderr, "error: incomplete reference-case run.json\n"); return 4; }
+    }
     if (!H.json_path.empty()) {
         FILE * f = fopen(H.json_path.c_str(), "w");
         if (!f) { fprintf(stderr, "error: cannot write %s\n", H.json_path.c_str()); return 4; }
@@ -1605,6 +1670,7 @@ int main(int argc, char ** argv) {
         else if (a == "--dump-serial") H.dump_serial = next("--dump-serial");
         else if (a == "--dump-overlap") H.dump_overlap = next("--dump-overlap");
         else if (a == "--dump-routing") H.dump_routing = next("--dump-routing");
+        else if (a == "--dump-reference-case") H.reference_case = next("--dump-reference-case");
         else if (a == "--list-devices") return list_devices();
         else if (a == "--help" || a == "-h") {
             printf("usage: %s [--gguf <shard> --layer N | --synthetic [--experts N] [--seed S]]\n"
@@ -1613,6 +1679,7 @@ int main(int argc, char ** argv) {
                    "  [--inputs-file <f32 block activations>] [--json out.json]\n"
                    "  [--self-check-negative] [--self-check-status-negative]\n"
                    "  [--dump-serial PATH] [--dump-overlap PATH] [--dump-routing PATH]\n"
+                   "  [--dump-reference-case NEW_DIR] (independent offline numerical check)\n"
                    "  [--list-devices]\n", argv[0]);
             return 0;
         }

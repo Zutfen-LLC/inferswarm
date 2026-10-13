@@ -114,10 +114,19 @@ needs.
 The existing comparison is **`legacy-cpu-unsplit/1`**. Its formula and verdict
 behavior are retained to preserve historical FAIL results. It uses a native
 CPU graph as its expected output, so it is not an independent operand
-reference. The proposed **`moe-operand-reference/2-proposed`** is
-**NOT_IMPLEMENTED**, blocked on the portable vetted reconstruction. See
+reference. The separate **`moe-operand-reference/2`** is implemented as an
+independent offline check with a proposed block-scoped empirical criterion.
+Its physical validation and whole failing-fixture replay remain pending. See
 [`numerical-reference.md`](numerical-reference.md) for source distinctions,
 the precise handoff, reserved seeds, and remaining physical validation.
+
+Use `--dump-reference-case NEW_DIR` for an untimed numerical export and
+`python3 tools/moe-overlap/check_reference.py NEW_DIR --gguf ORIGINAL_SHARD`
+for independently computed CPU/secondary/shared and final-arm checks. This
+does not change the native legacy verdict. The new report carries its own
+status and always reports `hardware_qualified: false`; it requires the native
+schedule, routing, replay, error/status and shared-omission control checks.
+Supported modes are explicit and unsupported subjects/shapes are rejected.
 
 - CPU and CUDA activation operands differ at this pin. CPU Q8_0 and CUDA
   MMVQ store fp16 activation scales; CUDA MMQ's Q8_0 D4 path stores fp32
@@ -147,6 +156,9 @@ the precise handoff, reserved seeds, and remaining physical validation.
 ## Files
 
 - `moe_overlap_harness.cpp` — the harness (single translation unit).
+- `operand_reference.py` / `check_reference.py` — independent Q8 operand
+  reconstruction and a block-specific offline check, reusing the repository's
+  bounded GGUF index. No native backend generates the expected values.
 - `build.py` — fetches the sha256-pinned source tarball once into the user
   cache, verifies the extracted tree against selected complete-file digests
   from the accepted #299 runtime contract (an `MOE_OVERLAP_SOURCE` override
@@ -167,6 +179,14 @@ the precise handoff, reserved seeds, and remaining physical validation.
 Additional offline controls exercised by
 `tests/test_moe_overlap_prototype.py`:
 
+- **Backend operand reference**: signed weight bytes and single scale
+  application, four explicit quantizer modes (ties, zero blocks and fp16/fp32
+  scales), all ten experts and shared across a small 128-token mapping fixture,
+  wrong-routing-weight, missing-expert, corrupted-output and missing-shared
+  controls. A complete CPU GGUF fixture tests exporter-to-checker integration
+  and refusal of missing files/unknown modes. The transferred seven-expert
+  frame-61 slice is development evidence only; its missing CPU/shared weights
+  prevent a whole-block replay here.
 - **Scalar CPU fixture operands**: a 32-element half-tie control checks F32
   multiplication before integer rounding and fp16 scale storage. Unknown,
   AVX and CUDA fixture-reference modes are rejected. A small 12-expert/top-10

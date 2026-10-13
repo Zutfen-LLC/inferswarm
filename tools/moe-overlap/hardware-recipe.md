@@ -8,9 +8,11 @@ part of the proposal.
 
 Current numerical status (2026-10-13): the legacy CPU-unsplit criterion below
 is unchanged and its T=128 FAIL remains recorded. The new independent backend
-operand reference is **NOT_IMPLEMENTED**; this recipe alone cannot validate
-it. See [`numerical-reference.md`](numerical-reference.md) for the portable
-reconstruction blocker and reserved inputs. No hardware run is part of the
+operand reference is an **implemented offline check with physical validation
+pending**. Use the untimed export/check commands in
+[`numerical-reference.md`](numerical-reference.md); it also documents missing
+whole-fixture weights, reserved inputs and the separate proposed criterion.
+No hardware run is part of the
 offline correction task. CUDA builds still require the externally documented
 nvcc-wrapper/libcuda-link amendments; build-system repair is out of scope.
 

@@ -7,13 +7,16 @@ Review-facing summary of this branch's deliverable. Full detail lives in
 
 ## Verdict
 
-**Backend numerical acceptance remains blocked.** The 2026-10-13 partial
-offline correction fixes scalar CPU fixture operands and labels the retained
-CPU-unsplit diagnostic. The full independent CPU/CUDA operand reference is
-`NOT_IMPLEMENTED`, pending the portable vetted reconstruction and its minimal
-capture inputs. See [`numerical-reference.md`](numerical-reference.md) for the
-handoff and reserved seeds. Historical T=128 FAIL records remain FAIL; this
-change establishes no hardware qualification or execution authority.
+**Independent operand reference implemented; hardware acceptance pending.**
+The 2026-10-13 correction adds an untimed harness export and independent
+CPU/CUDA/shared block reconstruction from original Q8_0 weights and F32 inputs.
+Its proposed empirical criterion and status are separate from the unchanged
+legacy CPU-unsplit verdict. The available seven-expert development slice
+reconstructs locally; whole failing-fixture verification needs missing
+CPU/shared weights. See [`numerical-reference.md`](numerical-reference.md)
+for exact limits, inspected archive integrity and reserved seeds. Historical
+T=128 FAIL records remain FAIL; offline work establishes no hardware
+qualification or execution authority.
 
 The earlier feasibility and offline results below describe the original
 prototype deliverable, not acceptance under the proposed reference contract.

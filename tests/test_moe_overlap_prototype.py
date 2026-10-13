@@ -104,8 +104,8 @@ class TestMoEOverlapPrototype(unittest.TestCase):
         self.assertTrue(doc["determinism_recheck"]["serial_bitwise"])
         self.assertEqual(doc["config"]["reference_comparison"], "legacy-cpu-unsplit/1")
         self.assertEqual(doc["config"]["backend_operand_reference_contract"],
-                         "moe-operand-reference/2-proposed")
-        self.assertEqual(doc["config"]["backend_operand_reference_status"], "NOT_IMPLEMENTED")
+                         "moe-operand-reference/2")
+        self.assertEqual(doc["config"]["backend_operand_reference_status"], "NOT_REQUESTED")
         for rep in doc["reps"]:
             self.assertTrue(rep["checks"]["routed_counts_ok"])
             # every router-selected expert executed exactly once per token
@@ -829,6 +829,97 @@ class TestFixtureReferenceOperands(unittest.TestCase):
                     assert_fixture_output(self, got, ref)
 
 
+def _operand_tools():
+    import importlib
+    directory = str(REPO / "tools" / "moe-overlap")
+    if directory not in sys.path:
+        sys.path.insert(0, directory)
+    return importlib.import_module("operand_reference"), importlib.import_module("check_reference")
+
+
+class TestBackendOperandReference(unittest.TestCase):
+    """Small independent math controls; no captured or held-out inputs."""
+    def test_quantizer_modes_ties_zero_and_scale_storage(self):
+        import numpy as np
+        ref, _ = _operand_tools()
+        x = np.array([127, 0.5, -0.5, np.nextafter(np.float32(0.5), np.float32(0))] + [0] * 28, dtype=np.float32)
+        for mode in ref.MODES:
+            q, scale = ref.quantize(x, mode)
+            self.assertEqual(q[0].tolist(), [127, 0 if mode == "cpu-avx-q8_0" else 1,
+                0 if mode == "cpu-avx-q8_0" else -1, 0] + [0] * 28)
+            zero, zs = ref.quantize(np.zeros(32), mode)
+            self.assertFalse(zero.any()); self.assertFalse(zs.any())
+        x[0] = 1; x[1:] = 0
+        _, cpu = ref.quantize(x, "cpu-scalar-q8_0")
+        _, cuda = ref.quantize(x, "cuda-mmq-d4")
+        self.assertEqual(float(cpu[0]), 0.00787353515625)
+        self.assertEqual(float(cuda[0]), float(np.float32(1) / np.float32(127)))
+        self.assertNotEqual(cpu[0], cuda[0])
+
+    def test_signed_weight_codes_and_scale_applied_once(self):
+        import numpy as np
+        ref, _ = _operand_tools()
+        raw = _fp16_bytes(0.5) + bytes([128, 127] + [0] * 30)
+        x = np.array([127, 127] + [0] * 30, dtype=np.float32)
+        codes, scales = ref.decode_q8(raw, 1, 32)
+        self.assertEqual(codes[0, 0, :2].tolist(), [-128, 127])
+        self.assertEqual(scales[0, 0], 0.5)
+        for mode in ref.MODES:
+            self.assertEqual(ref.project(raw, x, 1, mode)[0], -63.5)
+
+    def test_unknown_modes_invalid_extents_and_nonfinite_rejected(self):
+        import numpy as np
+        ref, _ = _operand_tools()
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            ref.quantize(np.ones(32), "cuda-unknown")
+        with self.assertRaises(ValueError): ref.decode_q8(b"\0" * 33, 1, 32)
+        with self.assertRaises(ValueError): ref.quantize(np.ones(31), ref.CPU_MODES[0])
+        with self.assertRaises(ValueError): ref.quantize(np.full(32, np.nan), ref.CPU_MODES[0])
+
+    def test_all_experts_shared_mapping_and_negative_controls(self):
+        import numpy as np
+        ref, _ = _operand_tools()
+        def tensor(code):
+            return (_fp16_bytes(1) + bytes([0, 0, code] + [0] * 29)) * 32
+        data = {(k, e): tensor(e + 1 if k == "up" and e is not None else 1)
+                for e in list(range(10)) + [None] for k in ("up", "gate", "down")}
+        data[("shared_gate", None)] = bytes(32 * 4)
+        x = np.array([[127, -127, 1] + [0] * 29] * 128, dtype=np.float32)
+        ids = np.array([list(range(10)), list(reversed(range(10)))] * 64, dtype=np.int32)
+        weights = np.array([[i / 55 for i in range(1, 11)]] * 128, dtype=np.float32)
+        for mode in ref.MODES:
+            expected, mass = ref.block(x, ids, weights, lambda k, e: data[k, e],
+                split=5, n_ff=32, cpu_mode="cpu-scalar-q8_0", secondary_mode=mode)
+            # Independently compute the sparse fixture's weighted scalar planes.
+            g = np.float32(1) / (np.float32(1) + np.exp(np.float32(-1)))
+            for t in range(128):
+                for name, group in (("cpu", range(5)), ("sec", range(5, 10))):
+                    total = 0.0
+                    for e in group:
+                        slot = ids[t].tolist().index(e)
+                        h = np.float32(g * np.float32(e + 1))
+                        if mode == "cuda-mmq-d4" and name == "sec":
+                            s = np.float32(1) / (np.float32(127) / h)
+                        else:
+                            s = np.float16(h / np.float32(127)).astype(np.float32)
+                        total += float(np.float32(np.float32(127 * s) * weights[t, slot]))
+                    np.testing.assert_allclose(expected[name][t], total, rtol=0, atol=1e-12)
+            self.assertTrue(ref.compare(expected["cpu"], expected["cpu"], mass["cpu"])["pass"])
+            missing = dict(data); del missing["up", 9]
+            with self.assertRaises(KeyError):
+                ref.block(x, ids, weights, lambda k, e: missing[k, e], split=5, n_ff=32,
+                          cpu_mode="cpu-scalar-q8_0", secondary_mode=mode)
+            wrong = weights.copy(); wrong[0, 1] *= 2
+            bad, _ = ref.block(x, ids, wrong, lambda k, e: data[k, e], split=5, n_ff=32,
+                             cpu_mode="cpu-scalar-q8_0", secondary_mode=mode)
+            self.assertFalse(ref.compare(bad["cpu"], expected["cpu"], mass["cpu"])["pass"])
+            corrupted = expected["sec"].copy(); corrupted[0, 0] += 0.1
+            self.assertFalse(ref.compare(corrupted, expected["sec"], mass["sec"])["pass"])
+            omitted = expected["cpu"] + expected["sec"]
+            full = omitted + expected["shared"]
+            self.assertFalse(ref.compare(omitted, full, sum(mass.values()))["pass"])
+
+
 @unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
 class TestMoEOverlapGGUFLoader(unittest.TestCase):
     """Real-file (fixture) weights with distinct contents: the loader's
@@ -890,6 +981,46 @@ class TestMoEOverlapGGUFLoader(unittest.TestCase):
         self.assertLess(worst, 5e-5)
         for rep in doc["reps"]:
             self.assertEqual(rep["checks"]["serial_vs_ref_max_abs"], 0.0)
+
+    def test_independent_reference_export_end_to_end_and_failure_controls(self):
+        import numpy as np
+        import shutil
+        _, checker = _operand_tools()
+        case = Path(self.tmp.name) / "reference-case"
+        gguf = Path(self.tmp.name) / "reference-fixture.gguf"
+        shutil.copyfile(self.gguf, gguf)
+        # The original loader fixture saturates the shared gate to zero. This
+        # variant sets that F32 gate to zero logits (sigmoid=1/2), ensuring the
+        # required missing-shared negative control is informative.
+        loader = checker.GGUFWeights(gguf, 2, FIXTURE_EXPERTS)
+        row = loader.rows["blk.2.ffn_gate_inp_shexp.weight"]
+        loader.close()
+        with gguf.open("r+b") as f:
+            f.seek(row.absolute_offset); f.write(bytes(row.encoded_bytes))
+        r = _run(self.harness, "--gguf", str(gguf), "--layer", "2", "--tokens", "1",
+                 "--split", "6", "--reps", "2", "--warmup", "0", "--inputs-file", self.inputs,
+                 "--self-check-negative", "--dump-reference-case", str(case))
+        self.assertEqual(r.returncode, 0, r.stderr[-1000:])
+        result = checker.check_case(case, gguf)
+        self.assertTrue(result["pass"], result)
+        self.assertEqual(result["status"], "PROPOSED_EMPIRICAL_PASS")
+        self.assertFalse(result["hardware_qualified"])
+        self.assertEqual(len(result["reps"]), 2)
+        # Wrong/corrupted backend partial fails even if the native report is green.
+        file = case / "rep-0-sec.f32"
+        original = file.read_bytes()
+        partial = np.frombuffer(original, dtype="<f4").copy(); partial[0] += 1
+        file.write_bytes(partial.tobytes())
+        self.assertFalse(checker.check_case(case, gguf)["pass"])
+        file.write_bytes(original)
+        # Missing data and unsupported producer mode cannot silently fall back.
+        file.unlink()
+        with self.assertRaises(OSError): checker.check_case(case, gguf)
+        file.write_bytes(original)
+        meta = json.loads((case / "run.json").read_text())
+        meta["config"]["reference_secondary_mode"] = "unknown"
+        (case / "run.json").write_text(json.dumps(meta))
+        with self.assertRaisesRegex(ValueError, "mode"): checker.check_case(case, gguf)
 
 
 @unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
