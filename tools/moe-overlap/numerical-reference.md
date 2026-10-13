@@ -50,6 +50,9 @@ The maintainer reports that an external source-faithful reconstruction of one
 frozen T=128 failure matched CPU planes to 1.7e-8, CUDA partial to 3.3e-8,
 and their delta to 4.3e-8 unexplained. These are **reported fixture-specific
 observations, not locally inspected artifacts or error bounds**. The original
+session did not capture native packed activation codes/scales: its packs were
+reconstructed offline. Preserve that distinction when transferring evidence.
+The original
 CPU-versus-CUDA max_abs 0.0004935832694 / max_ratio 1.765354018 remains a
 FAIL under the legacy criterion. [Comment 6134734665](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6134734665)
 withdraws the inverse-minimum-router-weight derivation. No fitted 32x
@@ -70,8 +73,11 @@ Provide locally, without a full model or new host run:
 2. The smallest existing self-contained reproduction slice: pre-quantization
    activations and Q8_0 weight bytes **including block scales** for one named
    expert/token/slot through up, gate, SwiGLU and down; routing ID and exact
-   F32 weight; packed activation codes/scales and matching CPU/CUDA stage
-   outputs. Include dimensions/strides and compact-to-original mapping.
+   F32 weight and matching retained CPU/CUDA stage outputs. Include
+   dimensions/strides and compact-to-original mapping. Include retained
+   **offline-reconstructed** codes/scales, clearly labeled, or the inputs
+   needed to regenerate them. Native packs were not captured in the reported
+   session; do not require a new GPU/native capture to package this bundle.
 3. If the script requires complete-subset reduction inputs, include precisely
    those existing selected-expert tensors/activations/planes and the shared
    branch inputs/output, or document that dependency before copying. One
@@ -80,9 +86,10 @@ Provide locally, without a full model or new host run:
 
 Exact remote filenames cannot be named until the script's dependency list is
 available. Do not substitute backend-generated outputs for independently
-computed expected values. Captures check the reconstruction's operand/mapping
-fidelity; full references must compute their own projection/nonlinear inputs
-from the original weights and activations. Adapting the vetted script is the
+computed expected values. Retained stage outputs check the reconstruction's
+numerical/mapping fidelity; predicted packs are not direct observations of
+native operands. Full references must compute their own projection/nonlinear
+inputs from the original weights and activations. Adapting the vetted script is the
 next step; duplicating an engine is outside this correction.
 
 ## Criteria and reserved inputs
@@ -132,7 +139,10 @@ existing harness invocation (`--gguf`, `--layer 2`, `--split 256`,
 and the vetted capture/reconstruction's documented invocation. A complete
 copy-paste reference-validation command is blocked on that script; the
 repository's present dumps omit internal codes/scales and failed runs do not
-emit arm outputs. Existing dumps alone cannot complete the new validation.
+emit arm outputs. Use the vetted script's existing reconstruction/capture
+requirements; reconstructed packs must remain labeled as predictions, and
+their absence from native captures is not a packaging blocker. Existing final
+output dumps alone cannot complete the new validation.
 
 Check each backend against independently computed operands for the same
 expert/token/slot, every selected expert and the shared branch, plus strict
