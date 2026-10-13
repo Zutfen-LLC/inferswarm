@@ -1153,7 +1153,12 @@ class TestSchedulingEquivalenceContract(unittest.TestCase):
         ids2[0] = (ids2[0] + 3) % 12  # rewrites a slot to another expert
         (case / "rep-0-ids.i32").write_bytes(ids2.tobytes())
         result = self.checker.check_case(case)
-        self.assertIn(result["status"], ("FAIL", "INVALID_OR_INCOMPLETE"))
+        # The rewritten slot breaks either the ownership accounting (k_real
+        # mismatch) or, if it stays within the same subset, the combine
+        # identity; both must FAIL, never PASS.
+        self.assertEqual(result["status"], "FAIL")
+        self.assertFalse(all(v for k, v in result["checks"].items()
+                             if k != "native_schedule_routing_replay_control"))
 
     def test_rejects_unequal_outputs_replay_compute_missing_shared_nonfinite_incomplete(self):
         import numpy as np
