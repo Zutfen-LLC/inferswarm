@@ -13,6 +13,14 @@ hardware_qualified, claims no backend numerical correctness, and qualifies no
 model: both arms can share a numerical defect, and the legacy
 CPU-unsplit / moe-operand-reference diagnostics are preserved verbatim as
 separate FAIL-able evidence. The case directory is only read, never written.
+
+This version supports ONE-REPETITION smoke cases only: config.reps must be
+exactly 1 with exactly one repetition record at index 0. Anything else is
+refused as UNSUPPORTED_SCOPE before any native-failure classification: the
+harness exports no independent inter-repetition isolation result (an isolation
+failure only sets the native reason while it is still empty), so a
+multi-repetition "validation failed" cannot be attributed to numerics alone
+and repetition zero never establishes isolation across repetitions.
 """
 from __future__ import annotations
 
@@ -41,6 +49,10 @@ SCOPE_LIMITS = (
     "not per arm.",
     "T>1 zero-weight padding correctness is a harness construction invariant guarded by "
     "the unit-routing seam regressions; padded ids/weights are not part of this export.",
+    "This version supports one-repetition smoke cases only: config.reps must be exactly "
+    "1 with exactly one repetition record at index 0; any other repetition cardinality "
+    "is refused as UNSUPPORTED_SCOPE (the export cannot attribute a multi-repetition "
+    "native failure to numerics alone).",
 )
 
 
@@ -100,7 +112,9 @@ def check_case(case) -> dict:
     """Evaluate scheduling equivalence from a retained export. Read-only.
 
     Fail-closed as a library call too: a structurally unusable run document
-    yields an INVALID_OR_INCOMPLETE result rather than an exception.
+    yields an INVALID_OR_INCOMPLETE result rather than an exception, and a
+    run outside this contract's one-repetition scope yields UNSUPPORTED_SCOPE
+    rather than a scheduling verdict.
     """
     try:
         return _check_case(case)
@@ -109,10 +123,49 @@ def check_case(case) -> dict:
                 "hardware_qualified": False, "error": str(exc)}
 
 
+def _unsupported_scope(case, detail: str) -> dict:
+    """Refuse a run outside the supported one-repetition scope.
+
+    Returned BEFORE any native-failure classification: the export carries no
+    independent inter-repetition isolation result, so this checker must never
+    interpret a multi-repetition run (and in particular never re-read it as a
+    single-repetition case or truncate its report).
+    """
+    return {
+        "contract": CONTRACT,
+        "status": "UNSUPPORTED_SCOPE",
+        "hardware_qualified": False,
+        "native_outcome": "NOT_ASSESSED",
+        "checks": {"native_schedule_routing_replay_control": False,
+                   "complete_exports": False,
+                   "same_inputs_routing_ownership_workload": False,
+                   "outputs_bitwise_identical": False,
+                   "combine_identity_all_reps": False},
+        "problems": [f"unsupported scope: {detail}"],
+        "scope_limits": list(SCOPE_LIMITS),
+    }
+
+
 def _check_case(case) -> dict:
     case = Path(case)
     report = json.loads((case / "run.json").read_text())
     c = report["config"]
+    # One-repetition scope gate — BEFORE native failure classification. Only
+    # an integer 1 (bools rejected) with exactly one index-0 repetition
+    # record may receive a scheduling verdict; the run report is re-read
+    # from the case so the cardinality is never truncated to its first
+    # repetition and never reinterpreted as a single case.
+    reps = report.get("reps")
+    reps_records = reps if isinstance(reps, list) else None
+    if (type(c.get("reps")) is not int or c.get("reps") != 1
+            or reps_records is None or len(reps_records) != 1
+            or reps_records[0].get("rep") != 0):
+        return _unsupported_scope(
+            case,
+            "moe-scheduling-equivalence/1 supports one-repetition smoke cases "
+            f"only; found config.reps={c.get('reps')!r} with "
+            f"{len(reps_records) if reps_records is not None else 'no'} repetition "
+            "record(s); refusing before native failure classification")
     problems: list[str] = []
     T, E, split = c["tokens"], c["n_expert"], c["split"]
     if (T not in (1, 128) or c["n_embd"] != N_EMBD or c["n_ff"] != 640

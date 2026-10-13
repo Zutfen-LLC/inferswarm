@@ -28,8 +28,13 @@ reports must be produced and retained whatever they say):
    provenance manually). If any retained case already used it, STOP and
    report; do not substitute silently.
 2. **Export**: run the existing T=128 command shape with
-   `--dump-reference-case NEW_CASE --seed 0x30712801 --self-check-negative`
-   (fresh `NEW_CASE`, never reused). Complete export requirements: `run.json`
+   `--dump-reference-case NEW_CASE --seed 0x30712801 --self-check-negative
+   --reps 1` (fresh `NEW_CASE`, never reused).
+   `moe-scheduling-equivalence/1` supports **one-repetition smoke cases
+   only** — the checker refuses any other repetition cardinality with
+   `UNSUPPORTED_SCOPE`, so the export MUST use exactly `--reps 1`; a
+   multi-repetition export is not re-interpretable by this contract.
+   Complete export requirements: `run.json`
    plus, for every repetition, `rep-N-cur.f32`, `rep-N-ids.i32`,
    `rep-N-weights.f32`, `rep-N-cpu.f32`, `rep-N-sec.f32`, `rep-N-shared.f32`,
    `rep-N-serial.f32`, `rep-N-overlap.f32`; the native JSON report; and both

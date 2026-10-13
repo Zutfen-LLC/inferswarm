@@ -1063,8 +1063,11 @@ class TestSchedulingEquivalenceContract(unittest.TestCase):
             f.seek(row.absolute_offset)
             f.write(bytes(row.encoded_bytes))
         cls.case = Path(td) / "reference-case"
+        # moe-scheduling-equivalence/1 supports one-repetition smoke cases
+        # only: the checker refuses config.reps != 1, so the fixture is
+        # exported at --reps 1.
         r = _run(cls.harness, "--gguf", cls.gguf, "--layer", "2", "--tokens", "1",
-                 "--split", "6", "--reps", "2", "--warmup", "0",
+                 "--split", "6", "--reps", "1", "--warmup", "0",
                  "--inputs-file", cls.inputs, "--self-check-negative",
                  "--dump-reference-case", str(cls.case))
         assert r.returncode == 0, r.stderr[-2000:]
@@ -1208,13 +1211,95 @@ class TestSchedulingEquivalenceContract(unittest.TestCase):
         (case / "rep-0-serial.f32").write_bytes(poisoned.tobytes())
         result = self.checker.check_case(case)
         self.assertEqual(result["status"], "FAIL")
-        self.assertTrue(any("non-finite" in p for p in result["problems"]))
+        self.assertTrue(any("non-finite" in p for p in result["problems"]), result["problems"])
         (case / "rep-0-serial.f32").write_bytes(serial.tobytes())
-        # 6. incomplete export: a required file is missing
-        (case / "rep-1-sec.f32").unlink()
+
+    def test_single_repetition_native_pass_scheduling_equivalent(self):
+        """Positive control at the supported cardinality: a genuine
+        single-repetition native PASS (every schedule/routing/replay/control
+        gate green) receives SCHEDULING_EQUIVALENT."""
+        case = self._copy()
         result = self.checker.check_case(case)
-        self.assertEqual(result["status"], "FAIL")
-        self.assertTrue(any("incomplete capture" in p for p in result["problems"]))
+        self.assertEqual(result["status"], "SCHEDULING_EQUIVALENT", result["problems"])
+        self.assertEqual(result["native_outcome"], "PASS")
+        self.assertTrue(result["checks"]["native_schedule_routing_replay_control"])
+        self.assertTrue(all(result["checks"].values()))
+        self.assertFalse(result["hardware_qualified"])
+        self.assertEqual(len(result["reps"]), 1)
+        self.assertEqual(result["reps"][0]["rep"], 0)
+
+    def test_refuses_non_single_repetition_scope(self):
+        """Regression for the multi-repetition ambiguity (review P2): in a
+        multi-repetition run an earlier legacy numerical failure sets the
+        native reason "validation failed" before a later isolation failure,
+        the harness exports no independent isolation result, and its
+        determinism recheck replays repetition zero only — so this contract
+        must never score such a run SCHEDULING_EQUIVALENT. Runs other than
+        exactly config.reps == 1 with exactly one index-0 repetition record
+        are refused before native failure classification."""
+        case = self._copy()
+
+        def combined_failure_two_reps(meta):
+            # Combined-failure shape at config.reps=2: rep 0 fails the
+            # legacy numerical comparison (reason becomes "validation
+            # failed"), rep 1 additionally fails isolation in this story —
+            # which the harness cannot report (fail_reason is only set while
+            # empty and no isolation flag is exported). Every checked
+            # schedule/replay/control flag stays green.
+            meta["config"]["reps"] = 2
+            second = json.loads(json.dumps(meta["reps"][0]))
+            second["rep"] = 1
+            meta["reps"].append(second)
+            meta["verdict"]["pass"] = False
+            meta["verdict"]["reason"] = "validation failed"
+            for rep in meta["reps"]:
+                rep["checks"]["serial_vs_ref_pass"] = False
+                rep["checks"]["legacy_cpu_unsplit_diagnostic"]["pass"] = False
+        self._edit_run_json(case, combined_failure_two_reps)
+
+        # Demonstrate the ambiguity is real: the native-failure classifier
+        # this checker historically applied to such a document (still
+        # exported unchanged by the module) scores it legacy-numerical-only
+        # with no problems — which is exactly why the scope gate, not the
+        # classifier, must refuse multi-repetition runs.
+        meta = json.loads((case / "run.json").read_text())
+        old_outcome, old_problems = self.checker._classify_native(meta)
+        self.assertEqual(old_outcome, "LEGACY_NUMERICAL_ONLY_FAIL")
+        self.assertEqual(old_problems, [])
+
+        result = self.checker.check_case(case)
+        self.assertEqual(result["status"], "UNSUPPORTED_SCOPE")
+        self.assertEqual(result["native_outcome"], "NOT_ASSESSED")
+        self.assertFalse(any(v for v in result["checks"].values()))
+        self.assertIn("one-repetition", result["problems"][0])
+        self.assertIn("config.reps=2", result["problems"][0])
+        # No truncation or reinterpretation: the checker never re-read the
+        # multi-repetition run as a single case, and the retained report is
+        # untouched.
+        meta_after = json.loads((case / "run.json").read_text())
+        self.assertEqual(len(meta_after["reps"]), 2)
+        self.assertEqual(meta_after, meta)
+
+        # Missing, malformed, zero or mismatched repetition cardinality is
+        # refused the same way — never scored, and never reclassified as an
+        # incomplete-repetition execution failure.
+        for edit, desc in (
+            (lambda m: m["config"].__setitem__("reps", 0), "zero"),
+            (lambda m: m["config"].__setitem__("reps", 2), "mismatch"),
+            (lambda m: m["config"].__setitem__("reps", True), "bool"),
+            (lambda m: m["config"].__setitem__("reps", 1.0), "float"),
+            (lambda m: m["config"].pop("reps"), "missing"),
+            (lambda m: m["reps"].clear(), "no records"),
+            (lambda m: m["reps"][0].__setitem__("rep", 1), "non-zero index"),
+        ):
+            with self.subTest(cardinality=desc):
+                case_n = self._copy()
+                self._edit_run_json(case_n, edit)
+                result_n = self.checker.check_case(case_n)
+                self.assertEqual(result_n["status"], "UNSUPPORTED_SCOPE", desc)
+                self.assertNotEqual(result_n["status"], "SCHEDULING_EQUIVALENT")
+                self.assertEqual(result_n["native_outcome"], "NOT_ASSESSED")
+                self.assertFalse(result_n["hardware_qualified"])
 
     def test_legacy_numerical_only_exit_distinguished_from_execution_failure(self):
         case = self._copy()
