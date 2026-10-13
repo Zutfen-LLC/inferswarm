@@ -1731,3 +1731,309 @@ class TestReturnedComputeFailures(unittest.TestCase):
             with self.subTest(stage=stage):
                 doc = self._assert_failure(36 + offset, stage, 2)
                 self.assertTrue(doc["determinism_recheck"]["serial_bitwise"])
+import json
+import os
+import shutil
+import socket
+import subprocess
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+TOOLS = REPO / "tools" / "moe-overlap"
+
+
+def _worker_binary() -> str:
+    """Build (or reuse) the cached RPC worker binary via build.py --rpc-worker."""
+    import importlib.util
+    import io
+    import contextlib
+    import sys
+    spec = importlib.util.spec_from_file_location("moe_overlap_build_rpc", TOOLS / "build.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    old_argv = sys.argv[:]
+    sys.argv = ["build.py", "--rpc-worker"]
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            rc = mod.main()
+    finally:
+        sys.argv = old_argv
+    assert rc == 0
+    for line in buf.getvalue().splitlines():
+        if line.startswith("MOE_OVERLAP_BINARY "):
+            path = line.split(" ", 1)[1].strip()
+            if Path(path).is_file():
+                return path
+    raise AssertionError("no MOE_OVERLAP_BINARY marker in build.py output")
+
+
+def _free_port() -> int:
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def _wait_listen(port: int, timeout: float = 20.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                return True
+        except OSError:
+            time.sleep(0.2)
+    return False
+
+
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_SKIP_BUILD") != "1", "MOE_OVERLAP_SKIP_BUILD=1")
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_RPC_TESTS") != "0", "MOE_OVERLAP_RPC_TESTS=0")
+class TestRPCModeArgumentHandling(unittest.TestCase):
+    """Argument/validation behavior of the rpc secondary mode (no server needed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        import io
+        import contextlib
+        import sys
+        spec = importlib.util.spec_from_file_location("moe_overlap_build_args", TOOLS / "build.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        old_argv = sys.argv[:]
+        sys.argv = ["build.py"]
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = mod.main()
+        finally:
+            sys.argv = old_argv
+        assert rc == 0
+        for line in buf.getvalue().splitlines():
+            if line.startswith("MOE_OVERLAP_BINARY "):
+                cls.harness = line.split(" ", 1)[1].strip()
+                return
+        raise AssertionError("no binary marker")
+
+    def test_rpc_requires_endpoint(self):
+        r = subprocess.run([self.harness, "--synthetic", "--experts", "12", "--tokens", "1",
+                            "--split", "6", "--secondary", "rpc"],
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--rpc-endpoint", r.stderr)
+
+    def test_unknown_secondary_rejected(self):
+        r = subprocess.run([self.harness, "--synthetic", "--experts", "12", "--tokens", "1",
+                            "--split", "6", "--secondary", "rdma"],
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("cpu, cuda or rpc", r.stderr)
+
+
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_SKIP_BUILD") != "1", "MOE_OVERLAP_SKIP_BUILD=1")
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_RPC_TESTS") != "0", "MOE_OVERLAP_RPC_TESTS=0")
+class TestRPCLoopbackSmoke(unittest.TestCase):
+    """Bounded loopback integration against the REAL pinned RPC implementation
+    (worker serving the CPU device on 127.0.0.1, harness as the RPC client).
+
+    This is orchestration/contract validation over the real transport, NOT a
+    physical GPU/network result: both processes share one host, so overlap
+    timing is not meaningful here (the same disclaimer the harness prints).
+    """
+
+    WORKER_THREADS = "2"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.tmp.cleanup)
+        cls.worker = _worker_binary()
+        cls.port = _free_port()
+        cls.log = Path(cls.tmp.name) / "worker.log"
+        cls.proc = subprocess.Popen(
+            [cls.worker, "--host", "127.0.0.1", "--port", str(cls.port),
+             "--device", "CPU", "--threads", cls.WORKER_THREADS],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            start_new_session=True)
+        if not _wait_listen(cls.port, timeout=30):
+            cls.proc.kill()
+            raise AssertionError("rpc worker did not listen in time")
+        import importlib.util
+        import io
+        import contextlib
+        import sys
+        spec = importlib.util.spec_from_file_location("moe_overlap_build_lb", TOOLS / "build.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        old_argv = sys.argv[:]
+        sys.argv = ["build.py"]
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = mod.main()
+        finally:
+            sys.argv = old_argv
+        assert rc == 0
+        for line in buf.getvalue().splitlines():
+            if line.startswith("MOE_OVERLAP_BINARY "):
+                cls.harness = line.split(" ", 1)[1].strip()
+                return
+        raise AssertionError("no binary marker")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.proc.poll() is None:
+            cls.proc.terminate()
+            try:
+                cls.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                cls.proc.kill()
+                cls.proc.wait(timeout=10)
+
+    def _run(self, *args):
+        env = dict(os.environ)
+        return subprocess.run(
+            [self.harness, "--synthetic", "--experts", "12", "--tokens", "1",
+             "--split", "6", "--reps", "2", "--warmup", "1", "--threads", "4",
+             "--secondary", "rpc", "--rpc-endpoint", f"127.0.0.1:{self.port}",
+             "--self-check-negative", *args],
+            capture_output=True, text=True, timeout=600, env=env)
+
+    @staticmethod
+    def _doc(r):
+        start = r.stdout.find("{\n")
+        assert start >= 0, "no JSON document in harness output:\n" + r.stdout[-1000:]
+        return json.loads(r.stdout[start:])
+
+    def test_loopback_all_gates_and_accounting(self):
+        r = self._run()
+        self.assertEqual(r.returncode, 0, r.stderr[-3000:])
+        doc = self._doc(r)
+        self.assertTrue(doc["verdict"]["pass"], doc["verdict"]["reason"])
+        self.assertEqual(doc["config"]["secondary_kind"], "rpc")
+        self.assertEqual(doc["config"]["secondary_backend"], f"RPC0[127.0.0.1:{self.port}]")
+        # remote identity honesty: the protocol does not transport it
+        self.assertEqual(doc["rpc_secondary"]["remote_device_identity"],
+                         "NOT_TRANSPORTED_BY_RPC_PROTOCOL")
+        # setup upload reported separately from steady-state requests
+        self.assertGreater(doc["load"]["secondary_weight_bytes"], 0)
+        self.assertGreater(doc["load"]["secondary_slice_ms"], 0.0)
+        self.assertIn("two-node RPC overlap measurement", doc["verdict"]["timing_claim"])
+        self.assertIn("NOT performance evidence" if doc["config"].get("reference_case") else "NOT GPU kernel time",
+                      doc["verdict"]["timing_claim"])
+        for rep in doc["reps"]:
+            with self.subTest(rep=rep["rep"]):
+                self.assertTrue(rep["checks"]["routed_counts_ok"])
+                self.assertTrue(rep["checks"]["overlap_vs_serial_bitwise"])
+                self.assertTrue(rep["checks"]["overlap_vs_serial_pass"])
+                rpc = rep["rpc"]
+                # steady-state traffic is activation-sized: exactly the
+                # calculated payload, weights NOT retransmitted
+                self.assertEqual(rpc["serial_request_bytes"], rpc["expected_request_bytes"])
+                self.assertEqual(rpc["overlap_request_bytes"], rpc["expected_request_bytes"])
+                self.assertEqual(rpc["serial_response_bytes"], rpc["expected_response_bytes"])
+                self.assertEqual(rpc["overlap_response_bytes"], rpc["expected_response_bytes"])
+                self.assertEqual(rpc["weights_retransmitted_in_request"], "no")
+                self.assertLess(rpc["expected_request_bytes"],
+                                doc["load"]["secondary_weight_bytes"])
+
+    def test_loopback_t128_and_reuse_across_reps(self):
+        """Weights initialize once and are reused: repeated requests (multiple
+        reps, both arms) keep producing correct, bitwise arm-identical outputs
+        with activation-sized traffic — impossible if weights were evicted or
+        retransmitted per request."""
+        r = self._run("--tokens", "128", "--reps", "2")
+        self.assertEqual(r.returncode, 0, r.stderr[-3000:])
+        doc = self._doc(r)
+        self.assertTrue(doc["verdict"]["pass"], doc["verdict"]["reason"])
+        for rep in doc["reps"]:
+            with self.subTest(rep=rep["rep"]):
+                self.assertEqual(rep["k_cpu_real"] + rep["k_sec_real"], 10 * 128)
+                self.assertTrue(rep["checks"]["overlap_vs_serial_bitwise"])
+                rpc = rep["rpc"]
+                self.assertEqual(rpc["serial_request_bytes"], rpc["expected_request_bytes"])
+                # T=128 payload (1.25 MiB each way) reported, still << weights
+                self.assertGreater(rpc["expected_request_bytes"], 1_000_000)
+        self.assertTrue(doc["determinism_recheck"]["serial_bitwise"])
+        self.assertTrue(doc["negative_control"]["comparator_rejected"])
+
+    def test_loopback_scheduling_equivalence_checker(self):
+        """The one-repetition scheduling-equivalence verdict applies unchanged
+        to an RPC-mode export (it does not depend on the secondary mode)."""
+        case = Path(self.tmp.name) / f"case-{self._testMethodName}"
+        r = self._run("--reps", "1", "--warmup", "0",
+                      "--dump-reference-case", str(case))
+        self.assertEqual(r.returncode, 0, r.stderr[-3000:])
+        try:
+            import numpy  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("numpy unavailable (run under the issue131 venv for this test)")
+        import importlib
+        import sys
+        directory = str(TOOLS)
+        if directory not in sys.path:
+            sys.path.insert(0, directory)
+        check_scheduling = importlib.import_module("check_scheduling")
+        result = check_scheduling.check_case(case)
+        self.assertEqual(result["status"], "SCHEDULING_EQUIVALENT", result.get("problems"))
+        self.assertFalse(result["hardware_qualified"])
+        # run.json records the honest unverified remote numerical profile
+        cfg = json.loads((case / "run.json").read_text())["config"]
+        self.assertEqual(cfg["reference_secondary_mode"], "rpc-remote-unverified")
+
+
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_SKIP_BUILD") != "1", "MOE_OVERLAP_SKIP_BUILD=1")
+@unittest.skipUnless(os.environ.get("MOE_OVERLAP_RPC_TESTS") != "0", "MOE_OVERLAP_RPC_TESTS=0")
+class TestRPCWorkerLifecycle(unittest.TestCase):
+    def test_worker_arg_validation(self):
+        worker = _worker_binary()
+        r = subprocess.run([worker, "--port", "0"], capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 2)
+        r = subprocess.run([worker, "--host", "127.0.0.1", "--port", "70000"],
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 2)
+        r = subprocess.run([worker, "--host", "127.0.0.1", "--port", "5111",
+                            "--device", "NO_SUCH_DEVICE"],
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("NO_SUCH_DEVICE", r.stderr)
+
+    def test_dead_endpoint_aborts_fail_closed(self):
+        """The pinned client GGML_ABORTs on an unreachable endpoint: the run
+        must terminate without emitting a pass verdict (no silent fallback,
+        no fabricated output). Hard cancellation is NOT provided by the
+        transport — an external process timeout is required at the recipe
+        level; here the connect failure is immediate so no timeout applies."""
+        port = _free_port()  # nothing listens here
+        import importlib.util
+        import io
+        import contextlib
+        import sys
+        spec = importlib.util.spec_from_file_location("moe_overlap_build_dead", TOOLS / "build.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        old_argv = sys.argv[:]
+        sys.argv = ["build.py"]
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = mod.main()
+        finally:
+            sys.argv = old_argv
+        assert rc == 0
+        harness = None
+        for line in buf.getvalue().splitlines():
+            if line.startswith("MOE_OVERLAP_BINARY "):
+                harness = line.split(" ", 1)[1].strip()
+        assert harness
+        r = subprocess.run([harness, "--synthetic", "--experts", "12", "--tokens", "1",
+                            "--split", "6", "--reps", "1", "--warmup", "0",
+                            "--secondary", "rpc", "--rpc-endpoint", f"127.0.0.1:{port}"],
+                           capture_output=True, text=True, timeout=120)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertNotIn('"pass": true', r.stdout)
+        self.assertNotIn('"pass":true', r.stdout)

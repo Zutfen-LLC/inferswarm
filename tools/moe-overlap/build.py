@@ -83,7 +83,11 @@ HARNESS = REPO / "tools" / "moe-overlap" / "moe_overlap_harness.cpp"
 DEFAULT_CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "inferswarm-moe-overlap"
 
 # Minimal ggml CPU closure (mirrors inferswarm/operator/native_observer/full_build.py,
-# trimmed to what the harness links: no RPC, no llama.* sources, no subprocess).
+# trimmed to what the harness links: no llama.* sources, no subprocess). The
+# pinned RPC backend (client + TCP transport) is linked into the same binary
+# for the --secondary rpc mode; GGML_USE_RPC is NOT defined so global device
+# registration is unchanged — the harness reaches the backend through
+# ggml_backend_rpc_init() directly.
 C_SOURCES = ["ggml/src/ggml.c", "ggml/src/ggml-alloc.c", "ggml/src/ggml-quants.c",
              "ggml/src/ggml-cpu/ggml-cpu.c", "ggml/src/ggml-cpu/repack.cpp",
              "ggml/src/ggml-cpu/iqp.cpp", "ggml/src/ggml-cpu/quants.c",
@@ -94,13 +98,15 @@ CXX_SOURCES = ["ggml/src/ggml.cpp", "ggml/src/ggml-backend.cpp", "ggml/src/ggml-
                "ggml/src/ggml-threading.cpp", "ggml/src/gguf.cpp",
                "ggml/src/ggml-cpu/ggml-cpu.cpp", "ggml/src/ggml-cpu/traits.cpp",
                "ggml/src/ggml-cpu/binary-ops.cpp", "ggml/src/ggml-cpu/unary-ops.cpp",
-               "ggml/src/ggml-cpu/vec.cpp", "ggml/src/ggml-cpu/ops.cpp"]
+               "ggml/src/ggml-cpu/vec.cpp", "ggml/src/ggml-cpu/ops.cpp",
+               "ggml/src/ggml-rpc/ggml-rpc.cpp", "ggml/src/ggml-rpc/transport.cpp"]
 
 BASE_FLAGS = ["-O3", "-pthread", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
               "-DGGML_SCHED_MAX_COPIES=4", "-DGGML_USE_CPU"]
 # Tests may trade optimization for compile time; hardware runs keep -O3.
 BASE_FLAGS[0] = os.environ.get("MOE_OVERLAP_OPT", "-O3")
-INCLUDES = ["ggml/include", "ggml/src", "ggml/src/ggml-cpu", "ggml/src/ggml-cpu/include"]
+INCLUDES = ["ggml/include", "ggml/src", "ggml/src/ggml-cpu", "ggml/src/ggml-cpu/include",
+            "ggml/src/ggml-rpc"]
 
 
 def sha256_file(path: Path) -> str:
@@ -214,7 +220,7 @@ def cuda_sources(source: Path) -> list[str]:
     return top + inst
 
 
-def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
+def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool = False) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     cc = pick_compiler("c")
     cxx = pick_compiler("c++")
@@ -264,9 +270,13 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
         o = obj_path(s)
         objects.append(o)
         jobs_list.append(([cxx], s, o, ["-std=c++17"]))
-    harness_o = out_dir / "moe_overlap_harness.o"
-    objects.append(harness_o)
-    jobs_list.append(([cxx], str(HARNESS), harness_o, ["-std=c++17"]))
+
+    # The RPC worker shares the same object closure; only the entry TU differs.
+    entry_src = str(REPO / "tools" / "moe-overlap" / "rpc_worker.cpp") if rpc_worker else str(HARNESS)
+    entry_obj_name = "rpc_worker.o" if rpc_worker else "moe_overlap_harness.o"
+    entry_o = out_dir / entry_obj_name
+    objects.append(entry_o)
+    jobs_list.append(([cxx], entry_src, entry_o, ["-std=c++17"]))
 
     if cuda:
         nvcc = shutil.which("nvcc") or shutil.which("/usr/local/cuda/bin/nvcc")
@@ -287,7 +297,8 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool) -> Path:
         for f in futs:
             f.result()
 
-    binary = out_dir / ("moe_overlap_harness_cuda" if cuda else "moe_overlap_harness")
+    binary = out_dir / ("moe_overlap_harness_cuda" if cuda else
+                        ("moe_rpc_worker" if rpc_worker else "moe_overlap_harness"))
     link = [cxx, *flags, "-std=c++17", *[str(o) for o in objects]]
     if cuda:
         # VMM is enabled at this pin unless GGML_CUDA_NO_VMM is defined.
@@ -303,11 +314,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     ap.add_argument("--cuda", action="store_true")
+    ap.add_argument("--rpc-worker", action="store_true",
+                    help="build the RPC worker binary instead of the harness")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     args = ap.parse_args()
     source = ensure_source(args.cache)
     out_dir = args.cache / ("build-cuda" if args.cuda else "build-cpu")
-    binary = build(source, out_dir, args.jobs, args.cuda)
+    binary = build(source, out_dir, args.jobs, args.cuda, rpc_worker=args.rpc_worker)
     # marker line: robust machine-readable handoff (stray env/log output may
     # follow the binary path in some sandboxes)
     print(f"MOE_OVERLAP_BINARY {binary}")

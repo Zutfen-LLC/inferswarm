@@ -44,6 +44,29 @@ kernels and precision:
   stream; work is only called "overlapped" because this ordering genuinely
   permits concurrent execution.
 
+### `--secondary rpc` (two-host mode, follow-on prototype)
+
+The same two arms over the pinned llama.cpp RPC backend (protocol v6.0.0,
+TCP) with the routed-expert slice resident on a remote worker:
+`moe_overlap_harness --secondary rpc --rpc-endpoint HOST:PORT` on the
+coordinator and `moe_rpc_worker` (same pin, `build.py --rpc-worker`) on the
+GPU host. Weight tensors upload once during setup and stay resident for the
+connection lifetime; steady-state requests carry activations/routing and
+read back the expert partial, exactly as above. The overlap join is the D2H
+`GET_TENSOR` response (the pinned server executes commands serially per
+connection, so the response proves prior graph computes finished) — source
+trace and transport limitations in [`rpc-feasibility.md`](rpc-feasibility.md),
+proposed hardware steps in [`rpc-hardware-recipe.md`](rpc-hardware-recipe.md).
+In rpc mode the run report adds a per-rep `rpc` block with measured
+application payload bytes (cross-checked against calculated tensor sizes)
+and honest labels: remote intervals are client-observed transport-inclusive
+wall-clock (never GPU kernel time), the remote device identity is not
+transported by the protocol, and the operand-reference mode is recorded as
+`rpc-remote-unverified` (refused fail-closed by `check_reference.py`; the
+scheduling-equivalence checker remains applicable). The loopback
+CPU-device variant of this mode is exercised offline by the test suite —
+contract evidence only, never performance evidence.
+
 Ownership is fixed for both arms: the CPU backend owns experts `[0, split)`
 (plus router and shared expert), the secondary backend owns a resident device
 copy of experts `[split, 512)` uploaded once at load. `--secondary cuda`
@@ -196,15 +219,26 @@ is documented in [`numerical-reference.md`](numerical-reference.md).
   from the accepted #299 runtime contract (an `MOE_OVERLAP_SOURCE` override
   must prove the same identity or the build refuses), and compiles the
   minimal ggml CPU closure plus the harness with a direct GCC/Clang recipe
-  (no CMake, no installs). Objects carry stamps (source hash + flags +
+  (no CMake, no installs). Objects carry stamps (source hash + flags + 
   compiler) and are rebuilt on any change — a stale cached build cannot test
-  old code. `--cuda` compiles the complete CUDA closure at this pin (every
-  `ggml/src/ggml-cuda/*.cu` plus the `template-instances/*.cu` TUs the pin's
-  own CMake GLOBs) with `GGML_USE_CUDA` defined at compile time for every TU
-  (backend registration in `ggml-backend-reg.cpp` is gated on that define, so
-  it cannot be a link-time-only flag). No CUDA toolchain exists in the offline
-  container, so the `--cuda` build remains compile-verified only on the
-  hardware host. `MOE_OVERLAP_OPT` overrides the optimization level.
+  old code. The pinned RPC backend (client + TCP transport) is linked into
+  the same closure for the `--secondary rpc` mode (`GGML_USE_RPC` stays
+  undefined so global backend registration is unchanged). `--rpc-worker`
+  builds `moe_rpc_worker` instead: a minimal wrapper around the pin's own
+  `ggml_backend_rpc_start_server` serving one device. `--cuda` compiles the
+  complete CUDA closure at this pin (every `ggml/src/ggml-cuda/*.cu` plus the
+  `template-instances/*.cu` TUs the pin's own CMake GLOBs) with
+  `GGML_USE_CUDA` defined at compile time for every TU (backend registration
+  in `ggml-backend-reg.cpp` is gated on that define, so it cannot be a
+  link-time-only flag). No CUDA toolchain exists in the offline container,
+  so the `--cuda` build remains compile-verified only on the hardware host.
+  `MOE_OVERLAP_OPT` overrides the optimization level.
+- `rpc_worker.cpp` — the RPC worker entry point (see above).
+- `rpc-feasibility.md` — Phase 1 source-based feasibility note for the
+  remote-resident follow-on (residency, blocking map, ownership, graph
+  resend, transport limitations).
+- `rpc-hardware-recipe.md` — proposed two-node hardware steps for later
+  separate authorization.
 - `offline-validation/` — retained offline run reports (SYNTHETIC weights and
   inputs; reduced smoke + full-authentic-shape decode/prefill runs).
 
