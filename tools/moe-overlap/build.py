@@ -149,7 +149,8 @@ def cuda_driver_flags(cxx: str) -> list[str]:
         # lacking the pin's dependency cannot pass. This binary is never run.
         with tempfile.TemporaryDirectory(prefix="moe-cuda-link-") as td:
             probe = subprocess.run(
-                [cxx, "-x", "c++", "-", *link_flags, "-o", str(Path(td) / "probe")],
+                [cxx, "-x", "c++", "-", "-x", "none", *link_flags,
+                 "-o", str(Path(td) / "probe")],
                 input='extern "C" void cuMemCreate(); int main(){cuMemCreate();}\n',
                 capture_output=True, text=True)
         if probe.returncode:
@@ -166,7 +167,14 @@ def cuda_driver_flags(cxx: str) -> list[str]:
         return [str(path.resolve())]
 
     candidates = []
+    # -print-file-name does not honor -L on GCC. Check our explicit linker
+    # directory first, and do not let a stub there shadow a later -lcuda probe.
+    development = Path(CUDA_LIB_FLAGS[0][2:]) / "libcuda.so"
+    if development.exists() or development.is_symlink():
+        candidates.append((development, [CUDA_LIB_FLAGS[0], "-lcuda"]))
     for name in ("libcuda.so", "libcuda.so.1"):
+        if name == "libcuda.so" and candidates:
+            continue
         result = subprocess.run([cxx, CUDA_LIB_FLAGS[0], f"-print-file-name={name}"],
                                 check=True, capture_output=True, text=True)
         found = result.stdout.strip()

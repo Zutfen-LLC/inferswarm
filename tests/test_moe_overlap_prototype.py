@@ -1696,6 +1696,18 @@ class TestBuildCommands(unittest.TestCase):
         self.assertIn(str(self.driver), self.commands[-1])
         self.assertNotIn("-lcuda", self.commands[-1])
 
+    def test_link_directory_stub_cannot_shadow_system_development_driver(self):
+        stub = self.fake_elf("toolkit/stubs/libcuda.so")
+        libdir = self.root / "toolkit/lib64"
+        libdir.mkdir()
+        (libdir / "libcuda.so").symlink_to(stub)
+        self.lookups = {"libcuda.so": str(self.driver.with_name("libcuda.so")),
+                        "libcuda.so.1": str(self.driver)}
+        with mock.patch.object(self.build, "CUDA_LIB_FLAGS", [f"-L{libdir}", *self.build.CUDA_LIB_FLAGS[1:]]):
+            self.run_build()
+        self.assertIn(str(self.driver), self.commands[-1])
+        self.assertNotIn("-lcuda", self.commands[-1])
+
     def test_cpu_ignores_invalid_cuda_override_and_missing_nvcc_refuses(self):
         with mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": "/missing/driver"}):
             self.run_build(cuda=False)
@@ -1744,6 +1756,35 @@ class TestBuildCommands(unittest.TestCase):
         self.run_build()
         self.assertEqual(self.compiles(), [])
         self.assertIn(str(self.driver), self.commands[-1], "driver change must relink")
+
+
+class TestDriverLinkProbe(unittest.TestCase):
+    def test_host_link_with_synthetic_driver_library(self):
+        """Use a real CPU linker on a tiny synthetic ELF, without running it.
+
+        This catches language-option leakage into explicit shared-library
+        inputs that a recording toolchain cannot detect. No CUDA is involved.
+        """
+        spec = importlib.util.spec_from_file_location("moe_driver_probe", BUILD_PY)
+        build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(build)
+        cxx = build.pick_compiler("c++")
+        with tempfile.TemporaryDirectory() as td:
+            source = Path(td) / "driver.cpp"
+            source.write_text('extern "C" void cuMemCreate() {}\n')
+            driver = Path(td) / "libcuda.so.1"
+            subprocess.run([cxx, "-shared", "-fPIC", "-Wl,-soname,libcuda.so.1",
+                            str(source), "-o", str(driver)], check=True)
+            with mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": str(driver)}), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(build.cuda_driver_flags(cxx), [str(driver)])
+            with mock.patch.dict(os.environ, {"LIBRARY_PATH": td}, clear=False), \
+                 mock.patch.object(build, "CUDA_LIB_FLAGS", [f"-L{td}"]), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                os.environ.pop("MOE_OVERLAP_CUDA_DRIVER", None)
+                self.assertEqual(build.cuda_driver_flags(cxx), [str(driver)])
+                driver.with_name("libcuda.so").symlink_to(driver.name)
+                self.assertEqual(build.cuda_driver_flags(cxx), ["-lcuda"])
 
 
 # Link wrappers inject a returned native failure after the real CPU compute.
