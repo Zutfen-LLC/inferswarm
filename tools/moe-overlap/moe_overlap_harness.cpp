@@ -1721,7 +1721,7 @@ int run_harness(Harness & H) {
           : H.secondary_kind == "cuda"
               ? "single-node CPU/GPU overlap measurement (hardware run)"
           : H.secondary_kind == "rpc"
-              ? "two-node RPC overlap measurement: remote intervals are client-observed wall-clock over the RPC transport (NOT GPU kernel time); sec_ms/h2d_ms/d2h_ms include protocol and network overhead"
+              ? "RPC-secondary overlap measurement; the protocol verifies neither topology nor remote device identity (a loopback CPU-worker run prints the same claim and is an offline contract check, not a two-node result): remote intervals are client-observed wall-clock over the RPC transport (NOT GPU kernel time); h2d_ms/sec_ms/d2h_ms include protocol and network overhead"
               : "secondary is a CPU backend: scheduling/dependency correctness only; overlap timing is NOT meaningful offline (thread pools contend on one host)");
     J.end();
 

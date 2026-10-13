@@ -111,13 +111,17 @@ with identical placement.
 repetition's expert graphs with `ggml_new_graph` + `ggml_build_forward_expand`,
 which never sets `uid` (only `ggml_backend_sched` does, at
 `ggml-backend.cpp:1085`). So every expert-plan compute sends a full
-serialized graph: `4 + 4 + 8·n_nodes + 4 + 120·n_tensors` bytes
-(`rpc_tensor` is 120 bytes packed). For the split-0 secondary plan
-(~30 nodes, ~40 tensors) this is ~5 KiB per invocation — small relative to
-the activation payload, reported separately in the run report as graph
-metadata traffic, and **not** weight retransmission. Weights are never
-resent during the request loop (client-side accounting + wire-level check in
-the loopback test).
+serialized graph: `4 + 4 + 8·n_nodes + 4 + 296·n_tensors` bytes (packed
+`rpc_tensor` is 296 bytes at this pin). Wire-observed via a transparent
+loopback TCP proxy: the split-0 T=128 secondary plan (26 nodes, 32 tensors)
+sends a **9,692-byte** `GRAPH_COMPUTE` payload per invocation — small
+relative to the 1.25 MiB activation payload but roughly double a naive
+120-byte-per-tensor estimate. It is per-compute graph metadata, not weight
+retransmission: the same proxy observation saw exactly three setup weight
+uploads and none afterwards. The run report does NOT include this metadata
+in its byte counters (the pinned client does not expose serialization sizes
+to callers); a hardware session that needs exact wire traffic must observe
+it externally (e.g. the same proxy technique or interface counters).
 
 ## 5. Build changes and measurements (minimal)
 

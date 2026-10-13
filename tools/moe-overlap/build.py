@@ -297,8 +297,13 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
         for f in futs:
             f.result()
 
-    binary = out_dir / ("moe_overlap_harness_cuda" if cuda else
-                        ("moe_rpc_worker" if rpc_worker else "moe_overlap_harness"))
+    if cuda:
+        # distinct names per role: a CUDA worker build must not overwrite the
+        # CUDA harness binary (and vice versa) in the shared cache
+        name = "moe_rpc_worker_cuda" if rpc_worker else "moe_overlap_harness_cuda"
+    else:
+        name = "moe_rpc_worker" if rpc_worker else "moe_overlap_harness"
+    binary = out_dir / name
     link = [cxx, *flags, "-std=c++17", *[str(o) for o in objects]]
     if cuda:
         # VMM is enabled at this pin unless GGML_CUDA_NO_VMM is defined.

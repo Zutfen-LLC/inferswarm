@@ -1842,7 +1842,9 @@ class TestRPCLoopbackSmoke(unittest.TestCase):
 
     This is orchestration/contract validation over the real transport, NOT a
     physical GPU/network result: both processes share one host, so overlap
-    timing is not meaningful here (the same disclaimer the harness prints).
+    timing is not meaningful here (the harness's timing_claim for rpc mode
+    states the protocol verifies neither topology nor remote device identity;
+    these loopback timings are contract evidence only).
     """
 
     WORKER_THREADS = "2"
@@ -1922,9 +1924,9 @@ class TestRPCLoopbackSmoke(unittest.TestCase):
         # setup upload reported separately from steady-state requests
         self.assertGreater(doc["load"]["secondary_weight_bytes"], 0)
         self.assertGreater(doc["load"]["secondary_slice_ms"], 0.0)
-        self.assertIn("two-node RPC overlap measurement", doc["verdict"]["timing_claim"])
-        self.assertIn("NOT performance evidence" if doc["config"].get("reference_case") else "NOT GPU kernel time",
-                      doc["verdict"]["timing_claim"])
+        self.assertIn("RPC-secondary overlap measurement", doc["verdict"]["timing_claim"])
+        self.assertIn("protocol verifies neither topology", doc["verdict"]["timing_claim"])
+        self.assertIn("NOT GPU kernel time", doc["verdict"]["timing_claim"])
         for rep in doc["reps"]:
             with self.subTest(rep=rep["rep"]):
                 self.assertTrue(rep["checks"]["routed_counts_ok"])

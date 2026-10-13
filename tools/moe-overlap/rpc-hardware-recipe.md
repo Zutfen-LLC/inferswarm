@@ -36,6 +36,8 @@ symlink and nvcc-wrapper notes apply):
 
 ```
 python3 tools/moe-overlap/build.py --cuda --rpc-worker --jobs 2
+# (produces moe_rpc_worker_cuda — a distinct name from the CUDA harness
+# binary, so the two roles never overwrite each other in the shared cache)
 ```
 
 Record binary sha256s, the pinned source verification output, and
@@ -73,11 +75,16 @@ Record binary sha256s, the pinned source verification output, and
    branch local — the placement that matches the single-host boundary
    experiment). Optional single confirmation shape at an intermediate split
    is NOT part of the minimal recipe.
-6. **Resource bounds and cleanup.** Run each phase under
-   `sudo systemd-run --unit=… --property=MemoryMax=16G --property=MemorySwapMax=0
-   --property=TimeoutStartSec=<ceiling> --wait bash -c '… ; echo $?>run.rc'`
-   (no hard cancellation exists in the transport; the unit timeout is the
-   bound). Sample GPU temp/util, MemAvailable and cgroup peak externally.
+6. **Resource bounds and cleanup.** Run each phase under a unit that bounds
+   the RUN, not just startup: `sudo systemd-run --unit=… --property=Type=oneshot
+   --property=MemoryMax=16G --property=MemorySwapMax=0
+   --property=RuntimeMaxSec=<ceiling> --property=TimeoutStartSec=<start-ceiling>
+   --wait bash -c '… ; echo $?>run.rc'`. With the default `Type=simple`,
+   `TimeoutStartSec` expires once the process has merely STARTED and does not
+   bound execution — `RuntimeMaxSec` (plus `Type=oneshot`, where
+   `TimeoutStartSec` covers the whole run) is what limits a stall (no hard
+   cancellation exists in the transport; the unit kill is the bound).
+   Sample GPU temp/util, MemAvailable and cgroup peak externally.
    Cleanup: terminate the harness first (it closes the connection, which
    frees all remote buffers), then SIGTERM the worker by exact PID, verify
    `ss -tln` empty for the port and no leftover processes; chown any
@@ -91,10 +98,12 @@ Record binary sha256s, the pinned source verification output, and
 - Per-rep `rpc.*_bytes` are measured application payloads at the call sites
   (cross-checked against `expected_*_bytes`); `load.secondary_weight_bytes`
   is the setup weight traffic. Physical network traffic additionally
-  includes TCP framing and per-compute graph metadata (~5 KiB/compute at
-  split-0 shapes; the pinned client does not expose it to callers). The
-  report's `weights_retransmitted_in_request: "no"` is the client-side
-  accounting statement.
+  includes TCP framing and per-compute graph metadata (wire-observed ~9.7
+  KiB per GRAPH_COMPUTE at split-0 T=128 shapes; the pinned client does not
+  expose it to callers, so measure it externally if exact wire traffic is
+  needed). The report's `weights_retransmitted_in_request: "no"` is the
+  client-side accounting statement, cross-checkable externally (a transparent
+  loopback proxy observed exactly three setup uploads and none after).
 - Compare against the single-host baselines sequentially (placement and
   backend confounds documented in PR #307): T=128 serial 29.394 ms /
   overlap 15.749 ms, CPU shared ~14.4 ms, GPU experts ~13.8 ms, router

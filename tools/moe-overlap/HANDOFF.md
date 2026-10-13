@@ -230,9 +230,11 @@ production numerical qualification.
   (`GRAPH_COMPUTE` is response-less and non-blocking; `synchronize` drains
   the client queue only; the `GET_TENSOR` response is the join); one
   dispatcher IO thread per endpoint owns the socket (no extra worker thread
-  needed); graph metadata resend ~5 KiB/compute (harness graphs carry
-  `uid=0`, so `GRAPH_RECOMPUTE` never triggers); no hard cancellation
-  (external process timeout required).
+  needed); graph metadata resent per compute — wire-observed 9,692 bytes per
+  `GRAPH_COMPUTE` at split-0 T=128 (296-byte packed `rpc_tensor`; harness
+  graphs carry `uid=0`, so `GRAPH_RECOMPUTE` never triggers) and excluded
+  from the report's byte counters; no hard cancellation (external process
+  timeout required).
 - `--secondary rpc --rpc-endpoint host:port` in the harness: all routed
   experts remote, shared branch local, both arms unchanged in work and
   placement; per-rep `rpc` accounting block (measured application payload
@@ -251,7 +253,7 @@ production numerical qualification.
   cancellation), cleanup, and honest reading of results (Gigabit payload
   floor ~22 ms at T=128 vs the 15.7 ms single-host overlapped phase — the
   experiment measures rather than assumes).
-- Tests (same module, +9): rpc argument validation, worker lifecycle,
+- Tests (same module, +7): rpc argument validation, worker lifecycle,
   dead-endpoint fail-closed abort, and a bounded loopback integration class
   against the REAL pinned RPC implementation on the CPU device (all gates,
   T=128 reuse-across-reps with activation-sized steady-state traffic,
