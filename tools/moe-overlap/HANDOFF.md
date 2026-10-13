@@ -7,11 +7,16 @@ Review-facing summary of this branch's deliverable. Full detail lives in
 
 ## Verdict
 
-**Ready for bounded hardware testing**, subject to the maintainer's explicit
-authorization of the proposed recipe. No architectural blocker was found; no
-speculative framework was added. The next decision after the hardware run is
-whether the measured overlap mechanism is worth extending — not whether to
-keep polishing this harness.
+**Backend numerical acceptance remains blocked.** The 2026-10-13 partial
+offline correction fixes scalar CPU fixture operands and labels the retained
+CPU-unsplit diagnostic. The full independent CPU/CUDA operand reference is
+`NOT_IMPLEMENTED`, pending the portable vetted reconstruction and its minimal
+capture inputs. See [`numerical-reference.md`](numerical-reference.md) for the
+handoff and reserved seeds. Historical T=128 FAIL records remain FAIL; this
+change establishes no hardware qualification or execution authority.
+
+The earlier feasibility and offline results below describe the original
+prototype deliverable, not acceptance under the proposed reference contract.
 
 ## Phase 1 feasibility findings (decision: proceed)
 

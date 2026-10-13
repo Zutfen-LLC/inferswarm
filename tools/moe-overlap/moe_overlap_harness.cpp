@@ -536,13 +536,12 @@ static bool read_inputs_file(const std::string & path, std::vector<float> & cur,
 }
 
 // ---------------------------------------------------------------------------
-// Validation. Criteria are fixed and derived from the operand types before
-// any comparison (see README): every path at this pin quantizes activations
-// to Q8_0 inside quantized MUL_MAT / MUL_MAT_ID, so the reference comparison
-// covers (a) F32 reassociation of <=10 plane sums plus cross-backend block
-// accumulation-order differences (~8 * 2^-23 relative to the plane L1 mass),
-// and (b) when a non-CPU secondary kernel path participates, one activation
-// quantization step (2^-7 relative) as documented backend headroom. The
+// Legacy CPU-unsplit comparison: retain the original criterion and failures.
+// CPU and CUDA do NOT use identical activation operands: CUDA MMQ D4 stores
+// fp32 scales whereas CPU Q8_0 and CUDA MMVQ store fp16 scales. Code rounding
+// also depends on the kernel path. The historical plane-L1 allowance below
+// is not a bound on quantization error through the nonlinear block, nor an
+// independent backend operand reference. See numerical-reference.md. The
 // overlapped arm must additionally match the serial arm bit-for-bit (same
 // kernels, same order, deterministic per fixed shapes/thread counts).
 // ---------------------------------------------------------------------------
@@ -977,6 +976,9 @@ int run_harness(Harness & H) {
     J.str("primary_backend", ggml_backend_name(H.cpu_bk));
     J.str("secondary_kind", H.secondary_kind);
     J.str("secondary_backend", H.sec_bk ? ggml_backend_name(H.sec_bk) : "(none)");
+    J.str("reference_comparison", "legacy-cpu-unsplit/1");
+    J.str("backend_operand_reference_contract", "moe-operand-reference/2-proposed");
+    J.str("backend_operand_reference_status", "NOT_IMPLEMENTED");
     J.num("primary_threads", H.threads);
     J.num("secondary_threads", H.secondary_kind == "cpu" ? H.secondary_threads : 0);
     J.num("warmup", H.warmup);
@@ -1315,6 +1317,12 @@ int run_harness(Harness & H) {
         J.boolean("serial_vs_ref_pass", R.serial_vs_ref.pass);
         J.num("serial_vs_ref_max_abs", R.serial_vs_ref.max_abs);
         J.num("serial_vs_ref_max_ratio", R.serial_vs_ref.max_ratio);
+        // Explicit name for new consumers; old fields/gates remain unchanged.
+        J.begin("legacy_cpu_unsplit_diagnostic");
+        J.boolean("pass", R.serial_vs_ref.pass);
+        J.num("max_abs", R.serial_vs_ref.max_abs);
+        J.num("max_ratio", R.serial_vs_ref.max_ratio);
+        J.end();
         J.boolean("overlap_vs_serial_bitwise", R.overlap_vs_serial.bitwise_equal);
         J.boolean("overlap_vs_serial_pass", R.overlap_vs_serial.pass);
         if (R.overlap_vs_serial.max_abs > 0) J.num("overlap_vs_serial_max_abs", R.overlap_vs_serial.max_abs);

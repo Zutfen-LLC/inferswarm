@@ -111,20 +111,29 @@ needs.
 
 ## Numerical criteria (fixed before any comparison)
 
-- All paths at this pin quantize activations to Q8_0 inside quantized
-  `MUL_MAT`/`MUL_MAT_ID`, so CPU and CUDA arms share the same activation
-  quantization behavior.
+The existing comparison is **`legacy-cpu-unsplit/1`**. Its formula and verdict
+behavior are retained to preserve historical FAIL results. It uses a native
+CPU graph as its expected output, so it is not an independent operand
+reference. The proposed **`moe-operand-reference/2-proposed`** is
+**NOT_IMPLEMENTED**, blocked on the portable vetted reconstruction. See
+[`numerical-reference.md`](numerical-reference.md) for source distinctions,
+the precise handoff, reserved seeds, and remaining physical validation.
+
+- CPU and CUDA activation operands differ at this pin. CPU Q8_0 and CUDA
+  MMVQ store fp16 activation scales; CUDA MMQ's Q8_0 D4 path stores fp32
+  scales. Arithmetic and integer rounding also depend on the selected kernel
+  path. The shared branch remains on CPU.
 - **overlapped vs serial**: must be bit-identical (same kernels, same order,
   deterministic per fixed shapes/thread counts). Any difference fails the run.
 - **each arm vs the unsplit reference** (llama.cpp op order on the primary
   backend): per element `|diff| <= tol` with
   `tol = 8 · 2⁻²³ · Σᵢ|planeᵢ| + (secondary non-CPU ? 2⁻⁷ · Σᵢ|planeᵢ| : 0)`,
   where `Σᵢ|planeᵢ|` is the per-element L1 mass of the reference's ten
-  weighted expert planes. The first term bounds F32 reassociation over ≤10
-  plane sums plus cross-backend block-accumulation order; the second is
-  documented headroom for one activation-quantization step (1/127 ≈ 2⁻⁷) when
-  a non-CPU kernel path participates. Criteria are computed from the actual
-  operands and never widened after a failure; the reports include
+  weighted expert planes. These are the original empirical allowances;
+  neither establishes a bound on quantization differences propagated through
+  projections, cancellation, SwiGLU and another quantized projection. They
+  are not a proposed acceptance criterion for the new independent reference.
+  No constants are widened after a failure; the reports include
   `max_ratio = max|diff|/tol` (observed ≤ 0.48 offline).
 - **single-device identity**: with everything on the primary backend the
   serial arm must match the reference bit-for-bit.
@@ -158,6 +167,13 @@ needs.
 Additional offline controls exercised by
 `tests/test_moe_overlap_prototype.py`:
 
+- **Scalar CPU fixture operands**: a 32-element half-tie control checks F32
+  multiplication before integer rounding and fp16 scale storage. Unknown,
+  AVX and CUDA fixture-reference modes are rejected. A small 12-expert/top-10
+  development fixture with all ten weights nonzero exercises missing-expert,
+  wrong-Q8-weight and corrupted/non-finite-output controls using the existing
+  fixture criterion. These tests do not add a real-weight/backend reference
+  to the harness or qualify CUDA.
 - **GGUF loader regression**: a small authentic-geometry fixture GGUF
   (n_expert = 12, tensors with distinct crafted contents, alphabetical file
   order deliberately different from the loader's internal order) is replayed

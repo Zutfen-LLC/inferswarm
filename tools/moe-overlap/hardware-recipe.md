@@ -6,6 +6,14 @@ maintainer's explicit authorization per `AGENTS.md` / `docs/campaign-gate-orderi
 this document grants nothing. STOP conditions and resource bounds below are
 part of the proposal.
 
+Current numerical status (2026-10-13): the legacy CPU-unsplit criterion below
+is unchanged and its T=128 FAIL remains recorded. The new independent backend
+operand reference is **NOT_IMPLEMENTED**; this recipe alone cannot validate
+it. See [`numerical-reference.md`](numerical-reference.md) for the portable
+reconstruction blocker and reserved inputs. No hardware run is part of the
+offline correction task. CUDA builds still require the externally documented
+nvcc-wrapper/libcuda-link amendments; build-system repair is out of scope.
+
 ## Objective and success question
 
 Does overlapping CPU expert computation, GPU expert computation and activation

@@ -102,12 +102,20 @@ class TestMoEOverlapPrototype(unittest.TestCase):
         self.assertTrue(doc["negative_control"]["comparator_rejected"])
         self.assertTrue(doc["determinism_recheck"]["reference_bitwise"])
         self.assertTrue(doc["determinism_recheck"]["serial_bitwise"])
+        self.assertEqual(doc["config"]["reference_comparison"], "legacy-cpu-unsplit/1")
+        self.assertEqual(doc["config"]["backend_operand_reference_contract"],
+                         "moe-operand-reference/2-proposed")
+        self.assertEqual(doc["config"]["backend_operand_reference_status"], "NOT_IMPLEMENTED")
         for rep in doc["reps"]:
             self.assertTrue(rep["checks"]["routed_counts_ok"])
             # every router-selected expert executed exactly once per token
             self.assertEqual(rep["k_cpu_real"] + rep["k_sec_real"],
                              10 * doc["config"]["tokens"])
             self.assertTrue(rep["checks"]["serial_vs_ref_pass"])
+            diagnostic = rep["checks"]["legacy_cpu_unsplit_diagnostic"]
+            self.assertEqual(diagnostic["pass"], rep["checks"]["serial_vs_ref_pass"])
+            self.assertEqual(diagnostic["max_abs"], rep["checks"]["serial_vs_ref_max_abs"])
+            self.assertEqual(diagnostic["max_ratio"], rep["checks"]["serial_vs_ref_max_ratio"])
             self.assertTrue(rep["checks"]["overlap_vs_serial_bitwise"])
             self.assertTrue(rep["checks"]["overlap_vs_serial_pass"])
             self.assertGreaterEqual(rep["k_cpu"], 1)   # genuinely split
@@ -654,31 +662,43 @@ def _roundf(x: float) -> float:
     return math.floor(x + 0.5) if x >= 0 else math.ceil(x - 0.5)
 
 
-def _q8_quantized_dot(ints32: list, xs: list) -> float:
+def _q8_quantized_dot(ints32: list, xs: list, *, mode="cpu-scalar-q8_0") -> float:
+    """Independent F64 dot for the crafted d_w=1 fixture's scalar CPU mode.
+
+    Pinned quantize_row_q8_0_ref computes d, reciprocal AND multiplication
+    in F32, then roundf (ties away), with d stored in fp16. This helper is
+    not an AVX or CUDA reference; those paths require different operands.
+    """
+    import math
     import struct
-    """Model ggml's quantized vec-dot for a Q8_0 weight row (d_w = 1.0)
-    against an F32 input row: the input is quantized to Q8_0 per 32-block
-    (quantize_row_q8_0_ref: d = amax/127 in F32, reciprocal multiply,
-    roundf; d stored as fp16) and dots accumulate per block like the CPU
-    kernel does."""
+    if mode != "cpu-scalar-q8_0":
+        raise ValueError(f"unsupported fixture reference mode: {mode}")
+    if len(ints32) != len(xs) or not xs or len(xs) % 32:
+        raise ValueError("fixture dot requires equal nonempty complete 32-block rows")
+    if any(not math.isfinite(v) for v in xs):
+        raise ValueError("non-finite fixture activation")
     total = 0.0
     for b in range(len(xs) // 32):
         blk = xs[b * 32:(b + 1) * 32]
         amax = max(abs(_f32(v)) for v in blk)
         d = _f32(_f32(amax) / 127.0)
-        d16 = _f32(struct.unpack("<e", struct.pack("<e", d))[0]) if True else d
+        d16 = struct.unpack("<e", struct.pack("<e", d))[0]
         idv = _f32(1.0 / d) if d != 0 else 0.0
         sumi = 0
         for i, v in enumerate(blk):
-            q = _roundf(_f32(v) * idv) if d != 0 else 0.0
-            q = max(-127.0, min(127.0, q))
+            q = _roundf(_f32(_f32(v) * idv)) if d != 0 else 0
             sumi += int(ints32[b * 32 + i]) * int(q)
         total += d16 * sumi  # d_w == 1.0
     return total
 
 
 def fixture_reference(fx: dict, act: list) -> list:
-    """Independent F64 block reference straight from the fixture bytes."""
+    """Independent F64 reference for this crafted T=1 CPU loader fixture.
+
+    Weight scales are all 1; the input quantization is identity by construction.
+    Router saturation makes most selected weights zero, so this fixture is NOT
+    evidence that an arbitrary real-weight block executes all top-10 experts.
+    """
     import math
 
     E = FIXTURE_EXPERTS
@@ -724,6 +744,89 @@ def fixture_reference(fx: dict, act: list) -> list:
               for d in range(N_EMBD)]
     gate = 1.0 / (1.0 + math.exp(-sum(w * a for w, a in zip(fx["sh_gate_w"], act))))
     return [o + gate * s for o, s in zip(out, shared)]
+
+
+def assert_fixture_output(case, got, ref):
+    """Existing loader-fixture criterion, scoped to this crafted CPU fixture.
+
+    Retained empirical thresholds for F32 nonlinear ops vs F64 reference;
+    no bound for arbitrary block inputs, accumulation orders, or CUDA.
+    """
+    import math
+    case.assertEqual(len(got), len(ref))
+    case.assertTrue(all(math.isfinite(v) for v in got + ref))
+    worst = max(abs(g - q) / max(1e-9, abs(q)) for g, q in zip(got, ref))
+    max_abs = max(abs(g - q) for g, q in zip(got, ref))
+    case.assertLess(worst, 5e-5, f"max relative deviation {worst}")
+    case.assertLess(max_abs, 5e-3, f"max absolute deviation {max_abs}")
+
+
+class TestFixtureReferenceOperands(unittest.TestCase):
+    """Small development fixtures; no native build, GPU, or held-out seeds."""
+
+    def test_f32_multiply_before_rounding_and_fp16_scale(self):
+        # 127 * F32(0.5/127) is just below 0.5 in F64 but is 0.5 in F32.
+        # Scalar roundf must therefore produce codes +1/-1, not zero.
+        xs = [1.0, _f32(0.5 / 127), _f32(-0.5 / 127)] + [0.0] * 29
+        weights = [0, 1, -1] + [0] * 29
+        self.assertEqual(_q8_quantized_dot(weights, xs), 2 * 0.00787353515625)
+
+    def test_zero_blocks_and_dot_cancellation(self):
+        self.assertEqual(_q8_quantized_dot([1] * 32, [0.0] * 32), 0.0)
+        self.assertEqual(_q8_quantized_dot([1, -1] * 16, [127.0] * 32), 0.0)
+
+    def test_rejects_unimplemented_operand_modes(self):
+        for mode in ("cpu-avx-q8_0", "cuda-mmvq-q8_1", "cuda-mmq-d4", "unknown"):
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, "unsupported"):
+                _q8_quantized_dot([1] * 32, [1.0] * 32, mode=mode)
+
+    def test_rejects_incomplete_rows_and_nonfinite_inputs(self):
+        for weights, xs in (([1] * 31, [1.0] * 31), ([1] * 32, [1.0] * 64),
+                            ([], []), ([1] * 32, [float("nan")] * 32)):
+            with self.subTest(lengths=(len(weights), len(xs))), self.assertRaises(ValueError):
+                _q8_quantized_dot(weights, xs)
+
+    def test_small_block_reference_and_negative_controls(self):
+        # Shrink only the fixture geometry, preserving 12 experts/top-10 and
+        # one complete Q8 block per row. All ten route weights are nonzero.
+        import copy
+        import math
+        import struct
+        with mock.patch.multiple(sys.modules[__name__], N_EMBD=32, N_FF=32):
+            def rows(values):
+                return [v if k == 2 else 0 for v in values for _ in range(32) for k in range(32)]
+
+            fx = {"up": rows(range(1, 13)), "gate": rows([1] * 12),
+                  "down": rows([1] * 12), "sh_up": rows([2]),
+                  "sh_gate": rows([1]), "sh_down": rows([1]), "sh_gate_w": [0.0] * 32}
+            act = [127.0, -127.0, 1.0] + [0.0] * 29  # identity input quantization; sum=1
+            ref = fixture_reference(fx, act)
+            silu_one = 1 / (1 + math.exp(-1))
+
+            def projected(v):
+                scale = struct.unpack("<e", struct.pack("<e", _f32(_f32(v) / 127)))[0]
+                return 127 * scale
+
+            z = sum(math.exp(-e) for e in range(10))
+            expected = sum(math.exp(-e) / z * projected(silu_one * (e + 1)) for e in range(10))
+            expected += 0.5 * projected(2 * silu_one)
+            for value in ref:
+                self.assertAlmostEqual(value, expected, places=12)
+            assert_fixture_output(self, ref, [expected] * 32)
+
+            missing = copy.deepcopy(fx)
+            missing["up"][:32 * 32] = [0] * (32 * 32)  # selected expert 0 omitted
+            wrong_weight = copy.deepcopy(fx)
+            wrong_weight["up"][2 * 32 + 2] = 4  # hidden row 2 feeds the down projection
+            corrupted = ref[:]
+            corrupted[0] += 1.0
+            nonfinite = ref[:]
+            nonfinite[0] = float("nan")
+            for name, got in (("missing expert", fixture_reference(missing, act)),
+                              ("wrong weight", fixture_reference(wrong_weight, act)),
+                              ("corrupted output", corrupted), ("nonfinite output", nonfinite)):
+                with self.subTest(control=name), self.assertRaises(AssertionError):
+                    assert_fixture_output(self, got, ref)
 
 
 @unittest.skipUnless(not SKIP_BUILD, "MOE_OVERLAP_SKIP_BUILD=1")
@@ -777,12 +880,7 @@ class TestMoEOverlapGGUFLoader(unittest.TestCase):
         ref = fixture_reference(self.fx, self.act)
         self.assertEqual(len(serial), N_EMBD)
         for got in (serial, overlap):
-            worst = max(abs(g - q) / max(1e-9, abs(q)) for g, q in zip(got, ref))
-            max_abs = max(abs(g - q) for g, q in zip(got, ref))
-            # derived bound: F32 transcendentals + F64 reference, exact int
-            # dot products on both sides (d = 1.0 everywhere by construction)
-            self.assertLess(worst, 5e-5, f"max relative deviation {worst}")
-            self.assertLess(max_abs, 5e-3, f"max absolute deviation {max_abs}")
+            assert_fixture_output(self, got, ref)
 
     def test_loader_assignment_single_device(self):
         """All-primary variant (also exercises the exact-subset path)."""
