@@ -1,0 +1,90 @@
+--- a/src/models/qwen4exp.cpp
++++ b/src/models/qwen4exp.cpp
+@@ -26,0 +27 @@
++    moe_overlap = llama_moe_overlap_config::from_env(hparams.n_layer());
+@@ -975,47 +976,2 @@
+-    GGML_ASSERT(model.layers[il].ffn_gate_inp != nullptr);
+-
+-    ggml_tensor * moe_out =
+-        build_moe_ffn(cur,
+-            model.layers[il].ffn_gate_inp,
+-            model.layers[il].ffn_up_exps,
+-            model.layers[il].ffn_gate_exps,
+-            model.layers[il].ffn_down_exps,
+-            nullptr,
+-            n_expert, n_expert_used,
+-            LLM_FFN_SILU, true,
+-            hparams.expert_weights_scale,
+-            LLAMA_EXPERT_GATING_FUNC_TYPE_SOFTMAX, il,
+-            nullptr, model.layers[il].ffn_gate_up_exps,
+-            model.layers[il].ffn_up_exps_s,
+-            model.layers[il].ffn_gate_exps_s,
+-            model.layers[il].ffn_down_exps_s);
+-    cb(moe_out, "ffn_moe_out", il);
+-
+-    // shared experts, as in the Qwen3Next reference
+-    if (model.layers[il].ffn_up_shexp != nullptr) {
+-        ggml_tensor * ffn_shexp =
+-            build_ffn(cur,
+-                model.layers[il].ffn_up_shexp, NULL, model.layers[il].ffn_up_shexp_s,
+-                model.layers[il].ffn_gate_shexp, NULL, model.layers[il].ffn_gate_shexp_s,
+-                model.layers[il].ffn_down_shexp, NULL, model.layers[il].ffn_down_shexp_s,
+-                NULL,
+-                LLM_FFN_SILU, LLM_FFN_PAR, il);
+-        cb(ffn_shexp, "ffn_shexp", il);
+-
+-        // shared expert has its own sigmoided gate (ffn_gate_inp_shexp, one value per token)
+-        ggml_tensor * shared_gate = build_lora_mm(model.layers[il].ffn_gate_inp_shexp, cur);
+-        cb(shared_gate, "shared_expert_gate", il);
+-
+-        shared_gate = ggml_sigmoid(ctx0, shared_gate);
+-        cb(shared_gate, "shared_expert_gate_sigmoid", il);
+-
+-        ffn_shexp = ggml_mul(ctx0, ffn_shexp, shared_gate);
+-        cb(ffn_shexp, "ffn_shexp_gated", il);
+-
+-        cur = ggml_add(ctx0, moe_out, ffn_shexp);
+-        cb(cur, "ffn_out", il);
+-    } else {
+-        cur = moe_out;
+-    }
+-
+-    return cur;
++    return build_qwen4exp_ffn(cur, model.layers[il], il,
++                             static_cast<const llama_model_qwen4exp &>(model).moe_overlap);
+--- a/src/models/models.h
++++ b/src/models/models.h
+@@ -2361,0 +2362 @@
++    llama_moe_overlap_config moe_overlap;
+--- a/src/llama-graph.h
++++ b/src/llama-graph.h
+@@ -6,0 +7 @@
++#include "llama-moe-overlap.h"
+@@ -946,0 +948 @@
++    std::vector<std::shared_ptr<llama_moe_overlap>> moe_overlap;
+@@ -1035,0 +1038 @@
++    bool moe_overlap_building = false;
+@@ -1050,0 +1054,4 @@
++
++    ggml_tensor * build_qwen4exp_ffn(ggml_tensor * cur, const llama_layer & layer, int il,
++                                    const llama_moe_overlap_config & cfg);
++    ggml_tensor * build_qwen4exp_ffn_native(ggml_tensor * cur, const llama_layer & layer, int il);
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -1339,0 +1340 @@
++    moe_overlap.clear();
+@@ -1500,0 +1502,4 @@
++    if (moe_overlap_building) {
++        ggml_format_name(cur, "%s-%d", name, il);
++        return;
++    }
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -20,0 +21 @@
++    llama-moe-overlap.cpp
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -365,0 +366,3 @@
++    if (std::getenv("IS309_MOE") && arch != LLM_ARCH_QWEN4EXP) {
++        throw std::runtime_error("IS309_MOE only supports qwen4exp");
++    }

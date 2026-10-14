@@ -430,11 +430,10 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group moe-overlap-prototype
-        # Offline SYNTHETIC correctness of the tools/moe-overlap prototype
-        # harness (builds the pinned llama.cpp ggml CPU closure into the
-        # runner's user cache, then runs the harness; no GPU, no live
-        # inference, no model download).
-        run: python3 -m unittest tests.test_moe_overlap_prototype -v
+        # Offline prototype plus the actual #309 native model FFN seam.
+        # Builds the pinned CPU ggml/llama closure, then small synthetic
+        # fixtures with loopback RPC; no GPU or full-model inference.
+        run: python3 -m unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap -v
 
   issue-187-r7a:
     name: Group issue-187-r7a

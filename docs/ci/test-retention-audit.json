@@ -5639,6 +5639,27 @@
       "replacement": null,
       "test_count_at_audit": 12
     },
+    "test_native_moe_overlap": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 9,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "The actual pinned qwen4exp native FFN seam is default-off and invariant for non-selected layers; a selected CPU-shared/resident-RPC-routed layer executes identical work in serial/overlap with exact scheduling equality, changed inputs, retained allocations/connection, correct packing of native top-k views, and bounded fail-stop process cleanup.",
+      "lineage": "Native one-layer MoE scheduling integration (issue #309)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/build.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Small native CPU fixtures and loopback RPC only. No hardware, full-model, CUDA compatibility, numerical qualification or performance claim.",
+      "replacement": null,
+      "test_count_at_audit": 9
+    },
     "test_plan_ci": {
       "baseline_group": "repo-integrity",
       "baseline_serial_seconds": 0.61,
