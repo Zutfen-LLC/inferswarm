@@ -1,9 +1,13 @@
 # MoE overlap prototype (resident block scheduling experiment)
 
-Status: **prototype / offline-validated coding deliverable**. Nothing here is a
-qualification result, a performance claim, or execution authority for any
-hardware campaign. Hardware execution, if approved, follows
-[`hardware-recipe.md`](hardware-recipe.md) through the separate Hermes handoff.
+Status (2026-10-14): **prototype; bounded two-node experimental slice complete**.
+PR #307 merged at `12276ee39fe4d775a2a8e8adef191b9890114ab9`; #308 integrates
+that main ancestry and its build repair additively. Historical offline and
+single-host descriptions below keep their original scope. The T=128 and T=1
+remote records and limitations are linked in [`HANDOFF.md`](HANDOFF.md).
+Scheduling equivalence is separate from numerical qualification; no full-model
+or tokens/second claim follows. This documentation grants no hardware execution
+authority, and no further microbenchmark run is currently requested.
 
 ## What this tests
 
@@ -43,6 +47,30 @@ kernels and precision:
   stay ordered because the copies, kernels and read-back share one device
   stream; work is only called "overlapped" because this ordering genuinely
   permits concurrent execution.
+
+### `--secondary rpc` (two-host mode, follow-on prototype)
+
+The same two arms over the pinned llama.cpp RPC backend (protocol v6.0.0,
+TCP) with the routed-expert slice resident on a remote worker:
+`moe_overlap_harness --secondary rpc --rpc-endpoint HOST:PORT` on the
+coordinator and `moe_rpc_worker_cuda` (same pin,
+`build.py --cuda --rpc-worker`) on the GPU host. Weight tensors upload once
+during setup and stay resident for the connection lifetime; steady-state
+requests carry activations/routing and
+read back the expert partial, exactly as above. The overlap join is the D2H
+`GET_TENSOR` response (the pinned server executes commands serially per
+connection, so the response proves prior graph computes finished) — source
+trace and transport limitations in [`rpc-feasibility.md`](rpc-feasibility.md),
+proposed hardware steps in [`rpc-hardware-recipe.md`](rpc-hardware-recipe.md).
+In rpc mode the run report adds a per-rep `rpc` block with measured
+application payload bytes (cross-checked against calculated tensor sizes)
+and honest labels: remote intervals are client-observed transport-inclusive
+wall-clock (never GPU kernel time), the remote device identity is not
+transported by the protocol, and the operand-reference mode is recorded as
+`rpc-remote-unverified` (refused fail-closed by `check_reference.py`; the
+scheduling-equivalence checker remains applicable). The loopback
+CPU-device variant of this mode is exercised offline by the test suite —
+contract evidence only, never performance evidence.
 
 Ownership is fixed for both arms: the CPU backend owns experts `[0, split)`
 (plus router and shared expert), the secondary backend owns a resident device
@@ -198,8 +226,14 @@ is documented in [`numerical-reference.md`](numerical-reference.md).
   minimal ggml CPU closure plus the harness with a direct GCC/Clang recipe
   (no CMake, no installs). Objects carry stamps (source hash + flags +
   resolved compiler/version, including nvcc's selected host compiler) and are
-  rebuilt on any change — a stale cached build cannot test
-  old code. `--cuda` compiles the complete CUDA closure at this pin (every
+  rebuilt on any change — a stale cached build cannot test old code. The
+  pinned RPC backend (client + TCP transport) is linked into the same closure
+  for `--secondary rpc` (`GGML_USE_RPC` stays undefined so global backend
+  registration is unchanged). `--rpc-worker` builds `moe_rpc_worker` for CPU
+  loopback or, with `--cuda`, `moe_rpc_worker_cuda`: a minimal wrapper around
+  the pin's own `ggml_backend_rpc_start_server` serving one device. Harness
+  and worker keep distinct entry objects and binaries in the shared cache.
+  `--cuda` compiles the complete CUDA closure at this pin (every
   `ggml/src/ggml-cuda/*.cu` plus the `template-instances/*.cu` TUs the pin's
   own CMake GLOBs) with `GGML_USE_CUDA` defined at compile time for every TU
   (backend registration in `ggml-backend-reg.cpp` is gated on that define, so
@@ -212,12 +246,21 @@ is documented in [`numerical-reference.md`](numerical-reference.md).
   `MOE_OVERLAP_CUDA_DRIVER` can select an explicit real driver library;
   missing/invalid libraries and toolkit `stubs` paths are refused before
   compilation. The link probe checks the VMM dependency without running it;
-  it does not establish device readiness. The repaired recipe still needs a
-  separate clean CUDA build and no-model `--list-devices` check on hardware
-  (see [`hardware-recipe.md`](hardware-recipe.md)). The historical full CUDA
-  compile took approximately 47 minutes at two jobs; allow a separate build
-  window, not a 30-minute combined build/run budget. `MOE_OVERLAP_OPT`
-  overrides the host optimization level.
+  it does not establish device readiness. The canonical clean CUDA harness
+  build and no-model discovery passed at #307 head `6f3aa083` on inferswarm01
+  ([operator record](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6158309286));
+  this does not establish a clean CUDA worker build at the integrated #308
+  head. Valinor has no nvcc; its worker checks are CPU loopback and recorded
+  command construction only. The recorded clean build took 50.11 minutes at
+  two jobs; allow a separate build window (see
+  [`hardware-recipe.md`](hardware-recipe.md)). `MOE_OVERLAP_OPT` overrides
+  the host optimization level.
+- `rpc_worker.cpp` — the RPC worker entry point (see above).
+- `rpc-feasibility.md` — Phase 1 source-based feasibility note for the
+  remote-resident follow-on (residency, blocking map, ownership, graph
+  resend, transport limitations).
+- `rpc-hardware-recipe.md` — two-node hardware recipe requiring separate
+  authorization for any future execution.
 - `offline-validation/` — retained offline run reports (SYNTHETIC weights and
   inputs; reduced smoke + full-authentic-shape decode/prefill runs).
 
@@ -277,11 +320,13 @@ timing is meaningless by construction and is not reported as a result):
 
 ## Limitations
 
-- Single-node only. This experiment informs — but does not demonstrate — a
-  distributed claim: it isolates the mechanism (CPU expert compute concurrent
-  with GPU expert compute and activation transfers over a PCIe boundary) that
+- The original single-host experiment alone informs — but does not
+  demonstrate — a distributed claim: it isolates the mechanism (CPU expert
+  compute concurrent with GPU expert compute and activation transfers over a
+  PCIe boundary) that
   the earlier two-host observation could not isolate. A network experiment
-  would replace the secondary-backend stream with a link and is out of scope.
+  replaces the secondary-backend stream with a link; the remote follow-on
+  and its limited two-node observations are separate records in `HANDOFF.md`.
 - Inputs are synthetic gaussians offline. The hardware recipe uses the real
   Q8 weights (real router → real routing under those inputs) and states
   explicitly how representative block activations are obtained or that the
@@ -297,5 +342,5 @@ timing is meaningless by construction and is not reported as a result):
 - The harness is a prototype: fail-closed errors and status checks are
   preferred, but it has not been through production hardening, fuzzing, or
   sanitizer campaigns. The CUDA closure is enumerated from the pin's own
-  CMake GLOBs and defines. The repaired build recipe has not been compiled
-  here (no nvcc on Valinor); a separate clean hardware build remains required.
+  CMake GLOBs and defines. The clean CUDA harness build/discovery record applies
+  to #307 head `6f3aa083`; it does not compile-verify this #308 CUDA worker.

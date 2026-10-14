@@ -44,6 +44,7 @@
 #include "ggml-alloc.h"
 #include "ggml-backend.h"
 #include "ggml-cpu.h"
+#include "ggml-rpc.h"
 #include "gguf.h"
 
 #include <algorithm>
@@ -859,6 +860,13 @@ struct StageTimes {
     // not executed (empty CPU expert subset). Their sum need not equal
     // cpu_ms exactly (timer overhead + work between the two regions).
     double cpu_experts_ms = 0, shared_ms = 0;
+    // RPC-mode application-payload accounting, accumulated at the exact
+    // set/get call sites of the secondary plan (tensor data bytes only; the
+    // pinned client's graph serialization is not exposed to callers). These
+    // are MEASURED call-site byte counts, not modeled sizes, and exclude TCP
+    // framing; they are serialized only in the per-rep "rpc" block so the
+    // stage-schema of the cpu/cuda modes is unchanged.
+    double rpc_request_bytes = 0, rpc_response_bytes = 0;
 };
 
 // Compute-status failure propagation: a non-success graph compute must abort
@@ -885,7 +893,8 @@ struct Harness {
     int64_t n_expert = N_EXPERT_AUTHENTIC;
     int64_t T = 1;
     int64_t split = 256;
-    std::string secondary_kind = "cpu"; // "cpu" | "cuda"
+    std::string secondary_kind = "cpu"; // "cpu" | "cuda" | "rpc"
+    std::string rpc_endpoint;           // host:port for --secondary rpc
     int threads = 0, secondary_threads = 2;
     int warmup = 1, reps = 5;
     uint64_t seed = 0x4953573030303033ULL; // "ISW0003"
@@ -926,7 +935,20 @@ int run_harness(Harness & H) {
         fprintf(stderr, "error: unsupported CPU reference quantizer architecture\n"); return 4;
 #endif
         H.reference_secondary_mode = H.secondary_kind == "cpu" ? H.reference_cpu_mode
-            : (H.T == 1 ? "cuda-mmvq-q8_1" : "cuda-mmq-d4");
+            : H.secondary_kind == "cuda" ? (H.T == 1 ? "cuda-mmvq-q8_1" : "cuda-mmq-d4")
+            : "rpc-remote-unverified";
+        if (H.secondary_kind == "rpc") {
+            // The offline operand reference (check_reference.py) models named
+            // quantizer modes (cpu-scalar/avx, cuda-mmvq/mmq). An RPC label
+            // does not identify the remote arithmetic profile — the pinned
+            // protocol transports no backend identity — so the export records
+            // "rpc-remote-unverified" and check_reference.py rejects that
+            // mode fail-closed. The narrow scheduling-equivalence checker
+            // (check_scheduling.py) does not depend on the secondary mode and
+            // remains usable over these exports. Numerical qualification for
+            // an rpc secondary is a reported limitation, never a silent
+            // local-profile substitution.
+        }
         if (mkdir(H.reference_case.c_str(), 0700) != 0) {
             fprintf(stderr, "error: reference-case directory must be new and creatable\n"); return 4;
         }
@@ -954,6 +976,38 @@ int run_harness(Harness & H) {
         }
         H.sec_bk = ggml_backend_dev_init(gpu, nullptr);
         if (!H.sec_bk) { fprintf(stderr, "error: gpu backend init failed\n"); return 4; }
+    } else if (H.secondary_kind == "rpc") {
+        // Pinned RPC client backend. ggml_backend_rpc_init connects, performs
+        // the HELLO handshake and spawns one dedicated dispatcher IO thread
+        // for this endpoint; all subsequent tensor/graph calls enqueue onto
+        // that thread through a mutex-protected queue (single-writer socket
+        // ownership; the coordinator thread never touches the socket).
+        if (H.rpc_endpoint.empty()) {
+            fprintf(stderr, "error: --secondary rpc requires --rpc-endpoint host:port\n");
+            return 4;
+        }
+        size_t rfree = 0, rtotal = 0;
+        ggml_backend_rpc_get_device_memory(H.rpc_endpoint.c_str(), 0, &rfree, &rtotal);
+        H.sec_bk = ggml_backend_rpc_init(H.rpc_endpoint.c_str(), 0);
+        if (!H.sec_bk) {
+            // ggml_backend_rpc_init GGML_ABORTs on unreachable endpoints; a
+            // null return still fails closed without fallback.
+            fprintf(stderr, "error: rpc backend init failed for %s (fail-closed; no fallback)\n",
+                    H.rpc_endpoint.c_str());
+            return 4;
+        }
+        J.begin("rpc_secondary");
+        J.str("endpoint", H.rpc_endpoint);
+        J.str("backend_name", ggml_backend_name(H.sec_bk));
+        // The RPC device description is the endpoint string by construction
+        // (ggml_backend_rpc_add_server); the ACTUAL remote hardware identity
+        // is not transported by the protocol at this pin — record the client
+        // device-memory snapshot as observed evidence, never as proof of the
+        // remote arithmetic profile.
+        J.num("device_free_bytes_observed", (double)rfree);
+        J.num("device_total_bytes_observed", (double)rtotal);
+        J.str("remote_device_identity", "NOT_TRANSPORTED_BY_RPC_PROTOCOL");
+        J.end();
     } else {
         H.sec_bk = ggml_backend_dev_init(cpu_dev, nullptr);
         if (!H.sec_bk) { fprintf(stderr, "error: secondary cpu backend init failed\n"); return 4; }
@@ -1027,6 +1081,17 @@ int run_harness(Harness & H) {
     J.num("weights_ms", load_ms);
     J.num("secondary_slice_ms", sec_load_ms);
     J.num("weight_bytes", (double)H.W.store.size());
+    if (H.sec_bk && H.split < H.n_expert) {
+        // secondary resident weight upload: exactly three Q8_0 slice tensors
+        // (up/gate/down over experts [split, n_expert)), uploaded once during
+        // setup through the same pinned set_tensor path the steady-state
+        // requests use. These are calculated tensor sizes; the rpc mode's
+        // physical wire traffic additionally includes TCP framing and (for
+        // uploads > 10 MiB) a hash round-trip per tensor.
+        size_t up_b   = ggml_row_size(GGML_TYPE_Q8_0, (size_t)(N_EMBD * N_FF)) * (size_t)(H.n_expert - H.split);
+        size_t down_b = ggml_row_size(GGML_TYPE_Q8_0, (size_t)(N_FF * N_EMBD)) * (size_t)(H.n_expert - H.split);
+        J.num("secondary_weight_bytes", (double)(up_b * 2 + down_b));
+    }
     J.end();
 
     // ---- execution helpers ---------------------------------------------------
@@ -1083,6 +1148,19 @@ int run_harness(Harness & H) {
         ggml_backend_tensor_set(p.in_w, wv.data(), 0, sizeof(float) * wv.size());
     };
 
+    // RPC-mode request/response application-payload accounting at the exact
+    // secondary-plan call sites (measured byte counts of tensor data moving
+    // client->server / server->client per repetition; TCP framing and the
+    // client-internal graph serialization are NOT included — the pinned
+    // client does not expose them to callers).
+    bool rpc_mode = (H.secondary_kind == "rpc");
+    auto rpc_req = [&](Plan & p, ArmContext & A, const std::vector<int32_t> & idsv,
+                       const std::vector<float> & wv, StageTimes & st) {
+        st.rpc_request_bytes += (double)(sizeof(float) * A.cur.size() + sizeof(int32_t) * idsv.size()
+                                         + sizeof(float) * wv.size());
+    };
+    auto rpc_rsp = [&](size_t bytes, StageTimes & st) { st.rpc_response_bytes += (double)bytes; };
+
     auto combine = [&](ArmContext & A, std::vector<float> & out) {
         out.assign((size_t)(N_EMBD * H.T), 0.0f);
         for (size_t i = 0; i < out.size(); ++i)
@@ -1113,6 +1191,7 @@ int run_harness(Harness & H) {
         if (psec.ok()) {
             double h0 = now_ms();
             set_plan_inputs_blocking(psec, A, A.ids_sec, A.w_sec);
+            if (rpc_mode) rpc_req(psec, A, A.ids_sec, A.w_sec, st);
             ggml_backend_synchronize(H.sec_bk);
             st.h2d_ms = now_ms() - h0;
             double g0 = now_ms();
@@ -1122,6 +1201,7 @@ int run_harness(Harness & H) {
             double d0 = now_ms();
             A.partial_sec.resize((size_t)(N_EMBD * H.T));
             ggml_backend_tensor_get(psec.out, A.partial_sec.data(), 0, sizeof(float) * A.partial_sec.size());
+            if (rpc_mode) rpc_rsp(sizeof(float) * A.partial_sec.size(), st);
             st.d2h_ms = now_ms() - d0;
         } else {
             A.partial_sec.assign((size_t)(N_EMBD * H.T), 0.0f);
@@ -1146,6 +1226,7 @@ int run_harness(Harness & H) {
             ggml_backend_tensor_set_async(H.sec_bk, psec.in_cur, A.cur.data(), 0, sizeof(float) * A.cur.size());
             ggml_backend_tensor_set_async(H.sec_bk, psec.in_ids, A.ids_sec.data(), 0, sizeof(int32_t) * A.ids_sec.size());
             ggml_backend_tensor_set_async(H.sec_bk, psec.in_w, A.w_sec.data(), 0, sizeof(float) * A.w_sec.size());
+            if (rpc_mode) rpc_req(psec, A, A.ids_sec, A.w_sec, st);
             st.h2d_ms = now_ms() - h0; // submission time only (async)
             A.partial_sec.resize((size_t)(N_EMBD * H.T));
             check_compute(ggml_backend_graph_compute_async(H.sec_bk, psec.gf), "secondary experts (async)");
@@ -1177,6 +1258,7 @@ int run_harness(Harness & H) {
             double d0 = now_ms();
             ggml_backend_tensor_get_async(H.sec_bk, psec.out, A.partial_sec.data(), 0, sizeof(float) * A.partial_sec.size());
             ggml_backend_synchronize(H.sec_bk);
+            if (rpc_mode) rpc_rsp(sizeof(float) * A.partial_sec.size(), st);
             st.d2h_ms = now_ms() - d0;
         }
         double k0 = now_ms();
@@ -1389,6 +1471,27 @@ int run_harness(Harness & H) {
         J.num("d2h_ms", R.st_overlap.d2h_ms);
         J.num("combine_ms", R.st_overlap.combine_ms);
         J.end();
+        if (rpc_mode) {
+            // Per-repetition application payload at the secondary call sites.
+            // MEASURED call-site tensor bytes, not modeled sizes and not
+            // physical network traffic (TCP framing, graph serialization and
+            // retransmissions are excluded; the pinned client does not expose
+            // them). Steady-state only: setup weight uploads are reported
+            // separately in the "load" block.
+            J.begin("rpc");
+            J.num("serial_request_bytes", R.st_serial.rpc_request_bytes);
+            J.num("serial_response_bytes", R.st_serial.rpc_response_bytes);
+            J.num("overlap_request_bytes", R.st_overlap.rpc_request_bytes);
+            J.num("overlap_response_bytes", R.st_overlap.rpc_response_bytes);
+            // calculated expected payload (cross-check): cur + ids + w in,
+            // partial out — per arm invocation
+            J.num("expected_request_bytes", (double)(sizeof(float) * (size_t)(N_EMBD * H.T)
+                + sizeof(int32_t) * (size_t)R.k_sec * (size_t)H.T
+                + sizeof(float) * (size_t)R.k_sec * (size_t)H.T));
+            J.num("expected_response_bytes", (double)(sizeof(float) * (size_t)(N_EMBD * H.T)));
+            J.str("weights_retransmitted_in_request", "no");
+            J.end();
+        }
         J.num("k_cpu", (double)R.k_cpu);
         J.num("k_sec", (double)R.k_sec);
         J.num("k_cpu_real", (double)R.k_cpu_real);
@@ -1617,6 +1720,8 @@ int run_harness(Harness & H) {
           !H.reference_case.empty() ? "untimed numerical-reference exports present: timing is NOT performance evidence"
           : H.secondary_kind == "cuda"
               ? "single-node CPU/GPU overlap measurement (hardware run)"
+          : H.secondary_kind == "rpc"
+              ? "RPC-secondary overlap measurement; the protocol verifies neither topology nor remote device identity (a loopback CPU-worker run prints the same claim and is an offline contract check, not a two-node result): remote intervals are client-observed wall-clock over the RPC transport (NOT GPU kernel time); h2d_ms/sec_ms/d2h_ms include protocol and network overhead"
               : "secondary is a CPU backend: scheduling/dependency correctness only; overlap timing is NOT meaningful offline (thread pools contend on one host)");
     J.end();
 
@@ -1684,6 +1789,7 @@ int main(int argc, char ** argv) {
         else if (a == "--tokens") H.T = atoll(next("--tokens").c_str());
         else if (a == "--split") H.split = atoll(next("--split").c_str());
         else if (a == "--secondary") H.secondary_kind = next("--secondary");
+        else if (a == "--rpc-endpoint") H.rpc_endpoint = next("--rpc-endpoint");
         else if (a == "--threads") H.threads = atoi(next("--threads").c_str());
         else if (a == "--secondary-threads") H.secondary_threads = atoi(next("--secondary-threads").c_str());
         else if (a == "--warmup") H.warmup = atoi(next("--warmup").c_str());
@@ -1699,7 +1805,8 @@ int main(int argc, char ** argv) {
         else if (a == "--list-devices") return list_devices();
         else if (a == "--help" || a == "-h") {
             printf("usage: %s [--gguf <shard> --layer N | --synthetic [--experts N] [--seed S]]\n"
-                   "  --tokens T (1 = decode, 128 = prefill) [--split S] [--secondary cpu|cuda]\n"
+                   "  --tokens T (1 = decode, 128 = prefill) [--split S] [--secondary cpu|cuda|rpc]\n"
+                   "  [--rpc-endpoint host:port] (required for --secondary rpc)\n"
                    "  [--threads N] [--secondary-threads N] [--warmup W] [--reps R]\n"
                    "  [--inputs-file <f32 block activations>] [--json out.json]\n"
                    "  [--self-check-negative] [--self-check-status-negative]\n"
@@ -1714,6 +1821,11 @@ int main(int argc, char ** argv) {
     if (H.mode == "gguf" && H.gguf_path.empty()) { fprintf(stderr, "error: --gguf needs a path\n"); return 2; }
     if (H.mode == "synthetic" && H.n_expert < N_USED) { fprintf(stderr, "error: --experts must be >= %lld\n", (long long)N_USED); return 2; }
     if (H.split < 0 || H.split > H.n_expert) { fprintf(stderr, "error: --split out of range\n"); return 2; }
-    if (H.secondary_kind != "cpu" && H.secondary_kind != "cuda") { fprintf(stderr, "error: --secondary must be cpu or cuda\n"); return 2; }
+    if (H.secondary_kind != "cpu" && H.secondary_kind != "cuda" && H.secondary_kind != "rpc") {
+        fprintf(stderr, "error: --secondary must be cpu, cuda or rpc\n"); return 2;
+    }
+    if (H.secondary_kind == "rpc" && H.rpc_endpoint.empty()) {
+        fprintf(stderr, "error: --secondary rpc requires --rpc-endpoint host:port\n"); return 2;
+    }
     return run_harness(H);
 }
