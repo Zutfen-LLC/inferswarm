@@ -267,7 +267,8 @@ class NativeCacheTests(unittest.TestCase):
             size = self.fixtures['A'].stat().st_size
             self.case(worker, 'A', size, control='offset')
             self.case(worker, 'A', 0, control='offset')
-            self.case(worker, 'A', 0, control='async')
+            self.case(worker, 'B', size, control='async')
+            self.case(worker, 'B', 0, control='async')
 
     def test_interrupted_publication_preserves_final_and_recovers(self):
         cache = self.root / 'interrupted-cache'
