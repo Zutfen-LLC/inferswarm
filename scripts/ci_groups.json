@@ -125,7 +125,8 @@
   "moe-overlap-prototype": {
    "invariant": "Offline correctness of the MoE overlap prototype harness: identical routed-expert/shared-branch work in serial and overlapped schedules, dependency ordering, routed-work accounting, comparator sensitivity and fail-closed behavior. No performance or authority claim.",
    "test_modules": [
-    "test_moe_overlap_prototype"
+    "test_moe_overlap_prototype",
+    "test_native_moe_overlap"
    ]
   },
   "r8-qwen-lineage": {
@@ -1852,6 +1853,9 @@
   "tests/test_moe_overlap_prototype.py": [
    "moe-overlap-prototype"
   ],
+  "tests/test_native_moe_overlap.py": [
+   "moe-overlap-prototype"
+  ],
   "tests/test_project_status.py": [
    "repo-integrity"
   ],
@@ -1859,6 +1863,9 @@
    "issue-99-103"
   ],
   "tools/moe-overlap/": [
+   "moe-overlap-prototype"
+  ],
+  "tools/native-moe-overlap/": [
    "moe-overlap-prototype"
   ]
  },
