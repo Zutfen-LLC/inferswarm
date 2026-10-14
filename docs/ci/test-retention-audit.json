@@ -5166,6 +5166,28 @@
       "replacement": null,
       "test_count_at_audit": 20
     },
+    "test_issue311_preparation": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 12,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Assigned-only immutable backing and exact shared metadata, verified process restart reuse, assignment delta, fail-closed corruption/interruption/revision checks, bounded cache file operations, and configured disk/headroom admission using #99/#101 authority.",
+      "lineage": "Issue #311 selective preparation successor to #99/#101 and #200",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "scripts/issue311_preparation.py",
+          "scripts/issue311_native_backing.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline synthetic backing proof. Original Q8 runner remains full-source-both-hosts/1; no full Q8 startup, physical qualification, acceptance or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 12
+    },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",
       "baseline_serial_seconds": 0.17,
@@ -5644,6 +5666,7 @@
       "baseline_serial_seconds": null,
       "baseline_test_count": 4,
       "category": "CURRENT_CONTRACT",
+      "current_test_count": 5,
       "disposition": "retain",
       "group": "moe-overlap-prototype",
       "invariant": "The actual pinned native RPC cache accepts only exact-length SHA-256 payloads, revalidates on every use, publishes only complete verified staged files atomically, reuses unchanged payloads across connections/restarts, fetches only missing deltas, preserves tensor semantics and bounds transfer staging independently of cached/tensor size.",
@@ -5656,7 +5679,7 @@
         ]
       },
       "pinned_by_evidence": [],
-      "rationale": "Compact CPU/loopback regression fixtures only; no selective Q8 operator completion, disk-budget, physical small-RAM/GPU qualification, acceptance or execution authority.",
+      "rationale": "Compact CPU/loopback fixtures include selective preparation-to-native cache composition with restart and delta. No complete Q8 operator integration, physical small-RAM/GPU qualification, acceptance or execution authority.",
       "replacement": null,
       "test_count_at_audit": 4
     },

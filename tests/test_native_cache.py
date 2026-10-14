@@ -15,6 +15,7 @@ import resource
 import socket
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -269,6 +270,73 @@ class NativeCacheTests(unittest.TestCase):
             self.case(worker, 'A', 0, control='offset')
             self.case(worker, 'B', size, control='async')
             self.case(worker, 'B', 0, control='async')
+
+    def test_selective_preparation_native_consumption_restart_and_delta(self):
+        # Composition proof: #101-authorized range acquisition -> bounded #99
+        # backing -> atomic #200-compatible RPC view -> real protocol-v7 hit.
+        sys.path.insert(0, str(ROOT/'scripts'))
+        from issue99_artifact_core import LocalFileSource, freeze_artifact_record, self_digest
+        from issue101_orchestration import Coordinator
+        from issue311_preparation import DiskBudget, StreamingArtifactCache, StreamingNode, prepare_participant
+        from issue311_native_backing import publish_rpc_views
+        from inferswarm.operator.source import compile_fnv, fnv
+        helper = self.root/'preparation-fnv'; compile_fnv(helper)
+        origin = self.root/'assigned-origin'; origin.mkdir()
+        records = {}; keys = {}
+        model = dict(model_id='synthetic/native', revision='fixture-v1', representation='Q8_0')
+        for label in ('A','B','C','Q'):
+            # Header/padding stands outside the assigned payload. Mandatory
+            # acquisition of that remainder would be visible in the source log.
+            data = self.fixtures[label].read_bytes()
+            (origin/(label+'.bin')).write_bytes(data+b'UNRELATED')
+            records[label] = freeze_artifact_record(kind='byte_range',content=data,**model,
+                satisfies_logical_state_ids=[label],requirement_class='assigned_logical_state',
+                origin=dict(source_object=label+'.bin',source_object_digest='sha256:'+hashlib.sha256(data+b'UNRELATED').hexdigest(),
+                            source_object_length=len(data)+9,byte_start=0,byte_end=len(data)))
+            keys[label] = fnv(self.fixtures[label],str(helper))
+        # This is deliberately never an assigned or acquired artifact.
+        (origin/'unassigned.bin').write_bytes(b'NOT NEEDED')
+        source = LocalFileSource(source_id='origin',root=origin)
+        cache = self.root/'selective-cache'
+        budget = DiskBudget(128<<20,0,(12<<20)+32768)
+        def preparation(labels,epoch):
+            node=StreamingNode('worker',StreamingArtifactCache(cache))
+            controller=Coordinator(node_sources=[node.descriptor()],origin_sources=[source.descriptor()])
+            plan=dict(epoch=epoch,model=model,logical_state_units=[dict(id=n) for n in records],
+                participants=[dict(participant_id='P',node_id='worker',execution_unit_id='native-fixture',
+                    required_state=dict(assigned_logical_state=labels,declared_shared_state=[],required_metadata=[]))])
+            plan['plan_digest']=self_digest(plan,identity_field='plan_digest')
+            required=controller.freeze(plan,lambda cls,sid:[records[sid]])
+            return prepare_participant(coordinator=controller,requirements=required,participant_id='P',
+                node=node,sources={'origin':source},budget=budget,
+                publish_view=lambda backing:publish_rpc_views(backing,[(records[n],keys[n]) for n in labels],fnv_binary=str(helper)))
+        cold=preparation(['A','B'],1)
+        self.assertEqual(cold['acquisition_bytes'],24<<20)
+        self.assertEqual({r['source_object'] for r in source.access_log},{'A.bin','B.bin'})
+        self.assertLessEqual(max(r['length'] for r in source.access_log),65536)
+        # Both cold-prepared payloads are already native hits on first startup.
+        with self.worker(cache) as worker:
+            self.case(worker,'A',0); self.case(worker,'B',0)
+        before=len(source.access_log)
+        warm=preparation(['A','B'],1)
+        self.assertEqual(warm['acquisition_bytes'],0)
+        self.assertEqual(len(source.access_log),before)
+        with self.worker(cache) as worker: self.case(worker,'A',0)
+        delta=preparation(['B','C','Q'],2)
+        self.assertEqual(delta['acquisition_bytes'],(12<<20)+self.fixtures['Q'].stat().st_size)
+        self.assertEqual({r['source_object'] for r in source.access_log[before:]},{'C.bin','Q.bin'})
+        with self.worker(cache) as worker:
+            self.case(worker,'B',0); self.case(worker,'C',0); self.case(worker,'Q',0,control='q8')
+        # Immutable backing and the native view share disk bytes, but have no
+        # permanent Python host mirror. Old A remains optional and budgeted.
+        target=cache/'rpc'/keys['A']
+        self.assertTrue(target.exists())
+        backing=cache/'objects'/records['A']['content_digest'].replace(':','-')
+        self.assertEqual(target.stat().st_ino,backing.stat().st_ino)
+        self.records.append(dict(case='selective-preparation',cold_acquisition_bytes=cold['acquisition_bytes'],
+            warm_acquisition_bytes=warm['acquisition_bytes'],delta_acquisition_bytes=delta['acquisition_bytes'],
+            unrelated_acquisition_bytes=0,source_max_read_bytes=max(r['length'] for r in source.access_log),
+            native_first_load_weight_payload=0,worker_restarted=True,exact_readback=True))
 
     def test_interrupted_publication_preserves_final_and_recovers(self):
         cache = self.root / 'interrupted-cache'
