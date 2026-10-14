@@ -221,8 +221,9 @@ UNKNOWN obligations. The successor replaces the obsolete weight-sized RPC
 message copy with a 352-byte descriptor, receive/cache-hit vectors with fixed
 1 MiB scratch charges, and full participant GGUF storage with the configured
 prepared-backing ceiling (including reserve/history). Receive scratch is charged
-for load and serve. Assigned metadata/guard payloads have a 2 MiB charge; native
-map/allocator overhead and backing-page residence remain UNKNOWN. No physical
+for load and serve. Assigned metadata/guard payloads have a 2 MiB charge on each
+role; native map/allocator overhead is UNKNOWN on both roles, and backing-page
+residence remains UNKNOWN. No physical
 host peak or automatic execution admission is claimed.
 
 The compact native regression calls the actual pinned

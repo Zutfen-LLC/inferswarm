@@ -142,6 +142,12 @@ class AssignedSourceTests(unittest.TestCase):
         self.assertEqual(charges['remote-receive-staging/load'].bytes,1<<20)
         self.assertEqual(charges['remote-receive-staging/serve'].bytes,1<<20)
         self.assertEqual(charges['FNV-cache-message-staging/load'].bytes,352)
+        for prefix,mid in (('', 'B-ram'),('coordinator-', 'A-ram')):
+            for phase in ('load','serve','cleanup'):
+                metadata=charges[prefix+'assigned-metadata-and-guard/'+phase]
+                layout=charges[prefix+'assigned-descriptor-layout/'+phase]
+                self.assertEqual((metadata.memory_id,metadata.bytes),(mid,2<<20))
+                self.assertEqual((layout.memory_id,layout.bytes),(mid,None))
         self.assertEqual(charges['prepared-backing-budget/load'].bytes,256<<30)
         self.assertFalse(any(k.startswith('source-backing:B:') for k in charges))
         self.assertFalse(any(k.startswith('full-tensor-cache-hit-vector') for k in charges))

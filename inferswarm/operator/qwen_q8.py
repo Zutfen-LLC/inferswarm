@@ -234,6 +234,8 @@ def _charges(config, contract, assignments, states, boundaries, options):
             add('native-cache-scratch',remote_cpu.memory_id,'transient',1<<20,('load',))
             add('assigned-metadata-and-guard',remote_cpu.memory_id,'required',2<<20,resident)
             add('assigned-descriptor-layout',remote_cpu.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
+            add('coordinator-assigned-metadata-and-guard',loader.memory_id,'required',2<<20,resident)
+            add('coordinator-assigned-descriptor-layout',loader.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
             add('prepared-backing-budget',disk,'backing',options['participant_backing']['limit_bytes'],PHASES)
         else:
             add('full-tensor-cache-hit-vector',remote_cpu.memory_id,'transient',LARGEST_BANK,('load',))
