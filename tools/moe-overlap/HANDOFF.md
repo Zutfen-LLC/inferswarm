@@ -5,6 +5,47 @@ Review-facing summary of this branch's deliverable. Full detail lives in
 (proposed hardware steps), and the retained offline reports under
 [`offline-validation/`](offline-validation/).
 
+## Current integration status (2026-10-14)
+
+PR #307 merged as `12276ee39fe4d775a2a8e8adef191b9890114ab9` from
+`6f3aa083bb3dec21209f25ac3b67c0c5bcac4123`. PR #308 preserves its original
+three commits at `c51cb8ce8dc3cc6e648bf2dac47534d11309d67f` and merges that
+main ancestry additively; its target is now main. The original stacked/offline
+handoff below is historical. This integration carries the repaired canonical
+CUDA flags, driver resolution and compiler/cache identity into both RPC roles;
+it changes no numerical contract, timer, endpoint restriction or resident-weight
+protocol, and adds no runtime integration or hardware authority.
+
+The [operator-reported clean CUDA harness build and no-model discovery](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6158309286)
+passed on inferswarm01 at exact #307 head `6f3aa083`, without wrappers or manual
+relinking. The initial 8.11-minute host-floor sampling gap remains a limitation.
+That record does not newly compile #308's CUDA worker. Valinor has no nvcc;
+local validation covers CPU/RPC builds, loopback contracts and offline command
+construction, with exact results recorded in the PR body.
+
+The separately authorized two-node experiments completed at `c51cb8ce` on
+the original timer-enabled base `877e2df91dfccce8b1079f034cd005a676e94fd7`
+and native pin `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`:
+
+- [Reconciled T=128 record](https://github.com/Zutfen-LLC/inferswarm/pull/308#issuecomment-6156395859):
+  scheduling equivalence passed; legacy numerical FAIL retained; substantial
+  communication cost without isolated cause. No direct in-residency VRAM sample
+  or timed kernel capture was retained for this shape.
+- [T=1 record](https://github.com/Zutfen-LLC/inferswarm/pull/308#issuecomment-6156999801):
+  scheduling equivalence and legacy numerical diagnostics passed; timestamped
+  worker VRAM observations support per-connection resident allocations. They
+  are not timed kernel evidence, and separate timing medians cannot attribute
+  the entire gain. The reported access-cleanup trailing-newline exception is
+  preserved in the source record.
+
+These are historical operator reports, not new physical validation of the
+integrated head. The independent numerical profile remains unsupported
+(`rpc-remote-unverified`); scheduling equivalence never sets
+`hardware_qualified`. No full-model or tokens/second qualification follows.
+No further microbenchmark run is requested. PR #308 stays open/draft for
+independent exact-head review; hosted Final CPU Validation waits for maintainer
+GO on that head. Issue #300 stays open.
+
 ## Verdict
 
 **Scheduling equivalence separated from backend numerical qualification;

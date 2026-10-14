@@ -1,10 +1,13 @@
 # Two-node hardware recipe: remote resident-block overlap (RPC)
 
-Proposed, **separately authorized** hardware steps for measuring the PR #307
+Recipe for **separately authorized** hardware steps for measuring the PR #307
 overlap mechanism with the routed experts on a remote GPU worker. Nothing
 here is execution authority; run it only after maintainer dispatch through
-the normal Hermes handoff. Preconditions: PR #307 merged or its branch
-available; this stacked branch at the reviewed head; the pinned llama.cpp
+the normal Hermes handoff. PR #307 merged at `12276ee3`; #308 now integrates
+main additively. The historical T=128 and T=1 experiments at `c51cb8ce` are
+complete (records and limitations in [`HANDOFF.md`](HANDOFF.md)); this recipe
+does not request a repeat. Preconditions for any future authorized execution:
+the exact reviewed head; the pinned llama.cpp
 source verified per `build.py` (commit + tree digests).
 
 ## Topology and roles
@@ -31,15 +34,22 @@ Coordinator (CPU-only closure is sufficient — the RPC client links in):
 python3 tools/moe-overlap/build.py --jobs <n>
 ```
 
-Worker (full CUDA closure; budget 60+ min for the 188-TU nvcc phase on the
-3060-class hosts — see the PR #307 CUDA build lessons; same libcuda.so
-symlink and nvcc-wrapper notes apply):
+Worker (full CUDA closure; allow a separate build window for the 188-TU nvcc
+phase on the 3060-class hosts — see the PR #307 CUDA build lessons):
 
 ```
 python3 tools/moe-overlap/build.py --cuda --rpc-worker --jobs 2
 # (produces moe_rpc_worker_cuda — a distinct name from the CUDA harness
 # binary, so the two roles never overwrite each other in the shared cache)
 ```
+
+The integrated recipe uses real nvcc with `--extended-lambda`, the pin's
+Flash Attention definitions, and the selected host compiler via `-ccbin`.
+Driver resolution and the optional `MOE_OVERLAP_CUDA_DRIVER` override follow
+[`hardware-recipe.md`](hardware-recipe.md); no nvcc wrapper, manual relink or
+system libcuda symlink is needed. The [clean #307 harness build/discovery](https://github.com/Zutfen-LLC/inferswarm/pull/307#issuecomment-6158309286)
+passed at `6f3aa083`; this does not establish a clean CUDA worker build at the
+integrated #308 head. No CUDA worker compilation occurred on Valinor (no nvcc).
 
 Record binary sha256s, the pinned source verification output, and
 `--list-devices` output on the worker host.

@@ -1554,39 +1554,295 @@ class TestBuildCacheAndStatusControls(unittest.TestCase):
 
 
 class TestBuildCommands(unittest.TestCase):
+    """Offline recipe/cache tests with fake ELF files and a recording toolchain.
+
+    These do not compile CUDA, load a driver, or discover a device.
+    """
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("moe_build_commands", BUILD_PY)
+        self.build = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.build)
+        stack = contextlib.ExitStack()
+        self.addCleanup(stack.close)
+        self.root = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+        self.source = self.root / "source"
+        self.cuda_rels = ["ggml/src/ggml-cuda/ggml-cuda.cu",
+                          "ggml/src/ggml-cuda/top-k.cu",
+                          "ggml/src/ggml-cuda/template-instances/mmq-instance.cu"]
+        for rel in self.build.C_SOURCES + self.build.CXX_SOURCES + self.cuda_rels:
+            p = self.source / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("fake source")
+        self.harness = self.root / "harness.cpp"
+        self.harness.write_text("fake harness")
+        self.worker = self.root / "tools/moe-overlap/rpc_worker.cpp"
+        self.worker.parent.mkdir(parents=True)
+        self.worker.write_text("fake worker")
+        self.driver = self.fake_elf("driver/libcuda.so.1")
+        development = self.driver.with_name("libcuda.so")
+        development.symlink_to(self.driver.name)
+        self.lookups = {"libcuda.so": str(development)}
+        self.commands = []
+        self.probe_rc = 0
+        self.versions = {"cc": "cc-v1", "c++": "cxx-v1", "nvcc": "nvcc-v1"}
+        stack.enter_context(mock.patch.dict(os.environ, {}, clear=False))
+        os.environ.pop("MOE_OVERLAP_CUDA_DRIVER", None)
+        stack.enter_context(mock.patch.object(self.build, "HARNESS", self.harness))
+        stack.enter_context(mock.patch.object(self.build, "REPO", self.root))
+        stack.enter_context(mock.patch.object(self.build, "pick_compiler",
+                                             side_effect=lambda k: "cc" if k == "c" else "c++"))
+        stack.enter_context(mock.patch.object(self.build.shutil, "which",
+                                             side_effect=lambda p: p if p in self.versions or p == "ldconfig" else None))
+        stack.enter_context(mock.patch.object(self.build.subprocess, "run", side_effect=self.record))
+
+    def fake_elf(self, rel):
+        p = self.root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"\x7fELFfixture, not a real driver")
+        return p
+
+    def record(self, cmd, **kw):
+        self.commands.append(cmd)
+        if "--version" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, self.versions[cmd[0]], "")
+        if cmd[-1].startswith("-print-file-name="):
+            name = cmd[-1].split("=", 1)[1]
+            return subprocess.CompletedProcess(cmd, 0, self.lookups.get(name, name), "")
+        if cmd == ["ldconfig", "-p"]:
+            return subprocess.CompletedProcess(cmd, 0, getattr(self, "loader_cache", ""), "")
+        if "-x" in cmd:
+            self.assertIn("cuMemCreate", kw["input"])
+            return subprocess.CompletedProcess(cmd, self.probe_rc, "", "fixture link failure")
+        if "-o" in cmd:
+            Path(cmd[cmd.index("-o") + 1]).touch()
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    def run_build(self, cuda=True, rpc_worker=False):
+        self.commands.clear()
+        with contextlib.redirect_stdout(io.StringIO()):
+            return self.build.build(self.source, self.root / ("cuda" if cuda else "cpu"),
+                                    2, cuda, rpc_worker=rpc_worker)
+
+    def compiles(self):
+        return [c for c in self.commands if "-c" in c]
+
     def test_cuda_driver_dependency_and_registration(self):
         """Capture commands without nvcc: VMM needs the driver, and every
         CUDA/host TU must retain compile-time backend registration."""
-        spec = importlib.util.spec_from_file_location("moe_build_commands", BUILD_PY)
+        for cuda in (False, True):
+            with self.subTest(cuda=cuda):
+                binary = self.run_build(cuda)
+                self.assertEqual(binary.name, "moe_overlap_harness_cuda" if cuda else "moe_overlap_harness")
+                compiles = self.compiles()
+                link = self.commands[-1]
+                self.assertEqual(len(compiles), len(self.build.C_SOURCES) + len(self.build.CXX_SOURCES) + 1 + (3 if cuda else 0))
+                self.assertEqual("-lcuda" in link, cuda)
+                for c in compiles:
+                    self.assertEqual("-DGGML_USE_CUDA" in c, cuda)
+                    self.assertNotIn("-DGGML_CUDA_NO_VMM", c)
+                if cuda:
+                    for lib in ("-lcuda", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"):
+                        self.assertIn(lib, link)
+                        self.assertGreater(link.index(lib), max(i for i, arg in enumerate(link) if arg.endswith(".o")))
+                    types = ("Q4_0", "Q4_1", "Q5_0", "Q5_1", "Q8_0", "BF16", "F16")
+                    enabled = {"Q4_0", "Q8_0", "F16", "BF16"}
+                    expected = {f"-DGGML_CUDA_FA_{k}_{v}={int(k == v and k in enabled)}"
+                                for k in types for v in types}
+                    for c in (c for c in compiles if c[0] == "nvcc"):
+                        self.assertIn("--extended-lambda", c)
+                        self.assertIn('-DGGML_CUDA_FA_QUANTS="q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16"', c)
+                        actual = {arg for arg in c if arg.startswith("-DGGML_CUDA_FA_") and "QUANTS" not in arg}
+                        self.assertEqual(actual, expected)
+                        self.assertIn("-arch=sm_86", c)
+                        self.assertEqual(c[c.index("-ccbin") + 1], "c++")
+                else:
+                    self.assertFalse(any("-print-file-name=" in " ".join(c) or "-x" in c for c in self.commands))
+
+    def test_versioned_driver_from_compiler_or_loader_cache(self):
+        for lookup in (True, False):
+            with self.subTest(compiler_search=lookup):
+                self.lookups = {"libcuda.so.1": str(self.driver)} if lookup else {}
+                self.loader_cache = f" libcuda.so.1 (libc6,x86-64) => {self.driver}\n"
+                self.run_build()
+                link = self.commands[-1]
+                self.assertIn(str(self.driver), link)
+                self.assertNotIn("-lcuda", link)
+
+    def test_worker_inherits_cuda_recipe_and_rpc_closure(self):
+        """Both worker variants link RPC while retaining canonical CUDA flags.
+
+        Recording toolchain only; this does not compile the CUDA worker.
+        """
+        for cuda in (False, True):
+            with self.subTest(cuda=cuda):
+                binary = self.run_build(cuda, rpc_worker=True)
+                self.assertEqual(binary.name, "moe_rpc_worker_cuda" if cuda else "moe_rpc_worker")
+                compiles = self.compiles()
+                sources = {c[c.index("-c") + 1] for c in compiles}
+                self.assertIn(str(self.worker), sources)
+                self.assertNotIn(str(self.harness), sources)
+                link = self.commands[-1]
+                for rel in ("ggml/src/ggml-rpc/ggml-rpc.cpp", "ggml/src/ggml-rpc/transport.cpp"):
+                    self.assertIn(str(self.source / rel), sources)
+                    self.assertIn(str(binary.parent / (rel.replace("/", "__") + ".o")), link)
+                for c in compiles:
+                    self.assertEqual("-DGGML_USE_CUDA" in c, cuda)
+                    self.assertNotIn("-DGGML_USE_RPC", c)
+                    self.assertNotIn("-DGGML_CUDA_NO_VMM", c)
+                self.assertNotIn("-DGGML_USE_RPC", link)
+                self.assertEqual("-lcuda" in link, cuda)
+                if cuda:
+                    for c in (c for c in compiles if c[0] == "nvcc"):
+                        self.assertTrue(set(self.build.NVCC_FLAGS).issubset(c))
+                        self.assertEqual(c[c.index("-ccbin") + 1], "c++")
+                        self.assertIn("-arch=sm_86", c)
+                    for lib in ("-lcuda", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"):
+                        self.assertGreater(link.index(lib), max(i for i, arg in enumerate(link) if arg.endswith(".o")))
+
+    def test_harness_worker_cache_role_switch_preserves_both_entries(self):
+        """The shared closure is reused; each role keeps its own entry/binary."""
+        for cuda in (False, True):
+            with self.subTest(cuda=cuda):
+                harness = self.run_build(cuda)
+                harness.write_bytes(b"retained harness")
+                worker = self.run_build(cuda, rpc_worker=True)
+                self.assertEqual([c[c.index("-c") + 1] for c in self.compiles()], [str(self.worker)])
+                self.assertEqual(harness.read_bytes(), b"retained harness")
+                worker_link = self.commands[-1]
+                self.assertIn(str(worker.parent / "rpc_worker.o"), worker_link)
+                self.assertNotIn(str(worker.parent / "moe_overlap_harness.o"), worker_link)
+                worker.write_bytes(b"retained worker")
+                self.assertEqual(self.run_build(cuda), harness)
+                self.assertEqual(self.compiles(), [])
+                self.assertEqual(worker.read_bytes(), b"retained worker")
+                self.assertIn(str(harness.parent / "moe_overlap_harness.o"), self.commands[-1])
+                self.assertNotIn(str(harness.parent / "rpc_worker.o"), self.commands[-1])
+                self.worker.write_text(f"changed worker cuda={cuda}")
+                self.run_build(cuda, rpc_worker=True)
+                self.assertEqual([c[c.index("-c") + 1] for c in self.compiles()], [str(self.worker)])
+
+    def test_explicit_driver_and_invalid_paths_fail_before_compile(self):
+        with mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": str(self.driver)}):
+            self.run_build()
+            self.assertIn(str(self.driver), self.commands[-1])
+            self.assertFalse(any("-print-file-name=" in " ".join(c) for c in self.commands))
+        text = self.root / "libcuda.so"
+        text.write_text("not ELF")
+        stub = self.fake_elf("toolkit/stubs/libcuda.so")
+        alias = self.root / "aliased-driver.so"
+        alias.symlink_to(stub)
+        for path in (self.root / "missing.so", self.root, text, stub, alias, ""):
+            with self.subTest(path=path), mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": str(path)}):
+                with self.assertRaisesRegex(SystemExit, "MOE_OVERLAP_CUDA_DRIVER invalid"):
+                    self.run_build()
+                self.assertEqual(self.compiles(), [])
+
+    def test_missing_stub_only_or_unlinkable_driver_fails_before_compile(self):
+        stub = self.fake_elf("toolkit/stubs/libcuda.so")
+        for lookups, rc in (({}, 0), ({"libcuda.so": str(stub)}, 0),
+                            ({"libcuda.so.1": str(self.driver)}, 1)):
+            self.lookups, self.probe_rc = lookups, rc
+            with self.subTest(lookups=lookups, rc=rc):
+                with self.assertRaisesRegex(SystemExit, "CUDA runtime driver unavailable"):
+                    self.run_build()
+                self.assertEqual(self.compiles(), [])
+
+    def test_stub_search_falls_back_to_runtime_driver(self):
+        stub = self.fake_elf("toolkit/stubs/libcuda.so")
+        self.lookups = {"libcuda.so": str(stub), "libcuda.so.1": str(self.driver)}
+        self.run_build()
+        self.assertIn(str(self.driver), self.commands[-1])
+        self.assertNotIn("-lcuda", self.commands[-1])
+
+    def test_link_directory_stub_cannot_shadow_system_development_driver(self):
+        stub = self.fake_elf("toolkit/stubs/libcuda.so")
+        libdir = self.root / "toolkit/lib64"
+        libdir.mkdir()
+        (libdir / "libcuda.so").symlink_to(stub)
+        self.lookups = {"libcuda.so": str(self.driver.with_name("libcuda.so")),
+                        "libcuda.so.1": str(self.driver)}
+        with mock.patch.object(self.build, "CUDA_LIB_FLAGS", [f"-L{libdir}", *self.build.CUDA_LIB_FLAGS[1:]]):
+            self.run_build()
+        self.assertIn(str(self.driver), self.commands[-1])
+        self.assertNotIn("-lcuda", self.commands[-1])
+
+    def test_cpu_ignores_invalid_cuda_override_and_missing_nvcc_refuses(self):
+        with mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": "/missing/driver"}):
+            self.run_build(cuda=False)
+        with mock.patch.object(self.build.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(SystemExit, "nvcc not found"):
+                self.run_build()
+            self.assertEqual(self.compiles(), [])
+
+    def test_final_link_failure_propagates(self):
+        def fail_link(cmd, **kw):
+            if "-o" in cmd and "-c" not in cmd and "-x" not in cmd:
+                raise subprocess.CalledProcessError(1, cmd)
+            return self.record(cmd, **kw)
+        with mock.patch.object(self.build.subprocess, "run", side_effect=fail_link):
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.run_build()
+
+    def test_source_override_still_requires_pin_identity(self):
+        rel = self.build.CONTRACT_VERIFY_FILES[0]
+        path = self.source / rel
+        with mock.patch.object(self.build, "_contract_digests", return_value={rel: "0" * 64}), \
+             mock.patch.dict(os.environ, {"MOE_OVERLAP_SOURCE": str(self.source)}):
+            with self.assertRaisesRegex(SystemExit, "pin identity check FAILED"):
+                self.build.ensure_source(self.root)
+        self.assertTrue(path.is_file())
+
+    def test_cache_tracks_source_flags_and_both_cuda_compilers(self):
+        self.run_build()
+        self.run_build()
+        self.assertEqual(self.compiles(), [])
+        changed = self.source / self.cuda_rels[0]
+        changed.write_text("changed source")
+        self.run_build()
+        self.assertEqual([c[c.index("-c") + 1] for c in self.compiles()], [str(changed)])
+        self.build.NVCC_FLAGS.append("-DREGRESSION_FLAG")
+        self.run_build()
+        self.assertEqual(len(self.compiles()), len(self.cuda_rels))
+        self.versions["nvcc"] = "nvcc-v2"
+        self.run_build()
+        self.assertEqual(len(self.compiles()), len(self.cuda_rels))
+        self.versions["c++"] = "cxx-v2"
+        self.run_build()
+        self.assertEqual(len(self.compiles()), len(self.cuda_rels) + len(self.build.CXX_SOURCES)
+                         + sum(not s.endswith(".c") for s in self.build.C_SOURCES) + 1)
+        self.lookups = {"libcuda.so.1": str(self.driver)}
+        self.run_build()
+        self.assertEqual(self.compiles(), [])
+        self.assertIn(str(self.driver), self.commands[-1], "driver change must relink")
+
+
+class TestDriverLinkProbe(unittest.TestCase):
+    def test_host_link_with_synthetic_driver_library(self):
+        """Use a real CPU linker on a tiny synthetic ELF, without running it.
+
+        This catches language-option leakage into explicit shared-library
+        inputs that a recording toolchain cannot detect. No CUDA is involved.
+        """
+        spec = importlib.util.spec_from_file_location("moe_driver_probe", BUILD_PY)
         build = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(build)
+        cxx = build.pick_compiler("c++")
         with tempfile.TemporaryDirectory() as td:
-            source = Path(td) / "source"
-            for rel in ("ggml/src/ggml-cuda/ggml-cuda.cu",
-                        "ggml/src/ggml-cuda/top-k.cu",
-                        "ggml/src/ggml-cuda/template-instances/mmq-instance.cu"):
-                p = source / rel
-                p.parent.mkdir(parents=True, exist_ok=True)
-                p.touch()
-            for cuda in (False, True):
-                with self.subTest(cuda=cuda):
-                    commands = []
-                    with mock.patch.object(build, "pick_compiler", return_value="c++"), \
-                         mock.patch.object(build, "sha256_file", return_value="source-hash"), \
-                         mock.patch.object(build.shutil, "which", return_value="nvcc"), \
-                         mock.patch.object(build.subprocess, "run", side_effect=lambda cmd, **kw: commands.append(cmd)):
-                        build.build(source, Path(td) / str(cuda), jobs=2, cuda=cuda)
-                    compiles = [c for c in commands if "-c" in c]
-                    link = commands[-1]
-                    self.assertEqual(len(compiles), len(build.C_SOURCES) + len(build.CXX_SOURCES) + 1 + (3 if cuda else 0))
-                    self.assertEqual("-lcuda" in link, cuda)
-                    for c in compiles:
-                        self.assertEqual("-DGGML_USE_CUDA" in c, cuda)
-                        self.assertNotIn("-DGGML_CUDA_NO_VMM", c)
-                    if cuda:
-                        for lib in ("-lcuda", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"):
-                            self.assertIn(lib, link)
-                            self.assertGreater(link.index(lib), max(i for i, arg in enumerate(link) if arg.endswith(".o")))
+            source = Path(td) / "driver.cpp"
+            source.write_text('extern "C" void cuMemCreate() {}\n')
+            driver = Path(td) / "libcuda.so.1"
+            subprocess.run([cxx, "-shared", "-fPIC", "-Wl,-soname,libcuda.so.1",
+                            str(source), "-o", str(driver)], check=True)
+            with mock.patch.dict(os.environ, {"MOE_OVERLAP_CUDA_DRIVER": str(driver)}), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(build.cuda_driver_flags(cxx), [str(driver)])
+            with mock.patch.dict(os.environ, {"LIBRARY_PATH": td}, clear=False), \
+                 mock.patch.object(build, "CUDA_LIB_FLAGS", [f"-L{td}"]), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                os.environ.pop("MOE_OVERLAP_CUDA_DRIVER", None)
+                self.assertEqual(build.cuda_driver_flags(cxx), [str(driver)])
+                driver.with_name("libcuda.so").symlink_to(driver.name)
+                self.assertEqual(build.cuda_driver_flags(cxx), ["-lcuda"])
 
 
 # Link wrappers inject a returned native failure after the real CPU compute.

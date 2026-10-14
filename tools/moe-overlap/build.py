@@ -25,6 +25,7 @@ Environment:
                        never trusted by path alone)
   MOE_OVERLAP_TARBALL  existing pin tarball path (skips download, still verified)
   MOE_OVERLAP_OPT      optimization level override (default -O3; tests may use -O1)
+  MOE_OVERLAP_CUDA_DRIVER  optional real libcuda shared-library path (no stubs)
 """
 from __future__ import annotations
 
@@ -36,6 +37,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.request import urlopen
@@ -107,6 +109,103 @@ BASE_FLAGS = ["-O3", "-pthread", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
 BASE_FLAGS[0] = os.environ.get("MOE_OVERLAP_OPT", "-O3")
 INCLUDES = ["ggml/include", "ggml/src", "ggml/src/ggml-cpu", "ggml/src/ggml-cpu/include",
             "ggml/src/ggml-rpc"]
+
+# Defaults from this exact pin's ggml/CMakeLists.txt and
+# ggml/cmake/common.cmake:ggml_cuda_fattn_vec_instances. Every K/V pair needs
+# an explicit 0/1 definition, including the combinations not selected.
+CUDA_FA_TYPES = ("q4_0", "q4_1", "q5_0", "q5_1", "q8_0", "bf16", "f16")
+CUDA_FA_QUANTS = ("q4_0-q4_0", "q8_0-q8_0", "f16-f16", "bf16-bf16")
+NVCC_FLAGS = ["-O3", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
+              "-DGGML_SCHED_MAX_COPIES=4", "-DGGML_USE_CUDA", "--extended-lambda",
+              '-DGGML_CUDA_FA_QUANTS="' + ",".join(CUDA_FA_QUANTS) + '"'] + [
+    f"-DGGML_CUDA_FA_{k.upper()}_{v.upper()}={int(k + '-' + v in CUDA_FA_QUANTS)}"
+    for v in CUDA_FA_TYPES for k in CUDA_FA_TYPES
+]
+# The pin's CUDA CMake flags include -extended-lambda. Keep the previously
+# tested optimization/math behavior; adding fast-math is outside this repair.
+CUDA_LIB_FLAGS = ["-L/usr/local/cuda/lib64", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos"]
+
+
+def compiler_identity(compiler: str) -> str:
+    """Invalidate objects when the executable or its reported version changes."""
+    resolved = str(Path(shutil.which(compiler) or compiler).resolve())
+    version = subprocess.run([compiler, "--version"], check=True,
+                             capture_output=True, text=True).stdout
+    return resolved + "\n" + version
+
+
+def cuda_driver_flags(cxx: str) -> list[str]:
+    """Resolve the VMM driver dependency before compiling, without running it.
+
+    Prefer ordinary -lcuda when the compiler finds a development library.
+    Runtime-only installs can link the stable libcuda.so.1 SONAME path from
+    the compiler search or loader cache. Linking proves no device readiness;
+    --list-devices remains a separate hardware check. Never select stubs.
+    """
+    def validate(path: Path, link_flags: list[str]) -> None:
+        resolved = path.resolve()
+        if "stubs" in path.parts or "stubs" in resolved.parts:
+            raise ValueError(f"toolkit stub is not a runtime CUDA driver: {path}")
+        if not resolved.is_file():
+            raise ValueError(f"CUDA driver is not a file: {path}")
+        with resolved.open("rb") as f:
+            if f.read(4) != b"\x7fELF":
+                raise ValueError(f"CUDA driver is not an ELF shared library: {path}")
+        # Force a VMM symbol reference so an unrelated ELF or an older driver
+        # lacking the pin's dependency cannot pass. This binary is never run.
+        with tempfile.TemporaryDirectory(prefix="moe-cuda-link-") as td:
+            probe = subprocess.run(
+                [cxx, "-x", "c++", "-", "-x", "none", *link_flags,
+                 "-o", str(Path(td) / "probe")],
+                input='extern "C" void cuMemCreate(); int main(){cuMemCreate();}\n',
+                capture_output=True, text=True)
+        if probe.returncode:
+            raise ValueError(f"CUDA driver link probe failed for {path}: {probe.stderr.strip()}")
+
+    override = os.environ.get("MOE_OVERLAP_CUDA_DRIVER")
+    if override is not None:
+        path = Path(override)
+        try:
+            validate(path, [str(path.resolve())])
+        except (OSError, ValueError) as e:
+            raise SystemExit(f"MOE_OVERLAP_CUDA_DRIVER invalid: {e}") from e
+        print(f"CUDA driver: {path.resolve()} (explicit; link only, device readiness untested)")
+        return [str(path.resolve())]
+
+    candidates = []
+    # -print-file-name does not honor -L on GCC. Check our explicit linker
+    # directory first, and do not let a stub there shadow a later -lcuda probe.
+    development = Path(CUDA_LIB_FLAGS[0][2:]) / "libcuda.so"
+    if development.exists() or development.is_symlink():
+        candidates.append((development, [CUDA_LIB_FLAGS[0], "-lcuda"]))
+    for name in ("libcuda.so", "libcuda.so.1"):
+        if name == "libcuda.so" and candidates:
+            continue
+        result = subprocess.run([cxx, CUDA_LIB_FLAGS[0], f"-print-file-name={name}"],
+                                check=True, capture_output=True, text=True)
+        found = result.stdout.strip()
+        if found and found != name:
+            candidates.append((Path(found), [CUDA_LIB_FLAGS[0], "-lcuda"] if name == "libcuda.so" else [found]))
+    ldconfig = shutil.which("ldconfig") or shutil.which("/sbin/ldconfig")
+    if ldconfig:
+        result = subprocess.run([ldconfig, "-p"], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if line.strip().startswith("libcuda.so.1 ") and "=>" in line:
+                    found = line.split("=>", 1)[1].strip()
+                    candidates.append((Path(found), [found]))
+    failures = []
+    for path, link_flags in candidates:
+        try:
+            validate(path, link_flags)
+        except (OSError, ValueError) as e:
+            failures.append(str(e))
+            continue
+        print(f"CUDA driver: {path.resolve()} (link only, device readiness untested)")
+        return link_flags[1:] if "-lcuda" in link_flags else link_flags
+    detail = "; ".join(failures) or "no development library or libcuda.so.1 found"
+    raise SystemExit(f"CUDA runtime driver unavailable: {detail}; "
+                     "set MOE_OVERLAP_CUDA_DRIVER to a real driver library (not toolkit stubs)")
 
 
 def sha256_file(path: Path) -> str:
@@ -232,6 +331,15 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
         flags.append("-DGGML_USE_CUDA")
     inc = [f"-I{out_dir / 'generated'}"] + [f"-I{source / p}" for p in INCLUDES]
     print(f"compilers: CC={cc} CXX={cxx} opt={flags[0]} cuda={cuda}")
+    compiler_ids = {compiler: compiler_identity(compiler) for compiler in {cc, cxx}}
+    nvcc = None
+    driver_flags = []
+    if cuda:
+        nvcc = shutil.which("nvcc") or shutil.which("/usr/local/cuda/bin/nvcc")
+        if not nvcc:
+            raise SystemExit("nvcc not found; CUDA build requires the CUDA toolkit")
+        compiler_ids[nvcc] = compiler_identity(nvcc)
+        driver_flags = cuda_driver_flags(cxx)
 
     stamp_dir = out_dir / "stamps"
     stamp_dir.mkdir(exist_ok=True)
@@ -246,17 +354,14 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
         used = list(flags) if not nvcc else list(NVCC_FLAGS)
         key = hashlib.sha256(
             ("|".join([sha256_file(key_src), " ".join(used), " ".join(extra_flags),
-                       " ".join(cmd_prefix)])).encode()).hexdigest()
+                       " ".join(cmd_prefix), compiler_ids[cmd_prefix[0]],
+                       compiler_ids[cxx] if nvcc else ""])).encode()).hexdigest()
         stamp = stamp_dir / (o.name + ".stamp")
         if o.is_file() and stamp.is_file() and stamp.read_text() == key:
             return  # unchanged source, flags and compiler: reuse the object
         cmd = [*cmd_prefix, *used, *extra_flags, *inc, "-c", str(src_path), "-o", str(o)]
         subprocess.run(cmd, check=True)
         stamp.write_text(key)
-
-    # nvcc does not forward arbitrary host flags; the CUDA TUs get their own set
-    NVCC_FLAGS = ["-O3", "-D_GNU_SOURCE", "-D_FILE_OFFSET_BITS=64",
-                  "-DGGML_SCHED_MAX_COPIES=4", "-DGGML_USE_CUDA"]
 
     jobs_list = []
     objects: list[Path] = []
@@ -279,13 +384,10 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
     jobs_list.append(([cxx], entry_src, entry_o, ["-std=c++17"]))
 
     if cuda:
-        nvcc = shutil.which("nvcc") or shutil.which("/usr/local/cuda/bin/nvcc")
-        if not nvcc:
-            raise SystemExit("nvcc not found; CUDA build requires the CUDA toolkit")
         print(f"nvcc: {len(cuda_sources(source))} CUDA translation units")
         # nvcc compiles are large; run them with bounded parallelism
         with ThreadPoolExecutor(max_workers=max(1, min(jobs, 8))) as ex:
-            futs = [ex.submit(compile_one, [nvcc], s, obj_path(s),
+            futs = [ex.submit(compile_one, [nvcc, "-ccbin", cxx], s, obj_path(s),
                               ["-std=c++17", "-arch=sm_86", "--compiler-options", "-fPIC"], True)
                     for s in cuda_sources(source)]
             for f in futs:
@@ -308,7 +410,7 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
     if cuda:
         # VMM is enabled at this pin unless GGML_CUDA_NO_VMM is defined.
         # Mirror its ggml-cuda/CMakeLists.txt CUDA::cuda_driver dependency.
-        link += ["-L/usr/local/cuda/lib64", "-lcudart", "-lcublas", "-lcublasLt", "-lculibos", "-lcuda"]
+        link += [*CUDA_LIB_FLAGS, *driver_flags]
     link += ["-o", str(binary)]
     print("linking", binary.name)
     subprocess.run(link, check=True)
