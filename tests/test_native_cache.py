@@ -108,6 +108,11 @@ class Relay:
                     if cmd in (6, 7):
                         row['key'] = f'{struct.unpack_from("<Q", prefix, 304)[0]:016x}'
                         row['sha256'] = prefix[320:352].hex()
+                        row['tensor'] = prefix[228:292].split(b'\0',1)[0].decode('ascii')
+                        row['type'] = struct.unpack_from('<I',prefix,8)[0]
+                        row['shape'] = list(struct.unpack_from('<IIII',prefix,20))
+                        row['offset'] = struct.unpack_from('<Q',prefix,296)[0]
+                        row['length'] = struct.unpack_from('<Q',prefix,312)[0]
                     if cmd == 8:
                         row['get_bytes'] = struct.unpack_from('<Q', prefix, 304)[0]
             except (OSError, EOFError):

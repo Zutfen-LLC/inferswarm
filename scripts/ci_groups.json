@@ -101,6 +101,7 @@
     "test_issue200_r8f_source_policy",
     "test_issue200_r8f_proof",
     "test_issue311_preparation",
+    "test_issue311_startup",
     "test_issue255_mvp",
     "test_issue255_measure",
     "test_issue255_baseline",

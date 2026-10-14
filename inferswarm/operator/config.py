@@ -478,6 +478,9 @@ def profile_subject(config, *, profile_mode='live') -> ProfileSubject:
     snapshot=config.profiles.snapshot
     bindings=tuple(b for p in config.participants for b in p.bindings)
     memory_ids={b.memory_id for b in bindings}|{b.memory_id for p in config.participants for b in p.backing}
+    options=thaw(config.strategy_options)
+    if options.get('source_contract')=='coordinator-full-source/participant-assigned-rpc-backing/1':
+        memory_ids.add(options['participant_backing']['memory_id'])
     # Workload tuple maps remain tuples in Python but hash JSON object semantics.
     workload=asdict(config.workload); workload['cache_settings']=thaw(config.workload.cache_settings)
     dependencies=tuple(sorted([('model:source_id',config.model.source_id),('model:revision',config.model.revision),

@@ -209,6 +209,7 @@ GROUP_TEST_MODULES = {
         "test_issue200_r8f_source_policy",
         "test_issue200_r8f_proof",
         "test_issue311_preparation",
+        "test_issue311_startup",
         # Issue #255: bounded CUDA/RPC product execution and local baseline.
         "test_issue255_mvp",
         "test_issue255_measure",

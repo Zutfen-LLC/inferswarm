@@ -264,7 +264,8 @@ class NativeObserverCollector:
 
     def __init__(self, transport: SSHCollectorTransport | None = None,
                  identity_reader: ProcIdentityReader | None = None,
-                 retained_builds=None, host_facts_reader: 'HostFactsReader | None' = None):
+                 retained_builds=None, host_facts_reader: 'HostFactsReader | None' = None, *, selective=False):
+        self.selective=selective
         self.transport = transport or SSHCollectorTransport()
         self.identity_reader = identity_reader or ProcIdentityReader(self.transport)
         # Independent remote host-facts seam (#302 P1-C): boot/topology
@@ -312,6 +313,12 @@ class NativeObserverCollector:
         if digest != manifest.executable_sha256:
             raise CollectorError('derived build executable bytes do not match manifest: '
                                  + participant.participant_id)
+        if self.selective:
+            from ..assigned_backing import role_identity
+            expected=role_identity(participant.role)
+            if manifest != expected or digest != participant.runtime_sha256:
+                raise CollectorError('selective backing unreviewed per-role derived build identity')
+            return DerivedBuildEvidence(manifest,digest)
         # Explicit per-role derived-build qualification: the manifest must
         # descend from the retained authenticated #301 producer artifacts
         # for THIS participant's role (llama-server closes over

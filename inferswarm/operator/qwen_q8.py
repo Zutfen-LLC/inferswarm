@@ -191,7 +191,7 @@ def _charges(config, contract, assignments, states, boundaries, options):
         for capability in ('q8-kernels-qualified','bf16-indexer-qualified','gdn-ssm-conv-qualified',
                            'qsa-top-k-qualified:'+str(thaw(contract.workload.cache_settings)['attention_cells']),
                            'qsa-dense-attention-qualified:'+str(thaw(contract.workload.cache_settings)['attention_cells']),
-                           'unmodified-source-tree:'+RUNTIME_TREE,'effective-argv-environment-qualified',
+                           ('selective-patched-runtime-v7' if options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else 'unmodified-source-tree:'+RUNTIME_TREE),'effective-argv-environment-qualified',
                            'complete-physical-observer','no-unplanned-host-mirror','native-weight-state-map'):
             requirements.append(CapabilityRequirement(b.runtime_id,capability,capability+':'+bid))
     for s in states:
@@ -205,7 +205,7 @@ def _charges(config, contract, assignments, states, boundaries, options):
         ram=loader.memory_id if p.role=='client' else remote_cpu.memory_id
         add('verification-read-buffer:'+p.participant_id,ram,'transient',None,('verification',),evidence='unknown:verification-buffer')
         add('verification-page-residence:'+p.participant_id,ram,'required',None,('verification',),evidence='unknown:verification-residence')
-        add('source-page-residence:'+p.participant_id,ram,'required',None,resident,evidence='unknown:source-residence')
+        add(('assigned-page-residence:' if p.role=='remote' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else 'source-page-residence:')+p.participant_id,ram,'required',None,resident,evidence='unknown:source-residence')
         add('transport-envelope:'+p.participant_id,ram,'transient',None,('load',),evidence='unknown:transport-envelope')
     # Whole-file lazy mappings are virtual only, kept separate from PLE working set.
     total=sum(size for _,_,size in config.model.members)
@@ -213,7 +213,10 @@ def _charges(config, contract, assignments, states, boundaries, options):
     add('PLE-active-backed-residence',loader.memory_id,'required',None,resident,evidence='unknown:PLE-residence')
     requirements.append(CapabilityRequirement(loader.runtime_id,'lazy-mmap','lazy PLE mmap support'))
     for label,mid in (('full-tensor-loader',loader.memory_id),('FNV-cache-message-staging',loader.memory_id),('remote-receive-staging',remote_cpu.memory_id)):
-        add(label,mid,'transient',LARGEST_BANK,('load',))
+        amount=(1<<20) if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else LARGEST_BANK
+        if label=='FNV-cache-message-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1': amount=352
+        phases=('load','serve') if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else ('load',)
+        add(label,mid,'transient',amount,phases)
     for boundary in boundaries:
         # Logical residual is only a lower bound. The complete split inventory,
         # repeated copies and side inputs require a runtime-scoped upper bound.
@@ -222,12 +225,21 @@ def _charges(config, contract, assignments, states, boundaries, options):
             add('boundary-bounce-lower-bound',loader.memory_id,'transient',boundary.logical_bytes,('serve',))
             add('boundary-bounce-overlap',loader.memory_id,'transient',None,('serve',),evidence='unknown:bounce-overlap')
         requirements.append(CapabilityRequirement(remote_cpu.runtime_id,'route:'+contract.route,'copy route '+contract.route))
+    selective=options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1'
     if options['rpc_cache']=='enabled':
         remote=next(p for p in config.participants if p.role=='remote')
-        disk=remote.backing[0].memory_id
-        add('assigned-cache-disk',disk,'optional',sum(r.length for r in remote.cache_ranges),PHASES)
-        add('full-tensor-cache-hit-vector',remote_cpu.memory_id,'transient',LARGEST_BANK,('load',))
-        add('cache-hit-vector-overlap',remote_cpu.memory_id,'transient',None,('load',),evidence='unknown:cache-vector-overlap')
+        disk=options['participant_backing']['memory_id'] if selective else remote.backing[0].memory_id
+        if not selective: add('assigned-cache-disk',disk,'optional',sum(r.length for r in remote.cache_ranges),PHASES)
+        if selective:
+            add('native-cache-scratch',remote_cpu.memory_id,'transient',1<<20,('load',))
+            add('assigned-metadata-and-guard',remote_cpu.memory_id,'required',2<<20,resident)
+            add('assigned-descriptor-layout',remote_cpu.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
+            add('coordinator-assigned-metadata-and-guard',loader.memory_id,'required',2<<20,resident)
+            add('coordinator-assigned-descriptor-layout',loader.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
+            add('prepared-backing-budget',disk,'backing',options['participant_backing']['limit_bytes'],PHASES)
+        else:
+            add('full-tensor-cache-hit-vector',remote_cpu.memory_id,'transient',LARGEST_BANK,('load',))
+            add('cache-hit-vector-overlap',remote_cpu.memory_id,'transient',None,('load',),evidence='unknown:cache-vector-overlap')
     for mirror in options['host_mirrors']:
         add('host-mirror:'+mirror['allocation_id'],mirror['memory_id'],'optional',mirror['bytes'],('load','serve','cleanup'),evidence=mirror['evidence_id'])
     bounds={b['allocation_id']:b for b in options['bounds']}
@@ -320,7 +332,10 @@ def _validate_options(config,metadata):
     if config.strategy_id!=STRATEGY_ID: raise ValueError('unsupported strategy id')
     if config.selection not in ('one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
     options=thaw(config.strategy_options)
+    from .assigned_backing import CONTRACT, role_identity
+    selective=options['source_contract']==CONTRACT
     base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
+    if selective: base_fields+=('participant_backing',)
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
     observer=options.get('observer')
     if observer is not None:
@@ -339,7 +354,17 @@ def _validate_options(config,metadata):
             text(value,'observer deployment path')
     keys(options['bindings'],('loader','remote_cpu','remote_gpu') if config.selection=='one-gpu' else ('loader','remote_cpu'),'strategy bindings')
     if options['route'] not in ('client-mediated','server-local'): raise ValueError('unsupported explicit copy route')
-    if options['source_contract']!='full-source-both-hosts/1': raise ValueError('unsupported full-source backing contract')
+    if options['source_contract'] not in ('full-source-both-hosts/1',CONTRACT): raise ValueError('unsupported full-source backing contract')
+    if selective:
+        if config.selection!='cpu-only' or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed CPU observer builds and enabled cache only')
+        backing=options['participant_backing']
+        keys(backing,('epoch','memory_id','limit_bytes','min_free_bytes','reserve_bytes'),'participant backing')
+        for k in ('epoch','limit_bytes','min_free_bytes','reserve_bytes'): integer(backing[k], 'participant backing '+k,minimum=1 if k=='limit_bytes' else 0)
+        for p in config.participants:
+            if p.runtime_sha256!=role_identity(p.role).executable_sha256: raise ValueError('selective backing unreviewed per-role runtime identity')
+        memory=next((m for m in config.profiles.snapshot.memory_resources if m.memory_id==backing['memory_id']),None)
+        remote=next(p for p in config.participants if p.role=='remote')
+        if memory is None or memory.host_id!=remote.host_id or memory.kind!='storage': raise ValueError('selective backing storage domain mismatch')
     if options['rpc_cache'] not in ('disabled','enabled'): raise ValueError('unsupported explicit RPC cache mode')
     integer(options['startup_timeout_seconds'],'startup timeout',minimum=1,maximum=3600)
     w=config.workload; cache=thaw(w.cache_settings)
@@ -374,7 +399,9 @@ def _validate_options(config,metadata):
     if len(names)!=len(set(names)): raise ValueError('duplicate ownership')
     if set(names)!={t.state_id for t in metadata.tensors}: raise ValueError('ownership coverage')
     for p in config.participants:
-        if sorted((b.member,b.sha256,b.size_bytes) for b in p.backing)!=list(metadata.source.members):
+        if selective and p.role=='remote':
+            if p.backing: raise ValueError('selective participant must not declare full GGUF backing')
+        elif sorted((b.member,b.sha256,b.size_bytes) for b in p.backing)!=list(metadata.source.members):
             raise ValueError('full-source backing: all six authenticated member identities exactly once on each host')
         if options['rpc_cache']=='disabled' and p.cache_ranges: raise ValueError('disabled RPC cache has descriptors')
         if p.role=='client' and p.cache_ranges: raise ValueError('client cache ranges unsupported')
@@ -978,14 +1005,15 @@ def _q8_startup_components(context, startup):
     add('loader.mapping', partition='backing', lifetime='source-backing', pending=('assigned-ranges/lazy-PLE/mmap-fragments/pages/FD-lifetime-UNKNOWN',))
     add('loader.read', partition='load-only', lifetime='load-call', pending=('logical-tensor-nbytes;actual-read_buf-size/overlap/load-end-UNKNOWN',))
     add('loader.upload', partition='load-only', lifetime='load-call', enabled=None, pending=('conditional-four-source-buffer_size-uploads;support/alignment/release-UNKNOWN',))
+    selective=options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1'
     add('rpc.send', partition='load-only', lifetime='load-call', pending=(
-        'SEND-SET-request-new-array=sizeof-rpc_tensor+8+payload;ABI/actual-payload-UNKNOWN',
+        ('v7-descriptor=352;borrowed-source-payload;synchronous-ack;no-weight-sized-message-copy' if selective else 'SEND-SET-request-new-array=sizeof-rpc_tensor+8+payload;ABI/actual-payload-UNKNOWN'),
         'hash-hit-no-payload;shared_ptr-dispatch-lifetime;load-or-request-not-permanent-base',))
     b_ram = (remote.participant_id, remote_cpu.memory_id)
     add('rpc.alloc', domain=b_ram, pending=('B-RAM-proxy-metadata-not-remote-physical-buffer;alloc-response-remote_size-UNKNOWN',))
-    add('rpc.receive', partition='load-only', lifetime='load-call', domain=b_ram, pending=('RECEIVE-vector-frame-length/overlap-UNKNOWN;not-SEND-envelope',))
+    add('rpc.receive', partition='load-only', lifetime='load-call', domain=b_ram, pending=(('v7-fixed-1MiB-scratch;actual-stack/layout/overlap-UNKNOWN' if selective else 'RECEIVE-vector-frame-length/overlap-UNKNOWN;not-SEND-envelope'),))
     add('rpc.cache-hit', partition='load-only', lifetime='load-call', domain=b_ram,
-        enabled=options['rpc_cache'] == 'enabled', pending=('conditional-cache-file-vector;actual-consumption/length-load-end-UNKNOWN',))
+        enabled=options['rpc_cache'] == 'enabled', pending=(('v7-fixed-1MiB-scratch;per-use-SHA-length;immutable-assigned-only;actual-consumption-load-end-UNKNOWN' if selective else 'conditional-cache-file-vector;actual-consumption/length-load-end-UNKNOWN'),))
     add('rpc.graph', partition='request-only', lifetime='request', domain=b_ram, pending=('stored-graph-buffer-grows-only-at-graph_compute;no-request-executed',))
     add('server.slots', dims=(sequences,), logical='client-control', pending=('CPU-samplers-exist-regardless-of-backend-samplers;slot-ABI-UNKNOWN',))
     capacity = max(b0, sequences)
@@ -1039,13 +1067,13 @@ def _q8_startup_charge_joins(context):
         elif prefix == 'final-output-state':
             sites, partition = ('final.template',), 'request-only'
             pending += ('startup-reservation-not-final-output-state',)
-        elif prefix in ('source-backing', 'assigned-cache-disk'):
+        elif prefix in ('source-backing', 'assigned-cache-disk', 'prepared-backing-budget'):
             sites, partition = ('loader.mapping',) if prefix == 'source-backing' else ('rpc.cache-hit',), 'backing'
             pending += ('source-member/assigned-cache/FD-consumption/lifetime-UNKNOWN',)
         elif prefix in ('verification-read-buffer', 'verification-page-residence'):
             sites, partition = (), 'verification'
             pending += ('operator-verifier-no-native-constructor-site;prior-read-peak/page-residence-UNKNOWN',)
-        elif prefix in ('source-page-residence', 'PLE-active-backed-residence', 'whole-source-mmap'):
+        elif prefix in ('source-page-residence', 'assigned-page-residence', 'PLE-active-backed-residence', 'whole-source-mmap'):
             sites = ('loader.mapping',)
             partition = 'virtual' if prefix == 'whole-source-mmap' else 'startup-active'
             pending += ('source-page/weight-mmap-alias-dedupe-disk-VA-residence-separately;lazy-PLE-unchanged',)
@@ -1053,7 +1081,7 @@ def _q8_startup_charge_joins(context):
             sites = ('loader.read', 'loader.upload') if prefix == 'full-tensor-loader' else ('rpc.receive',) if prefix == 'remote-receive-staging' or charge.memory_id != loader_memory else ('rpc.send',)
             partition = 'load-only'
             pending += ('load-end/peak/overlap-UNKNOWN;loader-read-and-message-not-aliases',)
-        elif prefix in ('full-tensor-cache-hit-vector', 'cache-hit-vector-overlap'):
+        elif prefix in ('full-tensor-cache-hit-vector', 'cache-hit-vector-overlap', 'native-cache-scratch'):
             sites, partition = ('rpc.cache-hit',), 'load-only'
             pending += ('conditional-RPC-cache-consumption/vector-overlap-UNKNOWN',)
         elif prefix == 'host-mirror':

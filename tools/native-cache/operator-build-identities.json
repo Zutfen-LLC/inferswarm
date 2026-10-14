@@ -1,0 +1,162 @@
+{
+  "archive_sha256": "03fb04316eb32a7b7347004a79a8dd60531c02f5a064d853fed3b53828951723",
+  "build_options": [
+    "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_C_FLAGS_DEBUG=-O0 -g0",
+    "-DCMAKE_CXX_FLAGS_DEBUG=-O0 -g0",
+    "-DBUILD_SHARED_LIBS=OFF",
+    "-DGGML_RPC=ON",
+    "-DGGML_CUDA=OFF",
+    "-DGGML_VULKAN=OFF",
+    "-DGGML_OPENMP=OFF",
+    "-DGGML_BLAS=OFF",
+    "-DGGML_NATIVE=OFF",
+    "-DLLAMA_OPENSSL=OFF",
+    "-DLLAMA_BUILD_TESTS=OFF",
+    "-DLLAMA_BUILD_EXAMPLES=OFF",
+    "-DLLAMA_BUILD_TOOLS=ON",
+    "-DLLAMA_BUILD_APP=OFF",
+    "-DLLAMA_BUILD_UI=OFF",
+    "-DLLAMA_USE_PREBUILT_UI=OFF"
+  ],
+  "compiler": "c++ (GCC) 16.2.1 20260810",
+  "composite_sha256": "1546b846900ec8f9b6d5674c0b11daa174ff9c4d29715677ece19d018ea08fba",
+  "native_commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "patch_sha256": "df52ba458ad8c6758de9084b2cc56d4dcdae9683f97405f1a4b17f88e738bfd4",
+  "roles": {
+    "client": {
+      "identity": {
+        "backend_libraries": [
+          {
+            "name": "common/libllama-common-base.a",
+            "sha256": "d7084742c4884bcd63d04399b7ea5280912adcc2da09418c068fcfcc52dc94e0"
+          },
+          {
+            "name": "common/libllama-common.a",
+            "sha256": "3116b68abe7f3be8df100317aa74e6de45d6dc902ff7450b0d24ebf1490882e1"
+          },
+          {
+            "name": "ggml/src/ggml-rpc/libggml-rpc.a",
+            "sha256": "c6db6257cf9583621649fcb24a2b0f825da12cc1629af57d62b81cd8915fff48"
+          },
+          {
+            "name": "ggml/src/libggml-base.a",
+            "sha256": "e5afe70d4c28b36c0cc6a931d8295ed39316e3134d4ec030bc66cf74ed0b4740"
+          },
+          {
+            "name": "ggml/src/libggml-cpu.a",
+            "sha256": "bdf31d9ba47cd0e16d20746059e9c953fed0d4c730579fd0dc6c272481d0055a"
+          },
+          {
+            "name": "ggml/src/libggml.a",
+            "sha256": "1432d96767e44ea1d642d52e441f7bf1585fc9a4578a5cc3ab0ef6d425c2705c"
+          },
+          {
+            "name": "src/libllama.a",
+            "sha256": "b5986e0913495ede07b5ae13c6544029d76d972f430674f24a1f5bb2ba1242b3"
+          },
+          {
+            "name": "tools/mtmd/libmtmd.a",
+            "sha256": "631d1a20d54d8db377a53de35ffca2814e0a7c1834ccd128061ae7b80a217e17"
+          },
+          {
+            "name": "tools/server/libllama-server-impl.a",
+            "sha256": "38d6b8ba3e131c8a7ce680e0d878eff54424258e1871e51625b9c682cd8eccea"
+          },
+          {
+            "name": "tools/server/libserver-context.a",
+            "sha256": "a7fde0c4f8f6a90480aaab822d79c4a971041f4598590a7534fac36d27ecebb8"
+          },
+          {
+            "name": "tools/ui/libllama-ui.a",
+            "sha256": "cb399aa2ccf3e1e7e9c48fe5a4cbcda56c43235c75032495b641103ac910db02"
+          },
+          {
+            "name": "vendor/cpp-httplib/libcpp-httplib.a",
+            "sha256": "f22e5ab4e7770ad657dc245cd3fe156fc2ee2cafebf6552561a529172af1e053"
+          },
+          {
+            "name": "vendor/hash/libvendor-hash.a",
+            "sha256": "f402b98b591ea2d75970e974b75cf78ffcde2ad61590c4c4d21b5a5171cedcfb"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-DCMAKE_BUILD_TYPE=Debug",
+          "-DCMAKE_C_FLAGS_DEBUG=-O0 -g0",
+          "-DCMAKE_CXX_FLAGS_DEBUG=-O0 -g0",
+          "-DBUILD_SHARED_LIBS=OFF",
+          "-DGGML_RPC=ON",
+          "-DGGML_CUDA=OFF",
+          "-DGGML_VULKAN=OFF",
+          "-DGGML_OPENMP=OFF",
+          "-DGGML_BLAS=OFF",
+          "-DGGML_NATIVE=OFF",
+          "-DLLAMA_OPENSSL=OFF",
+          "-DLLAMA_BUILD_TESTS=OFF",
+          "-DLLAMA_BUILD_EXAMPLES=OFF",
+          "-DLLAMA_BUILD_TOOLS=ON",
+          "-DLLAMA_BUILD_APP=OFF",
+          "-DLLAMA_BUILD_UI=OFF",
+          "-DLLAMA_USE_PREBUILT_UI=OFF"
+        ],
+        "compiler": "c++ (GCC) 16.2.1 20260810",
+        "executable_sha256": "fa2164969b6e3a144bcd8a902286f3f31d57339b5abeb7557c29350902e29c9b",
+        "patch_sha256": "df52ba458ad8c6758de9084b2cc56d4dcdae9683f97405f1a4b17f88e738bfd4",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "1546b846900ec8f9b6d5674c0b11daa174ff9c4d29715677ece19d018ea08fba"
+      }
+    },
+    "remote": {
+      "identity": {
+        "backend_libraries": [
+          {
+            "name": "ggml/src/ggml-rpc/libggml-rpc.a",
+            "sha256": "c6db6257cf9583621649fcb24a2b0f825da12cc1629af57d62b81cd8915fff48"
+          },
+          {
+            "name": "ggml/src/libggml-base.a",
+            "sha256": "e5afe70d4c28b36c0cc6a931d8295ed39316e3134d4ec030bc66cf74ed0b4740"
+          },
+          {
+            "name": "ggml/src/libggml-cpu.a",
+            "sha256": "bdf31d9ba47cd0e16d20746059e9c953fed0d4c730579fd0dc6c272481d0055a"
+          },
+          {
+            "name": "ggml/src/libggml.a",
+            "sha256": "1432d96767e44ea1d642d52e441f7bf1585fc9a4578a5cc3ab0ef6d425c2705c"
+          }
+        ],
+        "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+        "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+        "build_options": [
+          "-DCMAKE_BUILD_TYPE=Debug",
+          "-DCMAKE_C_FLAGS_DEBUG=-O0 -g0",
+          "-DCMAKE_CXX_FLAGS_DEBUG=-O0 -g0",
+          "-DBUILD_SHARED_LIBS=OFF",
+          "-DGGML_RPC=ON",
+          "-DGGML_CUDA=OFF",
+          "-DGGML_VULKAN=OFF",
+          "-DGGML_OPENMP=OFF",
+          "-DGGML_BLAS=OFF",
+          "-DGGML_NATIVE=OFF",
+          "-DLLAMA_OPENSSL=OFF",
+          "-DLLAMA_BUILD_TESTS=OFF",
+          "-DLLAMA_BUILD_EXAMPLES=OFF",
+          "-DLLAMA_BUILD_TOOLS=ON",
+          "-DLLAMA_BUILD_APP=OFF",
+          "-DLLAMA_BUILD_UI=OFF",
+          "-DLLAMA_USE_PREBUILT_UI=OFF"
+        ],
+        "compiler": "c++ (GCC) 16.2.1 20260810",
+        "executable_sha256": "f89f02035097a978383c41668327595c6e69caf9a0fea88844ff76e1465c4f2d",
+        "patch_sha256": "df52ba458ad8c6758de9084b2cc56d4dcdae9683f97405f1a4b17f88e738bfd4",
+        "protocol": "inferswarm-native-observation/2",
+        "schema": "q8-native-build-manifest/2",
+        "transformed_manifest_sha256": "1546b846900ec8f9b6d5674c0b11daa174ff9c4d29715677ece19d018ea08fba"
+      }
+    }
+  }
+}
