@@ -188,6 +188,7 @@ GROUP_TEST_MODULES = {
     "moe-overlap-prototype": [
         "test_moe_overlap_prototype",
         "test_native_moe_overlap",
+        "test_native_cache",
     ],
     "issue-187-r7a": [
         "test_issue187_r7a",
@@ -448,6 +449,8 @@ PATH_GROUPS = {
     # MoE overlap prototype (offline harness + build recipe + docs).
     "tools/moe-overlap/": ["moe-overlap-prototype"],
     "tools/native-moe-overlap/": ["moe-overlap-prototype"],
+    "tools/native-cache/": ["moe-overlap-prototype"],
+    "tests/test_native_cache.py": ["moe-overlap-prototype"],
     "tests/test_moe_overlap_prototype.py": ["moe-overlap-prototype"],
     "tests/test_native_moe_overlap.py": ["moe-overlap-prototype"],
     "docs/implementation/two-host-mvp-255/": ["issue-99-103"],

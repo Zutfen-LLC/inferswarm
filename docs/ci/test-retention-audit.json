@@ -5639,6 +5639,27 @@
       "replacement": null,
       "test_count_at_audit": 12
     },
+    "test_native_cache": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 4,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "The actual pinned native RPC cache accepts only exact-length SHA-256 payloads, revalidates on every use, publishes only complete verified staged files atomically, reuses unchanged payloads across connections/restarts, fetches only missing deltas, preserves tensor semantics and bounds transfer staging independently of cached/tensor size.",
+      "lineage": "Focused native cache integrity and staging fix (issue #311)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-cache/build.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Compact CPU/loopback regression fixtures only; no selective Q8 operator completion, disk-budget, physical small-RAM/GPU qualification, acceptance or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 4
+    },
     "test_native_moe_overlap": {
       "baseline_group": "moe-overlap-prototype",
       "baseline_serial_seconds": null,
