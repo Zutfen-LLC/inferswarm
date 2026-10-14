@@ -3,6 +3,8 @@
 Successor backing contract for preparation only. The original Q8 runner remains
 full-source-both-hosts/1. Coordinator GGUF scaffold, loader reads/hash work and
 actual upload boundaries still need a separate runtime integration review.
+Fail closed on runtime/assignment/metadata identity drift, wrong native keys or
+content, and insufficient disk reserve; never launch a worker on refusal.
 """
 from __future__ import annotations
 
@@ -25,12 +27,16 @@ PATCH = Path(__file__).resolve().parents[1]/'tools/native-cache/native.patch'
 MAX_METADATA_BYTES = 1 << 20
 
 
+def _runtime_contract(executable_sha256):
+    return dict(native_commit=NATIVE_PIN, rpc_major=7,
+                patch_sha256=hashlib.sha256(PATCH.read_bytes()).hexdigest(),
+                executable_sha256=executable_sha256)
+
+
 def runtime_identity(executable, expected_sha256):
     if file_identity(executable)[0] != 'sha256:' + expected_sha256:
         raise ValueError('patched runtime executable identity mismatch')
-    return dict(native_commit=NATIVE_PIN, rpc_major=7,
-                patch_sha256=hashlib.sha256(PATCH.read_bytes()).hexdigest(),
-                executable_sha256=expected_sha256)
+    return _runtime_contract(expected_sha256)
 
 
 def publish_rpc_views(cache, records_and_keys, *, fnv_binary=None):
@@ -86,9 +92,7 @@ def project_q8_preparation(payload, *, epoch, runtime):
     payload = deepcopy(validate_q8_payload(payload))
     if not payload['rpc_cache']: raise ValueError('explicit enabled RPC cache required')
     if type(epoch) is not int or epoch < 0: raise ValueError('invalid preparation epoch')
-    expected_runtime = dict(native_commit=NATIVE_PIN, rpc_major=7,
-        patch_sha256=hashlib.sha256(PATCH.read_bytes()).hexdigest(),
-        executable_sha256=runtime.get('executable_sha256'))
+    expected_runtime = _runtime_contract(runtime.get('executable_sha256'))
     if runtime != expected_runtime or not re.fullmatch('[0-9a-f]{64}', runtime['executable_sha256'] or ''):
         raise ValueError('patched runtime contract required')
     participant = next(p for p in payload['participants'] if p['role'] == 'remote')

@@ -5,6 +5,8 @@ whole-object cache verification/finalization with bounded file operations. No
 runtime spawn, scheduler, eviction, mutable-state recovery or network discovery.
 One owned backing directory, one preparation writer, workers stopped during
 preparation. Historical producers remain byte-identical.
+Fail closed on unissued requirements, wrong content/provenance, invalid source
+reads or partial bindings, and insufficient configured disk/free headroom.
 """
 from __future__ import annotations
 
