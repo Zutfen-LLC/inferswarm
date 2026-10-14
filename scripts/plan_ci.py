@@ -208,6 +208,7 @@ GROUP_TEST_MODULES = {
         "test_issue103_planner",
         "test_issue200_r8f_source_policy",
         "test_issue200_r8f_proof",
+        "test_issue311_preparation",
         # Issue #255: bounded CUDA/RPC product execution and local baseline.
         "test_issue255_mvp",
         "test_issue255_measure",
@@ -551,7 +552,8 @@ PATH_GROUPS = {
         "issue-74-79",
         "issue-83-95",
         "issue-99-103",
-        "r8i-qwen-qualification"],
+        "r8i-qwen-qualification",
+        "moe-overlap-prototype"],
     "scripts/commit_issue74_holdout.py": ["issue-74-79"],
     "scripts/seal_issue74_holdout.py": ["issue-74-79"],
     "scripts/generate_issue74_corpora.py": ["issue-74-79", "issue-109-110"],
@@ -795,11 +797,11 @@ PATH_GROUPS = {
     # prefix never matched a tracked path; the real retained #137
     # evidence rule lives with the #117 tree above.)
 
-    "scripts/issue99_artifact_core.py": ["issue-117-133", "issue-99-103"],
+    "scripts/issue99_artifact_core.py": ["issue-117-133", "issue-99-103", "moe-overlap-prototype"],
     "scripts/issue99_mini_model.py": ["issue-99-103"],
     "scripts/issue99_proof.py": ["issue-99-103"],
     "scripts/issue101_fixture.py": ["issue-99-103"],
-    "scripts/issue101_orchestration.py": ["issue-117-133", "issue-99-103"],
+    "scripts/issue101_orchestration.py": ["issue-117-133", "issue-99-103", "moe-overlap-prototype"],
     "scripts/issue101_proof.py": ["issue-99-103"],
     "scripts/issue103_fixture.py": ["issue-99-103"],
     "scripts/issue103_planner.py": ["issue-117-133", "issue-99-103"],
@@ -825,6 +827,9 @@ PATH_GROUPS = {
     "scripts/issue200_r8f_physical.py": ["issue-99-103"],
     "tests/test_issue200_r8f_source_policy.py": ["issue-99-103"],
     "tests/test_issue200_r8f_proof.py": ["issue-99-103"],
+    "scripts/issue311_preparation.py": ["issue-99-103", "moe-overlap-prototype"],
+    "scripts/issue311_native_backing.py": ["issue-99-103", "moe-overlap-prototype"],
+    "tests/test_issue311_preparation.py": ["issue-99-103"],
     "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],
 
     # Issue #246 topology: the former monolithic vulkan-v0-b bucket split

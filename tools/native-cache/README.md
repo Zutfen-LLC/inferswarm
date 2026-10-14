@@ -54,7 +54,20 @@ CPU backend destination memory is actual resident weight state; it is separate
 from the fixed transfer scratch. GET readback and graph commands retain their
 existing staging behavior. No full-model or GPU memory bound is claimed.
 
-## Concrete remaining integration gap
+## Selective preparation successor and remaining integration gap
+
+The additive [selective preparation adapter](selective-preparation.md) now
+connects #99/#101 requirements, verified inventory and missing-only acquisition
+to a bounded atomic native cache view, with exact assigned/runtime metadata and
+configured disk/free-headroom admission. It defines a preparation-only
+`coordinator-full-source/participant-assigned-rpc-backing/1` successor and has
+offline plus actual CPU/native consumption/restart/delta fixture coverage.
+The unchanged ordinary Q8 runner described below still requires full source.
+The repair-budget correction reserves each unique eligible content's possible
+durable duplicate plus the largest active replacement and overhead; the former
+largest-temp-only reserve failed a maintainer two-repair counterexample. See the
+guide's preserved failure and RED/GREEN regression; earlier PASS results did not
+cover that case.
 
 [`qwen_q8.py`](../../inferswarm/operator/qwen_q8.py) and
 [`source.py`](../../inferswarm/operator/source.py) explicitly enforce
@@ -63,7 +76,7 @@ runtime identities, and provisioned cache descriptors. The ordinary Q8 runner
 already passes `--cache` and `LLAMA_CACHE`. This patch does not loosen those
 validators or alter the historical #299/#301 observer overlay.
 
-The smallest next connection is a reviewed successor source contract: keep
+Normal runner integration still needs the reviewed successor source contract: keep
 complete coordinator GGUF scaffolding where the loader requires it; project
 frozen participant immutable assignments plus shared metadata to #99 artifacts;
 use #101's verified missing-only delta and a bounded successor to #200 staging;
@@ -74,9 +87,10 @@ Exact tensor-split upload boundaries need source-backed support before admission
 A worker's RPC API itself requires no model repository and this fixture supplies
 only assigned tensors; that does not establish the operator successor contract.
 
-Disk budgeting, stale temporary cleanup, and participant prepare/reconcile are
-not implemented by this native slice. Native cache retention remains optional
-and unbounded unless externally managed. Mutable/KV ownership is unchanged.
+Participant prepare/reconcile and disk-budget admission are implemented by the
+additive adapter; they are not a live quota daemon. Stale temporary cleanup is
+not automatic. Independent native cache retention remains optional and unbounded
+outside the declared prepared workload. Mutable/KV ownership is unchanged.
 #311 remains open; #300 is unchanged. No physical qualification is inferred.
 
 ## Local build and focused tests
