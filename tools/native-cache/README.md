@@ -63,6 +63,11 @@ configured disk/free-headroom admission. It defines a preparation-only
 `coordinator-full-source/participant-assigned-rpc-backing/1` successor and has
 offline plus actual CPU/native consumption/restart/delta fixture coverage.
 The unchanged ordinary Q8 runner described below still requires full source.
+The repair-budget correction reserves each unique eligible content's possible
+durable duplicate plus the largest active replacement and overhead; the former
+largest-temp-only reserve failed a maintainer two-repair counterexample. See the
+guide's preserved failure and RED/GREEN regression; earlier PASS results did not
+cover that case.
 
 [`qwen_q8.py`](../../inferswarm/operator/qwen_q8.py) and
 [`source.py`](../../inferswarm/operator/source.py) explicitly enforce

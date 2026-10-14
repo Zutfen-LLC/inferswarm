@@ -77,9 +77,25 @@ blocks), deduplicated by inode. Hardlinked RPC views do not double-count weights
 Missing contents plus conservative state/directory overhead, explicit reserve
 and filesystem free headroom must fit. Partial prefixes are conservatively not
 credited. Exceeding budget fails; there is no eviction optimizer or automatic
-deletion. The native adapter requires reserve for the largest eligible payload's
-replacement temporary file plus metadata/directory overhead. Final accounting
-is rechecked before a success receipt.
+deletion. For unique native hash-eligible contents, let `D` be their summed payload
+length, `L` the largest payload, and `N` their count. The native adapter requires
+`reserve_bytes >= D + L + 16384 * (N + 1)`: durable repair duplication, one active
+replacement temporary file, and conservative filesystem/metadata overhead. This
+minimum is checked before acquisition. Low-level `publish_rpc_views` composition
+also requires the budget and rechecks the reserve and actual retained accounting
+before publishing. Final accounting is rechecked before a success receipt.
+
+The first native repair may break a prepared object/RPC hardlink, preserving the
+corrupt object inode and adding a valid independent RPC inode. Every unique
+eligible content can do this; reserving only the largest payload was insufficient.
+Later successful serial repairs replace the independent RPC inode and free its
+previous instance, so another durable copy does not accumulate on every repair.
+The reserve is deliberately conservative even for views already independent;
+existing duplicates are additionally charged by their actual distinct inodes.
+Repeated successful repairs of the declared view are covered, with one active
+replacement at a time. Interrupted native leftovers remain charged on the next
+stopped-worker preparation before restart; this is not an unlimited interruption
+or concurrent-write quota. No damaged or historical object is automatically deleted.
 
 This is admission for a stopped-worker preparation and its declared immutable
 view, not a quota daemon. The existing native server's independent optional
@@ -87,6 +103,30 @@ cache writes remain unbounded outside that declared experiment. Stop and
 reconcile before reassignment; undeclared uploads or multiple writers require a
 separate runtime contract. Do not infer live enforcement from a preparation
 receipt.
+
+Native-only legacy `rpc/<key>` files are not adopted into the #99 object inventory
+by this slice. First preparation can fetch a separate verified object; both copies
+are charged. Prepared restart reuse is distinct from native-only migration.
+
+### Preserved repair-budget failure and correction
+
+Maintainer review of `52f95384bf46ec63423faa55d57443b71e7ad674` reproduced the
+P2 counterexample: two declared 12 MiB ranges repaired with correct readback, yet
+retained backing reached **MEASURED** 50,331,848 bytes against an admitted
+38,010,880-byte ceiling. The original largest-temp-only reserve did not cover the
+durable extra inodes. That finding supersedes the earlier repair-budget claim;
+the passing original tests and CI did not exercise this counterexample.
+
+The new actual Q8-adapter/native regression is RED on that reviewed implementation:
+50,344,196 retained bytes against the same ceiling, including its small exact
+metadata dependency. After the correction, the insufficient reserve is refused
+before acquisition. A 64 MiB ceiling admits the corrected allowance and contains
+multiple repairs of both declared ranges, with repeated repairs retaining no
+further copies and the largest active temporary replacement still fitting. A
+separate case starts with already independent object/RPC copies: a tight total
+refuses without source reads or deletion, while a sufficient total reuses them
+and bounds repeated repairs. A descriptor-only check proves content deduplication
+of the repair reserve. These are synthetic CPU observations and calculated bounds.
 
 Application source requests are at most 64 KiB; verification reads are at most
 1 MiB with no object-sized Python finalization or inventory buffer. The existing
@@ -109,7 +149,9 @@ Offline cases cover cold assigned-only acquisition, warm reuse with origin files
 absent in a fresh Python process, assignment delta, exact metadata and runtime
 bindings, corrupt/truncated content, interruption and damaged-prefix recovery,
 short/oversized reads, stale requirements, wrong revision/quantization/ranges,
-disk budget/free headroom and bounded Python allocation. No GPU/model download.
+disk budget/free headroom, deduplicated repair reserves and bounded Python allocation.
+Native cases include multiple and repeated declared repairs plus preexisting
+duplicate backing. No GPU/model download.
 
 The synthetic CPU/loopback composition test prepares A+B (24 MiB), starts the
 actual protocol-v7 worker, then reconstructs preparation and restarts the worker.

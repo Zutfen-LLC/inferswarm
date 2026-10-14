@@ -6,6 +6,7 @@ Verification GET traffic is accounted separately from weight acquisition.
 from __future__ import annotations
 
 import contextlib
+from dataclasses import asdict
 import hashlib
 import importlib.util
 import json
@@ -14,6 +15,7 @@ from pathlib import Path
 import resource
 import socket
 import struct
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -298,7 +300,7 @@ class NativeCacheTests(unittest.TestCase):
         (origin/'unassigned.bin').write_bytes(b'NOT NEEDED')
         source = LocalFileSource(source_id='origin',root=origin)
         cache = self.root/'selective-cache'
-        budget = DiskBudget(128<<20,0,(12<<20)+32768)
+        budget = DiskBudget(128<<20,0,64<<20)
         def preparation(labels,epoch):
             node=StreamingNode('worker',StreamingArtifactCache(cache))
             controller=Coordinator(node_sources=[node.descriptor()],origin_sources=[source.descriptor()])
@@ -309,7 +311,7 @@ class NativeCacheTests(unittest.TestCase):
             required=controller.freeze(plan,lambda cls,sid:[records[sid]])
             return prepare_participant(coordinator=controller,requirements=required,participant_id='P',
                 node=node,sources={'origin':source},budget=budget,
-                publish_view=lambda backing:publish_rpc_views(backing,[(records[n],keys[n]) for n in labels],fnv_binary=str(helper)))
+                publish_view=lambda backing:publish_rpc_views(backing,[(records[n],keys[n]) for n in labels],budget=budget,fnv_binary=str(helper)))
         cold=preparation(['A','B'],1)
         self.assertEqual(cold['acquisition_bytes'],24<<20)
         self.assertEqual({r['source_object'] for r in source.access_log},{'A.bin','B.bin'})
@@ -337,6 +339,116 @@ class NativeCacheTests(unittest.TestCase):
             warm_acquisition_bytes=warm['acquisition_bytes'],delta_acquisition_bytes=delta['acquisition_bytes'],
             unrelated_acquisition_bytes=0,source_max_read_bytes=max(r['length'] for r in source.access_log),
             native_first_load_weight_payload=0,worker_restarted=True,exact_readback=True))
+
+    def test_declared_repairs_fit_durable_duplicates_and_peak_stage(self):
+        sys.path.insert(0, str(ROOT/'scripts'))
+        from issue99_artifact_core import LocalFileSource
+        from issue311_preparation import DiskBudget, StreamingArtifactCache, StreamingNode, backing_usage
+        from issue311_native_backing import prepare_q8_participant
+        from inferswarm.operator import source as q8_source
+        from tests import test_issue299_source as q8_fixture
+        fixture = q8_fixture.Q8Source(); fixture.setUp()
+        self.addCleanup(fixture.doCleanups); fixture.cached()
+        payload = fixture.payload
+        helper = self.root/'repair-fnv'; q8_source.compile_fnv(helper)
+        keys = {}
+        # Two actual parsed synthetic GGUF members now contain the assigned
+        # 12 MiB native I8 fixtures. Other members/metadata remain small.
+        for label, name in [('A','blk.17.ffn_gate_exps.weight'),('B','blk.45.ffn_up_exps.weight')]:
+            row = next(t for t in payload['metadata']['tensors'] if t['state_id']==name)
+            member = row['member']; number = int(member.split('-')[1].split('.')[0])
+            pairs = [('general.architecture','synthetic'),('split.no',number),
+                     ('split.count',6),('split.tensors.count',len(payload['assignments']))]
+            header = b'GGUF'+struct.pack('<IQQ',3,1,len(pairs))
+            for key,value in pairs:
+                header += q8_fixture.text(key)+struct.pack('<I',8 if isinstance(value,str) else 4)
+                header += q8_fixture.text(value) if isinstance(value,str) else struct.pack('<I',value)
+            data = self.fixtures[label].read_bytes()
+            header += q8_fixture.text(name)+struct.pack('<IQIQ',1,len(data),24,0)
+            full = header+b'\0'*(-len(header)%32)+data
+            (fixture.root/member).write_bytes(full)
+            full_sha = hashlib.sha256(full).hexdigest(); header_sha = hashlib.sha256(header).hexdigest()
+            _,parsed = q8_source.parse_gguf_header(header,object_bytes=len(full),expected_header_sha256=header_sha)
+            row.update(asdict(parsed[0]),member=member)
+            # JSON wire descriptors use lists, independently of parser tuples.
+            row['shape'] = list(row['shape'])
+            for inventory in payload['model']['members']:
+                if inventory[0]==member: inventory[:]=[member,full_sha,len(full)]
+            for inventory in payload['metadata']['header_identities']:
+                if inventory[0]==member: inventory[:]=[member,0,len(header)-1,header_sha,len(full),full_sha]
+            for participant in payload['participants']:
+                for backing in participant['backing']:
+                    if backing['member']==member: backing.update(sha256=full_sha,size_bytes=len(full))
+            assignment = next(a for a in payload['assignments'] if a['state_id']==name)
+            assignment.update({k:row[k] for k in ('ggml_type','shape','absolute_offset','encoded_bytes')})
+            for placement in payload['placement']:
+                for span in placement['state_ranges']:
+                    if span[0]==name: span[2:]=[row['absolute_offset'],len(data)]
+            descriptor = next(c for c in fixture.remote['cache_ranges'] if c['state_id']==name)
+            keys[label] = q8_source.fnv(self.fixtures[label],str(helper))
+            descriptor.update(offset=row['absolute_offset'],length=len(data),
+                              sha256=hashlib.sha256(data).hexdigest(),cache_key=keys[label])
+        metadata = payload['metadata']
+        metadata['metadata_digest'] = hashlib.sha256(q8_source._q8_canonical(
+            {k:v for k,v in metadata.items() if k!='metadata_digest'})).hexdigest()
+        executable = self.bin['ggml-rpc-server']; executable_sha = q8_source.sha(executable)
+        origin = LocalFileSource(source_id='origin',root=fixture.root)
+        def prepare(cache,budget):
+            return prepare_q8_participant(payload=payload,epoch=1,executable=executable,
+                executable_sha256=executable_sha,node=StreamingNode('B',StreamingArtifactCache(cache)),
+                origin_source=origin,budget=budget,fnv_binary=str(helper))
+        def repairs(cache,budget,rounds):
+            usage = []
+            with self.worker(cache) as worker:
+                for round_number in range(rounds):
+                    for label in ('A','B'):
+                        target = cache/'rpc'/keys[label]
+                        with target.open('r+b') as stream:
+                            first=stream.read(1); stream.seek(0); stream.write(bytes([first[0]^255]))
+                        self.case(worker,label,12<<20)
+                        retained = backing_usage(cache)
+                        usage.append(retained)
+                        self.records.append(dict(case='declared-repair-budget',round=round_number,
+                            label=label,retained_bytes=retained,limit_bytes=budget.limit_bytes,
+                            exact_readback=True))
+                        self.assertLessEqual(retained,budget.limit_bytes,
+                            'declared native repairs exceeded admitted disk ceiling')
+            return usage
+        # RED on 52f95384: admission succeeds, both repairs read back exactly,
+        # then ~48 MiB remains under a ~36 MiB admitted ceiling.
+        tight = DiskBudget((36<<20)+(256<<10),0,(12<<20)+16384)
+        tight_cache=self.root/'repair-tight'
+        try: prepare(tight_cache,tight)
+        except ValueError as error:
+            self.assertRegex(str(error),'native.*reserve|disk budget')
+            self.assertEqual(origin.access_log,[])
+        else:
+            repairs(tight_cache,tight,1)
+            self.fail('unsafe repair reserve was admitted')
+        admitted = DiskBudget(64<<20,0,(36<<20)+(256<<10))
+        cache=self.root/'repair-admitted'; prepare(cache,admitted)
+        usage=repairs(cache,admitted,3)
+        self.assertGreater(usage[1],48<<20)
+        self.assertEqual(usage[1:], [usage[1]]*5)  # later RPC inodes have no retained alias
+        self.assertLessEqual(max(usage)+(12<<20)+16384,admitted.limit_bytes)
+        # Already independent object/RPC copies are charged, not mistaken for
+        # hardlink deduplication. Warm admission refuses a tight total and never
+        # deletes the copies; a sufficient budget reuses them without a read.
+        duplicate_cache=self.root/'repair-existing-duplicates'; prepare(duplicate_cache,admitted)
+        for label in ('A','B'):
+            target=duplicate_cache/'rpc'/keys[label]
+            copied=duplicate_cache/('.copy-'+label)
+            shutil.copyfile(target,copied); os.replace(copied,target)
+        retained=backing_usage(duplicate_cache); origin.access_log.clear()
+        with self.assertRaisesRegex(ValueError,'disk budget'): prepare(duplicate_cache,admitted)
+        self.assertEqual(backing_usage(duplicate_cache),retained)
+        self.assertEqual(origin.access_log,[])
+        larger=DiskBudget(88<<20,0,admitted.reserve_bytes)
+        self.assertEqual(prepare(duplicate_cache,larger)['acquisition_bytes'],0)
+        self.assertEqual(origin.access_log,[])
+        duplicate_usage=repairs(duplicate_cache,larger,2)
+        self.assertEqual(duplicate_usage,[retained]*4)
+        self.assertLessEqual(retained+(12<<20)+16384,larger.limit_bytes)
 
     def test_interrupted_publication_preserves_final_and_recovers(self):
         cache = self.root / 'interrupted-cache'

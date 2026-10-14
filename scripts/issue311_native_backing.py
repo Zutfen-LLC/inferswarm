@@ -18,7 +18,7 @@ import tempfile
 from issue99_artifact_core import (
     ARTIFACT_RECORD_SCHEMA, freeze_artifact_record, self_digest, validate_artifact_record,
 )
-from issue311_preparation import file_identity, fsync_directory, prepare_participant, verify_file
+from issue311_preparation import admit_disk, file_identity, fsync_directory, prepare_participant, verify_file
 from inferswarm.operator.source import _q8_canonical, fnv, validate_q8_payload
 
 SOURCE_CONTRACT = 'coordinator-full-source/participant-assigned-rpc-backing/1'
@@ -39,14 +39,42 @@ def runtime_identity(executable, expected_sha256):
     return _runtime_contract(expected_sha256)
 
 
-def publish_rpc_views(cache, records_and_keys, *, fnv_binary=None):
+def native_repair_reserve(records_and_keys):
+    """Bound retained repair duplication plus one active replacement file.
+
+    First native rename can leave a damaged hardlinked object inode behind.
+    Later repairs replace the independent RPC inode, so they do not accumulate
+    further copies. Conservatively reserve one extra per unique eligible content
+    even if its RPC view is already independent; actual existing copies are also
+    charged by admit_disk. No historical content is deleted or credited away.
+    """
+    eligible = {}
+    for record, _ in records_and_keys:
+        validate_artifact_record(record)
+        if record['length'] > 10 * 1024 * 1024:
+            eligible[(record['content_digest'], record['length'])] = record['length']
+    return sum(eligible.values()) + max(eligible.values(), default=0) + 16384 * (len(eligible) + 1)
+
+
+def _check_native_reserve(records_and_keys, budget):
+    required = native_repair_reserve(records_and_keys)
+    if budget.reserve_bytes < required:
+        raise ValueError('native durable repair and replacement temp reserve required')
+    return required
+
+
+def publish_rpc_views(cache, records_and_keys, *, budget, fnv_binary=None):
     """#200 verify/fsync/atomic publication, from verified assigned backing.
 
     Same-filesystem hardlink publication avoids another weight-sized disk copy.
     SHA/length remain authoritative. Existing wrong/colliding entries are refused
     and preserved; no automatic historical-content deletion. Tiny tensors retain
     backing but are not native hash-hit eligible at the unchanged >10 MiB gate.
+    Even low-level composition must supply the configured repair-aware budget.
     """
+    records_and_keys = list(records_and_keys)
+    _check_native_reserve(records_and_keys, budget)
+    admit_disk(cache.root, [r for r, _ in records_and_keys], cache, budget)
     rows = []; keys = {}
     for record, key in records_and_keys:
         validate_artifact_record(record)
@@ -167,10 +195,7 @@ def prepare_q8_participant(*, payload, epoch, executable, executable_sha256,
     projection = project_q8_preparation(payload, epoch=epoch, runtime=runtime)
     if any(r['length'] > 1 << 20 for r, _ in projection['native_ranges']) and fnv_binary is None:
         raise ValueError('provisioned bounded native FNV helper required')
-    largest = max((r['length'] for r, _ in projection['native_ranges']
-                   if r['length'] > 10 * 1024 * 1024), default=0)
-    if budget.reserve_bytes < largest + 16384:
-        raise ValueError('native replacement temp and metadata headroom reserve required')
+    required_reserve = _check_native_reserve(projection['native_ranges'], budget)
     if node.node_id != projection['metadata']['node_id']:
         raise ValueError('preparation Node identity mismatch')
     source = AssignedSource(origin_source, projection)
@@ -179,8 +204,8 @@ def prepare_q8_participant(*, payload, epoch, executable, executable_sha256,
     result = prepare_participant(coordinator=coordinator, requirements=requirements,
         participant_id=projection['metadata']['participant_id'], node=node,
         sources={source.source_id: source}, budget=budget,
-        publish_view=lambda cache: publish_rpc_views(cache, projection['native_ranges'], fnv_binary=fnv_binary))
+        publish_view=lambda cache: publish_rpc_views(cache, projection['native_ranges'], budget=budget, fnv_binary=fnv_binary))
     result.update(source_contract=SOURCE_CONTRACT, originating_plan_digest=payload['plan_digest'],
                   metadata_artifact_id=projection['records']['native-assigned-descriptors']['artifact_id'],
-                  runtime=runtime, q8_runner_integrated=False)
+                  runtime=runtime, native_repair_reserve_bytes=required_reserve, q8_runner_integrated=False)
     return result

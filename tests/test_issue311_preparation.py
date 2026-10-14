@@ -22,7 +22,8 @@ from issue311_preparation import (
     DiskBudget, StreamingArtifactCache, StreamingNode, backing_usage, prepare_participant,
 )
 from issue311_native_backing import (
-    SOURCE_CONTRACT, prepare_q8_participant, project_q8_preparation, publish_rpc_views, runtime_identity,
+    SOURCE_CONTRACT, native_repair_reserve, prepare_q8_participant, project_q8_preparation,
+    publish_rpc_views, runtime_identity,
 )
 from tests import test_issue299_source as q8_fixture
 
@@ -232,7 +233,24 @@ class Q8ProjectionTests(unittest.TestCase):
         projection=project_q8_preparation(self.payload,epoch=1,runtime=self.runtime)
         self.prepare(); record,key=projection['native_ranges'][0]
         with self.assertRaisesRegex(ValueError,'key/content mismatch'):
-            publish_rpc_views(self.node.cache,[(record,'0'*16)])
+            publish_rpc_views(self.node.cache,[(record,'0'*16)],budget=BUDGET)
+
+    def test_repair_reserve_deduplicates_content_and_counts_durable_plus_peak(self):
+        projection=project_q8_preparation(self.payload,epoch=1,runtime=self.runtime)
+        record=copy.deepcopy(projection['native_ranges'][0][0])
+        # Descriptor-only budget calculation: no source bytes are read.
+        size=12<<20
+        record.update(length=size)
+        record['origin'].update(byte_start=0,byte_end=size,source_object_length=size+1)
+        record['artifact_id']=self_digest(record,identity_field='artifact_id')
+        other=copy.deepcopy(record)
+        other['satisfies_logical_state_ids']=['another-assigned-state']
+        other['artifact_id']=self_digest(other,identity_field='artifact_id')
+        ranges=[(record,'a'*16),(other,'a'*16)]
+        self.assertEqual(native_repair_reserve(ranges),2*size+32768)
+        with self.assertRaisesRegex(ValueError,'native durable repair.*reserve'):
+            publish_rpc_views(self.node.cache,ranges,budget=DiskBudget(64<<20,0,size+16384))
+        self.assertFalse((self.node.cache.root/'rpc').exists())
 
 
 if __name__=='__main__': unittest.main()

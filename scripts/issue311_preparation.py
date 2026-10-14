@@ -159,7 +159,7 @@ class StreamingNode(Node):
 class DiskBudget:
     limit_bytes: int
     min_free_bytes: int
-    # Reserve native replacement temp / filesystem and metadata overhead explicitly.
+    # Reserve backend-required repair growth/staging and metadata overhead explicitly.
     reserve_bytes: int
 
     def __post_init__(self):
