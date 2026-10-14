@@ -103,6 +103,8 @@ def _onhost(p):
         if record.exists() or log.exists(): raise ValueError('process record/log already exists')
         env=os.environ.copy()
         if p.get('cache'): env['LLAMA_CACHE']=p['cache']
+        env.pop('IS311_ASSIGNED',None)
+        if p.get('assigned'): env['IS311_ASSIGNED']=p['assigned']
         if p.get('export'):
             # The observation overlay claims the directory itself via
             # O_CREAT|O_EXCL; the controller owns creating it fresh and
@@ -199,8 +201,8 @@ class LeaseManager:
     def invocation_dir(self,address):
         return str(Path(self.leases[address])/self.token)
 
-    def spawn(self,address,name,argv,cache=None,export=None):
-        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache,export=export)
+    def spawn(self,address,name,argv,cache=None,export=None,assigned=None):
+        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache,export=export,assigned=assigned)
         self.owned[address][name]=result
         return result
 

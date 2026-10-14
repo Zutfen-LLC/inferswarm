@@ -2,7 +2,7 @@
 
 This bounded development slice composes existing authority and recovery
 contracts. It does not add a manifest framework, cache daemon, scheduler or a
-permanent runtime choice. It is not Q8 operator startup acceptance.
+permanent runtime choice. The opt-in CPU startup connection below is development coverage, not physical Q8 acceptance.
 
 ## Reuse map and loader boundary
 
@@ -18,9 +18,10 @@ permanent runtime choice. It is not Q8 operator startup acceptance.
 
 The explicit successor is
 `coordinator-full-source/participant-assigned-rpc-backing/1`, implemented for
-preparation only in `scripts/issue311_native_backing.py`. The old
-`full-source-both-hosts/1` Q8 runner/validators are unchanged and still reject
-this successor. They must not be advertised as selectively prepared.
+stopped-worker preparation in `scripts/issue311_native_backing.py`. Ordinary Q8
+startup now accepts this opt-in contract for the finite reviewed CPU build pair
+in `operator-build-identities.json`. Legacy `full-source-both-hosts/1` remains
+available with its existing checks. See the startup scope below.
 
 The callable `prepare_q8_participant` accepts an already authenticated existing
 Q8 source payload, a separately reviewed patched executable SHA, an explicit
@@ -61,9 +62,10 @@ or historical final content. Dot-prefixed/interrupted native files are never
 eligible hits.
 
 Only existing native whole-tensor, single-SET, offset-zero payload boundaries are
-projected. The ordinary native loader's chunked/asynchronous upload path may
-choose other ranges; exact observed upload boundaries must be joined before
-normal Q8 startup admission. No arbitrary expert slices or tensor-split cache
+projected. The pinned RPC device has no host-buffer capability, excluding the loader's
+asynchronous chunk path. The real pinned loader fixture below observes and
+checks whole-tensor requests, including cache hits. Other boundaries are refused
+by the opt-in native guard before immutable weight transmission. No arbitrary expert slices or tensor-split cache
 support is implied. Native hash reuse still applies only above 10 MiB; smaller
 tensors have verified participant backing but SET sends their bytes.
 
@@ -163,12 +165,100 @@ unrelated acquisition. Native control bytes and verification GET are counted
 separately by the existing relay; there is no inference/steady-state activation
 measurement. Those are compact fixture observations, not real-model results.
 
-## Next bounded step
+## Ordinary CPU startup connection
 
-Connect the successor to normal owned-worker startup with reviewed per-role
-patched build identities, actual upload-range observations, worker source
-verification and updated memory charges. Keep the coordinator's full-source
-dependency explicit until its loader is separately changed. Then separately
-authorize the cold/warm physical recipe under #315 with roughly 16 GiB RAM and
-two 12 GiB GPUs, per-device headroom and actual host residency observations.
-#311 and #300 remain open. No merge or Final CPU Validation is dispatched here.
+`participant_backing` is an opt-in private strategy option alongside the successor
+`source_contract`, enabled `rpc_cache`, and existing per-role `observer` paths:
+
+```json
+{"epoch": 1, "memory_id": "B-disk", "limit_bytes": 274877906944,
+ "min_free_bytes": 1073741824, "reserve_bytes": 137438953472}
+```
+
+These are illustrative policy inputs, not a measured physical fit. The remote
+participant declares an empty full-GGUF `backing` list. Its `cache_path` names
+already prepared #317 objects/native views; its `source_path` remains provenance
+and is never opened there. Run the existing stopped-worker preparation adapter
+first, including cold/delta acquisition and its mandatory repair-aware admission.
+Normal startup verifies prepared backing and refuses missing data; it does not
+install an origin service or silently fetch complete source files. Reassignment
+requires stopping the owned worker, preparing the delta and creating a new plan.
+
+The ordinary runner acquires its leases, verifies participant backing plus the
+coordinator's complete source, authenticates the finite per-role build manifests,
+and only then spawns the owned RPC worker. Both owned runtime roles receive an
+exact assigned upload guard through `IS311_ASSIGNED`. Worker verification receives
+assigned descriptors/runtime metadata and small member provenance, without the
+global tensor index, tokenizer or raw GGUF headers. Its receipt labels all member
+identities as provenance and reports zero locally verified full members/headers.
+The controller still opens every GGUF split and reads/hashes actual source bytes.
+Warm worker reuse does not remove that coordinator dependency.
+
+`operator-build.py` composes the retained #301 observer overlay and #316 cache
+patch from the existing SHA-pinned source archive, preserves the conflicting
+`rpc_set` hook, and records attempts before the hash-hit early return. It uses
+the pin's CMake target closure for actual CPU `llama-server` and
+`ggml-rpc-server`, with exact executable/archive/compiler/options identities in
+`operator-build-identities.json`. The historical #301 manifests and producers
+are unchanged. Arbitrary self-declared executable/manifest pairs are refused.
+No runtime is built or installed by normal startup.
+
+The native guard accepts one immutable destination per assigned tensor name,
+exact original type/shape/SHA/length and one offset-zero whole-tensor SET.
+Partial uploads, views, duplicate destinations, reshapes and changed runtime
+identities are refused explicitly. Server cache reads/publication are restricted
+to declared immutable payloads; unrelated mutable/activation SETs retain transfer
+semantics but cannot create new cache entries against the assigned repair reserve.
+Protocol-v7 per-use integrity, atomic repair and ownership checks remain intact.
+This remains one controlled owned worker/writer, not a concurrent quota daemon.
+Smaller tensors retain verified backing but still send SET bytes below the
+unchanged >10 MiB hash gate. Arbitrary expert slices, row/tensor splits, missing
+explicit output weights and alternate native/backend builds are unsupported.
+
+Memory accounting retains coordinator full-source mappings, largest tensor reads,
+source hashing/page residence, destination weights, backend overhead and explicit
+UNKNOWN obligations. The successor replaces the obsolete weight-sized RPC
+message copy with a 352-byte descriptor, receive/cache-hit vectors with fixed
+1 MiB scratch charges, and full participant GGUF storage with the configured
+prepared-backing ceiling (including reserve/history). Receive scratch is charged
+for load and serve. Assigned metadata/guard payloads have a 2 MiB charge; native
+map/allocator overhead and backing-page residence remain UNKNOWN. No physical
+host peak or automatic execution admission is claimed.
+
+The compact native regression calls the actual pinned
+`llama_model_loader::load_all_data`, using six synthetic GGUF members and F32/Q8_0
+weights, through the same source-admission and owned-RPC-spawn functions called
+by ordinary Q8 startup. It does not instantiate the full Qwen model or perform
+inference. Native frame observations join name/type/shape/offset/length/SHA to
+assigned metadata and exact GET readback. **MEASURED** weight acquisition is
+51,348,736 bytes cold, 0 after fresh Node/worker restart, and 12,582,912 bytes
+for the missing assignment delta. Including metadata, preparation acquires
+51,351,132 / 0 / 12,585,766 bytes. All three prepared loads send 0 weight SET
+payload bytes. Verification GET traffic is 51,348,736 / 51,348,736 / 63,931,648
+bytes; control requests are separately 6,504 / 6,504 / 7,186 bytes. The coordinator
+retains 89,098,816 bytes of full fixture source on every run. Native partial and
+duplicate destination controls fail explicitly. These fixture results do not
+prove full-Qwen placement, selector visibility or request correlation.
+
+```bash
+python3 tools/native-cache/operator-build.py --archive /retained/pin.tar.gz \
+  --output /new/owned/operator-build --cmake /provisioned/cmake
+NATIVE_ASSIGNED_BUILD=/path/to/the/exact/reviewed/operator-build \
+  python3 -m unittest tests.test_issue311_startup -v
+```
+
+The finite identity table describes the retained reviewed pair; a newly compiled
+binary at another path/toolchain may differ and requires review before replacing
+those identities. This recipe does not automatically qualify arbitrary builds.
+Without the explicit build environment variable, ordinary CI runs the offline
+startup/config/identity regressions and skips the native fixture.
+
+## Next physical step
+
+Maintainer review of this coding slice comes first. CUDA builds and roughly
+16 GiB RAM/two 12 GiB GPU qualification remain separate under #315, with per-device
+headroom and actual host residency observations. The current finite pair is
+CPU-only and refuses the one-GPU configuration. Existing #302 live observer
+inventory/selector/request-correlation gaps remain explicit; this slice does not
+turn static startup into physical or inference acceptance. #311 and #300 remain
+open. No merge or Final CPU Validation is dispatched here.

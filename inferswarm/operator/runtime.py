@@ -79,6 +79,8 @@ class SSHSourceTransport:
                     raise RuntimeError(f'{part.role} source helper setup failed: {proc.stderr[-500:]}')
             payload=dict(schema='q8-source-verification/1',participant=selected,
                          plan_payload=projected,fnv_binary=helper)
+            if projected['source_contract']==source.SELECTIVE_CONTRACT and part.role=='remote':
+                payload=source.assigned_verification_envelope(projected,selected,helper)
             proc=self._call(part,program,canonical(payload).decode('utf-8'))
             try: result=json.loads(proc.stdout)
             except ValueError as exc:
@@ -143,6 +145,34 @@ class OperatorRunner:
         # nonce so labeled synthetic evidence can carry the same correlation
         # key; production leaves this None and generates a fresh secret.
         self.request_nonce=None
+
+    def _verify_profiled_sources(self,plan,client,remote):
+        """Ordinary owned startup's sole backing admission, before RPC spawn."""
+        options=thaw(plan.strategy_options)
+        cache=options['rpc_cache']=='enabled'
+        sources={p.participant_id:self.source.verify(p,plan,
+            str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
+            if p.role=='remote' and cache else None) for p in (remote,client)}
+        from .assigned_backing import CONTRACT
+        if options['source_contract']==CONTRACT:
+            if self.collector is None: raise ValueError('selective backing requires per-role native build collector')
+            observer=options['observer']
+            for p in (remote,client):
+                if 'assigned_guard_path' not in sources[p.participant_id]: raise ValueError('selective backing upload guard missing')
+                self.collector.collect_build(p,observer[p.role+'_manifest_path'],observer[p.role+'_executable_path'])
+        return sources
+
+    def _spawn_profiled_rpc(self,plan,remote,argv,sources,export=None):
+        options=thaw(plan.strategy_options)
+        return self.leases.spawn(remote.execution_address,'rpc',list(argv),
+            cache=remote.cache_path if options['rpc_cache']=='enabled' else None,
+            **({'export':export} if export else {}),**self._assigned_spawn(plan,remote,sources))
+
+    def _assigned_spawn(self,plan,part,sources):
+        from .assigned_backing import CONTRACT
+        if thaw(plan.strategy_options)['source_contract']==CONTRACT:
+            return dict(assigned=sources[part.participant_id]['assigned_guard_path'])
+        return {}
 
     def run(self,plan):
         if isinstance(plan,ProfiledOperatorPlan): return self._run_profiled(plan)
@@ -281,7 +311,7 @@ class OperatorRunner:
         client=next(p for p in plan.participants if p.role=='client')
         remote=next(p for p in plan.participants if p.role=='remote')
         for part in (client,remote):
-            if Path(part.source_path).name!=plan.model.members[0][0]:
+            if (part.role=='client' or thaw(plan.strategy_options)['source_contract']=='full-source-both-hosts/1') and Path(part.source_path).name!=plan.model.members[0][0]:
                 raise ValueError(part.role+' source_path must name first full GGUF member')
         host,sep,port=remote.rpc_endpoint.rpartition(':')
         if not sep or not host or not port.isdecimal() or int(port)!=remote.port:
@@ -296,13 +326,10 @@ class OperatorRunner:
         try:
             self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
             self.leases.acquire(client.execution_address,client.lifecycle_dir)
-            sources={p.participant_id:self.source.verify(p,plan,
-                str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
-                if p.role=='remote' and cache_enabled else None) for p in (remote,client)}
+            sources=self._verify_profiled_sources(plan,client,remote)
             self.leases.port(remote.execution_address,host,remote.port)
             self.leases.port(client.execution_address,'127.0.0.1',client.port)
-            rows={remote.participant_id:self.leases.spawn(remote.execution_address,'rpc',list(remote_argv),
-                cache=remote.cache_path if cache_enabled else None)}
+            rows={remote.participant_id:self._spawn_profiled_rpc(plan,remote,remote_argv,sources)}
             rpc_deadline=time.monotonic()+spec.startup_timeout_seconds
             while True:
                 self._live(client,remote,client_started=False)
@@ -311,7 +338,7 @@ class OperatorRunner:
                 if time.monotonic()>rpc_deadline: raise TimeoutError('RPC owned listener startup timeout')
                 if ready: break
                 self.pause(.5)
-            rows[client.participant_id]=self.leases.spawn(client.execution_address,'client',list(client_argv))
+            rows[client.participant_id]=self.leases.spawn(client.execution_address,'client',list(client_argv),**self._assigned_spawn(plan,client,sources))
             # Own the opened tunnel before any health/identity/capture can fail.
             opened=self.tunnel_factory(client.execution_address,client.port)
             tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
@@ -413,7 +440,7 @@ class OperatorRunner:
         client=next(p for p in plan.participants if p.role=='client')
         remote=next(p for p in plan.participants if p.role=='remote')
         for part in (client,remote):
-            if Path(part.source_path).name!=plan.model.members[0][0]:
+            if (part.role=='client' or thaw(plan.strategy_options)['source_contract']=='full-source-both-hosts/1') and Path(part.source_path).name!=plan.model.members[0][0]:
                 raise ValueError(part.role+' source_path must name first full GGUF member')
         host,sep,port=remote.rpc_endpoint.rpartition(':')
         if not sep or not host or not port.isdecimal() or int(port)!=remote.port:
@@ -448,17 +475,14 @@ class OperatorRunner:
         try:
             self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
             self.leases.acquire(client.execution_address,client.lifecycle_dir)
-            sources={p.participant_id:self.source.verify(p,plan,
-                str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
-                if p.role=='remote' and cache_enabled else None) for p in (remote,client)}
+            sources=self._verify_profiled_sources(plan,client,remote)
             self.leases.port(remote.execution_address,host,remote.port)
             self.leases.port(client.execution_address,'127.0.0.1',client.port)
             invocation=self.leases.token
             export_dirs={
                 remote.participant_id:str(Path(self.leases.invocation_dir(remote.execution_address))/'exports-rpc'),
                 client.participant_id:str(Path(self.leases.invocation_dir(client.execution_address))/'exports-client')}
-            rows={remote.participant_id:self.leases.spawn(remote.execution_address,'rpc',list(remote_argv),
-                cache=remote.cache_path if cache_enabled else None,export=export_dirs[remote.participant_id])}
+            rows={remote.participant_id:self._spawn_profiled_rpc(plan,remote,remote_argv,sources,export_dirs[remote.participant_id])}
             rpc_deadline=time.monotonic()+spec.startup_timeout_seconds
             while True:
                 self._live(client,remote,client_started=False)
@@ -468,7 +492,7 @@ class OperatorRunner:
                 if ready: break
                 self.pause(.5)
             rows[client.participant_id]=self.leases.spawn(client.execution_address,'client',list(client_argv),
-                export=export_dirs[client.participant_id])
+                export=export_dirs[client.participant_id],**self._assigned_spawn(plan,client,sources))
             # Own the opened tunnel before any health/identity/capture can fail.
             opened=self.tunnel_factory(client.execution_address,client.port)
             tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
@@ -652,8 +676,12 @@ def run_config(path):
         # run_config. Legacy /1 observer wiring stays unchanged.
         from .native_observer.collector import NativeObserverCollector
         from .phased_observation import reconcile_static, reconcile_dynamic
+        if options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1':
+            collector=NativeObserverCollector(selective=True)
+        else:
+            collector=NativeObserverCollector()
         runner=OperatorRunner(SSHSourceTransport(),manager,JSONHTTP(),ssh_tunnel,
-            collector=NativeObserverCollector(),static_reconciler=reconcile_static,
+            collector=collector,static_reconciler=reconcile_static,
             dynamic_reconciler=reconcile_dynamic)
     else:
         runner=OperatorRunner(SSHSourceTransport(),manager,JSONHTTP(),ssh_tunnel)

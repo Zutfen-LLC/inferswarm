@@ -3300,7 +3300,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c\u2026, stable AMD row 2187ab8f\u2026, V0n dispatch 4aa0aa0b\u2026, freeze 3fe9e74d\u2026, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+      "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -3521,7 +3521,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations \u2014 a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) \u2014 the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -4665,7 +4665,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
+      "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold — the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
       "lineage": "Issue #284 observer retention correction law",
       "pinned_by_evidence": [
         "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
@@ -4757,7 +4757,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws \u2014 the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed \u2014 a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch \u2014 no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
+      "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws — the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed — a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch — no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
       "lineage": "Issue #289 extraction of the session-local #280 r3 physical driver lifecycle (inferswarm05 driver.py sha256 2cc001b5...)",
       "owned_surfaces": {
         "evidence_read": [],
@@ -5185,9 +5185,32 @@
         ]
       },
       "pinned_by_evidence": [],
-      "rationale": "Offline synthetic backing proof. Original Q8 runner remains full-source-both-hosts/1; no full Q8 startup, physical qualification, acceptance or execution authority.",
+      "rationale": "Offline synthetic preparation proof; ordinary selective startup is tested separately by test_issue311_startup. No physical qualification, acceptance or execution authority.",
       "replacement": null,
       "test_count_at_audit": 12
+    },
+    "test_issue311_startup": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 7,
+      "category": "CURRENT_CONTRACT",
+      "current_test_count": 7,
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Ordinary selective CPU startup verifies assigned-only metadata/objects and finite per-role build identities before owned RPC spawn; actual pinned GGUF loader cold/restart/delta consumption and native partial/duplicate refusal are explicit opt-in CPU controls.",
+      "lineage": "Issue #311 ordinary startup successor to merged #317 preparation and #316 native integrity",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "scripts/issue311_preparation.py",
+          "scripts/issue311_native_backing.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline normal-config/source/build joins plus explicit retained CPU/native loopback startup. No full-Qwen inference, physical GPU qualification, acceptance or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 7
     },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",

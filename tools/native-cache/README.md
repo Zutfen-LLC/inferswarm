@@ -59,39 +59,25 @@ existing staging behavior. No full-model or GPU memory bound is claimed.
 The additive [selective preparation adapter](selective-preparation.md) now
 connects #99/#101 requirements, verified inventory and missing-only acquisition
 to a bounded atomic native cache view, with exact assigned/runtime metadata and
-configured disk/free-headroom admission. It defines a preparation-only
-`coordinator-full-source/participant-assigned-rpc-backing/1` successor and has
-offline plus actual CPU/native consumption/restart/delta fixture coverage.
-The unchanged ordinary Q8 runner described below still requires full source.
+configured disk/free-headroom admission. The opt-in successor
+`coordinator-full-source/participant-assigned-rpc-backing/1` is now connected to
+ordinary owned CPU worker startup with exact assigned metadata/cache verification,
+a finite reviewed observer/cache build pair, and actual pinned-loader fixture
+coverage. The coordinator still needs full source and its read/hash work.
+Legacy `full-source-both-hosts/1` checks and historical #301 artifacts remain.
+
 The repair-budget correction reserves each unique eligible content's possible
-durable duplicate plus the largest active replacement and overhead; the former
-largest-temp-only reserve failed a maintainer two-repair counterexample. See the
-guide's preserved failure and RED/GREEN regression; earlier PASS results did not
-cover that case.
+durable duplicate plus the largest active replacement and overhead. The former
+largest-temp-only reserve failed a maintainer counterexample; the guide preserves
+that result. The native successor restricts cache reads/publication to declared
+immutable payloads, while unchanged mutable/activation transfers do not populate
+the assigned cache. Native partial/view/duplicate-destination immutable uploads
+and unreviewed builds fail explicitly. Smaller tensors still send bytes below
+the >10 MiB hash gate. See the [startup scope and checks](selective-preparation.md#ordinary-cpu-startup-connection).
 
-[`qwen_q8.py`](../../inferswarm/operator/qwen_q8.py) and
-[`source.py`](../../inferswarm/operator/source.py) explicitly enforce
-`full-source-both-hosts/1`, all six authenticated members on both hosts, stock
-runtime identities, and provisioned cache descriptors. The ordinary Q8 runner
-already passes `--cache` and `LLAMA_CACHE`. This patch does not loosen those
-validators or alter the historical #299/#301 observer overlay.
-
-Normal runner integration still needs the reviewed successor source contract: keep
-complete coordinator GGUF scaffolding where the loader requires it; project
-frozen participant immutable assignments plus shared metadata to #99 artifacts;
-use #101's verified missing-only delta and a bounded successor to #200 staging;
-prepare only assigned native payload ranges, retain valid unassigned entries
-within an explicit disk budget, then verify before owned-worker startup. Bind
-the patched executable identity and update the source-derived memory ledger.
-Exact tensor-split upload boundaries need source-backed support before admission.
-A worker's RPC API itself requires no model repository and this fixture supplies
-only assigned tensors; that does not establish the operator successor contract.
-
-Participant prepare/reconcile and disk-budget admission are implemented by the
-additive adapter; they are not a live quota daemon. Stale temporary cleanup is
-not automatic. Independent native cache retention remains optional and unbounded
-outside the declared prepared workload. Mutable/KV ownership is unchanged.
-#311 remains open; #300 is unchanged. No physical qualification is inferred.
+This is controlled stopped-worker preparation and owned CPU startup, not a live
+quota daemon, full-Qwen inference, CUDA build qualification or physical fit proof.
+#311 and #300 stay open. Physical qualification remains separate under #315.
 
 ## Local build and focused tests
 

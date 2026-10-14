@@ -1205,6 +1205,9 @@ def _static_source_join(plan, participants, rows, source_receipts):
         for field, want in checks.items():
             if not _same_json(receipt[field], want):
                 raise ValueError('static reconciliation: source receipt identity mismatch: ' + row.participant_id)
+        if dict(plan.strategy_options)['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' and participant.role=='remote':
+            if receipt.get('verified_members')!=[] or receipt.get('header_identities')!=[] or receipt.get('backing')!='assigned-immutable-native-backing':
+                raise ValueError('static reconciliation: selective participant provenance/verified-byte mismatch')
         if not _same_json(receipt.get('member_identities'), _plan_members_wire(plan)):
             raise ValueError('static reconciliation: source receipt member mismatch: ' + row.participant_id)
         if _sha256(receipt) != row.source_receipt_digest:

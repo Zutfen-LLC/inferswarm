@@ -221,10 +221,10 @@ class Q8ProjectionTests(unittest.TestCase):
                 self.prepare(payload)
         self.assertFalse(self.node.cache.root.joinpath('rpc').exists())
 
-    def test_old_runner_keeps_full_source_contract_and_patch_is_explicit(self):
+    def test_successor_requires_assigned_metadata_and_patch_is_explicit(self):
         from inferswarm.operator.source import validate_q8_payload
         payload=copy.deepcopy(self.payload); payload['source_contract']=SOURCE_CONTRACT
-        with self.assertRaisesRegex(ValueError,'full-source backing contract'): validate_q8_payload(payload)
+        with self.assertRaisesRegex(ValueError,'q8 source plan.*fields'): validate_q8_payload(payload)
         runtime=copy.deepcopy(self.runtime); runtime['rpc_major']=6
         with self.assertRaisesRegex(ValueError,'runtime contract'):
             project_q8_preparation(self.payload,epoch=1,runtime=runtime)

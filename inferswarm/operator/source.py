@@ -1,4 +1,4 @@
-"""Read-only on-host authentication of runtime, full GGUF members and assigned RPC cache.
+"""On-host source authentication and private assigned upload-guard publication.
 
 This file is self-contained so the controller can send it to a participant via
 `ssh python3 -c ...` without requiring an installed product package there.
@@ -387,9 +387,14 @@ def q8_source_payload(plan):
         assignments=[asdict(a) for a in _field(_field(plan, 'candidate'), 'assignments')],
         placement=[asdict(p) for p in _field(plan, 'placement')])
     payload = json.loads(_q8_canonical(payload))
+    if options['source_contract'] == SELECTIVE_CONTRACT:
+        from .assigned_backing import project_payload
+        payload = project_payload(payload, dict(options['participant_backing']))
     validate_q8_payload(payload)
     return payload
 
+
+SELECTIVE_CONTRACT = 'coordinator-full-source/participant-assigned-rpc-backing/1'
 
 def validate_q8_payload(payload):
     """Validate complete opaque ownership against authenticated metadata identity.
@@ -398,12 +403,18 @@ def validate_q8_payload(payload):
     verify_q8_role. The trusted controller supplies the plan/metadata identities;
     resealing an invented digest is not independent public-source authentication.
     """
-    _q8_keys(payload, Q8_PLAN_FIELDS, 'q8 source plan')
+    selective = payload.get('source_contract') == SELECTIVE_CONTRACT
+    _q8_keys(payload, Q8_PLAN_FIELDS + ('prepared_metadata','backing_budget') if selective else Q8_PLAN_FIELDS, 'q8 source plan')
     if payload['schema'] != 'q8-source-plan/1': raise ValueError('unsupported Q8 source schema')
     _q8_digest(payload['plan_digest'], 'plan')
-    if payload['source_contract'] != 'full-source-both-hosts/1':
+    if payload['source_contract'] not in ('full-source-both-hosts/1', SELECTIVE_CONTRACT):
         raise ValueError('unsupported full-source backing contract')
     if type(payload['rpc_cache']) is not bool: raise ValueError('explicit boolean RPC cache mode required')
+    if selective:
+        if not payload['rpc_cache']: raise ValueError('selective backing requires enabled RPC cache')
+        _q8_keys(payload['backing_budget'], ('limit_bytes','min_free_bytes','reserve_bytes'), 'backing budget')
+        for k,v in payload['backing_budget'].items(): _q8_int(v, 'backing budget '+k, 1 if k=='limit_bytes' else 0)
+        _q8_keys(payload['prepared_metadata'], ('source_contract','source_identity','participant_id','node_id','metadata_authority_digest','runtime','tensors'), 'assigned metadata')
     meta = payload['metadata']
     _q8_keys(meta, ('schema', 'source', 'header_identities', 'model_metadata', 'tensors', 'provenance', 'metadata_digest'), 'metadata')
     if meta['schema'] != 'gguf-metadata-index/1': raise ValueError('unsupported metadata schema')
@@ -471,7 +482,9 @@ def validate_q8_payload(payload):
             _q8_keys(b, ('memory_id','member','sha256','size_bytes'), 'backing')
             _q8_text(b['memory_id'], 'backing memory'); _q8_digest(b['sha256'], 'backing'); _q8_int(b['size_bytes'], 'backing size', 1)
             backing.append([b['member'],b['sha256'],b['size_bytes']]); memory_ids.add(b['memory_id'])
-        if sorted(backing) != sorted(model['members']): raise ValueError('full-source backing inventory mismatch')
+        if selective and p['role']=='remote':
+            if backing: raise ValueError('selective participant must not declare complete GGUF backing')
+        elif sorted(backing) != sorted(model['members']): raise ValueError('full-source backing inventory mismatch')
         local_bindings = _q8_array(p['bindings'], 'binding', 1000)
         if not local_bindings: raise ValueError('missing participant bindings')
         for b in local_bindings:
@@ -561,6 +574,8 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
     selected = [r for r in payload['participants'] if r['participant_id'] == p['participant_id']]
     if len(selected) != 1 or p != selected[0]: raise ValueError('selected participant mismatch')
     role = p['role']; root = Path(p['source_path']).parent
+    if payload['source_contract'] == SELECTIVE_CONTRACT and role == 'remote':
+        return verify_assigned_role(p, payload, fnv_binary)
     if payload['rpc_cache'] and role == 'remote' and fnv_binary is not None:
         _q8_text(fnv_binary, 'FNV helper path')
         if not Path(fnv_binary).is_absolute(): raise ValueError('FNV helper path must be absolute')
@@ -617,7 +632,7 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
         ranges.append(dict(state_id=a['state_id'], member=t['member'], offset=off, length=length,
             sha256=h, binding_id=a['binding_id'], memory_id=a['memory_id'], authority=a['authority'],
             cache_eligible=cache_eligible, cache_key=key))
-    return dict(schema='q8-source-receipt/1', role=role, participant_id=p['participant_id'],
+    result = dict(schema='q8-source-receipt/1', role=role, participant_id=p['participant_id'],
         status='VERIFIED-not-consumed', plan_digest=payload['plan_digest'], metadata_digest=meta['metadata_digest'],
         source_contract=payload['source_contract'], rpc_cache=payload['rpc_cache'],
         source_identity=meta['source'], verified_members=members, member_identities=payload['model']['members'],
@@ -626,6 +641,158 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
         range_identities=ranges, cache_ranges=checked, eligible_cache_ranges=eligible,
         eligible_cache_reads=eligible if payload['rpc_cache'] and role == 'remote' else 0,
         backing='full-source', physical_observation=False, cache_consumed=False)
+    if payload['source_contract']==SELECTIVE_CONTRACT:
+        result['assigned_guard_path']=publish_assigned_guard(Path(p['cache_path']), payload['prepared_metadata'])
+    return result
+
+
+def assigned_guard_bytes(metadata):
+    rows=[]
+    for t in metadata['tensors']:
+        shape=t['shape']+[1]*(4-len(t['shape']))
+        rows.append(' '.join(map(str,[t['state_id'],t['ggml_type'],*shape,t['encoded_bytes'],t['content_sha256']])))
+    data=('\n'.join(rows)+'\n').encode('ascii')
+    if len(data)>1<<20: raise ValueError('assigned upload guard size exceeded')
+    return data
+
+
+def publish_assigned_guard(root, metadata):
+    import tempfile
+    guard=assigned_guard_bytes(metadata)
+    root.mkdir(parents=True,exist_ok=True)
+    path=root/('assigned-'+hashlib.sha256(guard).hexdigest()+'.txt')
+    if path.exists():
+        if path.is_symlink() or path.stat().st_size!=len(guard) or path.read_bytes()!=guard: raise ValueError('assigned upload guard identity mismatch')
+    else:
+        fd,tmp=tempfile.mkstemp(prefix='.assigned-',dir=root)
+        try:
+            with os.fdopen(fd,'wb') as stream: stream.write(guard); stream.flush(); os.fsync(stream.fileno())
+            os.replace(tmp,path)
+        finally:
+            if os.path.exists(tmp): os.unlink(tmp)
+    return str(path)
+
+
+def assigned_verification_envelope(payload,participant,fnv_binary):
+    """Project only assigned dependencies; do not send the global tensor index."""
+    validate_q8_payload(payload)
+    return dict(schema='q8-assigned-verification/1',participant=participant,
+        plan_digest=payload['plan_digest'],model=payload['model'],
+        prepared_metadata=payload['prepared_metadata'],backing_budget=payload['backing_budget'],fnv_binary=fnv_binary)
+
+
+def verify_assigned_envelope(envelope):
+    _q8_keys(envelope,('schema','participant','plan_digest','model','prepared_metadata','backing_budget','fnv_binary'),'assigned verification envelope')
+    if envelope['schema']!='q8-assigned-verification/1': raise ValueError('unsupported assigned verification schema')
+    _q8_digest(envelope['plan_digest'],'plan')
+    p=envelope['participant']; _q8_keys(p,Q8_PARTICIPANT_FIELDS,'assigned participant')
+    for k in Q8_PARTICIPANT_FIELDS:
+        if k not in ('bindings','backing','cache_ranges'): _q8_text(p[k],'assigned participant '+k)
+    if p['role']!='remote' or p['backing']: raise ValueError('assigned participant role/backing mismatch')
+    _q8_digest(p['runtime_sha256'],'runtime')
+    for k in ('runtime_executable','source_path','cache_path'):
+        if not Path(p[k]).is_absolute(): raise ValueError('assigned participant path must be absolute')
+    model=envelope['model']; _q8_keys(model,('source_id','revision','representation','members'),'assigned model')
+    identity={k:_q8_text(model[k],k) for k in ('source_id','revision','representation')}
+    if (p['source_id'],p['source_revision'],p['source_representation'])!=tuple(identity.values()): raise ValueError('assigned participant source identity mismatch')
+    members={}
+    for row in _q8_array(model['members'],'assigned source provenance',6):
+        if not isinstance(row,list) or len(row)!=3: raise ValueError('assigned member provenance mismatch')
+        name,h,size=row; _q8_text(name,'member'); _q8_digest(h,'member'); _q8_int(size,'member size',1)
+        if Path(name).name!=name or name in members: raise ValueError('assigned member provenance mismatch')
+        members[name]=size
+    if len(members)!=6: raise ValueError('assigned member provenance mismatch')
+    bindings={}
+    for b in _q8_array(p['bindings'],'assigned binding'):
+        _q8_keys(b,Q8_BINDING_FIELDS,'assigned binding')
+        for k in Q8_BINDING_FIELDS: _q8_text(b[k],'assigned binding '+k)
+        if b['binding_id'] in bindings: raise ValueError('assigned duplicate binding')
+        bindings[b['binding_id']]=b
+    descriptors={}
+    for c in _q8_array(p['cache_ranges'],'assigned cache descriptor'):
+        _q8_keys(c,Q8_CACHE_FIELDS,'assigned cache descriptor')
+        if c['state_id'] in descriptors: raise ValueError('assigned duplicate range')
+        descriptors[c['state_id']]=c
+    metadata=envelope['prepared_metadata']
+    _q8_keys(metadata,('source_contract','source_identity','participant_id','node_id','metadata_authority_digest','runtime','tensors'),'assigned metadata')
+    _q8_digest(metadata['metadata_authority_digest'],'assigned metadata authority')
+    assigned=[]; names=set(); native_keys=set()
+    for t in _q8_array(metadata['tensors'],'assigned metadata tensor'):
+        _q8_keys(t,Q8_ASSIGNMENT_FIELDS+('artifact_id','content_sha256','cache_key','unit_id'),'assigned metadata tensor')
+        name=_q8_text(t['state_id'],'assigned state')
+        if name in names or name not in descriptors or t['binding_id'] not in bindings or t['memory_id']!=bindings[t['binding_id']]['memory_id'] or t['authority']!='immutable-public-source/1': raise ValueError('assigned ownership coverage mismatch')
+        names.add(name); c=descriptors[name]
+        _q8_digest(c['sha256'],'assigned content'); _q8_int(c['offset'],'assigned offset'); _q8_int(c['length'],'assigned length',1)
+        if c['member'] not in members or c['offset']+c['length']>members[c['member']] or c['cache_key'] in native_keys or not KEY.fullmatch(c['cache_key']): raise ValueError('assigned source range/key mismatch')
+        native_keys.add(c['cache_key'])
+        if (c['source_id'],c['revision'],c['representation'])!=tuple(identity.values()) or c['unit_id']!=t['unit_id'] or (c['member'],c['offset'],c['length'])!=(t['member'],t['absolute_offset'],t['encoded_bytes']): raise ValueError('assigned descriptor authority mismatch')
+        if _encoded_bytes(t['shape'],t['ggml_type'])!=t['encoded_bytes']: raise ValueError('assigned encoded shape mismatch')
+        assigned.append({k:t[k] for k in Q8_ASSIGNMENT_FIELDS})
+    if not names or not bindings or names!=set(descriptors): raise ValueError('assigned cache coverage mismatch')
+    budget=envelope['backing_budget']; _q8_keys(budget,('limit_bytes','min_free_bytes','reserve_bytes'),'backing budget')
+    for k,v in budget.items(): _q8_int(v,'backing budget '+k,1 if k=='limit_bytes' else 0)
+    payload=dict(plan_digest=envelope['plan_digest'],model=model,metadata=dict(metadata_digest=metadata['metadata_authority_digest'],source=identity),
+        rpc_cache=True,prepared_metadata=metadata,assignments=assigned,backing_budget=budget)
+    return verify_assigned_role(p,payload,envelope['fnv_binary'])
+
+
+def verify_assigned_role(p, payload, fnv_binary):
+    """Verify #317 objects/metadata/native views; never open participant GGUFs."""
+    import shutil
+    if fnv_binary is not None:
+        _q8_text(fnv_binary,'FNV helper path')
+        if not Path(fnv_binary).is_absolute(): raise ValueError('FNV helper path must be absolute')
+    if not payload['rpc_cache']: raise ValueError('selective backing requires enabled RPC cache')
+    if sha(p['runtime_executable']) != p['runtime_sha256']: raise ValueError('remote: runtime executable SHA-256 mismatch')
+    metadata=payload['prepared_metadata']; tensors=_q8_array(metadata['tensors'], 'assigned metadata tensor')
+    if metadata['source_identity'] != dict(model_id=payload['model']['source_id'],revision=payload['model']['revision'],representation=payload['model']['representation']): raise ValueError('assigned metadata model identity mismatch')
+    _q8_keys(metadata['runtime'],('native_commit','rpc_major','patch_sha256','executable_sha256'),'assigned runtime')
+    if metadata['runtime']['patch_sha256']!='91ae0188e6746e7f6f455f895af423a0acfceb8b3342615ca042895fc0768a49': raise ValueError('assigned native patch identity mismatch')
+    bids={b['binding_id'] for b in p['bindings']}
+    assigned={a['state_id']:a for a in payload['assignments'] if a['binding_id'] in bids}
+    descriptors={c['state_id']:c for c in p['cache_ranges']}
+    if len(tensors)!=len(assigned) or {t['state_id'] for t in tensors}!=set(assigned): raise ValueError('assigned metadata coverage mismatch')
+    runtime=metadata['runtime']
+    if runtime['native_commit']!='b29c606e28a01b1bc8c1351026a0fa6e616bf6c4' or runtime['rpc_major']!=7 or runtime['executable_sha256']!=p['runtime_sha256']:
+        raise ValueError('selective patched runtime identity mismatch')
+    if metadata['metadata_authority_digest']!=payload['metadata']['metadata_digest'] or metadata['participant_id']!=p['participant_id'] or metadata['node_id']!=p['host_id'] or metadata['source_contract']!=SELECTIVE_CONTRACT:
+        raise ValueError('assigned metadata authority mismatch')
+    root=Path(p['cache_path']); ranges=[]; checked=0; counts={bid:0 for bid in bids}
+    expected=_q8_canonical(metadata)+b'\n'
+    if len(expected)>1<<20: raise ValueError('assigned metadata exceeds bounded dependency')
+    mpath=root/'objects'/('sha256-'+hashlib.sha256(expected).hexdigest())
+    if not mpath.is_file() or mpath.is_symlink() or mpath.stat().st_size!=len(expected) or mpath.read_bytes()!=expected: raise ValueError('assigned metadata object mismatch')
+    for t in tensors:
+        _q8_keys(t,Q8_ASSIGNMENT_FIELDS+('artifact_id','content_sha256','cache_key','unit_id'),'assigned metadata tensor')
+        name=t['state_id']; a=assigned[name]; c=descriptors[name]
+        if any(t[k]!=a[k] for k in Q8_ASSIGNMENT_FIELDS) or t['content_sha256']!=c['sha256'] or t['cache_key']!=c['cache_key']:
+            raise ValueError('assigned metadata tensor identity mismatch: '+name)
+        file=root/'objects'/('sha256-'+c['sha256'])
+        if file.is_symlink() or file.stat().st_size!=c['length'] or sha(file)!=c['sha256']: raise ValueError('assigned backing identity mismatch: '+name)
+        if fnv(file,fnv_binary)!=c['cache_key']: raise ValueError('assigned native lookup mismatch: '+name)
+        eligible=_q8_cache_eligible(c['length'])
+        if eligible:
+            native=root/'rpc'/c['cache_key']
+            if native.is_symlink() or native.stat().st_size!=c['length'] or sha(native)!=c['sha256'] or fnv(native,fnv_binary)!=c['cache_key']:
+                raise ValueError('assigned native view mismatch: '+name)
+            checked+=1
+        counts[a['binding_id']]+=1
+        ranges.append(dict(state_id=name,member=a['member'],offset=a['absolute_offset'],length=a['encoded_bytes'],sha256=c['sha256'],binding_id=a['binding_id'],memory_id=a['memory_id'],authority=a['authority'],cache_eligible=eligible,cache_key=c['cache_key']))
+    # Repair allowance is unchanged from #317, including durable hardlink splits.
+    lengths={(c['sha256'],c['length']):c['length'] for c in descriptors.values() if _q8_cache_eligible(c['length'])}
+    minimum=sum(lengths.values())+max(lengths.values(),default=0)+16384*(len(lengths)+1)
+    budget=payload['backing_budget']
+    if budget['reserve_bytes']<minimum: raise ValueError('native durable repair reserve required')
+    seen=set(); usage=0
+    for path in root.rglob('*'):
+        if path.is_symlink(): raise ValueError('nonregular retained backing entry')
+        info=path.lstat(); inode=(info.st_dev,info.st_ino)
+        if inode not in seen: usage+=max(info.st_size,info.st_blocks*512); seen.add(inode)
+    overhead=max(len(assigned_guard_bytes(metadata)),4096)+16384
+    if usage+budget['reserve_bytes']+overhead>budget['limit_bytes'] or shutil.disk_usage(root).free<budget['min_free_bytes']+budget['reserve_bytes']+overhead:
+        raise ValueError('selective backing disk budget/free headroom exceeded')
+    path=publish_assigned_guard(root, metadata)
+    return dict(schema='q8-source-receipt/1',role='remote',participant_id=p['participant_id'],status='VERIFIED-not-consumed',plan_digest=payload['plan_digest'],metadata_digest=payload['metadata']['metadata_digest'],source_contract=SELECTIVE_CONTRACT,rpc_cache=True,source_identity=payload['metadata']['source'],runtime_sha256=p['runtime_sha256'],member_identities=payload['model']['members'],verified_members=[],header_identities=[],binding_expectations=p['bindings'],assigned_count=len(assigned),binding_counts=counts,range_identities=ranges,cache_ranges=len(tensors),eligible_cache_ranges=checked,eligible_cache_reads=checked,backing='assigned-immutable-native-backing',physical_observation=False,cache_consumed=False,assigned_guard_path=str(path),retained_backing_bytes=usage,native_repair_reserve_bytes=minimum)
 
 
 def main():
@@ -641,6 +808,11 @@ def main():
     # to the explicitly versioned source protocol.
     if isinstance(raw, dict) and 'schema' in raw:
         raw = _q8_json(data)
+    if isinstance(raw,dict) and raw.get('schema')=='q8-assigned-verification/1':
+        try: print(json.dumps(verify_assigned_envelope(raw),allow_nan=False))
+        except (ValueError,OSError,subprocess.SubprocessError) as exc:
+            print(json.dumps({'schema':'q8-source-error/1','status':'ERROR','reason':str(exc)})); raise SystemExit(1)
+        return
     if isinstance(raw, dict) and raw.get('schema') == 'q8-source-verification/1':
         _q8_keys(raw, ('schema', 'participant', 'plan_payload', 'fnv_binary'), 'q8 verification envelope')
         try:
