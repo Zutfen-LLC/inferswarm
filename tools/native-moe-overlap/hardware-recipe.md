@@ -1,7 +1,7 @@
 # Hermes handoff: one real native MoE layer
 
 **Recipe only; execution requires a separate maintainer dispatch.** #309
-authorized CPU development on Valinor. It authorized no inferswarm host access,
+authorized CPU development on Valinor. It authorized no InferSwarm host access,
 install, model acquisition, GPU build/campaign, or full-model inference. CPU
 fixtures establish none of CUDA compatibility, real-model compatibility, VRAM
 fit, GPU overlap or performance. #300 is not closed by this handoff.
