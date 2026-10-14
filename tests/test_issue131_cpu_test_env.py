@@ -1441,7 +1441,7 @@ class DependencyCacheContractTests(unittest.TestCase):
                 job_name for job_name, job in workflow["jobs"].items()
                 if any("bootstrap" in step_roles(s) for s in job["steps"])}
             self.assertEqual(bearing, expected[name], name)
-            self.assertEqual(len(bearing), 17 if name == "ci.yml" else 1)
+            self.assertEqual(len(bearing), 18 if name == "ci.yml" else 1)
             for job_name in bearing:
                 self.assertEqual(environment_job_findings(
                     job_name, workflow["jobs"][job_name]), [], job_name)
@@ -2666,7 +2666,7 @@ class JobFailureToleranceTests(unittest.TestCase):
     def test_real_workflows_reject_tolerance_on_exactly_the_env_jobs(self):
         import copy
         import yaml
-        expected_counts = {CI_WORKFLOW: 17, FINAL_WORKFLOW: 1}
+        expected_counts = {CI_WORKFLOW: 18, FINAL_WORKFLOW: 1}
         for path, count in expected_counts.items():
             real = yaml.safe_load(path.read_text(encoding="utf-8"))
             self.assertEqual(
