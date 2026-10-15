@@ -100,7 +100,13 @@ def driver_resolution(cxx, pin):
     """
     flags = pin.cuda_driver_flags(cxx)
     if '-lcuda' in flags:
-        resolved = Path(pin.CUDA_LIB_FLAGS[0][2:]) / 'libcuda.so'
+        # The probe linked -lcuda; resolve the development library through
+        # the reviewed probe's own -L directory (fail closed on shape drift
+        # rather than guessing a path).
+        link_dir = next((f[2:] for f in flags if f.startswith('-L')), None)
+        if link_dir is None:
+            raise SystemExit('shared CUDA probe returned no -L directory; refusing to guess')
+        resolved = Path(link_dir) / 'libcuda.so'
     else:
         resolved = Path(flags[0])
     if not resolved.is_file():
