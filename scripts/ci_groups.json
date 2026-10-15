@@ -106,6 +106,7 @@
     "test_issue311_startup",
     "test_issue311_cuda_backing",
     "test_issue313_two_gpu",
+    "test_q8_experiment",
     "test_issue255_mvp",
     "test_issue255_measure",
     "test_issue255_baseline",
@@ -1901,6 +1902,9 @@
   ],
   "tests/test_project_status.py": [
    "repo-integrity"
+  ],
+  "tests/test_q8_experiment.py": [
+   "issue-99-103"
   ],
   "tools/issue255_mvp/": [
    "issue-99-103"

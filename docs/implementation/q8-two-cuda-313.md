@@ -77,6 +77,40 @@ receipt must additionally join each PID/listener to a GPU UUID and prove
 residency and execution on that UUID. Source inspection or a CPU fixture must
 not mint a qualified CUDA identity.
 
+Normal live admission still runs first on the ordinary operator command and
+refuses while graph/workspace/repacking, observer, runtime-heap, page/PLE and
+other required terms are unknown.  The successful CPU fixture does not replace
+that gate.  A separate `experimental-q8-two-cuda` command is the only bypass:
+it requires the exact reviewed opt-in envelope, retains the blocked admission
+and every unknown allocation in its receipt, and executes at most one request
+under external systemd limits.  It never returns accepted output or a normal
+feasibility/qualification verdict.
+
+The experimental command creates a fresh per-host systemd slice, verifies
+10 GiB aggregate worker RAM and 110 GiB aggregate coordinator RAM caps and zero
+owned swap, and runs source/collector helpers and native services inside those
+same aggregates. Each RPC service also has a 5 GiB limit. Services run as the
+SSH user's UID/GID, retain exact ownership and receive an absolute remaining
+execution budget (at most 160 minutes), leaving 20 minutes for cleanup. A
+bounded sentinel keeps each aggregate available before payload launch. Unknown
+runtime overhead remains unknown and competes inside the enforced cap.
+
+The monitor starts before source verification/model load. It checks aggregate
+cgroup memory/swap/OOM events, host headroom, UUID reserve, owned PID mappings,
+service identity/cgroup/deadline properties and allocator/device failure logs.
+A failed observation or violation stops owned units, including a unit whose
+spawn reply was lost. `memory.events:max` alone is retained as reclaim evidence,
+not treated as OOM. Cleanup retains final native service results and helper
+completion receipts and verifies that the aggregate slices are inactive.
+The selected GPU UUID pair is set explicitly in `CUDA_VISIBLE_DEVICES` for
+both listeners; CUDA0/CUDA1 refer to that frozen visible order, not an assumed
+match between CUDA and `nvidia-smi` physical indices.
+
+GPU reserve checks are sampled `nvidia-smi` observations, not a hard allocation
+cap. PID-bound memory and device-wide utilization cannot prove owned kernels;
+compute attribution remains `INCONCLUSIVE` with the retained observer. No extra
+request, fallback, tuning or retry is attempted to obtain a different verdict.
+
 The later bounded hardware recipe is
 [`../../tools/native-cache/q8-two-cuda-recipe.md`](../../tools/native-cache/q8-two-cuda-recipe.md).
 It requires real per-device and host budgets before launch. The exact encoded
@@ -87,7 +121,11 @@ paging budget rather than imply full CPU weight residency.
 
 ## Offline evidence
 
-Focused regressions cover the pinned serial-listener constraint, two-process
+Focused regressions cover explicit experimental opt-in, preservation of
+ordinary unknown admission, exact systemd caps and cleanup receipts, identity,
+disk, guard and GPU-mapping refusal, monitor/allocator/partial-spawn cleanup,
+and permanently unaccepted diagnostic output, in addition to the pinned
+serial-listener constraint, two-process
 selector/endpoint order and native argv, nonoverlapping
 whole-layer/tensor ownership, final output ownership, independent VRAM refusal,
 bounded worker-host charges, unsupported route refusal, assigned-only backing

@@ -6,6 +6,8 @@ operator contract and native argv only; they do not prove CUDA execution.
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -14,6 +16,7 @@ import unittest
 from unittest.mock import patch
 
 from inferswarm.operator import assigned_backing
+from inferswarm.operator import lifecycle
 from inferswarm.operator.config import parse_config
 from inferswarm.operator.lifecycle import LeaseManager
 from inferswarm.operator.plan import build_plan
@@ -23,6 +26,9 @@ from inferswarm.operator.profiles import freeze
 from inferswarm.operator.bindings import ProcessIdentity
 from inferswarm.operator.qwen_q8 import NativeQ8Options, q8_llama_cpp_spec, q8_rpc_processes
 from inferswarm.operator.runtime import OperatorRunner
+from inferswarm.operator.q8_experiment import (EXPERIMENTAL_OPT_IN,
+    ExperimentalLeaseManager, SystemdCampaignGuard,
+    validate_experimental_envelope)
 from inferswarm.operator import source as source_verifier
 from inferswarm.operator.source import q8_source_payload
 from tests.issue299_fixture import NOW, profile_digest, reseal_profiles, sha
@@ -216,6 +222,113 @@ class TwoGpuTopologyTests(unittest.TestCase):
             (lambda r:r['strategy_options'].update(route='server-local'),'client-mediated copy route')):
             with self.subTest(reason=reason),self.assertRaisesRegex(ValueError,reason): self.build(mutate)
 
+    def test_experimental_envelope_is_explicit_and_preserves_unknown_admission(self):
+        plan=self.build(lambda raw: raw['strategy_options']['participant_backing'].update(
+            limit_bytes=48<<30,min_free_bytes=64<<30,reserve_bytes=12<<30))
+        envelope=dict(schema='q8-two-cuda-experiment/1',opt_in='not-authorized',
+            config_sha256='1'*64,request_sha256='2'*64,
+            limits=dict(total_seconds=10800,cleanup_reserve_seconds=1200,
+                backing_ceiling_bytes=48<<30,min_free_disk_bytes=64<<30,
+                application_payload_ceiling_bytes=24<<30,
+                worker_memory_max_bytes=10<<30,worker_min_host_headroom_bytes=4<<30,
+                coordinator_memory_max_bytes=110<<30,
+                coordinator_min_host_headroom_bytes=8<<30,owned_swap_max_bytes=0,
+                per_gpu_reserve_bytes=512<<20),
+            gpu_bindings=[dict(selector='CUDA0',uuid='GPU-'+('a'*32)),
+                          dict(selector='CUDA1',uuid='GPU-'+('b'*32))])
+        with self.assertRaisesRegex(ValueError,'explicit experimental opt-in'):
+            validate_experimental_envelope(plan,envelope,config_sha256='1'*64,
+                                             request_sha256='2'*64)
+        envelope['opt_in']=EXPERIMENTAL_OPT_IN
+        with self.assertRaisesRegex(ValueError,'assigned backing budget'):
+            validate_experimental_envelope(self.build(),envelope,
+                config_sha256='1'*64,request_sha256='2'*64)
+        validated=validate_experimental_envelope(plan,envelope,
+            config_sha256='1'*64,request_sha256='2'*64)
+        self.assertEqual(validated.normal_admission_status,plan.admission.status)
+        self.assertFalse(validated.normal_execution_ready)
+        self.assertGreater(len(validated.unknown_allocations),0)
+        self.assertTrue(all(row.endswith(('/load','/serve','/cleanup','/verification'))
+                            for row in validated.unknown_allocations))
+
+    def test_experimental_supervision_caps_include_both_listeners(self):
+        class Transport:
+            def __init__(self): self.calls=[]
+            def call(self,address,payload):
+                self.calls.append((address,payload))
+                if payload['action']=='admit': return {'lease':'admitted'}
+                if payload['action']=='spawn':
+                    return {'pid':100+len(self.calls),'start':'200','token':payload['token'],
+                            'supervision':payload['supervision']}
+                raise AssertionError(payload['action'])
+        transport=Transport()
+        manager=ExperimentalLeaseManager(transport,'campaign-token')
+        manager.acquire('worker','/run/worker')
+        manager.acquire('coordinator','/run/coordinator')
+        manager.spawn('worker','rpc0',['rpc','--device','CUDA0'])
+        manager.spawn('worker','rpc1',['rpc','--device','CUDA1'])
+        manager.spawn('coordinator','client',['server'])
+        spawns=[payload for _,payload in transport.calls if payload['action']=='spawn']
+        self.assertEqual(sum(p['supervision']['memory_max_bytes'] for p in spawns
+                             if p['name'].startswith('rpc')),10<<30)
+        self.assertEqual(next(p for p in spawns if p['name']=='client')
+                         ['supervision']['memory_max_bytes'],110<<30)
+        self.assertTrue(all(p['supervision']['memory_swap_max_bytes']==0 for p in spawns))
+        self.assertTrue(all(p['supervision']['runtime_max_seconds']==9600 for p in spawns))
+
+    def test_experimental_preflight_refuses_identity_disk_source_and_gpu_mapping_drift(self):
+        plan=self.build(lambda raw: raw['strategy_options']['participant_backing'].update(
+            limit_bytes=48<<30,min_free_bytes=64<<30,reserve_bytes=12<<30))
+        client=next(p for p in plan.participants if p.role=='client')
+        remote=next(p for p in plan.participants if p.role=='remote')
+        raw=dict(schema='q8-two-cuda-experiment/1',opt_in=EXPERIMENTAL_OPT_IN,
+            config_sha256='1'*64,request_sha256='2'*64,
+            limits=dict(total_seconds=10800,cleanup_reserve_seconds=1200,
+                backing_ceiling_bytes=48<<30,min_free_disk_bytes=64<<30,
+                application_payload_ceiling_bytes=24<<30,
+                worker_memory_max_bytes=10<<30,worker_min_host_headroom_bytes=4<<30,
+                coordinator_memory_max_bytes=110<<30,
+                coordinator_min_host_headroom_bytes=8<<30,owned_swap_max_bytes=0,
+                per_gpu_reserve_bytes=512<<20),
+            gpu_bindings=[dict(selector='CUDA0',uuid='GPU-'+('a'*32)),
+                          dict(selector='CUDA1',uuid='GPU-'+('b'*32))])
+        envelope=validate_experimental_envelope(plan,raw,config_sha256='1'*64,
+                                                 request_sha256='2'*64)
+        class Commands:
+            def __init__(self,mode='ok'): self.mode=mode
+            def run(self,address,argv):
+                if argv[0] in ('sudo','systemd-run','systemctl'): return ''
+                if argv[0]=='sha256sum':
+                    digest=(client.runtime_sha256 if address==client.execution_address
+                            else remote.runtime_sha256)
+                    return (('0'*64 if self.mode=='binary' else digest)+'  '+argv[-1]+'\n')
+                if argv[0]=='grep': return 'MemAvailable: 134217728 kB\n'
+                if argv[0]=='df':
+                    return 'Avail\n'+str((1 if self.mode=='disk' else 70)<<30)+'\n'
+                if argv[0]=='nvidia-smi' and argv[1].startswith('--query-gpu='):
+                    first='GPU-'+('c' if self.mode=='gpu' else 'a')*32
+                    return f'0, {first}, 2048, 10\n1, GPU-{"b"*32}, 2048, 10\n'
+                if argv[0]=='nvidia-smi':
+                    return f'101, GPU-{"b"*32}, 1024\n102, GPU-{"a"*32}, 1024\n'
+                raise AssertionError(argv)
+        from inferswarm.operator.qwen_q8 import q8_llama_cpp_spec
+        for mode,reason in (('binary','runtime binary identity mismatch'),
+                            ('disk','free-disk floor'),('gpu','selector/UUID mapping')):
+            with self.subTest(mode=mode),self.assertRaisesRegex((ValueError,RuntimeError),reason):
+                SystemdCampaignGuard(envelope,SimpleNamespace(),Commands(mode)).begin(
+                    plan,q8_llama_cpp_spec(plan),client,remote)
+        guard=SystemdCampaignGuard(envelope,SimpleNamespace(),Commands())
+        guard.begin(plan,q8_llama_cpp_spec(plan),client,remote)
+        with self.assertRaisesRegex(ValueError,'guards missing'):
+            guard.sources_verified(plan,{remote.participant_id:{'assigned_guard_paths':{}}})
+        with self.assertRaisesRegex(RuntimeError,'wrong GPU/listener'):
+            guard._sample({'rpc0':{'pid':101},'rpc1':{'pid':102}})
+        guard=SystemdCampaignGuard(envelope,SimpleNamespace(),Commands(),clock=lambda:0)
+        guard.started=0
+        with self.assertRaisesRegex(RuntimeError,'owned systemd job failed'):
+            guard.after_cleanup({'worker':{'rpc0':{'properties':{
+                'Result':'oom-kill','MemorySwapCurrent':'0'}},'lease':'released'}})
+
     def test_pinned_server_is_serial_so_one_listener_cannot_back_two_dispatchers(self):
         source=(ROOT/'tests/fixtures/issue299/overlay/ggml/src/ggml-rpc/ggml-rpc.cpp').read_text()
         accept=source.index('auto client_socket = server_socket->accept();')
@@ -255,6 +368,11 @@ class TwoGpuTopologyTests(unittest.TestCase):
         runner=OperatorRunner(None,None,None,None)
         with self.assertRaisesRegex(ValueError,'requires the collected observer path'):
             runner.run(self.build())
+
+    def test_ordinary_live_admission_still_refuses_unknown_allocations(self):
+        runner=OperatorRunner(None,None,None,None)
+        with self.assertRaisesRegex(ValueError,'Q8 admission refused:'):
+            runner._profiled_admission(self.build())
 
     def test_each_rpc_spawn_receives_only_its_exact_bank_guard(self):
         plan=self.build(); remote=next(p for p in plan.participants if p.role=='remote')
@@ -325,7 +443,22 @@ class TwoGpuTopologyTests(unittest.TestCase):
             def poll(self): return 0 if self.done else None
             def terminate(self): self.done=True
             def wait(self,timeout=None): return 0
-        def execute(*,fail_spawn=None,fail_request=False,fail_dynamic=False):
+        class CampaignGuard:
+            def __init__(self,fail=None): self.fail=fail
+            def begin(self,*args): pass
+            def checkpoint(self): pass
+            def process_started(self,*args): pass
+            def stop_monitor(self): pass
+            def sources_verified(self,*args): pass
+            def before_request(self,*args):
+                if self.fail=='before': raise RuntimeError('material allocator refusal')
+                return {'cgroups':'bounded'}
+            def request_timeout_seconds(self): return 900
+            def after_request(self,*args):
+                if self.fail=='monitor': raise RuntimeError('material monitor failure')
+                return {'compute_attribution':'INCONCLUSIVE'}
+            def after_cleanup(self,*args): pass
+        def execute(*,fail_spawn=None,fail_request=False,fail_dynamic=False,campaign=None):
             transport=Transport(fail_spawn); manager=LeaseManager(
                 transport,'issue313-diagnostic-'+str(fail_spawn)+str(fail_request)+str(fail_dynamic),
                 stop_timeout=0)
@@ -333,8 +466,12 @@ class TwoGpuTopologyTests(unittest.TestCase):
                 observation_mode='synthetic-test',clock=lambda:NOW,
                 collector=Collector(transport,fail_dynamic))
             try:
-                with patch.object(runner,'_profiled_admission',return_value=plan.admission):
-                    outcome=runner.run(plan)
+                if campaign is None:
+                    with patch.object(runner,'_profiled_admission',return_value=plan.admission):
+                        outcome=runner.run(plan)
+                else:
+                    outcome=runner._execute_two_gpu_diagnostic(
+                        plan,plan.admission,campaign_guard=campaign)
             except BaseException as exc: outcome=exc
             return outcome,runner,transport
         result,runner,transport=execute()
@@ -361,6 +498,18 @@ class TwoGpuTopologyTests(unittest.TestCase):
                          'material rpc1 terminal observation failure')
         self.assertEqual(failed_transport.stopped,set(failed_transport.rows))
         self.assertTrue(all(row['lease']=='released' for row in failed_runner.last_cleanup.values()))
+        experimental,exp_runner,exp_transport=execute(campaign=CampaignGuard())
+        self.assertFalse(experimental['output_accepted'])
+        self.assertFalse(experimental['physical_qualified'])
+        self.assertEqual(experimental['campaign_observation']['after_request']
+                         ['compute_attribution'],'INCONCLUSIVE')
+        for phase in ('before','monitor'):
+            outcome,guard_runner,guard_transport=execute(campaign=CampaignGuard(phase))
+            if phase=='before': self.assertIsInstance(outcome,RuntimeError)
+            else: self.assertEqual(outcome['status'],'EXECUTED-OBSERVATION-REFUSED')
+            self.assertEqual(guard_transport.stopped,set(guard_transport.rows))
+            self.assertTrue(all(row['lease']=='released'
+                                for row in guard_runner.last_cleanup.values()))
 
 
 class TwoBankPreparationCompositionTests(unittest.TestCase):
@@ -494,4 +643,36 @@ class TwoListenerLifecycleTests(unittest.TestCase):
                 cleanup=manager.cleanup()
             self.assertEqual(cleanup['local']['lease'],'released')
             self.assertEqual(set(cleanup['local']),{'rpc0','rpc1','lease'})
+
+    def test_systemd_spawn_uses_exact_hard_limits_and_cleanup(self):
+        with tempfile.TemporaryDirectory() as root:
+            running={'value':True}; calls=[]
+            def command(argv,**kwargs):
+                calls.append(tuple(argv))
+                if argv[:3]==['sudo','-n','systemd-run']:
+                    return SimpleNamespace(returncode=0,stdout='',stderr='')
+                if argv[:3]==['sudo','-n','systemctl'] and 'show' in argv:
+                    if '--property=MainPID' in argv:
+                        text='123\n'
+                    else:
+                        text=('ActiveState=active\nResult=success\nExecMainCode=0\n'
+                              'ExecMainStatus=0\nMemoryPeak=1024\nMemorySwapCurrent=0\n'
+                              f'MemoryMax={5<<30}\nMemorySwapMax=0\n')
+                    return SimpleNamespace(returncode=0,stdout=text,stderr='')
+                if argv[:4]==['sudo','-n','systemctl','stop']:
+                    running['value']=False
+                    return SimpleNamespace(returncode=0,stdout='',stderr='')
+                raise AssertionError(argv)
+            with patch.object(lifecycle.subprocess,'run',side_effect=command), \
+                 patch.object(lifecycle,'identity',side_effect=lambda pid:'456' if running['value'] else None):
+                manager=ExperimentalLeaseManager(lifecycle.LocalTransport(),'token',stop_timeout=0)
+                manager.acquire('local',root)
+                row=manager.spawn('local','rpc0',['/rpc','--device','CUDA0'])
+                self.assertEqual(row['supervision']['memory_max_bytes'],5<<30)
+                cleanup=manager.cleanup()
+            launch=next(argv for argv in calls if argv[:3]==('sudo','-n','systemd-run'))
+            self.assertIn('--property=MemoryMax='+str(5<<30),launch)
+            self.assertIn('--property=MemorySwapMax=0',launch)
+            self.assertIn('--property=RuntimeMaxSec=9600',launch)
+            self.assertEqual(cleanup['local']['lease'],'released')
 

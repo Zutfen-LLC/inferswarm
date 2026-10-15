@@ -446,8 +446,16 @@ class OperatorRunner:
         response and exact process/export receipts for review, but deliberately
         does not call the ordinary /2 dynamic reconciler or qualify the output.
         """
-        from .phased_observation import OwnedSpawnFacts
         admission=self._profiled_admission(plan)
+        return self._execute_two_gpu_diagnostic(plan,admission)
+
+    def _execute_two_gpu_diagnostic(self,plan,admission,*,campaign_guard=None):
+        """Execute after either ordinary admission or an explicit experiment guard.
+
+        The experimental caller supplies the unchanged blocked admission and a
+        guard that independently enforces its one-shot external envelope.
+        """
+        from .phased_observation import OwnedSpawnFacts
         spec=llama_cpp_spec(plan)
         from .qwen_q8 import q8_rpc_processes
         rpc_processes=q8_rpc_processes(plan)
@@ -473,9 +481,13 @@ class OperatorRunner:
         tunnel=None; error=None; result=None; cleanup_error=None
         rows={}; identities={}; export_dirs={}
         try:
+            if campaign_guard is not None:
+                campaign_guard.begin(plan,spec,client,remote)
             self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
             self.leases.acquire(client.execution_address,client.lifecycle_dir)
             sources=self._verify_profiled_sources(plan,client,remote)
+            if campaign_guard is not None:
+                campaign_guard.sources_verified(plan,sources)
             guards=sources[remote.participant_id].get('assigned_guard_paths')
             wanted={p.binding_id for p,_,_,_ in processes}
             if not isinstance(guards,dict) or set(guards)!=wanted or len(set(guards.values()))!=2:
@@ -486,9 +498,11 @@ class OperatorRunner:
                 export_dirs[process.name]=export
                 rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
                     name=process.name,binding_id=process.binding_id)
+                if campaign_guard is not None: campaign_guard.process_started(rows)
             self.leases.port(client.execution_address,'127.0.0.1',client.port)
             deadline=time.monotonic()+spec.startup_timeout_seconds
             while True:
+                if campaign_guard is not None: campaign_guard.checkpoint()
                 ready=True
                 for process,host,port,_ in processes:
                     if not self.leases.alive(remote.execution_address,process.name):
@@ -523,11 +537,13 @@ class OperatorRunner:
             export_dirs['client']=client_export
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
                 export=client_export,**self._assigned_spawn(plan,client,sources))
+            if campaign_guard is not None: campaign_guard.process_started(rows)
             opened=self.tunnel_factory(client.execution_address,client.port)
             tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
             base=f'http://127.0.0.1:{local_port}'
             deadline=time.monotonic()+spec.startup_timeout_seconds
             while True:
+                if campaign_guard is not None: campaign_guard.checkpoint()
                 for process,_,_,_ in processes:
                     if not self.leases.alive(remote.execution_address,process.name):
                         raise RuntimeError('two-gpu RPC process lost: '+process.name)
@@ -539,11 +555,16 @@ class OperatorRunner:
                 except (OSError,ValueError,urllib.error.URLError): pass
                 if time.monotonic()>deadline: raise TimeoutError('client startup health timeout')
                 self.pause(.5)
+            campaign_before=None
+            if campaign_guard is not None:
+                campaign_before=campaign_guard.before_request(plan,rows,process_receipts,sources)
             request=dict(plan.request)
             response=self.http.post(base+'/v1/chat/completions',
                 {'messages':[{'role':'user','content':request['prompt']}],
                  'max_tokens':request['max_tokens'],'temperature':request['temperature'],
-                 'seed':request['seed'],'stream':False},timeout=900)
+                 'seed':request['seed'],'stream':False},
+                timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
+            if campaign_guard is not None: campaign_guard.checkpoint()
             choice=response['choices'][0]; output=choice['message']['content']
             if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
                 raise ValueError('incomplete diagnostic generation response')
@@ -557,8 +578,20 @@ class OperatorRunner:
                 nonclaims=['diagnostic response is retained but not accepted by the ordinary /2 observer',
                            'endpoint/PID/device-selector binding is not GPU residency or UUID execution proof',
                            'full coordinator working-set fit remains unqualified'])
+            if campaign_guard is not None:
+                try:
+                    result['campaign_observation']={
+                        'before_request':campaign_before,
+                        'after_request':campaign_guard.after_request(
+                            plan,rows,process_receipts,sources,response)}
+                except BaseException as exc:
+                    result['status']='EXECUTED-OBSERVATION-REFUSED'
+                    result['observation_refusal']=str(exc)
         except BaseException as exc: error=exc
         finally:
+            if campaign_guard is not None:
+                try: campaign_guard.stop_monitor()
+                except BaseException as exc: cleanup_error=exc
             try:
                 if tunnel is not None:
                     if tunnel.poll() is None: tunnel.terminate()
@@ -595,6 +628,10 @@ class OperatorRunner:
                 result['observation_refusal']=str(exc)
         if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
             cleanup_error=RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
+        if campaign_guard is not None:
+            try: campaign_guard.after_cleanup(self.last_cleanup)
+            except BaseException as exc:
+                cleanup_error=RuntimeError(f'experimental supervision cleanup failed: {exc}')
         if error is not None:
             if cleanup_error is not None: raise error from cleanup_error
             raise error

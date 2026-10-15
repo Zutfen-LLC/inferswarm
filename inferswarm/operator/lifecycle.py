@@ -9,6 +9,7 @@ import ctypes
 import errno
 import os
 from pathlib import Path
+import re
 import shlex
 import signal
 import socket
@@ -111,25 +112,85 @@ def _onhost(p):
             # enabling the strictly observation-only emitter.
             export_root=Path(p['export']); export_root.mkdir(parents=True,exist_ok=False)
             env['IS301_EXPORT_DIR']=p['export']; env['IS301_OBSERVE']='1'
-        with log.open('xb') as f:
-            child=subprocess.Popen(p['argv'],stdin=subprocess.DEVNULL,stdout=f,stderr=subprocess.STDOUT,
-                                   close_fds=True,start_new_session=True,env=env)
+        supervision=p.get('supervision')
+        if supervision is not None:
+            expected={'unit','memory_max_bytes','memory_swap_max_bytes','runtime_max_seconds'}
+            optional={'slice','cuda_visible_devices'}
+            if (not isinstance(supervision,dict) or not expected<=set(supervision)
+                    or set(supervision)-expected-optional):
+                raise ValueError('supervision fields must be exact')
+            unit=supervision['unit']
+            if (not isinstance(unit,str) or not re.fullmatch(r'[A-Za-z0-9_.-]+\.service',unit)
+                    or any(type(supervision[k]) is not int or supervision[k]<0
+                           for k in expected-{'unit'})
+                    or supervision['memory_max_bytes']<1
+                    or supervision['runtime_max_seconds']<1):
+                raise ValueError('invalid systemd supervision envelope')
+            log.touch(exist_ok=False)
+            command=['sudo','-n','systemd-run','--quiet','--unit='+unit,
+                '--uid='+str(os.getuid()),'--gid='+str(os.getgid()),
+                '--property=TimeoutStopSec=10',
+                '--property=Type=simple','--property=KillMode=control-group',
+                '--property=MemoryMax='+str(supervision['memory_max_bytes']),
+                '--property=MemorySwapMax='+str(supervision['memory_swap_max_bytes']),
+                '--property=RuntimeMaxSec='+str(supervision['runtime_max_seconds']),
+                '--property=StandardOutput=append:'+str(log),
+                '--property=StandardError=append:'+str(log)]
+            if 'slice' in supervision:
+                if not re.fullmatch(r'[A-Za-z0-9_.-]+\.slice',supervision['slice']):
+                    raise ValueError('invalid owned slice')
+                command.append('--slice='+supervision['slice'])
+            if 'cuda_visible_devices' in supervision:
+                command.append('--setenv=CUDA_VISIBLE_DEVICES='+supervision['cuda_visible_devices'])
+            for key in ('LLAMA_CACHE','IS311_ASSIGNED','IS301_EXPORT_DIR','IS301_OBSERVE'):
+                if key in env: command.append('--setenv='+key+'='+env[key])
+            command.extend(('--',*p['argv']))
+            try:
+                started=subprocess.run(command,capture_output=True,text=True,timeout=30)
+                if started.returncode:
+                    raise RuntimeError('systemd-run failed: '+started.stderr[-500:])
+                pid=None; deadline=time.monotonic()+5
+                while time.monotonic()<deadline:
+                    shown=subprocess.run(['sudo','-n','systemctl','show',unit,
+                        '--property=MainPID','--value'],capture_output=True,text=True,timeout=10)
+                    if shown.returncode:
+                        raise RuntimeError('systemctl show failed: '+shown.stderr[-500:])
+                    value=shown.stdout.strip()
+                    if value.isdecimal() and int(value)>0:
+                        pid=int(value); break
+                    time.sleep(.05)
+                if pid is None: raise ValueError('systemd service did not publish MainPID')
+                child=None
+            except BaseException:
+                subprocess.run(['sudo','-n','systemctl','stop',unit],
+                               capture_output=True,text=True,timeout=30)
+                raise
+
+        else:
+            with log.open('xb') as f:
+                child=subprocess.Popen(p['argv'],stdin=subprocess.DEVNULL,stdout=f,stderr=subprocess.STDOUT,
+                                       close_fds=True,start_new_session=True,env=env)
         try:
-            start=identity(child.pid)
+            child_pid=pid if supervision is not None else child.pid
+            start=identity(child_pid)
             if start is None: raise ValueError('child exited during launch')
-            row={'pid':child.pid,'start':start,'token':token}
+            row={'pid':child_pid,'start':start,'token':token}
+            if supervision is not None: row['supervision']=supervision
             with record.open('x',encoding='ascii') as f:
                 json.dump(row,f); f.flush(); os.fsync(f.fileno())
         except BaseException:
             # Even failure to record cannot leave an intentionally untracked child.
-            if identity(child.pid) is not None:
+            if supervision is not None:
+                subprocess.run(['sudo','-n','systemctl','stop',unit],capture_output=True,
+                               text=True,timeout=30)
+            elif identity(child.pid) is not None:
                 child.terminate()
                 try: child.wait(timeout=2)
                 except subprocess.TimeoutExpired: raise RuntimeError(f'unrecorded child may remain pid={child.pid}')
             raise
-        _CHILDREN[child.pid]=child
+        if child is not None: _CHILDREN[child.pid]=child
         return row
-    if action in ('alive','listening','log','stop','release'):
+    if action in ('alive','listening','log','inspect','stop','release'):
         if action=='log':
             if p['name'] not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported log')
             return {'text':(root/token/(p['name']+'.log')).read_text(errors='replace')[-2000000:]}
@@ -147,11 +208,46 @@ def _onhost(p):
         row=json.loads((marker/(name+'.json')).read_text())
         if row['token']!=token or row['pid']!=p['pid'] or row['start']!=p['start']:
             raise ValueError('ownership record mismatch')
+        if action=='inspect':
+            if 'supervision' not in row: raise ValueError('process is not systemd-supervised')
+            unit=row['supervision']['unit']
+            fields=('MainPID','ActiveState','Result','MemoryCurrent','MemoryPeak',
+                    'MemorySwapCurrent','MemoryMax','MemorySwapMax','RuntimeMaxUSec','KillMode','ControlGroup')
+            shown=subprocess.run(['sudo','-n','systemctl','show',unit,
+                *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)
+            if shown.returncode:
+                raise RuntimeError('systemctl inspect failed: '+shown.stderr[-500:])
+            values={}
+            for line in shown.stdout.splitlines():
+                key,sep,value=line.partition('=')
+                if sep and key in fields: values[key]=value
+            if set(values)!=set(fields): raise ValueError('incomplete systemd supervision receipt')
+            return {'unit':unit,'properties':values}
         current=identity(row['pid'])
         if action=='alive': return {'alive':current==row['start']}
         if action=='listening':
             listening=current==row['start'] and _owned_listening(row['pid'],p['bind'],p['port'])
             return {'listening':listening and identity(row['pid'])==row['start']}
+        if 'supervision' in row:
+            unit=row['supervision']['unit']
+            fields=('ActiveState','Result','ExecMainCode','ExecMainStatus','MemoryPeak',
+                    'MemorySwapCurrent','MemoryMax','MemorySwapMax')
+            try:
+                shown=subprocess.run(['sudo','-n','systemctl','show',unit,
+                    *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)
+                if shown.returncode:
+                    raise RuntimeError('systemctl final receipt failed: '+shown.stderr[-500:])
+                properties={}
+                for line in shown.stdout.splitlines():
+                    key,sep,value=line.partition('=')
+                    if sep and key in fields: properties[key]=value
+                if set(properties)!=set(fields): raise ValueError('incomplete final systemd receipt')
+            finally:
+                stopped=subprocess.run(['sudo','-n','systemctl','stop',unit],capture_output=True,
+                                       text=True,timeout=30)
+                if stopped.returncode:
+                    raise RuntimeError('systemctl stop failed: '+stopped.stderr[-500:])
+            return {'signal':'systemd-stop','unit':unit,'properties':properties}
         if current!=row['start']: return {'exit':'absent-or-recycled'}
         # pidfd pins the observed PID; recheck /proc identity after opening fd.
         fd=pidfd(row['pid'])
@@ -216,6 +312,10 @@ class LeaseManager:
                           bind=bind,port=port)['listening']
 
     def log(self,address,name): return self._call(address,'log',name=name)['text']
+
+    def inspect(self,address,name):
+        row=self.owned[address][name]
+        return self._call(address,'inspect',name=name,pid=row['pid'],start=row['start'])
 
     def cleanup(self):
         outcomes={}
