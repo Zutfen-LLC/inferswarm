@@ -6471,6 +6471,32 @@
       "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
       "retired_in": "PR #247 correction round 1",
       "test_count_at_audit": null
+    },
+    "test_bounded_acquisition": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 17,
+      "category": "CURRENT_REGRESSION",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Opt-in assigned-only bounded HTTP acquisition amortizes request/connection/checkpoint counts while preserving exact identity, final SHA publication and interrupted-process checkpoint recovery.",
+      "lineage": "Bounded initial acquisition successor to #99/#101/#311",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "scripts/bounded_acquisition.py",
+          "scripts/issue311_preparation.py",
+          "scripts/issue99_artifact_core.py",
+          "scripts/issue101_fixture.py",
+          "scripts/issue101_orchestration.py",
+          "scripts/issue311_native_backing.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Synthetic offline/loopback regressions protect initial preparation and recovery; no hardware performance, native build or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 17
     }
   },
   "retired_test_rows": "docs/ci/retired-test-rows.json",
