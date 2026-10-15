@@ -468,6 +468,15 @@ class NativeCacheTests(unittest.TestCase):
                                       preexec_fn=child_limits)
             try:
                 self.assertTrue(relay.partial.wait(10), 'did not reach partial native publication')
+                # sendall can finish while bytes are still queued in the kernel.
+                # Observe actual worker staging before choosing the crash point.
+                deadline = time.monotonic() + 5
+                expected = self.fixtures['C'].stat().st_size
+                while not any(0 < path.stat().st_size < expected
+                              for path in (cache / 'rpc').glob('.rpc-stage-*')):
+                    self.assertIsNone(process.poll(), 'worker exited before partial staging')
+                    self.assertLess(time.monotonic(), deadline, 'native partial staging deadline exceeded')
+                    time.sleep(.01)
                 process.terminate()  # actual worker restart in the middle of cold publication
                 process.wait(5)
                 relay.close()
