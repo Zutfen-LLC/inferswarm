@@ -13,6 +13,19 @@ repository-owned enforcement point is the handoff boundary, which now
 re-authenticates ordinary CI against read-only GitHub Actions data
 (``scripts/hosted_ci_verification.py``).
 
+Review correction (maintainer review of the first head, P1-A/B/C): the
+repository, the API origin and the PR are TRUST ANCHORS, not caller input.
+
+* A — the repository: only ``Zutfen-LLC/inferswarm`` is ever authorized; a
+  caller-supplied ``--repo`` cannot authorize another repository, even one
+  that holds the identical commit SHA and internally consistent records.
+* B — the API origin: only ``https://api.github.com`` is ever contacted with
+  the bearer token; a spoofed HTTPS ``GITHUB_API_URL`` is rejected before
+  any request.  Offline fakes stay injectable from Python only.
+* C — the current PR: the authoritative handoff requires ``--pr``; the PR is
+  read before verification and again after the CI run/jobs checks and any
+  head/branch/state/identity drift between the reads is BLOCKED.
+
 Control map (the numbers follow the task's required adversarial list):
 
 * C01..C15 — every rejection fails for its INTENDED reason code.
@@ -29,9 +42,13 @@ authentic read-only run metadata); no test calls GitHub.
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 import inspect
+import io
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -61,11 +78,12 @@ def verify(api, sha=REAL_SHA, *, pr_number=None, pinned_run_id=None):
         sha, pinned_run_id=pinned_run_id)
 
 
-def world_for(sha: str, branch: str = "feature/x", run_id: int = 9001):
-    """A genuine-shaped CI world for an arbitrary head."""
-    api = FakeCiApi()
-    api.add_run(fakes.ci_run(run_id, sha, branch))
-    api.pulls = {7: fakes.pull(7, sha, branch)}
+def world_for(sha: str, branch: str = "feature/x", run_id: int = 9001,
+              repo: str = REPO):
+    """A genuine-shaped CI world for an arbitrary head (in ``repo``)."""
+    api = FakeCiApi(repo)
+    api.add_run(fakes.ci_run(run_id, sha, branch, repo=repo))
+    api.pulls = {7: fakes.pull(7, sha, branch, repo=repo, base_repo=repo)}
     return api
 
 
@@ -428,7 +446,8 @@ def make_fcv(sha: str = HEAD) -> dict:
     return envelope
 
 
-def passing_verifier(sha: str = HEAD, pr_number: int | None = None):
+def passing_verifier(sha: str = HEAD, pr_number: int | None = 7):
+    """A verifier bound to the head's PR (7): the authoritative shape."""
     return hci.HostedCiVerifier(world_for(sha), REPO, pr_number=pr_number)
 
 
@@ -455,7 +474,9 @@ class HandoffBoundary(_Base):
 
     def test_h03_forged_claim_against_empty_authenticated_world(self):
         forged = gate.build_hosted_ci_status(HEAD, "123456789")
-        verifier = hci.HostedCiVerifier(FakeCiApi(), REPO)
+        empty = FakeCiApi()
+        empty.pulls = {7: fakes.pull(7, HEAD, "feature/x")}
+        verifier = hci.HostedCiVerifier(empty, REPO, pr_number=7)
         result = gate.handoff_gate_status(
             make_head(), None, forged, True,
             final_validation_receipt=make_fcv(), ci_verifier=verifier)
@@ -567,7 +588,7 @@ class HandoffBoundary(_Base):
         result = gate.handoff_gate_status(
             make_head(), None, None, True,
             final_validation_receipt=make_fcv(),
-            ci_verifier=Liar(FakeCiApi(), REPO))
+            ci_verifier=Liar(FakeCiApi(), REPO, pr_number=7))
         self.assertFalse(result["handoff_complete"])
         self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
                          "verdict_mismatch")
@@ -689,6 +710,452 @@ class Clis(unittest.TestCase):
         self.assertEqual(data["hosted_ci_verdict"]["reason_code"],
                          "no_ci_run")
 
+# ---------------------------------------------------------------------------
+# Review correction — trust anchors (P1-A repository, P1-B origin, P1-C PR)
+# ---------------------------------------------------------------------------
+
+# Literals on purpose: the anchors are pinned independently of the module
+# constants they test.
+CANONICAL = "Zutfen-LLC/inferswarm"
+EVIL_REPO = "evil/inferswarm"
+OFFICIAL_API = "https://api.github.com"
+EVIL_API = "https://evil.example"
+
+
+def run_cli(main, argv, **kwargs):
+    """Run a CLI ``main`` capturing stdout: ``(return code, stdout)``."""
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        rc = main(argv, **kwargs)
+    return rc, buffer.getvalue()
+
+
+def cli_env(**extra):
+    env = {"GITHUB_TOKEN": TOKEN}
+    env.update(extra)
+    return env
+
+
+def verify_argv(out, *, repo=REPO, pr="322", sha=REAL_SHA):
+    argv = ["verify", "--repo", repo, "--sha", sha, "--out", str(out)]
+    return argv + (["--pr", pr] if pr is not None else [])
+
+
+def handoff_argv(tmp, *, repo=REPO, pr="7"):
+    receipt = Path(tmp) / "fcv.json"
+    receipt.write_text(json.dumps(make_fcv()))
+    argv = ["handoff", "--final-validation-receipt", str(receipt),
+            "--finalizer-ok", "--repo", repo,
+            "--out", str(Path(tmp) / "handoff.json")]
+    return argv + (["--pr", pr] if pr is not None else [])
+
+
+class RepositoryTrustAnchor(_Base):
+    """P1-A: a caller-supplied ``--repo`` must not authorize a repository."""
+
+    def test_a01_foreign_repo_with_identical_sha_and_consistent_records(self):
+        # The attack: another repository holds the IDENTICAL commit SHA and
+        # supplies internally consistent successful workflow, run, job and PR
+        # records, and the caller names that repository.
+        evil = FakeCiApi.genuine(EVIL_REPO)
+        self.assertEqual(evil.runs[0]["head_sha"], REAL_SHA)
+        self.assertEqual(evil.runs[0]["repository"]["full_name"], EVIL_REPO)
+        with self.assertRaises(ValueError):
+            hci.HostedCiVerifier(evil, EVIL_REPO, pr_number=322)
+
+    def test_a02_forged_records_cannot_vouch_for_the_canonical_repo(self):
+        # A client that LIES about its binding but serves evil-repo records
+        # is still rejected by the record-level repository checks.
+        evil = FakeCiApi.genuine(EVIL_REPO)
+        evil.repository = CANONICAL
+        self.assertBlocked(verify(evil, pr_number=322), "foreign_repository")
+
+    def test_a03_handoff_rejects_a_verifier_retargeted_at_a_foreign_repo(self):
+        verifier = passing_verifier()
+        verifier.api = world_for(HEAD, repo=EVIL_REPO)
+        verifier.repository = EVIL_REPO
+        result = gate.handoff_gate_status(
+            make_head(), None, None, True,
+            final_validation_receipt=make_fcv(), ci_verifier=verifier)
+        self.assertFalse(result["handoff_complete"])
+        self.assertFalse(result["hosted_ci_success"])
+        self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                         "repository_not_canonical")
+        self.assertEqual(verifier.api.calls, [])
+
+    def test_a04_verify_cli_rejects_a_foreign_repo_before_any_request(self):
+        out = Path(tempfile.mkdtemp()) / "verdict.json"
+        built = []
+        rc, text = run_cli(
+            hci.main, verify_argv(out, repo=EVIL_REPO),
+            environ=cli_env(),
+            api_factory=lambda *a, **k: built.append(a)
+            or FakeCiApi.genuine(EVIL_REPO))
+        self.assertEqual(rc, 2, text)
+        self.assertEqual(built, [])
+        self.assertFalse(out.exists())
+        self.assertNotIn(TOKEN, text)
+
+    def test_a05_handoff_cli_rejects_a_foreign_repo(self):
+        tmp = tempfile.mkdtemp()
+        built = []
+        rc, text = run_cli(
+            gate.main, handoff_argv(tmp, repo=EVIL_REPO),
+            environ=cli_env(),
+            api_factory=lambda *a, **k: built.append(a)
+            or world_for(HEAD, repo=EVIL_REPO),
+            request_factory=lambda root: make_head())
+        self.assertEqual(rc, 2, text)
+        self.assertEqual(built, [])
+        self.assertFalse((Path(tmp) / "handoff.json").exists())
+
+    def test_a06_near_miss_repository_spellings_are_rejected(self):
+        for variant in ("zutfen-llc/inferswarm", "Zutfen-LLC/inferswarm-evil",
+                        "Zutfen-LLC-evil/inferswarm", "evil/Zutfen-LLC",
+                        "Zutfen-LLC/inferswarm.git", "Zutfen-LLC/Inferswarm",
+                        "Zutfen-LLC/inferswarm/", " Zutfen-LLC/inferswarm",
+                        "Zutfen-LLC/inferswarm\n", ""):
+            with self.assertRaises(ValueError, msg=repr(variant)):
+                hci.HostedCiVerifier(FakeCiApi(), variant)
+
+    def test_a07_api_client_bound_to_another_repository_is_rejected(self):
+        with self.assertRaises(ValueError):
+            hci.HostedCiVerifier(FakeCiApi(repository=EVIL_REPO), REPO)
+
+    def test_a08_the_anchors_are_pinned_literals(self):
+        self.assertEqual(getattr(hci, "CANONICAL_REPOSITORY", None),
+                         CANONICAL)
+        self.assertEqual(getattr(hci, "OFFICIAL_API_ORIGIN", None),
+                         OFFICIAL_API)
+
+    def test_a09_canonical_repository_positive_control(self):
+        tmp = tempfile.mkdtemp()
+        out = Path(tmp) / "verdict.json"
+        rc, text = run_cli(hci.main, verify_argv(out, repo=CANONICAL),
+                           environ=cli_env(),
+                           api_factory=lambda *a, **k: FakeCiApi.genuine())
+        self.assertEqual(rc, 0, text)
+        self.assertEqual(json.loads(out.read_text())["repository"], CANONICAL)
+        rc, text = run_cli(
+            gate.main, handoff_argv(tmp, repo=CANONICAL),
+            environ=cli_env(), api_factory=lambda *a, **k: world_for(HEAD),
+            request_factory=lambda root: make_head())
+        self.assertEqual(rc, 0, text)
+        self.assertTrue(json.loads(
+            (Path(tmp) / "handoff.json").read_text())["handoff_complete"])
+
+
+class ApiOriginAuthentication(unittest.TestCase):
+    """P1-B: the bearer token goes ONLY to the official GitHub API origin.
+
+    ``HttpEmulator`` runs the REAL ``HttpActionsApi`` and answers any origin
+    with internally consistent successful records, exactly like a spoofed
+    HTTPS endpoint would; it records every request and its credential.
+    """
+
+    def _verify(self, env, *, world=None, pr="322"):
+        out = Path(tempfile.mkdtemp()) / "verdict.json"
+        with fakes.HttpEmulator(world or FakeCiApi.genuine()) as http:
+            rc, text = run_cli(hci.main, verify_argv(out, pr=pr),
+                               environ=env)
+        return rc, text, http, out
+
+    def test_b01_official_origin_end_to_end_token_only_to_official(self):
+        for env in (cli_env(), cli_env(GITHUB_API_URL=OFFICIAL_API)):
+            rc, text, http, out = self._verify(env)
+            self.assertEqual(rc, 0, text)
+            self.assertEqual(json.loads(out.read_text())["verdict"], "PASS")
+            self.assertTrue(http.requests)
+            self.assertEqual(http.hosts(), ["api.github.com"])
+            for url, authorization in http.requests:
+                self.assertTrue(url.startswith(
+                    f"{OFFICIAL_API}/repos/{CANONICAL}/"), url)
+                self.assertEqual(authorization, f"Bearer {TOKEN}")
+            self.assertNotIn(TOKEN, out.read_text() + text)
+
+    def test_b02_spoofed_https_origin_is_rejected_before_any_request(self):
+        rc, text, http, out = self._verify(
+            cli_env(GITHUB_API_URL=EVIL_API))
+        # Baseline: the spoofed endpoint received the bearer token and its
+        # consistent forged records produced a PASS.
+        self.assertEqual(rc, 2, text)
+        self.assertEqual(http.requests, [])
+        self.assertFalse(out.exists())
+        self.assertNotIn(TOKEN, text)
+
+    def test_b03_lookalike_and_malformed_origins_are_rejected(self):
+        for origin in ("https://api.github.com.evil.example",
+                       "https://api.github.com@evil.example",
+                       "https://api.github.com\\@evil.example",
+                       "https://evil.example/api.github.com",
+                       "https://evil.example#api.github.com",
+                       "https://api.github.com:8443",
+                       "https://api.github.com/evil",
+                       "https://api.github.com/",
+                       "https://api.github.com?x=1",
+                       "https://api.github.com#x",
+                       "https://api.github.com.",
+                       "https://API.GITHUB.COM",
+                       "HTTPS://api.github.com",
+                       " https://api.github.com",
+                       "https://github.com/api/v3",
+                       "http://api.github.com",
+                       "http://127.0.0.1:8080",
+                       "ftp://api.github.com",
+                       "api.github.com",
+                       ""):
+            rc, text, http, out = self._verify(
+                cli_env(GITHUB_API_URL=origin))
+            self.assertEqual(rc, 2, (origin, text))
+            self.assertEqual(http.requests, [], origin)
+            self.assertFalse(out.exists(), origin)
+
+    def test_b04_default_factory_pins_origin_and_repository(self):
+        with self.assertRaises(ValueError):
+            hci.default_api_factory(EVIL_API, REPO, TOKEN)
+        with self.assertRaises(ValueError):
+            hci.default_api_factory(OFFICIAL_API, EVIL_REPO, TOKEN)
+        client = hci.default_api_factory(OFFICIAL_API, REPO, TOKEN)
+        self.assertEqual((client.api_url, client.repository),
+                         (OFFICIAL_API, CANONICAL))
+        self.assertFalse(client._insecure_ok)
+
+    def test_b05_a_client_aimed_elsewhere_cannot_back_the_verifier(self):
+        import final_validation_reuse as reuse
+        with fakes.HttpEmulator(FakeCiApi.genuine()) as http:
+            for client in (
+                    reuse.HttpActionsApi(EVIL_API, REPO, TOKEN),
+                    reuse.HttpActionsApi("http://127.0.0.1:1", REPO, TOKEN,
+                                         _allow_insecure_loopback=True),
+                    reuse.HttpActionsApi(OFFICIAL_API, EVIL_REPO, TOKEN)):
+                with self.assertRaises(ValueError):
+                    hci.HostedCiVerifier(client, REPO, pr_number=322)
+            self.assertEqual(http.requests, [])
+        hci.HostedCiVerifier(
+            reuse.HttpActionsApi(OFFICIAL_API, REPO, TOKEN), REPO,
+            pr_number=322)
+
+    def test_b06_handoff_cli_origin_pin_and_official_positive_control(self):
+        for env, expect_rc in ((cli_env(GITHUB_API_URL=EVIL_API), 2),
+                               (cli_env(GITHUB_API_URL=OFFICIAL_API), 0)):
+            tmp = tempfile.mkdtemp()
+            with fakes.HttpEmulator(world_for(HEAD)) as http:
+                rc, text = run_cli(gate.main, handoff_argv(tmp),
+                                   environ=env,
+                                   request_factory=lambda root: make_head())
+            self.assertEqual(rc, expect_rc, text)
+            if expect_rc:
+                self.assertEqual(http.requests, [])
+                self.assertFalse((Path(tmp) / "handoff.json").exists())
+            else:
+                self.assertEqual(http.hosts(), ["api.github.com"])
+                self.assertTrue(all(auth == f"Bearer {TOKEN}"
+                                    for _, auth in http.requests))
+                self.assertNotIn(
+                    TOKEN, (Path(tmp) / "handoff.json").read_text())
+
+    def test_b07_a_redirect_is_never_followed_with_the_token(self):
+        world = FakeCiApi.genuine()
+        out = Path(tempfile.mkdtemp()) / "verdict.json"
+        with fakes.HttpEmulator(world) as http:
+            http.redirect_to = EVIL_API + "/steal"
+            rc, text = run_cli(hci.main, verify_argv(out), environ=cli_env())
+        self.assertEqual(rc, 3, text)
+        self.assertEqual(json.loads(out.read_text())["reason_code"],
+                         "api_unavailable")
+        self.assertEqual(http.hosts(), ["api.github.com"])
+
+    def test_b08_injection_is_python_only_never_cli_or_env(self):
+        self.assertEqual(
+            inspect.signature(hci.main).parameters["api_factory"].kind,
+            inspect.Parameter.KEYWORD_ONLY)
+        tmp = tempfile.mkdtemp()
+        for main, argv in (
+                (hci.main, verify_argv(Path(tmp) / "v.json")),
+                (gate.main, handoff_argv(tmp))):
+            for flag in ("--api-url", "--api-factory", "--insecure"):
+                with self.assertRaises(SystemExit) as caught, \
+                        contextlib.redirect_stderr(io.StringIO()):
+                    main(argv + [flag, EVIL_API], environ=cli_env())
+                self.assertEqual(caught.exception.code, 2, flag)
+
+    def test_b09_real_entrypoints_reject_a_spoofed_origin(self):
+        tmp = Path(tempfile.mkdtemp())
+        env = {"PATH": os.environ.get("PATH", ""), "GITHUB_TOKEN": TOKEN,
+               "GITHUB_API_URL": "https://evil.invalid"}
+        for script, argv in (
+                ("hosted_ci_verification.py",
+                 verify_argv(tmp / "verdict.json")),
+                ("issue213_gate_orchestration.py",
+                 ["handoff", "--finalizer-ok", "--suite-receipt",
+                  str(tmp / "none.json"), "--repo", REPO, "--pr", "7",
+                  "--out", str(tmp / "handoff.json")])):
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / script)] + argv,
+                env=env, capture_output=True, text=True, timeout=120,
+                cwd=str(tmp))
+            blob = proc.stdout + proc.stderr
+            self.assertEqual(proc.returncode, 2, (script, blob))
+            self.assertNotIn(TOKEN, blob)
+        self.assertEqual(sorted(p.name for p in tmp.iterdir()), [])
+
+
+class CurrentPrBinding(_Base):
+    """P1-C: the authoritative handoff is bound to the CURRENT open PR head."""
+
+    @staticmethod
+    def later(change):
+        """Mutate the PR on the FINAL read only (call 2 onwards)."""
+        def mutator(call, pull):
+            if call >= 2:
+                change(pull)
+            return pull
+        return mutator
+
+    def test_c20_pr_is_read_first_and_again_after_the_jobs(self):
+        api = FakeCiApi.genuine()
+        self.assertPass(verify(api, pr_number=322))
+        names = api.called()
+        self.assertEqual(names.count("get_pull"), 2, names)
+        self.assertEqual(names[0], "get_pull", names)
+        self.assertEqual(names[-1], "get_pull", names)
+        last_ci_read = max(i for i, n in enumerate(names)
+                           if n in ("get_run", "list_run_jobs"))
+        self.assertLess(last_ci_read, len(names) - 1)
+
+    def test_c21_pr_drift_between_the_first_and_final_read_is_blocked(self):
+        cases = (
+            ("head moved", lambda p: p["head"].update(sha=fakes.OTHER_SHA),
+             "pr_head_moved"),
+            ("branch renamed", lambda p: p["head"].update(ref="renamed"),
+             "pr_branch_drift"),
+            ("closed", lambda p: p.update(state="closed"), "pr_not_open"),
+            ("head repo became a fork",
+             lambda p: p["head"]["repo"].update(full_name="fork/inferswarm"),
+             "foreign_repository"),
+            ("base repo foreign",
+             lambda p: p["base"]["repo"].update(full_name=EVIL_REPO),
+             "foreign_repository"),
+            ("other PR", lambda p: p.update(number=999),
+             "inconsistent_metadata"),
+            ("retargeted", lambda p: p["base"].update(ref="release"),
+             "pr_identity_drift"),
+            ("head vanished", lambda p: p.pop("head"), "malformed_response"),
+        )
+        for label, change, code in cases:
+            api = FakeCiApi.genuine()
+            api.get_pull_mutator = self.later(change)
+            self.assertBlocked(verify(api, pr_number=322), code)
+            self.assertEqual(api.get_pull_calls, 2, label)
+
+    def test_c21b_api_failure_on_the_final_read_is_blocked(self):
+        api = FakeCiApi.genuine()
+
+        def fail(call, pull):
+            if call >= 2:
+                raise hci.ApiUnavailable("HTTP 502")
+            return pull
+        api.get_pull_mutator = fail
+        self.assertBlocked(verify(api, pr_number=322), "api_unavailable")
+
+    def test_c22_pr_must_be_open_and_in_the_canonical_repo_on_first_read(self):
+        api = FakeCiApi.genuine()
+        api.pulls[322] = fakes.pull(322, state="closed")
+        self.assertBlocked(verify(api, pr_number=322), "pr_not_open")
+        api = FakeCiApi.genuine()
+        api.pulls[322] = fakes.pull(322, base_repo=EVIL_REPO)
+        self.assertBlocked(verify(api, pr_number=322), "foreign_repository")
+
+    def test_c23_pass_verdict_records_the_pr_binding(self):
+        verdict = verify(FakeCiApi.genuine(), pr_number=322)
+        self.assertPass(verdict)
+        self.assertIs(verdict["pr_bound"], True)
+        pull = verdict["pull_request"]
+        self.assertEqual((pull["number"], pull["state"], pull["head_sha"],
+                          pull["head_ref"], pull["reads"]),
+                         (322, "open", REAL_SHA, fakes.REAL_BRANCH, 2))
+        self.assertEqual((pull["head_repository"], pull["base_repository"]),
+                         (CANONICAL, CANONICAL))
+
+    def test_c24_unbound_verifier_cannot_complete_the_handoff(self):
+        world = world_for(HEAD)
+        verifier = hci.HostedCiVerifier(world, REPO)  # diagnostic shape
+        result = gate.handoff_gate_status(
+            make_head(), None, None, True,
+            final_validation_receipt=make_fcv(), ci_verifier=verifier)
+        self.assertFalse(result["handoff_complete"])
+        self.assertFalse(result["hosted_ci_success"])
+        self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                         "pr_binding_missing")
+        self.assertEqual(world.calls, [])  # rejected before any request
+
+    def test_c25_handoff_rejects_a_verdict_not_bound_to_the_pr(self):
+        class Unbound(hci.HostedCiVerifier):
+            def verify(self, expected_sha, *, pinned_run_id=None):
+                verdict = super().verify(expected_sha,
+                                         pinned_run_id=pinned_run_id)
+                verdict["pr_bound"] = False
+                return verdict
+
+        class OtherPr(hci.HostedCiVerifier):
+            def verify(self, expected_sha, *, pinned_run_id=None):
+                verdict = super().verify(expected_sha,
+                                         pinned_run_id=pinned_run_id)
+                verdict["pull_request"]["number"] = 8
+                return verdict
+
+        for cls in (Unbound, OtherPr):
+            result = gate.handoff_gate_status(
+                make_head(), None, None, True,
+                final_validation_receipt=make_fcv(),
+                ci_verifier=cls(world_for(HEAD), REPO, pr_number=7))
+            self.assertFalse(result["handoff_complete"], cls)
+            self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                             "verdict_mismatch", cls)
+
+    def test_c26_handoff_blocks_on_pr_mutation_between_reads(self):
+        for label, change, code in (
+                ("moved", lambda p: p["head"].update(sha="c" * 40),
+                 "pr_head_moved"),
+                ("closed", lambda p: p.update(state="closed"),
+                 "pr_not_open"),
+                ("branch", lambda p: p["head"].update(ref="other"),
+                 "pr_branch_drift")):
+            verifier = passing_verifier()
+            verifier.api.get_pull_mutator = self.later(change)
+            result = gate.handoff_gate_status(
+                make_head(), None, None, True,
+                final_validation_receipt=make_fcv(), ci_verifier=verifier)
+            self.assertFalse(result["handoff_complete"], label)
+            self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                             code, label)
+
+    def test_c27_handoff_cli_requires_a_current_pr(self):
+        for pr in (None, "0", "-3"):
+            tmp = tempfile.mkdtemp()
+            built = []
+            rc, text = run_cli(
+                gate.main, handoff_argv(tmp, pr=pr), environ=cli_env(),
+                api_factory=lambda *a, **k: built.append(a)
+                or world_for(HEAD),
+                request_factory=lambda root: make_head())
+            self.assertEqual(rc, 2, (pr, text))
+            self.assertEqual(built, [], pr)
+            self.assertFalse((Path(tmp) / "handoff.json").exists(), pr)
+            self.assertIn("--pr", text)
+
+    def test_c28_standalone_verify_stays_flexible_but_is_marked_unbound(self):
+        out = Path(tempfile.mkdtemp()) / "verdict.json"
+        rc, text = run_cli(hci.main, verify_argv(out, pr=None),
+                           environ=cli_env(),
+                           api_factory=lambda *a, **k: FakeCiApi.genuine())
+        self.assertEqual(rc, 0, text)
+        verdict = json.loads(out.read_text())
+        self.assertEqual(verdict["verdict"], "PASS")
+        self.assertIs(verdict["pr_bound"], False)
+        self.assertIn("diagnostic", text.lower())
+        self.assertIn("handoff", text.lower())
+
 
 # ---------------------------------------------------------------------------
 # D — workflow-identity pins and documented recovery
@@ -731,6 +1198,14 @@ class WorkflowAndDocs(unittest.TestCase):
                        "pr_head_moved", "Required status checks",
                        "ruleset", "CI Gate",
                        "Issue #323"):
+            self.assertIn(needle, text, needle)
+
+    def test_doc_describes_the_trust_anchors(self):
+        text = DOC.read_text(encoding="utf-8")
+        for needle in ("Zutfen-LLC/inferswarm", "https://api.github.com",
+                       "repository_not_canonical", "pr_binding_missing",
+                       "pr_not_open", "pr_branch_drift", "pr_identity_drift",
+                       "`--pr` is required", "diagnostic"):
             self.assertIn(needle, text, needle)
 
 
