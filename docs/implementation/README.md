@@ -68,6 +68,12 @@ physical two-Node proof.
 
 ## Current implementation work
 
+The bounded issue #313 software slice is documented in
+[`q8-two-cuda-313.md`](q8-two-cuda-313.md), with a separately dispatched
+Hermes handoff in
+[`../../tools/native-cache/q8-two-cuda-recipe.md`](../../tools/native-cache/q8-two-cuda-recipe.md).
+It is an offline fixed-topology implementation, not physical qualification.
+
 <!-- project-status:frontier:start -->
 **[Issue #280 — AMD-only Vulkan same-request pooling (candidate-B-only result STOP; authorization spent)](https://github.com/Zutfen-LLC/inferswarm/issues/280)**
 

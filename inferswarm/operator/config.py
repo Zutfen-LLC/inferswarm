@@ -481,6 +481,8 @@ def profile_subject(config, *, profile_mode='live') -> ProfileSubject:
     options=thaw(config.strategy_options)
     if options.get('source_contract')=='coordinator-full-source/participant-assigned-rpc-backing/1':
         memory_ids.add(options['participant_backing']['memory_id'])
+    if config.selection=='two-gpu' and 'worker_host_memory_id' in options:
+        memory_ids.add(options['worker_host_memory_id'])
     # Workload tuple maps remain tuples in Python but hash JSON object semantics.
     workload=asdict(config.workload); workload['cache_settings']=thaw(config.workload.cache_settings)
     dependencies=tuple(sorted([('model:source_id',config.model.source_id),('model:revision',config.model.revision),
@@ -528,7 +530,7 @@ def _parse_config_v3(data, *, base_dir, now, profile_mode):
     keys(data, ('schema','plan_id','model','participants','strategy_id','selection','metadata','profiles','policy','workload','placement','strategy_options','request'), 'config/3')
     _text(data['plan_id'],'plan_id')
     if data['strategy_id'] != 'qwen38-q8-fixed/1': raise ValueError('unsupported strategy_id')
-    if data['selection'] not in ('one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
+    if data['selection'] not in ('two-gpu','one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
     if profile_mode not in ('live','replay'): raise ValueError('unsupported profile validation mode')
     model=_model_v3(data['model']); policy=_policy_v3(data['policy']); workload=_workload_v3(data['workload'])
     request=_request_v3(data['request'])
