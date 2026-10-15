@@ -67,7 +67,8 @@
    "test_modules": [
     "test_issue213_campaign_gate_ordering",
     "test_issue226_final_validation_ci",
-    "test_issue291_final_validation_reuse"
+    "test_issue291_final_validation_reuse",
+    "test_issue323_verified_ordinary_ci"
    ]
   },
   "issue-222-r7c": {
@@ -611,6 +612,9 @@
   ],
   "scripts/hash_issue74_artifacts.py": [
    "issue-74-79"
+  ],
+  "scripts/hosted_ci_verification.py": [
+   "issue-213-gate-ordering"
   ],
   "scripts/issue101_fixture.py": [
    "issue-99-103"
@@ -1694,6 +1698,9 @@
   ],
   "tests/fixtures/issue299/": [
    "issue-99-103"
+  ],
+  "tests/hosted_ci_fakes.py": [
+   "issue-213-gate-ordering"
   ],
   "tests/test_evidence_manifest_lifecycle.py": [
    "repo-integrity"

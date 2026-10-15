@@ -406,8 +406,9 @@ jobs:
       - name: Run group issue-213-gate-ordering
         # Issue #226 adds the hosted final-validation controls to this
         # doctrinal group (same orchestration line); Issue #291 adds the
-        # verified exact-head receipt-reuse controls.
-        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci tests.test_issue291_final_validation_reuse -v
+        # verified exact-head receipt-reuse controls; Issue #323 adds the
+        # authenticated ordinary-CI handoff controls (offline fake API).
+        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci tests.test_issue291_final_validation_reuse tests.test_issue323_verified_ordinary_ci -v
 
   moe-overlap-prototype:
     name: Group moe-overlap-prototype

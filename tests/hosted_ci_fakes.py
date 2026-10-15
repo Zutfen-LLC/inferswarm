@@ -198,3 +198,17 @@ class FakeCiApi:
 
     def called(self) -> list:
         return [name for name, _ in self.calls]
+
+
+def authenticated_ci(sha: str, *, branch: str = "feature/x",
+                     run_id: int = 9001, pr_number: int | None = None):
+    """A ``HostedCiVerifier`` over a genuine-shaped CI world for ``sha``.
+
+    Positive-control helper for tests of the handoff boundary: the verifier
+    authenticates against an in-memory fake exactly like production code
+    authenticates against GitHub (PR ``7`` is the head's PR).
+    """
+    api = FakeCiApi()
+    api.add_run(ci_run(run_id, sha, branch))
+    api.pulls = {7: pull(7, sha, branch)}
+    return hci.HostedCiVerifier(api, REPO, pr_number=pr_number)

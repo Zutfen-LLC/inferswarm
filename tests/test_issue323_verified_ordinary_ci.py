@@ -244,7 +244,9 @@ class AdversarialControls(_Base):
         case("run id bool", lambda a: a.runs[0].update(id=True))
         case("run no status", lambda a: a.runs[0].pop("status"))
         case("run attempt str", lambda a: a.runs[0].update(run_attempt="1"))
-        case("run no head_sha", lambda a: a.runs[0].pop("head_sha"))
+        case("run no head_sha", lambda a: (
+            a.runs[0].pop("head_sha"),
+            setattr(a, "ignore_head_filter", True)))
         case("run no repository", lambda a: a.runs[0].pop("repository"))
         case("job no name", lambda a: a.jobs[REAL_RUN_ID][0].pop("name"))
         case("job no run_id", lambda a: a.jobs[REAL_RUN_ID][0].pop("run_id"))
@@ -458,6 +460,18 @@ class HandoffBoundary(_Base):
             make_head(), None, forged, True,
             final_validation_receipt=make_fcv(), ci_verifier=verifier)
         self.assertFalse(result["handoff_complete"])
+        # No ordinary CI exists at all: the forged run id is not even
+        # consulted as a possible source of success.
+        self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                         "no_ci_run")
+
+    def test_h03b_forged_run_id_cannot_borrow_a_real_run(self):
+        forged = gate.build_hosted_ci_status(HEAD, "424242")
+        result = gate.handoff_gate_status(
+            make_head(), None, forged, True,
+            final_validation_receipt=make_fcv(),
+            ci_verifier=passing_verifier())
+        self.assertFalse(result["handoff_complete"])
         self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
                          "pinned_run_not_found")
 
@@ -664,8 +678,10 @@ class Clis(unittest.TestCase):
         data = json.loads((tmp / "handoff.json").read_text())
         self.assertTrue(data["handoff_complete"])
         self.assertNotIn(TOKEN, json.dumps(data))
+        empty = FakeCiApi()
+        empty.pulls = {7: fakes.pull(7, HEAD, "feature/x")}
         rc = gate.main(argv, environ={"GITHUB_TOKEN": TOKEN},
-                       api_factory=lambda *a, **k: FakeCiApi(),
+                       api_factory=lambda *a, **k: empty,
                        request_factory=lambda root: make_head())
         self.assertEqual(rc, 1)
         data = json.loads((tmp / "handoff.json").read_text())

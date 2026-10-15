@@ -49,9 +49,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
 import issue213_gate_orchestration as gate  # noqa: E402
 import final_validation_reuse as reuse  # noqa: E402
+from tests.hosted_ci_fakes import authenticated_ci  # noqa: E402
 
 WORKFLOW = ROOT / ".github" / "workflows" / "final-cpu-validation.yml"
 SHA = "a" * 40
@@ -439,9 +441,9 @@ class DuplicateDispatch(unittest.TestCase):
         sim.dispatch()
         second, _ = sim.dispatch()
         request = make_request()
-        ci = gate.build_hosted_ci_status(SHA, "ci-1")
         status = gate.handoff_gate_status(
-            request, None, ci, True, final_validation_receipt=second)
+            request, None, None, True, final_validation_receipt=second,
+            ci_verifier=authenticated_ci(SHA))
         self.assertTrue(status["handoff_complete"])
         self.assertEqual(status["full_suite_proof"],
                          "hosted-final-validation")
@@ -449,8 +451,8 @@ class DuplicateDispatch(unittest.TestCase):
         other = make_request(OTHER_SHA)
         with self.assertRaises(gate.GateOrderingError):
             gate.handoff_gate_status(
-                other, None, gate.build_hosted_ci_status(OTHER_SHA, "c"),
-                True, final_validation_receipt=second)
+                other, None, None, True, final_validation_receipt=second,
+                ci_verifier=authenticated_ci(OTHER_SHA))
 
     def test_r3_third_dispatch_never_chains_through_a_reuse_receipt(self):
         sim = HostedSim()

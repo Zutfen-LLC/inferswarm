@@ -51,7 +51,12 @@ handoff.  Four concerns live here:
    BOTH the suite receipt and the hosted-CI status to bind to that exact
    SHA.  Hosted CI must present a structured status receipt (schema, exact
    SHA, ``SUCCESS`` result, run identity); a bare unbound boolean can never
-   complete handoff.
+   complete handoff.  Issue #323: that status is only a CLAIM — it is shape
+   checked, never trusted.  Ordinary CI is authenticated at the handoff
+   itself through ``hosted_ci_verification.HostedCiVerifier`` (read-only
+   GitHub Actions data: canonical ``ci.yml`` run on the exact head, latest
+   attempt, aggregate ``CI Gate`` job); a missing run (``[skip ci]``), an
+   unauthenticated claim or any API doubt keeps the handoff incomplete.
 
 5. **Hosted Final CPU Validation receipts (Issue #226).**  The canonical
    full CPU suite may run HOSTED — the ``final-cpu-validation.yml``
@@ -90,6 +95,9 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import hosted_ci_verification as ci_verification  # noqa: E402
 
 SCHEMA = "campaign-gate-ordering/1"
 RECEIPT_SCHEMA = "exact-head-suite-receipt/1"
@@ -746,7 +754,12 @@ def reuse_or_rerun(receipt: dict | None, request: dict) -> dict:
 def build_hosted_ci_status(git_commit_sha: str, run_id: str,
                            result: str = "SUCCESS",
                            run_url: str | None = None) -> dict:
-    """Build a structured hosted-CI status bound to one exact head."""
+    """Build a structured hosted-CI status CLAIM bound to one exact head.
+
+    Issue #323: the claim is only shape-checked and can be pinned to a run
+    id, but it never satisfies the handoff by itself — the handoff
+    re-authenticates ordinary CI against GitHub (``ci_verifier``).
+    """
     status: dict = {
         "schema": CI_STATUS_SCHEMA,
         "git_commit_sha": _validate_git_sha(git_commit_sha,
@@ -1287,11 +1300,76 @@ def current_final_head_request(root: Path, *, tests_dir: Path | None = None,
     )
 
 
+def _authenticate_hosted_ci(final_head: "FinalHeadRequest",
+                            hosted_ci_status: dict | None,
+                            ci_verifier: object) -> dict:
+    """Authenticated ordinary-CI verdict for the final head (Issue #323)."""
+    sha = final_head.git_commit_sha
+
+    def blocked(code: str, detail: str) -> dict:
+        return ci_verification.blocked_verdict(sha, code, detail)
+
+    if ci_verifier is not None and not isinstance(
+            ci_verifier, ci_verification.HostedCiVerifier):
+        raise GateOrderingError(
+            "ci_verifier must be a hosted_ci_verification.HostedCiVerifier "
+            "(fail closed): an arbitrary callable or object cannot "
+            "authenticate ordinary CI")
+    pinned = None
+    if hosted_ci_status is not None:
+        # Malformed claims raise; a well-formed one is only a claim.
+        claim_for_head = validate_hosted_ci_status(hosted_ci_status, sha)
+        if ci_verifier is None:
+            return blocked(
+                "unauthenticated_claim",
+                "a hosted-CI status object is a claim, not proof: supply a "
+                "ci_verifier so ordinary CI is authenticated against GitHub")
+        if not claim_for_head:
+            return blocked(
+                "claim_sha_mismatch",
+                "the hosted-CI claim is bound to another head")
+        run_id = hosted_ci_status["run_id"].strip()
+        if not (run_id.isascii() and run_id.isdigit() and int(run_id) >= 1):
+            return blocked(
+                "claim_malformed",
+                f"the hosted-CI claim run id is not a GitHub run id: "
+                f"{run_id!r}")
+        pinned = int(run_id)
+    elif ci_verifier is None:
+        return blocked(
+            "no_ci_verification",
+            "no authenticated ordinary-CI verification was supplied")
+    verdict = ci_verifier.verify(sha, pinned_run_id=pinned)
+    structurally_ok = (
+        isinstance(verdict, dict)
+        and verdict.get("schema") == ci_verification.VERDICT_SCHEMA
+        and verdict.get("expected_sha") == sha
+        and verdict.get("verdict") in (ci_verification.PASS,
+                                       ci_verification.BLOCKED))
+    if structurally_ok and verdict["verdict"] == ci_verification.PASS:
+        run = verdict.get("run")
+        gate_job = verdict.get("gate_job")
+        structurally_ok = (
+            verdict.get("reason_code") is None
+            and isinstance(run, dict) and run.get("head_sha") == sha
+            and run.get("conclusion") == "success"
+            and isinstance(gate_job, dict)
+            and gate_job.get("conclusion") == "success")
+    if not structurally_ok:
+        return blocked("verdict_mismatch",
+                       "the verifier verdict is malformed or not bound to "
+                       "this final head")
+    return verdict
+
+
 def handoff_gate_status(final_head: FinalHeadRequest,
                         suite_receipt: dict | None,
                         hosted_ci_status: dict | None,
                         finalizer_ok: bool,
-                        final_validation_receipt: dict | None = None) -> dict:
+                        final_validation_receipt: dict | None = None,
+                        *,
+                        ci_verifier: "ci_verification.HostedCiVerifier | None"
+                        = None) -> dict:
     """Final handoff decision (fail closed).
 
     Every required final gate is proven against the ONE independently
@@ -1317,6 +1395,20 @@ def handoff_gate_status(final_head: FinalHeadRequest,
     their exact semantics (the original call shape must pass
     ``suite_receipt``), and passing BOTH suite receipts is rejected rather
     than silently preferring one.
+
+    Issue #323: ordinary CI is AUTHENTICATED here, not asserted.  The hosted
+    CI requirement is satisfied only by a PASS verdict from
+    ``ci_verifier`` (a ``hosted_ci_verification.HostedCiVerifier`` over
+    read-only GitHub Actions data) for THIS final head: canonical ``ci.yml``
+    workflow, this repository, a completed successful run of the latest
+    attempt on the exact head, and the real ``CI Gate`` job.
+    ``hosted_ci_status`` is demoted to an optional claim that may pin the
+    deciding run id; without a verifier a claim is BLOCKED
+    (``unauthenticated_claim``), no claim and no verifier is BLOCKED
+    (``no_ci_verification``), and a skipped/absent ordinary CI run is BLOCKED
+    (``no_ci_run``) even when Final CPU Validation succeeded.  The verdict is
+    returned under ``hosted_ci_verdict`` (it never raises for a BLOCKED
+    verdict; malformed inputs still raise).
     """
     if not isinstance(final_head, FinalHeadRequest):
         raise GateOrderingError(
@@ -1362,13 +1454,9 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         # The hosted final-validation receipt proves the finalizer/status
         # fixed-point checks on the same exact head (validated above to
         # have passed); it never weakens an explicit finalizer_ok=False.
-    ci_ok = False
-    if hosted_ci_status is not None:
-        # A bare boolean cannot satisfy this: the structured status must
-        # carry schema + exact SHA + SUCCESS + run identity, and a
-        # malformed one raises instead of degrading.
-        ci_ok = validate_hosted_ci_status(hosted_ci_status,
-                                          final_head.git_commit_sha)
+    ci_verdict = _authenticate_hosted_ci(final_head, hosted_ci_status,
+                                         ci_verifier)
+    ci_ok = ci_verdict["verdict"] == ci_verification.PASS
     ok = bool(suite_ok and ci_ok and finalizer_ok)
     return {
         "schema": SCHEMA,
@@ -1379,6 +1467,7 @@ def handoff_gate_status(final_head: FinalHeadRequest,
                              else ("exact-head-suite-receipt"
                                    if suite_receipt is not None else None)),
         "hosted_ci_success": ci_ok,
+        "hosted_ci_verdict": ci_verdict,
         "finalizer_status_ok": finalizer_ok,
         "note": ("all final gates must bind to the one independently "
                  "supplied final-head identity; this decision is purely "
@@ -2117,12 +2206,102 @@ def trace_campaign(old_order: bool, review_mutates_head: bool = True,
     }
 
 
-def main(argv: list[str] | None = None) -> int:
+def _load_json_object(path: str, what: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError) as error:
+        raise GateOrderingError(f"{what} is unreadable: {error}") from None
+    if not isinstance(data, dict):
+        raise GateOrderingError(f"{what} is not a JSON object")
+    return data
+
+
+def _cmd_handoff(argv: list[str], *, environ, api_factory,
+                 request_factory) -> int:
+    """Executable authoritative final handoff (Issue #323).
+
+    Derives the final-head identity from the clean checked-out head, loads
+    the full-suite proof, AUTHENTICATES ordinary CI against read-only GitHub
+    Actions data and prints/writes the mechanical ``handoff_gate_status``
+    decision.  Exit 0 only when the handoff is complete.
+    """
+    parser = argparse.ArgumentParser(prog="issue213_gate_orchestration.py "
+                                          "handoff")
+    parser.add_argument("--root", type=Path,
+                        default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--final-validation-receipt",
+                        help="hosted-final-validation-receipt/1 JSON")
+    parser.add_argument("--suite-receipt",
+                        help="local exact-head-suite-receipt/1 JSON")
+    parser.add_argument("--finalizer-ok", action="store_true",
+                        help="the deterministic finalizer/project-status "
+                             "checks passed on this head (unchanged #213 "
+                             "semantics)")
+    parser.add_argument("--repo", required=True, help="OWNER/REPO")
+    parser.add_argument("--pr", type=int, default=None,
+                        help="PR number: its CURRENT head must be the final "
+                             "head (a moved head blocks the handoff)")
+    parser.add_argument("--hosted-ci-run-id", default=None,
+                        help="optionally pin the deciding ordinary CI run")
+    parser.add_argument("--out", required=True)
+    args = parser.parse_args(argv)
+    if not args.final_validation_receipt and not args.suite_receipt:
+        print("handoff: usage error: supply --final-validation-receipt "
+              "and/or --suite-receipt")
+        return 2
+    token = ci_verification.resolve_token(
+        environ if environ is not None else os.environ,
+        allow_gh_fallback=api_factory is None and environ is None)
+    if not token:
+        print("handoff: usage error: set GITHUB_TOKEN (read-only) or log in "
+              "with gh")
+        return 2
+    env = environ if environ is not None else os.environ
+    try:
+        head = (request_factory or current_final_head_request)(args.root)
+        suite = (_load_json_object(args.suite_receipt, "suite receipt")
+                 if args.suite_receipt else None)
+        envelope = (_load_json_object(args.final_validation_receipt,
+                                      "final-validation receipt")
+                    if args.final_validation_receipt else None)
+        api = (api_factory or ci_verification.default_api_factory)(
+            env.get("GITHUB_API_URL", "https://api.github.com"), args.repo,
+            token)
+        verifier = ci_verification.HostedCiVerifier(api, args.repo,
+                                                    pr_number=args.pr)
+        claim = (build_hosted_ci_status(head.git_commit_sha,
+                                        args.hosted_ci_run_id)
+                 if args.hosted_ci_run_id else None)
+        result = handoff_gate_status(head, suite, claim, args.finalizer_ok,
+                                     envelope, ci_verifier=verifier)
+    except (GateOrderingError, ValueError) as error:
+        print(f"handoff: FAIL (fail closed) {error}")
+        return 1
+    Path(args.out).write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8")
+    verdict = result["hosted_ci_verdict"]
+    print(f"handoff: {'COMPLETE' if result['handoff_complete'] else 'INCOMPLETE'}"
+          f" head={result['final_head_sha']} "
+          f"suite={result['full_suite_receipt_valid']} "
+          f"ordinary-ci={verdict['verdict']}"
+          f"{(' ' + verdict['reason_code']) if verdict['reason_code'] else ''}")
+    return 0 if result["handoff_complete"] else 1
+
+
+def main(argv: list[str] | None = None, *, environ=None, api_factory=None,
+         request_factory=None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if raw and raw[0] == "handoff":
+        return _cmd_handoff(raw[1:], environ=environ,
+                            api_factory=api_factory,
+                            request_factory=request_factory)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--trace", action="store_true",
                         help="print the old-vs-new ordering trace")
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw)
     if args.trace:
         old = trace_campaign(True)
         new = trace_campaign(False)
