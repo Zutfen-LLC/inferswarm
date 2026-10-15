@@ -927,7 +927,11 @@ class ApiOriginAuthentication(unittest.TestCase):
                     reuse.HttpActionsApi(EVIL_API, REPO, TOKEN),
                     reuse.HttpActionsApi("http://127.0.0.1:1", REPO, TOKEN,
                                          _allow_insecure_loopback=True),
-                    reuse.HttpActionsApi(OFFICIAL_API, EVIL_REPO, TOKEN)):
+                    reuse.HttpActionsApi(OFFICIAL_API, EVIL_REPO, TOKEN),
+                    # official URL, but the test-only mode that also bypasses
+                    # proxies: never a production client
+                    reuse.HttpActionsApi(OFFICIAL_API, REPO, TOKEN,
+                                         _allow_insecure_loopback=True)):
                 with self.assertRaises(ValueError):
                     hci.HostedCiVerifier(client, REPO, pr_number=322)
             self.assertEqual(http.requests, [])
@@ -1113,6 +1117,37 @@ class CurrentPrBinding(_Base):
             self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
                              "verdict_mismatch", cls)
 
+    def test_c25b_handoff_revalidates_pr_and_repository_in_the_verdict(self):
+        def tamper(change):
+            class Tampered(hci.HostedCiVerifier):
+                def verify(self, expected_sha, *, pinned_run_id=None):
+                    verdict = super().verify(expected_sha,
+                                             pinned_run_id=pinned_run_id)
+                    change(verdict)
+                    return verdict
+            return Tampered(world_for(HEAD), REPO, pr_number=7)
+
+        for label, change in (
+                ("PR closed", lambda v: v["pull_request"].update(
+                    state="closed")),
+                ("PR at another head", lambda v: v["pull_request"].update(
+                    head_sha="c" * 40)),
+                ("foreign repository", lambda v: v.update(
+                    repository=EVIL_REPO)),
+                ("no PR evidence", lambda v: v.update(pull_request=None))):
+            result = gate.handoff_gate_status(
+                make_head(), None, None, True,
+                final_validation_receipt=make_fcv(),
+                ci_verifier=tamper(change))
+            self.assertFalse(result["handoff_complete"], label)
+            self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                             "verdict_mismatch", label)
+        # control: the untampered verdict completes
+        self.assertTrue(gate.handoff_gate_status(
+            make_head(), None, None, True,
+            final_validation_receipt=make_fcv(),
+            ci_verifier=tamper(lambda v: None))["handoff_complete"])
+
     def test_c26_handoff_blocks_on_pr_mutation_between_reads(self):
         for label, change, code in (
                 ("moved", lambda p: p["head"].update(sha="c" * 40),
@@ -1143,6 +1178,18 @@ class CurrentPrBinding(_Base):
             self.assertEqual(built, [], pr)
             self.assertFalse((Path(tmp) / "handoff.json").exists(), pr)
             self.assertIn("--pr", text)
+
+    def test_c27b_verify_cli_rejects_a_nonpositive_pr(self):
+        for pr in ("0", "-3"):
+            out = Path(tempfile.mkdtemp()) / "verdict.json"
+            built = []
+            rc, text = run_cli(
+                hci.main, verify_argv(out, pr=pr), environ=cli_env(),
+                api_factory=lambda *a, **k: built.append(a)
+                or FakeCiApi.genuine())
+            self.assertEqual(rc, 2, (pr, text))
+            self.assertEqual(built, [], pr)
+            self.assertFalse(out.exists(), pr)
 
     def test_c28_standalone_verify_stays_flexible_but_is_marked_unbound(self):
         out = Path(tempfile.mkdtemp()) / "verdict.json"

@@ -326,13 +326,9 @@ class HostedCiVerifier:
         if pull is not None:
             # The PR was valid BEFORE the CI evidence; it must be the very
             # same open PR, head, branch and base AFTER it.
-            final = self._pull(expected_sha, evidence, 2)
-            self._require_same_pull(pull, final)
-            if run["head_branch"] != final["head_ref"]:
-                raise _Blocked(
-                    "branch_mismatch",
-                    f"run branch {run['head_branch']!r} is not the PR head "
-                    f"branch {final['head_ref']!r}")
+            # Identical to the first read (incl. head branch), so the
+            # run/branch binding checked above still holds.
+            self._require_same_pull(pull, self._pull(expected_sha, evidence, 2))
 
         verdict = blocked_verdict(expected_sha, "", "",
                                   repository=self.repository, **evidence)
