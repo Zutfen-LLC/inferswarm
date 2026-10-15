@@ -86,6 +86,18 @@ and every unknown allocation in its receipt, and executes at most one request
 under external systemd limits.  It never returns accepted output or a normal
 feasibility/qualification verdict.
 
+Stopped-worker missing-byte acquisition is a separate existing bounded
+preparation step, documented in the recipe; the command verifies already
+prepared backing and never performs acquisition. Its 24 GiB application
+payload check is encoded-assignment arithmetic, not measured transfer
+limiting. Hermes must provide outer source/ledger byte enforcement and
+supervision spanning preparation and execution, with one T0 + 160-minute
+STOP and T0 + 180-minute end (20 minutes cleanup). The command's own timer and
+slices start only at invocation and cannot reset that outer budget or cover
+prior source/server/writer jobs. There is no outer-deadline CLI/envelope
+parameter. Missing enforceable spanning ownership, counters or deadlines
+means no physical launch; this PR does not add an acquisition controller.
+
 The experimental command creates a fresh per-host systemd slice, verifies
 10 GiB aggregate worker RAM and 110 GiB aggregate coordinator RAM caps and zero
 owned swap, and runs source/collector helpers and native services inside those

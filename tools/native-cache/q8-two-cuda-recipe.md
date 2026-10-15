@@ -69,6 +69,52 @@ units on a violation or failed monitor. It samples GPU reserve rather than
 claiming an implicit hard GPU cap. It always reports compute attribution as
 `INCONCLUSIVE` until adequate endpoint/PID/UUID kernel evidence exists.
 
+## Two phases under one outer Hermes budget
+
+**Phase A is existing stopped-worker preparation, outside this command.** Use
+[`bounded-acquisition.md`](bounded-acquisition.md) and
+[`selective-preparation.md`](selective-preparation.md): the existing
+`prepare_q8_participant` API with authenticated assigned records, provisioned
+source/tunnel, reviewed executable/FNV helper, one writer and `DiskBudget`.
+The paired bounded-acquisition helpers are callable APIs, not an acquisition
+subcommand of the operator. They fetch only missing assigned bytes and retain
+the source/acquisition ledger. Keep workers stopped and authenticate/publish
+both prepared banks before Phase B. The diagnostic command refuses missing or
+invalid backing; it never fills it in or downloads a model.
+
+**Phase B is supervised verification, native load and at most one request.**
+Only this phase is implemented by `experimental-q8-two-cuda`. Its
+`application_payload_ceiling_bytes` checks the sum of encoded GPU assignments;
+it is not a measured acquisition or runtime transfer meter. A passing value
+must never be reported as enforcement of a 24 GiB transfer allowance.
+
+Before Phase A, Hermes must freeze one outer start time T0, an execution STOP
+at T0 + 160 minutes, and an absolute end at T0 + 180 minutes. Preparation,
+source/tunnel helpers, verification, load and the request all consume that
+same budget; the last 20 minutes are reserved for stopping and verifying
+cleanup of every owned process on both hosts. Phase B's internal timer starts
+when the command begins and is only a local backstop: it does not know time
+already spent in Phase A and must not extend either outer deadline. There is
+no supported outer-start/deadline CLI flag or envelope field. Hermes must
+supply an independently reviewed outer watchdog that stops both preparation
+and execution ownership sets at the earlier STOP and verifies cleanup by the
+absolute end. If that spanning supervision cannot be enforced, refuse the
+physical launch rather than reset the budget between phases.
+
+Freeze acquisition/transfer accounting separately in that outer session:
+authenticate the missing-only delta before reads, enforce the approved 24 GiB
+application-payload acquisition/transfer allowance against actual counted bytes
+for its frozen traffic classes, and retain source/ledger receipts. Record
+metadata/control, verification GET and native application payload separately;
+do not substitute encoded assignment arithmetic, a range-size limit or the
+48 GiB disk ceiling for a transfer counter. Apply the 48 GiB backing ceiling,
+64 GiB free-disk floor, per-bank repair reserve, aggregate host memory/swap
+limits and host headroom rules during preparation as well as execution.
+The command's slices start only in Phase B and do not supervise the earlier
+source/server/writer processes. Hermes must own and clean those Phase A jobs
+and refuse if any required limit/counter/ownership receipt is absent. A STOP
+is terminal for this attempt: no automatic repair/retry/restart/tuning.
+
 ## 1. Current inventory and identity admission
 
 1. Record fresh read-only inventory for inferswarm05 and inferswarm03: CPU/RAM,
