@@ -356,12 +356,20 @@ def _validate_options(config,metadata):
     if options['route'] not in ('client-mediated','server-local'): raise ValueError('unsupported explicit copy route')
     if options['source_contract'] not in ('full-source-both-hosts/1',CONTRACT): raise ValueError('unsupported full-source backing contract')
     if selective:
-        if config.selection!='cpu-only' or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed CPU observer builds and enabled cache only')
+        if config.selection not in ('cpu-only','one-gpu') or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed observer builds, the cpu-only or explicitly reviewed one-gpu pair, and enabled cache only')
+        if config.selection=='one-gpu' and options['route']!='client-mediated': raise ValueError('selective one-gpu backing requires the client-mediated copy route')
+        from .assigned_backing import CPU_BACKEND, CUDA_BACKEND
+        backend = CPU_BACKEND if config.selection=='cpu-only' else CUDA_BACKEND
         backing=options['participant_backing']
         keys(backing,('epoch','memory_id','limit_bytes','min_free_bytes','reserve_bytes'),'participant backing')
         for k in ('epoch','limit_bytes','min_free_bytes','reserve_bytes'): integer(backing[k], 'participant backing '+k,minimum=1 if k=='limit_bytes' else 0)
         for p in config.participants:
-            if p.runtime_sha256!=role_identity(p.role).executable_sha256: raise ValueError('selective backing unreviewed per-role runtime identity')
+            # The loader role is always the reviewed CPU client build; only the
+            # remote role's backend varies with the selection. A missing CUDA
+            # entry raises here, so the one-gpu pair cannot admit until that
+            # identity is reviewed into the table.
+            pbackend = CPU_BACKEND if p.role=='client' else backend
+            if p.runtime_sha256!=role_identity(p.role,pbackend).executable_sha256: raise ValueError('selective backing unreviewed per-role runtime identity')
         memory=next((m for m in config.profiles.snapshot.memory_resources if m.memory_id==backing['memory_id']),None)
         remote=next(p for p in config.participants if p.role=='remote')
         if memory is None or memory.host_id!=remote.host_id or memory.kind!='storage': raise ValueError('selective backing storage domain mismatch')

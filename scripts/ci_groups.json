@@ -102,6 +102,7 @@
     "test_issue200_r8f_proof",
     "test_issue311_preparation",
     "test_issue311_startup",
+    "test_issue311_cuda_backing",
     "test_issue255_mvp",
     "test_issue255_measure",
     "test_issue255_baseline",
@@ -1863,6 +1864,9 @@
   ],
   "tests/test_issue289_launcher.py": [
    "r8i-qwen-qualification"
+  ],
+  "tests/test_issue311_cuda_backing.py": [
+   "issue-99-103"
   ],
   "tests/test_issue311_preparation.py": [
    "issue-99-103"
