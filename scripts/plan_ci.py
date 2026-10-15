@@ -210,6 +210,7 @@ GROUP_TEST_MODULES = {
         "test_issue200_r8f_source_policy",
         "test_issue200_r8f_proof",
         "test_issue311_preparation",
+        "test_bounded_acquisition",
         "test_issue311_startup",
         "test_issue311_cuda_backing",
         # Issue #255: bounded CUDA/RPC product execution and local baseline.
@@ -832,6 +833,7 @@ PATH_GROUPS = {
     "tests/test_issue200_r8f_source_policy.py": ["issue-99-103"],
     "tests/test_issue200_r8f_proof.py": ["issue-99-103"],
     "scripts/issue311_preparation.py": ["issue-99-103", "moe-overlap-prototype"],
+    "scripts/bounded_acquisition.py": ["issue-99-103"],
     "scripts/issue311_native_backing.py": ["issue-99-103", "moe-overlap-prototype"],
     "tests/test_issue311_cuda_backing.py": ["issue-99-103"],
     "tests/test_issue311_preparation.py": ["issue-99-103"],
