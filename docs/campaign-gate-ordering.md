@@ -525,6 +525,14 @@ python3 scripts/issue213_gate_orchestration.py handoff \
     --repo Zutfen-LLC/inferswarm --pr <N> --out handoff.json
 ```
 
+A claim or `--hosted-ci-run-id` must be a numeric GitHub run id (a textual
+id such as `run-79` is BLOCKED `claim_malformed`); `--pr` is optional but
+without it the PR-head-moved and branch bindings are skipped, so pass it for
+every governed handoff. A "Re-run failed jobs" rerun can keep carried-over
+jobs from an earlier attempt, which the verifier conservatively BLOCKS as
+`stale_attempt` (never a false PASS); use "Re-run all jobs" or a fresh
+`workflow_dispatch` run instead.
+
 `verify` exits 0 for PASS and 3 for BLOCKED; `handoff` exits 0 only for a
 complete handoff and records the verdict in its output.
 
