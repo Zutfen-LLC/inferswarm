@@ -1,0 +1,15 @@
+test_assignment_mismatch_refuses_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_assignment_mismatch_refuses_before_connection) ... FAIL
+
+======================================================================
+FAIL: test_assignment_mismatch_refuses_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_assignment_mismatch_refuses_before_connection)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_moe_native_cache.py", line 115, in test_assignment_mismatch_refuses_before_connection
+    self.assertIn('assigned whole-bank identity mismatch',result.stderr)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'assigned whole-bank identity mismatch' not found in 'error: unknown arg --assigned-banks\n'
+
+----------------------------------------------------------------------
+Ran 1 test in 0.632s
+
+FAILED (failures=1)

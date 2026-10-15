@@ -1,0 +1,38 @@
+{
+  "cold": {
+    "assigned_weight_set_payload": 62668800,
+    "assigned_hash_attempts": 3,
+    "request_wire_bytes": 62788570,
+    "response_wire_bytes": 51813,
+    "get_tensor_payload_bytes": 51200,
+    "activation_routing_set_payload_bytes": 51600,
+    "graph_compute_or_recompute_requests": 5,
+    "serial_output_sha256": "0dd236bcf4c208265ec91b366e0938bc649e0a773ba52e62be915eeb5baa15eb",
+    "overlap_output_sha256": "0dd236bcf4c208265ec91b366e0938bc649e0a773ba52e62be915eeb5baa15eb",
+    "scheduling_status": "SCHEDULING_EQUIVALENT",
+    "numerical_status": "INVALID_OR_INCOMPLETE",
+    "independent_fixture_mapping": {
+      "pass": true,
+      "max_abs": 3.725290298461914e-09,
+      "max_ratio": 0.022562583769759118
+    }
+  },
+  "restart": {
+    "assigned_weight_set_payload": 0,
+    "assigned_hash_attempts": 3,
+    "request_wire_bytes": 118654,
+    "response_wire_bytes": 51750,
+    "get_tensor_payload_bytes": 51200,
+    "activation_routing_set_payload_bytes": 51600,
+    "graph_compute_or_recompute_requests": 5,
+    "serial_output_sha256": "0dd236bcf4c208265ec91b366e0938bc649e0a773ba52e62be915eeb5baa15eb",
+    "overlap_output_sha256": "0dd236bcf4c208265ec91b366e0938bc649e0a773ba52e62be915eeb5baa15eb",
+    "scheduling_status": "SCHEDULING_EQUIVALENT",
+    "numerical_status": "INVALID_OR_INCOMPLETE",
+    "independent_fixture_mapping": {
+      "pass": true,
+      "max_abs": 3.725290298461914e-09,
+      "max_ratio": 0.022562583769759118
+    }
+  }
+}

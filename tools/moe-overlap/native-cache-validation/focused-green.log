@@ -1,0 +1,13 @@
+test_assignment_mismatch_refuses_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_assignment_mismatch_refuses_before_connection) ... ok
+test_changed_source_bytes_refuse_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_changed_source_bytes_refuse_before_connection) ... ok
+test_incomplete_or_truncated_source_bank_refuses (tests.test_moe_native_cache.AssignedGraphTests.test_incomplete_or_truncated_source_bank_refuses) ... ok
+test_real_graph_cold_restart_cache_reuse_and_independent_mapping (tests.test_moe_native_cache.AssignedGraphTests.test_real_graph_cold_restart_cache_reuse_and_independent_mapping) ... ok
+test_unsupported_assignment_configurations_refuse (tests.test_moe_native_cache.AssignedGraphTests.test_unsupported_assignment_configurations_refuse) ... ok
+test_composed_cuda_build_refuses (tests.test_moe_native_cache.ComposedBuildTests.test_composed_cuda_build_refuses) ... ok
+test_explicit_composed_build_has_separate_closure_and_provenance (tests.test_moe_native_cache.ComposedBuildTests.test_explicit_composed_build_has_separate_closure_and_provenance) ... ok
+test_stock_and_composed_objects_cannot_alias (tests.test_moe_native_cache.ComposedBuildTests.test_stock_and_composed_objects_cannot_alias) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 17.209s
+
+OK

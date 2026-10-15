@@ -1,0 +1,22 @@
+{
+  "role": "derived-moe-worker",
+  "rpc_closure": "native-cache-composed",
+  "native_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "composition_sha256": "7813ff3bf2ffb98fce74bb505b2ae47d5aec199bde0070334dabf279b5eed5b8",
+  "compiler_identities": {
+    "gcc": "/usr/bin/gcc\ngcc (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+    "g++": "/usr/bin/g++\ng++ (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+  },
+  "flags": [
+    "-O1",
+    "-pthread",
+    "-D_GNU_SOURCE",
+    "-D_FILE_OFFSET_BITS=64",
+    "-DGGML_SCHED_MAX_COPIES=4",
+    "-DGGML_USE_CPU",
+    "-DIS321_NATIVE_CACHE",
+    "-DIS321_COMPOSITION=\"7813ff3bf2ffb98fce74bb505b2ae47d5aec199bde0070334dabf279b5eed5b8\""
+  ],
+  "harness_sha256": "0c2be9cdf3ace840122fc0ff4aa9d4df9f10bcc6c46fd4ab2c10e5340c9b6ceb",
+  "executable_sha256": "037952846327ff346a7b125f86fd9bb2dac583e7a953bdf19d561a50f2c26b8f"
+}

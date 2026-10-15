@@ -1,0 +1,19 @@
+{
+  "implementation_commit": "f269e073f58408cec721a0cde8b10f887c2a1e7a",
+  "base_commit": "203133661cfef9ce343d4402644c338fa54b4148",
+  "files": {
+    "tools/moe-overlap/build.py": "578fcb179a321a73450ed12bbee1387a86f3907491b5a81c35dac344853dcc76",
+    "tools/moe-overlap/moe_overlap_harness.cpp": "a6e1e8d5b6b0c2492a2b6fa7bea3cecfcd03f72a4b4dfb98894fc2655e34bf11",
+    "tools/moe-overlap/rpc_worker.cpp": "0c2be9cdf3ace840122fc0ff4aa9d4df9f10bcc6c46fd4ab2c10e5340c9b6ceb",
+    "tests/test_moe_native_cache.py": "978541996cfeb7acc7f708e2992badeec3063cdcbb7bde34553d86d45251fd7c",
+    "tests/test_native_cache.py": "2fe6b7e1a953cacaca4d304b33d9c1aa00225bde521d977b17c8bbf3754d475b",
+    "tools/moe-overlap/operand_reference.py": "79567917b4fa261aca568ad162b9154a490bc83ea44505b51d4c22828d8e43c4",
+    "tools/moe-overlap/check_scheduling.py": "743ba1943f168f34053ee4f2b8231db1b66d6a711760def3885a052c68579ea1",
+    "tools/moe-overlap/check_reference.py": "28f46bb3823abecbc72b7959e052b19004a19b65fccd3583586dcf04be7c3e40",
+    "tools/native-cache/operator-build.py": "dc921491c95f3847eff24f6ef58f6d4f16adb7883bc298c0b203635b44c1b16f",
+    "tools/native-cache/native.patch": "91ae0188e6746e7f6f455f895af423a0acfceb8b3342615ca042895fc0768a49",
+    "tools/native-cache/assigned.h": "e67d07a46cecc5fb0fa653da2989ff316722c9b33f20f8402ac4ad765223a75e"
+  },
+  "python": "3.14.7",
+  "claim": "CPU fixture engineering only; no hardware or numerical qualification"
+}

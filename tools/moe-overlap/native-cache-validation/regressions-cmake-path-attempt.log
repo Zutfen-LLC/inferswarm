@@ -1,0 +1,144 @@
+test_all_experts_shared_mapping_and_negative_controls (tests.test_moe_overlap_prototype.TestBackendOperandReference.test_all_experts_shared_mapping_and_negative_controls) ... ok
+test_quantizer_modes_ties_zero_and_scale_storage (tests.test_moe_overlap_prototype.TestBackendOperandReference.test_quantizer_modes_ties_zero_and_scale_storage) ... ok
+test_signed_weight_codes_and_scale_applied_once (tests.test_moe_overlap_prototype.TestBackendOperandReference.test_signed_weight_codes_and_scale_applied_once) ... ok
+test_unknown_modes_invalid_extents_and_nonfinite_rejected (tests.test_moe_overlap_prototype.TestBackendOperandReference.test_unknown_modes_invalid_extents_and_nonfinite_rejected) ... ok
+test_object_cache_invalidates_on_stamp_mismatch (tests.test_moe_overlap_prototype.TestBuildCacheAndStatusControls.test_object_cache_invalidates_on_stamp_mismatch)
+A cached object whose stamp no longer matches (changed source, ... /home/zutfen/Documents/Codex/2026-10-15/task/integration/tools/moe-overlap/build.py:309: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  t.extractall(cache)
+ok
+test_status_failure_injection_refuses_to_compare (tests.test_moe_overlap_prototype.TestBuildCacheAndStatusControls.test_status_failure_injection_refuses_to_compare)
+--self-check-status-negative must terminate non-passing with the ... ok
+test_warmup_count_is_honored (tests.test_moe_overlap_prototype.TestBuildCacheAndStatusControls.test_warmup_count_is_honored) ... ok
+test_cache_tracks_source_flags_and_both_cuda_compilers (tests.test_moe_overlap_prototype.TestBuildCommands.test_cache_tracks_source_flags_and_both_cuda_compilers) ... ok
+test_cpu_ignores_invalid_cuda_override_and_missing_nvcc_refuses (tests.test_moe_overlap_prototype.TestBuildCommands.test_cpu_ignores_invalid_cuda_override_and_missing_nvcc_refuses) ... ok
+test_cuda_driver_dependency_and_registration (tests.test_moe_overlap_prototype.TestBuildCommands.test_cuda_driver_dependency_and_registration)
+Capture commands without nvcc: VMM needs the driver, and every ... ok
+test_explicit_driver_and_invalid_paths_fail_before_compile (tests.test_moe_overlap_prototype.TestBuildCommands.test_explicit_driver_and_invalid_paths_fail_before_compile) ... ok
+test_final_link_failure_propagates (tests.test_moe_overlap_prototype.TestBuildCommands.test_final_link_failure_propagates) ... ok
+test_harness_worker_cache_role_switch_preserves_both_entries (tests.test_moe_overlap_prototype.TestBuildCommands.test_harness_worker_cache_role_switch_preserves_both_entries)
+The shared closure is reused; each role keeps its own entry/binary. ... ok
+test_link_directory_stub_cannot_shadow_system_development_driver (tests.test_moe_overlap_prototype.TestBuildCommands.test_link_directory_stub_cannot_shadow_system_development_driver) ... ok
+test_missing_stub_only_or_unlinkable_driver_fails_before_compile (tests.test_moe_overlap_prototype.TestBuildCommands.test_missing_stub_only_or_unlinkable_driver_fails_before_compile) ... ok
+test_source_override_still_requires_pin_identity (tests.test_moe_overlap_prototype.TestBuildCommands.test_source_override_still_requires_pin_identity) ... ok
+test_stub_search_falls_back_to_runtime_driver (tests.test_moe_overlap_prototype.TestBuildCommands.test_stub_search_falls_back_to_runtime_driver) ... ok
+test_versioned_driver_from_compiler_or_loader_cache (tests.test_moe_overlap_prototype.TestBuildCommands.test_versioned_driver_from_compiler_or_loader_cache) ... ok
+test_worker_inherits_cuda_recipe_and_rpc_closure (tests.test_moe_overlap_prototype.TestBuildCommands.test_worker_inherits_cuda_recipe_and_rpc_closure)
+Both worker variants link RPC while retaining canonical CUDA flags. ... ok
+test_empty_cpu_expert_subset_zero_without_skipping_shared (tests.test_moe_overlap_prototype.TestCpuStageSubTimers.test_empty_cpu_expert_subset_zero_without_skipping_shared)
+split=0 empties the CPU expert subset: cpu_experts_ms is exactly ... ok
+test_nonempty_regions_measured_inside_aggregate (tests.test_moe_overlap_prototype.TestCpuStageSubTimers.test_nonempty_regions_measured_inside_aggregate)
+With a genuinely split routing both substage regions do real work ... ok
+test_substage_fields_emitted_finite_and_schema_stable (tests.test_moe_overlap_prototype.TestCpuStageSubTimers.test_substage_fields_emitted_finite_and_schema_stable)
+Both arms emit the new fields; the existing aggregate fields and ... ok
+test_host_link_with_synthetic_driver_library (tests.test_moe_overlap_prototype.TestDriverLinkProbe.test_host_link_with_synthetic_driver_library)
+Use a real CPU linker on a tiny synthetic ELF, without running it. ... ok
+test_f32_multiply_before_rounding_and_fp16_scale (tests.test_moe_overlap_prototype.TestFixtureReferenceOperands.test_f32_multiply_before_rounding_and_fp16_scale) ... ok
+test_rejects_incomplete_rows_and_nonfinite_inputs (tests.test_moe_overlap_prototype.TestFixtureReferenceOperands.test_rejects_incomplete_rows_and_nonfinite_inputs) ... ok
+test_rejects_unimplemented_operand_modes (tests.test_moe_overlap_prototype.TestFixtureReferenceOperands.test_rejects_unimplemented_operand_modes) ... ok
+test_small_block_reference_and_negative_controls (tests.test_moe_overlap_prototype.TestFixtureReferenceOperands.test_small_block_reference_and_negative_controls) ... ok
+test_zero_blocks_and_dot_cancellation (tests.test_moe_overlap_prototype.TestFixtureReferenceOperands.test_zero_blocks_and_dot_cancellation) ... ok
+test_independent_reference_export_end_to_end_and_failure_controls (tests.test_moe_overlap_prototype.TestMoEOverlapGGUFLoader.test_independent_reference_export_end_to_end_and_failure_controls) ... ok
+test_loader_assignment_and_block_reference_split (tests.test_moe_overlap_prototype.TestMoEOverlapGGUFLoader.test_loader_assignment_and_block_reference_split)
+Two-device split: dumped arm outputs must match the independent ... ok
+test_loader_assignment_single_device (tests.test_moe_overlap_prototype.TestMoEOverlapGGUFLoader.test_loader_assignment_single_device)
+All-primary variant (also exercises the exact-subset path). ... ok
+test_all_secondary_bitwise_identity (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_all_secondary_bitwise_identity)
+All experts on the secondary backend: same kernels, still bitwise. ... ok
+test_cuda_secondary_fails_closed_without_gpu (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_cuda_secondary_fails_closed_without_gpu)
+--secondary cuda without a GPU device must fail closed (exit 4), ... ok
+test_decode_split_two_devices (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_decode_split_two_devices)
+Decode shape, split routing across both backends: all gates pass. ... ok
+test_error_propagation (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_error_propagation) ... ok
+test_isolation_between_repetitions (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_isolation_between_repetitions)
+Distinct per-repetition inputs must yield distinct reference outputs ... ok
+test_prefill_split_padding_accounted (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_prefill_split_padding_accounted)
+Prefill shape pads subsets to uniform k; padding is reported, not hidden. ... ok
+test_single_device_bitwise_identity (tests.test_moe_overlap_prototype.TestMoEOverlapPrototype.test_single_device_bitwise_identity)
+With everything on the primary device the serial arm must match the ... ok
+test_checker_catches_weight_and_genuine_mutations (tests.test_moe_overlap_prototype.TestPaddingInvariant.test_checker_catches_weight_and_genuine_mutations)
+Mutations of a VALID dump each violate exactly one contract clause. ... ok
+test_empty_and_full_subsets (tests.test_moe_overlap_prototype.TestPaddingInvariant.test_empty_and_full_subsets)
+split 0 (empty primary subset) and full split (empty secondary) ... ok
+test_exact_single_token_no_padding (tests.test_moe_overlap_prototype.TestPaddingInvariant.test_exact_single_token_no_padding)
+T=1 subsets are exact: k equals the genuine count, no padding. ... ok
+test_pre_fix_duplicate_padding_is_rejected_by_checker (tests.test_moe_overlap_prototype.TestPaddingInvariant.test_pre_fix_duplicate_padding_is_rejected_by_checker)
+RED control: the REAL retained pre-fix routing dump (repeated ... ok
+test_uneven_padding_structure_with_expert_zero_selected (tests.test_moe_overlap_prototype.TestPaddingInvariant.test_uneven_padding_structure_with_expert_zero_selected)
+T=8, 12 experts, split 6: per-token selection counts vary (padding ... ok
+test_loopback_all_gates_and_accounting (tests.test_moe_overlap_prototype.TestRPCLoopbackSmoke.test_loopback_all_gates_and_accounting) ... ok
+test_loopback_scheduling_equivalence_checker (tests.test_moe_overlap_prototype.TestRPCLoopbackSmoke.test_loopback_scheduling_equivalence_checker)
+The one-repetition scheduling-equivalence verdict applies unchanged ... ok
+test_loopback_t128_and_reuse_across_reps (tests.test_moe_overlap_prototype.TestRPCLoopbackSmoke.test_loopback_t128_and_reuse_across_reps)
+Weights initialize once and are reused: repeated requests (multiple ... ok
+test_rpc_requires_endpoint (tests.test_moe_overlap_prototype.TestRPCModeArgumentHandling.test_rpc_requires_endpoint) ... ok
+test_unknown_secondary_rejected (tests.test_moe_overlap_prototype.TestRPCModeArgumentHandling.test_unknown_secondary_rejected) ... ok
+test_dead_endpoint_aborts_fail_closed (tests.test_moe_overlap_prototype.TestRPCWorkerLifecycle.test_dead_endpoint_aborts_fail_closed)
+The pinned client GGML_ABORTs on an unreachable endpoint: the run ... ok
+test_worker_arg_validation (tests.test_moe_overlap_prototype.TestRPCWorkerLifecycle.test_worker_arg_validation) ... ok
+test_determinism_replay_returned_failures (tests.test_moe_overlap_prototype.TestReturnedComputeFailures.test_determinism_replay_returned_failures) ... ok
+test_measured_returned_failures (tests.test_moe_overlap_prototype.TestReturnedComputeFailures.test_measured_returned_failures) ... ok
+test_negative_control_returned_failures (tests.test_moe_overlap_prototype.TestReturnedComputeFailures.test_negative_control_returned_failures) ... ok
+test_crafted_routing_contract (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_crafted_routing_contract)
+Uneven counts, expert 0 genuinely selected on both devices, empty ... ok
+test_duplicate_genuine_id_rejected_valid_geometry (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_duplicate_genuine_id_rejected_valid_geometry)
+A router that selected the same expert twice in one token violates ... ok
+test_seam_rejects_cardinality_above_contract (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_seam_rejects_cardinality_above_contract)
+n_used > 10 must likewise be rejected as an explicit input error ... ok
+test_seam_rejects_cardinality_below_contract (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_seam_rejects_cardinality_below_contract)
+n_used < 10 is an input contract violation: partition_routing ... ok
+test_seam_rejects_out_of_range_ids (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_seam_rejects_out_of_range_ids) ... ok
+test_t1_exact_subsets_via_seam (tests.test_moe_overlap_prototype.TestRoutingUnitSeam.test_t1_exact_subsets_via_seam) ... ok
+test_legacy_numerical_only_exit_distinguished_from_execution_failure (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_legacy_numerical_only_exit_distinguished_from_execution_failure) ... ok
+test_malformed_repetition_documents_refused_not_crashed (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_malformed_repetition_documents_refused_not_crashed)
+Structurally malformed run documents keep the fail-closed library ... ok
+test_preserves_historical_reports_and_hardware_unqualified (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_preserves_historical_reports_and_hardware_unqualified) ... ok
+test_refuses_non_single_repetition_scope (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_refuses_non_single_repetition_scope)
+Regression for the multi-repetition ambiguity (review P2): in a ... ok
+test_rejects_changed_inputs_routing_ownership_or_incomplete_workload (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_rejects_changed_inputs_routing_ownership_or_incomplete_workload) ... ok
+test_rejects_unequal_outputs_replay_compute_missing_shared_nonfinite_incomplete (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_rejects_unequal_outputs_replay_compute_missing_shared_nonfinite_incomplete) ... ok
+test_scheduling_pass_with_numerical_fail_retained (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_scheduling_pass_with_numerical_fail_retained)
+Scheduling PASS while both numerical diagnostics stay FAIL: the ... ok
+test_single_repetition_native_pass_scheduling_equivalent (tests.test_moe_overlap_prototype.TestSchedulingEquivalenceContract.test_single_repetition_native_pass_scheduling_equivalent)
+Positive control at the supported cardinality: a genuine ... ok
+test_default_off_and_non_selected_invariance (tests.test_native_moe_overlap.NativeMoEIntegration.test_default_off_and_non_selected_invariance) ... ok
+test_native_input_output_captures_and_numerical_diagnostics (tests.test_native_moe_overlap.NativeMoEIntegration.test_native_input_output_captures_and_numerical_diagnostics) ... ok
+test_native_serial_overlap_reuse_and_same_work (tests.test_native_moe_overlap.NativeMoEIntegration.test_native_serial_overlap_reuse_and_same_work) ... ok
+test_refuses_unsupported_selection_and_placement (tests.test_native_moe_overlap.NativeMoEIntegration.test_refuses_unsupported_selection_and_placement) ... ok
+test_remote_failure_is_fail_stop_and_cleanup_is_bounded (tests.test_native_moe_overlap.NativeMoEIntegration.test_remote_failure_is_fail_stop_and_cleanup_is_bounded) ... ok
+test_shared_work_negative_control (tests.test_native_moe_overlap.NativeMoEIntegration.test_shared_work_negative_control) ... ok
+test_stalled_join_obeys_external_process_deadline (tests.test_native_moe_overlap.NativeMoEIntegration.test_stalled_join_obeys_external_process_deadline) ... ok
+test_wire_setup_steady_state_and_allocation_cleanup (tests.test_native_moe_overlap.NativeMoEIntegration.test_wire_setup_steady_state_and_allocation_cleanup) ... ok
+test_model_hook_and_scheduler_waits_are_preserved (tests.test_native_moe_overlap.NativePackaging.test_model_hook_and_scheduler_waits_are_preserved) ... ok
+/home/zutfen/Documents/Codex/2026-10-15/task/integration/tools/moe-overlap/build.py:312: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+  marker.write_text(PIN + "\n")
+setUpClass (tests.test_native_cache.NativeCacheTests) ... ERROR
+test_assignment_mismatch_refuses_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_assignment_mismatch_refuses_before_connection) ... ok
+test_changed_source_bytes_refuse_before_connection (tests.test_moe_native_cache.AssignedGraphTests.test_changed_source_bytes_refuse_before_connection) ... ok
+test_real_graph_cold_restart_cache_reuse_and_independent_mapping (tests.test_moe_native_cache.AssignedGraphTests.test_real_graph_cold_restart_cache_reuse_and_independent_mapping) ... ok
+test_unsupported_assignment_configurations_refuse (tests.test_moe_native_cache.AssignedGraphTests.test_unsupported_assignment_configurations_refuse) ... ok
+test_composed_cuda_build_refuses (tests.test_moe_native_cache.ComposedBuildTests.test_composed_cuda_build_refuses) ... ok
+test_explicit_composed_build_has_separate_closure_and_provenance (tests.test_moe_native_cache.ComposedBuildTests.test_explicit_composed_build_has_separate_closure_and_provenance) ... ok
+test_stock_and_composed_objects_cannot_alias (tests.test_moe_native_cache.ComposedBuildTests.test_stock_and_composed_objects_cannot_alias) ... ok
+
+======================================================================
+ERROR: setUpClass (tests.test_native_cache.NativeCacheTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_native_cache.py", line 151, in setUpClass
+    result = module.build(os.environ.get('NATIVE_CACHE_SOURCE'), cls.root / 'compiled',
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/Documents/Codex/2026-10-15/task/integration/tools/native-cache/build.py", line 73, in build
+    subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/home/zutfen/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/subprocess.py", line 1955, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'cmake'
+
+----------------------------------------------------------------------
+Ran 83 tests in 275.457s
+
+FAILED (errors=1)
