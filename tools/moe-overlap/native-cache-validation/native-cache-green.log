@@ -1,0 +1,11 @@
+test_bounded_staging_cold_and_warm (tests.test_native_cache.NativeCacheTests.test_bounded_staging_cold_and_warm) ... ok
+test_cold_reconnect_restart_delta_and_corruption_at_use (tests.test_native_cache.NativeCacheTests.test_cold_reconnect_restart_delta_and_corruption_at_use) ... ok
+test_declared_repairs_fit_durable_duplicates_and_peak_stage (tests.test_native_cache.NativeCacheTests.test_declared_repairs_fit_durable_duplicates_and_peak_stage) ... ok
+test_interrupted_publication_preserves_final_and_recovers (tests.test_native_cache.NativeCacheTests.test_interrupted_publication_preserves_final_and_recovers) ... ok
+test_quantized_offset_and_async_native_semantics (tests.test_native_cache.NativeCacheTests.test_quantized_offset_and_async_native_semantics) ... ok
+test_selective_preparation_native_consumption_restart_and_delta (tests.test_native_cache.NativeCacheTests.test_selective_preparation_native_consumption_restart_and_delta) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 56.438s
+
+OK

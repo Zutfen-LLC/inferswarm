@@ -1,0 +1,174 @@
+test_gate_fails_on_cancelled_selected_group (tests.test_plan_ci.TestAggregateGate.test_gate_fails_on_cancelled_selected_group) ... ok
+test_gate_fails_on_malformed_plan (tests.test_plan_ci.TestAggregateGate.test_gate_fails_on_malformed_plan) ... ok
+test_gate_fails_on_missing_selected_group (tests.test_plan_ci.TestAggregateGate.test_gate_fails_on_missing_selected_group) ... ok
+test_gate_fails_on_selected_failure (tests.test_plan_ci.TestAggregateGate.test_gate_fails_on_selected_failure) ... ok
+test_gate_fails_when_planner_step_failed (tests.test_plan_ci.TestAggregateGate.test_gate_fails_when_planner_step_failed) ... ok
+test_gate_full_regression_requires_every_group (tests.test_plan_ci.TestAggregateGate.test_gate_full_regression_requires_every_group) ... ok
+test_gate_passes_all_selected_success (tests.test_plan_ci.TestAggregateGate.test_gate_passes_all_selected_success) ... ok
+test_gate_succeeds_unselected_skipped (tests.test_plan_ci.TestAggregateGate.test_gate_succeeds_unselected_skipped) ... ok
+test_full_mode_cli (tests.test_plan_ci.TestCLI.test_full_mode_cli) ... ok
+test_output_flag (tests.test_plan_ci.TestCLI.test_output_flag) ... ok
+test_self_check_cli (tests.test_plan_ci.TestCLI.test_self_check_cli) ... ok
+test_control_count_equal_but_different_identity_is_detected (tests.test_plan_ci.TestIdentityAccounting.test_control_count_equal_but_different_identity_is_detected) ... ok
+test_control_duplicated_module_is_reported (tests.test_plan_ci.TestIdentityAccounting.test_control_duplicated_module_is_reported) ... ok
+test_control_omitted_module_is_reported_with_its_ids (tests.test_plan_ci.TestIdentityAccounting.test_control_omitted_module_is_reported_with_its_ids) ... ok
+test_control_unregistered_identities_are_reported (tests.test_plan_ci.TestIdentityAccounting.test_control_unregistered_identities_are_reported) ... ok
+test_identity_population_matches_loader_discovery (tests.test_plan_ci.TestIdentityAccounting.test_identity_population_matches_loader_discovery) ... ok
+test_module_ids_are_real_tests_never_load_failures (tests.test_plan_ci.TestIdentityAccounting.test_module_ids_are_real_tests_never_load_failures) ... ok
+test_proof_is_machine_readable_and_self_consistent (tests.test_plan_ci.TestIdentityAccounting.test_proof_is_machine_readable_and_self_consistent) ... ok
+test_real_workflow_executes_each_registered_identity_exactly_once (tests.test_plan_ci.TestIdentityAccounting.test_real_workflow_executes_each_registered_identity_exactly_once) ... ok
+test_control_dropped_consumer_is_detected (tests.test_plan_ci.TestImportClosureFanout.test_control_dropped_consumer_is_detected) ... ok
+test_every_imported_script_selects_its_consumer_groups (tests.test_plan_ci.TestImportClosureFanout.test_every_imported_script_selects_its_consumer_groups) ... ok
+test_every_group_nonempty (tests.test_plan_ci.TestInventoryInvariants.test_every_group_nonempty) ... ok
+test_every_test_module_owned_exactly_once (tests.test_plan_ci.TestInventoryInvariants.test_every_test_module_owned_exactly_once) ... ok
+test_full_regression_groups_all_registered (tests.test_plan_ci.TestInventoryInvariants.test_full_regression_groups_all_registered) ... ok
+test_repo_integrity_is_always_on (tests.test_plan_ci.TestInventoryInvariants.test_repo_integrity_is_always_on) ... ok
+test_docs_only_change_runs_no_r8i_job (tests.test_plan_ci.TestJobSelectionEvaluation.test_docs_only_change_runs_no_r8i_job) ... ok
+test_full_main_manual_and_authority_changes_run_every_job (tests.test_plan_ci.TestJobSelectionEvaluation.test_full_main_manual_and_authority_changes_run_every_job) ... ok
+test_r8i_source_test_and_evidence_changes_select_every_r8i_job (tests.test_plan_ci.TestJobSelectionEvaluation.test_r8i_source_test_and_evidence_changes_select_every_r8i_job) ... ok
+test_transitive_import_change_selects_every_r8i_job (tests.test_plan_ci.TestJobSelectionEvaluation.test_transitive_import_change_selects_every_r8i_job) ... ok
+test_unrelated_family_change_runs_no_r8i_job (tests.test_plan_ci.TestJobSelectionEvaluation.test_unrelated_family_change_runs_no_r8i_job) ... ok
+test_cli_stdin_matches_argv (tests.test_plan_ci.TestPlannerContract.test_cli_stdin_matches_argv) ... ok
+test_deterministic (tests.test_plan_ci.TestPlannerContract.test_deterministic) ... ok
+test_plan_schema_shape (tests.test_plan_ci.TestPlannerContract.test_plan_schema_shape) ... ok
+test_registry_is_canonical (tests.test_plan_ci.TestPlannerContract.test_registry_is_canonical) ... ok
+test_registry_on_disk_matches_builder (tests.test_plan_ci.TestPlannerContract.test_registry_on_disk_matches_builder) ... ok
+test_reproducible_across_processes (tests.test_plan_ci.TestPlannerContract.test_reproducible_across_processes) ... ok
+test_any_selected_job_without_success_fails_the_gate (tests.test_plan_ci.TestRealGateScript.test_any_selected_job_without_success_fails_the_gate)
+Every job of a full plan, one at a time, with every bad result. ... ok
+test_every_gate_dependency_maps_to_a_registered_group (tests.test_plan_ci.TestRealGateScript.test_every_gate_dependency_maps_to_a_registered_group) ... ok
+test_failed_or_cancelled_unselected_job_still_fails (tests.test_plan_ci.TestRealGateScript.test_failed_or_cancelled_unselected_job_still_fails) ... ok
+test_full_regression_all_success_passes (tests.test_plan_ci.TestRealGateScript.test_full_regression_all_success_passes) ... ok
+test_malformed_plan_output_fails_closed (tests.test_plan_ci.TestRealGateScript.test_malformed_plan_output_fails_closed) ... ok
+test_missing_or_malformed_result_fails_even_when_unselected (tests.test_plan_ci.TestRealGateScript.test_missing_or_malformed_result_fails_even_when_unselected) ... ok
+test_planner_failure_fails_the_gate (tests.test_plan_ci.TestRealGateScript.test_planner_failure_fails_the_gate) ... ok
+test_selected_group_unknown_to_the_gate_fails (tests.test_plan_ci.TestRealGateScript.test_selected_group_unknown_to_the_gate_fails) ... ok
+test_selected_group_with_any_bad_job_fails_in_targeted_plan (tests.test_plan_ci.TestRealGateScript.test_selected_group_with_any_bad_job_fails_in_targeted_plan) ... ok
+test_targeted_selected_success_and_unselected_skipped_passes (tests.test_plan_ci.TestRealGateScript.test_targeted_selected_success_and_unselected_skipped_passes) ... ok
+test_campaign110_preflight_selects_real_consumers (tests.test_plan_ci.TestRepositoryTreeCoverage.test_campaign110_preflight_selects_real_consumers) ... ok
+test_cleanup_selects_issue115 (tests.test_plan_ci.TestRepositoryTreeCoverage.test_cleanup_selects_issue115) ... ok
+test_every_configured_prefix_exists_in_tree (tests.test_plan_ci.TestRepositoryTreeCoverage.test_every_configured_prefix_exists_in_tree) ... ok
+test_issue137_retained_evidence_selects_integrity_and_shared (tests.test_plan_ci.TestRepositoryTreeCoverage.test_issue137_retained_evidence_selects_integrity_and_shared) ... ok
+test_normal_markdown_docs_stay_narrow (tests.test_plan_ci.TestRepositoryTreeCoverage.test_normal_markdown_docs_stay_narrow) ... ok
+test_phase1_results_select_integrity_only (tests.test_plan_ci.TestRepositoryTreeCoverage.test_phase1_results_select_integrity_only) ... ok
+test_retired_v0a_evidence_selects_integrity_only (tests.test_plan_ci.TestRepositoryTreeCoverage.test_retired_v0a_evidence_selects_integrity_only) ... ok
+test_retired_v0b_evidence_selects_integrity_only (tests.test_plan_ci.TestRepositoryTreeCoverage.test_retired_v0b_evidence_selects_integrity_only) ... ok
+test_shared_artifact_selects_union_of_consumers (tests.test_plan_ci.TestRepositoryTreeCoverage.test_shared_artifact_selects_union_of_consumers) ... ok
+test_unknown_evidence_bearing_docs_fails_closed (tests.test_plan_ci.TestRepositoryTreeCoverage.test_unknown_evidence_bearing_docs_fails_closed) ... ok
+test_unmapped_evidence_census_fail_closed (tests.test_plan_ci.TestRepositoryTreeCoverage.test_unmapped_evidence_census_fail_closed)
+Invariant: every tracked non-.md docs file must be classified ... ok
+test_v5_manifests_select_real_consumers (tests.test_plan_ci.TestRepositoryTreeCoverage.test_v5_manifests_select_real_consumers) ... ok
+test_current_r8i_source_selects_its_current_group_only (tests.test_plan_ci.TestRetentionTopology.test_current_r8i_source_selects_its_current_group_only) ... ok
+test_every_group_declares_its_current_invariant (tests.test_plan_ci.TestRetentionTopology.test_every_group_declares_its_current_invariant) ... ok
+test_every_registered_module_is_current (tests.test_plan_ci.TestRetentionTopology.test_every_registered_module_is_current) ... ok
+test_historical_evidence_consumed_by_current_selects_consumer (tests.test_plan_ci.TestRetentionTopology.test_historical_evidence_consumed_by_current_selects_consumer) ... ok
+test_historical_frozen_evidence_selects_integrity_only (tests.test_plan_ci.TestRetentionTopology.test_historical_frozen_evidence_selects_integrity_only) ... ok
+test_issue241_style_change_selects_current_group_not_history (tests.test_plan_ci.TestRetentionTopology.test_issue241_style_change_selects_current_group_not_history) ... ok
+test_issue244_style_change_selects_current_group_not_history (tests.test_plan_ci.TestRetentionTopology.test_issue244_style_change_selects_current_group_not_history) ... ok
+test_no_historical_catch_all_bucket_remains (tests.test_plan_ci.TestRetentionTopology.test_no_historical_catch_all_bucket_remains) ... ok
+test_reintroduced_retired_test_path_fails_closed (tests.test_plan_ci.TestRetentionTopology.test_reintroduced_retired_test_path_fails_closed) ... ok
+test_retention_authority_changes_force_full (tests.test_plan_ci.TestRetentionTopology.test_retention_authority_changes_force_full) ... ok
+test_retired_modules_are_unregistered_and_unmapped (tests.test_plan_ci.TestRetentionTopology.test_retired_modules_are_unregistered_and_unmapped) ... ok
+test_self_check_rejects_group_without_invariant (tests.test_plan_ci.TestRetentionTopology.test_self_check_rejects_group_without_invariant) ... ok
+test_shared_producer_still_widens_to_every_consumer (tests.test_plan_ci.TestRetentionTopology.test_shared_producer_still_widens_to_every_consumer) ... ok
+test_unknown_new_source_and_test_paths_still_fail_closed (tests.test_plan_ci.TestRetentionTopology.test_unknown_new_source_and_test_paths_still_fail_closed) ... ok
+test_bootstrap_doctor_change_full_regression (tests.test_plan_ci.TestSelectionBehavior.test_bootstrap_doctor_change_full_regression) ... ok
+test_deleted_path_still_classified (tests.test_plan_ci.TestSelectionBehavior.test_deleted_path_still_classified) ... ok
+test_docs_only_selects_integrity_not_117 (tests.test_plan_ci.TestSelectionBehavior.test_docs_only_selects_integrity_not_117) ... ok
+test_duplicate_groups_normalize (tests.test_plan_ci.TestSelectionBehavior.test_duplicate_groups_normalize) ... ok
+test_empty_path_list_is_not_narrow (tests.test_plan_ci.TestSelectionBehavior.test_empty_path_list_is_not_narrow) ... ok
+test_full_mode_includes_every_group (tests.test_plan_ci.TestSelectionBehavior.test_full_mode_includes_every_group) ... ok
+test_full_regression_reason_present (tests.test_plan_ci.TestSelectionBehavior.test_full_regression_reason_present) ... ok
+test_issue117_evidence_change_selects_lineage (tests.test_plan_ci.TestSelectionBehavior.test_issue117_evidence_change_selects_lineage) ... ok
+test_issue117_producer_selects_lineage (tests.test_plan_ci.TestSelectionBehavior.test_issue117_producer_selects_lineage) ... ok
+test_issue117_test_module_change_selects_lineage (tests.test_plan_ci.TestSelectionBehavior.test_issue117_test_module_change_selects_lineage) ... ok
+test_malformed_input_fails_closed (tests.test_plan_ci.TestSelectionBehavior.test_malformed_input_fails_closed) ... ok
+test_multiple_paths_union (tests.test_plan_ci.TestSelectionBehavior.test_multiple_paths_union) ... ok
+test_one_path_selects_multiple_groups (tests.test_plan_ci.TestSelectionBehavior.test_one_path_selects_multiple_groups) ... ok
+test_planner_authority_change_forces_full (tests.test_plan_ci.TestSelectionBehavior.test_planner_authority_change_forces_full) ... ok
+test_push_to_main_is_full (tests.test_plan_ci.TestSelectionBehavior.test_push_to_main_is_full) ... ok
+test_reason_lines_present_for_selections (tests.test_plan_ci.TestSelectionBehavior.test_reason_lines_present_for_selections) ... ok
+test_requirements_change_full_regression (tests.test_plan_ci.TestSelectionBehavior.test_requirements_change_full_regression) ... ok
+test_retired_vulkan_v0b_lineage_selects_integrity_only (tests.test_plan_ci.TestSelectionBehavior.test_retired_vulkan_v0b_lineage_selects_integrity_only) ... ok
+test_shared_test_helper_fails_closed (tests.test_plan_ci.TestSelectionBehavior.test_shared_test_helper_fails_closed) ... ok
+test_unknown_path_forces_full (tests.test_plan_ci.TestSelectionBehavior.test_unknown_path_forces_full) ... ok
+test_unregistered_script_fails_closed (tests.test_plan_ci.TestSelectionBehavior.test_unregistered_script_fails_closed) ... ok
+test_unregistered_test_module_fails_closed (tests.test_plan_ci.TestSelectionBehavior.test_unregistered_test_module_fails_closed) ... ok
+test_workflow_change_forces_full (tests.test_plan_ci.TestSelectionBehavior.test_workflow_change_forces_full) ... ok
+test_bare_module_token_expands_to_the_whole_module (tests.test_plan_ci.TestSelectorTokens.test_bare_module_token_expands_to_the_whole_module) ... ok
+test_class_selector_expands_to_every_test_of_the_class (tests.test_plan_ci.TestSelectorTokens.test_class_selector_expands_to_every_test_of_the_class) ... ok
+test_control_selector_for_unregistered_module_is_reported (tests.test_plan_ci.TestSelectorTokens.test_control_selector_for_unregistered_module_is_reported) ... ok
+test_control_split_module_missing_one_test_is_detected (tests.test_plan_ci.TestSelectorTokens.test_control_split_module_missing_one_test_is_detected) ... ok
+test_control_split_module_with_overlap_is_detected (tests.test_plan_ci.TestSelectorTokens.test_control_split_module_with_overlap_is_detected) ... ok
+test_control_whole_module_plus_selector_double_runs_a_test (tests.test_plan_ci.TestSelectorTokens.test_control_whole_module_plus_selector_double_runs_a_test) ... ok
+test_module_token_still_parses_as_a_module (tests.test_plan_ci.TestSelectorTokens.test_module_token_still_parses_as_a_module) ... ok
+test_selector_expands_to_exactly_the_named_test (tests.test_plan_ci.TestSelectorTokens.test_selector_expands_to_exactly_the_named_test) ... ok
+test_selector_naming_no_real_test_is_rejected (tests.test_plan_ci.TestSelectorTokens.test_selector_naming_no_real_test_is_rejected) ... ok
+test_selector_tokens_reduce_to_their_module_for_parity (tests.test_plan_ci.TestSelectorTokens.test_selector_tokens_reduce_to_their_module_for_parity) ... ok
+test_split_module_across_shards_is_exact_when_covered_once (tests.test_plan_ci.TestSelectorTokens.test_split_module_across_shards_is_exact_when_covered_once) ... ok
+test_each_shard_is_one_verbose_unittest_step_with_a_timeout (tests.test_plan_ci.TestShardedGroupWorkflow.test_each_shard_is_one_verbose_unittest_step_with_a_timeout) ... ok
+test_every_shard_bootstraps_and_doctors_the_canonical_env (tests.test_plan_ci.TestShardedGroupWorkflow.test_every_shard_bootstraps_and_doctors_the_canonical_env) ... ok
+test_only_declared_modules_are_split_across_shards (tests.test_plan_ci.TestShardedGroupWorkflow.test_only_declared_modules_are_split_across_shards) ... ok
+test_sharded_groups_have_bounded_numbered_shard_jobs (tests.test_plan_ci.TestShardedGroupWorkflow.test_sharded_groups_have_bounded_numbered_shard_jobs) ... ok
+test_shards_are_disjoint_nonempty_and_exhaustive (tests.test_plan_ci.TestShardedGroupWorkflow.test_shards_are_disjoint_nonempty_and_exhaustive) ... ok
+test_shards_share_one_selection_expression (tests.test_plan_ci.TestShardedGroupWorkflow.test_shards_share_one_selection_expression) ... ok
+test_blank_line_stdin_cannot_produce_targeted_plan (tests.test_plan_ci.TestStdinMalformedInput.test_blank_line_stdin_cannot_produce_targeted_plan) ... ok
+test_stdin_without_blank_lines_still_works (tests.test_plan_ci.TestStdinMalformedInput.test_stdin_without_blank_lines_still_works) ... ok
+test_every_group_job_required_by_gate (tests.test_plan_ci.TestWorkflowContract.test_every_group_job_required_by_gate) ... ok
+test_every_registered_group_has_runnable_job_or_shards (tests.test_plan_ci.TestWorkflowContract.test_every_registered_group_has_runnable_job_or_shards) ... ok
+test_full_regression_contains_every_registered_group (tests.test_plan_ci.TestWorkflowContract.test_full_regression_contains_every_registered_group) ... ok
+test_gate_maps_every_registered_group_to_a_job_result (tests.test_plan_ci.TestWorkflowContract.test_gate_maps_every_registered_group_to_a_job_result) ... /home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_plan_ci.py:520: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/zutfen/Documents/Codex/2026-10-15/task/integration/.github/workflows/ci.yml' mode='r' encoding='utf-8'>
+  text = open(self.WORKFLOW, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_gate_needs_plan (tests.test_plan_ci.TestWorkflowContract.test_gate_needs_plan) ... ok
+test_gate_runs_always (tests.test_plan_ci.TestWorkflowContract.test_gate_runs_always) ... ok
+test_issue117_runs_as_one_job (tests.test_plan_ci.TestWorkflowContract.test_issue117_runs_as_one_job) ... ok
+test_plan_job_exposes_referenced_outputs (tests.test_plan_ci.TestWorkflowContract.test_plan_job_exposes_referenced_outputs)
+Every needs.plan.outputs.X in any job if:/step must exist. ... /home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_plan_ci.py:448: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/zutfen/Documents/Codex/2026-10-15/task/integration/.github/workflows/ci.yml' mode='r' encoding='utf-8'>
+  text = open(self.WORKFLOW, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_push_to_main_selects_full (tests.test_plan_ci.TestWorkflowContract.test_push_to_main_selects_full) ... /home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_plan_ci.py:546: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/zutfen/Documents/Codex/2026-10-15/task/integration/.github/workflows/ci.yml' mode='r' encoding='utf-8'>
+  text = open(self.WORKFLOW, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_repo_integrity_has_no_selection_condition (tests.test_plan_ci.TestWorkflowContract.test_repo_integrity_has_no_selection_condition) ... ok
+test_selected_group_condition_evaluates_true_when_selected (tests.test_plan_ci.TestWorkflowContract.test_selected_group_condition_evaluates_true_when_selected)
+Mechanical evaluation of each job's if: for a real plan. ... ok
+test_unselected_group_may_skip (tests.test_plan_ci.TestWorkflowContract.test_unselected_group_may_skip) ... ok
+test_workflow_group_ids_match_registry (tests.test_plan_ci.TestWorkflowContract.test_workflow_group_ids_match_registry)
+Group literals in the workflow == registry group ids. ... /home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_plan_ci.py:551: ResourceWarning: unclosed file <_io.TextIOWrapper name='/home/zutfen/Documents/Codex/2026-10-15/task/integration/.github/workflows/ci.yml' mode='r' encoding='utf-8'>
+  text = open(self.WORKFLOW, encoding="utf-8").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_control_issue117_job_drops_a_module (tests.test_plan_ci.TestWorkflowRegistryParity.test_control_issue117_job_drops_a_module) ... ok
+test_control_module_in_two_unrelated_groups (tests.test_plan_ci.TestWorkflowRegistryParity.test_control_module_in_two_unrelated_groups) ... ok
+test_control_registered_r8i_module_removed_from_workflow (tests.test_plan_ci.TestWorkflowRegistryParity.test_control_registered_r8i_module_removed_from_workflow) ... ok
+test_control_test_plan_ci_registered_but_not_executed (tests.test_plan_ci.TestWorkflowRegistryParity.test_control_test_plan_ci_registered_but_not_executed) ... ok
+test_control_workflow_runs_an_unregistered_module (tests.test_plan_ci.TestWorkflowRegistryParity.test_control_workflow_runs_an_unregistered_module) ... ok
+test_group_jobs_execute_each_registered_module_exactly_once (tests.test_plan_ci.TestWorkflowRegistryParity.test_group_jobs_execute_each_registered_module_exactly_once) ... ok
+test_issue117_job_equals_registry (tests.test_plan_ci.TestWorkflowRegistryParity.test_issue117_job_equals_registry) ... ok
+test_r8i_shards_execute_every_r8i_registered_module (tests.test_plan_ci.TestWorkflowRegistryParity.test_r8i_shards_execute_every_r8i_registered_module) ... ok
+test_real_workflow_and_registry_are_at_parity (tests.test_plan_ci.TestWorkflowRegistryParity.test_real_workflow_and_registry_are_at_parity) ... ok
+test_repo_integrity_union_equals_registry (tests.test_plan_ci.TestWorkflowRegistryParity.test_repo_integrity_union_equals_registry) ... ok
+test_268_acceptance_is_recorded_and_does_not_authorize_execution (tests.test_project_status.ProjectStatusTests.test_268_acceptance_is_recorded_and_does_not_authorize_execution) ... ok
+test_268_compact_publication_is_digest_bound_and_nonterminal (tests.test_project_status.ProjectStatusTests.test_268_compact_publication_is_digest_bound_and_nonterminal) ... ok
+test_280_candidate_b_stop_is_bounded_spent_and_unaccepted_on_all_living_surfaces (tests.test_project_status.ProjectStatusTests.test_280_candidate_b_stop_is_bounded_spent_and_unaccepted_on_all_living_surfaces) ... ok
+test_accepted_255_status_cannot_revert_to_pending_final_cpu (tests.test_project_status.ProjectStatusTests.test_accepted_255_status_cannot_revert_to_pending_final_cpu) ... ok
+test_accepted_prerequisite_does_not_authorize_execution (tests.test_project_status.ProjectStatusTests.test_accepted_prerequisite_does_not_authorize_execution) ... ok
+test_capability_direction_keeps_residency_expansion_and_whole_model_feasibility_apart (tests.test_project_status.ProjectStatusTests.test_capability_direction_keeps_residency_expansion_and_whole_model_feasibility_apart) ... ok
+test_check_is_read_only_and_write_is_idempotent (tests.test_project_status.ProjectStatusTests.test_check_is_read_only_and_write_is_idempotent) ... ok
+test_committed_sections_are_current (tests.test_project_status.ProjectStatusTests.test_committed_sections_are_current) ... ok
+test_completed_266_authority_preserves_bounded_264_and_250_scope (tests.test_project_status.ProjectStatusTests.test_completed_266_authority_preserves_bounded_264_and_250_scope) ... ok
+test_evidence_matrix_is_linked_classed_and_bound_to_acceptance (tests.test_project_status.ProjectStatusTests.test_evidence_matrix_is_linked_classed_and_bound_to_acceptance) ... ok
+test_missing_duplicate_reversed_nested_and_unknown_markers_fail_before_writes (tests.test_project_status.ProjectStatusTests.test_missing_duplicate_reversed_nested_and_unknown_markers_fail_before_writes) ... ok
+test_missing_or_inconsistent_authority_fails (tests.test_project_status.ProjectStatusTests.test_missing_or_inconsistent_authority_fails) ... ok
+test_readme_mission_keeps_doctrine_order_and_scoped_claims (tests.test_project_status.ProjectStatusTests.test_readme_mission_keeps_doctrine_order_and_scoped_claims) ... ok
+test_schema_scope_duplicates_and_unsafe_links_fail (tests.test_project_status.ProjectStatusTests.test_schema_scope_duplicates_and_unsafe_links_fail) ... ok
+test_source_change_updates_every_frontier_and_detects_manual_drift (tests.test_project_status.ProjectStatusTests.test_source_change_updates_every_frontier_and_detects_manual_drift) ... ok
+
+----------------------------------------------------------------------
+Ran 152 tests in 6.668s
+
+OK

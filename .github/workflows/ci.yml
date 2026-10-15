@@ -433,7 +433,7 @@ jobs:
         # Offline prototype plus the actual #309 native model FFN seam.
         # Builds the pinned CPU ggml/llama closure, then small synthetic
         # fixtures with loopback RPC; no GPU or full-model inference.
-        run: python3 -m unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache -v
+        run: python3 -m unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache tests.test_moe_native_cache -v
 
   issue-187-r7a:
     name: Group issue-187-r7a

@@ -5684,6 +5684,28 @@
       "replacement": null,
       "test_count_at_audit": 19
     },
+    "test_moe_native_cache": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 8,
+      "category": "CURRENT_CONTRACT",
+      "current_test_count": 8,
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "The opt-in composed v7 MoE harness validates exact assigned whole-model routed banks before connection, preserves expert layout/mapping and local shared work, executes real CPU loopback graphs with identical cold/restart outputs and actual zero-payload hash reuse; stock v6 defaults and numerical refusal remain intact.",
+      "lineage": "Bounded assigned native-cache MoE integration (issue #321)",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/moe-overlap/build.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Small deterministic CPU GGUF/loopback fixtures, malformed assignment and unsupported configuration refusals, real v6/v7 mismatch and stale-object cache controls. No GPU, hardware qualification, new numerical oracle or physical authority.",
+      "replacement": null,
+      "test_count_at_audit": 8
+    },
     "test_moe_overlap_prototype": {
       "baseline_group": "moe-overlap-prototype",
       "baseline_serial_seconds": null,

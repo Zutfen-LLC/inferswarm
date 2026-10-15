@@ -18,7 +18,10 @@ defined at compile time for every TU so backend registration is enabled; it is
 a build action only and never runs the harness.
 
 Usage:
-  python3 tools/moe-overlap/build.py [--cache DIR] [--cuda] [--jobs N]
+  python3 tools/moe-overlap/build.py [--cache DIR] [--cuda | --native-cache] [--jobs N]
+
+--native-cache reuses the existing #311 composer for a distinct CPU/RPC v7
+closure and derived build manifest. Stock defaults remain unchanged.
 
 Environment:
   MOE_OVERLAP_SOURCE   existing extracted llama.cpp pin root (identity-verified,
@@ -32,6 +35,8 @@ from __future__ import annotations
 import argparse
 import glob
 import hashlib
+import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -311,6 +316,41 @@ def ensure_source(cache: Path) -> Path:
     return root
 
 
+def tree_identity(source: Path) -> str:
+    """Same complete-file composition identity as the existing composer."""
+    files = {str(p.relative_to(source)): sha256_file(p)
+             for p in source.rglob("*") if p.is_file()}
+    return hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def composed_source(cache: Path) -> tuple[Path, str]:
+    # Acquire and authenticate through the stock seam; compose only from the
+    # original archive, never from a previously patched tree or a source override.
+    ensure_source(cache)
+    archive = Path(os.environ.get("MOE_OVERLAP_TARBALL", cache / "pin.tar.gz"))
+    if not archive.is_file():
+        raise SystemExit("--native-cache requires the pinned archive (MOE_OVERLAP_TARBALL)")
+    recipe = REPO / "tools/native-cache/operator-build.py"
+    spec = importlib.util.spec_from_file_location("moe_cache_composer", recipe)
+    composer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(composer)
+    inputs = [recipe, *(recipe.parent / n for n in ("native.patch", "assigned.h", "loader.cpp")),
+              composer.OVERLAY.parent / "native-observer-transformed.json"]
+    inputs += sorted(p for p in composer.OVERLAY.rglob("*") if p.is_file())
+    key = hashlib.sha256((composer.digest(archive) + "".join(sha256_file(p) for p in inputs)).encode()).hexdigest()
+    output = cache / "native-cache-sources" / key
+    receipt = output / "composition.json"
+    if receipt.is_file():
+        saved = json.loads(receipt.read_text())
+        source = output / ("llama.cpp-" + PIN)
+        if tree_identity(source) != saved["composition_sha256"]:
+            raise SystemExit("native-cache composed source identity drift; refusing cached tree")
+        return source, saved["composition_sha256"]
+    source, identity = composer.compose(archive, output)
+    receipt.write_text(json.dumps({"composition_sha256": identity}) + "\n")
+    return source, identity
+
+
 def cuda_sources(source: Path) -> list[str]:
     """The pin's CUDA closure: every top-level .cu plus the template-instance
     TUs its own CMakeLists GLOBs (fattn-tile*, fattn-mma*, mmq*, mmf*)."""
@@ -323,7 +363,8 @@ def cuda_sources(source: Path) -> list[str]:
     return top + inst
 
 
-def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool = False) -> Path:
+def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool = False,
+          native_cache: bool = False, composition: str = "") -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     cc = pick_compiler("c")
     cxx = pick_compiler("c++")
@@ -333,7 +374,13 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
         # compile-time for every TU: ggml-backend-reg.cpp registers the CUDA
         # backend only under this define, so it cannot be a link-time-only flag
         flags.append("-DGGML_USE_CUDA")
+    if native_cache:
+        if cuda:
+            raise SystemExit("--native-cache is a CPU/RPC harness build; use the reviewed CUDA worker")
+        flags += ["-DIS321_NATIVE_CACHE", f'-DIS321_COMPOSITION="{composition}"']
     inc = [f"-I{out_dir / 'generated'}"] + [f"-I{source / p}" for p in INCLUDES]
+    if native_cache:
+        inc += [f"-I{source}", f"-I{source / 'vendor'}", f"-I{source / 'vendor/hash'}"]
     print(f"compilers: CC={cc} CXX={cxx} opt={flags[0]} cuda={cuda}")
     compiler_ids = {compiler: compiler_identity(compiler) for compiler in {cc, cxx}}
     nvcc = None
@@ -370,12 +417,14 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
     jobs_list = []
     objects: list[Path] = []
 
-    for s in C_SOURCES:
+    c_sources = C_SOURCES + (["vendor/hash/sha256/sha256.c"] if native_cache else [])
+    cxx_sources = CXX_SOURCES + (["is301_sink.cpp"] if native_cache else [])
+    for s in c_sources:
         o = obj_path(s)
         objects.append(o)
         jobs_list.append(([cc if s.endswith(".c") else cxx], s, o,
                           ["-std=c17"] if s.endswith(".c") else ["-std=c++17"]))
-    for s in CXX_SOURCES:
+    for s in cxx_sources:
         o = obj_path(s)
         objects.append(o)
         jobs_list.append(([cxx], s, o, ["-std=c++17"]))
@@ -409,6 +458,8 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
         name = "moe_rpc_worker_cuda" if rpc_worker else "moe_overlap_harness_cuda"
     else:
         name = "moe_rpc_worker" if rpc_worker else "moe_overlap_harness"
+    if native_cache:
+        name += "_native_cache"
     binary = out_dir / name
     link = [cxx, *flags, "-std=c++17", *[str(o) for o in objects]]
     if cuda:
@@ -418,6 +469,16 @@ def build(source: Path, out_dir: Path, jobs: int, cuda: bool, rpc_worker: bool =
     link += ["-o", str(binary)]
     print("linking", binary.name)
     subprocess.run(link, check=True)
+    if native_cache:
+        provenance = {
+            "role": "derived-moe-worker" if rpc_worker else "derived-moe-harness",
+            "rpc_closure": "native-cache-composed" if native_cache else "stock",
+            "native_pin": PIN, "composition_sha256": composition or None,
+            "compiler_identities": compiler_ids, "flags": flags,
+            "harness_sha256": sha256_file(Path(entry_src)),
+            "executable_sha256": sha256_file(binary),
+        }
+        binary.with_suffix(".build-manifest.json").write_text(json.dumps(provenance, indent=2) + "\n")
     return binary
 
 
@@ -427,11 +488,24 @@ def main() -> int:
     ap.add_argument("--cuda", action="store_true")
     ap.add_argument("--rpc-worker", action="store_true",
                     help="build the RPC worker binary instead of the harness")
+    ap.add_argument("--native-cache", action="store_true",
+                    help="opt in to the existing composed v7 CPU/RPC closure (derived harness)")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     args = ap.parse_args()
-    source = ensure_source(args.cache)
+    if args.native_cache and args.cuda:
+        ap.error("--native-cache supports CPU/RPC builds only; use the reviewed CUDA worker")
+    if args.jobs < 1:
+        ap.error("--jobs must be positive")
+    composition = ""
+    if args.native_cache:
+        source, composition = composed_source(args.cache)
+    else:
+        source = ensure_source(args.cache)
     out_dir = args.cache / ("build-cuda" if args.cuda else "build-cpu")
-    binary = build(source, out_dir, args.jobs, args.cuda, rpc_worker=args.rpc_worker)
+    if args.native_cache:
+        out_dir = args.cache / "build-cpu-native-cache"
+    binary = build(source, out_dir, args.jobs, args.cuda, rpc_worker=args.rpc_worker,
+                   native_cache=args.native_cache, composition=composition)
     # marker line: robust machine-readable handoff (stray env/log output may
     # follow the binary path in some sandboxes)
     print(f"MOE_OVERLAP_BINARY {binary}")

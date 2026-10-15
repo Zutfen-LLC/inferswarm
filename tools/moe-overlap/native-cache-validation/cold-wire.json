@@ -1,0 +1,537 @@
+{
+  "requests": [
+    {
+      "cmd": 14,
+      "size": 24
+    },
+    {
+      "cmd": 14,
+      "size": 24
+    },
+    {
+      "cmd": 11,
+      "size": 4
+    },
+    {
+      "cmd": 14,
+      "size": 24
+    },
+    {
+      "cmd": 15,
+      "size": 0
+    },
+    {
+      "cmd": 1,
+      "size": 4
+    },
+    {
+      "cmd": 2,
+      "size": 4
+    },
+    {
+      "cmd": 13,
+      "size": 3260
+    },
+    {
+      "cmd": 0,
+      "size": 12
+    },
+    {
+      "cmd": 3,
+      "size": 8
+    },
+    {
+      "cmd": 12,
+      "size": 296
+    },
+    {
+      "cmd": 7,
+      "size": 352,
+      "key": "32f81bccd4bd9275",
+      "sha256": "dbb501400ee4a07b47ca45028e2ffc756c9d1b730cd1df8a1942e6a498646785",
+      "tensor": "blk.2.ffn_up_exps.weight",
+      "type": 8,
+      "shape": [
+        2560,
+        640,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 6,
+      "size": 20889952,
+      "key": "32f81bccd4bd9275",
+      "sha256": "dbb501400ee4a07b47ca45028e2ffc756c9d1b730cd1df8a1942e6a498646785",
+      "tensor": "blk.2.ffn_up_exps.weight",
+      "type": 8,
+      "shape": [
+        2560,
+        640,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 7,
+      "size": 352,
+      "key": "8c604b4738bcb8d5",
+      "sha256": "172d36705b142f0dec8c2547600afeba6f9f61991fabbf8dbca7dbdbb1b3e5bf",
+      "tensor": "blk.2.ffn_gate_exps.weight",
+      "type": 8,
+      "shape": [
+        2560,
+        640,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 6,
+      "size": 20889952,
+      "key": "8c604b4738bcb8d5",
+      "sha256": "172d36705b142f0dec8c2547600afeba6f9f61991fabbf8dbca7dbdbb1b3e5bf",
+      "tensor": "blk.2.ffn_gate_exps.weight",
+      "type": 8,
+      "shape": [
+        2560,
+        640,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 7,
+      "size": 352,
+      "key": "245d32016ba74d65",
+      "sha256": "d271a55c597385e255f5bed7effb47162ad54de1c0bfd7731dd48fd0c8623c0a",
+      "tensor": "blk.2.ffn_down_exps.weight",
+      "type": 8,
+      "shape": [
+        640,
+        2560,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 6,
+      "size": 20889952,
+      "key": "245d32016ba74d65",
+      "sha256": "d271a55c597385e255f5bed7effb47162ad54de1c0bfd7731dd48fd0c8623c0a",
+      "tensor": "blk.2.ffn_down_exps.weight",
+      "type": 8,
+      "shape": [
+        640,
+        2560,
+        12,
+        1
+      ],
+      "offset": 0,
+      "length": 20889600
+    },
+    {
+      "cmd": 13,
+      "size": 3260
+    },
+    {
+      "cmd": 13,
+      "size": 3260
+    },
+    {
+      "cmd": 0,
+      "size": 12
+    },
+    {
+      "cmd": 3,
+      "size": 8
+    },
+    {
+      "cmd": 6,
+      "size": 10592,
+      "key": "0000000000000000",
+      "sha256": "94ecdbeb3ffde0aaed654229de73de55b54dfb570b6824063b048d0335c33eeb",
+      "tensor": "cur",
+      "type": 0,
+      "shape": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "016fc30a5156771fec21edf427d8d9ae2d8ce0aa9e030f37d97a4a97ac92d37b",
+      "tensor": "ids",
+      "type": 26,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "34ec04109c7913fd53e09be2ccbcee1a0cbfab6ee937304cfd5f880cbad481ef",
+      "tensor": "w",
+      "type": 0,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 10,
+      "size": 9692
+    },
+    {
+      "cmd": 8,
+      "size": 312,
+      "get_bytes": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 10592,
+      "key": "0000000000000000",
+      "sha256": "94ecdbeb3ffde0aaed654229de73de55b54dfb570b6824063b048d0335c33eeb",
+      "tensor": "cur",
+      "type": 0,
+      "shape": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "016fc30a5156771fec21edf427d8d9ae2d8ce0aa9e030f37d97a4a97ac92d37b",
+      "tensor": "ids",
+      "type": 26,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "34ec04109c7913fd53e09be2ccbcee1a0cbfab6ee937304cfd5f880cbad481ef",
+      "tensor": "w",
+      "type": 0,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 10,
+      "size": 9692
+    },
+    {
+      "cmd": 8,
+      "size": 312,
+      "get_bytes": 10240
+    },
+    {
+      "cmd": 4,
+      "size": 8
+    },
+    {
+      "cmd": 0,
+      "size": 12
+    },
+    {
+      "cmd": 3,
+      "size": 8
+    },
+    {
+      "cmd": 6,
+      "size": 10592,
+      "key": "0000000000000000",
+      "sha256": "94ecdbeb3ffde0aaed654229de73de55b54dfb570b6824063b048d0335c33eeb",
+      "tensor": "cur",
+      "type": 0,
+      "shape": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "016fc30a5156771fec21edf427d8d9ae2d8ce0aa9e030f37d97a4a97ac92d37b",
+      "tensor": "ids",
+      "type": 26,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "34ec04109c7913fd53e09be2ccbcee1a0cbfab6ee937304cfd5f880cbad481ef",
+      "tensor": "w",
+      "type": 0,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 10,
+      "size": 9692
+    },
+    {
+      "cmd": 8,
+      "size": 312,
+      "get_bytes": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 10592,
+      "key": "0000000000000000",
+      "sha256": "94ecdbeb3ffde0aaed654229de73de55b54dfb570b6824063b048d0335c33eeb",
+      "tensor": "cur",
+      "type": 0,
+      "shape": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "016fc30a5156771fec21edf427d8d9ae2d8ce0aa9e030f37d97a4a97ac92d37b",
+      "tensor": "ids",
+      "type": 26,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "34ec04109c7913fd53e09be2ccbcee1a0cbfab6ee937304cfd5f880cbad481ef",
+      "tensor": "w",
+      "type": 0,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 10,
+      "size": 9692
+    },
+    {
+      "cmd": 8,
+      "size": 312,
+      "get_bytes": 10240
+    },
+    {
+      "cmd": 4,
+      "size": 8
+    },
+    {
+      "cmd": 0,
+      "size": 12
+    },
+    {
+      "cmd": 3,
+      "size": 8
+    },
+    {
+      "cmd": 6,
+      "size": 10592,
+      "key": "0000000000000000",
+      "sha256": "94ecdbeb3ffde0aaed654229de73de55b54dfb570b6824063b048d0335c33eeb",
+      "tensor": "cur",
+      "type": 0,
+      "shape": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 10240
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "016fc30a5156771fec21edf427d8d9ae2d8ce0aa9e030f37d97a4a97ac92d37b",
+      "tensor": "ids",
+      "type": 26,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 6,
+      "size": 392,
+      "key": "0000000000000000",
+      "sha256": "34ec04109c7913fd53e09be2ccbcee1a0cbfab6ee937304cfd5f880cbad481ef",
+      "tensor": "w",
+      "type": 0,
+      "shape": [
+        10,
+        1,
+        1,
+        1
+      ],
+      "offset": 0,
+      "length": 40
+    },
+    {
+      "cmd": 10,
+      "size": 9692
+    },
+    {
+      "cmd": 8,
+      "size": 312,
+      "get_bytes": 10240
+    },
+    {
+      "cmd": 4,
+      "size": 8
+    },
+    {
+      "cmd": 4,
+      "size": 8
+    }
+  ],
+  "server_response_wire_bytes": 51813,
+  "unchanged_weight_set_payload": 62668800,
+  "scheduling": {
+    "contract": "moe-scheduling-equivalence/1",
+    "status": "SCHEDULING_EQUIVALENT",
+    "hardware_qualified": false,
+    "native_outcome": "PASS",
+    "checks": {
+      "native_schedule_routing_replay_control": true,
+      "complete_exports": true,
+      "same_inputs_routing_ownership_workload": true,
+      "outputs_bitwise_identical": true,
+      "combine_identity_all_reps": true
+    },
+    "problems": [],
+    "legacy_cpu_unsplit_verdict": {
+      "pass": true,
+      "warmup_runs": 0,
+      "reason": "all correctness gates passed",
+      "timing_claim": "untimed numerical-reference exports present: timing is NOT performance evidence"
+    },
+    "moe_operand_reference_status": "NOT_REQUESTED",
+    "scope_limits": [
+      "Scheduling equivalence only: identical work executed under two schedules.",
+      "No claim of backend numerical correctness; both arms can share a numerical defect.",
+      "Not hardware qualification; hardware_qualified stays false and no full model is qualified.",
+      "Model-weight identity and cross-arm input identity are single-process construction invariants of the resident harness (weights loaded once; both arms consume one ArmContext per repetition); the export retains one operand set per repetition, not per arm.",
+      "T>1 zero-weight padding correctness is a harness construction invariant guarded by the unit-routing seam regressions; padded ids/weights are not part of this export.",
+      "This version supports one-repetition smoke cases only: config.reps must be exactly 1 with exactly one repetition record at index 0; any other repetition cardinality is refused as UNSUPPORTED_SCOPE (the export cannot attribute a multi-repetition native failure to numerics alone)."
+    ],
+    "reps": [
+      {
+        "rep": 0,
+        "checks": {
+          "outputs_bitwise_identical": true,
+          "serial_combine_identity": true,
+          "overlap_combine_identity": true
+        },
+        "k_cpu_real": 0,
+        "k_sec_real": 10,
+        "legacy_cpu_unsplit_diagnostic": {
+          "pass": true,
+          "max_abs": 0,
+          "max_ratio": 0
+        }
+      }
+    ]
+  },
+  "numerical": {
+    "contract": "moe-operand-reference/2",
+    "pass": false,
+    "status": "INVALID_OR_INCOMPLETE",
+    "hardware_qualified": false,
+    "error": "unsupported/mismatched backend reference mode"
+  },
+  "independent_fixture_mapping": {
+    "pass": true,
+    "max_abs": 3.725290298461914e-09,
+    "max_ratio": 0.022562583769759118
+  }
+}

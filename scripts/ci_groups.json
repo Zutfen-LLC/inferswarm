@@ -130,7 +130,8 @@
    "test_modules": [
     "test_moe_overlap_prototype",
     "test_native_moe_overlap",
-    "test_native_cache"
+    "test_native_cache",
+    "test_moe_native_cache"
    ]
   },
   "r8-qwen-lineage": {
@@ -1870,6 +1871,9 @@
   ],
   "tests/test_issue311_preparation.py": [
    "issue-99-103"
+  ],
+  "tests/test_moe_native_cache.py": [
+   "moe-overlap-prototype"
   ],
   "tests/test_moe_overlap_prototype.py": [
    "moe-overlap-prototype"

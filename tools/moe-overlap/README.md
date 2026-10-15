@@ -9,6 +9,12 @@ Scheduling equivalence is separate from numerical qualification; no full-model
 or tokens/second claim follows. This documentation grants no hardware execution
 authority, and no further microbenchmark run is currently requested.
 
+The default-off [assigned native-cache integration](native-cache-recipe.md)
+(#321) builds a separately identified composed RPC v7 CPU harness and accepts
+only exact whole routed banks in GGUF/RPC/split=0 mode. Stock v6 modes below
+keep their defaults. CPU loopback graph/restart tests do not qualify CUDA
+arithmetic or authorize hardware execution.
+
 ## What this tests
 
 One representative routed MoE FFN block of the accepted Q8 model

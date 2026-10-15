@@ -1,0 +1,17 @@
+test_explicit_composed_build_has_separate_closure_and_provenance (tests.test_moe_native_cache.ComposedBuildTests.test_explicit_composed_build_has_separate_closure_and_provenance) ... FAIL
+
+======================================================================
+FAIL: test_explicit_composed_build_has_separate_closure_and_provenance (tests.test_moe_native_cache.ComposedBuildTests.test_explicit_composed_build_has_separate_closure_and_provenance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zutfen/Documents/Codex/2026-10-15/task/integration/tests/test_moe_native_cache.py", line 21, in test_explicit_composed_build_has_separate_closure_and_provenance
+    self.assertEqual(result.returncode, 0, result.stderr[-3000:])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 2 != 0 : usage: build.py [-h] [--cache CACHE] [--cuda] [--rpc-worker] [--jobs JOBS]
+build.py: error: unrecognized arguments: --native-cache
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.068s
+
+FAILED (failures=1)
