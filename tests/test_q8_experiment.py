@@ -47,6 +47,9 @@ class CampaignFixture:
                 MemorySwapCurrent='0',MemoryCurrent='1024',KillMode='control-group',
                 RuntimeMaxUSec='2h 39min 59s',ControlGroup='/'+supervision['slice']+'/'+supervision['unit']))
         if action=='stop':
+            if self.mode=='cleanup' and name=='client' and not self.rejected:
+                self.rejected=True
+                raise RuntimeError('transient cleanup reply failed')
             self.stopped.add(key); row=self.rows[key]
             self.services.discard((address,row['supervision']['unit']))
             return dict(signal='systemd-stop',unit=row['supervision']['unit'],
@@ -193,7 +196,7 @@ class ExperimentalDriverTests(unittest.TestCase):
             self.assertEqual(row['supervision']['cuda_visible_devices'],expected)
 
     def test_refusal_and_failure_paths_clean_up_without_retry(self):
-        for mode in ('aggregate','headroom','source','partial','request','timeout','allocator','monitor'):
+        for mode in ('aggregate','headroom','source','partial','request','timeout','allocator','monitor','cleanup'):
             with self.subTest(mode=mode):
                 result,fixture=self.execute(mode)
                 self.assertIsInstance(result,experiment.ExperimentalCampaignError,str(result))
@@ -207,7 +210,13 @@ class ExperimentalDriverTests(unittest.TestCase):
                 self.assertIn('cleanup',receipt); self.assertIn('last_aggregate_observations',receipt)
                 self.assertRegex(str(result),{'aggregate':'aggregate cgroup','headroom':'headroom',
                     'source':'source identity','partial':'ambiguous rpc1','request':'request failed',
-                    'timeout':'request deadline','allocator':'allocator/device','monitor':'monitor'}[mode])
+                    'timeout':'request deadline','allocator':'allocator/device','monitor':'monitor',
+                    'cleanup':'cleanup'}[mode])
+                if mode=='cleanup':
+                    self.assertEqual(receipt['raw_output'],'unqualified')
+                    self.assertEqual(receipt['raw_response']['id'],'one')
+                    self.assertEqual(receipt['response_id'],'one')
+                    self.assertIn('campaign_observation',receipt)
                 self.assertFalse(fixture.services)
                 self.assertLessEqual(len(fixture.posts),1)
                 self.assertEqual(fixture.stopped,set(fixture.rows))

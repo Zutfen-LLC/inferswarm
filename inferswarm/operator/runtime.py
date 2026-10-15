@@ -565,7 +565,9 @@ class OperatorRunner:
                  'max_tokens':request['max_tokens'],'temperature':request['temperature'],
                  'seed':request['seed'],'stream':False},
                 timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
-            if campaign_guard is not None: campaign_guard.checkpoint()
+            if campaign_guard is not None:
+                campaign_guard.raw_response=response
+                campaign_guard.checkpoint()
             choice=response['choices'][0]; output=choice['message']['content']
             if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
                 raise ValueError('incomplete diagnostic generation response')
@@ -580,6 +582,7 @@ class OperatorRunner:
                            'endpoint/PID/device-selector binding is not GPU residency or UUID execution proof',
                            'full coordinator working-set fit remains unqualified'])
             if campaign_guard is not None:
+                campaign_guard.execution_result=result
                 try:
                     result['campaign_observation']={
                         'before_request':campaign_before,

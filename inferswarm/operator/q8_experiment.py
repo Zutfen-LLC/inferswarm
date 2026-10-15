@@ -327,6 +327,7 @@ class SystemdCampaignGuard:
         self.client=None; self.remote=None; self.process_receipts=None
         self.rows={}; self.uids={}; self.gids={}
         self.request_attempts=0; self.verified_backing={}
+        self.execution_result={}; self.raw_response=None
         self.last_aggregates={}; self.last_gpu_rows=[]; self.last_host_available={}
         self._stop=threading.Event(); self._thread=None; self._samples=[]; self._monitor_error=None
         if hasattr(leases,'configure'): leases.configure(self)
@@ -631,7 +632,9 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     try: result=runner._execute_two_gpu_diagnostic(plan,plan.admission,campaign_guard=guard)
     except Exception as exc:
         failure=exc
-        result=dict(status='STOPPED',error=str(exc),error_type=type(exc).__name__)
+        result=dict(guard.execution_result)
+        result.update(status='STOPPED',error=str(exc),error_type=type(exc).__name__,
+                      raw_response=guard.raw_response)
     result.update(schema='q8-two-gpu-experimental-campaign/1',
         experimental_opt_in=True,output_accepted=False,physical_qualified=False,
         execution_authorized=False,experimental_execution_authorized=True,
