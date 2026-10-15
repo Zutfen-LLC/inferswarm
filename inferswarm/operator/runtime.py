@@ -163,7 +163,8 @@ class OperatorRunner:
             for p in (remote,client):
                 if 'assigned_guard_path' not in sources[p.participant_id]: raise ValueError('selective backing upload guard missing')
                 self.collector.collect_build(p,observer[p.role+'_manifest_path'],
-                    observer[p.role+'_executable_path'],backend=backend if p.role=='remote' else 'cpu')
+                    observer[p.role+'_executable_path'],backend=backend if p.role=='remote' else 'cpu',
+                    **({'build_pair':options['build_pair']} if 'build_pair' in options else {}))
         return sources
 
     def _spawn_profiled_rpc(self,plan,remote,argv,sources,export=None):
@@ -541,6 +542,8 @@ class OperatorRunner:
                 build_kwargs = ({'backend': CUDA_BACKEND if p.role=='remote'
                     and plan.selection=='one-gpu' else CPU_BACKEND}
                     if options['source_contract']==CONTRACT else {})
+                if options['source_contract']==CONTRACT and 'build_pair' in options:
+                    build_kwargs['build_pair']=options['build_pair']
                 evidence=self.collector.collect_static(p,spawn,
                     manifest_path,executable_path,
                     _sha256(sources[p.participant_id]),expected_argv=argv,

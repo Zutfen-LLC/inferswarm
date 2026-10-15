@@ -1,0 +1,54 @@
+{
+  "schema": "q8-native-build-manifest/2",
+  "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "patch_sha256": "df52ba458ad8c6758de9084b2cc56d4dcdae9683f97405f1a4b17f88e738bfd4",
+  "transformed_manifest_sha256": "aeb8d04eb4d6010c07baaf265372d8829fe8960b2019cf2506bc8d290951e38d",
+  "protocol": "inferswarm-native-observation/2",
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+  "build_options": [
+    "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_C_FLAGS_DEBUG=-O0 -g0",
+    "-DCMAKE_CXX_FLAGS_DEBUG=-O0 -g0",
+    "-DBUILD_SHARED_LIBS=OFF",
+    "-DGGML_RPC=ON",
+    "-DGGML_VULKAN=OFF",
+    "-DGGML_OPENMP=OFF",
+    "-DGGML_BLAS=OFF",
+    "-DGGML_NATIVE=OFF",
+    "-DLLAMA_OPENSSL=OFF",
+    "-DLLAMA_BUILD_TESTS=OFF",
+    "-DLLAMA_BUILD_EXAMPLES=OFF",
+    "-DLLAMA_BUILD_TOOLS=ON",
+    "-DLLAMA_BUILD_APP=OFF",
+    "-DLLAMA_BUILD_UI=OFF",
+    "-DLLAMA_USE_PREBUILT_UI=OFF",
+    "-DGGML_CUDA=ON",
+    "-DCMAKE_CUDA_ARCHITECTURES=86",
+    "-DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc",
+    "-DCUDA_CUDA_LIBRARY=/usr/lib/x86_64-linux-gnu/libcuda.so.615.71.09"
+  ],
+  "executable_sha256": "46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73",
+  "backend_libraries": [
+    {
+      "name": "ggml/src/ggml-cuda/libggml-cuda.a",
+      "sha256": "6a6358f235ec191965b3c7d9f2cd7dd28d18194264390a78eac79c1ac7dcde59"
+    },
+    {
+      "name": "ggml/src/ggml-rpc/libggml-rpc.a",
+      "sha256": "7ebd46e1178d18dd01187a156f19816ce62ece5a138fe63c80efb4aaf007e1ce"
+    },
+    {
+      "name": "ggml/src/libggml-base.a",
+      "sha256": "826c7b23dbc2817c5aefde67f21df7b24586efa53fe46a224df3bb5d1668a5ad"
+    },
+    {
+      "name": "ggml/src/libggml-cpu.a",
+      "sha256": "e01e0c9f69be44e3e5b25323ffbc627e683c6eef9608dcf7356b3c20b6df7e25"
+    },
+    {
+      "name": "ggml/src/libggml.a",
+      "sha256": "19df26ea10699c3b3d2a31e23a60738a11b789ef6715b00d6bd6fb612020d75c"
+    }
+  ]
+}

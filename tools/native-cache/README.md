@@ -76,7 +76,10 @@ and unreviewed builds fail explicitly. Smaller tensors still send bytes below
 the >10 MiB hash gate. See the [startup scope and checks](selective-preparation.md#ordinary-cpu-startup-connection).
 
 This is controlled stopped-worker preparation and owned CPU startup, not a live
-quota daemon, full-Qwen inference, CUDA build qualification or physical fit proof.
+quota daemon, full-Qwen inference, CUDA physical qualification or physical fit proof. The
+[explicit Step A pair](step-a-build-pair/README.md) adds both uploaded CPU05
+and CUDA03 identities behind one opt-in selector; the historical CPU defaults
+remain unchanged. See the [bounded Step B recipe](cuda-prerequisite-recipe.md#step-b--selective-backing-and-gpu-readback).
 #311 and #300 stay open. Physical qualification remains separate under #315.
 
 ## Local build and focused tests

@@ -19,8 +19,9 @@ permanent runtime choice. The opt-in CPU startup connection below is development
 The explicit successor is
 `coordinator-full-source/participant-assigned-rpc-backing/1`, implemented for
 stopped-worker preparation in `scripts/issue311_native_backing.py`. Ordinary Q8
-startup now accepts this opt-in contract for the finite reviewed CPU build pair
-in `operator-build-identities.json`. Legacy `full-source-both-hosts/1` remains
+startup accepts this opt-in contract for the historical CPU build pair
+in `operator-build-identities.json`, or the explicitly selected
+[Step A CPU05 + CUDA03 pair](step-a-build-pair/README.md). Legacy `full-source-both-hosts/1` remains
 available with its existing checks. See the startup scope below.
 
 The callable `prepare_q8_participant` accepts an already authenticated existing
@@ -248,9 +249,15 @@ NATIVE_ASSIGNED_BUILD=/path/to/the/exact/reviewed/operator-build \
   python3 -m unittest tests.test_issue311_startup -v
 ```
 
-The finite identity table describes the retained reviewed pair; a newly compiled
-binary at another path/toolchain may differ and requires review before replacing
-those identities. This recipe does not automatically qualify arbitrary builds.
+The historical identity table describes the retained CPU pair; a newly compiled
+binary at another path/toolchain may differ and requires separate review.
+`strategy_options.build_pair: "step-a-cpu05-cuda03"` selects both complete
+uploaded Step A manifests together, including the distinct CPU05 client. Omission
+or `historical-cpu` retains the old defaults. This private finite selector is
+available only for selective backing; Step A requires `one-gpu`, enabled cache,
+observer paths and the client-mediated route. Both participant executable hashes
+are checked in admission and complete manifests are compared before spawn and
+at static collection. Mixed pairs and incomplete descriptions refuse. This recipe does not automatically qualify arbitrary builds.
 Without the explicit build environment variable, ordinary CI runs the offline
 startup/config/identity regressions and skips the native fixture.
 
@@ -258,8 +265,10 @@ startup/config/identity regressions and skips the native fixture.
 
 Maintainer review of this coding slice comes first. CUDA builds and roughly
 16 GiB RAM/two 12 GiB GPU qualification remain separate under #315, with per-device
-headroom and actual host residency observations. The current finite pair is
-CPU-only and refuses the one-GPU configuration. Existing #302 live observer
+headroom and actual host residency observations. The default finite pair remains CPU-only; the explicit Step A pair can describe
+one-GPU startup but does not establish physical readiness. The
+[compact Step B recipe](cuda-prerequisite-recipe.md#step-b--selective-backing-and-gpu-readback)
+bounds testing on the small worker instead of reusing the full-model CPU partition. Existing #302 live observer
 inventory/selector/request-correlation gaps remain explicit; this slice does not
 turn static startup into physical or inference acceptance. #311 and #300 remain
 open. No merge or Final CPU Validation is dispatched here.

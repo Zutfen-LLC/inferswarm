@@ -24,10 +24,11 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT/'scripts'))
 
 from inferswarm.operator import assigned_backing
 from inferswarm.operator.assigned_backing import (CONTRACT, CPU_BACKEND, CUDA_BACKEND,
-    role_identity, role_key)
+    HISTORICAL_BUILD_PAIR, STEP_A_BUILD_PAIR, role_identity, role_key)
 from inferswarm.operator.config import parse_config
 from inferswarm.operator.phased_observation import parse_build_manifest
 from inferswarm.operator.plan import build_plan
@@ -98,6 +99,171 @@ def rejoin_profiles(raw):
     reseal_profiles(snapshot)
     raw['profiles']['digest'] = profile_digest(snapshot)
     return raw
+
+
+def step_a_bodies():
+    return {role: json.loads((assigned_backing.STEP_A_MANIFESTS/name).read_text())
+            for role,name in (('client','cpu05-llama-server.build-manifest.json'),
+                              ('remote','cuda03-ggml-rpc-server.build-manifest.json'))}
+
+
+def step_a_mapping():
+    pair = assigned_backing.step_a_identities()
+    raw = selective_mapping('one-gpu', pair['remote'].executable_sha256,
+                            pair['client'].executable_sha256)
+    raw['strategy_options']['build_pair'] = STEP_A_BUILD_PAIR
+    return raw
+
+
+class StepABuildPairTests(unittest.TestCase):
+    """Exact uploaded descriptions; offline checks do not qualify hardware."""
+
+    def build(self, raw):
+        return build_plan(parse_config(rejoin_profiles(raw), now=NOW, profile_mode='replay'), now=NOW)
+
+    def test_complete_uploaded_manifests_and_historical_bytes(self):
+        pins = (('cpu05-llama-server.build-manifest.json',
+                 'dffc6a2ce7028a973a41949aac094f39dbc8d7884abfca25ba3430d0d4a7a01c'),
+                ('cuda03-ggml-rpc-server.build-manifest.json',
+                 'e08ea250e56823072a5582a28e77edfe34774dafe0c3d8a0568f24274152f47d'))
+        for name,digest in pins:
+            self.assertEqual(hashlib.sha256((assigned_backing.STEP_A_MANIFESTS/name).read_bytes()).hexdigest(),digest)
+        rows=(assigned_backing.STEP_A_MANIFESTS/'SHA256SUMS').read_text().splitlines()
+        self.assertEqual({row.split()[1] for row in rows},{'README.md',*(name for name,_ in pins)})
+        for row in rows:
+            digest,name=row.split()
+            self.assertEqual(hashlib.sha256((assigned_backing.STEP_A_MANIFESTS/name).read_bytes()).hexdigest(),digest)
+        self.assertEqual(hashlib.sha256(IDENTITY_TABLE.read_bytes()).hexdigest(),
+            '1e1c0d19788487a45a7c0183ae8dd1c7574fea697203237d05780caee022f5d8')
+        pair = assigned_backing.step_a_identities()
+        self.assertEqual(pair['client'].executable_sha256,
+            '91f7ada4cb5d9805a292ec14b56518f80cb1b550834f30f225aeed676fcd518e')
+        self.assertEqual(pair['remote'].executable_sha256,
+            '46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73')
+        for role,backend in (('client',CPU_BACKEND),('remote',CUDA_BACKEND)):
+            self.assertEqual(role_identity(role,backend,build_pair=STEP_A_BUILD_PAIR),pair[role])
+        self.assertEqual(role_identity('client'),role_identity('client',build_pair=HISTORICAL_BUILD_PAIR))
+        self.assertEqual(role_identity('remote'),role_identity('remote',build_pair=HISTORICAL_BUILD_PAIR))
+
+    def test_explicit_pair_admission_and_preparation_projection(self):
+        from inferswarm.operator.source import q8_source_payload
+        plan = self.build(step_a_mapping())
+        self.assertEqual(dict(plan.strategy_options)['build_pair'],STEP_A_BUILD_PAIR)
+        self.assertFalse(plan.admission.execution_ready)
+        payload = q8_source_payload(plan)
+        self.assertEqual(payload['prepared_metadata']['runtime']['executable_sha256'],
+                         assigned_backing.step_a_identities()['remote'].executable_sha256)
+        self.assertEqual(payload['participants'][1]['backing'],[])
+        self.assertEqual(len(payload['participants'][0]['backing']),6)
+        self.assertTrue(payload['prepared_metadata']['tensors'])
+
+    def test_preparation_adapter_keeps_selected_worker_runtime_on_restart(self):
+        from tests.test_issue299_source import Q8Source
+        from issue99_artifact_core import LocalFileSource
+        from issue311_native_backing import prepare_q8_participant
+        from issue311_preparation import StreamingNode, StreamingArtifactCache, DiskBudget
+        fixture=Q8Source(); fixture.setUp(); self.addCleanup(fixture.doCleanups)
+        fixture.cached()
+        bodies=step_a_bodies()
+        # The archives contain no executable bytes: use the existing compact
+        # source fixture's executable, never label it a physical Step A build.
+        bodies['remote']['executable_sha256']=fixture.remote['runtime_sha256']
+        pair={role:parse_build_manifest(body) for role,body in bodies.items()}
+        node=StreamingNode('B',StreamingArtifactCache(fixture.root/'step-a-backing'))
+        origin=LocalFileSource(source_id='origin',root=fixture.root)
+        with patch.object(assigned_backing,'step_a_identities',return_value=pair):
+            runtime=role_identity('remote',CUDA_BACKEND,build_pair=STEP_A_BUILD_PAIR)
+            def prepare(node):
+                return prepare_q8_participant(payload=fixture.payload,epoch=1,
+                    executable=fixture.runtime,executable_sha256=runtime.executable_sha256,
+                    node=node,origin_source=origin,budget=DiskBudget(4<<20,0,32768))
+            cold=prepare(node)
+            warm=prepare(StreamingNode('B',StreamingArtifactCache(node.cache.root)))
+        self.assertGreater(cold['acquisition_bytes'],0)
+        self.assertEqual(warm['acquisition_bytes'],0)
+        self.assertEqual(cold['runtime']['executable_sha256'],runtime.executable_sha256)
+        self.assertEqual(warm['runtime'],cold['runtime'])
+
+    def test_unknown_selector_and_mixed_pairs_refuse(self):
+        raw = step_a_mapping()
+        raw['strategy_options']['build_pair']='unreviewed-pair'
+        with self.assertRaisesRegex(ValueError,'unknown selective backing build pair'):
+            self.build(raw)
+        for role in ('client','remote'):
+            raw = step_a_mapping()
+            next(p for p in raw['participants'] if p['role']==role)['runtime_sha256']=role_identity(role).executable_sha256
+            with self.subTest(role=role), self.assertRaisesRegex(ValueError,'unreviewed per-role runtime identity'):
+                self.build(raw)
+        raw = step_a_mapping()
+        del raw['strategy_options']['build_pair']
+        with self.assertRaisesRegex(ValueError,'unreviewed per-role runtime identity'):
+            self.build(raw)
+
+    def test_wrong_backend_incomplete_pair_and_required_options_refuse(self):
+        pair = assigned_backing.step_a_identities()
+        raw = selective_mapping('cpu-only',pair['remote'].executable_sha256,pair['client'].executable_sha256)
+        raw['strategy_options']['build_pair']=STEP_A_BUILD_PAIR
+        with self.assertRaisesRegex(ValueError,'wrong backend'):
+            self.build(raw)
+        raw=step_a_mapping()
+        with tempfile.TemporaryDirectory() as td:
+            # Even a client lookup must refuse the missing second participant.
+            name='cpu05-llama-server.build-manifest.json'
+            (Path(td)/name).write_bytes((assigned_backing.STEP_A_MANIFESTS/name).read_bytes())
+            with patch.object(assigned_backing,'STEP_A_MANIFESTS',Path(td)):
+                with self.assertRaisesRegex(ValueError,'incomplete Step A build pair'):
+                    self.build(raw)
+                with self.assertRaisesRegex(ValueError,'incomplete Step A build pair'):
+                    role_identity('client',build_pair=STEP_A_BUILD_PAIR)
+        for field,value in (('observer',None),('rpc_cache','disabled'),('route','server-local')):
+            raw=step_a_mapping()
+            if value is None: del raw['strategy_options'][field]
+            else: raw['strategy_options'][field]=value
+            with self.subTest(field=field), self.assertRaises(ValueError): self.build(raw)
+
+    def test_collector_compares_every_identity_field_and_pair(self):
+        from inferswarm.operator.native_observer.collector import NativeObserverCollector, CollectorError
+        from tests.test_issue302_collected_runner import VirtualHostTree, RecordingCollectorTransport
+        bodies=step_a_bodies()
+        tree=VirtualHostTree()
+        # Binary bytes are host-retained, so only the executable in this offline
+        # fixture is synthetic; all other fields come from the exact manifests.
+        for role in bodies:
+            data=('synthetic Step A '+role).encode()
+            bodies[role]['executable_sha256']=hashlib.sha256(data).hexdigest()
+            tree.put(role,'/exe',data)
+        expected={role:parse_build_manifest(body) for role,body in bodies.items()}
+        collector=NativeObserverCollector(RecordingCollectorTransport(tree),selective=True)
+        mutations={
+            'schema':lambda b:b.update(schema='unknown/1'),
+            'base_revision':lambda b:b.update(base_revision='a'*40),
+            'base_tree':lambda b:b.update(base_tree='a'*40),
+            'patch_sha256':lambda b:b.update(patch_sha256='a'*64),
+            'transformed_manifest_sha256':lambda b:b.update(transformed_manifest_sha256='a'*64),
+            'protocol':lambda b:b.update(protocol='other/2'),
+            'compiler':lambda b:b.update(compiler='other compiler'),
+            'build_options':lambda b:b['build_options'].append('-DGGML_NATIVE=ON'),
+            'path_option':lambda b:b['build_options'].append('-DCMAKE_CUDA_COMPILER=/other/nvcc'),
+            'executable_sha256':lambda b:b.update(executable_sha256='a'*64),
+            'library_digest':lambda b:b['backend_libraries'][0].update(sha256='a'*64),
+            'library_name':lambda b:b['backend_libraries'][0].update(name='other.a'),
+            'library_closure':lambda b:b['backend_libraries'].pop(),
+        }
+        with patch.object(assigned_backing,'step_a_identities',return_value=expected):
+            for role,backend in (('client',CPU_BACKEND),('remote',CUDA_BACKEND)):
+                participant=SimpleNamespace(role=role,participant_id=role,execution_address=role,
+                                            runtime_sha256=expected[role].executable_sha256)
+                def collect(pair=STEP_A_BUILD_PAIR, selected_backend=backend):
+                    return collector.collect_build(participant,'/manifest','/exe',backend=selected_backend,build_pair=pair)
+                tree.put(role,'/manifest',bodies[role])
+                self.assertEqual(collect().manifest,expected[role])
+                for selector in (HISTORICAL_BUILD_PAIR,'unknown'):
+                    with self.assertRaises((ValueError,CollectorError)): collect(selector)
+                with self.assertRaises((ValueError,CollectorError)):
+                    collect(selected_backend=CUDA_BACKEND if role=='client' else CPU_BACKEND)
+                for name,mutate in mutations.items():
+                    body=copy.deepcopy(bodies[role]); mutate(body); tree.put(role,'/manifest',body)
+                    with self.subTest(role=role,field=name), self.assertRaises((ValueError,CollectorError)): collect()
 
 
 class RoleIdentitySelectionTests(unittest.TestCase):
@@ -337,8 +503,10 @@ class SelectiveStaticCollectionTests(unittest.TestCase):
         client_bytes = b'synthetic CPU coordinator'
         client_sha = hashlib.sha256(client_bytes).hexdigest()
         table['roles']['client']['identity']['executable_sha256'] = client_sha
-        for selection in ('cpu-only', 'one-gpu'):
-            with self.subTest(selection=selection):
+        for selection,build_pair in (('cpu-only',HISTORICAL_BUILD_PAIR),
+                                     ('one-gpu',HISTORICAL_BUILD_PAIR),
+                                     ('one-gpu',STEP_A_BUILD_PAIR)):
+            with self.subTest(selection=selection,build_pair=build_pair):
                 remote_bytes = ('synthetic remote '+selection).encode()
                 remote_sha = hashlib.sha256(remote_bytes).hexdigest()
                 key = 'remote' if selection == 'cpu-only' else 'remote-cuda'
@@ -346,8 +514,15 @@ class SelectiveStaticCollectionTests(unittest.TestCase):
                     table['roles'][key] = dict(identity=synthetic_cuda_manifest(executable=remote_sha))
                 else:
                     table['roles'][key]['identity']['executable_sha256'] = remote_sha
-                with patch.object(assigned_backing, 'identities', return_value=table):
+                bodies=step_a_bodies()
+                bodies['client']['executable_sha256']=client_sha
+                bodies['remote']['executable_sha256']=remote_sha
+                step_a_pair={role:parse_build_manifest(body) for role,body in bodies.items()}
+                with patch.object(assigned_backing, 'identities', return_value=table), patch.object(
+                        assigned_backing,'step_a_identities',return_value=step_a_pair):
                     raw = selective_mapping(selection, remote_sha, client_sha)
+                    if build_pair==STEP_A_BUILD_PAIR:
+                        raw['strategy_options']['build_pair']=build_pair
                     candidate, = q8_candidates(parse_config(rejoin_profiles(raw), now=NOW,
                         profile_mode='replay'), metadata())
                     snapshot = raw['profiles']['snapshot']
@@ -372,6 +547,7 @@ class SelectiveStaticCollectionTests(unittest.TestCase):
                     for participant in plan.participants:
                         role = participant.role
                         tree.put(participant.execution_address, OBSERVER[role+'_manifest_path'],
+                            bodies[role] if build_pair==STEP_A_BUILD_PAIR else
                             table['roles']['client' if role=='client' else key]['identity'])
                         tree.put(participant.execution_address, OBSERVER[role+'_executable_path'],
                             client_bytes if role=='client' else remote_bytes)
@@ -386,8 +562,13 @@ class SelectiveStaticCollectionTests(unittest.TestCase):
                     collector = NativeObserverCollector(RecordingCollectorTransport(tree), IdentityReader(),
                         host_facts_reader=RecordingHostFactsReader(plan), selective=True)
                     runner = harness.runner(collector=collector)
-                    with self.assertRaisesRegex(ValueError, 'selective participant provenance/verified-byte mismatch'):
-                        runner.run(plan)
+                    with patch.object(collector,'collect_build',wraps=collector.collect_build) as builds:
+                        with self.assertRaisesRegex(ValueError, 'selective participant provenance/verified-byte mismatch'):
+                            runner.run(plan)
+                    self.assertEqual([call.args[0].role for call in builds.call_args_list],
+                                     ['remote','client','client','remote'])
+                    self.assertTrue(all(call.kwargs.get('build_pair',HISTORICAL_BUILD_PAIR)==build_pair
+                                        for call in builds.call_args_list))
                     self.assertEqual(harness.posts, 0)
                     self.assertTrue(all(row['lease']=='released' for row in runner.last_cleanup.values()))
                     # The public collector's omitted-backend default still
@@ -397,8 +578,9 @@ class SelectiveStaticCollectionTests(unittest.TestCase):
                     evidence = collector.collect_static(client, OwnedSpawnFacts(client.participant_id,
                         row['pid'], str(row['start']), harness.manager.token),
                         OBSERVER['client_manifest_path'], OBSERVER['client_executable_path'], '0'*64,
-                        expected_argv=harness.transport.argv[client.execution_address])
-                    self.assertEqual(evidence.build.manifest, role_identity('client'))
+                        expected_argv=harness.transport.argv[client.execution_address],
+                        **({'build_pair':build_pair} if build_pair==STEP_A_BUILD_PAIR else {}))
+                    self.assertEqual(evidence.build.manifest, role_identity('client',build_pair=build_pair))
 
 
 class DriverResolutionTests(unittest.TestCase):

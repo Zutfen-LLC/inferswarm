@@ -283,9 +283,9 @@ class NativeObserverCollector:
                        executable_path: str, source_receipt_digest: str, *,
                        expected_argv: tuple[str, ...],
                        listener_endpoints: tuple[str, ...] = (),
-                       backend='cpu') -> ParticipantStaticEvidence:
+                       backend='cpu', build_pair='historical-cpu') -> ParticipantStaticEvidence:
         build = self.collect_build(participant, manifest_path, executable_path,
-                                   backend=backend)
+                                   backend=backend, build_pair=build_pair)
         identity = self.identity_reader.read(participant, spawn.pid,
             expected_executable=participant.runtime_executable,
             expected_sha256=participant.runtime_sha256,
@@ -304,7 +304,7 @@ class NativeObserverCollector:
                                          observed_host_facts=host_facts)
 
     def collect_build(self, participant, manifest_path,
-                      executable_path, *, backend='cpu'):
+                      executable_path, *, backend='cpu', build_pair='historical-cpu'):
         body = self.transport.read_json(participant.execution_address, manifest_path,
                                         max_bytes=SSHCollectorTransport.MANIFEST_MAX_BYTES)
         manifest = parse_build_manifest(body)
@@ -320,7 +320,7 @@ class NativeObserverCollector:
             # backend names which reviewed identity table row applies; the
             # loader/client role is always the CPU build (role_identity refuses
             # a CUDA identity for it), and an unreviewed CUDA row refuses.
-            expected=role_identity(participant.role, backend)
+            expected=role_identity(participant.role, backend, build_pair=build_pair)
             if manifest != expected or digest != participant.runtime_sha256:
                 raise CollectorError('selective backing unreviewed per-role derived build identity')
             return DerivedBuildEvidence(manifest,digest)

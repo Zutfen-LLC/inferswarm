@@ -16,14 +16,33 @@ def identities():
     return json.loads(IDENTITIES.read_text())
 
 # The reviewed CPU pair keeps its exact historical keys ('client', 'remote').
-# A one-GPU selective pair needs a separately reviewed CUDA worker build; its
-# accepted identity lives under the backend-qualified key below. The key is
-# deliberately absent until a maintainer reviews a real hardware build receipt:
-# nothing here invents, derives or promotes one automatically, and a candidate
-# build receipt is never itself an approved runtime.
+# The historical table has no CUDA worker. A separately selected Step A pair
+# below carries its own CPU client AND CUDA worker; it never replaces these
+# historical rows or promotes a receipt supplied by a caller.
 CPU_BACKEND = 'cpu'
 CUDA_BACKEND = 'cuda'
 ROLE_BACKENDS = (('remote', (CPU_BACKEND, CUDA_BACKEND)), ('client', (CPU_BACKEND,)))
+HISTORICAL_BUILD_PAIR = 'historical-cpu'
+STEP_A_BUILD_PAIR = 'step-a-cpu05-cuda03'
+STEP_A_MANIFESTS = ROOT/'tools/native-cache/step-a-build-pair'
+
+
+def step_a_identities():
+    """The complete, finite Step A pair; never import caller-supplied receipts."""
+    from .phased_observation import parse_build_manifest
+    try:
+        pair = {role: parse_build_manifest(json.loads((STEP_A_MANIFESTS/name).read_text()))
+                for role, name in (('client', 'cpu05-llama-server.build-manifest.json'),
+                                   ('remote', 'cuda03-ggml-rpc-server.build-manifest.json'))}
+    except FileNotFoundError as exc:
+        raise ValueError('selective backing incomplete Step A build pair') from exc
+    for role, backend in (('client', CPU_BACKEND), ('remote', CUDA_BACKEND)):
+        identity = pair[role]
+        if ('-DGGML_CUDA='+('ON' if backend==CUDA_BACKEND else 'OFF')) not in identity.build_options:
+            raise ValueError('selective backing wrong backend in Step A build pair: '+role)
+        if any('ggml-cuda' in name for name, _ in identity.backend_libraries) != (backend==CUDA_BACKEND):
+            raise ValueError('selective backing wrong library backend in Step A build pair: '+role)
+    return pair
 
 def role_key(role, backend=CPU_BACKEND):
     if backend not in (CPU_BACKEND, CUDA_BACKEND):
@@ -33,8 +52,8 @@ def role_key(role, backend=CPU_BACKEND):
         raise ValueError('no supported native build backend '+str(backend)+' for role: '+str(role))
     return role if backend==CPU_BACKEND else role+'-'+backend
 
-def role_identity(role, backend=CPU_BACKEND):
-    """Accepted per-role build identity; CPU hashes never answer for CUDA.
+def role_identity(role, backend=CPU_BACKEND, *, build_pair=HISTORICAL_BUILD_PAIR):
+    """Selected finite build identity; CPU hashes never answer for CUDA.
 
     An absent backend-qualified entry refuses: a missing, unreviewed or
     mismatched CUDA identity must stop selective admission, and caller-supplied
@@ -45,6 +64,13 @@ def role_identity(role, backend=CPU_BACKEND):
     """
     from .phased_observation import parse_build_manifest
     key = role_key(role, backend)
+    if build_pair == STEP_A_BUILD_PAIR:
+        pair = step_a_identities()  # Load BOTH roles, even when collecting just one.
+        if backend != (CPU_BACKEND if role=='client' else CUDA_BACKEND):
+            raise ValueError('selective backing wrong backend for Step A build pair: '+role)
+        return pair[role]
+    if build_pair != HISTORICAL_BUILD_PAIR:
+        raise ValueError('unknown selective backing build pair: '+str(build_pair))
     rows = identities()['roles']
     if key not in rows:
         raise ValueError('selective backing unreviewed per-role runtime identity: '
