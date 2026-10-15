@@ -69,6 +69,42 @@ SKIP_CI_FCV_RUN_ID = 38087287752
 
 OTHER_SHA = "b" * 40
 
+# --- run -> PR association ---------------------------------------------------
+# GitHub reports a workflow run's PR association in ``pull_requests`` as
+# ``pull-request-minimal`` objects (REST schema): ``id``, ``number``, ``url``
+# plus ``head`` / ``base`` each ``{ref, sha, repo: {id, url, name}}``.  Note
+# the repository is identified by its API ``url``/``id``/``name`` — there is
+# NO ``full_name`` in this embedded object (unlike the run's own
+# ``repository``).  Values for the live PR #324 CI run are authentic
+# (run 38784795407 -> PR 324, base ``main``); ids not observable through the
+# read-only tooling used here are synthetic and carry no meaning.
+API = "https://api.github.com"
+BASE_SHA = "1b330679d7fbe2641cedfc13010112e3474a7d92"
+SYNTHETIC_REPO_ID = 1_100_000_001
+
+# --- authentic live PR #324 run (exact reviewed head) ----------------------
+LIVE_RUN_ID = 38784795407
+LIVE_SHA = "280ebb4367a8b3bb5f8003f268b55181bd52088a"
+LIVE_BRANCH = "p0/verified-ordinary-ci-final-head"
+LIVE_PR = 324
+
+
+def repo_ref(repo: str) -> dict:
+    return {"id": SYNTHETIC_REPO_ID, "url": f"{API}/repos/{repo}",
+            "name": repo.split("/", 1)[1]}
+
+
+def pr_association(number: int, sha: str = REAL_SHA,
+                   ref: str = REAL_BRANCH, base_ref: str = "main",
+                   repo: str = REPO, base_repo: str | None = None) -> dict:
+    """One realistic entry of a run's ``pull_requests`` array."""
+    base_repo = repo if base_repo is None else base_repo
+    return {"id": 3_000_000_000 + number, "number": number,
+            "url": f"{API}/repos/{base_repo}/pulls/{number}",
+            "head": {"ref": ref, "sha": sha, "repo": repo_ref(repo)},
+            "base": {"ref": base_ref, "sha": BASE_SHA,
+                     "repo": repo_ref(base_repo)}}
+
 
 def ci_workflow() -> dict:
     return {"id": CI_WORKFLOW_ID, "name": "CI",
@@ -78,7 +114,20 @@ def ci_workflow() -> dict:
 def ci_run(run_id: int = REAL_RUN_ID, sha: str = REAL_SHA,
            branch: str = REAL_BRANCH, event: str = "pull_request",
            attempt: int = 1, status: str = "completed",
-           conclusion: str | None = "success", repo: str = REPO) -> dict:
+           conclusion: str | None = "success", repo: str = REPO,
+           pr: int | None = 322, base_ref: str = "main",
+           pull_requests: list | None = None) -> dict:
+    """A CI run record.
+
+    A ``pull_request`` run is associated with PR ``pr`` (base ``base_ref``)
+    exactly like GitHub does; a ``workflow_dispatch`` run (and any other
+    event) carries no association.  ``pull_requests`` overrides the array
+    verbatim for adversarial worlds (empty, foreign, ambiguous, forged).
+    """
+    if pull_requests is None:
+        pull_requests = ([pr_association(pr, sha, branch, base_ref, repo)]
+                         if event == "pull_request" and pr is not None
+                         else [])
     return {
         "id": run_id, "name": "CI", "path": ".github/workflows/ci.yml",
         "workflow_id": CI_WORKFLOW_ID, "event": event, "status": status,
@@ -89,7 +138,7 @@ def ci_run(run_id: int = REAL_RUN_ID, sha: str = REAL_SHA,
         "html_url": f"https://github.com/{repo}/actions/runs/{run_id}",
         "repository": {"full_name": repo},
         "head_repository": {"full_name": repo},
-        "pull_requests": [],
+        "pull_requests": pull_requests,
     }
 
 
@@ -233,7 +282,7 @@ def authenticated_ci(sha: str, *, branch: str = "feature/x",
     current-PR binding (a verifier without ``pr_number`` is a diagnostic).
     """
     api = FakeCiApi()
-    api.add_run(ci_run(run_id, sha, branch))
+    api.add_run(ci_run(run_id, sha, branch, pr=7))
     api.pulls = {7: pull(7, sha, branch)}
     return hci.HostedCiVerifier(api, REPO, pr_number=pr_number)
 

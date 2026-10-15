@@ -82,7 +82,7 @@ def world_for(sha: str, branch: str = "feature/x", run_id: int = 9001,
               repo: str = REPO):
     """A genuine-shaped CI world for an arbitrary head (in ``repo``)."""
     api = FakeCiApi(repo)
-    api.add_run(fakes.ci_run(run_id, sha, branch, repo=repo))
+    api.add_run(fakes.ci_run(run_id, sha, branch, repo=repo, pr=7))
     api.pulls = {7: fakes.pull(7, sha, branch, repo=repo, base_repo=repo)}
     return api
 
@@ -1202,6 +1202,411 @@ class CurrentPrBinding(_Base):
         self.assertIs(verdict["pr_bound"], False)
         self.assertIn("diagnostic", text.lower())
         self.assertIn("handoff", text.lower())
+
+
+# ---------------------------------------------------------------------------
+# R — run -> PR association (maintainer review of 280ebb43, P1)
+# ---------------------------------------------------------------------------
+
+_DROP = object()  # marker: remove this key from a record
+PR_A, PR_B = 322, 401
+BASE_A, BASE_B = "main", "release/0.9"
+BRANCH = fakes.REAL_BRANCH
+
+
+def run_for(pr: int, run_id: int, **kwargs) -> dict:
+    """A ``pull_request`` CI run of ``pr`` (PR A -> main, PR B -> release)."""
+    return fakes.ci_run(run_id, REAL_SHA, BRANCH, pr=pr,
+                        base_ref=BASE_A if pr == PR_A else BASE_B, **kwargs)
+
+
+def two_prs(*runs: dict) -> FakeCiApi:
+    """Two OPEN PRs: same repository, head SHA and head branch, DIFFERENT
+    base branches — the review's scenario — and the given CI runs."""
+    api = FakeCiApi()
+    api.pulls = {PR_A: fakes.pull(PR_A, REAL_SHA, BRANCH, base_ref=BASE_A),
+                 PR_B: fakes.pull(PR_B, REAL_SHA, BRANCH, base_ref=BASE_B)}
+    for run in runs:
+        api.add_run(run)
+    return api
+
+
+def both_associations() -> list:
+    return [fakes.pr_association(PR_A, REAL_SHA, BRANCH, BASE_A),
+            fakes.pr_association(PR_B, REAL_SHA, BRANCH, BASE_B)]
+
+
+def handoff(verifier_cls, api, pr, sha=REAL_SHA):
+    return gate.handoff_gate_status(
+        make_head(sha), None, None, True,
+        final_validation_receipt=make_fcv(sha),
+        ci_verifier=verifier_cls(api, REPO, pr_number=pr))
+
+
+class RunToPrAssociation(_Base):
+    """A ``pull_request`` CI run authorizes ONLY the PR GitHub associates it
+    with.  Before the correction ``_run()`` discarded ``pull_requests`` and
+    any run with the right ``head_sha`` / branch name counted, so PR A's
+    green CI satisfied the handoff of PR B (same head, different base)."""
+
+    # -- the attack ------------------------------------------------------
+    def test_r01_pr_a_success_cannot_authorize_pr_b(self):
+        api = two_prs(run_for(PR_A, 100))
+        # control: PR A's own CI authorizes PR A
+        ok = verify(api, pr_number=PR_A)
+        self.assertPass(ok)
+        self.assertEqual((ok["run"]["id"], ok["pull_request"]["number"]),
+                         (100, PR_A))
+        # the attack: PR B has no qualifying run of its own
+        blocked = verify(api, pr_number=PR_B)
+        self.assertBlocked(blocked, "no_ci_run")
+        self.assertIsNone(blocked["run"])
+        self.assertIs(blocked["pr_bound"], False)
+        [considered] = blocked["considered_runs"]
+        self.assertTrue(considered["ignored"])
+        self.assertEqual(considered["ignored_reason"], "other_pr")
+        self.assertEqual(considered["pull_requests"], [PR_A])
+
+    def test_r02_empty_association_cannot_authorize_a_pr_bound_verdict(self):
+        api = FakeCiApi.genuine()
+        api.runs[0]["pull_requests"] = []
+        self.assertBlocked(verify(api, pr_number=322),
+                           "pr_association_missing")
+        # the unbound diagnostic keeps its flexibility but is never bound
+        diagnostic = verify(api)
+        self.assertPass(diagnostic)
+        self.assertIs(diagnostic["pr_bound"], False)
+
+    def test_r03_run_associated_with_another_pr_number_is_not_this_prs(self):
+        for other in (1, 323, 999):
+            api = FakeCiApi.genuine()
+            api.runs[0]["pull_requests"] = [
+                fakes.pr_association(other, REAL_SHA, fakes.REAL_BRANCH)]
+            self.assertBlocked(verify(api, pr_number=322), "no_ci_run")
+
+    def test_r04_ambiguous_association_never_authorizes(self):
+        api = two_prs(run_for(PR_A, 100, pull_requests=both_associations()))
+        for pr in (PR_A, PR_B):
+            self.assertBlocked(verify(api, pr_number=pr),
+                               "pr_association_ambiguous")
+        # the same PR listed twice is equally ambiguous
+        api = FakeCiApi.genuine()
+        api.runs[0]["pull_requests"] *= 2
+        self.assertBlocked(verify(api, pr_number=322),
+                           "pr_association_ambiguous")
+
+    def test_r05_contradictory_association_metadata_blocks(self):
+        cases = (
+            ("base branch is not the PR's",
+             lambda e: e["base"].update(ref=BASE_B)),
+            ("head branch is not the run's / PR's",
+             lambda e: e["head"].update(ref="other/branch")),
+            ("head sha is not the run's",
+             lambda e: e["head"].update(sha=fakes.OTHER_SHA)),
+            ("head repository is a fork",
+             lambda e: e["head"].update(repo=fakes.repo_ref("fork/inferswarm"))),
+            ("base repository is foreign",
+             lambda e: e["base"].update(repo=fakes.repo_ref(EVIL_REPO))),
+        )
+        for label, change in cases:
+            api = FakeCiApi.genuine()
+            change(api.runs[0]["pull_requests"][0])
+            self.assertBlocked(verify(api, pr_number=322),
+                               "pr_association_mismatch")
+
+    def test_r05b_a_pr_retargeted_after_its_ci_cannot_borrow_that_run(self):
+        # The run's association names base main; the PR now targets release.
+        api = FakeCiApi.genuine()
+        api.pulls[322] = fakes.pull(322, REAL_SHA, BRANCH, base_ref=BASE_B)
+        self.assertBlocked(verify(api, pr_number=322),
+                           "pr_association_mismatch")
+
+    def test_r06_malformed_association_blocks(self):
+        def entry(**changes):
+            def build(run):
+                run["pull_requests"] = [fakes.pr_association(
+                    322, REAL_SHA, fakes.REAL_BRANCH)]
+                for key, value in changes.items():
+                    if value is _DROP:
+                        run["pull_requests"][0].pop(key)
+                    else:
+                        run["pull_requests"][0][key] = value
+            return build
+
+        def top(value):
+            def build(run):
+                if value is _DROP:
+                    run.pop("pull_requests")
+                else:
+                    run["pull_requests"] = value
+            return build
+        cases = {
+            "key missing": top(_DROP),
+            "null": top(None),
+            "a string": top("322"),
+            "an object": top({"number": 322}),
+            "bare numbers (a trimmed view, not the REST object)": top([322]),
+            "empty object entry": top([{}]),
+            "number missing": entry(number=_DROP),
+            "number is a bool": entry(number=True),
+            "number is a string": entry(number="322"),
+            "number is zero": entry(number=0),
+            "head missing": entry(head=_DROP),
+            "head not an object": entry(head="main"),
+            "base missing": entry(base=_DROP),
+            "head sha malformed": entry(
+                head={"ref": fakes.REAL_BRANCH, "sha": "abc",
+                      "repo": fakes.repo_ref(REPO)}),
+            "head ref empty": entry(
+                head={"ref": "", "sha": REAL_SHA,
+                      "repo": fakes.repo_ref(REPO)}),
+            "head repo missing": entry(
+                head={"ref": fakes.REAL_BRANCH, "sha": REAL_SHA}),
+            "base repo url garbage": entry(
+                base={"ref": "main", "sha": fakes.BASE_SHA,
+                      "repo": {"id": 1, "url": "not a url", "name": "x"}}),
+            "base repo url on another origin": entry(
+                base={"ref": "main", "sha": fakes.BASE_SHA,
+                      "repo": {"id": 1, "name": "inferswarm",
+                               "url": f"{EVIL_API}/repos/{CANONICAL}"}}),
+        }
+        for label, build in cases.items():
+            api = FakeCiApi.genuine()
+            build(api.runs[0])
+            verdict = verify(api, pr_number=322)
+            self.assertBlocked(verdict, "malformed_response")
+            self.assertFalse(verdict["pr_bound"], label)
+
+    # -- selection -------------------------------------------------------
+    def test_r07_a_foreign_prs_run_never_supersedes_or_rescues(self):
+        # B's legitimate run is older; A's newer run FAILED: it does not
+        # supersede B's success...
+        api = two_prs(run_for(PR_B, 100),
+                      run_for(PR_A, 200, conclusion="failure"))
+        api.job("CI Gate", 200).update(conclusion="failure")
+        verdict = verify(api, pr_number=PR_B)
+        self.assertPass(verdict)
+        self.assertEqual(verdict["run"]["id"], 100)
+        self.assertEqual([(r["id"], r["ignored"])
+                          for r in verdict["considered_runs"]],
+                         [(100, False), (200, True)])
+        self.assertBlocked(verify(api, pr_number=PR_A), "ci_failed")
+        # ...and A's newer SUCCESS cannot rescue B's failed run.
+        api = two_prs(run_for(PR_B, 100, conclusion="failure"),
+                      run_for(PR_A, 200))
+        self.assertBlocked(verify(api, pr_number=PR_B), "ci_failed")
+        self.assertPass(verify(api, pr_number=PR_A))
+
+    def test_r07b_newest_run_of_the_same_pr_still_decides(self):
+        api = two_prs(run_for(PR_B, 100), run_for(PR_A, 200),
+                      run_for(PR_B, 300, conclusion="failure"))
+        self.assertBlocked(verify(api, pr_number=PR_B), "ci_failed")
+        api = two_prs(run_for(PR_B, 100, conclusion="failure"),
+                      run_for(PR_A, 200),
+                      run_for(PR_B, 300))
+        verdict = verify(api, pr_number=PR_B)
+        self.assertPass(verdict)
+        self.assertEqual(verdict["run"]["id"], 300)
+
+    def test_r07c_latest_attempt_semantics_are_preserved(self):
+        api = two_prs(run_for(PR_B, 100, attempt=2))
+        # jobs of the previous attempt are stale for the latest attempt
+        api.jobs[100] = fakes.ci_jobs(100, REAL_SHA, attempt=1)
+        self.assertBlocked(verify(api, pr_number=PR_B), "stale_attempt")
+        api = two_prs(run_for(PR_B, 100, attempt=2))
+        self.assertPass(verify(api, pr_number=PR_B))
+
+    def test_r07d_a_pin_can_only_name_a_run_of_this_pr(self):
+        api = two_prs(run_for(PR_A, 100), run_for(PR_B, 150))
+        self.assertBlocked(verify(api, pr_number=PR_B, pinned_run_id=100),
+                           "pinned_run_not_found")
+        self.assertPass(verify(api, pr_number=PR_B, pinned_run_id=150))
+        self.assertPass(verify(api, pr_number=PR_A, pinned_run_id=100))
+
+    def test_r08_an_unclassifiable_newer_run_blocks_but_dispatch_recovers(self):
+        # A newer pull_request run with an empty association might BE this
+        # PR's newer run: the older success may not decide over it...
+        api = two_prs(run_for(PR_B, 100),
+                      run_for(PR_B, 200, pull_requests=[]))
+        self.assertBlocked(verify(api, pr_number=PR_B),
+                           "pr_association_missing")
+        # ...but an unclassifiable run OLDER than the deciding run is
+        # superseded, so the documented dispatch recovery still works.
+        api.add_run(fakes.ci_run(300, REAL_SHA, BRANCH,
+                                 event="workflow_dispatch"))
+        verdict = verify(api, pr_number=PR_B)
+        self.assertPass(verdict)
+        self.assertEqual(verdict["run"]["id"], 300)
+
+    # -- workflow_dispatch recovery -------------------------------------------
+    def test_r09_dispatch_recovery_needs_no_association(self):
+        # PR B has no CI of its own; PR A does.  A dispatched run on the
+        # exact head and branch is the documented recovery.
+        api = two_prs(run_for(PR_A, 100))
+        api.add_run(fakes.ci_run(200, REAL_SHA, BRANCH,
+                                 event="workflow_dispatch"))
+        self.assertEqual(api.runs[1]["pull_requests"], [])
+        verdict = verify(api, pr_number=PR_B)
+        self.assertPass(verdict)
+        self.assertEqual((verdict["run"]["id"], verdict["run"]["event"]),
+                         (200, "workflow_dispatch"))
+        self.assertIs(verdict["pr_bound"], True)
+        self.assertIsNone(verdict["run"]["pr_association"])
+
+    def test_r09b_dispatch_must_still_match_the_prs_head_and_branch(self):
+        api = two_prs()
+        api.add_run(fakes.ci_run(200, REAL_SHA, "some/other-branch",
+                                 event="workflow_dispatch"))
+        self.assertBlocked(verify(api, pr_number=PR_B), "branch_mismatch")
+        # a dispatch on another head is not even listed for this head
+        api = two_prs()
+        api.add_run(fakes.ci_run(200, fakes.OTHER_SHA, BRANCH,
+                                 event="workflow_dispatch"))
+        self.assertBlocked(verify(api, pr_number=PR_B), "no_ci_run")
+
+    def test_r09c_a_dispatch_run_is_not_judged_by_advisory_associations(self):
+        # GitHub documents ``pull_requests`` as the PRs open for the branch,
+        # "not necessarily" the trigger; a dispatch run is anchored by head
+        # SHA + branch only, so a listed PR neither helps nor hurts it.
+        api = two_prs()
+        api.add_run(fakes.ci_run(200, REAL_SHA, BRANCH,
+                                 event="workflow_dispatch",
+                                 pull_requests=both_associations()))
+        self.assertPass(verify(api, pr_number=PR_B))
+
+    # -- consistency across the re-reads --------------------------------------
+    def test_r10_association_must_be_stable_across_the_run_rereads(self):
+        def flip(call_no, change):
+            def mutator(call, run):
+                if call == call_no:
+                    change(run)
+                return run
+            return mutator
+        for change in (
+                lambda r: r["pull_requests"][0]["base"].update(ref=BASE_B),
+                lambda r: r["pull_requests"][0].update(number=PR_B),
+                lambda r: r.update(pull_requests=[])):
+            api = FakeCiApi.genuine()
+            api.get_run_mutator = flip(1, change)
+            self.assertBlocked(verify(api, pr_number=322),
+                               "inconsistent_metadata")
+            api = FakeCiApi.genuine()
+            api.get_run_mutator = flip(2, change)
+            self.assertBlocked(verify(api, pr_number=322),
+                               "ambiguous_evidence")
+
+    def test_r10b_pr_retarget_between_the_reads_still_blocks(self):
+        api = two_prs(run_for(PR_B, 100))
+
+        def retarget(call, pull):
+            if call >= 2:
+                pull["base"]["ref"] = BASE_A
+            return pull
+        api.get_pull_mutator = retarget
+        self.assertBlocked(verify(api, pr_number=PR_B), "pr_identity_drift")
+
+    # -- the verdict and the handoff ------------------------------------------
+    def test_r11_pass_verdict_records_the_authenticated_association(self):
+        verdict = verify(two_prs(run_for(PR_B, 100)), pr_number=PR_B)
+        self.assertPass(verdict)
+        self.assertEqual(verdict["run"]["pr_association"],
+                         {"number": PR_B, "head_ref": BRANCH,
+                          "head_sha": REAL_SHA, "base_ref": BASE_B})
+        self.assertEqual(verdict["pull_request"]["base_ref"], BASE_B)
+
+    def test_r12_the_handoff_refuses_another_prs_ci(self):
+        api = two_prs(run_for(PR_A, 100))
+        refused = handoff(hci.HostedCiVerifier, api, PR_B)
+        self.assertFalse(refused["handoff_complete"])
+        self.assertFalse(refused["hosted_ci_success"])
+        self.assertEqual(refused["hosted_ci_verdict"]["reason_code"],
+                         "no_ci_run")
+        accepted = handoff(hci.HostedCiVerifier, api, PR_A)
+        self.assertTrue(accepted["handoff_complete"])
+
+    def test_r12b_the_handoff_revalidates_the_association_in_the_verdict(self):
+        def tampered(change):
+            class Tampered(hci.HostedCiVerifier):
+                def verify(self, expected_sha, *, pinned_run_id=None):
+                    verdict = super().verify(expected_sha,
+                                             pinned_run_id=pinned_run_id)
+                    change(verdict)
+                    return verdict
+            return Tampered
+
+        def run_of(verdict):
+            return verdict["run"]
+        api = two_prs(run_for(PR_B, 100))
+        for label, change in (
+                ("association names another PR",
+                 lambda v: run_of(v)["pr_association"].update(number=PR_A)),
+                ("association base is not the PR's",
+                 lambda v: run_of(v)["pr_association"].update(base_ref=BASE_A)),
+                ("association head is not the PR's",
+                 lambda v: run_of(v)["pr_association"].update(head_ref="x")),
+                ("pull_request run without association",
+                 lambda v: run_of(v).update(pr_association=None)),
+                ("run branch is not the PR's",
+                 lambda v: run_of(v).update(head_branch="x")),
+                ("unknown event",
+                 lambda v: run_of(v).update(event="push"))):
+            result = handoff(tampered(change), api, PR_B)
+            self.assertFalse(result["handoff_complete"], label)
+            self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                             "verdict_mismatch", label)
+        self.assertTrue(handoff(tampered(lambda v: None), api,
+                                PR_B)["handoff_complete"])
+
+    def test_r12c_the_handoff_accepts_and_revalidates_a_dispatch_run(self):
+        api = two_prs()
+        api.add_run(fakes.ci_run(200, REAL_SHA, BRANCH,
+                                 event="workflow_dispatch"))
+        self.assertTrue(handoff(hci.HostedCiVerifier, api,
+                                PR_B)["handoff_complete"])
+
+        class WrongBranch(hci.HostedCiVerifier):
+            def verify(self, expected_sha, *, pinned_run_id=None):
+                verdict = super().verify(expected_sha,
+                                         pinned_run_id=pinned_run_id)
+                verdict["run"]["head_branch"] = "x"
+                return verdict
+        result = handoff(WrongBranch, api, PR_B)
+        self.assertFalse(result["handoff_complete"])
+        self.assertEqual(result["hosted_ci_verdict"]["reason_code"],
+                         "verdict_mismatch")
+
+    # -- the real wire path -------------------------------------------------
+    def test_r13_end_to_end_over_the_real_http_client(self):
+        def verify_cli(pr):
+            out = Path(tempfile.mkdtemp()) / "verdict.json"
+            with fakes.HttpEmulator(two_prs(run_for(PR_A, 100))) as http:
+                rc, text = run_cli(hci.main, verify_argv(out, pr=str(pr)),
+                                   environ=cli_env())
+            self.assertEqual(http.hosts(), ["api.github.com"])
+            return rc, text, json.loads(out.read_text())
+        rc, text, verdict = verify_cli(PR_A)
+        self.assertEqual((rc, verdict["verdict"], verdict["run"]["id"]),
+                         (0, "PASS", 100), text)
+        rc, text, verdict = verify_cli(PR_B)
+        self.assertEqual((rc, verdict["verdict"], verdict["reason_code"]),
+                         (3, "BLOCKED", "no_ci_run"), text)
+
+    def test_r14_the_live_pr_324_run_belongs_to_pr_324_and_only_to_it(self):
+        # Identifiers of the authentic hosted run for the reviewed head.
+        api = FakeCiApi()
+        api.pulls = {
+            fakes.LIVE_PR: fakes.pull(fakes.LIVE_PR, fakes.LIVE_SHA,
+                                      fakes.LIVE_BRANCH),
+            325: fakes.pull(325, fakes.LIVE_SHA, fakes.LIVE_BRANCH,
+                            base_ref=BASE_B)}
+        api.add_run(fakes.ci_run(fakes.LIVE_RUN_ID, fakes.LIVE_SHA,
+                                 fakes.LIVE_BRANCH, pr=fakes.LIVE_PR))
+        verdict = verify(api, fakes.LIVE_SHA, pr_number=fakes.LIVE_PR)
+        self.assertPass(verdict)
+        self.assertEqual(verdict["run"]["pr_association"]["number"],
+                         fakes.LIVE_PR)
+        self.assertBlocked(verify(api, fakes.LIVE_SHA, pr_number=325),
+                           "no_ci_run")
 
 
 # ---------------------------------------------------------------------------
