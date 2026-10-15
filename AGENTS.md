@@ -112,4 +112,8 @@ exactly one hosted Final CPU Validation run (the canonical full CPU suite,
 dispatched on the exact reviewed SHA; `final-cpu-validation.yml`) and one
 hosted exact-head CI run. Independent review never substitutes for those
 final gates, and a pre-review full suite or hosted CI run requires an
-explicit review-critical declaration.
+explicit review-critical declaration. The exact-head ordinary CI run is
+authenticated against GitHub at handoff (`issue213_gate_orchestration.py
+handoff`, Issue #323), never asserted: a head with no ordinary CI run
+(`[skip ci]`) stays blocked until the existing `ci.yml` has succeeded on that
+exact head (`docs/campaign-gate-ordering.md`).

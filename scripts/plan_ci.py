@@ -183,6 +183,9 @@ GROUP_TEST_MODULES = {
         # Issue #291: verified exact-head receipt reuse for hosted Final
         # CPU Validation (duplicate-dispatch dedup, fail closed).
         "test_issue291_final_validation_reuse",
+        # Issue #323: authenticated ordinary CI on the exact final head
+        # (handoff boundary; offline fake of the Actions API).
+        "test_issue323_verified_ordinary_ci",
     ],
     # MoE overlap prototype (tools/moe-overlap): offline harness correctness.
     "moe-overlap-prototype": [
@@ -760,6 +763,8 @@ PATH_GROUPS = {
     # entries deliberately do NOT narrow that.)
     "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],
     "scripts/final_validation_reuse.py": ["issue-213-gate-ordering"],
+    "scripts/hosted_ci_verification.py": ["issue-213-gate-ordering"],
+    "tests/hosted_ci_fakes.py": ["issue-213-gate-ordering"],
     "docs/campaign-gate-ordering.md": ["issue-213-gate-ordering"],
     # The parallel full-suite runner itself (Issue #173): its contract
     # tests are repo-integrity modules; classify explicitly instead of

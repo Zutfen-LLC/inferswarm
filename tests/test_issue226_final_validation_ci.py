@@ -54,8 +54,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
 import issue213_gate_orchestration as gate  # noqa: E402
+from tests.hosted_ci_fakes import authenticated_ci  # noqa: E402
 
 WORKFLOW = ROOT / ".github" / "workflows" / "final-cpu-validation.yml"
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
@@ -398,9 +400,9 @@ class FinalValidationEnvelopeTests(unittest.TestCase):
         envelope = make_envelope(sha=sha)
         # The envelope's embedded suite must match the final head suite.
         envelope["suite_receipt"]["suite"] = copy.deepcopy(suite)
-        ci = gate.build_hosted_ci_status(sha, "run-ci")
-        status = gate.handoff_gate_status(head, None, ci, True,
-                                          final_validation_receipt=envelope)
+        status = gate.handoff_gate_status(
+            head, None, None, True, final_validation_receipt=envelope,
+            ci_verifier=authenticated_ci(sha))
         self.assertTrue(status["handoff_complete"])
         self.assertEqual(status["full_suite_proof"],
                          "hosted-final-validation")
@@ -413,9 +415,9 @@ class FinalValidationEnvelopeTests(unittest.TestCase):
                          for rel in gate.ENV_AUTHORITY_FILES})
         envelope = make_envelope(sha=sha)
         envelope["suite_receipt"]["suite"] = make_suite()
-        ci = gate.build_hosted_ci_status(sha, "run-ci")
-        status = gate.handoff_gate_status(head, None, ci, True,
-                                          final_validation_receipt=envelope)
+        status = gate.handoff_gate_status(
+            head, None, None, True, final_validation_receipt=envelope,
+            ci_verifier=authenticated_ci(sha))
         self.assertTrue(status["handoff_complete"],
                         "hosted proof alone completes the mechanical "
                         "gates — no separate local suite receipt")
@@ -448,9 +450,14 @@ class FinalValidationEnvelopeTests(unittest.TestCase):
         self.assertEqual(
             list(signature.parameters),
             ["final_head", "suite_receipt", "hosted_ci_status",
-             "finalizer_ok", "final_validation_receipt"])
+             "finalizer_ok", "final_validation_receipt", "ci_verifier"])
         self.assertEqual(
             signature.parameters["final_validation_receipt"].default, None)
+        # Issue #323: the authenticated-CI seam is keyword-only and
+        # optional, so every pre-existing positional call shape still binds.
+        self.assertEqual(signature.parameters["ci_verifier"].kind,
+                         inspect.Parameter.KEYWORD_ONLY)
+        self.assertEqual(signature.parameters["ci_verifier"].default, None)
         sha = "a" * 40
         suite = make_suite()
         head = gate.FinalHeadRequest(
@@ -464,8 +471,8 @@ class FinalValidationEnvelopeTests(unittest.TestCase):
             "result": "PASS", "count": suite["count"],
             "started_unix": 1.0, "ended_unix": 2.0,
         }
-        ci = gate.build_hosted_ci_status(sha, "run-ci")
-        status = gate.handoff_gate_status(head, local, ci, True)
+        status = gate.handoff_gate_status(
+            head, local, None, True, ci_verifier=authenticated_ci(sha))
         self.assertTrue(status["handoff_complete"])
         self.assertEqual(status["full_suite_proof"],
                          "exact-head-suite-receipt")

@@ -317,6 +317,13 @@ reports no result or a result outside `success`/`failure`/`cancelled`/
 `skipped`; legitimately unselected groups are skipped by design). A sharded
 group is selected as a unit and passes only if all of its shards passed.
 
+The `CI Gate` can only report when the workflow runs: a `[skip ci]` head has
+no ordinary CI run at all. Governed handoff therefore re-verifies ordinary CI
+(the `CI Gate` job on the exact head) against GitHub Actions data
+([Issue #323](campaign-gate-ordering.md#verified-ordinary-ci-on-the-exact-final-head-issue-323)),
+and requiring the `CI Gate` check in a `main` ruleset is the matching
+human-admin merge control.
+
 ## Adding a group or test module
 
 Register it: add the test modules to `GROUP_TEST_MODULES`, a new group's

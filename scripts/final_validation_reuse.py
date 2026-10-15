@@ -59,6 +59,7 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import hosted_ci_verification as ci_verification  # noqa: E402
 import issue213_gate_orchestration as gate  # noqa: E402
 
 WORKFLOW_FILE = "final-cpu-validation.yml"
@@ -91,8 +92,12 @@ class InputError(ReuseError):
     """An untrusted workflow input is malformed (the job must fail)."""
 
 
-class ApiUnavailable(ReuseError):
-    """The read-only Actions API could not answer (outage, limit, 403 ...)."""
+class ApiUnavailable(ReuseError, ci_verification.ApiUnavailable):
+    """The read-only Actions API could not answer (outage, limit, 403 ...).
+
+    Also a ``hosted_ci_verification.ApiUnavailable`` (Issue #323) so the
+    ordinary-CI verifier treats the very same transport failures as BLOCKED.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +253,36 @@ class HttpActionsApi:
         return self._get_json(
             f"/repos/{self.repository}/actions/runs/{int(run_id)}/"
             "artifacts?per_page=100")
+
+    # -- ordinary-CI verification surface (Issue #323; read-only) ----------
+    def get_workflow(self, workflow_file: str) -> dict:
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", workflow_file or ""):
+            raise InputError(f"workflow file is malformed: {workflow_file!r}")
+        return self._get_json(
+            f"/repos/{self.repository}/actions/workflows/{workflow_file}")
+
+    def list_workflow_runs(self, workflow_id: int, head_sha: str, page: int,
+                           per_page: int) -> dict:
+        if not _SHA_RE.fullmatch(head_sha or ""):
+            raise InputError(f"head_sha is malformed: {head_sha!r}")
+        query = urllib.parse.urlencode({
+            "head_sha": head_sha, "per_page": int(per_page),
+            "page": int(page)})
+        return self._get_json(
+            f"/repos/{self.repository}/actions/workflows/"
+            f"{int(workflow_id)}/runs?{query}")
+
+    def list_run_jobs(self, run_id: int, page: int, per_page: int) -> dict:
+        query = urllib.parse.urlencode({
+            "filter": "latest", "per_page": int(per_page),
+            "page": int(page)})
+        return self._get_json(
+            f"/repos/{self.repository}/actions/runs/{int(run_id)}/jobs?"
+            f"{query}")
+
+    def get_pull(self, number: int) -> dict:
+        return self._get_json(
+            f"/repos/{self.repository}/pulls/{int(number)}")
 
     def _follow_download_redirect(self, location: str,
                                   max_bytes: int) -> bytes:

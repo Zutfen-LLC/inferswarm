@@ -82,9 +82,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
 
 import issue213_gate_orchestration as gate  # noqa: E402
 import run_full_cpu_suite as runner  # noqa: E402
+from tests.hosted_ci_fakes import authenticated_ci  # noqa: E402
 
 
 def sample_suite_config(tests_dir="tests", jobs=1,
@@ -403,8 +405,9 @@ class MaintainerReviewDoctrineTests(unittest.TestCase):
             self.assertNotIn(forbidden, params)
         head = make_final_head(sha="b" * 40)
         suite = make_receipt(sha="b" * 40)
-        ci = gate.build_hosted_ci_status("b" * 40, "run-79")
-        status = gate.handoff_gate_status(head, suite, ci, finalizer_ok=True)
+        status = gate.handoff_gate_status(
+            head, suite, None, finalizer_ok=True,
+            ci_verifier=authenticated_ci("b" * 40))
         self.assertTrue(status["handoff_complete"])
         self.assertIn("no review verdict", status["note"])
 
@@ -715,9 +718,9 @@ class HandoffTests(unittest.TestCase):
     def test_control14_stale_suite_sha_current_ci_finalizer_false(self):
         head = self._valid_final_head()          # final head = bbbb
         stale_suite = make_receipt(sha="a" * 40)  # suite from SHA aaaa
-        ci = gate.build_hosted_ci_status("b" * 40, "run-77")
-        status = gate.handoff_gate_status(head, stale_suite, ci,
-                                          finalizer_ok=True)
+        status = gate.handoff_gate_status(
+            head, stale_suite, None, finalizer_ok=True,
+            ci_verifier=authenticated_ci("b" * 40))
         self.assertFalse(status["handoff_complete"])
         self.assertFalse(status["full_suite_receipt_valid"])
         self.assertTrue(status["hosted_ci_success"])
@@ -753,11 +756,16 @@ class HandoffTests(unittest.TestCase):
     def test_valid_receipt_plus_structured_ci_plus_finalizer_completes(self):
         head = self._valid_final_head()
         suite = make_receipt(sha="b" * 40)
-        ci = gate.build_hosted_ci_status("b" * 40, "run-79",
+        # Issue #323: the structured status is only a CLAIM (here pinning
+        # the deciding run); ordinary CI is authenticated by the verifier.
+        ci = gate.build_hosted_ci_status("b" * 40, "9001",
                                          run_url="https://ci.example/79")
-        status = gate.handoff_gate_status(head, suite, ci, finalizer_ok=True)
+        status = gate.handoff_gate_status(
+            head, suite, ci, finalizer_ok=True,
+            ci_verifier=authenticated_ci("b" * 40))
         self.assertTrue(status["handoff_complete"])
         self.assertEqual(status["final_head_sha"], "b" * 40)
+        self.assertEqual(status["hosted_ci_verdict"]["run"]["id"], 9001)
 
     def test_malformed_ci_status_fails_closed(self):
         head = self._valid_final_head()
