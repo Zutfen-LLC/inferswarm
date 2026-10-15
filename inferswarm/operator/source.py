@@ -788,11 +788,29 @@ def verify_assigned_role(p, payload, fnv_binary):
         if path.is_symlink(): raise ValueError('nonregular retained backing entry')
         info=path.lstat(); inode=(info.st_dev,info.st_ino)
         if inode not in seen: usage+=max(info.st_size,info.st_blocks*512); seen.add(inode)
+    binding_rows={b['binding_id']:b for b in p['bindings']}
+    dual_cuda=(len(binding_rows)==2 and
+               {b['native_selector'] for b in binding_rows.values()}=={'CUDA0','CUDA1'})
+    banks={}
+    if dual_cuda:
+        for bid in sorted(bids):
+            bank=dict(metadata)
+            bank['tensors']=[t for t in tensors if t['binding_id']==bid]
+            if not bank['tensors']: raise ValueError('assigned binding guard is empty: '+bid)
+            banks[bid]=bank
     overhead=max(len(assigned_guard_bytes(metadata)),4096)+16384
+    overhead+=sum(max(len(assigned_guard_bytes(bank)),4096) for bank in banks.values())
     if usage+budget['reserve_bytes']+overhead>budget['limit_bytes'] or shutil.disk_usage(root).free<budget['min_free_bytes']+budget['reserve_bytes']+overhead:
         raise ValueError('selective backing disk budget/free headroom exceeded')
     path=publish_assigned_guard(root, metadata)
-    return dict(schema='q8-source-receipt/1',role='remote',participant_id=p['participant_id'],status='VERIFIED-not-consumed',plan_digest=payload['plan_digest'],metadata_digest=payload['metadata']['metadata_digest'],source_contract=SELECTIVE_CONTRACT,rpc_cache=True,source_identity=payload['metadata']['source'],runtime_sha256=p['runtime_sha256'],member_identities=payload['model']['members'],verified_members=[],header_identities=[],binding_expectations=p['bindings'],assigned_count=len(assigned),binding_counts=counts,range_identities=ranges,cache_ranges=len(tensors),eligible_cache_ranges=checked,eligible_cache_reads=checked,backing='assigned-immutable-native-backing',physical_observation=False,cache_consumed=False,assigned_guard_path=str(path),retained_backing_bytes=usage,native_repair_reserve_bytes=minimum)
+    # A multi-listener worker receives one immutable guard per binding.  The
+    # durable cache remains shared only after every object/native view above
+    # has been authenticated; each server can therefore read its disjoint
+    # pre-existing keys while the guard prevents cross-bank uploads.
+    result=dict(schema='q8-source-receipt/1',role='remote',participant_id=p['participant_id'],status='VERIFIED-not-consumed',plan_digest=payload['plan_digest'],metadata_digest=payload['metadata']['metadata_digest'],source_contract=SELECTIVE_CONTRACT,rpc_cache=True,source_identity=payload['metadata']['source'],runtime_sha256=p['runtime_sha256'],member_identities=payload['model']['members'],verified_members=[],header_identities=[],binding_expectations=p['bindings'],assigned_count=len(assigned),binding_counts=counts,range_identities=ranges,cache_ranges=len(tensors),eligible_cache_ranges=checked,eligible_cache_reads=checked,backing='assigned-immutable-native-backing',physical_observation=False,cache_consumed=False,assigned_guard_path=str(path),retained_backing_bytes=usage,native_repair_reserve_bytes=minimum)
+    if banks:
+        result['assigned_guard_paths']={bid:publish_assigned_guard(root,bank) for bid,bank in banks.items()}
+    return result
 
 
 def main():

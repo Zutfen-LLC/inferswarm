@@ -212,8 +212,9 @@ def _charges(config, contract, assignments, states, boundaries, options):
     worker_ram=(options['worker_host_memory_id'] if contract.selection=='two-gpu'
                 else dict(contract.bindings)['remote_cpu'].memory_id)
     if contract.selection=='two-gpu':
-        add('worker-runtime-heap',worker_ram,'required',None,resident,
-            evidence='unknown:worker-runtime-heap')
+        for index in range(2):
+            add('worker-runtime-heap:rpc'+str(index),worker_ram,'required',None,resident,
+                evidence='unknown:worker-runtime-heap')
     for p in config.participants:
         # Complete source is a bounded selected backend scaffold, not eligibility.
         for backing in p.backing:
@@ -388,23 +389,20 @@ def _validate_options(config,metadata):
         if options['route']!='client-mediated': raise ValueError('two-gpu requires the client-mediated copy route')
         endpoints=options['rpc_endpoints']
         if not isinstance(endpoints,list) or len(endpoints)!=2 or len(set(endpoints))!=2:
-            raise ValueError('two-gpu requires two distinct RPC endpoint spellings')
+            raise ValueError('two-gpu requires two distinct RPC endpoints')
         remote=next(p for p in config.participants if p.role=='remote')
         if endpoints[0]!=remote.rpc_endpoint: raise ValueError('two-gpu primary RPC endpoint mismatch')
-        endpoint_hosts=[]
+        endpoint_hosts=[]; endpoint_ports=[]
         for endpoint in endpoints:
             text(endpoint,'two-gpu RPC endpoint')
             host,sep,port=endpoint.rpartition(':')
-            if not host or not sep or not port.isdecimal() or int(port)!=remote.port:
-                raise ValueError('two-gpu RPC endpoints must address the owned listener port')
-            endpoint_hosts.append(host)
-        # A fully-qualified DNS name and its absolute trailing-dot spelling
-        # are distinct dispatcher keys but the same DNS name.  Do not accept
-        # an arbitrary second host merely because it uses the same port.
-        if ('.' not in endpoint_hosts[0] or endpoint_hosts[0].endswith('.')
-                or endpoint_hosts[1] != endpoint_hosts[0]+'.'):
-            raise ValueError('two-gpu RPC endpoint spellings must be one FQDN '
-                             'and its trailing-dot alias for the same listener')
+            if not host or not sep or not port.isdecimal() or not 1<=int(port)<=65535:
+                raise ValueError('two-gpu RPC endpoint must be host:port')
+            endpoint_hosts.append(host); endpoint_ports.append(int(port))
+        if endpoint_hosts[0]!=endpoint_hosts[1]:
+            raise ValueError('two-gpu RPC endpoints must address the same owned worker host')
+        if endpoint_ports[0]!=remote.port or endpoint_ports[0]==endpoint_ports[1]:
+            raise ValueError('two-gpu RPC endpoints must use two distinct owned listener ports')
     if options['source_contract'] not in ('full-source-both-hosts/1',CONTRACT): raise ValueError('unsupported full-source backing contract')
     if config.selection=='two-gpu' and options['source_contract']!=CONTRACT:
         raise ValueError('two-gpu requires assigned-only worker backing')
@@ -457,7 +455,7 @@ def _validate_options(config,metadata):
             raise ValueError('fixed binding backend/memory legality')
         expected_native=({'loader':'CPU','remote_gpu0':'CUDA0','remote_gpu1':'CUDA1'}[key]
                          if config.selection=='two-gpu' else 'CUDA0' if gpu else 'CPU')
-        expected_visible=({'loader':'CPU','remote_gpu0':'RPC0','remote_gpu1':'RPC3'}[key]
+        expected_visible=({'loader':'CPU','remote_gpu0':'RPC0','remote_gpu1':'RPC1'}[key]
                           if config.selection=='two-gpu' else 'CPU' if key=='loader' else 'RPC1' if gpu else 'RPC0')
         if b.native_selector!=expected_native or b.visible_selector!=expected_visible:
             raise ValueError('fixed native/visible selector translation')
@@ -747,6 +745,14 @@ class NativeQ8Options:
 
 
 @dataclass(frozen=True)
+class Q8RPCProcess:
+    name: str
+    endpoint: str
+    binding_id: str
+    native_selector: str
+
+
+@dataclass(frozen=True)
 class Q8LaunchSpec:
     executable: str
     executable_sha256: str
@@ -776,6 +782,7 @@ def q8_llama_cpp_spec(plan):
     device=','.join(binding[k].visible_selector for k in binding_order if k in binding)
     native=','.join(binding[k].native_selector for k in binding_order if k in binding)
     rpc=','.join(options['rpc_endpoints']) if plan.selection=='two-gpu' else remote.rpc_endpoint
+    rpc_args=() if plan.selection=='two-gpu' else ('--device',native)
     w=plan.workload
     args=('--rpc',rpc,'--device',device,'--split-mode',native_options.split_mode,'--gpu-layers',str(native_options.gpu_layers),
           '--tensor-split',','.join(str(n) for n in native_options.tensor_split),'--fit',native_options.fit,'--lazy-mode',native_options.lazy_mode,'--load-mode',native_options.load_mode,
@@ -784,8 +791,21 @@ def q8_llama_cpp_spec(plan):
           '--model',client.source_path,'--ctx-size',str(w.context),'--batch-size',str(w.batch),
           '--ubatch-size',str(w.microbatch),'--parallel',str(w.slots),'--no-warmup')
     return Q8LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,rpc,
-        device,args,('--device',native),plan.candidate.assignments,plan.candidate.required_state,plan.candidate.boundaries,
+        device,args,rpc_args,plan.candidate.assignments,plan.candidate.required_state,plan.candidate.boundaries,
         w.context,w.slots,options['startup_timeout_seconds'],plan.admission.execution_ready,plan.admission.deficits)
+
+
+def q8_rpc_processes(plan):
+    """Return owned RPC process intents without changing legacy launch receipts."""
+    remote=next(p for p in plan.participants if p.role=='remote')
+    options=thaw(plan.strategy_options)
+    binding=dict(plan.candidate.semantic_contract[0].bindings)
+    if plan.selection=='two-gpu':
+        return tuple(Q8RPCProcess('rpc'+str(index),endpoint,
+            options['bindings']['remote_gpu'+str(index)],binding['remote_gpu'+str(index)].native_selector)
+            for index,endpoint in enumerate(options['rpc_endpoints']))
+    key='remote_gpu' if plan.selection=='one-gpu' else 'remote_cpu'
+    return (Q8RPCProcess('rpc',remote.rpc_endpoint,options['bindings'][key],binding[key].native_selector),)
 
 
 def q8_participant_build_backend(plan, participant):

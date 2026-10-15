@@ -19,11 +19,18 @@ coding task. Stop on any identity, capacity, placement or cleanup mismatch.
    change to emit endpoint/device ordinals, build into a fresh owned directory,
    capture complete manifests, and stop for separate review. Never alias a CPU
    identity as CUDA or promote a source-inspected candidate.
-4. Bind device order by observed UUID: worker `CUDA0,CUDA1`; use the worker's
-   fully-qualified DNS name and its absolute trailing-dot spelling for the two
-   registrations. Independently resolve both spellings to the same worker and
-   verify that they enumerate the intended devices as `RPC0` and `RPC3` in
-   that order.
+4. Bind device order by observed UUID. Reserve two distinct ports on the same
+   worker and bind one owned process/listener to each: `rpc0 --device CUDA0`
+   and `rpc1 --device CUDA1`. Register the two endpoints in that order and
+   verify that the client enumerates them as `RPC0` and `RPC1`. Record the
+   listener, PID/start and GPU UUID join for each process; a selector string is
+   not UUID or residency proof.
+5. Before any full-model run, use the reviewed native binaries and a tiny
+   disposable fixture to hold simultaneous connections to both listeners and
+   exercise an operation through each. The pinned server's synchronous
+   connection loop makes this a mandatory route diagnostic. No such native
+   simultaneous-listener execution has been performed by this coding task;
+   failure or absence of that receipt is STOP.
 
 ## 2. Freeze budgets from the real census
 
@@ -36,8 +43,12 @@ declared reserve against measured available VRAM. For worker RAM, sum assigned
 metadata/page residence, verification, transport, receive/cache staging,
 runtime heap and a declared host reserve against measured available RAM. Record
 phase peaks rather than aggregating VRAM or treating worker RAM as a weight
-mirror. Unknown or unmeasured terms, insufficient headroom, or a plan that
-requires the full model on the worker are STOP.
+mirror. The exact encoded GPU assignment is 19,992,422,784 B. The coordinator
+assignment is 168,221,585,536 B (about 156.67 GiB), so the roughly 125 GiB
+coordinator must separately demonstrate a bounded lazy/mmap resident working
+set, file-cache/paging headroom and acceptable fault behavior; full CPU
+residency cannot be assumed. Unknown or unmeasured terms, insufficient
+headroom, or a plan that requires the full model on the worker are STOP.
 
 ## 3. One cold start and one restart
 
@@ -45,15 +56,20 @@ requires the full model on the worker are STOP.
    Acquire only missing immutable whole tensors for both GPU banks. Record
    source reads/hashes, weight payload, metadata/control and cache publication
    separately.
-2. Start one owned RPC server with `--device CUDA0,CUDA1`, then the coordinator
-   with the two endpoint registrations, `--device CPU,RPC0,RPC3`,
+2. After authenticating the complete shared cache, publish disjoint immutable
+   assigned guards and start two owned RPC servers on the reserved ports, one
+   with `--device CUDA0` and one with `--device CUDA1`. Start the coordinator
+   with both endpoints, `--device RPC0,RPC1`,
    `--gpu-layers 8`, and `--tensor-split 4,4`. Use the unchanged short fixed
    request and existing numerical diagnostics/thresholds.
-3. During the request, bind samples to owned PIDs and UUIDs. Require measured
+3. During the request, bind samples to the exact listener/PID/UUID joins.
+   Require measured
    weight residency and backend execution on both GPUs, per-device peak/reserve,
    worker host peak/headroom, the coordinator-mediated GPU0-to-GPU1 transition,
-   correct final output custody, and complete cleanup. CPU-fixture evidence is
-   not a substitute.
+   correct final output custody/readback, a retained raw diagnostic response,
+   and complete cleanup of both RPC processes. The software result remains
+   diagnostic-only and must not be reported as accepted output. CPU-fixture
+   evidence is not a substitute.
 4. Stop only the owned processes. Reconstruct preparation from the unchanged
    durable cache, start once more, and repeat exactly the same request. Require
    zero missing-weight acquisition payload and zero unchanged-weight SET
@@ -61,6 +77,8 @@ requires the full model on the worker are STOP.
 
 Preserve cold/restart receipts and failures. Do not retry into PASS, adjust the
 frozen allocation after launch, run extra requests, claim fit from nominal VRAM,
-or close #313/#311/#315/#300. The next smallest physical operation is exactly
-this one cold/restart pair after the per-device observer receipt and complete
-memory census have received separate review and dispatch.
+or close #313/#311/#315/#300. The next smallest physical operation is the tiny
+simultaneous two-listener native diagnostic in inventory step 5. Only if it passes,
+and the exact build admission plus complete per-device/host/coordinator census
+receive separate review and dispatch, proceed to the one cold/restart full-Q8
+diagnostic pair above.

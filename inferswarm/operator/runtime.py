@@ -1,7 +1,8 @@
 """One fixed-plan ordinary generation with verified sources and bounded ownership."""
 from __future__ import annotations
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -167,16 +168,24 @@ class OperatorRunner:
                     **({'build_pair':options['build_pair']} if 'build_pair' in options else {}))
         return sources
 
-    def _spawn_profiled_rpc(self,plan,remote,argv,sources,export=None):
+    def _spawn_profiled_rpc(self,plan,remote,argv,sources,export=None,*,name='rpc',binding_id=None):
         options=thaw(plan.strategy_options)
-        return self.leases.spawn(remote.execution_address,'rpc',list(argv),
+        return self.leases.spawn(remote.execution_address,name,list(argv),
             cache=remote.cache_path if options['rpc_cache']=='enabled' else None,
-            **({'export':export} if export else {}),**self._assigned_spawn(plan,remote,sources))
+            **({'export':export} if export else {}),**self._assigned_spawn(plan,remote,sources,binding_id=binding_id))
 
-    def _assigned_spawn(self,plan,part,sources):
+    def _assigned_spawn(self,plan,part,sources,*,binding_id=None):
         from .assigned_backing import CONTRACT
         if thaw(plan.strategy_options)['source_contract']==CONTRACT:
-            return dict(assigned=sources[part.participant_id]['assigned_guard_path'])
+            receipt=sources[part.participant_id]
+            if binding_id is not None:
+                guards=receipt.get('assigned_guard_paths')
+                if not isinstance(guards,dict) or set(guards)!={
+                        thaw(plan.strategy_options)['bindings']['remote_gpu0'],
+                        thaw(plan.strategy_options)['bindings']['remote_gpu1']}:
+                    raise ValueError('two-gpu requires exact per-binding assigned guards')
+                return dict(assigned=guards[binding_id])
+            return dict(assigned=receipt['assigned_guard_path'])
         return {}
 
     def run(self,plan):
@@ -305,6 +314,8 @@ class OperatorRunner:
         if plan.strategy_id!='qwen38-q8-fixed/1': raise ValueError('unsupported profiled runtime strategy')
         if self.collector is not None:
             return self._run_profiled_collected(plan)
+        if plan.selection=='two-gpu':
+            raise ValueError('two-gpu diagnostic requires the collected observer path')
         if self.binding_transport is None or type(self.binding_transport) is bindings.BindingTransport:
             raise ValueError(bindings.UNSUPPORTED_OBSERVER)
         if not callable(self.identity_reader): raise ValueError('independent identity reader required; no host-query default')
@@ -427,6 +438,170 @@ class OperatorRunner:
         result['cleanup']=self.last_cleanup
         return result
 
+    def _run_two_gpu_diagnostic(self,plan):
+        """Run the bounded two-listener diagnostic without accepting output.
+
+        Pinned RPC v7 serves one connection at a time, so the two CUDA banks
+        use two owned server processes/listeners.  This path retains the raw
+        response and exact process/export receipts for review, but deliberately
+        does not call the ordinary /2 dynamic reconciler or qualify the output.
+        """
+        from .phased_observation import OwnedSpawnFacts
+        admission=self._profiled_admission(plan)
+        spec=llama_cpp_spec(plan)
+        from .qwen_q8 import q8_rpc_processes
+        rpc_processes=q8_rpc_processes(plan)
+        if len(rpc_processes)!=2:
+            raise ValueError('two-gpu diagnostic requires exactly two RPC processes')
+        client=next(p for p in plan.participants if p.role=='client')
+        remote=next(p for p in plan.participants if p.role=='remote')
+        if client.execution_address==remote.execution_address:
+            raise ValueError('distinct explicit execution addresses required')
+        options=thaw(plan.strategy_options)
+        if options['source_contract']!='coordinator-full-source/participant-assigned-rpc-backing/1':
+            raise ValueError('two-gpu diagnostic requires assigned-only worker backing')
+        cache_enabled=options['rpc_cache']=='enabled'
+        processes=[]
+        for process in rpc_processes:
+            host,sep,port=process.endpoint.rpartition(':')
+            if not sep or not host or not port.isdecimal():
+                raise ValueError('two-gpu diagnostic RPC endpoint must be host:port')
+            argv=(remote.runtime_executable,'--device',process.native_selector,
+                  '--host',host,'--port',port,*(('--cache',) if cache_enabled else ()))
+            processes.append((process,host,int(port),argv))
+        client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
+        tunnel=None; error=None; result=None; cleanup_error=None
+        rows={}; identities={}; export_dirs={}
+        try:
+            self.leases.acquire(remote.execution_address,remote.lifecycle_dir)
+            self.leases.acquire(client.execution_address,client.lifecycle_dir)
+            sources=self._verify_profiled_sources(plan,client,remote)
+            guards=sources[remote.participant_id].get('assigned_guard_paths')
+            wanted={p.binding_id for p,_,_,_ in processes}
+            if not isinstance(guards,dict) or set(guards)!=wanted or len(set(guards.values()))!=2:
+                raise ValueError('two-gpu diagnostic requires two distinct per-binding assigned guards')
+            for process,host,port,argv in processes:
+                self.leases.port(remote.execution_address,host,port)
+                export=str(Path(self.leases.invocation_dir(remote.execution_address))/('exports-'+process.name))
+                export_dirs[process.name]=export
+                rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
+                    name=process.name,binding_id=process.binding_id)
+            self.leases.port(client.execution_address,'127.0.0.1',client.port)
+            deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                ready=True
+                for process,host,port,_ in processes:
+                    if not self.leases.alive(remote.execution_address,process.name):
+                        raise RuntimeError('two-gpu RPC process lost: '+process.name)
+                    ready = self.leases.listening(remote.execution_address,process.name,host,port) and ready
+                if ready: break
+                if time.monotonic()>deadline:
+                    raise TimeoutError('two-gpu owned RPC listeners startup timeout')
+                self.pause(.5)
+            # Independently bind each listener PID/start/executable/argv before
+            # the client can connect.  The physical_id is the freshly admitted
+            # profile identity; later hardware evidence must join it to UUID.
+            remote_bindings={b.binding_id:b for b in remote.bindings}
+            process_receipts=[]
+            for process,host,port,argv in processes:
+                row=rows[process.name]
+                start=str(row['start'])
+                proxy=replace(remote,participant_id=remote.participant_id+'-'+process.name,
+                              rpc_endpoint=process.endpoint,port=port)
+                identity=self.collector.identity_reader.read(proxy,row['pid'],
+                    expected_executable=remote.runtime_executable,
+                    expected_sha256=remote.runtime_sha256,expected_argv=argv)
+                if identity.pid!=row['pid'] or identity.start!=start:
+                    raise ValueError('two-gpu owned RPC identity mismatch: '+process.name)
+                identities[process.name]=(proxy,identity)
+                binding=remote_bindings[process.binding_id]
+                process_receipts.append(dict(name=process.name,endpoint=process.endpoint,
+                    binding_id=process.binding_id,native_selector=process.native_selector,
+                    physical_id=binding.physical_id,pid=row['pid'],start=start,
+                    executable_sha256=remote.runtime_sha256,assigned_guard=guards[process.binding_id]))
+            client_export=str(Path(self.leases.invocation_dir(client.execution_address))/'exports-client')
+            export_dirs['client']=client_export
+            rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
+                export=client_export,**self._assigned_spawn(plan,client,sources))
+            opened=self.tunnel_factory(client.execution_address,client.port)
+            tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
+            base=f'http://127.0.0.1:{local_port}'
+            deadline=time.monotonic()+spec.startup_timeout_seconds
+            while True:
+                for process,_,_,_ in processes:
+                    if not self.leases.alive(remote.execution_address,process.name):
+                        raise RuntimeError('two-gpu RPC process lost: '+process.name)
+                if not self.leases.alive(client.execution_address,'client'):
+                    raise RuntimeError('client participant lost')
+                if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during startup')
+                try:
+                    if self.http.get(base+'/health',timeout=2).get('status')=='ok': break
+                except (OSError,ValueError,urllib.error.URLError): pass
+                if time.monotonic()>deadline: raise TimeoutError('client startup health timeout')
+                self.pause(.5)
+            request=dict(plan.request)
+            response=self.http.post(base+'/v1/chat/completions',
+                {'messages':[{'role':'user','content':request['prompt']}],
+                 'max_tokens':request['max_tokens'],'temperature':request['temperature'],
+                 'seed':request['seed'],'stream':False},timeout=900)
+            choice=response['choices'][0]; output=choice['message']['content']
+            if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
+                raise ValueError('incomplete diagnostic generation response')
+            result=dict(schema='q8-two-gpu-diagnostic/1',status='EXECUTED-OUTPUT-UNACCEPTED',
+                plan_id=plan.plan_id,plan_digest=plan.digest,selection=plan.selection,
+                response_id=response['id'],raw_output=output,
+                raw_output_sha256=hashlib.sha256(output.encode()).hexdigest(),
+                finish_reason=choice['finish_reason'],tokens=response['usage']['completion_tokens'],
+                rpc_processes=process_receipts,verified_backing=sources,
+                output_accepted=False,physical_qualified=False,execution_authorized=False,
+                nonclaims=['diagnostic response is retained but not accepted by the ordinary /2 observer',
+                           'endpoint/PID/device-selector binding is not GPU residency or UUID execution proof',
+                           'full coordinator working-set fit remains unqualified'])
+        except BaseException as exc: error=exc
+        finally:
+            try:
+                if tunnel is not None:
+                    if tunnel.poll() is None: tunnel.terminate()
+                    try: tunnel.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        tunnel.kill(); tunnel.wait(timeout=5)
+            except BaseException as exc:
+                cleanup_error=RuntimeError(f'SSH tunnel cleanup failed: {exc}')
+            finally:
+                try: self.last_cleanup=self.leases.cleanup()
+                except BaseException as exc:
+                    cleanup_error=RuntimeError(f'incomplete owned cleanup: {exc}')
+        if error is None:
+            try:
+                evidence=[]
+                for process,_,_,_ in processes:
+                    proxy,_=identities[process.name]; row=rows[process.name]
+                    spawn=OwnedSpawnFacts(proxy.participant_id,row['pid'],str(row['start']),self.leases.token)
+                    self.collector.await_terminal_export(proxy,spawn,export_dirs[process.name],NATIVE_LABELS['remote'])
+                    item=self.collector.collect_dynamic(proxy,spawn,export_dirs[process.name],
+                        plan.digest,self.leases.token,NATIVE_LABELS['remote'])
+                    events=[thaw(event)['event'] for event in item.observation.sequence]
+                    if 'rpc_server_command' not in events:
+                        raise ValueError('two-gpu diagnostic listener served no observed RPC command: '+process.name)
+                    evidence.append(dict(name=process.name,terminal_digest=item.observation.terminal_digest,
+                                         event_count=item.observation.event_count,
+                                         rpc_commands=events.count('rpc_server_command')))
+                result['listener_observations']=evidence
+            except BaseException as exc:
+                # Execution already happened.  Retain the raw response and
+                # report the observation refusal without converting it into
+                # accepted output or discarding the bounded diagnostic.
+                result['status']='EXECUTED-OBSERVATION-REFUSED'
+                result['observation_refusal']=str(exc)
+        if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
+            cleanup_error=RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
+        if error is not None:
+            if cleanup_error is not None: raise error from cleanup_error
+            raise error
+        if cleanup_error is not None: raise cleanup_error
+        result['cleanup']=self.last_cleanup
+        return result
+
     def _run_profiled_collected(self,plan):
         """#302 production path: real collector, phased /2 reconciliation.
 
@@ -436,6 +611,8 @@ class OperatorRunner:
         output acceptance. A dynamic refusal means execution occurred but the
         output is rejected, which is reported truthfully.
         """
+        if plan.selection=='two-gpu':
+            return self._run_two_gpu_diagnostic(plan)
         from .phased_observation import (OwnedSpawnFacts, RequestIdentity,
             reconcile_static, reconcile_dynamic)
         from .profiles import sha256 as _sha256

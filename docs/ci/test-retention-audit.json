@@ -1030,7 +1030,7 @@
     "test_derive_phase1_placement_v2": {
       "baseline_group": "phase1-analysis",
       "baseline_serial_seconds": 0.36,
-      "baseline_test_count": 9,
+      "baseline_test_count": 13,
       "category": "HISTORICAL_ONLY",
       "disposition": "integrity-replacement",
       "group": null,
@@ -1156,7 +1156,7 @@
         "scripts/v0b_manifest.py"
       ],
       "replacement": null,
-      "test_count_at_audit": 9
+      "test_count_at_audit": 13
     },
     "test_finalize_repository": {
       "baseline_group": "repo-integrity",
@@ -3930,7 +3930,7 @@
     "test_issue254_round7": {
       "baseline_group": "r8i-qwen-qualification",
       "baseline_serial_seconds": 0.0,
-      "baseline_test_count": 8,
+      "baseline_test_count": 9,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
@@ -3957,7 +3957,7 @@
       "source_modules": [
         "scripts/issue254_producer.py"
       ],
-      "test_count_at_audit": 8
+      "test_count_at_audit": 9
     },
     "test_issue255_baseline": {
       "baseline_group": "issue-99-103",
@@ -5239,7 +5239,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-99-103",
-      "invariant": "Opt-in Q8 two-CUDA fixed placement preserves complete nonoverlapping tensor ownership, independently admits each device and bounded worker-host resources, lowers exact endpoint/device selectors through the coordinator-mediated route, retains assigned-only restart reuse, and refuses unsupported identity, routing and observation claims.",
+      "invariant": "Opt-in Q8 two-CUDA fixed placement preserves complete nonoverlapping tensor ownership, independently admits each device and bounded worker-host resources, lowers two owned single-device listeners in exact endpoint/device order through the coordinator-mediated route, retains assigned-only restart reuse, and refuses unsupported routing and observation claims.",
       "lineage": "Issue #313 two-device Q8 capacity slice; successor to #311/#321 selective backing and #325 acquisition",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -5250,7 +5250,9 @@
           "inferswarm/operator/config.py",
           "inferswarm/operator/phased_observation.py",
           "inferswarm/operator/qwen_q8.py",
-          "inferswarm/operator/runtime.py"
+          "inferswarm/operator/runtime.py",
+          "scripts/issue311_native_backing.py",
+          "scripts/issue311_preparation.py"
         ]
       },
       "pinned_by_evidence": [],

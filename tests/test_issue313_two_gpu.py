@@ -9,15 +9,21 @@ import copy
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from inferswarm.operator import assigned_backing
 from inferswarm.operator.config import parse_config
+from inferswarm.operator.lifecycle import LeaseManager
 from inferswarm.operator.plan import build_plan
 from inferswarm.operator.phased_observation import reconcile_dynamic
 from inferswarm.operator.profiles import thaw
-from inferswarm.operator.qwen_q8 import NativeQ8Options, q8_llama_cpp_spec
+from inferswarm.operator.profiles import freeze
+from inferswarm.operator.bindings import ProcessIdentity
+from inferswarm.operator.qwen_q8 import NativeQ8Options, q8_llama_cpp_spec, q8_rpc_processes
+from inferswarm.operator.runtime import OperatorRunner
+from inferswarm.operator import source as source_verifier
 from inferswarm.operator.source import q8_source_payload
 from tests.issue299_fixture import NOW, profile_digest, reseal_profiles, sha
 from tests.test_issue299_q8_plan import metadata, q8_mapping
@@ -82,7 +88,7 @@ def two_gpu_mapping():
     gpu0_binding.update(binding_id='binding-B-gpu0',native_selector='CUDA0',visible_selector='RPC0')
     gpu1_binding=copy.deepcopy(gpu0_binding)
     gpu1_binding.update(binding_id='binding-B-gpu1',compute_id='B-gpu1',memory_id='B-vram1',
-        physical_id='physical-B-gpu1',native_selector='CUDA1',visible_selector='RPC3',
+        physical_id='physical-B-gpu1',native_selector='CUDA1',visible_selector='RPC1',
         runtime_id='runtime-B-gpu1',evidence_id='synthetic-B-gpu1')
     gpu1_binding['evidence_sha256']='0'*64
     remote['bindings']=[gpu0_binding,gpu1_binding]
@@ -90,7 +96,7 @@ def two_gpu_mapping():
     raw['strategy_options'].update(
         bindings=dict(loader='binding-A-cpu',remote_gpu0='binding-B-gpu0',remote_gpu1='binding-B-gpu1'),
         route='client-mediated',source_contract=assigned_backing.CONTRACT,rpc_cache='enabled',
-        rpc_endpoints=['synthetic-B.example:5000','synthetic-B.example.:5000'],worker_host_memory_id='B-ram',
+        rpc_endpoints=['synthetic-B.example:5000','synthetic-B.example:5001'],worker_host_memory_id='B-ram',
         subject_memory_ids=['B-ram'],
         participant_backing=dict(epoch=1,memory_id='B-disk',limit_bytes=256<<30,
             min_free_bytes=1<<30,reserve_bytes=128<<30),observer=dict(OBSERVER))
@@ -161,9 +167,12 @@ class TwoGpuTopologyTests(unittest.TestCase):
 
     def test_native_lowering_binds_both_devices_in_order(self):
         plan=self.build(); spec=q8_llama_cpp_spec(plan)
-        self.assertEqual(spec.rpc_endpoint,'synthetic-B.example:5000,synthetic-B.example.:5000')
-        self.assertEqual(spec.device,'RPC0,RPC3')
-        self.assertEqual(spec.rpc_args,('--device','CUDA0,CUDA1'))
+        self.assertEqual(spec.rpc_endpoint,'synthetic-B.example:5000,synthetic-B.example:5001')
+        self.assertEqual(spec.device,'RPC0,RPC1')
+        self.assertEqual(spec.rpc_args,())
+        self.assertEqual([(p.name,p.endpoint,p.binding_id,p.native_selector) for p in q8_rpc_processes(plan)],
+            [('rpc0','synthetic-B.example:5000','binding-B-gpu0','CUDA0'),
+             ('rpc1','synthetic-B.example:5001','binding-B-gpu1','CUDA1')])
         self.assertEqual(spec.args[spec.args.index('--tensor-split')+1],'4,4')
         self.assertEqual(spec.args[spec.args.index('--gpu-layers')+1],'8')
         self.assertEqual(NativeQ8Options('two-gpu',gpu_layers=8).layer_device_indices(),
@@ -177,8 +186,12 @@ class TwoGpuTopologyTests(unittest.TestCase):
         self.assertEqual((worker_payload.memory_id,worker_payload.bytes),('B-ram',boundary.logical_bytes))
         self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id=='boundary-worker-rpc-overlap/serve'
                             and c.bytes is None for c in charges))
-        self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id=='worker-runtime-heap/serve'
-                            and c.bytes is None for c in charges))
+        self.assertEqual({c.allocation_id for c in charges if c.memory_id=='B-ram'
+                          and c.allocation_id.startswith('worker-runtime-heap:')
+                          and c.bytes is None},
+                         {'worker-runtime-heap:rpc0/load','worker-runtime-heap:rpc0/serve',
+                          'worker-runtime-heap:rpc0/cleanup','worker-runtime-heap:rpc1/load',
+                          'worker-runtime-heap:rpc1/serve','worker-runtime-heap:rpc1/cleanup'})
         self.assertTrue(any(c.memory_id=='B-vram' and c.allocation_id.startswith('encoded-weights:binding-B-gpu0') for c in charges))
         self.assertTrue(any(c.memory_id=='B-vram1' and c.allocation_id.startswith('encoded-weights:binding-B-gpu1') for c in charges))
         for memory_id in ('B-vram','B-vram1'):
@@ -192,10 +205,20 @@ class TwoGpuTopologyTests(unittest.TestCase):
     def test_endpoint_alias_and_server_local_routes_refuse(self):
         for mutate,reason in (
             (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example:5000']*2),'distinct RPC endpoint'),
-            (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example.:5000','synthetic-B.example:5000']),'primary RPC endpoint'),
-            (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example:5000','other.example.:5000']),'trailing-dot alias'),
+            (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example:5001','synthetic-B.example:5000']),'primary RPC endpoint'),
+            (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example:5000','other.example:5001']),'same owned worker host'),
+            (lambda r:r['strategy_options'].update(rpc_endpoints=['synthetic-B.example:5000','synthetic-B.example:5000']),'distinct RPC endpoint'),
             (lambda r:r['strategy_options'].update(route='server-local'),'client-mediated copy route')):
             with self.subTest(reason=reason),self.assertRaisesRegex(ValueError,reason): self.build(mutate)
+
+    def test_pinned_server_is_serial_so_one_listener_cannot_back_two_dispatchers(self):
+        source=(ROOT/'tests/fixtures/issue299/overlay/ggml/src/ggml-rpc/ggml-rpc.cpp').read_text()
+        accept=source.index('auto client_socket = server_socket->accept();')
+        serve=source.index('rpc_serve_client(backends, cache_dir, client_socket);',accept)
+        closed=source.index('Client connection closed',serve)
+        self.assertGreater(serve,accept)
+        self.assertGreater(closed,serve)
+        self.assertEqual(source.count('server_socket->accept()'),1)
 
     def test_full_source_worker_contract_refuses(self):
         def full_source(raw):
@@ -223,6 +246,86 @@ class TwoGpuTopologyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'lack endpoint/device ordinal'):
             reconcile_dynamic(plan,None,None,(),mode='synthetic-test',clock=lambda:NOW)
 
+    def test_two_gpu_cannot_fall_through_the_legacy_single_rpc_runner(self):
+        runner=OperatorRunner(None,None,None,None)
+        with self.assertRaisesRegex(ValueError,'requires the collected observer path'):
+            runner.run(self.build())
+
+    def test_each_rpc_spawn_receives_only_its_exact_bank_guard(self):
+        plan=self.build(); remote=next(p for p in plan.participants if p.role=='remote')
+        guards={'binding-B-gpu0':'/guard/gpu0','binding-B-gpu1':'/guard/gpu1'}
+        runner=OperatorRunner(None,None,None,None)
+        sources={remote.participant_id:{'assigned_guard_paths':guards}}
+        self.assertEqual(runner._assigned_spawn(plan,remote,sources,binding_id='binding-B-gpu0'),
+                         {'assigned':'/guard/gpu0'})
+        self.assertEqual(runner._assigned_spawn(plan,remote,sources,binding_id='binding-B-gpu1'),
+                         {'assigned':'/guard/gpu1'})
+        with self.assertRaisesRegex(KeyError,'not-a-bank'):
+            runner._assigned_spawn(plan,remote,sources,binding_id='not-a-bank')
+
+    def test_diagnostic_runs_two_owned_processes_retains_output_and_cleans_up(self):
+        plan=self.build()
+        class Transport:
+            def __init__(self): self.rows={}; self.stopped=set(); self.argv={}
+            def call(self,address,payload):
+                action=payload['action']; name=payload.get('name')
+                if action=='admit': return {'lease':'admitted'}
+                if action=='port': return {'port':'available'}
+                if action=='spawn':
+                    row={'pid':100+len(self.rows),'start':str(200+len(self.rows)),
+                         'token':payload['token']}
+                    self.rows[(address,name)]=row; self.argv[(address,name)]=tuple(payload['argv'])
+                    return row
+                if action=='alive': return {'alive':(address,name) not in self.stopped}
+                if action=='listening': return {'listening':(address,name) not in self.stopped}
+                if action=='stop': self.stopped.add((address,name)); return {'signal':'TERM'}
+                if action=='release': return {'lease':'released'}
+                raise AssertionError(action)
+        transport=Transport(); manager=LeaseManager(transport,'issue313-diagnostic',stop_timeout=0)
+        class Sources:
+            def verify(self,part,plan,fnv_binary=None):
+                receipt={'assigned_guard_path':'/guard/all'}
+                if part.role=='remote': receipt['assigned_guard_paths']={
+                    'binding-B-gpu0':'/guard/gpu0','binding-B-gpu1':'/guard/gpu1'}
+                return receipt
+        class IdentityReader:
+            def read(self,part,pid,*,expected_executable,expected_sha256,expected_argv):
+                row=transport.rows[(part.execution_address,part.participant_id.rsplit('-',1)[-1])]
+                return ProcessIdentity(part.participant_id,part.host_id,part.boot_epoch,
+                    part.topology_epoch,pid,row['start'],expected_executable,expected_sha256,
+                    tuple(expected_argv),freeze(dict(native=[],visible=[],environment={})),part.rpc_endpoint)
+        class Collector:
+            identity_reader=IdentityReader()
+            def collect_build(self,*args,**kwargs): return None
+            def await_terminal_export(self,*args,**kwargs): return None
+            def collect_dynamic(self,*args,**kwargs):
+                observation=SimpleNamespace(sequence=({'event':'rpc_server_command'},),
+                    terminal_digest='a'*64,event_count=1)
+                return SimpleNamespace(observation=observation)
+        class HTTP:
+            def get(self,*args,**kwargs): return {'status':'ok'}
+            def post(self,*args,**kwargs):
+                return {'id':'diag-1','choices':[{'message':{'content':'raw diagnostic'},
+                    'finish_reason':'stop'}],'usage':{'completion_tokens':2}}
+        class Tunnel:
+            def __init__(self): self.done=False
+            def poll(self): return 0 if self.done else None
+            def terminate(self): self.done=True
+            def wait(self,timeout=None): return 0
+        runner=OperatorRunner(Sources(),manager,HTTP(),lambda *args:(Tunnel(),8080),
+            observation_mode='synthetic-test',clock=lambda:NOW,collector=Collector())
+        with patch.object(runner,'_profiled_admission',return_value=plan.admission):
+            result=runner.run(plan)
+        self.assertEqual((result['status'],result['raw_output'],result['output_accepted']),
+                         ('EXECUTED-OUTPUT-UNACCEPTED','raw diagnostic',False))
+        self.assertEqual([p['name'] for p in result['rpc_processes']],['rpc0','rpc1'])
+        self.assertEqual([p['name'] for p in result['listener_observations']],['rpc0','rpc1'])
+        self.assertEqual(result['cleanup'][next(p.execution_address for p in plan.participants
+            if p.role=='remote')]['lease'],'released')
+        remote=next(p for p in plan.participants if p.role=='remote')
+        self.assertIn('CUDA0',transport.argv[(remote.execution_address,'rpc0')])
+        self.assertIn('CUDA1',transport.argv[(remote.execution_address,'rpc1')])
+
 
 class TwoBankPreparationCompositionTests(unittest.TestCase):
     """Tiny CPU bytes prove cache composition, never CUDA correctness."""
@@ -235,6 +338,8 @@ class TwoBankPreparationCompositionTests(unittest.TestCase):
         for binding in remote['bindings']:
             old=binding['binding_id']; binding['binding_id']=rename[old]
             binding['memory_id']=rename[old]+'-mem'
+            binding['native_selector']='CUDA0' if old=='B-cpu' else 'CUDA1'
+            binding['visible_selector']='RPC0' if old=='B-cpu' else 'RPC1'
         for assignment in self.payload['assignments']:
             if assignment['binding_id'] in rename:
                 assignment['binding_id']=rename[assignment['binding_id']]
@@ -266,6 +371,19 @@ class TwoBankPreparationCompositionTests(unittest.TestCase):
         self.assertEqual(banks,{'B-gpu0','B-gpu1'})
         cold=self.prepare(node)
         self.assertGreater(cold['acquisition_bytes'],0)
+        selective=copy.deepcopy(self.payload)
+        selective['source_contract']=assigned_backing.CONTRACT
+        participant=selective['participants'][1]
+        participant['backing']=[]; participant['cache_path']=str(self.cache)
+        assigned_backing.project_payload(selective,dict(epoch=1,memory_id='B-disk',**vars(self.budget)))
+        receipt=source_verifier.verify_q8_role(participant,selective)
+        guards=receipt['assigned_guard_paths']
+        self.assertEqual(set(guards),{'B-gpu0','B-gpu1'})
+        self.assertEqual(len(set(guards.values())),2)
+        guarded={bid:{line.split('\t',1)[0] for line in Path(path).read_text().splitlines()}
+                 for bid,path in guards.items()}
+        self.assertTrue(all(guarded.values()))
+        self.assertFalse(guarded['B-gpu0'] & guarded['B-gpu1'])
         self.source.access_log.clear()
         warm=self.prepare(StreamingNode('B',StreamingArtifactCache(self.cache)))
         self.assertEqual((warm['acquisition_bytes'],self.source.access_log),(0,[]))
@@ -284,4 +402,39 @@ class TwoBankPreparationCompositionTests(unittest.TestCase):
         after_digests={row['content_digest'] for row in after}
         self.assertTrue(before_digests<=after_digests)
         self.assertNotIn('sha256:'+'0'*64,after_digests)
+
+
+class TwoListenerLifecycleTests(unittest.TestCase):
+    """Controller proof only; the later native route diagnostic is still required."""
+    def test_two_owned_listeners_are_simultaneous_and_cleaned_up(self):
+        class Transport:
+            def __init__(self): self.rows={}; self.stopped=set()
+            def call(self,address,payload):
+                action=payload['action']; name=payload.get('name')
+                if action=='admit': return {'lease':'admitted'}
+                if action=='port': return {'port':'available'}
+                if action=='spawn':
+                    row={'pid':100+len(self.rows),'start':str(200+len(self.rows)),
+                         'token':payload['token']}
+                    self.rows[name]=row; return row
+                if action=='alive': return {'alive':name not in self.stopped}
+                if action=='listening': return {'listening':name not in self.stopped}
+                if action=='stop': self.stopped.add(name); return {'signal':'TERM'}
+                if action=='release': return {'lease':'released'}
+                raise AssertionError(action)
+        with tempfile.TemporaryDirectory() as root:
+            manager=LeaseManager(Transport(),'issue313-two-listener-test',stop_timeout=0)
+            manager.acquire('local',root)
+            ports=[5000,5001]
+            try:
+                for index,port in enumerate(ports):
+                    manager.port('local','127.0.0.1',port)
+                    manager.spawn('local','rpc'+str(index),['synthetic-rpc',str(port)])
+                self.assertTrue(all(manager.listening('local','rpc'+str(index),'127.0.0.1',port)
+                                    for index,port in enumerate(ports)))
+                self.assertNotEqual(manager.owned['local']['rpc0']['pid'],manager.owned['local']['rpc1']['pid'])
+            finally:
+                cleanup=manager.cleanup()
+            self.assertEqual(cleanup['local']['lease'],'released')
+            self.assertEqual(set(cleanup['local']),{'rpc0','rpc1','lease'})
 
