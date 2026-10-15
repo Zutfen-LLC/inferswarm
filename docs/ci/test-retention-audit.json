@@ -5235,7 +5235,7 @@
     "test_issue323_verified_ordinary_ci": {
       "baseline_group": "issue-213-gate-ordering",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 73,
+      "baseline_test_count": 75,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-213-gate-ordering",
@@ -5254,7 +5254,7 @@
       "rationale": "Current ordinary-CI authentication gate for final handoff.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 73
+      "test_count_at_audit": 75
     },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",
