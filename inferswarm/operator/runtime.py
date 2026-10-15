@@ -153,13 +153,17 @@ class OperatorRunner:
         sources={p.participant_id:self.source.verify(p,plan,
             str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
             if p.role=='remote' and cache else None) for p in (remote,client)}
-        from .assigned_backing import CONTRACT
+        from .assigned_backing import CONTRACT, CUDA_BACKEND
         if options['source_contract']==CONTRACT:
             if self.collector is None: raise ValueError('selective backing requires per-role native build collector')
             observer=options['observer']
+            # The remote role's build backend follows the plan's explicit
+            # selection; the client/loader role stays on the reviewed CPU build.
+            backend = CUDA_BACKEND if getattr(plan,'selection',None)=='one-gpu' else 'cpu'
             for p in (remote,client):
                 if 'assigned_guard_path' not in sources[p.participant_id]: raise ValueError('selective backing upload guard missing')
-                self.collector.collect_build(p,observer[p.role+'_manifest_path'],observer[p.role+'_executable_path'])
+                self.collector.collect_build(p,observer[p.role+'_manifest_path'],
+                    observer[p.role+'_executable_path'],backend=backend if p.role=='remote' else 'cpu')
         return sources
 
     def _spawn_profiled_rpc(self,plan,remote,argv,sources,export=None):
@@ -531,10 +535,16 @@ class OperatorRunner:
                     owned_endpoints=(f'{host}:{remote.port}',)
                 else:
                     owned_endpoints=(f'127.0.0.1:{p.port}',)
+                # Repeat the source precheck's role/backend join at static
+                # collection; the coordinator remains CPU for either plan.
+                from .assigned_backing import CONTRACT, CUDA_BACKEND, CPU_BACKEND
+                build_kwargs = ({'backend': CUDA_BACKEND if p.role=='remote'
+                    and plan.selection=='one-gpu' else CPU_BACKEND}
+                    if options['source_contract']==CONTRACT else {})
                 evidence=self.collector.collect_static(p,spawn,
                     manifest_path,executable_path,
                     _sha256(sources[p.participant_id]),expected_argv=argv,
-                    listener_endpoints=owned_endpoints)
+                    listener_endpoints=owned_endpoints,**build_kwargs)
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
             self._live(client,remote)

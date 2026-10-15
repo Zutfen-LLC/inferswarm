@@ -15,9 +15,47 @@ IDENTITIES = ROOT/'tools/native-cache/operator-build-identities.json'
 def identities():
     return json.loads(IDENTITIES.read_text())
 
-def role_identity(role):
+# The reviewed CPU pair keeps its exact historical keys ('client', 'remote').
+# A one-GPU selective pair needs a separately reviewed CUDA worker build; its
+# accepted identity lives under the backend-qualified key below. The key is
+# deliberately absent until a maintainer reviews a real hardware build receipt:
+# nothing here invents, derives or promotes one automatically, and a candidate
+# build receipt is never itself an approved runtime.
+CPU_BACKEND = 'cpu'
+CUDA_BACKEND = 'cuda'
+ROLE_BACKENDS = (('remote', (CPU_BACKEND, CUDA_BACKEND)), ('client', (CPU_BACKEND,)))
+
+def role_key(role, backend=CPU_BACKEND):
+    if backend not in (CPU_BACKEND, CUDA_BACKEND):
+        raise ValueError('unsupported native build backend: '+str(backend))
+    backends = next((b for r,b in ROLE_BACKENDS if r==role), None)
+    if backends is None or backend not in backends:
+        raise ValueError('no supported native build backend '+str(backend)+' for role: '+str(role))
+    return role if backend==CPU_BACKEND else role+'-'+backend
+
+def role_identity(role, backend=CPU_BACKEND):
+    """Accepted per-role build identity; CPU hashes never answer for CUDA.
+
+    An absent backend-qualified entry refuses: a missing, unreviewed or
+    mismatched CUDA identity must stop selective admission, and caller-supplied
+    executable hashes are never treated as approval (callers compare against
+    the value returned here instead). A row offered under the CUDA key must
+    itself be a CUDA build (CUDA backend option plus a ggml-cuda library in
+    the closure), so an accepted CPU row is never reinterpreted as one.
+    """
     from .phased_observation import parse_build_manifest
-    return parse_build_manifest(identities()['roles'][role]['identity'])
+    key = role_key(role, backend)
+    rows = identities()['roles']
+    if key not in rows:
+        raise ValueError('selective backing unreviewed per-role runtime identity: '
+            'no accepted '+backend+' build for role '+role)
+    identity = parse_build_manifest(rows[key]['identity'])
+    if backend == CUDA_BACKEND:
+        cuda_option = any(option == '-DGGML_CUDA=ON' or option.startswith('-DGGML_CUDA=ON') for option in identity.build_options)
+        cuda_library = any('ggml-cuda' in name for name, _ in identity.backend_libraries)
+        if not (cuda_option and cuda_library):
+            raise ValueError('selective backing identity for '+key+' is not a reviewed CUDA build')
+    return identity
 
 def project_payload(payload, options):
     """Reuse the merged projector; complete GGUF rows here are provenance only."""

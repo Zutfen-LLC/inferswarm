@@ -5189,6 +5189,26 @@
       "replacement": null,
       "test_count_at_audit": 12
     },
+    "test_issue311_cuda_backing": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 15,
+      "category": "CURRENT_CONTRACT",
+      "current_test_count": 19,
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Selective CPU pair admission unchanged; the explicitly reviewed one-GPU pair is expressible only through a reviewed backend-qualified CUDA worker identity, and missing/unqualified CUDA identities, CPU-hash reuse, server-local placement and receipt-as-approval all refuse.",
+      "lineage": "Issue #311/#313/#315 CUDA selective-backing prerequisite; successor to merged #318 CPU startup connection",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": []
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline synthetic identity/admission/build-recipe regressions only. No CUDA compilation, GPU access, model bytes, inference, physical qualification, acceptance or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 15
+    },
     "test_issue311_startup": {
       "baseline_group": "issue-99-103",
       "baseline_serial_seconds": null,
