@@ -45,6 +45,17 @@ Trust model
   branch, state or identity drift between the reads is BLOCKED.  A verifier
   without a PR number is a *diagnostic*: it cannot satisfy the handoff
   (``handoff_gate_status`` requires ``pr_bound`` verdicts).
+* A ``pull_request`` run must also BE that PR's CI.  Several open PRs can
+  share the source repository, head SHA and head branch yet target different
+  bases, so the SHA and the branch name do not say which PR a run belongs
+  to; GitHub's own ``pull_requests`` association does.  It must name exactly
+  one PR — this one — and agree with the run and the PR read on head SHA/ref/
+  repository and base ref/repository.  A run associated with a different PR
+  is ignored (it can neither authorize nor supersede this PR's runs); a run
+  that cannot be attributed (no, several or malformed associations) blocks
+  only while it is the newest candidate.  A ``workflow_dispatch`` run has no
+  PR association and is the documented recovery: it is anchored by the exact
+  head and the PR's head branch.
 * Everything uncertain is BLOCKED, never PASS: no run, pending/cancelled/
   failed, wrong workflow or repository, inconsistent or malformed metadata,
   stale/ambiguous attempts, pagination that cannot be proven complete, API
@@ -99,6 +110,8 @@ MAX_PAGES = 5
 
 _SHA_RE = re.compile(r"[0-9a-f]{40}")
 _REPO_RE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+_REPO_URL_RE = re.compile(
+    re.escape(OFFICIAL_API_ORIGIN) + r"/repos/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)")
 
 BLOCKED = "BLOCKED"
 PASS = "PASS"
@@ -204,6 +217,42 @@ def _repo_of(obj: dict, key: str, what: str) -> str:
     return _field(inner, "full_name", "str", f"{what}.{key}")
 
 
+def _repo_of_url(obj: dict, key: str, what: str) -> str:
+    """``OWNER/REPO`` of a ``pull_requests[]`` repository.
+
+    The embedded ``pull-request-minimal`` repository has ``id``, ``url`` and
+    ``name`` but no ``full_name``: identity comes from its API URL, which
+    must sit on the official origin (an exact, anchored match).
+    """
+    inner = _require(obj.get(key), f"{what}.{key}")
+    url = _field(inner, "url", "str", f"{what}.{key}")
+    match = _REPO_URL_RE.fullmatch(url)
+    if not match:
+        raise _Blocked("malformed_response",
+                       f"{what}.{key}.url is not a repository URL on "
+                       f"{OFFICIAL_API_ORIGIN}: {url!r}")
+    return match.group(1)
+
+
+def _association(entry: object, what: str) -> dict:
+    """Validate one ``pull_requests[]`` entry of a workflow run."""
+    entry = _require(entry, what)
+    head = _require(entry.get("head"), f"{what}.head")
+    base = _require(entry.get("base"), f"{what}.base")
+    head_sha = _field(head, "sha", "str", f"{what}.head")
+    if not _SHA_RE.fullmatch(head_sha):
+        raise _Blocked("malformed_response",
+                       f"{what}.head.sha is not a 40-hex SHA: {head_sha!r}")
+    return {
+        "number": _field(entry, "number", "int", what),
+        "head_ref": _field(head, "ref", "str", f"{what}.head"),
+        "head_sha": head_sha,
+        "head_repository": _repo_of_url(head, "repo", f"{what}.head"),
+        "base_ref": _field(base, "ref", "str", f"{what}.base"),
+        "base_repository": _repo_of_url(base, "repo", f"{what}.base"),
+    }
+
+
 def blocked_verdict(expected_sha: object, code: str, detail: str, *,
                     repository: str | None = None, **evidence) -> dict:
     """A BLOCKED verdict (also used by the handoff for claim-level blocks)."""
@@ -291,9 +340,9 @@ class HostedCiVerifier:
 
         pull = self._pull(expected_sha, evidence, 1)
         workflow = self._workflow(evidence)
-        candidates = self._candidate_runs(workflow, expected_sha, evidence)
-        run = self._select(candidates, pinned_run_id)
-        evidence["run"] = self._run_summary(run)
+        candidates = self._candidate_runs(workflow, expected_sha)
+        run, association = self._select(candidates, pinned_run_id, evidence)
+        evidence["run"] = self._run_summary(run, association)
 
         if run["status"] != "completed":
             raise _Blocked("ci_pending",
@@ -311,6 +360,8 @@ class HostedCiVerifier:
                 "branch_mismatch",
                 f"run branch {run['head_branch']!r} is not the PR head "
                 f"branch {pull['head_ref']!r}")
+        if association is not None:
+            self._require_association_matches(run, association, pull)
 
         run_a = self._read_run(run["id"], workflow, expected_sha)
         if run_a != run:
@@ -334,11 +385,14 @@ class HostedCiVerifier:
                                   repository=self.repository, **evidence)
         verdict["verdict"] = PASS
         verdict["reason_code"] = None
-        verdict["detail"] = (f"ordinary CI run {run['id']} attempt "
-                             f"{run['run_attempt']} succeeded on the exact "
-                             "head including the CI Gate job"
-                             + ("" if pull is not None else
-                                " (diagnostic: not bound to a PR head)"))
+        verdict["detail"] = (
+            f"ordinary CI run {run['id']} attempt {run['run_attempt']} "
+            "succeeded on the exact head including the CI Gate job"
+            + (" (diagnostic: not bound to a PR head)" if pull is None else
+               f" (associated with PR {association['number']})"
+               if association is not None else
+               " (workflow_dispatch recovery run on the PR head and "
+               "branch)"))
         verdict["gate_job"] = gate
         verdict["pr_bound"] = pull is not None
         return verdict
@@ -464,6 +518,12 @@ class HostedCiVerifier:
             "repository": _repo_of(raw, "repository", what),
             "head_repository": _repo_of(raw, "head_repository", what),
         }
+        # Kept verbatim so the listing, the run read and the post-jobs
+        # re-read must agree on it.  It is nullable/absent for some events,
+        # so it is interpreted (and required to be a list) only for a
+        # PR-bound ``pull_request`` run (``_association_of``): an unrelated
+        # push run on the same SHA must not block the verification.
+        run["pull_requests"] = raw.get("pull_requests")
         if (run["workflow_id"] != workflow["id"]
                 or run["path"] != CI_WORKFLOW_PATH
                 or run["name"] != CI_WORKFLOW_NAME):
@@ -480,8 +540,8 @@ class HostedCiVerifier:
                 f"{run['head_repository']!r}, not {self.repository!r}")
         return run
 
-    def _candidate_runs(self, workflow: dict, expected_sha: str,
-                        evidence: dict) -> list[dict]:
+    def _candidate_runs(self, workflow: dict,
+                        expected_sha: str) -> list[dict]:
         rows = self._collect(
             lambda page, per: self.api.list_workflow_runs(
                 workflow["id"], expected_sha, page, per),
@@ -501,41 +561,144 @@ class HostedCiVerifier:
             seen.add(run["id"])
             runs.append(run)
         runs.sort(key=lambda r: r["id"])
-        evidence["considered_runs"] = [
-            {"id": r["id"], "attempt": r["run_attempt"], "event": r["event"],
-             "status": r["status"], "conclusion": r["conclusion"],
-             "ignored": r["event"] not in ALLOWED_EVENTS}
-            for r in runs]
         return runs
 
-    def _select(self, runs: list[dict], pinned: int | None) -> dict:
-        eligible = [r for r in runs if r["event"] in ALLOWED_EVENTS]
-        if not eligible:
+    def _association_of(self, run: dict) -> dict | None:
+        """The PR GitHub associates a ``pull_request`` run with.
+
+        Only a PR-bound verifier evaluates it, and only for ``pull_request``
+        runs: a ``workflow_dispatch`` run has no PR (its recovery path is
+        anchored by head SHA + branch) and an unbound verifier is a
+        diagnostic.  ``None`` therefore means "not evaluated"; a run whose
+        association cannot be read as exactly ONE well-formed PR raises, so
+        it can never be attributed to this PR (or to another).
+        """
+        if self.pr_number is None or run["event"] != "pull_request":
+            return None
+        if not isinstance(run["pull_requests"], list):
+            raise _Blocked(
+                "malformed_response",
+                f"pull_request run {run['id']} lacks a 'pull_requests' list")
+        entries = [_association(entry, "pull_requests entry")
+                   for entry in run["pull_requests"]]
+        if not entries:
+            raise _Blocked(
+                "pr_association_missing",
+                f"pull_request run {run['id']} carries no PR association: "
+                f"it cannot be attributed to PR {self.pr_number}")
+        if len(entries) > 1:
+            raise _Blocked(
+                "pr_association_ambiguous",
+                f"pull_request run {run['id']} is associated with "
+                f"{len(entries)} PRs "
+                f"({', '.join(str(e['number']) for e in entries)}): it "
+                f"cannot be attributed to PR {self.pr_number}")
+        return entries[0]
+
+    def _select(self, runs: list[dict], pinned: int | None,
+                evidence: dict) -> tuple[dict, dict | None]:
+        """The newest run of THIS PR decides.
+
+        A run that GitHub associates with a different PR is not this PR's
+        CI: it can neither authorize it nor supersede its runs.  A run that
+        cannot be attributed (no/ambiguous/malformed association) might be
+        this PR's newest run, so it blocks when it is the newest candidate;
+        once a newer run of this PR exists it is superseded and harmless,
+        which keeps the ``workflow_dispatch`` recovery usable.
+        """
+        considered = []
+        pool = []  # (run, association, blocker) that may be this PR's CI
+        for run in runs:  # oldest first
+            entry = {"id": run["id"], "attempt": run["run_attempt"],
+                     "event": run["event"], "status": run["status"],
+                     "conclusion": run["conclusion"], "ignored": False,
+                     "ignored_reason": None, "pull_requests": []}
+            considered.append(entry)
+            if run["event"] not in ALLOWED_EVENTS:
+                entry.update(ignored=True, ignored_reason="event")
+                continue
+            try:
+                association = self._association_of(run)
+            except _Blocked as unattributable:
+                pool.append((run, None, unattributable))
+                continue
+            if association is not None:
+                entry["pull_requests"] = [association["number"]]
+                if association["number"] != self.pr_number:
+                    entry.update(ignored=True, ignored_reason="other_pr")
+                    continue
+            pool.append((run, association, None))
+        evidence["considered_runs"] = considered
+        if not pool:
+            foreign = sorted({n for e in considered
+                              if e["ignored_reason"] == "other_pr"
+                              for n in e["pull_requests"]})
             raise _Blocked(
                 "no_ci_run",
+                f"no ordinary CI run of PR {self.pr_number} exists for the "
+                f"exact head: its only pull_request run(s) belong to PR(s) "
+                f"{', '.join(map(str, foreign))} (dispatch ci.yml on the PR "
+                "branch to recover)" if foreign else
                 "no ordinary CI (pull_request / workflow_dispatch) run "
                 "exists for the exact head ([skip ci] or CI never ran)")
-        newest = eligible[-1]
+        newest, association, blocker = pool[-1]
+        if blocker is not None:
+            raise blocker
         if pinned is not None and pinned != newest["id"]:
-            if any(r["id"] == pinned for r in eligible):
+            if any(r["id"] == pinned for r, _, b in pool if b is None):
                 raise _Blocked(
                     "stale_run",
                     f"pinned run {pinned} is superseded by run "
                     f"{newest['id']} for the same head")
             raise _Blocked("pinned_run_not_found",
                            f"pinned run {pinned} is not an ordinary CI run "
-                           "of the exact head")
-        return newest
+                           "of this PR's exact head")
+        return newest, association
+
+    def _require_association_matches(self, run: dict, association: dict,
+                                     pull: dict) -> None:
+        """The association must agree with the run AND both PR reads.
+
+        ``pull`` is the first PR read; the final read is required to equal
+        it (``_require_same_pull``), so agreement with it is agreement with
+        both.  The run was already forced to the expected head, branch and
+        repository, and the PR to the same head and the pinned repository.
+        """
+        mismatched = [
+            name for name, got, want in (
+                ("head ref", association["head_ref"], pull["head_ref"]),
+                ("head sha", association["head_sha"], run["head_sha"]),
+                ("head repository", association["head_repository"],
+                 pull["head_repository"]),
+                ("base ref", association["base_ref"], pull["base_ref"]),
+                ("base repository", association["base_repository"],
+                 pull["base_repository"]))
+            if got != want]
+        if mismatched:
+            raise _Blocked(
+                "pr_association_mismatch",
+                f"run {run['id']}'s association with PR "
+                f"{association['number']} contradicts the PR: "
+                f"{', '.join(mismatched)}")
 
     @staticmethod
-    def _run_summary(run: dict) -> dict:
+    def _run_summary(run: dict, association: dict | None) -> dict:
         return {"id": run["id"], "attempt": run["run_attempt"],
                 "event": run["event"], "head_sha": run["head_sha"],
                 "head_branch": run["head_branch"], "status": run["status"],
                 "conclusion": run["conclusion"],
                 "html_url": run["html_url"],
                 "created_at": run["created_at"],
-                "updated_at": run["updated_at"]}
+                "updated_at": run["updated_at"],
+                # The authenticated run -> PR association (``pull_request``
+                # runs of a PR-bound verifier only; ``workflow_dispatch``
+                # recovery runs and diagnostics carry none).
+                "pr_association": (
+                    None if association is None else
+                    {"number": association["number"],
+                     "head_ref": association["head_ref"],
+                     "head_sha": association["head_sha"],
+                     "base_ref": association["base_ref"]})}
 
     def _read_run(self, run_id: int, workflow: dict,
                   expected_sha: str) -> dict:

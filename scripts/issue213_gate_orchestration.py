@@ -1304,6 +1304,28 @@ def current_final_head_request(root: Path, *, tests_dir: Path | None = None,
     )
 
 
+def _run_bound_to_pr(run: dict, pull: dict, pr_number: int) -> bool:
+    """Re-check on the verdict itself that its run is THIS PR's CI (#323).
+
+    A ``pull_request`` run must record the authenticated association with
+    exactly this PR (number, head and base as the PR read reports them); a
+    ``workflow_dispatch`` recovery run has no PR association and is anchored
+    by the exact head and the PR's head branch.  Anything else — including a
+    run of another PR that shares the head — is not this handoff's CI.
+    """
+    if run.get("head_branch") != pull.get("head_ref"):
+        return False
+    if run.get("event") == "workflow_dispatch":
+        return True
+    association = run.get("pr_association")
+    return (run.get("event") == "pull_request"
+            and isinstance(association, dict)
+            and association.get("number") == pr_number
+            and association.get("head_ref") == pull.get("head_ref")
+            and association.get("head_sha") == pull.get("head_sha")
+            and association.get("base_ref") == pull.get("base_ref"))
+
+
 def _authenticate_hosted_ci(final_head: "FinalHeadRequest",
                             hosted_ci_status: dict | None,
                             ci_verifier: object) -> dict:
@@ -1381,7 +1403,10 @@ def _authenticate_hosted_ci(final_head: "FinalHeadRequest",
             and isinstance(pull, dict)
             and pull.get("number") == ci_verifier.pr_number
             and pull.get("state") == "open"
-            and pull.get("head_sha") == sha)
+            and pull.get("head_sha") == sha
+            # The deciding run is THIS PR's CI, not another PR's that
+            # merely shares the head SHA and branch.
+            and _run_bound_to_pr(run, pull, ci_verifier.pr_number))
     if not structurally_ok:
         return blocked("verdict_mismatch",
                        "the verifier verdict is malformed or not bound to "

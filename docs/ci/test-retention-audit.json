@@ -5235,11 +5235,11 @@
     "test_issue323_verified_ordinary_ci": {
       "baseline_group": "issue-213-gate-ordering",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 75,
+      "baseline_test_count": 100,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-213-gate-ordering",
-      "invariant": "Governed final handoff accepts ordinary CI only when it is re-derived from read-only GitHub Actions data (canonical ci.yml run, exact head, latest attempt, real CI Gate job); a missing run ([skip ci]), forged claim or any API doubt blocks, and Final CPU Validation never substitutes for it. The repository (Zutfen-LLC/inferswarm), the API origin (https://api.github.com) and the current open PR head are pinned trust anchors, never caller input.",
+      "invariant": "Governed final handoff accepts ordinary CI only when it is re-derived from read-only GitHub Actions data (canonical ci.yml run, exact head, latest attempt, real CI Gate job); a missing run ([skip ci]), forged claim or any API doubt blocks, and Final CPU Validation never substitutes for it. The repository (Zutfen-LLC/inferswarm), the API origin (https://api.github.com) and the current open PR head are pinned trust anchors, never caller input; a pull_request CI run authorizes only the PR GitHub associates it with (a run of another PR sharing the head can neither authorize nor supersede), while a dispatched run is anchored by the exact head and branch.",
       "lineage": "verified ordinary CI on the exact final head (#323)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -5254,7 +5254,7 @@
       "rationale": "Current ordinary-CI authentication gate for final handoff.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 75
+      "test_count_at_audit": 100
     },
     "test_issue35_corrections": {
       "baseline_group": "vulkan-v0-b",

@@ -510,21 +510,27 @@ request is made:
 | Canonical workflow | workflow endpoint for `ci.yml` is named `CI`, path `.github/workflows/ci.yml`, state `active`; every run must carry that workflow id, path and name (so a Final CPU Validation run is never ordinary CI) |
 | This repository | run `repository` and `head_repository` both equal the pinned `Zutfen-LLC/inferswarm` (forks/foreign rejected); with `--pr`, the PR's head **and base** repository too |
 | Exact head | runs are listed with `head_sha=<expected>`; every returned run and job must report that same SHA. GitHub reports a `pull_request` run's `head_sha` as the PR **head** commit (not the synthetic merge commit the job checks out), and a `workflow_dispatch` run's as the dispatched branch tip. Only those two events count; a `push` run is not PR CI |
-| Completed success | newest eligible run is `completed`/`success`; `queued`/`in_progress` is `ci_pending`, `cancelled` is `ci_cancelled`, failures are `ci_failed` |
+| This PR's run | with `--pr`, a `pull_request` run counts only if GitHub's `pull_requests` association is **exactly one** well-formed PR whose number is `--pr` and whose head SHA/ref/repository and base ref/repository agree with the run and the PR read (`pr_association_mismatch`); no association is `pr_association_missing`, several PRs `pr_association_ambiguous`, a malformed object `malformed_response`. A run associated with a **different** PR is not this PR's CI: it is listed in `considered_runs` as ignored (`other_pr`) and can neither authorize nor supersede this PR's runs; when nothing else qualifies the result is `no_ci_run`. A run that cannot be attributed to any PR blocks only while it is the newest candidate (it might be this PR's newest run) and is harmless once a newer run of this PR exists, so the dispatch recovery below stays usable. A `workflow_dispatch` run carries no PR association: it is anchored by the exact head and the PR's head branch (`branch_mismatch`) |
+| Completed success | the newest eligible run (this PR's, above) is `completed`/`success`; `queued`/`in_progress` is `ci_pending`, `cancelled` is `ci_cancelled`, failures are `ci_failed` |
 | The real gate | exactly one `CI Gate` job, `completed`/`success`; the always-required `Plan CI (impact selection)` and `Group repo-integrity (always-on)` jobs succeeded; every job is `success` or `skipped` |
 | Attempt identity | every job is from the run's latest `run_attempt`; the run is re-read after its jobs and must be unchanged (a rerun in flight is `ambiguous_evidence`) |
 | Completeness | listings must be provably complete (`total_count` vs rows, bounded pages) or `pagination_uncertain` |
-| Current PR | with `--pr`: the PR is read **before** any CI evidence and **again after** the run/jobs checks. Both reads must be the same PR, open (`pr_not_open`), with head and base in this repository (`foreign_repository`), head still equal to the final head (`pr_head_moved`), head branch equal to the run's branch (`branch_mismatch`) and unchanged between the reads (`pr_branch_drift`, `pr_identity_drift`, e.g. a retargeted base) |
-| Run pin | an optional claim run id must be the newest eligible run (`stale_run` / `pinned_run_not_found`) |
+| Current PR | with `--pr`: the PR is read **before** any CI evidence and **again after** the run/jobs checks. Both reads must be the same PR, open (`pr_not_open`), with head and base in this repository (`foreign_repository`), head still equal to the final head (`pr_head_moved`), head branch equal to the run's branch (`branch_mismatch`) and unchanged between the reads (`pr_branch_drift`, `pr_identity_drift`, e.g. a retargeted base). The deciding run's association is held to the same facts, and the run is read three times (listing, read, re-read after the jobs) and must be identical each time, association included |
+| Run pin | an optional claim run id must be the newest eligible run of this PR (`stale_run` / `pinned_run_not_found`); a run of another PR or an unattributable run can never be pinned |
 
 Every uncertainty is **BLOCKED**, never PASS: no run (`no_ci_run`), API
 error / 403 / 429 / outage (`api_unavailable`), malformed or incomplete
 responses (`malformed_response`), inconsistent metadata, wrong workflow
-(`workflow_identity_mismatch`), foreign repository (`foreign_repository`).
+(`workflow_identity_mismatch`), foreign repository (`foreign_repository`),
+a run that cannot be attributed to this PR (`pr_association_missing`,
+`pr_association_ambiguous`, `pr_association_mismatch`).
 The verdict (`hosted-ci-verification-verdict/1`) is deterministic and
 secret-free: expected SHA, repository, workflow id/path, run id / attempt /
-event / branch / URL, the `CI Gate` job id and conclusion, every considered
-run, and the evidence source. Final CPU Validation success is never a
+event / branch / URL / PR association (`run.pr_association`: number, head
+ref/SHA, base ref; `null` for a dispatch recovery run or a diagnostic), the
+`CI Gate` job id and conclusion, every considered run (with the PR numbers
+GitHub associates it with and why an ignored run was ignored), and the
+evidence source. Final CPU Validation success is never a
 substitute for it. Duplicate verification only repeats read-only GETs and
 never starts a workflow.
 
@@ -541,7 +547,11 @@ whose repository is not the pinned one (`repository_not_canonical`) and a
 verifier built without a PR number (`pr_binding_missing`) — a PR-unbound
 verifier is a *diagnostic* and can never complete the handoff. A PASS verdict
 is only accepted if it is `pr_bound` to an open PR at exactly this head in
-the pinned repository. Executable form:
+the pinned repository **and** its deciding run is that PR's CI: a
+`pull_request` run must record the authenticated association with exactly
+this PR (head and base as the PR read reports them), a `workflow_dispatch`
+run must be on the PR's head branch; anything else is `verdict_mismatch`.
+Executable form:
 
 ```sh
 export GITHUB_TOKEN=$(gh auth token)            # read-only use
@@ -584,7 +594,13 @@ Use the **existing** ordinary workflow, not a replacement path:
 3. Wait for the run to complete, then re-run `verify`/`handoff`. The run is
    accepted only if its `head_sha` equals the reviewed head, it is the
    canonical `CI` workflow, and the `CI Gate` job succeeded; a matching
-   branch name alone is never enough.
+   branch name alone is never enough. A dispatched run has no PR
+   association, so it is anchored by the exact head and the PR's head branch
+   only (it tests the branch tip, not a PR-specific merge ref) and can serve
+   every open PR with that exact head and branch. This is also the recovery
+   when another PR shares the head: a successful `pull_request` run of
+   *another* PR does not count for this one (`no_ci_run`), and runs GitHub
+   associates with several PRs are ambiguous (`pr_association_ambiguous`).
 4. Any later PR-head mutation (new commit, force push) makes the earlier
    result stale: `pr_head_moved` / `no_ci_run`. Re-validate the new head.
 
@@ -621,6 +637,15 @@ Residual, accepted limitations (experiment-first standard):
   verification; it cannot prevent a push, close or retarget *after* the
   second read — that is what re-running the handoff on the final head (and
   the external ruleset above) is for.
+- The run -> PR association is GitHub's own report. The verifier requires it
+  to agree with both PR reads, but if GitHub reports a PR's *current* base
+  rather than its base when the run was created, a PR retargeted after its CI
+  ran cannot be told apart from one that was not (a retarget *during*
+  verification is caught by the second PR read). The check proves the run is
+  this PR's CI, not that its merge ref is still current.
+- A `workflow_dispatch` recovery run is not PR-specific (see above): it
+  proves the branch tip at the exact head and is accepted for every open PR
+  with that head and branch.
 
 Residual, accepted limitation (experiment-first standard): for
 `pull_request` events GitHub runs the workflow definition from the merge

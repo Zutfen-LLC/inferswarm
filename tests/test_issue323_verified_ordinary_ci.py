@@ -1345,6 +1345,8 @@ class RunToPrAssociation(_Base):
             "null": top(None),
             "a string": top("322"),
             "an object": top({"number": 322}),
+            "an empty object": top({}),
+            "an empty string": top(""),
             "bare numbers (a trimmed view, not the REST object)": top([322]),
             "empty object entry": top([{}]),
             "number missing": entry(number=_DROP),
@@ -1365,6 +1367,11 @@ class RunToPrAssociation(_Base):
             "base repo url garbage": entry(
                 base={"ref": "main", "sha": fakes.BASE_SHA,
                       "repo": {"id": 1, "url": "not a url", "name": "x"}}),
+            "base repo url with a trailing path": entry(
+                base={"ref": "main", "sha": fakes.BASE_SHA,
+                      "repo": {"id": 1, "name": "inferswarm",
+                               "url": f"{OFFICIAL_API}/repos/{CANONICAL}"
+                                      "/pulls/322"}}),
             "base repo url on another origin": entry(
                 base={"ref": "main", "sha": fakes.BASE_SHA,
                       "repo": {"id": 1, "name": "inferswarm",
@@ -1376,6 +1383,26 @@ class RunToPrAssociation(_Base):
             verdict = verify(api, pr_number=322)
             self.assertBlocked(verdict, "malformed_response")
             self.assertFalse(verdict["pr_bound"], label)
+
+    def test_r06b_other_events_need_no_readable_association(self):
+        # ``pull_requests`` is nullable/absent for some events: an unrelated
+        # push run on the same SHA, or a dispatch recovery run, must neither
+        # block nor be judged by it.
+        for value in (None, _DROP, "x"):
+            api = two_prs(run_for(PR_B, 100))
+            for run_id, event in ((50, "push"), (200, "workflow_dispatch")):
+                extra = fakes.ci_run(run_id, REAL_SHA, BRANCH, event=event)
+                if value is _DROP:
+                    extra.pop("pull_requests")
+                else:
+                    extra["pull_requests"] = value
+                api.add_run(extra)
+            verdict = verify(api, pr_number=PR_B)
+            self.assertPass(verdict)
+            self.assertEqual(verdict["run"]["id"], 200)  # newest dispatch
+            # ...and the pull_request run is still judged on its own
+            api.runs[:] = [r for r in api.runs if r["event"] != "workflow_dispatch"]
+            self.assertEqual(verify(api, pr_number=PR_B)["run"]["id"], 100)
 
     # -- selection -------------------------------------------------------
     def test_r07_a_foreign_prs_run_never_supersedes_or_rescues(self):
@@ -1437,6 +1464,10 @@ class RunToPrAssociation(_Base):
         verdict = verify(api, pr_number=PR_B)
         self.assertPass(verdict)
         self.assertEqual(verdict["run"]["id"], 300)
+        # an unattributable run can never be pinned as the deciding run
+        self.assertBlocked(verify(api, pr_number=PR_B, pinned_run_id=200),
+                           "pinned_run_not_found")
+        self.assertPass(verify(api, pr_number=PR_B, pinned_run_id=300))
 
     # -- workflow_dispatch recovery -------------------------------------------
     def test_r09_dispatch_recovery_needs_no_association(self):
@@ -1544,6 +1575,9 @@ class RunToPrAssociation(_Base):
                  lambda v: run_of(v)["pr_association"].update(base_ref=BASE_A)),
                 ("association head is not the PR's",
                  lambda v: run_of(v)["pr_association"].update(head_ref="x")),
+                ("association head sha is not the PR's",
+                 lambda v: run_of(v)["pr_association"].update(
+                     head_sha=fakes.OTHER_SHA)),
                 ("pull_request run without association",
                  lambda v: run_of(v).update(pr_association=None)),
                 ("run branch is not the PR's",
@@ -1651,6 +1685,21 @@ class WorkflowAndDocs(unittest.TestCase):
                        "ruleset", "CI Gate",
                        "Issue #323"):
             self.assertIn(needle, text, needle)
+
+    def test_doc_describes_the_run_to_pr_association(self):
+        text = DOC.read_text(encoding="utf-8")
+        for needle in ("pull_requests", "pr_association_missing",
+                       "pr_association_ambiguous", "pr_association_mismatch",
+                       "`other_pr`", "`run.pr_association`",
+                       "can neither authorize nor supersede",
+                       "anchored by the exact head and the PR's head branch",
+                       "`verdict_mismatch`"):
+            self.assertIn(needle, text, needle)
+        source = (ROOT / "scripts" / "hosted_ci_verification.py").read_text(
+            encoding="utf-8")
+        for code in ("pr_association_missing", "pr_association_ambiguous",
+                     "pr_association_mismatch"):
+            self.assertIn(code, source, code)
 
     def test_doc_describes_the_trust_anchors(self):
         text = DOC.read_text(encoding="utf-8")
