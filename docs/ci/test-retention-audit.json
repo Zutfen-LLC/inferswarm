@@ -5194,7 +5194,7 @@
       "baseline_serial_seconds": null,
       "baseline_test_count": 15,
       "category": "CURRENT_CONTRACT",
-      "current_test_count": 15,
+      "current_test_count": 19,
       "disposition": "retain",
       "group": "issue-99-103",
       "invariant": "Selective CPU pair admission unchanged; the explicitly reviewed one-GPU pair is expressible only through a reviewed backend-qualified CUDA worker identity, and missing/unqualified CUDA identities, CPU-hash reuse, server-local placement and receipt-as-approval all refuse.",

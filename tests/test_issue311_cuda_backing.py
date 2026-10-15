@@ -8,10 +8,14 @@ candidate build receipts never masquerade as accepted identities. No CUDA
 compilation, GPU access, model bytes or inference happens here.
 """
 import copy
+import contextlib
 import hashlib
 import importlib.util
+import io
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -310,6 +314,146 @@ class BuildReceiptSeparationTests(unittest.TestCase):
             with patch.dict('os.environ', {'MOE_OVERLAP_CUDA_DRIVER': str(stub)}):
                 with self.assertRaises(SystemExit):
                     probe.cuda_driver_flags('c++')
+
+
+class SelectiveStaticCollectionTests(unittest.TestCase):
+    def test_actual_runner_keeps_role_backend_through_static_collection(self):
+        """Real runner + collector; only host reads/processes are synthetic.
+
+        Build checks must finish for both roles before the real reconciler
+        refuses the synthetic source receipt, with zero requests and cleanup.
+        """
+        from inferswarm.operator.bindings import ProcessIdentity
+        from inferswarm.operator.native_observer.collector import NativeObserverCollector
+        from inferswarm.operator.phased_observation import OwnedSpawnFacts
+        from inferswarm.operator.profiles import freeze
+        from inferswarm.operator.qwen_q8 import q8_candidates, bound_capability
+        from tests.test_issue299_q8_plan import metadata
+        from tests.test_issue302_collected_runner import (
+            RecordingRunnerHarness, VirtualHostTree, RecordingCollectorTransport)
+        from tests.test_issue302_per_role_builds import RecordingHostFactsReader
+
+        table = synthetic_table()
+        client_bytes = b'synthetic CPU coordinator'
+        client_sha = hashlib.sha256(client_bytes).hexdigest()
+        table['roles']['client']['identity']['executable_sha256'] = client_sha
+        for selection in ('cpu-only', 'one-gpu'):
+            with self.subTest(selection=selection):
+                remote_bytes = ('synthetic remote '+selection).encode()
+                remote_sha = hashlib.sha256(remote_bytes).hexdigest()
+                key = 'remote' if selection == 'cpu-only' else 'remote-cuda'
+                if selection == 'one-gpu':
+                    table['roles'][key] = dict(identity=synthetic_cuda_manifest(executable=remote_sha))
+                else:
+                    table['roles'][key]['identity']['executable_sha256'] = remote_sha
+                with patch.object(assigned_backing, 'identities', return_value=table):
+                    raw = selective_mapping(selection, remote_sha, client_sha)
+                    candidate, = q8_candidates(parse_config(rejoin_profiles(raw), now=NOW,
+                        profile_mode='replay'), metadata())
+                    snapshot = raw['profiles']['snapshot']
+                    runtimes = {r['runtime_id']: r for r in snapshot['runtime_capabilities']}
+                    memories = {m['memory_id']: m for m in snapshot['memory_resources']}
+                    for requirement in candidate.capability_requirements:
+                        runtimes[requirement.runtime_id]['capabilities'].append(requirement.capability)
+                    for charge in candidate.charges:
+                        if charge.bytes is not None: continue
+                        runtime = next(r for r in runtimes.values() if r['host_id']==memories[charge.memory_id]['host_id'])
+                        amount = 2**21  # Synthetic witness only, never a hardware fit claim.
+                        raw['strategy_options']['bounds'].append(dict(allocation_id=charge.allocation_id,
+                            bytes=amount, evidence_id=runtime['evidence_id']))
+                        runtime['capabilities'].append(bound_capability(charge, amount))
+                        evidence = next(e for e in snapshot['evidence'] if e['evidence_id']==runtime['evidence_id'])
+                        evidence['dependencies']['memory:'+charge.memory_id+':physical_id'] = memories[charge.memory_id]['physical_id']
+                    plan = build_plan(parse_config(rejoin_profiles(raw), now=NOW, profile_mode='replay'), now=NOW)
+                    harness = RecordingRunnerHarness(plan)
+                    for receipt in harness.sources.values():
+                        receipt['assigned_guard_path'] = '/synthetic/assigned-guard'
+                    tree = VirtualHostTree()
+                    for participant in plan.participants:
+                        role = participant.role
+                        tree.put(participant.execution_address, OBSERVER[role+'_manifest_path'],
+                            table['roles']['client' if role=='client' else key]['identity'])
+                        tree.put(participant.execution_address, OBSERVER[role+'_executable_path'],
+                            client_bytes if role=='client' else remote_bytes)
+
+                    class IdentityReader:
+                        def read(self, p, pid, *, expected_executable, expected_sha256, expected_argv):
+                            row = harness.transport.rows[p.execution_address]['client' if p.role=='client' else 'rpc']
+                            return ProcessIdentity(p.participant_id, p.host_id, p.boot_epoch, p.topology_epoch,
+                                pid, str(row['start']), expected_executable, expected_sha256, tuple(expected_argv),
+                                freeze(dict(native=[], visible=[], environment={})), p.rpc_endpoint)
+
+                    collector = NativeObserverCollector(RecordingCollectorTransport(tree), IdentityReader(),
+                        host_facts_reader=RecordingHostFactsReader(plan), selective=True)
+                    runner = harness.runner(collector=collector)
+                    with self.assertRaisesRegex(ValueError, 'selective participant provenance/verified-byte mismatch'):
+                        runner.run(plan)
+                    self.assertEqual(harness.posts, 0)
+                    self.assertTrue(all(row['lease']=='released' for row in runner.last_cleanup.values()))
+                    # The public collector's omitted-backend default still
+                    # qualifies a CPU role exactly as it did before this fix.
+                    client = next(p for p in plan.participants if p.role=='client')
+                    row = harness.transport.rows[client.execution_address]['client']
+                    evidence = collector.collect_static(client, OwnedSpawnFacts(client.participant_id,
+                        row['pid'], str(row['start']), harness.manager.token),
+                        OBSERVER['client_manifest_path'], OBSERVER['client_executable_path'], '0'*64,
+                        expected_argv=harness.transport.argv[client.execution_address])
+                    self.assertEqual(evidence.build.manifest, role_identity('client'))
+
+
+class DriverResolutionTests(unittest.TestCase):
+    """Real CPU linker, synthetic ELF libraries; no driver/device/CUDA build."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.recipe = load_recipe(CUDA_RECIPE)
+        self.probe = load_recipe(ROOT/'tools/moe-overlap/build.py')
+        self.cxx = self.probe.pick_compiler('c++')
+        self.driver = self.root/'libcuda.so.1'
+        subprocess.run([self.cxx, '-shared', '-fPIC', '-x', 'c++', '-',
+                        '-o', str(self.driver)],
+                       input='extern "C" void cuMemCreate() {}\n',
+                       text=True, check=True, timeout=30)
+        (self.root/'libcuda.so').symlink_to(self.driver.name)
+
+    def test_development_driver_success_binds_validated_filename(self):
+        # Exercise both shared-probe success branches: an explicit linker
+        # directory and the compiler's search path. Its legacy result remains
+        # ['-lcuda']; the CMake adapter must retain the validated real filename.
+        empty = self.root/'empty'; empty.mkdir()
+        environment = dict(os.environ, LIBRARY_PATH=str(self.root))
+        environment.pop('MOE_OVERLAP_CUDA_DRIVER', None)
+        with patch.dict(os.environ, environment, clear=True), contextlib.redirect_stdout(io.StringIO()):
+            for directory in (self.root, empty):
+                with self.subTest(directory=directory), patch.object(
+                        self.probe, 'CUDA_LIB_FLAGS', ['-L'+str(directory)]):
+                    self.assertEqual(self.probe.cuda_driver_flags(self.cxx), ['-lcuda'])
+                    record, options = self.recipe.driver_resolution(self.cxx, self.probe)
+                    self.assertEqual(record['resolved_path'], str(self.driver))
+                    self.assertEqual(record['resolved_sha256'], hashlib.sha256(self.driver.read_bytes()).hexdigest())
+                    self.assertEqual(options, ['-DCUDA_CUDA_LIBRARY='+str(self.driver)])
+
+    def test_explicit_runtime_driver_retains_resolved_path(self):
+        with patch.dict(os.environ, {'MOE_OVERLAP_CUDA_DRIVER': str(self.root/'libcuda.so')}), contextlib.redirect_stdout(io.StringIO()):
+            record, options = self.recipe.driver_resolution(self.cxx, self.probe)
+        self.assertEqual(record['resolved_path'], str(self.driver))
+        self.assertEqual(options, ['-DCUDA_CUDA_LIBRARY='+str(self.driver)])
+
+    def test_invalid_driver_paths_still_refuse(self):
+        stub = self.root/'stubs'/'libcuda.so'
+        stub.parent.mkdir(); stub.write_bytes(self.driver.read_bytes())
+        alias = self.root/'libcuda-stub-alias.so'; alias.symlink_to(stub)
+        text = self.root/'not-elf.so'; text.write_text('not ELF')
+        wrong = self.root/'wrong-symbol.so'
+        subprocess.run([self.cxx, '-shared', '-fPIC', '-x', 'c++', '-', '-o', str(wrong)],
+                       input='extern "C" void unrelated() {}\n', text=True, check=True, timeout=30)
+        for driver, reason in ((stub, 'stub'), (alias, 'stub'), (text, 'ELF'),
+                               (wrong, 'link probe failed'), (self.root/'missing.so', 'not a file')):
+            with self.subTest(driver=driver), patch.dict(os.environ, {'MOE_OVERLAP_CUDA_DRIVER': str(driver)}):
+                with self.assertRaisesRegex(SystemExit, reason):
+                    self.recipe.driver_resolution(self.cxx, self.probe)
 
 
 if __name__ == '__main__':

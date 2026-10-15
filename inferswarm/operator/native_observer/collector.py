@@ -282,8 +282,10 @@ class NativeObserverCollector:
     def collect_static(self, participant, spawn: OwnedSpawnFacts, manifest_path: str,
                        executable_path: str, source_receipt_digest: str, *,
                        expected_argv: tuple[str, ...],
-                       listener_endpoints: tuple[str, ...] = ()) -> ParticipantStaticEvidence:
-        build = self.collect_build(participant, manifest_path, executable_path)
+                       listener_endpoints: tuple[str, ...] = (),
+                       backend='cpu') -> ParticipantStaticEvidence:
+        build = self.collect_build(participant, manifest_path, executable_path,
+                                   backend=backend)
         identity = self.identity_reader.read(participant, spawn.pid,
             expected_executable=participant.runtime_executable,
             expected_sha256=participant.runtime_sha256,

@@ -134,13 +134,15 @@ def compiler_identity(compiler: str) -> str:
     return resolved + "\n" + version
 
 
-def cuda_driver_flags(cxx: str) -> list[str]:
+def cuda_driver_flags(cxx: str, *, absolute_path: bool = False) -> list[str]:
     """Resolve the VMM driver dependency before compiling, without running it.
 
     Prefer ordinary -lcuda when the compiler finds a development library.
     Runtime-only installs can link the stable libcuda.so.1 SONAME path from
     the compiler search or loader cache. Linking proves no device readiness;
     --list-devices remains a separate hardware check. Never select stubs.
+    CMake callers can request the validated absolute filename rather than
+    reconstructing it from the legacy -lcuda result; validation is identical.
     """
     def validate(path: Path, link_flags: list[str]) -> None:
         resolved = path.resolve()
@@ -197,11 +199,13 @@ def cuda_driver_flags(cxx: str) -> list[str]:
     failures = []
     for path, link_flags in candidates:
         try:
-            validate(path, link_flags)
+            validate(path, [str(path.resolve())] if absolute_path else link_flags)
         except (OSError, ValueError) as e:
             failures.append(str(e))
             continue
         print(f"CUDA driver: {path.resolve()} (link only, device readiness untested)")
+        if absolute_path:
+            return [str(path.resolve())]
         return link_flags[1:] if "-lcuda" in link_flags else link_flags
     detail = "; ".join(failures) or "no development library or libcuda.so.1 found"
     raise SystemExit(f"CUDA runtime driver unavailable: {detail}; "

@@ -21,12 +21,19 @@ instead of working around it.
    link width), `/srv/models` mount and free space, current listeners by
    owning process. Prior x4-link and occupied-RPC observations are historical
    and must be re-verified, not assumed.
-2. Coordinator (05): run the accepted CPU recipe unchanged into a fresh owned
+2. Coordinator (05): run the CPU recipe unchanged into a fresh owned
    directory — `operator-build.py` builds `llama-server` + `ggml-rpc-server`
    CPU/RPC in minutes. Record `build.json` plus both
-   `*.build-manifest.json`; these must reproduce the accepted
-   `operator-build-identities.json` CPU rows exactly (a mismatch is the
-   report, not a rebuild loop).
+   `*.build-manifest.json`, the absolute source/output prefix, resolved C/C++
+   compiler paths and complete version output, CMake version and build logs.
+   These are **candidate CPU receipts**, not a promise of identical hashes:
+   the unchanged composer embeds absolute source paths into CMake input before
+   hashing it, and the accepted rows record `c++ (GCC) 16.2.1 20260810`.
+   A fresh path or different toolchain can therefore change the manifest even
+   with the same verified archive and overlay.
+   Compare both manifests with the accepted CPU rows and retain every mismatch
+   for separate maintainer review; do not retry into a match, edit the bound
+   CPU recipe, overwrite accepted rows, or authorize a candidate from its receipt.
 3. Worker (03): run the additive CUDA recipe into a fresh owned directory:
    `python3 tools/native-cache/operator-build-cuda.py --archive <pin.tar.gz>
    --output /srv/models-owned/cuda-worker-build --arch 86` (RTX 3060 is
@@ -38,16 +45,22 @@ instead of working around it.
    exactly GPU0 (`--list-devices` or equivalent), refuses nothing unexpected,
    and that the manifest closure contains `libggml-cuda.a`. No model weights,
    no inference, no cache writes.
-5. Post the recorded CPU pair verification + the candidate
+5. Post the CPU build receipts and comparison + the candidate
    `cuda-worker-receipt.json` (executable/library closure hashes, compiler,
    nvcc, arch, resolved real driver path+sha) for maintainer review. STOP.
-   Acceptance means a maintainer adds the reviewed `remote-cuda` identity row
-   to `operator-build-identities.json` in a reviewed change — the receipt
-   itself grants nothing.
+   If the deployed CPU client matches its accepted row, CUDA qualification
+   still requires a maintainer-reviewed `remote-cuda` row in a separate change.
+   If the CPU receipts differ, a separate maintainer decision and reviewed
+   follow-up must establish the deployable CPU identities while preserving the
+   historical accepted pair; adding only a CUDA row is insufficient. This PR
+   adds no mechanism for selecting another CPU pair. Until that decision is
+   implemented, ordinary runtime admission and Step B remain blocked. Receipts
+   themselves grant nothing; Step A ends with their review, not qualification.
 
 ## Step B — after identities are accepted: selective backing + GPU load/readback
 
-Only after Step A's identities are reviewed in. Compact whole-tensor fixture
+Only after the complete deployed CPU/CUDA pair's identities are reviewed in,
+and Step B receives its own physical dispatch. Compact whole-tensor fixture
 first; this is a selective-loading/cache test, not an inference claim, and the
 full-model baseline's CPU layer assignment must NOT be reused on 03 without a
 separately proven fit.

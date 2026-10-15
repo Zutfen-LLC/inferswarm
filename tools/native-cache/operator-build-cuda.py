@@ -98,17 +98,8 @@ def driver_resolution(cxx, pin):
     proves the VMM symbol link. Map its verdict to an explicit
     ``CUDA_CUDA_LIBRARY`` so CMake binds the same validated library.
     """
-    flags = pin.cuda_driver_flags(cxx)
-    if '-lcuda' in flags:
-        # The probe linked -lcuda; resolve the development library through
-        # the reviewed probe's own -L directory (fail closed on shape drift
-        # rather than guessing a path).
-        link_dir = next((f[2:] for f in flags if f.startswith('-L')), None)
-        if link_dir is None:
-            raise SystemExit('shared CUDA probe returned no -L directory; refusing to guess')
-        resolved = Path(link_dir) / 'libcuda.so'
-    else:
-        resolved = Path(flags[0])
+    flags = pin.cuda_driver_flags(cxx, absolute_path=True)
+    resolved = Path(flags[0])
     if not resolved.is_file():
         raise SystemExit('validated CUDA driver path is not a file: ' + str(resolved))
     record = dict(link_flags=flags, resolved_path=str(resolved),

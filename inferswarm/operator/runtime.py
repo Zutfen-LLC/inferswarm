@@ -535,10 +535,16 @@ class OperatorRunner:
                     owned_endpoints=(f'{host}:{remote.port}',)
                 else:
                     owned_endpoints=(f'127.0.0.1:{p.port}',)
+                # Repeat the source precheck's role/backend join at static
+                # collection; the coordinator remains CPU for either plan.
+                from .assigned_backing import CONTRACT, CUDA_BACKEND, CPU_BACKEND
+                build_kwargs = ({'backend': CUDA_BACKEND if p.role=='remote'
+                    and plan.selection=='one-gpu' else CPU_BACKEND}
+                    if options['source_contract']==CONTRACT else {})
                 evidence=self.collector.collect_static(p,spawn,
                     manifest_path,executable_path,
                     _sha256(sources[p.participant_id]),expected_argv=argv,
-                    listener_endpoints=owned_endpoints)
+                    listener_endpoints=owned_endpoints,**build_kwargs)
                 static_evidence.append(evidence)
             static_receipt=self.static_reconciler(plan,static_evidence,sources,**mode)
             self._live(client,remote)
