@@ -559,6 +559,7 @@ class OperatorRunner:
             if campaign_guard is not None:
                 campaign_before=campaign_guard.before_request(plan,rows,process_receipts,sources)
             request=dict(plan.request)
+            if campaign_guard is not None: campaign_guard.request_started()
             response=self.http.post(base+'/v1/chat/completions',
                 {'messages':[{'role':'user','content':request['prompt']}],
                  'max_tokens':request['max_tokens'],'temperature':request['temperature'],

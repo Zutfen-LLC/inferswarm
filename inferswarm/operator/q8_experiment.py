@@ -64,6 +64,7 @@ class ExperimentalLeaseManager(LeaseManager):
         self.helper_index=0
         self.helper_receipts=[]
         self.stopped_receipts={}
+        self.spawn_receipts=[]
 
     def register(self,address,unit):
         # Register BEFORE dispatch so a failed/ambiguous SSH reply remains owned.
@@ -212,6 +213,8 @@ class ExperimentalLeaseManager(LeaseManager):
             cache=cache, export=export, assigned=assigned,
             supervision=supervision)
         self.owned[address][name] = result
+        if hasattr(self,'spawn_receipts'):
+            self.spawn_receipts.append(dict(address=address,name=name,argv=list(argv),**result))
         return result
 
 
@@ -323,6 +326,8 @@ class SystemdCampaignGuard:
         self.clock=clock; self.pause=pause; self.started=None; self.execute_deadline=None
         self.client=None; self.remote=None; self.process_receipts=None
         self.rows={}; self.uids={}; self.gids={}
+        self.request_attempts=0; self.verified_backing={}
+        self.last_aggregates={}; self.last_gpu_rows=[]; self.last_host_available={}
         self._stop=threading.Event(); self._thread=None; self._samples=[]; self._monitor_error=None
         if hasattr(leases,'configure'): leases.configure(self)
 
@@ -346,6 +351,7 @@ class SystemdCampaignGuard:
             '--property=MemoryMax','--property=MemorySwapMax','--property=MemoryCurrent',
             '--property=MemorySwapCurrent','--property=ControlGroup'])
         props=dict(line.split('=',1) for line in raw.splitlines() if '=' in line)
+        self.last_aggregates[address]=props
         expected=(_LIMITS['worker_memory_max_bytes'] if address==self.remote.execution_address
                   else _LIMITS['coordinator_memory_max_bytes'])
         if (int(props['MemoryMax'])!=expected or int(props['MemorySwapMax'])!=0
@@ -356,6 +362,7 @@ class SystemdCampaignGuard:
             raise ValueError('invalid aggregate ControlGroup')
         events=self.commands.run(address,['cat','/sys/fs/cgroup'+group+'/memory.events'])
         counters=dict(line.split() for line in events.splitlines())
+        props['memory_events']=counters
         if any(int(counters[k]) for k in ('oom','oom_kill')):
             raise RuntimeError('owned aggregate allocator/OOM failure: '+address)
         props['memory_events']=counters  # max/reclaim alone is an observation
@@ -379,6 +386,7 @@ class SystemdCampaignGuard:
                 raise ValueError('unparseable nvidia-smi GPU observation')
             rows.append(dict(index=int(fields[0]),uuid=fields[1],
                 free_bytes=int(fields[2])<<20,utilization=int(fields[3])))
+        self.last_gpu_rows=rows
         wanted=dict(self.envelope.gpu_bindings)
         by_uuid={row['uuid']:row for row in rows}
         for selector in ('CUDA0','CUDA1'):
@@ -402,6 +410,7 @@ class SystemdCampaignGuard:
 
     def _memory(self,part,minimum):
         available=self._available(self._run(part,['grep','-E','^MemAvailable:','/proc/meminfo']))
+        self.last_host_available[part.host_id]=available
         if available<minimum: raise RuntimeError('host headroom breach: '+part.host_id)
         return available
 
@@ -442,6 +451,7 @@ class SystemdCampaignGuard:
             self._thread.start()
 
     def sources_verified(self,plan,sources):
+        self.verified_backing=sources
         receipt=sources.get(self.remote.participant_id)
         guards=receipt.get('assigned_guard_paths') if isinstance(receipt,dict) else None
         if not isinstance(guards,dict) or set(guards)!={'binding-B-gpu0','binding-B-gpu1'}:
@@ -538,6 +548,11 @@ class SystemdCampaignGuard:
         self._samples.append(receipt['sample'])
         return receipt
 
+    def request_started(self):
+        self.checkpoint()
+        if self.request_attempts: raise RuntimeError('experimental request already attempted')
+        self.request_attempts=1
+
     def request_timeout_seconds(self):
         remaining=int(self.execute_deadline-self.clock())
         if remaining<1: raise TimeoutError('campaign execution deadline reached')
@@ -587,6 +602,13 @@ class SupervisedCollectorTransport(SSHCollectorTransport):
         return self.manager.run_helper(address,command,**kwargs)
 
 
+class ExperimentalCampaignError(RuntimeError):
+    """A nonzero campaign result with its partial evidence still available."""
+    def __init__(self,campaign_receipt,cause):
+        super().__init__(str(cause))
+        self.campaign_receipt=campaign_receipt
+
+
 def run_experimental_campaign(config_path,envelope_path,*,commands=None,transport=None,
                               runner_factory=None):
     """Run exactly one unqualified request under the reviewed #313 envelope."""
@@ -605,7 +627,11 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
             collector=NativeObserverCollector(transport=SupervisedCollectorTransport(manager),selective=True))
     else:
         runner=runner_factory(manager)
-    result=runner._execute_two_gpu_diagnostic(plan,plan.admission,campaign_guard=guard)
+    result={}; failure=None
+    try: result=runner._execute_two_gpu_diagnostic(plan,plan.admission,campaign_guard=guard)
+    except Exception as exc:
+        failure=exc
+        result=dict(status='STOPPED',error=str(exc),error_type=type(exc).__name__)
     result.update(schema='q8-two-gpu-experimental-campaign/1',
         experimental_opt_in=True,output_accepted=False,physical_qualified=False,
         execution_authorized=False,experimental_execution_authorized=True,
@@ -614,7 +640,16 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         normal_execution_ready=envelope.normal_execution_ready,
         unknown_allocations=list(envelope.unknown_allocations),limits=dict(envelope.limits),
         request_sha256=envelope.request_sha256,config_sha256=envelope.config_sha256,
-        attempts=1,restarts=0,
-        helper_receipts=manager.helper_receipts,
-        final_aggregate_receipts=guard.final_aggregates)
+        frozen_request=dict(plan.request),gpu_bindings=dict(envelope.gpu_bindings),
+        attempts=1,request_attempts=guard.request_attempts,restarts=0,
+        helper_receipts=manager.helper_receipts,spawn_receipts=manager.spawn_receipts,
+        verified_backing=guard.verified_backing,cleanup=runner.last_cleanup,
+        final_aggregate_receipts=getattr(guard,'final_aggregates',{}))
+    if failure is not None:
+        result.update(samples=list(guard._samples),
+            last_aggregate_observations=guard.last_aggregates,
+            last_gpu_observations=guard.last_gpu_rows,
+            last_host_available=guard.last_host_available,
+            monitor_failure=str(guard._monitor_error) if guard._monitor_error is not None else None)
+        raise ExperimentalCampaignError(result,failure) from failure
     return result

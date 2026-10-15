@@ -453,6 +453,7 @@ class TwoGpuTopologyTests(unittest.TestCase):
             def before_request(self,*args):
                 if self.fail=='before': raise RuntimeError('material allocator refusal')
                 return {'cgroups':'bounded'}
+            def request_started(self): pass
             def request_timeout_seconds(self): return 900
             def after_request(self,*args):
                 if self.fail=='monitor': raise RuntimeError('material monitor failure')

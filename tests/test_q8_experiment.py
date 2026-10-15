@@ -164,10 +164,10 @@ class ExperimentalDriverTests(unittest.TestCase):
                     return original(config,envelope,commands=fixture,transport=fixture,runner_factory=runner)
                 with patch.object(experiment,'run_experimental_campaign',side_effect=dispatch), \
                      contextlib.redirect_stdout(io.StringIO()) as output, \
-                     contextlib.redirect_stderr(io.StringIO()):
+                     contextlib.redirect_stderr(io.StringIO()) as error:
                     code=cli.main(['experimental-q8-two-cuda','--config',str(self.config),
                                    '--envelope',str(self.envelope)])
-                return code,json.loads(output.getvalue()) if output.getvalue() else None,fixture
+                return code,json.loads(output.getvalue() or error.getvalue()),fixture
             try:
                 result=experiment.run_experimental_campaign(self.config,self.envelope,
                     commands=fixture,transport=fixture,runner_factory=runner)
@@ -182,6 +182,11 @@ class ExperimentalDriverTests(unittest.TestCase):
         self.assertEqual(result['campaign_observation']['after_request']['compute_attribution'],'INCONCLUSIVE')
         self.assertEqual((result['attempts'],result['restarts']),(1,0))
         self.assertFalse(fixture.services); self.assertTrue(fixture.tunnel.done)
+        failed_code,failed,failed_fixture=self.execute('timeout',cli_path=True)
+        self.assertEqual(failed_code,1)
+        self.assertEqual(failed['campaign']['request_attempts'],1)
+        self.assertEqual(failed['campaign']['status'],'STOPPED')
+        self.assertFalse(failed_fixture.services)
         self.assertEqual(len(fixture.rows),3)
         for (_,name),row in fixture.rows.items():
             expected='GPU-'+'a'*32+',GPU-'+'b'*32 if name.startswith('rpc') else ''
@@ -191,7 +196,15 @@ class ExperimentalDriverTests(unittest.TestCase):
         for mode in ('aggregate','headroom','source','partial','request','timeout','allocator','monitor'):
             with self.subTest(mode=mode):
                 result,fixture=self.execute(mode)
-                self.assertIsInstance(result,Exception,str(result))
+                self.assertIsInstance(result,experiment.ExperimentalCampaignError,str(result))
+                receipt=result.campaign_receipt
+                self.assertEqual(receipt['status'],'STOPPED')
+                self.assertEqual(receipt['config_sha256'],self.raw['config_sha256'])
+                self.assertEqual(receipt['request_sha256'],self.raw['request_sha256'])
+                self.assertEqual(receipt['request_attempts'],len(fixture.posts))
+                self.assertTrue(receipt['unknown_allocations'])
+                self.assertFalse(receipt['output_accepted'])
+                self.assertIn('cleanup',receipt); self.assertIn('last_aggregate_observations',receipt)
                 self.assertRegex(str(result),{'aggregate':'aggregate cgroup','headroom':'headroom',
                     'source':'source identity','partial':'ambiguous rpc1','request':'request failed',
                     'timeout':'request deadline','allocator':'allocator/device','monitor':'monitor'}[mode])

@@ -23,7 +23,9 @@ def main(argv=None):
         print(json.dumps(result,sort_keys=True))
         return 0
     except Exception as exc:
-        print(json.dumps({'error':str(exc),'type':type(exc).__name__}),file=sys.stderr)
+        error={'error':str(exc),'type':type(exc).__name__}
+        if hasattr(exc,'campaign_receipt'): error['campaign']=exc.campaign_receipt
+        print(json.dumps(error,sort_keys=True),file=sys.stderr)
         return 1
 
 if __name__=='__main__': raise SystemExit(main())
