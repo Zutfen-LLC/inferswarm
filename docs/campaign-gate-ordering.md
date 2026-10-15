@@ -483,16 +483,38 @@ data (`actions: read` / `repo` read; no write, rerun or dispatch). The
 expected head is the independently derived `FinalHeadRequest` SHA; nothing
 the API or a caller asserts can change it.
 
+Three **trust anchors** are pinned in the verifier and are never caller
+input; a caller-supplied value is only *checked against* the pin and is
+rejected (usage error, exit 2) before the bearer token is resolved or any
+request is made:
+
+- **Repository** — only `Zutfen-LLC/inferswarm` (exact string) is ever
+  authorized. `--repo` may restate it but can never select another
+  repository, so another repository that happens to hold the identical commit
+  SHA and internally consistent workflow/run/job/PR records is never
+  evaluated (`TrustAnchorError`; `repository_not_canonical` if a verifier is
+  retargeted after construction).
+- **API origin** — only `https://api.github.com` (exact string) is ever
+  contacted with the token. A `GITHUB_API_URL` that names anything else —
+  another host, a lookalike, a port, a path, `http`, a loopback — is refused
+  before any request, and the production client is built from the pin rather
+  than from the offered value. A `HttpActionsApi` aimed elsewhere (or in
+  loopback-test mode, or bound to another repository) cannot back a
+  `HostedCiVerifier`. Offline fakes remain injectable from Python
+  (`main(..., api_factory=...)`), but no option or environment variable
+  selects a client, so injection is not a production bypass.
+- **Current PR** — the authoritative handoff requires `--pr` (below).
+
 | Requirement | How it is checked (all from the API) |
 |---|---|
 | Canonical workflow | workflow endpoint for `ci.yml` is named `CI`, path `.github/workflows/ci.yml`, state `active`; every run must carry that workflow id, path and name (so a Final CPU Validation run is never ordinary CI) |
-| This repository | run `repository` and `head_repository` both equal the expected repository (forks/foreign rejected); with `--pr`, the PR's head repository too |
+| This repository | run `repository` and `head_repository` both equal the pinned `Zutfen-LLC/inferswarm` (forks/foreign rejected); with `--pr`, the PR's head **and base** repository too |
 | Exact head | runs are listed with `head_sha=<expected>`; every returned run and job must report that same SHA. GitHub reports a `pull_request` run's `head_sha` as the PR **head** commit (not the synthetic merge commit the job checks out), and a `workflow_dispatch` run's as the dispatched branch tip. Only those two events count; a `push` run is not PR CI |
 | Completed success | newest eligible run is `completed`/`success`; `queued`/`in_progress` is `ci_pending`, `cancelled` is `ci_cancelled`, failures are `ci_failed` |
 | The real gate | exactly one `CI Gate` job, `completed`/`success`; the always-required `Plan CI (impact selection)` and `Group repo-integrity (always-on)` jobs succeeded; every job is `success` or `skipped` |
 | Attempt identity | every job is from the run's latest `run_attempt`; the run is re-read after its jobs and must be unchanged (a rerun in flight is `ambiguous_evidence`) |
 | Completeness | listings must be provably complete (`total_count` vs rows, bounded pages) or `pagination_uncertain` |
-| Branch / PR head | with `--pr`, the PR's **current** head must still equal the final head (`pr_head_moved` otherwise) and its head branch must equal the run's branch |
+| Current PR | with `--pr`: the PR is read **before** any CI evidence and **again after** the run/jobs checks. Both reads must be the same PR, open (`pr_not_open`), with head and base in this repository (`foreign_repository`), head still equal to the final head (`pr_head_moved`), head branch equal to the run's branch (`branch_mismatch`) and unchanged between the reads (`pr_branch_drift`, `pr_identity_drift`, e.g. a retargeted base) |
 | Run pin | an optional claim run id must be the newest eligible run (`stale_run` / `pinned_run_not_found`) |
 
 Every uncertainty is **BLOCKED**, never PASS: no run (`no_ci_run`), API
@@ -514,7 +536,12 @@ existing gates (full-suite proof, finalizer/status) are untouched. Without a
 verifier a supplied claim is BLOCKED `unauthenticated_claim` and no claim is
 BLOCKED `no_ci_verification`; a verdict that is not bound to this head
 (`verdict_mismatch`) or a verifier that is not a `HostedCiVerifier` is
-rejected. Executable form:
+rejected. Two further gates reject **before any API request**: a verifier
+whose repository is not the pinned one (`repository_not_canonical`) and a
+verifier built without a PR number (`pr_binding_missing`) — a PR-unbound
+verifier is a *diagnostic* and can never complete the handoff. A PASS verdict
+is only accepted if it is `pr_bound` to an open PR at exactly this head in
+the pinned repository. Executable form:
 
 ```sh
 export GITHUB_TOKEN=$(gh auth token)            # read-only use
@@ -526,15 +553,21 @@ python3 scripts/issue213_gate_orchestration.py handoff \
 ```
 
 A claim or `--hosted-ci-run-id` must be a numeric GitHub run id (a textual
-id such as `run-79` is BLOCKED `claim_malformed`); `--pr` is optional but
-without it the PR-head-moved and branch bindings are skipped, so pass it for
-every governed handoff. A "Re-run failed jobs" rerun can keep carried-over
+id such as `run-79` is BLOCKED `claim_malformed`). For the **governed
+handoff** `--pr` is required: `issue213_gate_orchestration.py handoff`
+without a positive `--pr` exits 2 before any request. Standalone `verify`
+without `--pr` stays available as a **diagnostic** (for example to see
+`no_ci_run` for a `[skip ci]` head): it prints a diagnostic note, its verdict
+carries `pr_bound: false`, and it cannot satisfy the handoff. A "Re-run
+failed jobs" rerun can keep carried-over
 jobs from an earlier attempt, which the verifier conservatively BLOCKS as
 `stale_attempt` (never a false PASS); use "Re-run all jobs" or a fresh
 `workflow_dispatch` run instead.
 
 `verify` exits 0 for PASS and 3 for BLOCKED; `handoff` exits 0 only for a
-complete handoff and records the verdict in its output.
+complete handoff and records the verdict in its output. Both exit 2 on a
+usage error, including a repository or `GITHUB_API_URL` that is not the pinned
+one and (for `handoff`) a missing `--pr`.
 
 ### Recovery when no ordinary CI run exists (`[skip ci]`)
 
@@ -575,6 +608,19 @@ ordinary CI succeeds is a ruleset (or classic branch protection) on `main`:
 - Optionally also require `Final CPU Validation Gate`; it reports on the
   head SHA only when dispatched on the exact head, so it blocks until the
   post-review dispatch exists. Not required by this issue.
+
+Residual, accepted limitations (experiment-first standard):
+
+- The pins (`CANONICAL_REPOSITORY`, `OFFICIAL_API_ORIGIN`) live in the
+  repository's own code, so changing them is a reviewed code change, not a
+  runtime option; the origin pin is enforced against configuration, not
+  against code that is already running in the verifier's process. Final CPU
+  Validation's own receipt-reuse lookup (`final_validation_reuse.py`) is a
+  separate path and is unchanged.
+- The PR is read twice around the CI evidence, which closes drift during the
+  verification; it cannot prevent a push, close or retarget *after* the
+  second read — that is what re-running the handoff on the final head (and
+  the external ruleset above) is for.
 
 Residual, accepted limitation (experiment-first standard): for
 `pull_request` events GitHub runs the workflow definition from the merge

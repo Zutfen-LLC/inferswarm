@@ -57,6 +57,10 @@ handoff.  Four concerns live here:
    GitHub Actions data: canonical ``ci.yml`` run on the exact head, latest
    attempt, aggregate ``CI Gate`` job); a missing run (``[skip ci]``), an
    unauthenticated claim or any API doubt keeps the handoff incomplete.
+   The repository (``Zutfen-LLC/inferswarm``) and the API origin
+   (``https://api.github.com``) are pinned trust anchors, not caller input,
+   and the verifier must be bound to the CURRENT open PR head (``--pr``):
+   a diagnostic, PR-unbound verifier can never complete the handoff.
 
 5. **Hosted Final CPU Validation receipts (Issue #226).**  The canonical
    full CPU suite may run HOSTED — the ``final-cpu-validation.yml``
@@ -1339,6 +1343,19 @@ def _authenticate_hosted_ci(final_head: "FinalHeadRequest",
         return blocked(
             "no_ci_verification",
             "no authenticated ordinary-CI verification was supplied")
+    # Both gates reject BEFORE any API request is made.
+    if ci_verifier.repository != ci_verification.CANONICAL_REPOSITORY:
+        return blocked(
+            "repository_not_canonical",
+            f"the verifier targets {ci_verifier.repository!r}; only "
+            f"{ci_verification.CANONICAL_REPOSITORY!r} can authorize the "
+            "handoff")
+    if ci_verifier.pr_number is None:
+        return blocked(
+            "pr_binding_missing",
+            "the verifier is not bound to a PR (diagnostic only): the "
+            "authoritative handoff requires the current open PR head "
+            "(--pr)")
     verdict = ci_verifier.verify(sha, pinned_run_id=pinned)
     structurally_ok = (
         isinstance(verdict, dict)
@@ -1349,12 +1366,22 @@ def _authenticate_hosted_ci(final_head: "FinalHeadRequest",
     if structurally_ok and verdict["verdict"] == ci_verification.PASS:
         run = verdict.get("run")
         gate_job = verdict.get("gate_job")
+        pull = verdict.get("pull_request")
         structurally_ok = (
             verdict.get("reason_code") is None
+            and verdict.get("repository")
+            == ci_verification.CANONICAL_REPOSITORY
             and isinstance(run, dict) and run.get("head_sha") == sha
             and run.get("conclusion") == "success"
             and isinstance(gate_job, dict)
-            and gate_job.get("conclusion") == "success")
+            and gate_job.get("conclusion") == "success"
+            # Current-PR binding: the PR was read, open, in this repository
+            # and at exactly this head, and re-read unchanged.
+            and verdict.get("pr_bound") is True
+            and isinstance(pull, dict)
+            and pull.get("number") == ci_verifier.pr_number
+            and pull.get("state") == "open"
+            and pull.get("head_sha") == sha)
     if not structurally_ok:
         return blocked("verdict_mismatch",
                        "the verifier verdict is malformed or not bound to "
@@ -1409,6 +1436,13 @@ def handoff_gate_status(final_head: FinalHeadRequest,
     (``no_ci_run``) even when Final CPU Validation succeeded.  The verdict is
     returned under ``hosted_ci_verdict`` (it never raises for a BLOCKED
     verdict; malformed inputs still raise).
+
+    Trust anchors (Issue #323 review): the verifier must target the pinned
+    ``Zutfen-LLC/inferswarm`` repository (``repository_not_canonical``) and
+    must be bound to the CURRENT open PR head (``pr_binding_missing`` for a
+    diagnostic verifier built without ``pr_number``); both are rejected
+    before any API request, and a PASS verdict that is not ``pr_bound`` to
+    an open PR at exactly this head is ``verdict_mismatch``.
     """
     if not isinstance(final_head, FinalHeadRequest):
         raise GateOrderingError(
@@ -2238,10 +2272,14 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
                         help="the deterministic finalizer/project-status "
                              "checks passed on this head (unchanged #213 "
                              "semantics)")
-    parser.add_argument("--repo", required=True, help="OWNER/REPO")
+    parser.add_argument("--repo", required=True,
+                        help="OWNER/REPO; must be "
+                             f"{ci_verification.CANONICAL_REPOSITORY} (a "
+                             "pinned trust anchor, checked not trusted)")
     parser.add_argument("--pr", type=int, default=None,
-                        help="PR number: its CURRENT head must be the final "
-                             "head (a moved head blocks the handoff)")
+                        help="REQUIRED: the PR number. Its CURRENT open head "
+                             "must be the final head, read before and after "
+                             "the CI checks (any drift blocks the handoff)")
     parser.add_argument("--hosted-ci-run-id", default=None,
                         help="optionally pin the deciding ordinary CI run")
     parser.add_argument("--out", required=True)
@@ -2250,14 +2288,28 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
         print("handoff: usage error: supply --final-validation-receipt "
               "and/or --suite-receipt")
         return 2
+    if args.pr is None or args.pr < 1:
+        print("handoff: usage error: --pr <N> is required: the authoritative "
+              "handoff is bound to the current open PR head (a standalone "
+              "`hosted_ci_verification.py verify` without --pr is a "
+              "diagnostic and cannot satisfy it)")
+        return 2
+    env = environ if environ is not None else os.environ
+    # Trust anchors are checked BEFORE the credential is resolved and before
+    # any client exists, whether or not a client is injected.
+    api_url = env.get("GITHUB_API_URL", ci_verification.OFFICIAL_API_ORIGIN)
+    try:
+        ci_verification.require_canonical_repository(args.repo)
+        ci_verification.require_official_api_origin(api_url)
+    except ci_verification.TrustAnchorError as error:
+        print(f"handoff: usage error: {error}")
+        return 2
     token = ci_verification.resolve_token(
-        environ if environ is not None else os.environ,
-        allow_gh_fallback=api_factory is None and environ is None)
+        env, allow_gh_fallback=api_factory is None and environ is None)
     if not token:
         print("handoff: usage error: set GITHUB_TOKEN (read-only) or log in "
               "with gh")
         return 2
-    env = environ if environ is not None else os.environ
     try:
         head = (request_factory or current_final_head_request)(args.root)
         suite = (_load_json_object(args.suite_receipt, "suite receipt")
@@ -2266,8 +2318,7 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
                                       "final-validation receipt")
                     if args.final_validation_receipt else None)
         api = (api_factory or ci_verification.default_api_factory)(
-            env.get("GITHUB_API_URL", "https://api.github.com"), args.repo,
-            token)
+            api_url, args.repo, token)
         verifier = ci_verification.HostedCiVerifier(api, args.repo,
                                                     pr_number=args.pr)
         claim = (build_hosted_ci_status(head.git_commit_sha,
