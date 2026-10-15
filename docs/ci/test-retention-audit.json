@@ -971,6 +971,32 @@
       "replacement": "integrity_replacements[phase1-derivations]: accepted manifest rows + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
       "test_count_at_audit": null
     },
+    "test_bounded_acquisition": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 17,
+      "category": "CURRENT_REGRESSION",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Opt-in assigned-only bounded HTTP acquisition amortizes request/connection/checkpoint counts while preserving exact identity, final SHA publication and interrupted-process checkpoint recovery.",
+      "lineage": "Bounded initial acquisition successor to #99/#101/#311",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "scripts/bounded_acquisition.py",
+          "scripts/issue311_preparation.py",
+          "scripts/issue99_artifact_core.py",
+          "scripts/issue101_fixture.py",
+          "scripts/issue101_orchestration.py",
+          "scripts/issue311_native_backing.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Synthetic offline/loopback regressions protect initial preparation and recovery; no hardware performance, native build or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 17
+    },
     "test_ci_test_retention": {
       "baseline_group": null,
       "baseline_serial_seconds": null,
@@ -3300,7 +3326,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c…, stable AMD row 2187ab8f…, V0n dispatch 4aa0aa0b…, freeze 3fe9e74d…, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
+      "invariant": "The post-V0n Arm-A reachability bridge (AMENDMENT-008) is fail-closed in every direction: the canonical record digest-authenticates and binds EXACTLY the accepted evidence identities (V0 dispatch 99cb573c\u2026, stable AMD row 2187ab8f\u2026, V0n dispatch 4aa0aa0b\u2026, freeze 3fe9e74d\u2026, the two novel V0n rows); the retained V0n population must authenticate through the frozen producer verifiers (freeze custody, row digests, identity, mismatched first pair); absent/tampered/drifted records reject; only d250-arm-a / A-vulkan-necessity is eligible; the historical AMD_VARIABLE gate is preserved verbatim for every other arm; the accepted #241/#248 constants stay immutable; V0n semantics (terminal=None, a_eligible=False) never change; a fresh exact-head dispatch remains mandatory and B/C/C1/C2/D gain no reachability.",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -3521,7 +3547,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations — a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) — the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
+      "invariant": "The R8-I3B retained-byte terminal reducer (#250 correction pass 4) accepts no caller-supplied determinism/factor/terminal values: it re-derives every conclusion from retained unit bytes, campaign attestations, the live dispatch-authority binding, and the accepted #248 retained ngl=1 contrast; enforces the frozen prefix population law (valid mismatch early-stop vs incomplete/truncated vs invalid populations \u2014 a truncated lifecycle is NEVER terminal-complete even when its retained prefix happens to contain a row mismatch; deterministic confirmation at the frozen repeat count); distinguishes authority-loss truncation from mismatch stops; re-derives task-bound reset proofs from retained logs; judges Arm-D against ACTUAL token counts with the single source-proven transition predicate (indexer top_k SELECTION-WIDTH execution boundary: all-cells side n_kv <= 2051, selective side n_kv >= 2052; width = min(n_kv, top_k + compress_ratio - 1); pinned source src/models/qwen4exp.cpp build_qsa_top_k) \u2014 the midstream ubatch split predicate is RETIRED (wall-clock sampled progress counts cannot localize; D without a firing predicate ends UNRESOLVED).",
       "lineage": "R8-I3B reference runtime-boundary localization (#250)",
       "named_by_evidence": [],
       "owned_surfaces": {
@@ -4665,7 +4691,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold — the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
+      "invariant": "Issue #284 observer-retention correction law: library producer TUs must emit I280 events at log level NONE (the pinned common_log_default_callback drops library INFO at the default threshold \u2014 the retained-run root cause); proves the drop mechanism from pinned source bytes and binds the corrected transform sink lines.",
       "lineage": "Issue #284 observer retention correction law",
       "pinned_by_evidence": [
         "docs/investigations/vulkan-same-request-280/compatibility/MANIFEST.sha256"
@@ -4757,7 +4783,7 @@
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
-      "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws — the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed — a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch — no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
+      "invariant": "Issue #289 physical launcher server lifecycle: the tracked launcher (scripts/issue289_launcher.py) drives the unchanged pure gate engine with corrected launch laws \u2014 the prior owned launch is stopped and reaped (SIGTERM then SIGKILL to the owned process group) with port release verified BEFORE the next launch; a foreign port occupant is never contacted; readiness requires the owned child alive under the same process instance AND reporting this launch's identity token; every completion response must echo that identity (SERVER_IDENTITY_MISMATCH is a transport failure, never admission); launch failures consume request slots fail-closed; no owned child survives campaign return on COMPLETE, STOP, or exception. CPU-only loopback stub servers; no model/GPU/Vulkan/device execution. Review 5459338940 additions: command_builder environment additions reach the spawned child and never override the generated launch identity (B2); PID/start-time identity is strictly fail-closed \u2014 a missing or unreadable /proc start time never authenticates a live PID at capture, readiness, or request time (B3); the exact frozen prompt bytes and request settings must be supplied explicitly and hash-verified before any HTTP dispatch \u2014 no silent default prompt text (B4). Review 5461889945: readiness explicitly consumes the liveness tuple and rejects identity loss/change or child exit before trusting a token (N1); production prompt/hash/settings are checked against independently digest-pinned retained workload authority, row overrides and unapproved settings are rejected, accepted greedy-to-top_k normalization is applied, and retained request identity derives from actual transmitted bytes (N2).",
       "lineage": "Issue #289 extraction of the session-local #280 r3 physical driver lifecycle (inferswarm05 driver.py sha256 2cc001b5...)",
       "owned_surfaces": {
         "evidence_read": [],
@@ -5166,6 +5192,26 @@
       "replacement": null,
       "test_count_at_audit": 20
     },
+    "test_issue311_cuda_backing": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 15,
+      "category": "CURRENT_CONTRACT",
+      "current_test_count": 19,
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Selective CPU pair admission unchanged; the explicitly reviewed one-GPU pair is expressible only through a reviewed backend-qualified CUDA worker identity, and missing/unqualified CUDA identities, CPU-hash reuse, server-local placement and receipt-as-approval all refuse.",
+      "lineage": "Issue #311/#313/#315 CUDA selective-backing prerequisite; successor to merged #318 CPU startup connection",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": []
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline synthetic identity/admission/build-recipe regressions only. No CUDA compilation, GPU access, model bytes, inference, physical qualification, acceptance or execution authority.",
+      "replacement": null,
+      "test_count_at_audit": 15
+    },
     "test_issue311_preparation": {
       "baseline_group": "issue-99-103",
       "baseline_serial_seconds": null,
@@ -5188,26 +5234,6 @@
       "rationale": "Offline synthetic preparation proof; ordinary selective startup is tested separately by test_issue311_startup. No physical qualification, acceptance or execution authority.",
       "replacement": null,
       "test_count_at_audit": 12
-    },
-    "test_issue311_cuda_backing": {
-      "baseline_group": "issue-99-103",
-      "baseline_serial_seconds": null,
-      "baseline_test_count": 15,
-      "category": "CURRENT_CONTRACT",
-      "current_test_count": 19,
-      "disposition": "retain",
-      "group": "issue-99-103",
-      "invariant": "Selective CPU pair admission unchanged; the explicitly reviewed one-GPU pair is expressible only through a reviewed backend-qualified CUDA worker identity, and missing/unqualified CUDA identities, CPU-hash reuse, server-local placement and receipt-as-approval all refuse.",
-      "lineage": "Issue #311/#313/#315 CUDA selective-backing prerequisite; successor to merged #318 CPU startup connection",
-      "named_by_evidence": [],
-      "owned_surfaces": {
-        "evidence_read": [],
-        "scripts_imported": []
-      },
-      "pinned_by_evidence": [],
-      "rationale": "Offline synthetic identity/admission/build-recipe regressions only. No CUDA compilation, GPU access, model bytes, inference, physical qualification, acceptance or execution authority.",
-      "replacement": null,
-      "test_count_at_audit": 15
     },
     "test_issue311_startup": {
       "baseline_group": "issue-99-103",
@@ -5259,7 +5285,7 @@
       "rationale": "Offline exact planning, lowering, accounting and small CPU-backed acquisition lifecycle proof only. No CUDA execution, GPU residency, performance, physical qualification, acceptance or execution authority.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 8
+      "test_count_at_audit": 19
     },
     "test_issue323_verified_ordinary_ci": {
       "baseline_group": "issue-213-gate-ordering",
@@ -5882,6 +5908,33 @@
       "referenced_by_scripts": [],
       "replacement": null,
       "test_count_at_audit": 9
+    },
+    "test_q8_experiment": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 6,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "The real opt-in CLI/driver retains blocked ordinary admission and unknown bounds, freezes one request, verifies aggregate systemd limits and UUID mapping, supervises source helpers, stops and cleans all owned jobs on partial spawn/request/timeout/allocator/monitor failures, and never accepts or qualifies output.",
+      "lineage": "Issue #313 opt-in experimental campaign correction to PR #326",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "tests/fixtures/issue299/q8-metadata.json"
+        ],
+        "scripts_imported": [
+          "inferswarm/operator/q8_experiment.py",
+          "inferswarm/operator/__main__.py",
+          "inferswarm/operator/lifecycle.py",
+          "inferswarm/operator/runtime.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline config/CLI/driver with fake process interfaces plus owned systemd command construction and launch rollback; no hardware, model bytes or physical authorization.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": 6
     },
     "test_run_full_cpu_suite": {
       "baseline_group": "repo-integrity",
@@ -6524,32 +6577,6 @@
       "replacement": "integrity_replacements[vulkan-v0c-v1-v2a]: accepted manifest rows (retired test rows tombstoned in docs/ci/retired-test-rows.json) + CI-owned pins in docs/ci/retired-lineage-pins.sha256, verified by scripts/check_ci_test_retention.py and tests/test_ci_test_retention.py (always-on repo-integrity).",
       "retired_in": "PR #247 correction round 1",
       "test_count_at_audit": null
-    },
-    "test_bounded_acquisition": {
-      "baseline_group": "issue-99-103",
-      "baseline_serial_seconds": null,
-      "baseline_test_count": 17,
-      "category": "CURRENT_REGRESSION",
-      "disposition": "retain",
-      "group": "issue-99-103",
-      "invariant": "Opt-in assigned-only bounded HTTP acquisition amortizes request/connection/checkpoint counts while preserving exact identity, final SHA publication and interrupted-process checkpoint recovery.",
-      "lineage": "Bounded initial acquisition successor to #99/#101/#311",
-      "named_by_evidence": [],
-      "owned_surfaces": {
-        "evidence_read": [],
-        "scripts_imported": [
-          "scripts/bounded_acquisition.py",
-          "scripts/issue311_preparation.py",
-          "scripts/issue99_artifact_core.py",
-          "scripts/issue101_fixture.py",
-          "scripts/issue101_orchestration.py",
-          "scripts/issue311_native_backing.py"
-        ]
-      },
-      "pinned_by_evidence": [],
-      "rationale": "Synthetic offline/loopback regressions protect initial preparation and recovery; no hardware performance, native build or execution authority.",
-      "replacement": null,
-      "test_count_at_audit": 17
     }
   },
   "retired_test_rows": "docs/ci/retired-test-rows.json",
