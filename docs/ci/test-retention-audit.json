@@ -1030,7 +1030,7 @@
     "test_derive_phase1_placement_v2": {
       "baseline_group": "phase1-analysis",
       "baseline_serial_seconds": 0.36,
-      "baseline_test_count": 13,
+      "baseline_test_count": 9,
       "category": "HISTORICAL_ONLY",
       "disposition": "integrity-replacement",
       "group": null,
@@ -1156,7 +1156,7 @@
         "scripts/v0b_manifest.py"
       ],
       "replacement": null,
-      "test_count_at_audit": 13
+      "test_count_at_audit": 9
     },
     "test_finalize_repository": {
       "baseline_group": "repo-integrity",
@@ -3930,7 +3930,7 @@
     "test_issue254_round7": {
       "baseline_group": "r8i-qwen-qualification",
       "baseline_serial_seconds": 0.0,
-      "baseline_test_count": 9,
+      "baseline_test_count": 8,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "r8i-qwen-qualification",
@@ -3957,7 +3957,7 @@
       "source_modules": [
         "scripts/issue254_producer.py"
       ],
-      "test_count_at_audit": 9
+      "test_count_at_audit": 8
     },
     "test_issue255_baseline": {
       "baseline_group": "issue-99-103",

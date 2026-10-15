@@ -266,12 +266,14 @@ class TwoGpuTopologyTests(unittest.TestCase):
     def test_diagnostic_runs_two_owned_processes_retains_output_and_cleans_up(self):
         plan=self.build()
         class Transport:
-            def __init__(self): self.rows={}; self.stopped=set(); self.argv={}
+            def __init__(self,fail_spawn=None):
+                self.rows={}; self.stopped=set(); self.argv={}; self.fail_spawn=fail_spawn
             def call(self,address,payload):
                 action=payload['action']; name=payload.get('name')
                 if action=='admit': return {'lease':'admitted'}
                 if action=='port': return {'port':'available'}
                 if action=='spawn':
+                    if name==self.fail_spawn: raise RuntimeError('material '+name+' spawn failure')
                     row={'pid':100+len(self.rows),'start':str(200+len(self.rows)),
                          'token':payload['token']}
                     self.rows[(address,name)]=row; self.argv[(address,name)]=tuple(payload['argv'])
@@ -289,22 +291,28 @@ class TwoGpuTopologyTests(unittest.TestCase):
                     'binding-B-gpu0':'/guard/gpu0','binding-B-gpu1':'/guard/gpu1'}
                 return receipt
         class IdentityReader:
+            def __init__(self,transport): self.transport=transport
             def read(self,part,pid,*,expected_executable,expected_sha256,expected_argv):
-                row=transport.rows[(part.execution_address,part.participant_id.rsplit('-',1)[-1])]
+                row=self.transport.rows[(part.execution_address,part.participant_id.rsplit('-',1)[-1])]
                 return ProcessIdentity(part.participant_id,part.host_id,part.boot_epoch,
                     part.topology_epoch,pid,row['start'],expected_executable,expected_sha256,
                     tuple(expected_argv),freeze(dict(native=[],visible=[],environment={})),part.rpc_endpoint)
         class Collector:
-            identity_reader=IdentityReader()
+            def __init__(self,transport,fail_dynamic=False):
+                self.identity_reader=IdentityReader(transport); self.fail_dynamic=fail_dynamic
             def collect_build(self,*args,**kwargs): return None
             def await_terminal_export(self,*args,**kwargs): return None
-            def collect_dynamic(self,*args,**kwargs):
+            def collect_dynamic(self,part,*args,**kwargs):
+                if self.fail_dynamic and part.participant_id.endswith('rpc1'):
+                    raise RuntimeError('material rpc1 terminal observation failure')
                 observation=SimpleNamespace(sequence=({'event':'rpc_server_command'},),
                     terminal_digest='a'*64,event_count=1)
                 return SimpleNamespace(observation=observation)
         class HTTP:
+            def __init__(self,fail=False): self.fail=fail
             def get(self,*args,**kwargs): return {'status':'ok'}
             def post(self,*args,**kwargs):
+                if self.fail: raise RuntimeError('material request failure')
                 return {'id':'diag-1','choices':[{'message':{'content':'raw diagnostic'},
                     'finish_reason':'stop'}],'usage':{'completion_tokens':2}}
         class Tunnel:
@@ -312,10 +320,19 @@ class TwoGpuTopologyTests(unittest.TestCase):
             def poll(self): return 0 if self.done else None
             def terminate(self): self.done=True
             def wait(self,timeout=None): return 0
-        runner=OperatorRunner(Sources(),manager,HTTP(),lambda *args:(Tunnel(),8080),
-            observation_mode='synthetic-test',clock=lambda:NOW,collector=Collector())
-        with patch.object(runner,'_profiled_admission',return_value=plan.admission):
-            result=runner.run(plan)
+        def execute(*,fail_spawn=None,fail_request=False,fail_dynamic=False):
+            transport=Transport(fail_spawn); manager=LeaseManager(
+                transport,'issue313-diagnostic-'+str(fail_spawn)+str(fail_request)+str(fail_dynamic),
+                stop_timeout=0)
+            runner=OperatorRunner(Sources(),manager,HTTP(fail_request),lambda *args:(Tunnel(),8080),
+                observation_mode='synthetic-test',clock=lambda:NOW,
+                collector=Collector(transport,fail_dynamic))
+            try:
+                with patch.object(runner,'_profiled_admission',return_value=plan.admission):
+                    outcome=runner.run(plan)
+            except BaseException as exc: outcome=exc
+            return outcome,runner,transport
+        result,runner,transport=execute()
         self.assertEqual((result['status'],result['raw_output'],result['output_accepted']),
                          ('EXECUTED-OUTPUT-UNACCEPTED','raw diagnostic',False))
         self.assertEqual([p['name'] for p in result['rpc_processes']],['rpc0','rpc1'])
@@ -325,6 +342,20 @@ class TwoGpuTopologyTests(unittest.TestCase):
         remote=next(p for p in plan.participants if p.role=='remote')
         self.assertIn('CUDA0',transport.argv[(remote.execution_address,'rpc0')])
         self.assertIn('CUDA1',transport.argv[(remote.execution_address,'rpc1')])
+        for failure,reason in ((dict(fail_spawn='rpc1'),'material rpc1 spawn failure'),
+                               (dict(fail_request=True),'material request failure')):
+            outcome,failed_runner,failed_transport=execute(**failure)
+            self.assertIsInstance(outcome,RuntimeError)
+            self.assertEqual(str(outcome),reason)
+            self.assertEqual(failed_transport.stopped,set(failed_transport.rows))
+            self.assertTrue(all(row['lease']=='released'
+                                for row in failed_runner.last_cleanup.values()))
+        refused,failed_runner,failed_transport=execute(fail_dynamic=True)
+        self.assertEqual(refused['status'],'EXECUTED-OBSERVATION-REFUSED')
+        self.assertEqual(refused['observation_refusal'],
+                         'material rpc1 terminal observation failure')
+        self.assertEqual(failed_transport.stopped,set(failed_transport.rows))
+        self.assertTrue(all(row['lease']=='released' for row in failed_runner.last_cleanup.values()))
 
 
 class TwoBankPreparationCompositionTests(unittest.TestCase):
