@@ -12,7 +12,7 @@ python3 -m inferswarm.operator experimental-q8-two-cuda \
   --envelope /absolute/path/q8-two-cuda-experiment.json
 ```
 
-`python3 -m inferswarm.operator run` is unchanged and must continue to refuse
+The ordinary `run` command is unchanged and must continue to refuse
 unknown allocation/capability terms.  The experimental command also refuses
 unless the envelope contains the exact opt-in string
 `I_AUTHORIZE_ONE_UNQUALIFIED_Q8_TWO_CUDA_EXPERIMENT`, SHA-256 of the exact
