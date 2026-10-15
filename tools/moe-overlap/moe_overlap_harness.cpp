@@ -63,6 +63,13 @@
 #include <thread>
 #include <vector>
 #include <sys/stat.h>
+#include <fstream>
+#include <sstream>
+#ifdef IS321_NATIVE_CACHE
+extern "C" {
+#include "hash/sha256/sha256.h"
+}
+#endif
 
 // ---------------------------------------------------------------------------
 // Authentic qwen4exp Q8_0 block geometry (authenticated #299 census:
@@ -225,7 +232,7 @@ struct Weights {
         return true;
     }
 
-    bool load_gguf(const std::string & path, int layer, std::string & err) {
+    bool load_gguf(const std::string & path, int layer, std::string & err, bool model_names = false) {
         struct gguf_init_params ip = { /*no_alloc =*/ true, /*ctx =*/ nullptr };
         gguf_context * g = gguf_init_from_file(path.c_str(), ip);
         if (!g) { err = "gguf_init_from_file failed: " + path; return false; }
@@ -306,6 +313,12 @@ struct Weights {
                 err = std::string("short read for blk.") + want[i].suffix; fclose(f); gguf_free(g); return false;
             }
         }
+        if (model_names) {
+            for (size_t i = 0; i < want.size(); ++i) {
+                std::string name = "blk." + std::to_string(layer) + "." + want[i].suffix;
+                ggml_set_name(targets[i], name.c_str());
+            }
+        }
         fclose(f);
         gguf_free(g);
         return true;
@@ -370,6 +383,25 @@ struct DeviceSlice {
         up   = place("up_slice",   N_EMBD, N_FF,   (const uint8_t *)w.up->data   + (size_t)e0 * w.up->nb[2],   up_b);
         gate = place("gate_slice", N_EMBD, N_FF,   (const uint8_t *)w.gate->data + (size_t)e0 * w.gate->nb[2], up_b);
         down = place("down_slice", N_FF,   N_EMBD, (const uint8_t *)w.down->data + (size_t)e0 * w.down->nb[2], down_b);
+        return true;
+    }
+
+    // Complete model tensors own their allocation; graph views keep using the
+    // original expert index (split=0). No repacking, slicing or re-quantizing.
+    bool init_whole_banks(ggml_backend_t backend, Weights & w) {
+        bk = backend; e0 = 0; e1 = w.n_expert;
+        wctx = ggml_init({ggml_tensor_overhead() * 3 + 256, nullptr, true});
+        up = ggml_dup_tensor(wctx, w.up);
+        gate = ggml_dup_tensor(wctx, w.gate);
+        down = ggml_dup_tensor(wctx, w.down);
+        ggml_tensor * remote[] = {up, gate, down};
+        ggml_tensor * local[] = {w.up, w.gate, w.down};
+        for (size_t i = 0; i < 3; ++i) ggml_set_name(remote[i], local[i]->name);
+        wbuf = ggml_backend_alloc_ctx_tensors(wctx, bk);
+        if (!wbuf) return false;
+        ggml_backend_buffer_set_usage(wbuf, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+        for (size_t i = 0; i < 3; ++i)
+            ggml_backend_tensor_set(remote[i], local[i]->data, 0, ggml_nbytes(local[i]));
         return true;
     }
 
@@ -894,6 +926,7 @@ struct Harness {
     int64_t T = 1;
     int64_t split = 256;
     std::string secondary_kind = "cpu"; // "cpu" | "cuda" | "rpc"
+    std::string assigned_banks;         // existing #311 guard; exact whole banks only
     std::string rpc_endpoint;           // host:port for --secondary rpc
     int threads = 0, secondary_threads = 2;
     int warmup = 1, reps = 5;
@@ -917,6 +950,38 @@ struct Harness {
     Plan router_plan, shared_plan, ref_plan;
     JsonOut J;
 };
+
+#ifdef IS321_NATIVE_CACHE
+static bool validate_assigned_banks(const Harness & H) {
+    // Consume the existing assigned_guard_bytes/publish_assigned_guard seam.
+    // Compare a canonical exact inventory rather than defining a second
+    // manifest/parser. The composed RPC closure independently enforces the
+    // same boundary and digest again at the real upload/cache seam.
+    std::vector<std::string> expected, actual;
+    for (auto * t : {H.W.up, H.W.gate, H.W.down}) {
+        uint8_t digest[SHA256_DIGEST_SIZE];
+        sha256_hash(digest, (const uint8_t *)t->data, ggml_nbytes(t));
+        std::ostringstream row;
+        row << t->name << " " << (int)t->type;
+        for (auto n : t->ne) row << " " << n;
+        row << " " << ggml_nbytes(t) << " ";
+        const char * hex = "0123456789abcdef";
+        for (auto b : digest) row << hex[b >> 4] << hex[b & 15];
+        expected.push_back(row.str());
+    }
+    std::ifstream file(H.assigned_banks);
+    std::string row;
+    size_t bytes = 0;
+    while (std::getline(file, row)) {
+        bytes += row.size() + 1;
+        if (bytes > 1048576) return false;
+        actual.push_back(row);
+    }
+    std::sort(expected.begin(), expected.end());
+    std::sort(actual.begin(), actual.end());
+    return file.eof() && expected == actual;
+}
+#endif
 
 int run_harness(Harness & H) {
     std::string err;
@@ -953,6 +1018,35 @@ int run_harness(Harness & H) {
             fprintf(stderr, "error: reference-case directory must be new and creatable\n"); return 4;
         }
     }
+
+    // Assigned source validation must finish before any RPC connection.
+    // Stock modes keep their original backend-before-weight initialization.
+    double load_ms = 0.0;
+    auto load_weights = [&]() -> bool {
+        double t0 = now_ms();
+        if (H.mode == "gguf") {
+            if (!H.W.load_gguf(H.gguf_path, H.layer, err, !H.assigned_banks.empty())) { fprintf(stderr, "error: %s\n", err.c_str()); return false; }
+            H.n_expert = H.W.n_expert;
+        } else if (!H.W.fill_synthetic(H.n_expert, H.seed)) {
+            fprintf(stderr, "error: synthetic weight generation failed\n");
+            return false;
+        }
+        load_ms = now_ms() - t0;
+
+        if (H.n_expert < N_USED || H.split > H.n_expert) {
+            fprintf(stderr, "error: incomplete expert bank or split exceeds loaded bank\n"); return false;
+        }
+    #ifdef IS321_NATIVE_CACHE
+        if (!H.assigned_banks.empty()) {
+            if (!validate_assigned_banks(H)) {
+                fprintf(stderr, "error: assigned whole-bank identity mismatch (names/types/shapes/lengths/SHA-256)\n"); return false;
+            }
+            setenv("IS311_ASSIGNED", H.assigned_banks.c_str(), 1);
+        }
+    #endif
+        return true;
+    };
+    if (!H.assigned_banks.empty() && !load_weights()) return 4;
 
     // ---- backends ----------------------------------------------------------
     ggml_backend_dev_t cpu_dev = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
@@ -1014,16 +1108,7 @@ int run_harness(Harness & H) {
         ggml_backend_cpu_set_n_threads(H.sec_bk, H.secondary_threads);
     }
 
-    // ---- weights (loaded once; both arms and all repetitions reuse) --------
-    double t0 = now_ms();
-    if (H.mode == "gguf") {
-        if (!H.W.load_gguf(H.gguf_path, H.layer, err)) { fprintf(stderr, "error: %s\n", err.c_str()); return 4; }
-        H.n_expert = H.W.n_expert;
-    } else if (!H.W.fill_synthetic(H.n_expert, H.seed)) {
-        fprintf(stderr, "error: synthetic weight generation failed\n");
-        return 4;
-    }
-    double load_ms = now_ms() - t0;
+    if (H.assigned_banks.empty() && !load_weights()) return 4;
 
     // ---- resident slices ----------------------------------------------------
     double sec_load_ms = 0.0;
@@ -1031,7 +1116,9 @@ int run_harness(Harness & H) {
     if (!H.full.init_cpu_view(H.cpu_bk, H.W, 0, H.n_expert)) { fprintf(stderr, "error: reference slice\n"); return 4; }
     if (H.split < H.n_expert) {
         double s0 = now_ms();
-        if (!H.sec.init_device_copy(H.sec_bk, H.W, H.split, H.n_expert)) {
+        if (!(H.assigned_banks.empty()
+                ? H.sec.init_device_copy(H.sec_bk, H.W, H.split, H.n_expert)
+                : H.sec.init_whole_banks(H.sec_bk, H.W))) {
             fprintf(stderr, "error: secondary slice\n"); return 4;
         }
         sec_load_ms = now_ms() - s0;
@@ -1048,6 +1135,13 @@ int run_harness(Harness & H) {
 
     J.begin("config");
     J.str("harness", "moe_overlap_harness/1");
+#ifdef IS321_NATIVE_CACHE
+    J.str("rpc_closure", "native-cache-composed");
+    J.str("derived_harness_composition_sha256", IS321_COMPOSITION);
+#else
+    J.str("rpc_closure", "stock");
+#endif
+    J.str("upload_boundary", H.assigned_banks.empty() ? "composite-slices" : "assigned-whole-model-banks");
     J.str("native_pin", "llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4");
     J.str("weights_mode", H.mode == "gguf" ? "GGUF" : "SYNTHETIC");
     if (H.mode == "gguf") { J.str("gguf", H.gguf_path); J.num("layer", H.layer); }
@@ -1789,6 +1883,7 @@ int main(int argc, char ** argv) {
         else if (a == "--tokens") H.T = atoll(next("--tokens").c_str());
         else if (a == "--split") H.split = atoll(next("--split").c_str());
         else if (a == "--secondary") H.secondary_kind = next("--secondary");
+        else if (a == "--assigned-banks") H.assigned_banks = next("--assigned-banks");
         else if (a == "--rpc-endpoint") H.rpc_endpoint = next("--rpc-endpoint");
         else if (a == "--threads") H.threads = atoi(next("--threads").c_str());
         else if (a == "--secondary-threads") H.secondary_threads = atoi(next("--secondary-threads").c_str());
@@ -1806,6 +1901,7 @@ int main(int argc, char ** argv) {
         else if (a == "--help" || a == "-h") {
             printf("usage: %s [--gguf <shard> --layer N | --synthetic [--experts N] [--seed S]]\n"
                    "  --tokens T (1 = decode, 128 = prefill) [--split S] [--secondary cpu|cuda|rpc]\n"
+                   "  [--assigned-banks GUARD] (composed build, GGUF, RPC, split=0 only)\n"
                    "  [--rpc-endpoint host:port] (required for --secondary rpc)\n"
                    "  [--threads N] [--secondary-threads N] [--warmup W] [--reps R]\n"
                    "  [--inputs-file <f32 block activations>] [--json out.json]\n"
@@ -1826,6 +1922,20 @@ int main(int argc, char ** argv) {
     }
     if (H.secondary_kind == "rpc" && H.rpc_endpoint.empty()) {
         fprintf(stderr, "error: --secondary rpc requires --rpc-endpoint host:port\n"); return 2;
+    }
+    if (!H.assigned_banks.empty()) {
+#ifndef IS321_NATIVE_CACHE
+        fprintf(stderr, "error: --assigned-banks requires build.py --native-cache\n"); return 2;
+#endif
+        if (H.secondary_kind != "rpc" || H.split != 0 || H.mode != "gguf") {
+            fprintf(stderr, "error: --assigned-banks supports only GGUF, RPC, split=0 complete banks\n"); return 2;
+        }
+        const char * guard = getenv("IS311_ASSIGNED");
+        if (guard && H.assigned_banks != guard) {
+            fprintf(stderr, "error: IS311_ASSIGNED differs from --assigned-banks\n"); return 2;
+        }
+    } else if (getenv("IS311_ASSIGNED")) {
+        fprintf(stderr, "error: IS311_ASSIGNED requires explicit --assigned-banks\n"); return 2;
     }
     return run_harness(H);
 }

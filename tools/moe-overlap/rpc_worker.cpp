@@ -1,7 +1,7 @@
 // Minimal RPC worker for the remote resident-block overlap prototype.
 //
 // Exposes the pinned llama.cpp RPC server (ggml_backend_rpc_start_server,
-// protocol v6.0.0, TCP) over one endpoint with exactly one backend device.
+// stock protocol v6.0.0 or explicitly composed cache closure, TCP) over one endpoint with exactly one backend device.
 // This is the entire worker: no loader, no engine, no scheduling policy —
 // the coordinator's harness owns all orchestration through the pinned RPC
 // client, and the weight tensors the coordinator uploads stay resident in
@@ -24,7 +24,7 @@
 
 static void usage(const char * argv0) {
     fprintf(stderr,
-            "usage: %s --host H --port P [--device NAME] [--threads N]\n"
+            "usage: %s --host H --port P [--device NAME] [--threads N] [--cache-dir DIR]\n"
             "  Serves the pinned ggml RPC protocol on H:P with ONE device.\n"
             "  Default device: first non-CPU backend device, else CPU.\n",
             argv0);
@@ -34,6 +34,7 @@ int main(int argc, char ** argv) {
     std::string host = "127.0.0.1";
     int port = -1;
     std::string device_name;
+    std::string cache_dir;
     int threads = (int)(std::thread::hardware_concurrency() / 2);
     if (threads < 1) threads = 1;
     for (int i = 1; i < argc; ++i) {
@@ -45,12 +46,21 @@ int main(int argc, char ** argv) {
         if (a == "--host") host = next("--host");
         else if (a == "--port") port = atoi(next("--port").c_str());
         else if (a == "--device") device_name = next("--device");
+        else if (a == "--cache-dir") cache_dir = next("--cache-dir");
         else if (a == "--threads") threads = atoi(next("--threads").c_str());
         else if (a == "--help" || a == "-h") { usage(argv[0]); return 0; }
         else { fprintf(stderr, "error: unknown arg %s\n", a.c_str()); usage(argv[0]); return 2; }
     }
     if (port < 1 || port > 65535) { fprintf(stderr, "error: --port must be 1..65535\n"); return 2; }
 
+    if (!cache_dir.empty()) {
+#ifndef IS321_NATIVE_CACHE
+        fprintf(stderr, "error: --cache-dir requires build.py --native-cache\n"); return 2;
+#endif
+        if (!getenv("IS311_ASSIGNED")) {
+            fprintf(stderr, "error: --cache-dir requires IS311_ASSIGNED\n"); return 2;
+        }
+    }
     ggml_backend_dev_t dev = nullptr;
     if (!device_name.empty()) {
         dev = ggml_backend_dev_by_name(device_name.c_str());
@@ -81,7 +91,7 @@ int main(int argc, char ** argv) {
     // serially until killed; buffers uploaded by a client stay resident for
     // that client's connection lifetime.
     std::string endpoint = host + ":" + std::to_string(port);
-    ggml_backend_rpc_start_server(endpoint.c_str(), /*cache_dir=*/nullptr,
+    ggml_backend_rpc_start_server(endpoint.c_str(), cache_dir.empty() ? nullptr : cache_dir.c_str(),
                                    (size_t)threads, 1, &dev);
     fprintf(stderr, "error: rpc server exited\n");
     return 1;
