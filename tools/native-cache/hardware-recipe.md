@@ -1,5 +1,10 @@
 # Future bounded hardware check (#315)
 
+For the next compact CPU05/CUDA03 check, use the more specific
+[Step B recipe](cuda-prerequisite-recipe.md#step-b--selective-backing-and-gpu-readback):
+only the x16 GPU on 03 participates, with explicit host/VRAM bounds. The broader
+two-GPU outline below remains a future scope, not the next dispatch.
+
 This is a recipe for later explicit physical dispatch, not execution authority.
 The target is one worker with 16 GiB host RAM and two 12 GiB GPUs. It remains
 unqualified. Compact native fixtures can test the patched RPC path directly under

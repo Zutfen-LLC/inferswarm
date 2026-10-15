@@ -336,6 +336,7 @@ def _validate_options(config,metadata):
     selective=options['source_contract']==CONTRACT
     base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
     if selective: base_fields+=('participant_backing',)
+    if selective and 'build_pair' in options: base_fields+=('build_pair',)
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
     observer=options.get('observer')
     if observer is not None:
@@ -358,18 +359,18 @@ def _validate_options(config,metadata):
     if selective:
         if config.selection not in ('cpu-only','one-gpu') or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed observer builds, the cpu-only or explicitly reviewed one-gpu pair, and enabled cache only')
         if config.selection=='one-gpu' and options['route']!='client-mediated': raise ValueError('selective one-gpu backing requires the client-mediated copy route')
-        from .assigned_backing import CPU_BACKEND, CUDA_BACKEND
+        from .assigned_backing import CPU_BACKEND, CUDA_BACKEND, HISTORICAL_BUILD_PAIR
+        build_pair=options.get('build_pair',HISTORICAL_BUILD_PAIR)
+        text(build_pair,'selective backing build pair')
         backend = CPU_BACKEND if config.selection=='cpu-only' else CUDA_BACKEND
         backing=options['participant_backing']
         keys(backing,('epoch','memory_id','limit_bytes','min_free_bytes','reserve_bytes'),'participant backing')
         for k in ('epoch','limit_bytes','min_free_bytes','reserve_bytes'): integer(backing[k], 'participant backing '+k,minimum=1 if k=='limit_bytes' else 0)
         for p in config.participants:
-            # The loader role is always the reviewed CPU client build; only the
-            # remote role's backend varies with the selection. A missing CUDA
-            # entry raises here, so the one-gpu pair cannot admit until that
-            # identity is reviewed into the table.
+            # One selector binds BOTH participants. Omission retains the
+            # historical CPU client and remote identities byte-for-byte.
             pbackend = CPU_BACKEND if p.role=='client' else backend
-            if p.runtime_sha256!=role_identity(p.role,pbackend).executable_sha256: raise ValueError('selective backing unreviewed per-role runtime identity')
+            if p.runtime_sha256!=role_identity(p.role,pbackend,build_pair=build_pair).executable_sha256: raise ValueError('selective backing unreviewed per-role runtime identity')
         memory=next((m for m in config.profiles.snapshot.memory_resources if m.memory_id==backing['memory_id']),None)
         remote=next(p for p in config.participants if p.role=='remote')
         if memory is None or memory.host_id!=remote.host_id or memory.kind!='storage': raise ValueError('selective backing storage domain mismatch')
