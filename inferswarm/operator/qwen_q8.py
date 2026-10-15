@@ -229,10 +229,13 @@ def _charges(config, contract, assignments, states, boundaries, options):
     add('whole-source-mmap',loader.memory_id,'virtual',total,resident)
     add('PLE-active-backed-residence',loader.memory_id,'required',None,resident,evidence='unknown:PLE-residence')
     requirements.append(CapabilityRequirement(loader.runtime_id,'lazy-mmap','lazy PLE mmap support'))
-    for label,mid in (('full-tensor-loader',loader.memory_id),('FNV-cache-message-staging',loader.memory_id),('remote-receive-staging',worker_ram)):
-        amount=(1<<20) if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else LARGEST_BANK
+    staging_labels=(('remote-receive-staging:rpc0','remote-receive-staging:rpc1')
+                    if contract.selection=='two-gpu' else ('remote-receive-staging',))
+    for label,mid in (('full-tensor-loader',loader.memory_id),('FNV-cache-message-staging',loader.memory_id),
+                      *((name,worker_ram) for name in staging_labels)):
+        amount=(1<<20) if label.startswith('remote-receive-staging') and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else LARGEST_BANK
         if label=='FNV-cache-message-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1': amount=352
-        phases=('load','serve') if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else ('load',)
+        phases=('load','serve') if label.startswith('remote-receive-staging') and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else ('load',)
         add(label,mid,'transient',amount,phases)
     for boundary in boundaries:
         # Logical residual is only a lower bound. The complete split inventory,

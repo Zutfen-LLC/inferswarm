@@ -180,7 +180,12 @@ class TwoGpuTopologyTests(unittest.TestCase):
 
     def test_worker_host_and_each_vram_are_independent_domains(self):
         plan=self.build(); charges=plan.candidate.charges
-        self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id.startswith('remote-receive-staging') for c in charges))
+        self.assertEqual({c.allocation_id for c in charges if c.memory_id=='B-ram'
+                          and c.allocation_id.startswith('remote-receive-staging')},
+                         {'remote-receive-staging:rpc0/load','remote-receive-staging:rpc0/serve',
+                          'remote-receive-staging:rpc1/load','remote-receive-staging:rpc1/serve'})
+        self.assertTrue(all(c.bytes==1<<20 for c in charges if c.memory_id=='B-ram'
+                            and c.allocation_id.startswith('remote-receive-staging')))
         boundary=plan.candidate.boundaries[1]
         worker_payload=next(c for c in charges if c.allocation_id=='boundary-worker-rpc-payload/serve')
         self.assertEqual((worker_payload.memory_id,worker_payload.bytes),('B-ram',boundary.logical_bytes))
