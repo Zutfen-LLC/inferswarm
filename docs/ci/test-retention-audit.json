@@ -5232,6 +5232,33 @@
       "replacement": null,
       "test_count_at_audit": 7
     },
+    "test_issue313_two_gpu": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 8,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "Opt-in Q8 two-CUDA fixed placement preserves complete nonoverlapping tensor ownership, independently admits each device and bounded worker-host resources, lowers exact endpoint/device selectors through the coordinator-mediated route, retains assigned-only restart reuse, and refuses unsupported identity, routing and observation claims.",
+      "lineage": "Issue #313 two-device Q8 capacity slice; successor to #311/#321 selective backing and #325 acquisition",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [
+          "tests/fixtures/issue299/q8-metadata.json"
+        ],
+        "scripts_imported": [
+          "inferswarm/operator/config.py",
+          "inferswarm/operator/phased_observation.py",
+          "inferswarm/operator/qwen_q8.py",
+          "inferswarm/operator/runtime.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline exact planning, lowering, accounting and small CPU-backed acquisition lifecycle proof only. No CUDA execution, GPU residency, performance, physical qualification, acceptance or execution authority.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": 8
+    },
     "test_issue323_verified_ordinary_ci": {
       "baseline_group": "issue-213-gate-ordering",
       "baseline_serial_seconds": null,
