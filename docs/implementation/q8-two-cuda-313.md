@@ -35,10 +35,24 @@ Duplicate ports, different worker hosts, reversed primary ownership and
 `server-local` routing refuse.
 
 Assigned acquisition authenticates the complete two-bank cache first, then
-publishes a distinct immutable upload guard for each server's disjoint tensor
-keys. Both processes and their unknown runtime heaps are owned, accounted and
+publishes a distinct immutable assigned guard for each server's disjoint tensor
+bank. The server guard narrows hash-backed lookup/publication, but it is not a
+general destination firewall: it does not by itself reject every raw SET or
+prove CUDA placement. Endpoint-bound execution observations provide that proof.
+Both processes and their unknown runtime heaps are owned, accounted and
 cleaned up independently. Existing `cpu-only` and `one-gpu` launch receipt
 shapes remain unchanged.
+
+"Shared cache" means one already prepared and completely authenticated durable
+cache root, not a shared upload guard. Each listener receives only its bank's
+guard. Ordinary startup finds every immutable key present and opens it
+read-only. If a later exact assigned repair is needed, the native patch stages
+through a unique `mkstemp` file and the two banks have distinct validated cache
+keys, so the listeners never publish to the same final path. Duplicate cache
+keys are rejected during source admission. Admission reserves the complete
+retained eligible set plus the largest eligible repair in each binding bank,
+so two simultaneous listener temporaries fit without changing the historical
+single-listener reserve calculation.
 
 Existing `cpu-only` and `one-gpu` selections and their identity rows are
 unchanged. Assigned-only v7 acquisition, immutable tensor identities,
@@ -81,3 +95,12 @@ projection and explicit dynamic-observer refusal. Existing CPU/loopback suites
 continue to cover old modes, complete assigned-bank loading, restart reuse,
 changed inputs and failure cleanup. Those fixtures do not prove CUDA execution,
 residency, numerical correctness or capacity.
+
+The existing native-cache CI fixture additionally builds the actual pinned CPU
+RPC server and proves that two server processes on distinct listeners can each
+hold a client connection at the same time, concurrently transfer different
+whole tensors through the shared cache, expose two simultaneous distinct repair
+temporaries within the summed bank reserve, read them back exactly, and reuse
+both keys with zero warm weight payload. This proves the native two-listener route
+mechanism on CPU only; it does not prove CUDA enumeration, residency, kernels,
+P2P, capacity or output acceptance.

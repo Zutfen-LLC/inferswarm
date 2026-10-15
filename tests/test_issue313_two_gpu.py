@@ -412,7 +412,11 @@ class TwoBankPreparationCompositionTests(unittest.TestCase):
         participant=selective['participants'][1]
         participant['backing']=[]; participant['cache_path']=str(self.cache)
         assigned_backing.project_payload(selective,dict(epoch=1,memory_id='B-disk',**vars(self.budget)))
-        receipt=source_verifier.verify_q8_role(participant,selective)
+        with patch.object(source_verifier,'_q8_native_repair_reserve',
+                          wraps=source_verifier._q8_native_repair_reserve) as reserve:
+            receipt=source_verifier.verify_q8_role(participant,selective)
+        self.assertEqual(reserve.call_args.kwargs['simultaneous_bindings'],
+                         ('B-gpu0','B-gpu1'))
         guards=receipt['assigned_guard_paths']
         self.assertEqual(set(guards),{'B-gpu0','B-gpu1'})
         self.assertEqual(len(set(guards.values())),2)
@@ -438,6 +442,23 @@ class TwoBankPreparationCompositionTests(unittest.TestCase):
         after_digests={row['content_digest'] for row in after}
         self.assertTrue(before_digests<=after_digests)
         self.assertNotIn('sha256:'+'0'*64,after_digests)
+
+    def test_dual_listener_repair_reserve_sums_each_bank_peak(self):
+        mib=1<<20
+        tensors=[dict(state_id='a',binding_id='B-gpu0'),
+                 dict(state_id='b',binding_id='B-gpu0'),
+                 dict(state_id='c',binding_id='B-gpu1')]
+        descriptors={
+            'a':dict(sha256='a'*64,length=11*mib),
+            'b':dict(sha256='b'*64,length=13*mib),
+            'c':dict(sha256='c'*64,length=17*mib),
+        }
+        overhead=16384*(len(descriptors)+1)
+        single=source_verifier._q8_native_repair_reserve(tensors,descriptors)
+        dual=source_verifier._q8_native_repair_reserve(
+            tensors,descriptors,simultaneous_bindings=('B-gpu0','B-gpu1'))
+        self.assertEqual(single,(11+13+17+17)*mib+overhead)
+        self.assertEqual(dual,(11+13+17+13+17)*mib+overhead)
 
 
 class TwoListenerLifecycleTests(unittest.TestCase):

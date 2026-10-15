@@ -25,12 +25,25 @@ coding task. Stop on any identity, capacity, placement or cleanup mismatch.
    verify that the client enumerates them as `RPC0` and `RPC1`. Record the
    listener, PID/start and GPU UUID join for each process; a selector string is
    not UUID or residency proof.
-5. Before any full-model run, use the reviewed native binaries and a tiny
-   disposable fixture to hold simultaneous connections to both listeners and
-   exercise an operation through each. The pinned server's synchronous
-   connection loop makes this a mandatory route diagnostic. No such native
-   simultaneous-listener execution has been performed by this coding task;
-   failure or absence of that receipt is STOP.
+5. Confirm the ordinary CI receipt for the repository's bounded native CPU
+   fixture. It builds the actual pinned RPC server, holds simultaneous client
+   connections to two server processes/listeners, concurrently transfers two
+   distinct whole tensors through one cache root, verifies exact readback, and
+   then verifies zero warm weight payload. This closes the generic native
+   two-listener mechanism only. CUDA device enumeration and execution remain
+   physical gates; a missing or failed CI receipt is STOP.
+
+### Shared cache and per-listener guards
+
+The two listeners use one complete prepared cache root but never share an
+upload guard. Preparation authenticates every object/native view before either
+process starts, and each process receives the immutable guard for only its
+assigned bank. Normal startup therefore performs read-only opens of existing
+keys. For a permitted repair, the native patch uses a unique `mkstemp` staging
+file, verifies the complete SHA-256 before atomic publication, and admission
+requires cache keys to be globally unique; the two disjoint banks cannot write
+the same final cache path. Any missing object, duplicate key, wrong guard or
+failed verification is STOP before launch.
 
 ## 2. Freeze budgets from the real census
 
@@ -61,7 +74,11 @@ headroom, or a plan that requires the full model on the worker are STOP.
    with `--device CUDA0` and one with `--device CUDA1`. Start the coordinator
    with both endpoints, `--device RPC0,RPC1`,
    `--gpu-layers 8`, and `--tensor-split 4,4`. Use the unchanged short fixed
-   request and existing numerical diagnostics/thresholds.
+   request and existing numerical diagnostics/thresholds. The disk budget must
+   retain every eligible native view and reserve the largest eligible repair in
+   each assigned bank because both listeners can stage a replacement at once.
+   Guards constrain hash-backed assigned lookup/publication; they neither prove
+   endpoint placement nor reject every possible raw SET.
 3. During the request, bind samples to the exact listener/PID/UUID joins.
    Require measured
    weight residency and backend execution on both GPUs, per-device peak/reserve,
@@ -77,8 +94,9 @@ headroom, or a plan that requires the full model on the worker are STOP.
 
 Preserve cold/restart receipts and failures. Do not retry into PASS, adjust the
 frozen allocation after launch, run extra requests, claim fit from nominal VRAM,
-or close #313/#311/#315/#300. The next smallest physical operation is the tiny
-simultaneous two-listener native diagnostic in inventory step 5. Only if it passes,
-and the exact build admission plus complete per-device/host/coordinator census
-receive separate review and dispatch, proceed to the one cold/restart full-Q8
-diagnostic pair above.
+or close #313/#311/#315/#300. With the CPU two-listener mechanism established
+by ordinary CI, the next smallest physical operation is fresh read-only worker
+inventory plus exact CUDA build admission and the complete
+per-device/host/coordinator memory census. Only after those gates receive
+separate review and dispatch should the one cold/restart full-Q8 diagnostic
+pair above run.

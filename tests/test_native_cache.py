@@ -43,7 +43,7 @@ def read_exact(sock, size):
 
 
 class Relay:
-    def __init__(self, worker_port, interrupt=False):
+    def __init__(self, worker_port, interrupt=False, start_gate=None, repair_gate=None):
         self.listener = socket.socket()
         self.listener.bind(('127.0.0.1', 0))
         self.port = self.listener.getsockname()[1]
@@ -54,6 +54,9 @@ class Relay:
         self.received = 0
         self.stopping = threading.Event()
         self.partial = threading.Event()
+        self.connected = threading.Event()
+        self.start_gate = start_gate
+        self.repair_gate = repair_gate
         self.thread = threading.Thread(target=self.serve, daemon=True)
         self.thread.start()
 
@@ -82,9 +85,14 @@ class Relay:
             server = socket.create_connection(('127.0.0.1', self.worker_port), timeout=3)
             server.settimeout(None)
             self.sockets.extend([client, server])
-            reverse = threading.Thread(target=self.reverse, args=(server, client), daemon=True)
-            reverse.start()
+            self.connected.set()
+            while self.start_gate is not None and not self.start_gate.wait(.05):
+                if self.stopping.is_set(): break
+            reverse = None
             try:
+                if self.stopping.is_set(): continue
+                reverse = threading.Thread(target=self.reverse, args=(server, client), daemon=True)
+                reverse.start()
                 while not self.stopping.is_set():
                     header = read_exact(client, 9)
                     cmd, size = struct.unpack('<BQ', header)
@@ -101,6 +109,11 @@ class Relay:
                         prefix.extend(data[:max(0, HEADER_SIZE - len(prefix))])
                         server.sendall(data)
                         left -= len(data)
+                        if (cmd == 6 and self.repair_gate is not None and
+                                size - left >= 2 << 20 and not self.partial.is_set()):
+                            self.partial.set()
+                            while not self.repair_gate.wait(.05):
+                                if self.stopping.is_set(): raise EOFError
                         if cmd == 6 and self.interrupt and size - left >= 2 << 20:
                             self.partial.set()
                             self.stopping.wait(10)
@@ -124,7 +137,7 @@ class Relay:
                     with contextlib.suppress(OSError):
                         sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-                reverse.join(3)
+                if reverse is not None: reverse.join(3)
 
     def close(self):
         self.stopping.set()
@@ -235,6 +248,75 @@ class NativeCacheTests(unittest.TestCase):
                   'coordinator_source_read_bytes': self.fixtures[label].stat().st_size}
         self.records.append(record)
         return next((r['key'] for r in relay.requests if r['cmd'] == 7), None), hwm
+
+    def test_two_native_listeners_hold_simultaneous_connections_and_transfer(self):
+        """Actual pinned CPU RPC proof for #313; never a CUDA qualification."""
+        cache = self.root / 'two-listener-shared-cache'
+        with contextlib.ExitStack() as stack:
+            workers = [stack.enter_context(self.worker(cache)) for _ in range(2)]
+
+            def round_trip(labels, expected_payload):
+                gate = threading.Event()
+                repair_gate = threading.Event() if any(expected_payload.values()) else None
+                relays = [Relay(worker[1], start_gate=gate,repair_gate=repair_gate)
+                          for worker in workers]
+                clients = []
+                try:
+                    for relay, label in zip(relays, labels):
+                        clients.append(subprocess.Popen(
+                            [self.bin['driver'], f'127.0.0.1:{relay.port}',
+                             str(self.fixtures[label]), 'setget', ''],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            env=dict(os.environ, GGML_NO_BACKTRACE='1'), preexec_fn=child_limits))
+                    self.assertTrue(all(relay.connected.wait(5) for relay in relays),
+                                    'both native listeners must hold a client simultaneously')
+                    self.assertTrue(all(client.poll() is None for client in clients))
+                    gate.set()
+                    if repair_gate is not None:
+                        self.assertTrue(all(relay.partial.wait(10) for relay in relays),
+                                        'both listeners must stage repair data concurrently')
+                        deadline=time.monotonic()+5
+                        stages=[]
+                        while time.monotonic()<deadline:
+                            stages=[path for path in (cache/'rpc').glob('.rpc-stage-*')
+                                    if path.stat().st_size]
+                            if len(stages)==2: break
+                            time.sleep(.01)
+                        self.assertEqual(len(stages),2,'two concurrent repair temporaries required')
+                        self.assertLessEqual(sum(path.stat().st_size for path in stages),
+                                             sum(expected_payload.values()))
+                        repair_gate.set()
+                    replies = [client.communicate(timeout=20) for client in clients]
+                finally:
+                    gate.set()
+                    if repair_gate is not None: repair_gate.set()
+                    for client in clients:
+                        if client.poll() is None:
+                            client.kill(); client.wait(5)
+                    for relay in relays: relay.close()
+                keys=[]
+                for label,client,reply,relay in zip(labels,clients,replies,relays):
+                    stdout,stderr=reply
+                    self.assertEqual(client.returncode,0,stderr[-4000:])
+                    self.assertIn('byte-identical to fixture: yes',stderr)
+                    self.assertFalse(relay.errors,relay.errors)
+                    self.assertEqual(sum(r['size']-HEADER_SIZE for r in relay.requests if r['cmd']==6),
+                                     expected_payload[label])
+                    key=next(r['key'] for r in relay.requests if r['cmd']==7)
+                    self.assertEqual(next(r['sha256'] for r in relay.requests if r['cmd']==7),
+                                     hashlib.sha256(self.fixtures[label].read_bytes()).hexdigest())
+                    keys.append(key)
+                    self.records.append(dict(case='two-native-listeners/'+label,
+                        simultaneous_connections=True,weight_payload=expected_payload[label],
+                        exact_readback=True,shared_cache=True))
+                return keys
+
+            cold=round_trip(('A','B'),{'A':12<<20,'B':12<<20})
+            self.assertEqual(len(set(cold)),2)
+            for label,key in zip(('A','B'),cold):
+                self.assertEqual((cache/'rpc'/key).read_bytes(),self.fixtures[label].read_bytes())
+            warm=round_trip(('A','B'),{'A':0,'B':0})
+            self.assertEqual(warm,cold)
 
     def test_cold_reconnect_restart_delta_and_corruption_at_use(self):
         cache = self.root / 'main-cache'
