@@ -6,6 +6,9 @@ operator contract and native argv only; they do not prove CUDA execution.
 from __future__ import annotations
 
 import copy
+from pathlib import Path
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -20,6 +23,12 @@ from tests.issue299_fixture import NOW, profile_digest, reseal_profiles, sha
 from tests.test_issue299_q8_plan import metadata, q8_mapping
 from tests.test_issue311_cuda_backing import (OBSERVER, rejoin_profiles,
     synthetic_cuda_manifest, synthetic_table)
+
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'scripts'))
+from issue99_artifact_core import AcquisitionError, LocalFileSource
+from issue311_native_backing import prepare_q8_participant, project_q8_preparation, runtime_identity
+from issue311_preparation import DiskBudget, StreamingArtifactCache, StreamingNode
 
 
 def two_gpu_mapping():
@@ -82,6 +91,7 @@ def two_gpu_mapping():
         bindings=dict(loader='binding-A-cpu',remote_gpu0='binding-B-gpu0',remote_gpu1='binding-B-gpu1'),
         route='client-mediated',source_contract=assigned_backing.CONTRACT,rpc_cache='enabled',
         rpc_endpoints=['synthetic-B.example:5000','synthetic-B.example.:5000'],worker_host_memory_id='B-ram',
+        subject_memory_ids=['B-ram'],
         participant_backing=dict(epoch=1,memory_id='B-disk',limit_bytes=256<<30,
             min_free_bytes=1<<30,reserve_bytes=128<<30),observer=dict(OBSERVER))
     remote['backing']=[]
@@ -162,6 +172,13 @@ class TwoGpuTopologyTests(unittest.TestCase):
     def test_worker_host_and_each_vram_are_independent_domains(self):
         plan=self.build(); charges=plan.candidate.charges
         self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id.startswith('remote-receive-staging') for c in charges))
+        boundary=plan.candidate.boundaries[1]
+        worker_payload=next(c for c in charges if c.allocation_id=='boundary-worker-rpc-payload/serve')
+        self.assertEqual((worker_payload.memory_id,worker_payload.bytes),('B-ram',boundary.logical_bytes))
+        self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id=='boundary-worker-rpc-overlap/serve'
+                            and c.bytes is None for c in charges))
+        self.assertTrue(any(c.memory_id=='B-ram' and c.allocation_id=='worker-runtime-heap/serve'
+                            and c.bytes is None for c in charges))
         self.assertTrue(any(c.memory_id=='B-vram' and c.allocation_id.startswith('encoded-weights:binding-B-gpu0') for c in charges))
         self.assertTrue(any(c.memory_id=='B-vram1' and c.allocation_id.startswith('encoded-weights:binding-B-gpu1') for c in charges))
         for memory_id in ('B-vram','B-vram1'):
@@ -180,11 +197,23 @@ class TwoGpuTopologyTests(unittest.TestCase):
             (lambda r:r['strategy_options'].update(route='server-local'),'client-mediated copy route')):
             with self.subTest(reason=reason),self.assertRaisesRegex(ValueError,reason): self.build(mutate)
 
+    def test_full_source_worker_contract_refuses(self):
+        def full_source(raw):
+            raw['strategy_options']['source_contract']='full-source-both-hosts/1'
+            remote=raw['participants'][1]
+            remote['backing']=[dict(memory_id='B-disk',member=row['name'],sha256=row['sha256'],
+                size_bytes=row['size_bytes']) for row in raw['model']['members']]
+            raw['strategy_options'].pop('participant_backing')
+        with self.assertRaisesRegex(ValueError,'assigned-only worker backing'):
+            self.build(full_source)
+
     def test_assigned_only_projection_covers_both_gpu_banks(self):
         plan=self.build(); payload=q8_source_payload(plan)
         remote=next(p for p in payload['participants'] if p['role']=='remote')
         self.assertEqual(remote['backing'],[])
-        self.assertEqual({row['binding_id'] for row in remote['bindings']},{'binding-B-gpu0','binding-B-gpu1'})
+        self.assertEqual({row['binding_id'] for row in remote['bindings']
+                          if row['binding_id'].startswith('binding-B-gpu')},
+                         {'binding-B-gpu0','binding-B-gpu1'})
         assigned={row['binding_id'] for row in payload['assignments']
                   if row['binding_id'].startswith('binding-B-')}
         self.assertEqual(assigned,{'binding-B-gpu0','binding-B-gpu1'})
@@ -193,4 +222,66 @@ class TwoGpuTopologyTests(unittest.TestCase):
         plan=self.build()
         with self.assertRaisesRegex(ValueError,'lack endpoint/device ordinal'):
             reconcile_dynamic(plan,None,None,(),mode='synthetic-test',clock=lambda:NOW)
+
+
+class TwoBankPreparationCompositionTests(unittest.TestCase):
+    """Tiny CPU bytes prove cache composition, never CUDA correctness."""
+    def setUp(self):
+        from tests.test_issue299_source import Q8Source
+        self.fixture=Q8Source(); self.fixture.setUp(); self.addCleanup(self.fixture.doCleanups)
+        self.fixture.cached(); self.payload=copy.deepcopy(self.fixture.payload)
+        remote=self.payload['participants'][1]
+        rename={'B-cpu':'B-gpu0','B-gpu':'B-gpu1'}
+        for binding in remote['bindings']:
+            old=binding['binding_id']; binding['binding_id']=rename[old]
+            binding['memory_id']=rename[old]+'-mem'
+        for assignment in self.payload['assignments']:
+            if assignment['binding_id'] in rename:
+                assignment['binding_id']=rename[assignment['binding_id']]
+                assignment['memory_id']=rename[assignment['memory_id'].removesuffix('-mem')]+'-mem'
+        unit_rename={}
+        for placement in self.payload['placement']:
+            if placement['binding_id'] in rename:
+                old=placement['unit_id']; placement['binding_id']=rename[placement['binding_id']]
+                placement['unit_id']='unit-'+placement['binding_id']; unit_rename[old]=placement['unit_id']
+        for row in remote['cache_ranges']:
+            row['unit_id']=unit_rename[row['unit_id']]
+        self.temp=tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.cache=Path(self.temp.name)/'worker'
+        self.source=LocalFileSource(source_id='origin',root=self.fixture.root)
+        self.budget=DiskBudget(1<<20,0,32768)
+
+    def prepare(self,node):
+        remote=self.payload['participants'][1]
+        return prepare_q8_participant(payload=self.payload,epoch=1,
+            executable=self.fixture.runtime,executable_sha256=remote['runtime_sha256'],
+            node=node,origin_source=self.source,budget=self.budget)
+
+    def test_both_assigned_banks_cold_restart_and_failed_change_cleanup(self):
+        node=StreamingNode('B',StreamingArtifactCache(self.cache))
+        remote=self.payload['participants'][1]
+        projection=project_q8_preparation(self.payload,epoch=1,
+            runtime=runtime_identity(self.fixture.runtime,remote['runtime_sha256']))
+        banks={row['binding_id'] for row in projection['metadata']['tensors']}
+        self.assertEqual(banks,{'B-gpu0','B-gpu1'})
+        cold=self.prepare(node)
+        self.assertGreater(cold['acquisition_bytes'],0)
+        self.source.access_log.clear()
+        warm=self.prepare(StreamingNode('B',StreamingArtifactCache(self.cache)))
+        self.assertEqual((warm['acquisition_bytes'],self.source.access_log),(0,[]))
+        changed=copy.deepcopy(self.payload)
+        row=changed['participants'][1]['cache_ranges'][0]
+        row['sha256']='0'*64
+        before=StreamingNode('B',StreamingArtifactCache(self.cache)).inventory()['verified_objects']
+        with self.assertRaises(AcquisitionError):
+            prepare_q8_participant(payload=changed,epoch=2,
+                executable=self.fixture.runtime,
+                executable_sha256=changed['participants'][1]['runtime_sha256'],
+                node=StreamingNode('B',StreamingArtifactCache(self.cache)),
+                origin_source=self.source,budget=self.budget)
+        after=StreamingNode('B',StreamingArtifactCache(self.cache)).inventory()['verified_objects']
+        before_digests={row['content_digest'] for row in before}
+        after_digests={row['content_digest'] for row in after}
+        self.assertTrue(before_digests<=after_digests)
+        self.assertNotIn('sha256:'+'0'*64,after_digests)
 

@@ -18,8 +18,10 @@ The byte census comes from the exact pinned Q8 metadata used by the operator.
 It is a lower bound, not a fit verdict. Each VRAM domain is admitted separately
 with its own weights, persistent state, backend allocation, graph, workspace,
 observer and reserve. Worker RAM is charged separately for assigned metadata,
-page residence, verification, transport and bounded receive/cache staging. The
-worker has no full-source backing and no permanent host weight mirror.
+page residence, verification, transport and bounded receive/cache staging,
+plus the logical cross-device RPC payload and unknown overlap/runtime heap.
+The mode requires assigned-only backing; the worker has no full-source backing
+and no permanent host weight mirror.
 
 The worker runs one reviewed RPC server with `--device CUDA0,CUDA1`. The
 coordinator registers its one owned listener through the FQDN and absolute

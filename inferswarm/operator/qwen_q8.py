@@ -211,6 +211,9 @@ def _charges(config, contract, assignments, states, boundaries, options):
     remote=next(p for p in config.participants if p.role=='remote')
     worker_ram=(options['worker_host_memory_id'] if contract.selection=='two-gpu'
                 else dict(contract.bindings)['remote_cpu'].memory_id)
+    if contract.selection=='two-gpu':
+        add('worker-runtime-heap',worker_ram,'required',None,resident,
+            evidence='unknown:worker-runtime-heap')
     for p in config.participants:
         # Complete source is a bounded selected backend scaffold, not eligibility.
         for backing in p.backing:
@@ -239,6 +242,10 @@ def _charges(config, contract, assignments, states, boundaries, options):
                                   dict(contract.binding_hosts)[boundary.consumer_binding]):
             add('boundary-bounce-lower-bound',loader.memory_id,'transient',boundary.logical_bytes,('serve',))
             add('boundary-bounce-overlap',loader.memory_id,'transient',None,('serve',),evidence='unknown:bounce-overlap')
+            if contract.selection=='two-gpu':
+                add('boundary-worker-rpc-payload',worker_ram,'transient',boundary.logical_bytes,('serve',))
+                add('boundary-worker-rpc-overlap',worker_ram,'transient',None,('serve',),
+                    evidence='unknown:worker-rpc-overlap')
         route_runtime=(dict(contract.bindings)['remote_gpu0'].runtime_id if contract.selection=='two-gpu'
                        else dict(contract.bindings)['remote_cpu'].runtime_id)
         requirements.append(CapabilityRequirement(route_runtime,'route:'+contract.route,'copy route '+contract.route))
@@ -351,7 +358,7 @@ def _validate_options(config,metadata):
     from .assigned_backing import CONTRACT, role_identity
     selective=options['source_contract']==CONTRACT
     base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
-    if config.selection=='two-gpu': base_fields+=('rpc_endpoints','worker_host_memory_id')
+    if config.selection=='two-gpu': base_fields+=('rpc_endpoints','worker_host_memory_id','subject_memory_ids')
     if selective: base_fields+=('participant_backing',)
     if selective and 'build_pair' in options: base_fields+=('build_pair',)
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
@@ -376,6 +383,8 @@ def _validate_options(config,metadata):
     keys(options['bindings'],binding_fields,'strategy bindings')
     if options['route'] not in ('client-mediated','server-local'): raise ValueError('unsupported explicit copy route')
     if config.selection=='two-gpu':
+        if options['subject_memory_ids']!=[options['worker_host_memory_id']]:
+            raise ValueError('two-gpu subject memory ids must name only worker host RAM')
         if options['route']!='client-mediated': raise ValueError('two-gpu requires the client-mediated copy route')
         endpoints=options['rpc_endpoints']
         if not isinstance(endpoints,list) or len(endpoints)!=2 or len(set(endpoints))!=2:
@@ -397,6 +406,8 @@ def _validate_options(config,metadata):
             raise ValueError('two-gpu RPC endpoint spellings must be one FQDN '
                              'and its trailing-dot alias for the same listener')
     if options['source_contract'] not in ('full-source-both-hosts/1',CONTRACT): raise ValueError('unsupported full-source backing contract')
+    if config.selection=='two-gpu' and options['source_contract']!=CONTRACT:
+        raise ValueError('two-gpu requires assigned-only worker backing')
     if selective:
         if config.selection not in ('cpu-only','one-gpu','two-gpu') or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed observer builds, the cpu-only or explicitly reviewed CUDA pair, and enabled cache only')
         if config.selection in ('one-gpu','two-gpu') and options['route']!='client-mediated': raise ValueError('selective CUDA backing requires the client-mediated copy route')
@@ -775,6 +786,14 @@ def q8_llama_cpp_spec(plan):
     return Q8LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,rpc,
         device,args,('--device',native),plan.candidate.assignments,plan.candidate.required_state,plan.candidate.boundaries,
         w.context,w.slots,options['startup_timeout_seconds'],plan.admission.execution_ready,plan.admission.deficits)
+
+
+def q8_participant_build_backend(plan, participant):
+    """Strategy-owned reviewed build backend for one participant."""
+    from .assigned_backing import CPU_BACKEND, CUDA_BACKEND
+    if participant.role=='client': return CPU_BACKEND
+    if participant.role!='remote': raise ValueError('unsupported Q8 participant role')
+    return CPU_BACKEND if plan.selection=='cpu-only' else CUDA_BACKEND
 
 # Startup-only source expectations. These private tables are definitions, not
 # observation IDs, executable expressions or caller-extensible catalog inputs.

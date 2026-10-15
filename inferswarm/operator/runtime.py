@@ -153,17 +153,17 @@ class OperatorRunner:
         sources={p.participant_id:self.source.verify(p,plan,
             str(Path(self.leases.invocation_dir(p.execution_address))/'fnv-cache')
             if p.role=='remote' and cache else None) for p in (remote,client)}
-        from .assigned_backing import CONTRACT, CUDA_BACKEND
+        from .assigned_backing import CONTRACT
+        from .qwen_q8 import q8_participant_build_backend
         if options['source_contract']==CONTRACT:
             if self.collector is None: raise ValueError('selective backing requires per-role native build collector')
             observer=options['observer']
             # The remote role's build backend follows the plan's explicit
             # selection; the client/loader role stays on the reviewed CPU build.
-            backend = CUDA_BACKEND if getattr(plan,'selection',None) in ('one-gpu','two-gpu') else 'cpu'
             for p in (remote,client):
                 if 'assigned_guard_path' not in sources[p.participant_id]: raise ValueError('selective backing upload guard missing')
                 self.collector.collect_build(p,observer[p.role+'_manifest_path'],
-                    observer[p.role+'_executable_path'],backend=backend if p.role=='remote' else 'cpu',
+                    observer[p.role+'_executable_path'],backend=q8_participant_build_backend(plan,p),
                     **({'build_pair':options['build_pair']} if 'build_pair' in options else {}))
         return sources
 
@@ -538,9 +538,9 @@ class OperatorRunner:
                     owned_endpoints=(f'127.0.0.1:{p.port}',)
                 # Repeat the source precheck's role/backend join at static
                 # collection; the coordinator remains CPU for either plan.
-                from .assigned_backing import CONTRACT, CUDA_BACKEND, CPU_BACKEND
-                build_kwargs = ({'backend': CUDA_BACKEND if p.role=='remote'
-                    and plan.selection in ('one-gpu','two-gpu') else CPU_BACKEND}
+                from .assigned_backing import CONTRACT
+                from .qwen_q8 import q8_participant_build_backend
+                build_kwargs = ({'backend': q8_participant_build_backend(plan,p)}
                     if options['source_contract']==CONTRACT else {})
                 if options['source_contract']==CONTRACT and 'build_pair' in options:
                     build_kwargs['build_pair']=options['build_pair']

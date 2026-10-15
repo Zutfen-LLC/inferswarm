@@ -481,8 +481,11 @@ def profile_subject(config, *, profile_mode='live') -> ProfileSubject:
     options=thaw(config.strategy_options)
     if options.get('source_contract')=='coordinator-full-source/participant-assigned-rpc-backing/1':
         memory_ids.add(options['participant_backing']['memory_id'])
-    if config.selection=='two-gpu' and 'worker_host_memory_id' in options:
-        memory_ids.add(options['worker_host_memory_id'])
+    subject_memory_ids=options.get('subject_memory_ids',())
+    if not isinstance(subject_memory_ids,(list,tuple)):
+        raise ValueError('strategy subject memory ids must be an array')
+    for memory_id in subject_memory_ids:
+        memory_ids.add(_text(memory_id,'strategy subject memory id'))
     # Workload tuple maps remain tuples in Python but hash JSON object semantics.
     workload=asdict(config.workload); workload['cache_settings']=thaw(config.workload.cache_settings)
     dependencies=tuple(sorted([('model:source_id',config.model.source_id),('model:revision',config.model.revision),
