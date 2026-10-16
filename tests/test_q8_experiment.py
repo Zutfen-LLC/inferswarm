@@ -125,6 +125,8 @@ class CampaignFixture:
                 # First-listener probe channel refuses; rpc1/client must survive.
                 raise RuntimeError('rpc0 probe channel refused')
             return self._run_retention_probe(address,argv)
+        if argv[:2]==['python3','-c'] and 'load-once-resource-sample' in argv[2]:
+            return json.dumps({path:'synthetic cumulative CPU/disk counters' for path in argv[3:]})
         if argv[0]=='id': return '1000\n'
         if argv[0]=='sha256sum':
             part=next(p for p in self.plan.participants if p.execution_address==address)
@@ -174,6 +176,8 @@ class CampaignFixture:
     def collect_build(self,*args,**kwargs): pass
     def await_terminal_export(self,*args,**kwargs): pass
     def collect_dynamic(self,participant=None,spawn=None,*args,**kwargs):
+        if self.mode=='observer-interrupt': raise KeyboardInterrupt
+        if self.mode=='observer-timeout': raise TimeoutError('observer campaign execution deadline reached')
         if self.mode=='dropped' and participant is not None \
                 and participant.participant_id.endswith('-rpc1'):
             raise ValueError('observation dropped events refuse completeness')
@@ -183,10 +187,19 @@ class CampaignFixture:
     def post(self,url,payload,timeout):
         self.posts.append(payload)
         if self.mode=='interrupt': raise KeyboardInterrupt
+        if len(self.posts)==2:
+            if self.mode=='second-failure': raise RuntimeError('second request failed')
+            if self.mode=='second-timeout': raise TimeoutError('request deadline')
+            if self.mode=='second-interrupt': raise KeyboardInterrupt
         if self.mode=='request': raise RuntimeError('request failed')
         if self.mode=='timeout': raise TimeoutError('request deadline')
         if self.mode in ('allocator','monitor'):
             if not self.failure.wait(8): raise AssertionError('monitor did not stop live services')
+        if url.endswith('/completion'):
+            if self.mode=='invalid-response': return {'error':'synthetic error','content':123}
+            if self.mode=='missing-timings': return dict(content='unqualified',stop=True,stop_type='limit')
+            return dict(content='unqualified',stop=True,stop_type='eos',tokens_predicted=1,
+                        tokens_cached=9,timings=dict(cache_n=0,prompt_ms=12,predicted_ms=34,predicted_n=1))
         return dict(id='one',choices=[dict(message=dict(content='unqualified'),finish_reason='stop')],
                     usage=dict(completion_tokens=1))
     def tunnel_factory(self,*args):
@@ -195,7 +208,9 @@ class CampaignFixture:
             done=False
             def poll(self): return 0 if self.done else None
             def terminate(self): self.done=True
-            def wait(self,timeout=None): return 0
+            def wait(self,timeout=None):
+                if fixture.mode=='tunnel-cleanup': raise RuntimeError('synthetic tunnel cleanup failure')
+                return 0
         fixture.tunnel=Tunnel(); return fixture.tunnel,8080
 
 
@@ -216,8 +231,15 @@ class ExperimentalDriverTests(unittest.TestCase):
             limits=dict(experiment._LIMITS),gpu_bindings=[dict(selector='CUDA0',uuid='GPU-'+'a'*32),
                                                        dict(selector='CUDA1',uuid='GPU-'+'b'*32)])
 
-    def execute(self,mode='ok',raw=None,cli_path=False):
-        self.envelope.write_text(json.dumps(self.raw if raw is None else raw))
+    def execute(self,mode='ok',raw=None,cli_path=False,session=None):
+        envelope=copy.deepcopy(self.raw if raw is None else raw)
+        options={}
+        if session is not None:
+            session_path=Path(self.temp.name)/'session.json'
+            session_path.write_text(json.dumps(session))
+            envelope['request_sha256']=hashlib.sha256(canonical(session)).hexdigest()
+            options['session_path']=session_path
+        self.envelope.write_text(json.dumps(envelope))
         fixture=CampaignFixture(mode); fixture.plan=self.plan
         fixture.remote=next(p for p in self.plan.participants if p.role=='remote')
         evidence_root=Path(self.temp.name)/('evidence-'+mode)
@@ -235,23 +257,280 @@ class ExperimentalDriverTests(unittest.TestCase):
             if cli_path:
                 original=experiment.run_experimental_campaign
                 import uuid
-                def dispatch(config,envelope,evidence_root=None):
+                def dispatch(config,envelope,evidence_root=None,session_path=None,**kwargs):
                     return original(config,envelope,commands=fixture,transport=fixture,
                         runner_factory=runner,evidence_root=(evidence_root if evidence_root
                             is not None else str(Path(self.temp.name)/('evidence-'+uuid.uuid4().hex))),
-                        evidence_transport=fixture)
+                        evidence_transport=fixture,session_path=session_path,**kwargs)
                 with patch.object(experiment,'run_experimental_campaign',side_effect=dispatch), \
                      contextlib.redirect_stdout(io.StringIO()) as output, \
                      contextlib.redirect_stderr(io.StringIO()) as error:
                     code=cli.main(['experimental-q8-two-cuda','--config',str(self.config),
-                                   '--envelope',str(self.envelope)])
+                                   '--envelope',str(self.envelope),
+                                   *(['--session',str(options['session_path'])] if session is not None else [])])
                 return code,json.loads(output.getvalue() or error.getvalue()),fixture,evidence_root
             try:
                 result=experiment.run_experimental_campaign(self.config,self.envelope,
                     commands=fixture,transport=fixture,runner_factory=runner,
-                    evidence_root=str(evidence_root),evidence_transport=fixture)
-            except Exception as exc: result=exc
+                    evidence_root=str(evidence_root),evidence_transport=fixture,**options)
+            except BaseException as exc: result=exc
         return result,fixture,evidence_root
+
+    @staticmethod
+    def session(count=3):
+        return dict(schema='q8-two-cuda-session/1',requests=[dict(warmup=index==0,
+            body=dict(prompt='frozen-'+str(index),n_predict=8,temperature=0.0,
+                      seed=42,stream=False,cache_prompt=False)) for index in range(count)])
+
+    def test_session_one_load_frozen_order_and_raw_timing(self):
+        session=self.session()
+        result,fixture,root=self.execute(session=session)
+        self.assertIsInstance(result,dict,str(result))
+        self.assertEqual(fixture.posts,[row['body'] for row in session['requests']])
+        self.assertEqual(len(fixture.rows),3)
+        self.assertEqual(result['request_attempts'],3)
+        self.assertEqual(result['session_sha256'],hashlib.sha256(canonical(session)).hexdigest())
+        self.assertEqual([r['warmup'] for r in result['requests']],[True,False,False])
+        self.assertEqual([r['status'] for r in result['requests']],['COMPLETED']*3)
+        for index,row in enumerate(result['requests'],1):
+            self.assertIsNone(row['metrics']['ttft_seconds'])
+            self.assertEqual(row['metrics']['prompt_ms'],12)
+            self.assertEqual(row['metrics']['predicted_n'],1)
+            self.assertEqual(row['metrics']['tokens_cached'],9)
+            self.assertIn('reported_reused_prompt_tokens',row['prompt_cache'])
+            self.assertEqual(row['prompt_cache']['reported_reused_prompt_tokens'],0)
+            self.assertEqual(row['metrics']['cache_n'],0)
+            saved=json.loads((root/f'request-{index:02d}-response.json').read_text())
+            self.assertEqual(saved['content'],'unqualified')
+        self.assertEqual(result['outcomes']['execution'],'COMPLETED')
+        self.assertEqual(result['outcomes']['correctness'],'NOT-EVALUATED')
+        self.assertFalse(result['output_accepted']); self.assertFalse(result['physical_qualified'])
+        self.assertIn('setup',result); self.assertFalse(fixture.services)
+        self.assertTrue(fixture.tunnel.done)
+        self.assertEqual(result['evidence_retention']['response_status'],'session')
+        self.assertEqual(len(result['evidence_retention']['session_responses']),3)
+        self.assertEqual([row['name'] for row in result['spawn_receipts']],['rpc0','rpc1','client'])
+        self.assertTrue(result['evidence_retention']['complete'])
+
+    def test_session_full_list_rejection_precedes_every_remote_operation(self):
+        cases=[self.session(0),self.session(7)]
+        for cap in (0,-1,4097,True,1.5,None,float('inf'),float('nan')):
+            raw=self.session(); raw['requests'][-1]['body']['n_predict']=cap; cases.append(raw)
+        for field,value in (('cache_prompt',None),('stream',True),('seed',-1),
+                            ('temperature',float('nan')),('prompt','')):
+            raw=self.session(); raw['requests'][-1]['body'][field]=value; cases.append(raw)
+        raw=self.session(); raw['requests'][-1]['warmup']='true'; cases.append(raw)
+        for raw in cases:
+            with self.subTest(raw=raw):
+                # Canonical encoder rejects NaN/Infinity too; the driver still
+                # sees the malformed JSON and must refuse before any side effect.
+                if any(isinstance(row['body'].get('n_predict'),float) and
+                       not __import__('math').isfinite(row['body']['n_predict'])
+                       for row in raw['requests']) or any(
+                       isinstance(row['body']['temperature'],float) and
+                       not __import__('math').isfinite(row['body']['temperature'])
+                       for row in raw['requests']):
+                    self.envelope.write_text(json.dumps(self.raw))
+                    session_path=Path(self.temp.name)/'invalid-session.json'
+                    session_path.write_text(json.dumps(raw))
+                    with self.assertRaises(ValueError):
+                        experiment.run_experimental_campaign(self.config,self.envelope,session_path=session_path)
+                    continue
+                result,fixture,_=self.execute(session=raw)
+                self.assertIsInstance(result,ValueError)
+                self.assertFalse(fixture.commands); self.assertFalse(fixture.posts)
+                self.assertFalse(fixture.rows)
+
+    def test_session_later_failure_deadline_interrupt_keep_completed_measurements(self):
+        for mode in ('second-failure','second-timeout','second-interrupt'):
+            with self.subTest(mode=mode):
+                result,fixture,root=self.execute(mode,session=self.session())
+                if mode=='second-interrupt': self.assertIsInstance(result,KeyboardInterrupt)
+                else: self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+                receipt=result.campaign_receipt
+                self.assertEqual(len(fixture.posts),2)
+                self.assertEqual(receipt['requests'][0]['status'],'COMPLETED')
+                self.assertEqual(receipt['request_attempts'],2)
+                self.assertEqual(receipt['outcomes']['cleanup'],'COMPLETE')
+                self.assertEqual(len(fixture.rows),3); self.assertFalse(fixture.services)
+                self.assertTrue(fixture.tunnel.done)
+                self.assertEqual(json.loads((root/'request-01-response.json').read_text())['content'],'unqualified')
+                self.assertTrue((root/'request-02-final.json').exists())
+                self.assertFalse((root/'request-03-started.json').exists())
+                manifest=json.loads((root/'MANIFEST.json').read_text())
+                self.assertTrue(manifest['session_artifacts'])
+                report=json.loads((root/'session-report.json').read_text())
+                self.assertEqual(report['requests'][0]['status'],'COMPLETED')
+
+    def test_session_observer_refusal_never_erases_or_retries_requests(self):
+        result,fixture,root=self.execute('dropped',session=self.session(6))
+        self.assertIsInstance(result,dict,str(result))
+        self.assertEqual(len(fixture.posts),6)
+        self.assertEqual(result['outcomes']['observer'],'REFUSED')
+        self.assertIn('dropped events',result['observation_refusal'])
+        self.assertEqual([row['status'] for row in result['requests']],['COMPLETED']*6)
+        self.assertEqual(result['outcomes']['execution'],'COMPLETED')
+        self.assertTrue((root/'request-06-response.json').exists())
+        self.assertFalse(fixture.services)
+
+    def test_session_missing_metrics_remain_none_and_setup_is_separate(self):
+        result,fixture,_=self.execute('missing-timings',session=self.session(1))
+        self.assertIsInstance(result,dict,str(result))
+        row=result['requests'][0]
+        for key in ('prompt_n','prompt_ms','predicted_n','predicted_ms',
+                    'tokens_predicted','tokens_evaluated','tokens_cached','cache_n','ttft_seconds','raw_timings'):
+            self.assertIsNone(row['metrics'][key],key)
+        self.assertGreaterEqual(row['started_monotonic'],result['setup']['load_ended_monotonic'])
+        self.assertGreaterEqual(result['setup']['load_started_monotonic'],
+                                result['setup']['verification_ended_monotonic'])
+        self.assertFalse(fixture.posts[0]['cache_prompt'])
+
+    def test_session_invalid_response_is_saved_before_validation_then_stops(self):
+        result,fixture,root=self.execute('invalid-response',session=self.session())
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        self.assertEqual(len(fixture.posts),1)
+        self.assertEqual(json.loads((root/'request-01-response.json').read_text()),
+                         dict(error='synthetic error',content=123))
+        self.assertEqual(result.campaign_receipt['requests'][0]['status'],'FAILED')
+        self.assertFalse(fixture.services)
+
+    def test_session_resources_include_timestamped_phase_cpu_io_residency(self):
+        result,_,root=self.execute(session=self.session(1))
+        self.assertIsInstance(result,dict,str(result))
+        self.assertTrue(result['samples'])
+        phases={sample['phase'] for sample in result['samples']}
+        self.assertTrue({'verification','load','request'}.issubset(phases),phases)
+        sample=result['samples'][-1]
+        self.assertIn('timestamp',sample)
+        self.assertTrue(sample['owned_app_memory'])
+        self.assertTrue(all(row['used_bytes']>0 for row in sample['owned_app_memory']))
+        self.assertTrue(sample['raw_cpu_disk_counters'])
+        import os
+        for path in root.iterdir():
+            if path.is_file(): self.assertEqual(os.stat(path).st_mode & 0o777,0o600)
+        self.assertNotIn('unqualified',(root/'MANIFEST.json').read_text())
+
+    def test_session_safety_failure_after_response_is_not_observer_refusal(self):
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        original=SystemdSessionGuard.after_request
+        def fail(guard,*args):
+            original(guard,*args)
+            raise RuntimeError('synthetic device safety STOP')
+        with patch.object(SystemdSessionGuard,'after_request',fail):
+            result,fixture,root=self.execute(session=self.session())
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        self.assertEqual(len(fixture.posts),1)
+        self.assertEqual(result.campaign_receipt['requests'][0]['status'],'COMPLETED')
+        self.assertEqual(result.campaign_receipt['outcomes']['execution'],'STOPPED')
+        self.assertTrue((root/'request-01-response.json').exists())
+        self.assertFalse(fixture.services)
+
+    def test_session_absolute_budget_spans_warmup_and_stops_next_post(self):
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        original=SystemdSessionGuard.after_request
+        deadlines=[]
+        def expire(guard,*args):
+            deadlines.append(guard.execute_deadline)
+            original(guard,*args)
+            # Move only the synthetic guard clock, never grant a new budget.
+            guard.clock=lambda:guard.execute_deadline+1
+        with patch.object(SystemdSessionGuard,'after_request',expire):
+            result,fixture,root=self.execute(session=self.session())
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        self.assertEqual(len(fixture.posts),1)
+        self.assertTrue(result.campaign_receipt['requests'][0]['warmup'])
+        self.assertEqual(result.campaign_receipt['requests'][0]['status'],'COMPLETED')
+        self.assertIn('deadline',str(result))
+        self.assertFalse(fixture.services)
+        self.assertTrue((root/'request-01-response.json').exists())
+        self.assertFalse((root/'request-02-started.json').exists())
+
+    def test_session_frozen_bytes_and_legacy_sole_request_guard(self):
+        from inferswarm.operator.q8_session import validate_session,SystemdSessionGuard
+        raw=self.session(1); frozen=validate_session(raw); before=frozen.digest
+        raw['requests'][0]['body']['prompt']='mutated'
+        self.assertEqual(frozen.digest,before)
+        self.assertEqual(frozen.payload()['requests'][0]['body']['prompt'],'frozen-0')
+        guard=experiment.SystemdCampaignGuard(None,SimpleNamespace(),None)
+        guard.request_started()
+        with self.assertRaisesRegex(RuntimeError,'already attempted'): guard.request_started()
+        guard=SystemdSessionGuard(None,SimpleNamespace(),None,session=frozen)
+        guard.request_started()
+        with self.assertRaisesRegex(RuntimeError,'exhausted'): guard.request_started()
+
+    def test_session_cleanup_error_is_independent_of_completed_requests(self):
+        result,fixture,root=self.execute('cleanup',session=self.session(1))
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        receipt=result.campaign_receipt
+        self.assertEqual(receipt['requests'][0]['status'],'COMPLETED')
+        self.assertEqual(receipt['outcomes']['execution'],'COMPLETED')
+        self.assertEqual(receipt['outcomes']['cleanup'],'FAILED-OR-INCOMPLETE')
+        self.assertTrue((root/'session-report.json').exists())
+        self.assertFalse(fixture.services)
+
+    def test_session_tunnel_cleanup_failure_is_not_reported_complete(self):
+        result,fixture,root=self.execute('tunnel-cleanup',session=self.session(1))
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        self.assertEqual(result.campaign_receipt['requests'][0]['status'],'COMPLETED')
+        self.assertEqual(result.campaign_receipt['outcomes']['cleanup'],'FAILED-OR-INCOMPLETE')
+        self.assertFalse(fixture.services)
+        self.assertTrue((root/'MANIFEST.json').exists())
+
+    def test_session_observer_interrupt_and_deadline_are_not_swallowed(self):
+        for mode in ('observer-interrupt','observer-timeout'):
+            result,fixture,root=self.execute(mode,session=self.session())
+            if mode=='observer-interrupt': self.assertIsInstance(result,KeyboardInterrupt)
+            else: self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+            self.assertEqual([row['status'] for row in result.campaign_receipt['requests']],['COMPLETED']*3)
+            self.assertEqual(len(fixture.posts),3)
+            self.assertFalse(fixture.services)
+            self.assertTrue((root/'MANIFEST.json').exists())
+            self.assertTrue((root/'request-03-response.json').exists())
+
+    def test_session_wall_measures_post_not_metadata_fsync(self):
+        import time
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        clock=[time.monotonic()]
+        init=SystemdSessionGuard.__init__; save=DurableEvidenceStore.save_session_json
+        post=CampaignFixture.post
+        def init_guard(guard,*args,**kwargs):
+            init(guard,*args,clock=lambda:clock[0],**kwargs)
+        def save_with_delay(store,name,value):
+            answer=save(store,name,value)
+            if name.endswith('-started.json'): clock[0]+=100
+            return answer
+        def measured_post(fixture,*args,**kwargs):
+            response=post(fixture,*args,**kwargs); clock[0]+=10; return response
+        with patch.object(SystemdSessionGuard,'__init__',init_guard), \
+             patch.object(DurableEvidenceStore,'save_session_json',save_with_delay), \
+             patch.object(CampaignFixture,'post',measured_post):
+            result,_,_=self.execute(session=self.session(1))
+        self.assertIsInstance(result,dict,str(type(result)))
+        self.assertEqual(result['requests'][0]['wall_seconds'],10)
+
+    def test_session_light_counter_probe_executes_and_discloses_truncation(self):
+        import subprocess,sys
+        result,fixture,_=self.execute(session=self.session(1))
+        self.assertIsInstance(result,dict,str(type(result)))
+        command=next(argv for _,argv in fixture.commands
+            if len(argv)>2 and 'load-once-resource-sample' in argv[2])
+        counter=Path(self.temp.name)/'counter'; counter.write_text('x'*16385)
+        missing=Path(self.temp.name)/'missing'
+        proc=subprocess.run([sys.executable,'-c',command[2],str(counter),str(missing)],
+                            capture_output=True,text=True,check=True)
+        values=json.loads(proc.stdout)
+        self.assertIsInstance(values[str(counter)],dict)
+        self.assertTrue(values[str(counter)]['truncated'])
+        self.assertEqual(len(values[str(counter)]['raw']),16384)
+        self.assertIsNone(values[str(missing)])
+
+    def test_session_cli_reaches_same_load_once_driver(self):
+        code,result,fixture,_=self.execute(session=self.session(),cli_path=True)
+        self.assertEqual(code,0)
+        self.assertEqual(result['schema'],'q8-two-gpu-experimental-session/1')
+        self.assertEqual(len(fixture.posts),3)
+        self.assertEqual(len(result['spawn_receipts']),3)
 
     def test_cli_reaches_one_real_driver_request_with_unknown_bounds(self):
         code,result,fixture,_=self.execute(cli_path=True)
@@ -400,6 +679,17 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
               if row['process']==process and row['kind']==kind
               and (name is None or row['source_path'].endswith(name))]
         return rows
+
+    def test_session_report_does_not_inherit_single_response_size_bound(self):
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-session-size'
+        store=DurableEvidenceStore.create(root,'token1',config_sha256='a'*64,
+            request_sha256='b'*64,max_response_bytes=32,max_total_bytes=4096)
+        # A long session's lightweight sample report may exceed one response's
+        # bound; total retention still bounds it, without losing the report.
+        self.assertTrue(store.save_session_json('session-report.json',{'samples':'x'*128}))
+        self.assertFalse(store.save_session_json('request-01-response.json',{'content':'x'*128}))
+        self.assertFalse(store.finalize()['complete'])
 
     def test_normal_completed_response_retains_all_raw_evidence(self):
         result,fixture,root=self.execute('ok')
