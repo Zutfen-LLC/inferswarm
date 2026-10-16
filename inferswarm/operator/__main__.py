@@ -18,13 +18,18 @@ def main(argv=None):
         'absolute controller-local directory for durable raw-evidence retention; '
         'must not already exist (default: fresh token directory under '
         '~/.local/share/inferswarm)'))
+    experiment.add_argument('--source-digest-cache',help='absolute coordinator-host digest JSON path outside lifecycle directories (opt-in)')
+    experiment.add_argument('--force-fresh-source-hash',action='store_true',help='rehash all coordinator source bytes and refresh the digest cache')
     args=parser.parse_args(argv)
     try:
         if args.command=='run': result=run_config(args.config)
         else:
             from .q8_experiment import run_experimental_campaign
-            result=run_experimental_campaign(args.config,args.envelope,
-                evidence_root=args.evidence_root)
+            options=dict(evidence_root=args.evidence_root)
+            if args.source_digest_cache or args.force_fresh_source_hash:
+                options.update(source_digest_cache=args.source_digest_cache,
+                    force_fresh_source_hash=args.force_fresh_source_hash)
+            result=run_experimental_campaign(args.config,args.envelope,**options)
         print(json.dumps(result,sort_keys=True))
         return 0
     except Exception as exc:

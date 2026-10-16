@@ -188,3 +188,46 @@ temporaries within the summed bank reserve, read them back exactly, and reuse
 both keys with zero warm weight payload. This proves the native two-listener route
 mechanism on CPU only; it does not prove CUDA enumeration, residency, kernels,
 P2P, capacity or output acceptance.
+
+### Optional coordinator source digest reuse
+
+For repeated internal experiments, `experimental-q8-two-cuda` accepts
+`--source-digest-cache /absolute/coordinator/path/source-digests.json`.
+Choose a dedicated JSON file on the coordinator outside lifecycle directories;
+it persists independently of invocation cleanup. Ordinary `run` remains unchanged.
+`--force-fresh-source-hash` with that path rehashes and refreshes every source
+entry. A legacy digest alone cannot seed this cache: the first invocation must
+establish a witnessed file identity while hashing.
+
+The bounded, versioned JSON cache is atomically replaced on the source host.
+It records host/machine/boot identity, canonical path, device, inode, size,
+mtime and ctime in nanoseconds, the expected whole-member SHA-256, and actual
+whole-member and exact offset/length SHA-256 values. Missing, malformed, changed
+or differently keyed entries miss; an unchanged member can retain its ranges
+while another member changes. New ranges are hashed. Hashing checks descriptor
+and pathname identities before and after reads; the verifier checks all witnessed
+members again before publishing. A cheap post-request stat check refuses results
+if coordinator source identities changed during execution.
+
+Headers are still read and parsed on each invocation, runtime executables are
+still hashed, and current receipts are rebuilt against the current plan.
+`source_digest_cache.hashed_bytes` and `reused_bytes` appear in the campaign
+result, outside strict source receipts. These counters count source digest reads
+only, excluding headers, executables and worker backing. Worker assigned-only
+SHA/FNV checks, native readback and publication integrity remain unchanged.
+
+This opt-in trusts stable files and cache metadata on controlled homelab hosts.
+It does not detect silent storage corruption or privileged timestamp/inode
+manipulation, and snapshot restoration may defeat metadata witnesses. Use
+force-fresh when those assumptions are uncertain. Reboot causes a cold cache.
+Concurrent writers may lose reusable entries (a later miss), without sharing
+leases or replaying old receipts.
+
+The tiny synthetic regression measures 1,808 digest bytes hashed cold, zero
+hashed / 1,808 reused warm, and 1,808 hashed with force-fresh. This is a source
+read-count comparison, not an inference or wall-time benchmark. For the frozen
+Hermes inventory, avoiding 188,225,033,248 whole-member bytes plus
+168,221,585,536 assigned-range bytes would eliminate a CALCULATED
+356,446,618,784 verification bytes per warm coordinator run; roughly 11 MB of
+headers are still checked. No real-model or hardware speedup has been measured.
+This implementation adds no capability acceptance or execution authorization.

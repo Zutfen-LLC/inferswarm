@@ -616,6 +616,8 @@ class OperatorRunner:
                 except BaseException: pass
             if campaign_guard is not None:
                 campaign_guard.checkpoint()
+            revalidate=getattr(self.source,'revalidate_source_identity',None)
+            if revalidate is not None: revalidate()
             choice=response['choices'][0]; output=choice['message']['content']
             if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
                 raise ValueError('incomplete diagnostic generation response')

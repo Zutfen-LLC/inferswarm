@@ -862,3 +862,32 @@ class RecordingProbeRunner:
         self.test.seen_timeouts.append(timeout)
         if 'os.listdir' in argv[2]: return json.dumps({'missing':True})
         return base64.b64encode(b'x').decode('ascii')
+
+
+class DigestCacheTransportTests(unittest.TestCase):
+    def test_only_coordinator_envelope_changes_and_diagnostics_stay_outside_receipt(self):
+        calls=[]
+        class Manager:
+            def run_helper(self, address, command, *, input, timeout):
+                value=json.loads(input); calls.append(value)
+                output=(dict(receipt=dict(status='VERIFIED-not-consumed'),
+                    digest_cache=dict(hashed_bytes=0,reused_bytes=100),source_fingerprints={})
+                    if value['schema'].endswith('/2') else dict(status='VERIFIED-not-consumed'))
+                return SimpleNamespace(returncode=0,stdout=json.dumps(output))
+        transport=experiment.SupervisedSourceTransport(Manager(),digest_cache='/cache/source.json',force_fresh=True)
+        for role in ('client','remote'):
+            result=transport._call(SimpleNamespace(role=role,execution_address='synthetic'),
+                'synthetic',json.dumps(dict(schema='q8-source-verification/1')))
+            self.assertEqual(json.loads(result.stdout),dict(status='VERIFIED-not-consumed'))
+        self.assertEqual(calls[0]['digest_cache'],dict(path='/cache/source.json',force_fresh=True))
+        self.assertEqual(calls[1],dict(schema='q8-source-verification/1'))
+        self.assertEqual(transport.digest_cache_stats,dict(hashed_bytes=0,reused_bytes=100))
+
+    def test_cli_forwards_explicit_options(self):
+        with patch.object(experiment,'run_experimental_campaign',return_value={}) as run:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(['experimental-q8-two-cuda','--config','config',
+                    '--envelope','envelope','--source-digest-cache','/cache/source.json',
+                    '--force-fresh-source-hash']),0)
+        self.assertEqual(run.call_args.kwargs,dict(evidence_root=None,
+            source_digest_cache='/cache/source.json',force_fresh_source_hash=True))
