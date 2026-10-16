@@ -189,6 +189,36 @@ both keys with zero warm weight payload. This proves the native two-listener rou
 mechanism on CPU only; it does not prove CUDA enumeration, residency, kernels,
 P2P, capacity or output acceptance.
 
+### Explicit load-once diagnostic session
+
+`experimental-q8-two-cuda --session FILE` opts into a frozen
+`q8-two-cuda-session/1` ordered list of one to six native `/completion`
+requests. Every entry declares its body, generation cap and warmup flag;
+warmups consume the request limit and the same absolute campaign budget.
+The envelope's `request_sha256` binds the canonical entire session. Without
+`--session`, the existing single chat request and sole-request guard are
+unchanged; ordinary operator admission is unchanged too.
+
+The session reuses the existing one-time worker/server startup, backing
+verification, source-digest cache opt-in, resource supervision and cleanup.
+It saves each complete response immediately, before validation, plus private
+per-request metadata and a final session report. Missing native timing/token
+fields remain null; HTTP wall time is not TTFT. Lightweight timestamped
+CPU/disk counters and the existing RAM/cgroup/GPU samples carry phase markers.
+Execution, unevaluated correctness, timing/resources, detailed observer
+completeness/refusal and cleanup are separate outcomes. A terminal observer
+refusal preserves measurements; genuine execution/safety failures stop further
+requests. The existing RPC observer scope is not per-request native dynamic
+acceptance or GPU kernel proof.
+
+The [fixed-placement baseline recipe](../../tools/native-cache/q8-load-once-recipe.md)
+uses explicit uncached-prefill settings and bounded raw text workloads. These
+are not directly comparable to IS326/327. This is CPU-tested diagnostic
+software support, not a new physical result, accepted capability or execution
+authorization: `output_accepted=false`, `physical_qualified=false`, and
+unsupported two-GPU physical qualification remain unchanged. No living status
+acceptance/frontier record is advanced by this extension.
+
 ### Optional coordinator source digest reuse
 
 For repeated internal experiments, `experimental-q8-two-cuda` accepts
