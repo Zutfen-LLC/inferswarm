@@ -70,11 +70,15 @@ reviewer-trust gates before review, the default independent review being
 the maintainer's exact-head review of the pushed PR (delegated agent/LLM
 adversarial reviews are optional, targeted advisory lanes with no default
 count or timeout), then final validation of the single reviewed head:
-one hosted **Final CPU Validation** run (the canonical full CPU suite,
+one hosted **Final CPU Validation** run (the full CPU requirement,
 dispatched via `final-cpu-validation.yml` on the exact reviewed SHA —
 `gh workflow run final-cpu-validation.yml --ref <branch> -f
 expected_sha=<sha>`) plus the ordinary hosted CI run, both on the same
-exact head. A separate local full-suite run is not additionally required
+exact head. Complete compatible ordinary CI results can satisfy the full CPU
+requirement through the authenticated reuse path documented in campaign gate
+ordering; otherwise Final CPU Validation executes the canonical suite. Supply
+`-f pr_number=<number>` to enable PR-bound ordinary CI reuse. A separate local
+full-suite run is not additionally required
 once the hosted final validation is accepted; local runs remain
 diagnostic.
 

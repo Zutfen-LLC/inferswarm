@@ -867,6 +867,11 @@ def validate_execution_block(execution: object, *, git_commit_sha: str,
             "final-validation execution block is not an object (fail "
             "closed)")
     mode = execution.get("mode")
+    if mode == "verified_ordinary_ci":
+        import ordinary_ci_reuse
+        ordinary_ci_reuse.validate_execution(
+            execution, git_commit_sha=git_commit_sha, github_run_id=github_run_id)
+        return mode
     if mode == EXECUTION_MODE_EXECUTED:
         expected_keys = _EXECUTED_KEYS
     elif mode == EXECUTION_MODE_REUSED:
@@ -1496,8 +1501,13 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         # SHA — exactly like a local suite receipt (#213 guarantee:
         # a result from a different suite configuration or environment
         # can never satisfy this gate).
+        receipt_request = final_head.to_dict()
+        if final_validation_receipt.get("execution", {}).get("mode") == "verified_ordinary_ci":
+            import ordinary_ci_reuse
+            receipt_request = dict(receipt_request, suite=dict(
+                final_head.suite, suite_config=ordinary_ci_reuse.suite_configuration()))
         if not validate_receipt(final_validation_receipt["suite_receipt"],
-                                final_head.to_dict()):
+                                receipt_request):
             raise GateOrderingError(
                 "hosted final-validation receipt's suite identity (suite "
                 "configuration or environment authority) does not match "

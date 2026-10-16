@@ -37,6 +37,7 @@ concurrency:
 env:
   # Deterministic pip behavior across runners.
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  CI_OUTCOMES_DIR: /tmp/ci-outcomes
 
 jobs:
   plan:
@@ -161,39 +162,34 @@ jobs:
 
       - name: Check generated project status
         run: |
-          python3 scripts/sync_project_status.py --check
-          python3 -m unittest tests.test_project_status -v
+          python3 -m scripts.ci_unittest tests.test_project_status -v
 
       - name: Check deterministic repository finalization (Issue #130)
         run: |
           python3 scripts/finalize_repository.py --check
-          python3 -m unittest tests.test_finalize_repository -v
+          python3 -m scripts.ci_unittest tests.test_finalize_repository -v
 
       # The accepted #137/#153 bundles are verified by the tombstone-aware
       # retired-lineage check below (their frozen manifest builders hash
       # test files retired by Issue #246, so they are no longer run).
       - name: Check evidence manifest lifecycle
         run: |
-          python3 scripts/issue187_r7a_manifest.py --check
-          python3 -m unittest tests.test_evidence_manifest_lifecycle -v
+          python3 -m scripts.ci_unittest tests.test_evidence_manifest_lifecycle -v
 
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
 
       - name: Check issue 131 canonical CPU test environment (CPU-only)
-        run: python3 -m unittest tests.test_issue131_cpu_test_env -v
-
-      - name: Check CI planner self-check (Issue #148)
-        run: python3 scripts/plan_ci.py --self-check
+        run: python3 -m scripts.ci_unittest tests.test_issue131_cpu_test_env -v
 
       - name: Check CI test-retention audit and retired-lineage integrity (Issue #246)
         run: |
           python3 scripts/check_ci_test_retention.py
-          python3 -m unittest tests.test_ci_test_retention -v
+          python3 -m scripts.ci_unittest tests.test_ci_test_retention -v
 
       - name: Check CI planner and full-suite runner tests
         # Registry parity requires every repo-integrity module to run here.
-        run: python3 -m unittest tests.test_plan_ci tests.test_run_full_cpu_suite -v
+        run: python3 -m scripts.ci_unittest tests.test_plan_ci tests.test_run_full_cpu_suite -v
 
       - name: Check internal Markdown links
         run: |
@@ -285,6 +281,15 @@ jobs:
           print("Naming consistent")
           EOF
 
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-repo-integrity
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
+
   # ---------------------------------------------------------------------------
   # Impact-selected groups. Each job is conditional on the planner's
   # selection; a skip is legitimate (the CI Gate verifies selection
@@ -312,7 +317,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-74-79
-        run: python3 -m unittest tests.test_issue74_methodology -v
+        run: python3 -m scripts.ci_unittest tests.test_issue74_methodology -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-74-79
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-83-95:
     name: Group issue-83-95
@@ -335,7 +349,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-83-95
-        run: python3 -m unittest tests.test_issue83_semantic_contract tests.test_issue93_numerical_core_doctrine tests.test_issue108_post_v4_statistical_metric_doctrine -v
+        run: python3 -m scripts.ci_unittest tests.test_issue83_semantic_contract tests.test_issue93_numerical_core_doctrine tests.test_issue108_post_v4_statistical_metric_doctrine -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-83-95
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-109-110:
     name: Group issue-109-110
@@ -358,7 +381,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-109-110
-        run: python3 -m unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze tests.test_issue110_v5_custody_handoff tests.test_issue110_terminal_report_decimals tests.test_consumed_holdout_boundary -v
+        run: python3 -m scripts.ci_unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze tests.test_issue110_v5_custody_handoff tests.test_issue110_terminal_report_decimals tests.test_consumed_holdout_boundary -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-109-110
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-117-133:
     name: Group issue-117-133
@@ -381,7 +413,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-117-133
-        run: python3 -m unittest tests.test_issue117_provenance tests.test_issue117_accepted_subject tests.test_issue117_arm_a_retention tests.test_issue117_arm_b_retention tests.test_issue117_arm_c_retention tests.test_issue133_physical_execution_retention tests.test_issue184_final_closure -v
+        run: python3 -m scripts.ci_unittest tests.test_issue117_provenance tests.test_issue117_accepted_subject tests.test_issue117_arm_a_retention tests.test_issue117_arm_b_retention tests.test_issue117_arm_c_retention tests.test_issue133_physical_execution_retention tests.test_issue184_final_closure -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-117-133
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-213-gate-ordering:
     name: Group issue-213-gate-ordering
@@ -408,7 +449,16 @@ jobs:
         # doctrinal group (same orchestration line); Issue #291 adds the
         # verified exact-head receipt-reuse controls; Issue #323 adds the
         # authenticated ordinary-CI handoff controls (offline fake API).
-        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci tests.test_issue291_final_validation_reuse tests.test_issue323_verified_ordinary_ci -v
+        run: python3 -m scripts.ci_unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci tests.test_issue291_final_validation_reuse tests.test_issue323_verified_ordinary_ci tests.test_ordinary_ci_reuse -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-213-gate-ordering
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   moe-overlap-prototype:
     name: Group moe-overlap-prototype
@@ -434,7 +484,16 @@ jobs:
         # Offline prototype plus the actual #309 native model FFN seam.
         # Builds the pinned CPU ggml/llama closure, then small synthetic
         # fixtures with loopback RPC; no GPU or full-model inference.
-        run: python3 -m unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache tests.test_moe_native_cache -v
+        run: python3 -m scripts.ci_unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache tests.test_moe_native_cache -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-moe-overlap-prototype
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-187-r7a:
     name: Group issue-187-r7a
@@ -457,7 +516,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-187-r7a
-        run: python3 -m unittest tests.test_issue187_r7a -v
+        run: python3 -m scripts.ci_unittest tests.test_issue187_r7a -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-187-r7a
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-209-r7b:
     name: Group issue-209-r7b
@@ -480,7 +548,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-209-r7b
-        run: python3 -m unittest tests.test_issue209_r7b -v
+        run: python3 -m scripts.ci_unittest tests.test_issue209_r7b -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-209-r7b
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-222-r7c:
     name: Group issue-222-r7c
@@ -503,7 +580,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-222-r7c
-        run: python3 -m unittest tests.test_issue222_r7c -v
+        run: python3 -m scripts.ci_unittest tests.test_issue222_r7c -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-222-r7c
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-99-103:
     name: Group issue-99-103
@@ -526,7 +612,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-99-103
-        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof tests.test_issue311_preparation tests.test_bounded_acquisition tests.test_issue311_startup tests.test_issue311_cuda_backing tests.test_issue313_two_gpu tests.test_q8_experiment tests.test_issue255_mvp tests.test_issue255_measure tests.test_issue255_baseline tests.test_issue268_operator_plan tests.test_issue268_operator_runtime tests.test_issue299_metadata tests.test_issue299_profiles tests.test_issue299_q8_plan tests.test_issue299_admission tests.test_issue299_source tests.test_issue299_bindings tests.test_issue299_runtime tests.test_issue299_phased_observation tests.test_issue299_native_build tests.test_issue299_native_producer tests.test_issue301_budget_authorization tests.test_issue302_collected_runner tests.test_issue302_per_role_builds tests.test_issue302_bounded_collection tests.test_issue302_route_contracts -v
+        run: python3 -m scripts.ci_unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof tests.test_issue311_preparation tests.test_bounded_acquisition tests.test_issue311_startup tests.test_issue311_cuda_backing tests.test_issue313_two_gpu tests.test_q8_experiment tests.test_issue255_mvp tests.test_issue255_measure tests.test_issue255_baseline tests.test_issue268_operator_plan tests.test_issue268_operator_runtime tests.test_issue299_metadata tests.test_issue299_profiles tests.test_issue299_q8_plan tests.test_issue299_admission tests.test_issue299_source tests.test_issue299_bindings tests.test_issue299_runtime tests.test_issue299_phased_observation tests.test_issue299_native_build tests.test_issue299_native_producer tests.test_issue301_budget_authorization tests.test_issue302_collected_runner tests.test_issue302_per_role_builds tests.test_issue302_bounded_collection tests.test_issue302_route_contracts -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-99-103
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   # ---------------------------------------------------------------------------
   # r8i-qwen-qualification is ONE registered planner group executed as 5
@@ -579,7 +674,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 1
-        run: python3 -m unittest tests.test_issue248_diagnostic tests.test_issue250_terminal tests.test_issue289_launcher tests.test_issue250_amendment008 tests.test_issue250_pass6_corrections tests.test_issue254_producer tests.test_issue260_source_patch tests.test_issue262_source_patch tests.test_issue264_pilot tests.test_issue280_observer tests.test_issue280_source -v
+        run: python3 -m scripts.ci_unittest tests.test_issue248_diagnostic tests.test_issue250_terminal tests.test_issue289_launcher tests.test_issue250_amendment008 tests.test_issue250_pass6_corrections tests.test_issue254_producer tests.test_issue260_source_patch tests.test_issue262_source_patch tests.test_issue264_pilot tests.test_issue280_observer tests.test_issue280_source -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8i-qwen-qualification-s1
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   r8i-qwen-qualification-s2:
     name: Group r8i-qwen-qualification shard 2
@@ -603,7 +707,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 2
-        run: python3 -m unittest tests.test_issue250_terminalization tests.test_issue250_v0n_nvidia tests.test_issue252_physical tests.test_issue252_round4 tests.test_issue252_round5 tests.test_issue278_integration.IntegrationChainTests.test_comparison_callback_custody_tamper_blocks tests.test_issue278_integration.IntegrationChainTests.test_custody_row_drift_blocks_reference_first_zero_launches tests.test_issue278_integration.IntegrationChainTests.test_final_verification_covers_staged_bytes_and_reevaluation_callbacks tests.test_issue278_integration.IntegrationChainTests.test_first_demonstration_matching_and_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_forged_verdicts_cannot_mint_physical_terminal tests.test_issue280_real_compat tests.test_issue280_source_compat -v
+        run: python3 -m scripts.ci_unittest tests.test_issue250_terminalization tests.test_issue250_v0n_nvidia tests.test_issue252_physical tests.test_issue252_round4 tests.test_issue252_round5 tests.test_issue278_integration.IntegrationChainTests.test_comparison_callback_custody_tamper_blocks tests.test_issue278_integration.IntegrationChainTests.test_custody_row_drift_blocks_reference_first_zero_launches tests.test_issue278_integration.IntegrationChainTests.test_final_verification_covers_staged_bytes_and_reevaluation_callbacks tests.test_issue278_integration.IntegrationChainTests.test_first_demonstration_matching_and_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_forged_verdicts_cannot_mint_physical_terminal tests.test_issue280_real_compat tests.test_issue280_source_compat -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8i-qwen-qualification-s2
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   r8i-qwen-qualification-s3:
     name: Group r8i-qwen-qualification shard 3
@@ -627,7 +740,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 3
-        run: python3 -m unittest tests.test_issue244_r8i5_v340l_import tests.test_issue250_amendment008_round2 tests.test_issue250_amendment008_reducer_admission tests.test_issue250_amendment008_reducer_admission_negative tests.test_issue252_phase0 tests.test_issue252_vulkanpath tests.test_issue262_pilot tests.test_issue273_evidence tests.test_issue275_provenance tests.test_issue280_runner tests.test_issue280_admission -v
+        run: python3 -m scripts.ci_unittest tests.test_issue244_r8i5_v340l_import tests.test_issue250_amendment008_round2 tests.test_issue250_amendment008_reducer_admission tests.test_issue250_amendment008_reducer_admission_negative tests.test_issue252_phase0 tests.test_issue252_vulkanpath tests.test_issue262_pilot tests.test_issue273_evidence tests.test_issue275_provenance tests.test_issue280_runner tests.test_issue280_admission -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8i-qwen-qualification-s3
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   r8i-qwen-qualification-s4:
     name: Group r8i-qwen-qualification shard 4
@@ -651,7 +773,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 4
-        run: python3 -m unittest tests.test_issue250_diagnostic tests.test_issue252_terminal tests.test_issue252_mechanism tests.test_issue258_theorem tests.test_issue260_observation tests.test_issue262_h5 tests.test_issue264_source_patch tests.test_issue270_authority tests.test_issue273_admission tests.test_issue273_round3_trust_boundaries tests.test_issue278_integration.IntegrationChainTests.test_blocked_record_reports_observed_launches_and_evidence_label tests.test_issue278_integration.IntegrationChainTests.test_capture_outside_custody_fails_closed_before_staging tests.test_issue278_integration.IntegrationChainTests.test_custody_tamper_between_capture_and_staging_fails_closed tests.test_issue278_integration.IntegrationChainTests.test_evaluate_278_asserts_reducer_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_executor_custody_tamper_blocks_at_final_verification tests.test_issue278_integration.IntegrationChainTests.test_matching_fixture_completes_every_stage tests.test_issue278_integration.IntegrationChainTests.test_reevaluation_rejects_staged_and_custody_tamper tests.test_issue278_integration.IntegrationChainTests.test_signature_rejects_authored_verdict_parameters tests.test_issue278_integration.IntegrationChainTests.test_stage_linkage_binds_retained_bytes_to_derived_results tests.test_issue280_task_check -v
+        run: python3 -m scripts.ci_unittest tests.test_issue250_diagnostic tests.test_issue252_terminal tests.test_issue252_mechanism tests.test_issue258_theorem tests.test_issue260_observation tests.test_issue262_h5 tests.test_issue264_source_patch tests.test_issue270_authority tests.test_issue273_admission tests.test_issue273_round3_trust_boundaries tests.test_issue278_integration.IntegrationChainTests.test_blocked_record_reports_observed_launches_and_evidence_label tests.test_issue278_integration.IntegrationChainTests.test_capture_outside_custody_fails_closed_before_staging tests.test_issue278_integration.IntegrationChainTests.test_custody_tamper_between_capture_and_staging_fails_closed tests.test_issue278_integration.IntegrationChainTests.test_evaluate_278_asserts_reducer_fail_closed tests.test_issue278_integration.IntegrationChainTests.test_executor_custody_tamper_blocks_at_final_verification tests.test_issue278_integration.IntegrationChainTests.test_matching_fixture_completes_every_stage tests.test_issue278_integration.IntegrationChainTests.test_reevaluation_rejects_staged_and_custody_tamper tests.test_issue278_integration.IntegrationChainTests.test_signature_rejects_authored_verdict_parameters tests.test_issue278_integration.IntegrationChainTests.test_stage_linkage_binds_retained_bytes_to_derived_results tests.test_issue280_task_check -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8i-qwen-qualification-s4
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   r8i-qwen-qualification-s5:
     name: Group r8i-qwen-qualification shard 5
@@ -675,7 +806,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8i-qwen-qualification shard 5
-        run: python3 -m unittest tests.test_issue237_r8i_methodology tests.test_issue250_physical tests.test_issue252_arms tests.test_issue252_capture tests.test_issue254_round5 tests.test_issue254_round7 tests.test_issue264_h5 tests.test_issue275_collector tests.test_issue275_demo tests.test_issue276_byte_admission tests.test_issue277_reference_first tests.test_issue280_retention_fix -v
+        run: python3 -m scripts.ci_unittest tests.test_issue237_r8i_methodology tests.test_issue250_physical tests.test_issue252_arms tests.test_issue252_capture tests.test_issue254_round5 tests.test_issue254_round7 tests.test_issue264_h5 tests.test_issue275_collector tests.test_issue275_demo tests.test_issue276_byte_admission tests.test_issue277_reference_first tests.test_issue280_retention_fix -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8i-qwen-qualification-s5
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   r8-qwen-lineage:
     name: Group r8-qwen-lineage
@@ -698,7 +838,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group r8-qwen-lineage
-        run: python3 -m unittest tests.test_issue189_r8a tests.test_issue191_r8b -v
+        run: python3 -m scripts.ci_unittest tests.test_issue189_r8a tests.test_issue191_r8b -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-r8-qwen-lineage
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   issue-115-cleanup:
     name: Group issue-115-cleanup
@@ -721,7 +870,16 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-115-cleanup
-        run: python3 -m unittest tests.test_issue115_cleanup_retention -v
+        run: python3 -m scripts.ci_unittest tests.test_issue115_cleanup_retention -v
+
+      - name: Retain unittest outcomes for compatible final validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-outcomes-issue-115-cleanup
+          path: /tmp/ci-outcomes/*.json
+          retention-days: 30
+          if-no-files-found: error
+
 
   # ---------------------------------------------------------------------------
   # Stable aggregate gate. Branch protection should require exactly

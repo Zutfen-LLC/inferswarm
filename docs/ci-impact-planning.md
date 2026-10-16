@@ -68,7 +68,8 @@ the changed paths.
 ## Hosted Final CPU Validation (Issue #226)
 
 Ordinary PR CI above stays impact-selected and never runs the full
-suite on a PR push. The canonical full CPU suite runs HOSTED exactly
+suite through the canonical runner on a PR push. The full CPU requirement is
+validated HOSTED exactly
 once, explicitly, on the maintainer-reviewed PR head:
 [`final-cpu-validation.yml`](../.github/workflows/final-cpu-validation.yml)
 (`workflow_dispatch` with the required 40-hex `expected_sha`; the
@@ -80,7 +81,11 @@ Gate` on the same exact head; see
 [campaign gate ordering](campaign-gate-ordering.md). A duplicate dispatch for a
 head that already has a verified successful hosted execution does not re-run
 the suite: it records `verified_prior_execution` against the independently
-verified source receipt, and any doubt runs the full suite (Issue #291).
+verified source receipt (Issue #291). Complete compatible ordinary CI outcomes
+can also satisfy the CPU requirement with an authenticated current PR association,
+same checkout tree, exact outcomes and environment, and final-environment skip
+confirmation. Supply `pr_number` at dispatch to enable that path; any lookup
+doubt runs the full suite. See the ordinary-CI reuse section of campaign gate ordering.
 
 ## Groups
 

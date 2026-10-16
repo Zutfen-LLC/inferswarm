@@ -15,7 +15,10 @@
   "scripts/check_ci_test_retention.py",
   "scripts/check_test_env.py",
   "scripts/ci_groups.json",
+  "scripts/ci_unittest.py",
+  "scripts/ci_workflow_parity.py",
   "scripts/finalize_repository.py",
+  "scripts/ordinary_ci_reuse.py",
   "scripts/plan_ci.py",
   "scripts/sync_project_status.py",
   "tests/test_plan_ci.py"
@@ -68,7 +71,8 @@
     "test_issue213_campaign_gate_ordering",
     "test_issue226_final_validation_ci",
     "test_issue291_final_validation_reuse",
-    "test_issue323_verified_ordinary_ci"
+    "test_issue323_verified_ordinary_ci",
+    "test_ordinary_ci_reuse"
    ]
   },
   "issue-222-r7c": {
