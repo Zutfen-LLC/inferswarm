@@ -216,6 +216,111 @@ def sha(path, offset=0, length=None):
     return h.hexdigest()
 
 
+
+class SourceDigestCache:
+    """Opt-in homelab digest reuse. Identity witnesses are not corruption scans."""
+    SCHEMA = 'coordinator-source-digests/1'
+    MAX_BYTES = 4 << 20
+    MAX_MEMBERS = 64
+    MAX_RANGES = 20000
+
+    def __init__(self, path, *, force_fresh=False):
+        import socket
+        self.path = Path(path)
+        if not self.path.is_absolute(): raise ValueError('absolute digest cache path required')
+        if type(force_fresh) is not bool: raise ValueError('invalid force fresh option')
+        self.force_fresh = force_fresh
+        # Machine + boot identity prevents reuse across restored hosts/reboots.
+        self.host = [socket.gethostname(), Path('/etc/machine-id').read_text().strip(),
+                     Path('/proc/sys/kernel/random/boot_id').read_text().strip()]
+        self.entries = {}
+        self.witnesses = {}
+        self.stats = dict(hashed_bytes=0, reused_bytes=0)
+        try:
+            with self.path.open('rb') as stream: raw = stream.read(self.MAX_BYTES + 1)
+            if len(raw) > self.MAX_BYTES: raise ValueError('oversized digest cache')
+            value = json.loads(raw)
+            if (value['schema'] != self.SCHEMA or value['host'] != self.host
+                    or not isinstance(value['members'], dict) or len(value['members']) > self.MAX_MEMBERS):
+                raise ValueError('invalid digest cache')
+            self.entries = value['members']
+        except (OSError, ValueError, KeyError, TypeError): pass
+
+    @staticmethod
+    def fingerprint(path, st=None):
+        import stat
+        path = Path(path).resolve(strict=True)
+        st = path.stat() if st is None else st
+        if not stat.S_ISREG(st.st_mode): raise ValueError('digest cache requires regular files')
+        return dict(path=str(path), device=st.st_dev, inode=st.st_ino, size=st.st_size,
+                    mtime_ns=st.st_mtime_ns, ctime_ns=st.st_ctime_ns)
+
+    def digest(self, path, expected_full, offset=0, length=None):
+        _q8_digest(expected_full, 'expected member')
+        path = Path(path)
+        before = self.fingerprint(path)
+        key = before['path']
+        if key in self.witnesses and self.witnesses[key] != before:
+            raise ValueError('source changed during verification')
+        self.witnesses[key] = before
+        entry = self.entries.get(key)
+        if (not isinstance(entry, dict) or entry.get('fingerprint') != before
+                or entry.get('expected_full') != expected_full
+                or not isinstance(entry.get('digests'), dict)
+                or len(entry['digests']) > self.MAX_RANGES):
+            entry = dict(fingerprint=before, expected_full=expected_full, digests={})
+            self.entries[key] = entry
+        count = before['size'] if length is None else length
+        if offset < 0 or count < 0 or offset + count > before['size']:
+            raise ValueError('invalid cached source range')
+        range_key = str(offset) + ':' + str(count)
+        recorded = entry['digests'].get(range_key)
+        if not self.force_fresh and isinstance(recorded, str) and re.fullmatch('[0-9a-f]{64}', recorded):
+            result = recorded
+            self.stats['reused_bytes'] += count
+        else:
+            h = hashlib.sha256()
+            with path.open('rb') as stream:
+                if self.fingerprint(path, os.fstat(stream.fileno())) != before:
+                    raise ValueError('source changed before hashing')
+                stream.seek(offset)
+                remaining = count
+                while remaining:
+                    block = stream.read(min(8 << 20, remaining))
+                    if not block: raise ValueError('short cached source range')
+                    h.update(block); remaining -= len(block)
+                if self.fingerprint(path, os.fstat(stream.fileno())) != before:
+                    raise ValueError('source changed during hashing')
+            result = h.hexdigest()
+            self.stats['hashed_bytes'] += count
+            if len(entry['digests']) >= self.MAX_RANGES: entry['digests'].clear()
+            entry['digests'][range_key] = result
+        if self.fingerprint(path) != before: raise ValueError('source changed during verification')
+        return result
+
+    def finish(self):
+        import tempfile
+        for key, witness in self.witnesses.items():
+            if self.fingerprint(key) != witness: raise ValueError('source changed during verification')
+        # Bound both input and publication. Eviction only costs a future hash.
+        members = dict(list(self.entries.items())[-self.MAX_MEMBERS:])
+        data = json.dumps(dict(schema=self.SCHEMA, host=self.host, members=members),
+                          sort_keys=True, separators=(',', ':')).encode()
+        if len(data) > self.MAX_BYTES:
+            members = {k:self.entries[k] for k in self.witnesses}
+            data = json.dumps(dict(schema=self.SCHEMA, host=self.host, members=members)).encode()
+        if len(data) > self.MAX_BYTES: raise ValueError('digest cache capacity exceeded')
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix='.source-digests-', dir=self.path.parent)
+        try:
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(data); stream.flush(); os.fsync(stream.fileno())
+            os.replace(tmp, self.path)
+        finally:
+            if os.path.exists(tmp): os.unlink(tmp)
+        return dict(self.stats)
+
+
 def fnv(path, binary=None):
     if binary:
         return subprocess.check_output([str(binary),str(path)],text=True,timeout=300).strip()
@@ -581,7 +686,7 @@ def _q8_native_repair_reserve(tensors, descriptors, *, simultaneous_bindings=())
     return sum(lengths.values())+sum(active)+16384*(len(lengths)+1)
 
 
-def verify_q8_role(participant, plan_payload, fnv_binary=None):
+def verify_q8_role(participant, plan_payload, fnv_binary=None, *, digest_cache=None):
     """Read-only full-source + exact ranges on client and ALL remote bindings.
 
     No compile, provisioning or fit/physical/cache-consumption claim. In cached
@@ -594,6 +699,12 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
     selected = [r for r in payload['participants'] if r['participant_id'] == p['participant_id']]
     if len(selected) != 1 or p != selected[0]: raise ValueError('selected participant mismatch')
     role = p['role']; root = Path(p['source_path']).parent
+    if digest_cache is not None and role != 'client':
+        raise ValueError('digest reuse is coordinator-only')
+    member_digests = {name:full for name,full,_ in payload['model']['members']}
+    def source_sha(path, offset=0, length=None):
+        if digest_cache is None: return sha(path, offset, length)
+        return digest_cache.digest(path, member_digests[Path(path).name], offset, length)
     if payload['source_contract'] == SELECTIVE_CONTRACT and role == 'remote':
         return verify_assigned_role(p, payload, fnv_binary)
     if payload['rpc_cache'] and role == 'remote' and fnv_binary is not None:
@@ -606,7 +717,7 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
     actual = {}; metadata = {}; members = []
     for name, full, size in payload['model']['members']:
         path = root / name
-        if path.stat().st_size != size or sha(path) != full:
+        if path.stat().st_size != size or source_sha(path) != full:
             raise ValueError(role + ': model member identity mismatch: ' + name)
         members.append(name); h = headers[name]
         with path.open('rb') as stream: header = stream.read(h[2] + 1)
@@ -633,7 +744,7 @@ def verify_q8_role(participant, plan_payload, fnv_binary=None):
         # Offsets and lengths come from the actual authenticated GGUF parser,
         # NOT an echoed transport range. The exact join above is mandatory.
         t = actual[a['state_id']]; off, length = t['absolute_offset'], t['encoded_bytes']
-        h = sha(root / t['member'], off, length)
+        h = source_sha(root / t['member'], off, length)
         cache_eligible = _q8_cache_eligible(length)
         if cache_eligible: eligible += 1
         key = None
@@ -850,6 +961,17 @@ def main():
         try: print(json.dumps(verify_assigned_envelope(raw),allow_nan=False))
         except (ValueError,OSError,subprocess.SubprocessError) as exc:
             print(json.dumps({'schema':'q8-source-error/1','status':'ERROR','reason':str(exc)})); raise SystemExit(1)
+        return
+    if isinstance(raw, dict) and raw.get('schema') == 'q8-source-verification/2':
+        _q8_keys(raw, ('schema','participant','plan_payload','fnv_binary','digest_cache'), 'cached verification envelope')
+        options = raw['digest_cache']
+        _q8_keys(options, ('path','force_fresh'), 'digest cache options')
+        try:
+            cache = SourceDigestCache(options['path'], force_fresh=options['force_fresh'])
+            receipt = verify_q8_role(raw['participant'], raw['plan_payload'], raw['fnv_binary'], digest_cache=cache)
+            print(json.dumps(dict(receipt=receipt, digest_cache=cache.finish(), source_fingerprints=cache.witnesses), allow_nan=False))
+        except (ValueError, OSError, subprocess.SubprocessError) as exc:
+            print(json.dumps({'status':'ERROR','reason':str(exc)})); raise SystemExit(1)
         return
     if isinstance(raw, dict) and raw.get('schema') == 'q8-source-verification/1':
         _q8_keys(raw, ('schema', 'participant', 'plan_payload', 'fnv_binary'), 'q8 verification envelope')

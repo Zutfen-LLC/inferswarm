@@ -371,3 +371,122 @@ class Q8Source(unittest.TestCase):
 
 
 if __name__=='__main__': unittest.main()
+
+
+class CoordinatorDigestReuse(unittest.TestCase):
+    """Tiny source-byte A/B fixtures; no model or hardware benchmark."""
+    setUp = Q8Source.setUp
+    owner = Q8Source.owner
+
+    def cache(self, **kwargs):
+        return source.SourceDigestCache(self.root/'digests.json', **kwargs)
+
+    def verify(self, cache, payload=None):
+        payload = payload or self.payload
+        result = source.verify_q8_role(payload['participants'][0], payload, digest_cache=cache)
+        stats = cache.finish()
+        return result, stats
+
+    def test_cold_warm_force_fresh_and_current_receipts(self):
+        cold, stats = self.verify(self.cache())
+        self.assertGreater(stats['hashed_bytes'], 0)
+        self.assertEqual(stats['reused_bytes'], 0)
+        payload = copy.deepcopy(self.payload)
+        payload['plan_digest'] = 'c'*64  # New request/build/plan has current receipts.
+        self.runtime.write_bytes(b'new synthetic build')
+        payload['participants'][0]['runtime_sha256'] = source.sha(self.runtime)
+        real_open = Path.open
+        headers = {name:count+1 for name,_,count,*_ in payload['metadata']['header_identities']}
+        class HeaderOnly:
+            def __init__(self, stream, limit): self.stream=stream; self.limit=limit
+            def __enter__(self): return self
+            def __exit__(self, *args): return self.stream.__exit__(*args)
+            def read(self, count=-1):
+                if count < 0 or count > self.limit: raise AssertionError('warm model payload read')
+                return self.stream.read(count)
+        def open_header(path, *args, **kwargs):
+            stream = real_open(path, *args, **kwargs)
+            return HeaderOnly(stream, headers[path.name]) if path.name in headers else stream
+        with patch.object(Path, 'open', open_header):
+            warm, reused = self.verify(self.cache(), payload)
+        self.runtime.write_bytes(b'SYNTHETIC executable identity, never launched')
+        self.assertEqual(reused, dict(hashed_bytes=0, reused_bytes=stats['hashed_bytes']))
+        self.assertEqual(warm['plan_digest'], 'c'*64)
+        self.assertEqual(warm['range_identities'], cold['range_identities'])
+        _, fresh = self.verify(self.cache(force_fresh=True))
+        self.assertEqual(fresh, stats)
+        print('SYNTHETIC digest bytes cold/warm/force:', stats, reused, fresh)
+
+    def test_missing_corrupt_host_path_and_expected_digest_are_misses(self):
+        path = self.root/'member-1.gguf'; full = source.sha(path)
+        cache = self.cache(); cache.digest(path, full); cache.finish()
+        original = (self.root/'digests.json').read_text()
+        for change in ('corrupt', 'host', 'path', 'digest', 'missing-range'):
+            with self.subTest(change=change):
+                value = json.loads(original)
+                entry = value['members'][str(path.resolve())]
+                if change == 'corrupt': data = '{'
+                else:
+                    if change == 'host': value['host'] = ['other-host']
+                    if change == 'path': entry['fingerprint']['path'] = '/elsewhere'
+                    if change == 'digest': entry['expected_full'] = 'a'*64
+                    if change == 'missing-range': entry['digests'] = {}
+                    data = json.dumps(value)
+                (self.root/'digests.json').write_text(data)
+                cache = self.cache()
+                self.assertEqual(cache.digest(path, full), full)
+                self.assertEqual(cache.stats['hashed_bytes'], path.stat().st_size)
+
+    def test_only_changed_member_invalidates_and_new_range_hashes(self):
+        self.verify(self.cache())
+        path = self.root/'member-1.gguf'
+        # Same-byte replacement still needs a new witness; other members reuse.
+        temp = self.root/'replacement'; temp.write_bytes(path.read_bytes()); temp.replace(path)
+        _, stats = self.verify(self.cache())
+        expected = path.stat().st_size
+        # Client has no assigned ranges in member-1.
+        self.assertEqual(stats['hashed_bytes'], expected)
+        self.assertGreater(stats['reused_bytes'], expected)
+        cache = self.cache(); full = source.sha(path)
+        cache.digest(path, full, 0, 7)
+        self.assertEqual(cache.stats['hashed_bytes'], 7)
+
+    def test_modification_and_ctime_cannot_reuse(self):
+        path = self.root/'member-1.gguf'; full = source.sha(path)
+        cache = self.cache(); cache.digest(path, full); cache.finish()
+        st = path.stat(); path.chmod(0o600 if st.st_mode & 0o077 else 0o644)
+        cache = self.cache(); cache.digest(path, full)
+        self.assertEqual(cache.stats['reused_bytes'], 0)
+        path.write_bytes(path.read_bytes()[:-1]+b'X')
+        os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
+        with self.assertRaisesRegex(ValueError, 'member identity mismatch'):
+            self.verify(self.cache())
+
+    def test_mutation_during_hash_and_before_finish_rejected(self):
+        path = self.root/'member-1.gguf'; full = source.sha(path)
+        real = source.hashlib.sha256
+        class MutatingHash:
+            def __init__(self): self.h = real()
+            def update(self, block):
+                self.h.update(block); path.write_bytes(path.read_bytes()+b'X')
+            def hexdigest(self): return self.h.hexdigest()
+        with patch.object(source.hashlib, 'sha256', MutatingHash):
+            with self.assertRaisesRegex(ValueError, 'changed during hashing'):
+                self.cache().digest(path, full)
+        cache = self.cache(); cache.digest(path, source.sha(path))
+        path.write_bytes(path.read_bytes()+b'X')
+        with self.assertRaisesRegex(ValueError, 'changed during verification'): cache.finish()
+        self.assertFalse((self.root/'digests.json').exists())
+
+    def test_standalone_cached_envelope_and_worker_refusal(self):
+        envelope = dict(schema='q8-source-verification/2', participant=self.client,
+            plan_payload=self.payload, fnv_binary=None,
+            digest_cache=dict(path=str(self.root/'digests.json'), force_fresh=False))
+        for warm in (False, True):
+            proc = Q8Source.standalone(self, raw=json.dumps(envelope))
+            self.assertEqual(proc.returncode, 0, proc.stderr+proc.stdout)
+            value = json.loads(proc.stdout)
+            self.assertNotIn('digest_cache', value['receipt'])
+            self.assertEqual(value['digest_cache']['hashed_bytes']==0, warm)
+        with self.assertRaisesRegex(ValueError, 'coordinator-only'):
+            source.verify_q8_role(self.remote, self.payload, digest_cache=self.cache())

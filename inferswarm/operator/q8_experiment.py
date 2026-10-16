@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import posixpath
 from pathlib import Path
 import re
 import secrets
@@ -591,10 +592,39 @@ from .native_observer.collector import SSHCollectorTransport
 
 
 class SupervisedSourceTransport(SSHSourceTransport):
-    def __init__(self,manager): self.manager=manager
+    def __init__(self,manager,*,digest_cache=None,force_fresh=False):
+        self.manager=manager
+        self.digest_cache=digest_cache
+        self.force_fresh=force_fresh
+        self.digest_cache_stats={}
+        self.source_fingerprints={}
+        self.coordinator=None
     def _call(self,part,program,payload):
-        return self.manager.run_helper(part.execution_address,
+        cached=False
+        if payload and self.digest_cache and part.role=='client':
+            value=json.loads(payload)
+            if value.get('schema')=='q8-source-verification/1':
+                value.update(schema='q8-source-verification/2',
+                    digest_cache=dict(path=self.digest_cache,force_fresh=self.force_fresh))
+                payload=json.dumps(value); cached=True
+        proc=self.manager.run_helper(part.execution_address,
             'python3 -c '+shlex.quote(program),input=payload,timeout=1800)
+        if cached and proc.returncode==0:
+            value=json.loads(proc.stdout)
+            self.digest_cache_stats=value['digest_cache']
+            self.source_fingerprints=value['source_fingerprints']
+            self.coordinator=part
+            proc.stdout=json.dumps(value['receipt'])
+        return proc
+
+    def revalidate_source_identity(self):
+        if not self.source_fingerprints: return
+        from . import source
+        program=Path(source.__file__).read_text().rsplit("if __name__=='__main__': main()",1)[0]
+        program += "\nfor path, witness in json.loads(sys.stdin.read()).items():\n    if SourceDigestCache.fingerprint(path) != witness: raise ValueError('source changed during experiment')\n"
+        proc=self.manager.run_helper(self.coordinator.execution_address,
+            'python3 -c '+shlex.quote(program),input=json.dumps(self.source_fingerprints),timeout=30)
+        if proc.returncode: raise RuntimeError('coordinator source identity changed during experiment: '+proc.stderr[-500:])
 
 
 class SupervisedCollectorTransport(SSHCollectorTransport):
@@ -612,10 +642,20 @@ class ExperimentalCampaignError(RuntimeError):
 
 def run_experimental_campaign(config_path,envelope_path,*,commands=None,transport=None,
                               runner_factory=None,evidence_root=None,
-                              evidence_transport=None):
+                              evidence_transport=None,source_digest_cache=None,force_fresh_source_hash=False):
     """Run exactly one unqualified request under the reviewed #313 envelope."""
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
+    if force_fresh_source_hash and source_digest_cache is None:
+        raise ValueError('force fresh source hash requires source digest cache')
+    if source_digest_cache is not None:
+        cache_path=Path(source_digest_cache)
+        if not cache_path.is_absolute(): raise ValueError('absolute source digest cache path required')
+        cache_path=Path(posixpath.normpath(str(cache_path)))
+        for part in plan.participants:
+            if cache_path.is_relative_to(Path(posixpath.normpath(part.lifecycle_dir))):
+                raise ValueError('source digest cache must be outside lifecycle directories')
+        source_digest_cache=str(cache_path)
     config_sha=hashlib.sha256(config_bytes).hexdigest()
     request_sha=hashlib.sha256(canonical(dict(plan.request))).hexdigest()
     envelope=validate_experimental_envelope(plan,_strict_json(envelope_path),
@@ -636,7 +676,8 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     if runner_factory is None:
         from .runtime import JSONHTTP, OperatorRunner, ssh_tunnel
         from .native_observer.collector import NativeObserverCollector
-        runner=OperatorRunner(SupervisedSourceTransport(manager),manager,JSONHTTP(),ssh_tunnel,
+        runner=OperatorRunner(SupervisedSourceTransport(manager,digest_cache=source_digest_cache,
+            force_fresh=force_fresh_source_hash),manager,JSONHTTP(),ssh_tunnel,
             collector=NativeObserverCollector(transport=SupervisedCollectorTransport(manager),selective=True))
     else:
         runner=runner_factory(manager)
@@ -668,6 +709,9 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     # own result or exception.  (No recovery from SIGKILL or power loss.)
     evidence_summary=evidence_store.finalize()
     result.update(evidence_retention=evidence_summary)
+    if source_digest_cache is not None:
+        result['source_digest_cache']=dict(getattr(runner.source,'digest_cache_stats',{}),
+            path=source_digest_cache,force_fresh=force_fresh_source_hash)
     result.update(schema='q8-two-gpu-experimental-campaign/1',
         experimental_opt_in=True,output_accepted=False,physical_qualified=False,
         execution_authorized=False,experimental_execution_authorized=True,
