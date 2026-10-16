@@ -252,5 +252,170 @@ class Authentication(unittest.TestCase):
                 self.compose(decision)
 
 
+
+MISSING = ['tests.test_missing.Missing.test_one', 'tests.test_missing.Missing.test_two']
+
+
+class PartialCoverage(unittest.TestCase):
+    setUp = Authentication.setUp
+    repack = Authentication.repack
+    lookup = Authentication.lookup
+    compose = Authentication.compose
+
+    def partial(self):
+        self.jobs = {'example': IDS, 'missing-s0': MISSING[:1],
+                     'missing-s1': MISSING[1:]}
+        patch('ordinary_ci_reuse.schedule', return_value=self.jobs).start()
+        patch('run_full_cpu_suite.ids_for_units', return_value=[
+            i.removeprefix('tests.') for i in IDS + MISSING]).start()
+        self.request = make_request(SHA, count=4)
+        # Production-shaped multi-invocation artifact from one job.
+        self.records = [record(IDS[:1]), record(IDS[1:])]
+        self.repack()
+        fresh = record(MISSING)
+        fresh.update(run_id='10000', started_unix=3., ended_unix=4.)
+        return [fresh]
+
+    def test_partial_union_excludes_already_passed_tests_and_handoff_accepts(self):
+        import hosted_ci_verification as ci
+        fresh = self.partial()
+        decision = self.lookup()
+        self.assertEqual(decision['action'], 'reuse', decision)
+        with patch.object(ordinary, 'execute_completion', return_value=fresh) as execute:
+            envelope = self.compose(decision)
+        plan = execute.call_args.args[0]
+        self.assertEqual(plan['selectors'], ['tests.test_missing'])
+        self.assertEqual(plan['fresh_ids'], MISSING)
+        self.assertEqual(plan['reused_ids'], [i.removeprefix('tests.') for i in IDS])
+        completion = envelope['execution']['completion']
+        self.assertEqual(len(completion['reused_ids']) + len(fresh[0]['outcomes']), 4)
+        self.assertEqual(envelope['suite_receipt']['ended_unix'], 4.)
+        self.assertTrue(gate.handoff_gate_status(
+            self.request, None, None, True, envelope,
+            ci_verifier=ci.HostedCiVerifier(self.api, ci.CANONICAL_REPOSITORY,
+                                           pr_number=7))['handoff_complete'])
+        self.assertEqual(envelope['suite_receipt']['suite']['count'], 4)
+
+    def test_partial_missing_duplicate_failed_and_wrong_identity_fresh_outcomes_block(self):
+        fresh = self.partial()
+        decision = self.lookup()
+        for change in (lambda r: r['outcomes'].pop(),
+                       lambda r: r['outcomes'].append(r['outcomes'][0]),
+                       lambda r: r.update(ok=False),
+                       lambda r: r.update(tree='d' * 40),
+                       lambda r: r.update(runtime={}),
+                       lambda r: r.update(attempt='2'),
+                       lambda r: r['started_ids'].append(IDS[0])):
+            bad = copy.deepcopy(fresh); change(bad[0])
+            with self.subTest(record=bad), patch.object(
+                    ordinary, 'execute_completion', return_value=bad):
+                with self.assertRaises(ValueError):
+                    self.compose(decision)
+
+    def test_partial_skip_is_rechecked_and_terminal_skip_is_retained(self):
+        fresh = self.partial()
+        self.records[0]['outcomes'][0][1:] = ['skip', 'local resource absent']
+        self.repack()
+        fresh[0]['started_ids'].append(IDS[0])
+        fresh[0]['outcomes'].append([IDS[0], 'skip', 'still absent'])
+        with patch.object(ordinary, 'execute_completion', return_value=fresh) as execute:
+            envelope = self.compose(self.lookup())
+        self.assertEqual(execute.call_args.args[0]['selectors'],
+                         ['tests.test_missing', IDS[0]])
+        self.assertEqual(envelope['execution']['ordinary_source']['skipped_ids'], IDS[:1])
+        self.assertIn([IDS[0], 'skip', 'still absent'],
+                      envelope['execution']['completion']['records'][0]['outcomes'])
+
+    def test_incomplete_module_is_repeated_and_zero_savings_falls_back(self):
+        self.partial()
+        split = {'example': IDS[:1], 'example-s1': IDS[1:]}
+        with patch.object(ordinary, 'schedule', return_value=split), patch(
+                'run_full_cpu_suite.ids_for_units', return_value=[
+                    i.removeprefix('tests.') for i in IDS]):
+            self.records = [record(IDS[:1])]; self.repack()
+            self.assertEqual(self.lookup()['action'], 'run')
+            source = {'artifacts': [{'job': 'example'}], 'skipped_ids': []}
+            plan = ordinary.completion_plan(source)
+            self.assertEqual(plan['selectors'], ['tests.test_example'])
+            self.assertEqual(plan['fresh_ids'], IDS)
+            self.assertEqual(plan['reused_ids'], [])
+
+    def test_no_artifacts_and_partial_authentication_mismatch_fall_back(self):
+        self.partial()
+        self.records[0]['runtime'] = {}; self.repack()
+        self.assertEqual(self.lookup()['action'], 'run')
+        self.api.list_artifacts = lambda _: {'total_count': 0, 'artifacts': []}
+        self.assertEqual(self.lookup()['action'], 'run')
+
+    def test_partial_composition_reauthenticates_and_rejects_receipt_tampering(self):
+        fresh = self.partial()
+        decision = self.lookup()
+        with patch.object(ordinary, 'execute_completion', return_value=fresh):
+            envelope = self.compose(decision)
+        for change in (lambda e: e['execution'].pop('completion'),
+                       lambda e: e['execution']['completion']['reused_ids'].pop(),
+                       lambda e: e['execution']['completion']['records'][0]['outcomes'].pop(),
+                       lambda e: e['execution']['completion']['records'][0].update(attempt='2')):
+            bad = copy.deepcopy(envelope); change(bad)
+            with self.subTest(envelope=bad), self.assertRaises(gate.GateOrderingError):
+                gate.validate_final_validation_receipt(bad, SHA)
+        self.art['digest'] = 'sha256:' + '0' * 64
+        with patch.object(ordinary, 'execute_completion') as execute:
+            with self.assertRaises(ValueError):
+                self.compose(decision)
+            execute.assert_not_called()
+
+    def test_real_completion_cli_runs_only_missing_module_and_records_all_outcomes(self):
+        # Use the real recorder and module fixtures in an isolated tiny repo.
+        import shutil
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'scripts').mkdir(); (root / 'tests').mkdir()
+            (root / 'tests/__init__.py').touch()
+            shutil.copy(ROOT / 'scripts/ci_unittest.py', root / 'scripts/ci_unittest.py')
+            (root / 'tests/test_cached.py').write_text(
+                'import unittest\nclass Cached(unittest.TestCase):\n'
+                ' def test_passed(self): raise AssertionError("cached test reran")\n')
+            (root / 'tests/test_missing.py').write_text(
+                'import unittest\nfrom pathlib import Path\n'
+                'class Missing(unittest.TestCase):\n'
+                ' @classmethod\n def setUpClass(cls): Path("fixture-started").touch()\n'
+                ' def test_one(self): self.assertTrue(Path("fixture-started").exists())\n'
+                ' @unittest.skip("host resource absent")\n def test_two(self): pass\n')
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+            subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                            '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture'],
+                           check=True)
+            # Undo setUp's identity mocks for the real subprocess record.
+            with patch.object(ordinary.outcomes, 'runtime_identity',
+                              self.real_runtime), patch.object(
+                    ordinary.outcomes, 'git_value', self.real_git):
+                cached = 'tests.test_cached.Cached.test_passed'
+                with patch.object(ordinary, 'schedule', return_value={
+                        'cached': [cached], 'missing': MISSING}), patch(
+                        'run_full_cpu_suite.ids_for_units', return_value=[
+                            i.removeprefix('tests.') for i in [cached] + MISSING]):
+                    plan = ordinary.completion_plan({
+                        'artifacts': [{'job': 'cached'}], 'skipped_ids': []}, root)
+                self.assertEqual(plan['reused_ids'], [cached.removeprefix('tests.')])
+                with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1'):
+                    records = ordinary.execute_completion(plan, root)
+            self.assertEqual(records[0]['started_ids'], MISSING)
+            self.assertEqual(records[0]['outcomes'][1][1], 'skip')
+            self.assertTrue((root / 'fixture-started').exists())
+            # A real failing fresh test must block even if reused tests passed.
+            path = root / 'tests/test_missing.py'
+            path.write_text(path.read_text().replace(
+                'self.assertTrue(Path("fixture-started").exists())', 'self.fail("fresh failure")'))
+            with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1'):
+                with self.assertRaisesRegex(ValueError, 'completion failed'):
+                    ordinary.execute_completion(plan, root)
+
+    # Save real functions before Authentication.setUp installs its mocks.
+    real_runtime = staticmethod(outcomes.runtime_identity)
+    real_git = staticmethod(outcomes.git_value)
+
+
 if __name__ == '__main__':
     unittest.main()

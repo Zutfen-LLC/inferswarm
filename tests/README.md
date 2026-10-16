@@ -143,5 +143,6 @@ Python packages outside `requirements-test.txt`.
 
 Ordinary CI invokes `python3 -m scripts.ci_unittest` with the same selectors
 and unittest semantics, recording terminal outcomes for authenticated final
-validation reuse. The full runner remains the fallback. See
+validation reuse. Final Validation executes uncovered modules and required skip
+rechecks. The full runner remains the fallback. See
 [campaign gate ordering](../docs/campaign-gate-ordering.md#reusing-complete-ordinary-ci-outcomes).

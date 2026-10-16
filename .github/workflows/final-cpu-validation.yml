@@ -33,7 +33,8 @@ name: Final CPU Validation
 # missing permission, any failed verification) runs the full suite.  Ordinary
 # CI outcomes use a separate authenticated PR-bound path: supply pr_number,
 # require complete terminal outcomes and matching tree/runtime, and confirm
-# skipped IDs on this checkout. Missing/incompatible records run the suite.
+# skipped IDs on this checkout. Missing jobs execute by module at composition;
+# incompatible records or no reusable modules run the canonical suite.
 #
 # Untrusted dispatch inputs reach scripts ONLY through quoted environment
 # bindings (EXPECTED_SHA / PR_NUMBER), never spliced into script source.

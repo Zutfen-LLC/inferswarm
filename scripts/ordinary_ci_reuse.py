@@ -1,7 +1,7 @@
-"""Reuse complete ordinary CI outcomes through existing Actions authentication.
+"""Reuse authenticated ordinary CI outcomes through existing Actions authentication.
 
-Only same-tree, complete, disjoint, successful coverage of the current loader
-population is eligible. Skipped IDs are executed again in Final CPU Validation;
+Only same-tree, disjoint, successful job coverage of the current loader
+population is eligible. Uncovered modules execute in Final CPU Validation. Skipped IDs are executed again in Final CPU Validation;
 they are never silently counted as passed. Any lookup uncertainty falls back to
 the canonical full suite. Composition reauthenticates all source bytes.
 """
@@ -53,8 +53,11 @@ def schedule(root=ROOT):
     return parity.job_executed_ids(doc, root=root)
 
 
-def suite_configuration(root=ROOT):
+def suite_configuration(root=ROOT, source=None):
     jobs = schedule(root)
+    if source is not None and len(source['artifacts']) < len(jobs):
+        jobs = {a['job']: jobs[a['job']] for a in source['artifacts']}
+        jobs['final_completion'] = completion_plan(source, root)['fresh_ids']
     return {'schema': 'suite-config/1', 'tests_dir': 'tests', 'jobs': len(jobs),
             'plan_digest': hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest(),
             'timeout': 7200.0, 'retain_dir': None}
@@ -126,6 +129,8 @@ def authenticate(api, *, request, current_run_id, pr_number, root=ROOT,
     artifacts, skipped, records_all = [], [], []
     for job, expected in sorted(jobs.items()):
         named = [a for a in listing['artifacts'] if a.get('name') == PREFIX + job]
+        if not named:
+            continue  # Impact-selected CI did not execute this job.
         if len(named) != 1:
             raise ValueError('missing or ambiguous outcomes for ' + job)
         art = named[0]
@@ -148,12 +153,16 @@ def authenticate(api, *, request, current_run_id, pr_number, root=ROOT,
                                         tree=tree, run_id=run_id, attempt=attempt))
         records_all.extend(records)
         artifacts.append({'id': art['id'], 'digest': digest, 'job': job})
+    if not artifacts:
+        raise ValueError('no eligible ordinary coverage')
     # Detect a rerun that began while the artifacts were being downloaded.
     after = verifier.verify(request.git_commit_sha, pinned_run_id=run_id)
     if after['verdict'] != ci.PASS or after['run'] != run:
         raise ValueError('ordinary run changed during outcome authentication')
     source = {'run_id': run_id, 'run_attempt': attempt, 'workflow': 'CI',
               'artifacts': artifacts, 'tree': tree, 'skipped_ids': sorted(skipped)}
+    if len(artifacts) < len(jobs) and not completion_plan(source, root)['reused_ids']:
+        raise ValueError('no reusable complete-module coverage')
     if pointer is not None and source != pointer:
         raise ValueError('ordinary decision differs from authenticated source')
     return source, records_all
@@ -164,7 +173,7 @@ def lookup(api, *, request, current_run_id, pr_number, root=ROOT):
     try:
         source, _ = authenticate(api, request=request, current_run_id=current_run_id,
                                  pr_number=pr_number, root=root)
-        decision = reuse._decision('reuse', 'complete authenticated ordinary CI',
+        decision = reuse._decision('reuse', 'authenticated ordinary CI with required completion',
                                    request.git_commit_sha)
         decision.update(source=source, source_kind=MODE)
         return decision
@@ -188,6 +197,54 @@ def confirm_skips(ids, root=ROOT):
                          tree=outcomes.git_value(root, 'HEAD^{tree}'),
                          run_id=os.environ['GITHUB_RUN_ID'],
                          attempt=os.environ['GITHUB_RUN_ATTEMPT'])
+        return records
+
+
+def completion_plan(source, root=ROOT):
+    """Repeat a whole module if any of its required tests lack CI coverage.
+
+    This preserves module/class fixture lifecycles. Source skips in otherwise
+    covered modules still need individual rechecks, as in the existing path.
+    """
+    import run_full_cpu_suite as runner
+    jobs = schedule(root)
+    required = runner.ids_for_units(runner.discover_units(root, root / 'tests'))
+    if len(required) != len(set(required)):
+        raise ValueError('duplicate canonical identities')
+    covered = [canonical_test_id(i) for art in source['artifacts']
+               for i in jobs[art['job']]]
+    if len(covered) != len(set(covered)) or not set(covered) <= set(required):
+        raise ValueError('ambiguous ordinary coverage')
+    modules = sorted({i.split('.')[0] for i in set(required) - set(covered)})
+    repeated = {i for i in required if i.split('.')[0] in modules}
+    skipped = {canonical_test_id(i) for i in source['skipped_ids']}
+    if not skipped <= set(covered):
+        raise ValueError('skipped identity outside ordinary coverage')
+    fresh = repeated | skipped
+    reused = set(covered) - fresh
+    if reused | fresh != set(required) or reused & fresh:
+        raise ValueError('incomplete completion plan')
+    return {'reused_ids': sorted(reused),
+            'fresh_ids': ['tests.' + i for i in sorted(fresh)],
+            'selectors': ['tests.' + m for m in modules] +
+                         ['tests.' + i for i in sorted(skipped - repeated)]}
+
+
+def execute_completion(plan, root=ROOT):
+    """Use the existing outcome recorder, but launch whole missing modules."""
+    with tempfile.TemporaryDirectory(prefix='ci-completion-') as temporary:
+        process = subprocess.run(
+            [sys.executable, '-m', 'scripts.ci_unittest', *plan['selectors'], '-v'],
+            cwd=root, env=dict(os.environ, CI_OUTCOMES_DIR=temporary), timeout=7200)
+        if process.returncode:
+            raise ValueError('ordinary CI completion failed')
+        records = [json.loads(p.read_text()) for p in Path(temporary).glob('*.json')]
+        validate_records(records, expected=plan['fresh_ids'],
+                         runtime=outcomes.runtime_identity(),
+                         tree=outcomes.git_value(root, 'HEAD^{tree}'),
+                         run_id=os.environ['GITHUB_RUN_ID'],
+                         attempt=os.environ['GITHUB_RUN_ATTEMPT'])
+        return records
 
 
 def compose(decision, *, api, request, current_run_id, attempt, pr_number,
@@ -200,10 +257,22 @@ def compose(decision, *, api, request, current_run_id, attempt, pr_number,
     source, records = authenticate(api, request=request, current_run_id=current_run_id,
                                   pr_number=pr_number, root=root,
                                   pointer=decision.get('source'))
-    confirm_skips(source['skipped_ids'], root)
+    partial = len(source['artifacts']) < len(schedule(root))
+    completion = None
+    if partial:
+        plan = completion_plan(source, root)
+        fresh = execute_completion(plan, root)
+        validate_records(fresh, expected=plan['fresh_ids'],
+                         runtime=outcomes.runtime_identity(), tree=source['tree'],
+                         run_id=current_run_id, attempt=attempt)
+        completion = {'reused_ids': plan['reused_ids'], 'records': fresh}
+        records = records + fresh
+    else:
+        rechecks = confirm_skips(source['skipped_ids'], root)
+        records = records + (rechecks if isinstance(rechecks, list) else [])
     # Record the actual ordinary schedule. It is an explicitly allowed alternate
     # schedule, never claimed to be execution of the canonical subprocess plan.
-    suite = dict(request.suite, suite_config=suite_configuration(root))
+    suite = dict(request.suite, suite_config=suite_configuration(root, source))
     receipt = gate.SuiteReceipt(request.git_commit_sha, suite, request.environment,
                                 'PASS', suite['count'],
                                 min(r['started_unix'] for r in records),
@@ -211,6 +280,8 @@ def compose(decision, *, api, request, current_run_id, attempt, pr_number,
     execution = {'mode': MODE, 'dispatch_sha': dispatch_sha,
                  'reuse_contract': gate.FINAL_VALIDATION_REUSE_CONTRACT,
                  'ordinary_source': source, 'skips_confirmed': True}
+    if completion is not None:
+        execution['completion'] = completion
     return gate.build_final_validation_receipt(
         request.git_commit_sha, receipt, github_run_id=str(current_run_id),
         github_run_attempt=attempt, pr_number=pr_number,
@@ -225,7 +296,8 @@ def validate_execution(execution, *, git_commit_sha, github_run_id):
     def require(condition, message):
         if not condition:
             raise gate.GateOrderingError(message)
-    require(set(execution) == {'mode', 'dispatch_sha', 'reuse_contract',
+    fields = set(execution) - {'completion'}
+    require(fields == {'mode', 'dispatch_sha', 'reuse_contract',
                                'ordinary_source', 'skips_confirmed'},
             'ordinary execution fields mismatch')
     require(execution['dispatch_sha'] == git_commit_sha
@@ -264,3 +336,22 @@ def validate_execution(execution, *, git_commit_sha, github_run_id):
             source_envelope_sha256=reuse.canonical_sha256(source), source_workflow='CI')
         gate.validate_execution_block(block, git_commit_sha=git_commit_sha,
                                       github_run_id=github_run_id)
+
+    if len(artifacts) < len(schedule()):
+        completion = execution.get('completion')
+        require(isinstance(completion, dict) and set(completion) == {
+            'reused_ids', 'records'}, 'partial completion evidence missing')
+        plan = completion_plan(source)
+        require(completion['reused_ids'] == plan['reused_ids'],
+                'partial reused population mismatch')
+        records = completion['records']
+        require(isinstance(records, list) and bool(records),
+                'partial fresh outcomes missing')
+        try:
+            validate_records(records, expected=plan['fresh_ids'],
+                             runtime=records[0]['runtime'], tree=source['tree'],
+                             run_id=github_run_id, attempt=records[0]['attempt'])
+        except (ValueError, KeyError, TypeError) as error:
+            raise gate.GateOrderingError('invalid completion outcomes: ' + str(error)) from error
+    else:
+        require('completion' not in execution, 'unexpected partial completion')

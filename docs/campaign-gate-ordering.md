@@ -891,6 +891,8 @@ agent-independent.
 
 ## Reusing complete ordinary CI outcomes
 
+This path also accepts partial compatible CI coverage as specified below.
+
 Final CPU Validation first tries the existing prior-Final receipt path. If none
 qualifies, `ordinary_ci_reuse.py` can reuse ordinary CI only when `pr_number` is
 supplied and the existing Issue #323 verifier authenticates the current PR,
@@ -903,10 +905,11 @@ checkout SHA/tree, package versions, Python patch version, OS/architecture and
 test environment switches, compiler/CMake/OpenSSL versions and hosted image
 identity. Each successful CI job uploads these records as
 `ci-outcomes-<job>`. Workflow ownership/parity and canonical loader discovery
-must independently agree, and every job must have an unexpired artifact whose
+must independently agree. Each reused job must have an unexpired artifact whose
 bytes match the Actions API digest and whose run/head/repository binding agrees
 with the authenticated run. Every expected ID must start and finish exactly
-once; missing, duplicate, extra, failed or incomplete outcomes disable reuse.
+once within each reused job; duplicate, extra, failed or incomplete outcomes
+disable reuse. A job with no artifact contributes no reused coverage.
 
 A pull-request merge checkout may differ from the reviewed head only when its
 recorded Git tree exactly equals the final checkout tree. Different dependency
@@ -919,7 +922,7 @@ artifacts and skipped IDs are included in the final receipt.
 
 Lookup uncertainty executes the canonical full suite. After a reuse decision,
 composition reauthenticates the PR/run/attempt and every artifact, detects source
-changes, and confirms skipped tests; failure at that point fails the gate.
+changes, executes uncovered modules, and confirms skipped tests; failure at that point fails the gate.
 The decision file is only a pointer. Old ordinary runs without outcome records
 fall back; the historical 4,376-ID population match does not retroactively
 qualify those runs.
@@ -927,10 +930,33 @@ qualify those runs.
 The resulting `verified_ordinary_ci` execution block records the source run,
 attempt, tree, per-job artifact IDs/digests and confirmed skipped IDs. Its suite
 configuration records the actual ordinary job schedule (workflow-derived plan
-digest and job count), rather than claiming the canonical four-worker schedule
+digest and job count, including completion where needed), rather than claiming the canonical four-worker schedule
 ran. Handoff allows only that independently derived alternate schedule and
 still requires the exact head, full population, environment authority and
 authenticated ordinary CI. Reused Final receipts remain ineligible as sources.
+
+For partial coverage, canonical discovery still establishes the entire required
+population. Only the known `tests.test_*` / `test_*` import prefix is normalized.
+If any test in a module lacks coverage, the final run executes that whole module
+through the existing outcome recorder. This preserves module/class fixtures.
+Previously covered tests in that module repeat; their fresh outcomes replace
+source outcomes in the final population accounting. Other source skips receive
+the existing individual recheck. The disjoint union of reused IDs and fresh
+terminal outcomes must cover every required ID exactly once. No reusable module,
+no eligible artifacts, or an uncertain plan uses the canonical full fallback.
+
+Partial receipts retain `execution.completion.reused_ids` and the actual fresh
+outcome records, including skips and timestamps. Their suite time window includes
+both source and fresh records. Full-compatible receipts keep their existing
+shape. Completion has a 7,200-second subprocess bound; failures and incomplete
+outcomes fail the final gate.
+
+Publication compatibility: publish these helper and handoff-validator changes
+together. Dispatch Final CPU Validation with the workflow definition on the
+exact new head, as already required. The YAML step interface and ordinary-CI
+artifact format do not change. Old complete receipts remain readable; older
+handoff code cannot validate the new partial receipt extension. No historical
+ordinary run without recorded outcomes becomes eligible.
 
 Bounded lookup uses the existing verifier pagination bounds, one complete
 artifact listing (at most 100 entries), and one size-bounded download per
