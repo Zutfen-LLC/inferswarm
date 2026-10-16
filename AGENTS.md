@@ -108,9 +108,11 @@ PR, obtain the default independent review — the maintainer's exact-head PR
 review (delegated agent/LLM adversarial reviews are optional, targeted,
 advisory lanes with no default count or timeout) — apply accepted fixes
 (re-reviewing the new head if it moved), then validate the final head with
-exactly one hosted Final CPU Validation run (the canonical full CPU suite,
-dispatched on the exact reviewed SHA; `final-cpu-validation.yml`) and one
-hosted exact-head CI run. Independent review never substitutes for those
+exactly one hosted Final CPU Validation run (the full CPU requirement,
+dispatched on the exact reviewed SHA; `final-cpu-validation.yml`). Complete,
+compatible ordinary CI outcomes may satisfy that requirement through the
+authenticated reuse path in `docs/campaign-gate-ordering.md`. One hosted
+exact-head CI run is also required. Independent review never substitutes for those
 final gates, and a pre-review full suite or hosted CI run requires an
 explicit review-critical declaration. The exact-head ordinary CI run is
 authenticated against GitHub at handoff (`issue213_gate_orchestration.py

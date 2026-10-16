@@ -85,6 +85,9 @@ SELF_AUTHORITY_PATHS = [
     "scripts/plan_ci.py",
     "scripts/ci_groups.json",
     "tests/test_plan_ci.py",
+    "scripts/ci_unittest.py",
+    "scripts/ordinary_ci_reuse.py",
+    "scripts/ci_workflow_parity.py",
 ]
 
 # CI workflow files: a workflow change can alter how any group runs.
@@ -186,6 +189,7 @@ GROUP_TEST_MODULES = {
         # Issue #323: authenticated ordinary CI on the exact final head
         # (handoff boundary; offline fake of the Actions API).
         "test_issue323_verified_ordinary_ci",
+        "test_ordinary_ci_reuse",
     ],
     # MoE overlap prototype (tools/moe-overlap): offline harness correctness.
     "moe-overlap-prototype": [

@@ -140,3 +140,8 @@ Python packages outside `requirements-test.txt`.
 - Skip — with an explicit reason string — rather than fail when a host-local
   resource is genuinely absent. Never skip to route around a real failure.
 - Wire the module into `ci.yml` in the same change.
+
+Ordinary CI invokes `python3 -m scripts.ci_unittest` with the same selectors
+and unittest semantics, recording terminal outcomes for authenticated final
+validation reuse. The full runner remains the fallback. See
+[campaign gate ordering](../docs/campaign-gate-ordering.md#reusing-complete-ordinary-ci-outcomes).
