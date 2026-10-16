@@ -20,12 +20,17 @@ def main(argv=None):
         '~/.local/share/inferswarm)'))
     experiment.add_argument('--source-digest-cache',help='absolute coordinator-host digest JSON path outside lifecycle directories (opt-in)')
     experiment.add_argument('--force-fresh-source-hash',action='store_true',help='rehash all coordinator source bytes and refresh the digest cache')
+    experiment.add_argument('--session',help=(
+        'explicit load-once q8-two-cuda-session/1 JSON; envelope request_sha256 '
+        'must bind the canonical entire ordered session (1..6 including warmups)'))
     args=parser.parse_args(argv)
     try:
         if args.command=='run': result=run_config(args.config)
         else:
             from .q8_experiment import run_experimental_campaign
             options=dict(evidence_root=args.evidence_root)
+            if args.session is not None:
+                options['session_path']=args.session
             if args.source_digest_cache or args.force_fresh_source_hash:
                 options.update(source_digest_cache=args.source_digest_cache,
                     force_fresh_source_hash=args.force_fresh_source_hash)

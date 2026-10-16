@@ -596,51 +596,55 @@ class OperatorRunner:
                 except (OSError,ValueError,urllib.error.URLError): pass
                 if time.monotonic()>deadline: raise TimeoutError('client startup health timeout')
                 self.pause(.5)
-            campaign_before=None
-            if campaign_guard is not None:
-                campaign_before=campaign_guard.before_request(plan,rows,process_receipts,sources)
-            request=dict(plan.request)
-            if campaign_guard is not None: campaign_guard.request_started()
-            response=self.http.post(base+'/v1/chat/completions',
-                {'messages':[{'role':'user','content':request['prompt']}],
-                 'max_tokens':request['max_tokens'],'temperature':request['temperature'],
-                 'seed':request['seed'],'stream':False},
-                timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
-            if campaign_guard is not None:
-                campaign_guard.raw_response=response
-            if evidence_store is not None:
-                # Preserve the complete response JSON immediately after
-                # receipt, before checkpoint/validation/observation can
-                # fail; never allowed to disturb execution or cleanup.
-                try: evidence_store.save_response(response)
-                except BaseException: pass
-            if campaign_guard is not None:
-                campaign_guard.checkpoint()
-            revalidate=getattr(self.source,'revalidate_source_identity',None)
-            if revalidate is not None: revalidate()
-            choice=response['choices'][0]; output=choice['message']['content']
-            if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
-                raise ValueError('incomplete diagnostic generation response')
-            result=dict(schema='q8-two-gpu-diagnostic/1',status='EXECUTED-OUTPUT-UNACCEPTED',
-                plan_id=plan.plan_id,plan_digest=plan.digest,selection=plan.selection,
-                response_id=response['id'],raw_output=output,
-                raw_output_sha256=hashlib.sha256(output.encode()).hexdigest(),
-                finish_reason=choice['finish_reason'],tokens=response['usage']['completion_tokens'],
-                rpc_processes=process_receipts,verified_backing=sources,
-                output_accepted=False,physical_qualified=False,execution_authorized=False,
-                nonclaims=['diagnostic response is retained but not accepted by the ordinary /2 observer',
-                           'endpoint/PID/device-selector binding is not GPU residency or UUID execution proof',
-                           'full coordinator working-set fit remains unqualified'])
-            if campaign_guard is not None:
-                campaign_guard.execution_result=result
-                try:
-                    result['campaign_observation']={
-                        'before_request':campaign_before,
-                        'after_request':campaign_guard.after_request(
-                            plan,rows,process_receipts,sources,response)}
-                except BaseException as exc:
-                    result['status']='EXECUTED-OBSERVATION-REFUSED'
-                    result['observation_refusal']=str(exc)
+            if campaign_guard is not None and hasattr(campaign_guard,'session'):
+                result=self._execute_diagnostic_session(plan,campaign_guard,base,
+                    rows,process_receipts,sources,tunnel,client,remote,processes)
+            else:
+                campaign_before=None
+                if campaign_guard is not None:
+                    campaign_before=campaign_guard.before_request(plan,rows,process_receipts,sources)
+                request=dict(plan.request)
+                if campaign_guard is not None: campaign_guard.request_started()
+                response=self.http.post(base+'/v1/chat/completions',
+                    {'messages':[{'role':'user','content':request['prompt']}],
+                     'max_tokens':request['max_tokens'],'temperature':request['temperature'],
+                     'seed':request['seed'],'stream':False},
+                    timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
+                if campaign_guard is not None:
+                    campaign_guard.raw_response=response
+                if evidence_store is not None:
+                    # Preserve the complete response JSON immediately after
+                    # receipt, before checkpoint/validation/observation can
+                    # fail; never allowed to disturb execution or cleanup.
+                    try: evidence_store.save_response(response)
+                    except BaseException: pass
+                if campaign_guard is not None:
+                    campaign_guard.checkpoint()
+                revalidate=getattr(self.source,'revalidate_source_identity',None)
+                if revalidate is not None: revalidate()
+                choice=response['choices'][0]; output=choice['message']['content']
+                if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
+                    raise ValueError('incomplete diagnostic generation response')
+                result=dict(schema='q8-two-gpu-diagnostic/1',status='EXECUTED-OUTPUT-UNACCEPTED',
+                    plan_id=plan.plan_id,plan_digest=plan.digest,selection=plan.selection,
+                    response_id=response['id'],raw_output=output,
+                    raw_output_sha256=hashlib.sha256(output.encode()).hexdigest(),
+                    finish_reason=choice['finish_reason'],tokens=response['usage']['completion_tokens'],
+                    rpc_processes=process_receipts,verified_backing=sources,
+                    output_accepted=False,physical_qualified=False,execution_authorized=False,
+                    nonclaims=['diagnostic response is retained but not accepted by the ordinary /2 observer',
+                               'endpoint/PID/device-selector binding is not GPU residency or UUID execution proof',
+                               'full coordinator working-set fit remains unqualified'])
+                if campaign_guard is not None:
+                    campaign_guard.execution_result=result
+                    try:
+                        result['campaign_observation']={
+                            'before_request':campaign_before,
+                            'after_request':campaign_guard.after_request(
+                                plan,rows,process_receipts,sources,response)}
+                    except BaseException as exc:
+                        result['status']='EXECUTED-OBSERVATION-REFUSED'
+                        result['observation_refusal']=str(exc)
         except BaseException as exc: error=exc
         finally:
             if campaign_guard is not None:
@@ -678,14 +682,22 @@ class OperatorRunner:
                 # Execution already happened.  Retain the raw response and
                 # report the observation refusal without converting it into
                 # accepted output or discarding the bounded diagnostic.
-                result['status']='EXECUTED-OBSERVATION-REFUSED'
-                result['observation_refusal']=str(exc)
+                if (campaign_guard is not None and hasattr(campaign_guard,'session')
+                        and isinstance(exc,(KeyboardInterrupt,SystemExit,TimeoutError))):
+                    # Preserve terminal observer interrupts/deadlines, but run
+                    # aggregate cleanup and retention below before re-raising.
+                    error=exc
+                else:
+                    result['status']='EXECUTED-OBSERVATION-REFUSED'
+                    result['observation_refusal']=str(exc)
         if any(row.get('lease')!='released' for row in self.last_cleanup.values()):
             cleanup_error=RuntimeError(f'incomplete owned cleanup: {self.last_cleanup}')
         if campaign_guard is not None:
             try: campaign_guard.after_cleanup(self.last_cleanup)
             except BaseException as exc:
                 cleanup_error=RuntimeError(f'experimental supervision cleanup failed: {exc}')
+        if campaign_guard is not None and hasattr(campaign_guard,'session'):
+            campaign_guard.cleanup_error=None if cleanup_error is None else str(cleanup_error)
         # Retention is strictly LAST: acknowledged processes, ambiguous
         # spawns (stopped by after_cleanup -> stop_units), leases, the SSH
         # tunnel and aggregate slices are all stopped before any evidence
@@ -712,6 +724,109 @@ class OperatorRunner:
             raise error
         if cleanup_error is not None: raise cleanup_error
         result['cleanup']=self.last_cleanup
+        return result
+
+    def _execute_diagnostic_session(self,plan,guard,base,rows,process_receipts,
+                                    sources,tunnel,client,remote,processes):
+        """Reuse the already loaded owned server, with no hidden POST or retry."""
+        from .q8_session import ENDPOINT, response_metrics
+        store=self.evidence
+        guard.setup['load_ended_monotonic']=guard.clock()
+        result=dict(status='EXECUTED-OUTPUT-UNACCEPTED',plan_id=plan.plan_id,
+            plan_digest=plan.digest,selection=plan.selection,rpc_processes=process_receipts,
+            verified_backing=sources,requests=guard.request_records,
+            output_accepted=False,physical_qualified=False,execution_authorized=False,
+            nonclaims=['diagnostic responses are not accepted by the ordinary /2 observer',
+                'PID/UUID residency, graph submission and utilization are not kernel execution proof',
+                'nonstreaming wall time is not TTFT; correctness is not evaluated'])
+        guard.execution_result=result
+        for index,request in enumerate(guard.session.payload()['requests'],1):
+            guard.phase='request'; guard.phase_index=index
+            body=request['body']
+            record=dict(index=index,warmup=request['warmup'],measured=not request['warmup'],
+                request_sha256=hashlib.sha256(canonical(body)).hexdigest(),body=body,
+                endpoint=ENDPOINT,status='NOT-STARTED',started_monotonic=None,
+                ended_monotonic=None,started_at=None,ended_at=None,finish_reason=None,
+                metrics=None,correctness='NOT-EVALUATED',
+                prompt_cache=dict(cache_prompt=body['cache_prompt'],reported_tokens_cached=None,
+                    reported_reused_prompt_tokens=None,
+                    interpretation='reuse permitted' if body['cache_prompt'] else 'uncached prefill requested',
+                    uncertainty='timings.cache_n reports reused prefill; tokens_cached alone is not reuse proof; absent cache_n means unknown'))
+            # Pre-request safety checks are not observer completeness checks.
+            # Any failure here stops the sequence without consuming another POST.
+            guard.before_request(plan,rows,process_receipts,sources)
+            for process,_,_,_ in processes:
+                if not self.leases.alive(remote.execution_address,process.name):
+                    raise RuntimeError('two-gpu RPC process lost: '+process.name)
+            if not self.leases.alive(client.execution_address,'client'):
+                raise RuntimeError('client participant lost')
+            if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited before request')
+            revalidate=getattr(self.source,'revalidate_source_identity',None)
+            if revalidate is not None: revalidate()
+            guard.checkpoint()
+            record.update(status='STARTED',started_monotonic=guard.clock(),
+                          started_at=datetime.now(timezone.utc).isoformat())
+            guard.request_records.append(record)
+            prefix=f'request-{index:02d}'
+            try:
+                if store is None or not store.save_session_json(prefix+'-started.json',record):
+                    raise RuntimeError('session request metadata retention failed')
+                timeout=guard.request_timeout_seconds()
+                guard.request_started()
+                # Decode anew so a transport cannot mutate the frozen record.
+                payload=guard.session.payload()['requests'][index-1]['body']
+                record['http_started_monotonic']=guard.clock()
+                record['http_started_at']=datetime.now(timezone.utc).isoformat()
+                response=self.http.post(base+ENDPOINT,payload,timeout=timeout)
+                record.update(ended_monotonic=guard.clock(),
+                              ended_at=datetime.now(timezone.utc).isoformat(),status='RECEIVED')
+                guard.raw_response=response
+                # FIRST operation on the received value is durable retention.
+                # No validation, observer or liveness call may precede this.
+                if not store.save_session_json(prefix+'-response.json',response):
+                    raise RuntimeError('complete session response retention failed')
+                record['wall_seconds']=record['ended_monotonic']-record['http_started_monotonic']
+                if not store.save_session_json(prefix+'-received.json',record):
+                    raise RuntimeError('session receipt metadata retention failed')
+                if not isinstance(response,dict):
+                    raise ValueError('incomplete native diagnostic generation response')
+                record['metrics']=response_metrics(response)
+                record['prompt_cache']['reported_tokens_cached']=response.get('tokens_cached')
+                record['prompt_cache']['reported_reused_prompt_tokens']=record['metrics']['cache_n']
+                record['finish_reason']=response.get('stop_type')
+                output=response.get('content')
+                if (not isinstance(output,str) or not output or response.get('stop') is not True
+                        or not record['finish_reason'] or response.get('error')):
+                    raise ValueError('incomplete native diagnostic generation response')
+                record.update(status='COMPLETED',raw_output_sha256=hashlib.sha256(output.encode()).hexdigest())
+                # Completion is an HTTP fact, independent of later safety,
+                # observer completeness or correctness acceptance.
+                guard.checkpoint()
+                for process,_,_,_ in processes:
+                    if not self.leases.alive(remote.execution_address,process.name):
+                        raise RuntimeError('two-gpu RPC process lost: '+process.name)
+                if not self.leases.alive(client.execution_address,'client'):
+                    raise RuntimeError('client participant lost')
+                if tunnel.poll() is not None: raise RuntimeError('SSH tunnel exited during request')
+                if revalidate is not None: revalidate()
+                # This hook checks cgroup/OOM/allocator/host/GPU safety, not
+                # terminal native event completeness: failures MUST stop.
+                guard.after_request(plan,rows,process_receipts,sources,response)
+            except BaseException as exc:
+                if record['status']!='COMPLETED':
+                    record['status']='INTERRUPTED' if isinstance(exc,(KeyboardInterrupt,SystemExit)) else 'FAILED'
+                record['failure']=dict(type=type(exc).__name__,reason=str(exc))
+                raise
+            finally:
+                if record['ended_monotonic'] is None:
+                    record.update(ended_monotonic=guard.clock(),
+                                  ended_at=datetime.now(timezone.utc).isoformat())
+                if store is not None:
+                    saved=store.save_session_json(prefix+'-final.json',record)
+                    # Do not replace an in-flight execution error/interrupt.
+                    if not saved and 'failure' not in record:
+                        raise RuntimeError('session final request metadata retention failed')
+        guard.phase='cleanup'; guard.phase_index=None
         return result
 
     def _run_profiled_collected(self,plan):

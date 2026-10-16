@@ -496,8 +496,10 @@ class SystemdCampaignGuard:
         wrong={row['pid']:(expected[row['pid']],row['uuid']) for row in owned
                if expected[row['pid']]!=row['uuid']}
         if wrong: raise RuntimeError('wrong GPU/listener PID mapping: '+repr(wrong))
-        return dict(monotonic=self.clock(),gpu=gpu,owned_apps=observed,
+        sample=dict(monotonic=self.clock(),gpu=gpu,owned_apps=observed,
                     attribution=('BOUND' if expected and set(observed)==set(expected) else 'INCONCLUSIVE'))
+        if hasattr(self,'session'): sample['owned_app_memory']=owned
+        return sample
 
     def process_started(self,rows):
         self.rows=dict(rows)
@@ -642,8 +644,13 @@ class ExperimentalCampaignError(RuntimeError):
 
 def run_experimental_campaign(config_path,envelope_path,*,commands=None,transport=None,
                               runner_factory=None,evidence_root=None,
-                              evidence_transport=None,source_digest_cache=None,force_fresh_source_hash=False):
-    """Run exactly one unqualified request under the reviewed #313 envelope."""
+                              evidence_transport=None,source_digest_cache=None,force_fresh_source_hash=False,
+                              session_path=None):
+    """One load and one request, or an explicitly frozen bounded session."""
+    session=None
+    if session_path is not None:
+        from .q8_session import validate_session
+        session=validate_session(_strict_json(session_path))
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
     if force_fresh_source_hash and source_digest_cache is None:
@@ -657,7 +664,8 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
                 raise ValueError('source digest cache must be outside lifecycle directories')
         source_digest_cache=str(cache_path)
     config_sha=hashlib.sha256(config_bytes).hexdigest()
-    request_sha=hashlib.sha256(canonical(dict(plan.request))).hexdigest()
+    request_sha=(session.digest if session is not None else
+                 hashlib.sha256(canonical(dict(plan.request))).hexdigest())
     envelope=validate_experimental_envelope(plan,_strict_json(envelope_path),
         config_sha256=config_sha,request_sha256=request_sha)
     # The controller-owned durable evidence destination is created fresh
@@ -672,7 +680,14 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     evidence_store=DurableEvidenceStore.create(evidence_root,token,
         config_sha256=config_sha,request_sha256=request_sha)
     manager=ExperimentalLeaseManager(transport or SSHTransport(),token)
-    guard=SystemdCampaignGuard(envelope,manager,commands or SSHCommandRunner())
+    if session is None:
+        guard=SystemdCampaignGuard(envelope,manager,commands or SSHCommandRunner())
+    else:
+        from .q8_session import SystemdSessionGuard
+        guard=SystemdSessionGuard(envelope,manager,commands or SSHCommandRunner(),session=session)
+        if not evidence_store.save_session_json('frozen-session.json',session.payload()):
+            evidence_store.finalize()
+            raise ValueError('could not retain frozen session before launch')
     if runner_factory is None:
         from .runtime import JSONHTTP, OperatorRunner, ssh_tunnel
         from .native_observer.collector import NativeObserverCollector
@@ -707,8 +722,7 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     # record its honest summary separately from execution/observation/
     # cleanup outcomes.  Never allowed to mask or replace the campaign's
     # own result or exception.  (No recovery from SIGKILL or power loss.)
-    evidence_summary=evidence_store.finalize()
-    result.update(evidence_retention=evidence_summary)
+    # Session report is saved below, before the manifest-last finalization.
     if source_digest_cache is not None:
         result['source_digest_cache']=dict(getattr(runner.source,'digest_cache_stats',{}),
             path=source_digest_cache,force_fresh=force_fresh_source_hash)
@@ -725,7 +739,27 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         helper_receipts=manager.helper_receipts,spawn_receipts=manager.spawn_receipts,
         verified_backing=guard.verified_backing,cleanup=runner.last_cleanup,
         final_aggregate_receipts=getattr(guard,'final_aggregates',{}))
+    try:
+        if session is not None:
+            guard.report(result,failure=failure,interrupted=interrupted,cleanup=runner.last_cleanup)
+            result['schema']='q8-two-gpu-experimental-session/1'
+            try:
+                evidence_store.save_session_json('session-report.json',result)
+            except (KeyboardInterrupt,SystemExit) as exc:
+                # A first interrupt may arrive after execution/cleanup, while
+                # publishing the report. Preserve it just like an execution
+                # interrupt; never skip the manifest or overwrite a partial file.
+                if interrupted is None: interrupted=exc
+                result.update(status='INTERRUPTED',error=str(interrupted) or 'interrupted',
+                              error_type=type(interrupted).__name__)
+                result['report_interruption']=dict(type=type(exc).__name__,reason=str(exc))
+                evidence_store.save_session_json('session-report-interrupted.json',result)
+    finally:
+        evidence_summary=evidence_store.finalize()
+    result.update(evidence_retention=evidence_summary)
     if interrupted is not None:
+        if session is not None:
+            interrupted.campaign_receipt=result
         result.update(samples=list(guard._samples),
             last_aggregate_observations=guard.last_aggregates,
             last_gpu_observations=guard.last_gpu_rows,

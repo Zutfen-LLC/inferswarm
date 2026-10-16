@@ -194,6 +194,7 @@ class DurableEvidenceStore:
         self._response_status = 'not-received'
         self._response_row = None
         self._summary = None
+        self._session_rows = []
 
     # ------------------------------------------------------------- creation
 
@@ -324,6 +325,39 @@ class DurableEvidenceStore:
             sha256=digest, target=RESPONSE_NAME)
         self._collected_bytes += size
         self._event('response-saved', size)
+
+    def save_session_json(self, name, value):
+        """Append a private session artifact; manifest exposes only its digest.
+
+        Request response files are complete JSON at receipt, before validation.
+        Started/received/final snapshots and the final report are separate,
+        exclusive files, so catchable interrupts cannot erase prior records.
+        A failed write returns false: callers stop rather than silently lose a
+        response and continue a nominally complete measurement sequence.
+        """
+        if self._finalized or not _safe_component(name):
+            return False
+        row = dict(target=name, status='error', sha256=None, size=None)
+        self._session_rows.append(row)
+        try:
+            payload = json.dumps(value, sort_keys=True, indent=1,
+                                 allow_nan=False).encode('utf-8')
+            bound=(self.max_response_bytes if name.endswith('-response.json')
+                   else self.max_total_bytes)
+            if len(payload) > bound:
+                row['status'] = 'oversize'
+                return False
+            if self._collected_bytes + len(payload) > self.max_total_bytes:
+                row['status'] = 'budget'
+                return False
+            size = self._write_new(name, payload)
+            row.update(status=_COLLECTED, size=size,
+                       sha256=hashlib.sha256(payload).hexdigest())
+            self._collected_bytes += size
+            return True
+        except Exception as exc:
+            self._event('session-write-failed', exc)
+            return False
 
     # ---------------------------------------------------- artifact retention
 
@@ -685,6 +719,16 @@ class DurableEvidenceStore:
                         counts=dict(sorted(counts.items())),
                         complete=complete,
                         events=list(self._events))
+        if self._session_rows:
+            manifest['session_artifacts'] = list(self._session_rows)
+            manifest['response'] = dict(status='session', rows=[row for row in self._session_rows
+                if row['target'].endswith('-response.json')])
+            for row in self._session_rows:
+                counts[row['status']] = counts.get(row['status'], 0) + 1
+                if row['status'] != _COLLECTED:
+                    complete = False
+            manifest['counts'] = dict(sorted(counts.items()))
+            manifest['complete'] = complete
         manifest_sha256 = None
         try:
             payload = json.dumps(manifest, sort_keys=True,
@@ -703,4 +747,7 @@ class DurableEvidenceStore:
                              processes=sorted(self._processes),
                              artifact_count=len(rows),
                              error=self._manifest_error)
+        if self._session_rows:
+            self._summary.update(response_status='session',
+                                 session_responses=manifest['response']['rows'])
         return self._summary
