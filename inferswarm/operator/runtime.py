@@ -137,6 +137,9 @@ class OperatorRunner:
         # Internal synthetic plumbing only: run_config/CLI never exposes this.
         self.binding_transport=binding_transport; self.identity_reader=identity_reader
         self.observation_mode=observation_mode; self.clock=clock
+        # #313 durable evidence retention read transport (experimental path
+        # only); None on ordinary paths.
+        self.evidence_transport=None
         # #302 real collector path: production wiring supplies these through
         # run_config; tests inject recording doubles.
         self.collector=collector
@@ -146,6 +149,10 @@ class OperatorRunner:
         # nonce so labeled synthetic evidence can carry the same correlation
         # key; production leaves this None and generates a fresh secret.
         self.request_nonce=None
+        # #313 durable evidence retention (experimental path only): set by
+        # the experimental driver before execution; None on every ordinary
+        # path, which stays byte-for-byte unchanged in behavior.
+        self.evidence=None
 
     def _verify_profiled_sources(self,plan,client,remote):
         """Ordinary owned startup's sole backing admission, before RPC spawn."""
@@ -480,6 +487,8 @@ class OperatorRunner:
         client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
         tunnel=None; error=None; result=None; cleanup_error=None
         rows={}; identities={}; export_dirs={}
+        evidence=self.evidence
+        evidence_entries=[]
         try:
             if campaign_guard is not None:
                 campaign_guard.begin(plan,spec,client,remote)
@@ -498,6 +507,15 @@ class OperatorRunner:
                 export_dirs[process.name]=export
                 rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
                     name=process.name,binding_id=process.binding_id)
+                if evidence is not None:
+                    evidence.register_process(process.name,remote.execution_address,
+                        rows[process.name]['pid'],str(rows[process.name]['start']))
+                    evidence_entries.append(dict(name=process.name,
+                        address=remote.execution_address,export_dir=export,
+                        log_path=str(Path(self.leases.invocation_dir(
+                            remote.execution_address))/(process.name+'.log')),
+                        pid=rows[process.name]['pid'],
+                        start=str(rows[process.name]['start'])))
                 if campaign_guard is not None: campaign_guard.process_started(rows)
             self.leases.port(client.execution_address,'127.0.0.1',client.port)
             deadline=time.monotonic()+spec.startup_timeout_seconds
@@ -537,6 +555,15 @@ class OperatorRunner:
             export_dirs['client']=client_export
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
                 export=client_export,**self._assigned_spawn(plan,client,sources))
+            if evidence is not None:
+                evidence.register_process('client',client.execution_address,
+                    rows['client']['pid'],str(rows['client']['start']))
+                evidence_entries.append(dict(name='client',
+                    address=client.execution_address,export_dir=client_export,
+                    log_path=str(Path(self.leases.invocation_dir(
+                        client.execution_address))/'client.log'),
+                    pid=rows['client']['pid'],
+                    start=str(rows['client']['start'])))
             if campaign_guard is not None: campaign_guard.process_started(rows)
             opened=self.tunnel_factory(client.execution_address,client.port)
             tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
@@ -567,6 +594,13 @@ class OperatorRunner:
                 timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
             if campaign_guard is not None:
                 campaign_guard.raw_response=response
+            if evidence is not None:
+                # Preserve the complete response JSON immediately after
+                # receipt, before checkpoint/validation/observation can
+                # fail; never allowed to disturb execution or cleanup.
+                try: evidence.save_response(response)
+                except BaseException: pass
+            if campaign_guard is not None:
                 campaign_guard.checkpoint()
             choice=response['choices'][0]; output=choice['message']['content']
             if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
@@ -608,6 +642,18 @@ class OperatorRunner:
                 try: self.last_cleanup=self.leases.cleanup()
                 except BaseException as exc:
                     cleanup_error=RuntimeError(f'incomplete owned cleanup: {exc}')
+                # Owned processes are stopped and leases are released above;
+                # NOW, while terminal exports have flushed but nothing else
+                # can remove them, preserve original bytes durably on the
+                # controller.  Strictly best-effort and bounded: a retention
+                # failure is recorded honestly and must never displace the
+                # still-required stop/slice/transport cleanup that follows.
+                if evidence is not None:
+                    try:
+                        evidence.collect_processes(evidence_entries,
+                            self.evidence_transport)
+                    except BaseException as exc:
+                        evidence._event('collect-wrapper-failed',exc)
         if error is None:
             try:
                 evidence=[]

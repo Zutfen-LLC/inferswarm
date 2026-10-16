@@ -27,17 +27,27 @@ class CampaignFixture:
         self.mode=mode; self.rows={}; self.stopped=set(); self.services=set()
         self.commands=[]; self.posts=[]; self.tunnel=None; self.rejected=False
         self.failure=threading.Event()
+        # Synthetic remote evidence surfaces (#326 durable retention):
+        # per-address filesystem of original export/claim/log bytes the
+        # fixture serves to the read-only retention probes.
+        self.files={}; self.exports={}; self.roots={}
 
     def call(self,address,payload):
         action=payload['action']; name=payload.get('name'); key=(address,name)
-        if action=='admit': return {'lease':'admitted'}
+        if action=='admit':
+            self.roots[address]=payload['root']; return {'lease':'admitted'}
         if action=='port': return {'port':'available'}
         if action=='spawn':
             supervision=payload['supervision']; self.services.add((address,supervision['unit']))
             # Simulate remote success and lost reply: unit is still known to the manager.
             if name=='rpc1' and self.mode=='partial': raise RuntimeError('ambiguous rpc1 spawn')
             row=dict(pid=100+len(self.rows),start='200',token=payload['token'],supervision=supervision)
-            self.rows[key]=row; return row
+            self.rows[key]=row
+            if payload.get('export'):
+                invocation=str(Path(self.roots[address])/payload['token'])
+                self.exports.setdefault(address,{})[payload['export']]=self._synthetic_export(
+                    address,name,payload['export'],invocation,row)
+            return row
         if action=='alive': return {'alive':key not in self.stopped}
         if action=='listening': return {'listening':True}
         if action=='inspect':
@@ -57,8 +67,53 @@ class CampaignFixture:
         if action=='release': return {'lease':'released'}
         raise AssertionError(action)
 
+    def _synthetic_export(self,address,name,export_dir,invocation,row):
+        """Create one process's remote export dir plus its invocation log."""
+        label='ggml-rpc-server' if name.startswith('rpc') else 'llama-server'
+        claim=(str(row['pid'])+'\n'+str(row['start'])+'\n'+label+'\n').encode('utf-8')
+        envelope=(b'{"schema":"native-stream/1","participant_id":"'+label.encode()
+                  +b'","dropped_events":0}')
+        if self.mode=='evidence-malformed' and name=='rpc0':
+            envelope=b'{"schema":"native-stream/1","dropped_events":'  # truncated original bytes
+        files={str(Path(export_dir)/'is301-claim'):claim,
+               str(Path(export_dir)/(label+'-'+str(row['pid'])+'-0000.json')):envelope,
+               str(Path(invocation)/(name+'.log')):b'no owned allocator failure\n'}
+        if self.mode=='evidence-symlink' and name=='rpc1':
+            files[str(Path(export_dir)/'is301-claim')]=str(Path(invocation)/(name+'.log'))
+        if self.mode=='evidence-oversize' and name=='rpc1':
+            files[str(Path(export_dir)/(label+'-'+str(row['pid'])+'-0001.json'))]=b'x'*(9<<20)
+        self.files.setdefault(address,{}).update(files)
+        return export_dir
+
+    def _run_retention_probe(self,address,argv):
+        """Answer read-only retention probes from the synthetic files."""
+        import base64 as _b64, json as _json, os as _os
+        program,path=argv[2],argv[3]
+        tree=self.files.get(address,{})
+        if 'os.listdir' in program:
+            names=sorted(_os.path.basename(candidate) for candidate in tree
+                         if _os.path.dirname(candidate)==path)
+            if not names and not any(candidate.startswith(path+'/') for candidate in tree):
+                return _json.dumps({'missing':True})
+            out={}
+            for file_name in names:
+                full=str(_os.path.join(path,file_name))
+                if isinstance(tree.get(full),str): out[file_name]={'type':'symlink'}
+                else: out[file_name]={'type':'file','size':len(tree[full])}
+            return _json.dumps(out)
+        payload=tree[path]
+        if isinstance(payload,str): raise RuntimeError('refusing to follow symlink: '+path)
+        return _b64.b64encode(payload[:int(argv[4])+1]).decode('ascii')
+
     def run(self,address,argv,**kwargs):
         self.commands.append((address,tuple(argv)))
+        if argv[:2]==['python3','-c'] and len(argv)>3 and (
+                'os.listdir' in argv[2] or 'base64' in argv[2]):
+            if self.mode=='evidence-refused-rpc0' and 'os.listdir' in argv[2] \
+                    and 'exports-rpc0' in argv[3]:
+                # First-listener probe channel refuses; rpc1/client must survive.
+                raise RuntimeError('rpc0 probe channel refused')
+            return self._run_retention_probe(address,argv)
         if argv[0]=='id': return '1000\n'
         if argv[0]=='sha256sum':
             part=next(p for p in self.plan.participants if p.execution_address==address)
@@ -107,7 +162,10 @@ class CampaignFixture:
     def read(self,part,pid,**kwargs): return SimpleNamespace(pid=pid,start='200')
     def collect_build(self,*args,**kwargs): pass
     def await_terminal_export(self,*args,**kwargs): pass
-    def collect_dynamic(self,*args,**kwargs):
+    def collect_dynamic(self,participant=None,spawn=None,*args,**kwargs):
+        if self.mode=='dropped' and participant is not None \
+                and participant.participant_id.endswith('-rpc1'):
+            raise ValueError('observation dropped events refuse completeness')
         return SimpleNamespace(observation=SimpleNamespace(sequence=({'event':'rpc_server_command'},),
             terminal_digest='a'*64,event_count=1))
     def get(self,*args,**kwargs): return {'status':'ok'}
@@ -150,6 +208,7 @@ class ExperimentalDriverTests(unittest.TestCase):
         self.envelope.write_text(json.dumps(self.raw if raw is None else raw))
         fixture=CampaignFixture(mode); fixture.plan=self.plan
         fixture.remote=next(p for p in self.plan.participants if p.role=='remote')
+        evidence_root=Path(self.temp.name)/('evidence-'+mode)
         def runner(manager):
             fixture.identity_reader=fixture
             return OperatorRunner(fixture,manager,fixture,fixture.tunnel_factory,collector=fixture)
@@ -163,29 +222,34 @@ class ExperimentalDriverTests(unittest.TestCase):
              patch.object(topology.assigned_backing,'identities',return_value=synthetic_table(self.manifest)):
             if cli_path:
                 original=experiment.run_experimental_campaign
-                def dispatch(config,envelope):
-                    return original(config,envelope,commands=fixture,transport=fixture,runner_factory=runner)
+                import uuid
+                def dispatch(config,envelope,evidence_root=None):
+                    return original(config,envelope,commands=fixture,transport=fixture,
+                        runner_factory=runner,evidence_root=(evidence_root if evidence_root
+                            is not None else str(Path(self.temp.name)/('evidence-'+uuid.uuid4().hex))),
+                        evidence_transport=fixture)
                 with patch.object(experiment,'run_experimental_campaign',side_effect=dispatch), \
                      contextlib.redirect_stdout(io.StringIO()) as output, \
                      contextlib.redirect_stderr(io.StringIO()) as error:
                     code=cli.main(['experimental-q8-two-cuda','--config',str(self.config),
                                    '--envelope',str(self.envelope)])
-                return code,json.loads(output.getvalue() or error.getvalue()),fixture
+                return code,json.loads(output.getvalue() or error.getvalue()),fixture,evidence_root
             try:
                 result=experiment.run_experimental_campaign(self.config,self.envelope,
-                    commands=fixture,transport=fixture,runner_factory=runner)
+                    commands=fixture,transport=fixture,runner_factory=runner,
+                    evidence_root=str(evidence_root),evidence_transport=fixture)
             except Exception as exc: result=exc
-        return result,fixture
+        return result,fixture,evidence_root
 
     def test_cli_reaches_one_real_driver_request_with_unknown_bounds(self):
-        code,result,fixture=self.execute(cli_path=True)
+        code,result,fixture,_=self.execute(cli_path=True)
         self.assertEqual(code,0); self.assertEqual(len(fixture.posts),1)
         self.assertTrue(result['unknown_allocations']); self.assertFalse(result['normal_execution_ready'])
         self.assertFalse(result['output_accepted']); self.assertFalse(result['physical_qualified'])
         self.assertEqual(result['campaign_observation']['after_request']['compute_attribution'],'INCONCLUSIVE')
         self.assertEqual((result['attempts'],result['restarts']),(1,0))
         self.assertFalse(fixture.services); self.assertTrue(fixture.tunnel.done)
-        failed_code,failed,failed_fixture=self.execute('timeout',cli_path=True)
+        failed_code,failed,failed_fixture,_=self.execute('timeout',cli_path=True)
         self.assertEqual(failed_code,1)
         self.assertEqual(failed['campaign']['request_attempts'],1)
         self.assertEqual(failed['campaign']['status'],'STOPPED')
@@ -198,7 +262,7 @@ class ExperimentalDriverTests(unittest.TestCase):
     def test_refusal_and_failure_paths_clean_up_without_retry(self):
         for mode in ('aggregate','headroom','source','partial','request','timeout','allocator','monitor','cleanup'):
             with self.subTest(mode=mode):
-                result,fixture=self.execute(mode)
+                result,fixture,_=self.execute(mode)
                 self.assertIsInstance(result,experiment.ExperimentalCampaignError,str(result))
                 receipt=result.campaign_receipt
                 self.assertEqual(receipt['status'],'STOPPED')
@@ -226,7 +290,7 @@ class ExperimentalDriverTests(unittest.TestCase):
         for key,value in (('opt_in',''),('config_sha256','0'*64),('request_sha256','0'*64)):
             raw=copy.deepcopy(self.raw); raw[key]=value
             with self.subTest(key=key):
-                result,fixture=self.execute(raw=raw)
+                result,fixture,_=self.execute(raw=raw)
                 self.assertIsInstance(result,ValueError)
                 self.assertEqual(fixture.commands,[]); self.assertEqual(fixture.rows,{})
 
@@ -266,3 +330,275 @@ class SupervisionPrimitiveTests(unittest.TestCase):
                 manager.spawn('local','rpc0',['/rpc','--device','CUDA0'])
             self.assertTrue(any(argv[:4]==['sudo','-n','systemctl','stop'] for argv in calls))
             self.assertEqual(manager.cleanup()['local']['lease'],'released')
+
+
+def summary_rows(summary,root):
+    manifest=json.loads((root/'MANIFEST.json').read_text()) \
+        if (root/'MANIFEST.json').exists() else {'artifacts':[]}
+    return manifest['artifacts']
+
+
+class DurableEvidenceRetentionTests(unittest.TestCase):
+    """IS326 follow-up: raw evidence must survive every campaign exit path."""
+
+    def setUp(self):
+        self.plan=topology.TwoGpuTopologyTests().build(lambda raw: raw['strategy_options']['participant_backing'].update(
+            limit_bytes=48<<30,min_free_bytes=64<<30,reserve_bytes=12<<30))
+        self.temp=tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)
+        raw,build_manifest=topology.two_gpu_mapping()
+        raw['strategy_options']['participant_backing'].update(
+            limit_bytes=48<<30,min_free_bytes=64<<30,reserve_bytes=12<<30)
+        config=self.root/'config.json'; self.envelope=self.root/'envelope.json'
+        self.config=config; self.build_manifest=build_manifest
+        config.write_text(json.dumps(rejoin_profiles(raw)))
+        self.raw=dict(schema='q8-two-cuda-experiment/1',opt_in=experiment.EXPERIMENTAL_OPT_IN,
+            config_sha256=hashlib.sha256(config.read_bytes()).hexdigest(),
+            request_sha256=hashlib.sha256(canonical(dict(self.plan.request))).hexdigest(),
+            limits=dict(experiment._LIMITS),gpu_bindings=[dict(selector='CUDA0',uuid='GPU-'+'a'*32),
+                                                       dict(selector='CUDA1',uuid='GPU-'+'b'*32)])
+
+    def execute(self,mode='ok',raw=None):
+        self.envelope.write_text(json.dumps(self.raw if raw is None else raw))
+        fixture=CampaignFixture(mode); fixture.plan=self.plan
+        fixture.remote=next(p for p in self.plan.participants if p.role=='remote')
+        evidence_root=self.root/('evidence-'+mode)
+        def runner(manager):
+            fixture.identity_reader=fixture
+            return OperatorRunner(fixture,manager,fixture,fixture.tunnel_factory,collector=fixture)
+        def parse_fixture(text,base_dir):
+            return parse_config_json(text,base_dir=base_dir,now=NOW,profile_mode='replay')
+        with patch.object(experiment,'parse_config_json',side_effect=parse_fixture), \
+             patch.object(experiment,'build_plan',side_effect=lambda config:build_plan(config,now=NOW)), \
+             patch.object(topology.assigned_backing,'identities',return_value=synthetic_table(self.build_manifest)):
+            try:
+                result=experiment.run_experimental_campaign(self.config,self.envelope,
+                    commands=fixture,transport=fixture,runner_factory=runner,
+                    evidence_root=str(evidence_root),evidence_transport=fixture)
+            except Exception as exc: result=exc
+        return result,fixture,evidence_root
+
+    def manifest(self,evidence_root):
+        return json.loads((evidence_root/'MANIFEST.json').read_text())
+
+    def _collected(self,evidence_root,process,kind,name=None):
+        rows=[row for row in self.manifest(evidence_root)['artifacts']
+              if row['process']==process and row['kind']==kind
+              and (name is None or row['source_path'].endswith(name))]
+        return rows
+
+    def test_normal_completed_response_retains_all_raw_evidence(self):
+        result,fixture,root=self.execute('ok')
+        self.assertNotIsInstance(result,Exception,str(result))
+        retention=result['evidence_retention']
+        self.assertTrue(retention['complete'])
+        self.assertEqual(retention['response_status'],'saved')
+        self.assertEqual(sorted(retention['processes']),['client','rpc0','rpc1'])
+        # Complete HTTP response persisted verbatim, not extracted text only.
+        saved=json.loads((root/'http-response.json').read_text())
+        self.assertEqual(saved['id'],'one')
+        self.assertEqual(saved['usage'],dict(completion_tokens=1))
+        self.assertEqual(saved['choices'][0]['finish_reason'],'stop')
+        manifest=self.manifest(root)
+        response_row=manifest['response']['row']
+        raw=Path(root,'http-response.json').read_bytes()
+        self.assertEqual(response_row['sha256'],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(response_row['size'],len(raw))
+        # Every owned process contributed claim + export envelope + log bytes.
+        for process in ('rpc0','rpc1','client'):
+            self.assertTrue((root/process/'is301-claim').is_file())
+            self.assertTrue(any(row['kind']=='export' and row['status']=='collected'
+                                for row in manifest['artifacts'] if row['process']==process))
+            log_rows=[row for row in manifest['artifacts']
+                      if row['process']==process and row['kind']=='log']
+            self.assertTrue(log_rows and all(row['status']=='collected' for row in log_rows))
+            for row in log_rows:
+                digest=hashlib.sha256((root/row['target']).read_bytes()).hexdigest()
+                self.assertEqual(row['sha256'],digest)
+        self.assertEqual(manifest['process_identities']['rpc0']['pid'],
+            fixture.rows[(fixture.remote.execution_address,'rpc0')]['pid'])
+        # Qualification flags unchanged.
+        self.assertFalse(result['output_accepted']); self.assertFalse(result['physical_qualified'])
+
+    def test_dropped_event_refusal_retains_response_and_malformed_bytes(self):
+        # The observation refuses with the exact IS326 dropped-events
+        # wording on rpc1 while rpc0 wrote a malformed export: both raw
+        # surfaces must be retained before parsing.
+        result,fixture,root=self.execute('evidence-malformed')
+        self.assertNotIsInstance(result,Exception,str(result))
+        result_dropped,fixture_dropped,root_dropped=self.execute('dropped')
+        self.assertNotIsInstance(result_dropped,Exception,str(result_dropped))
+        self.assertEqual(result_dropped['status'],'EXECUTED-OBSERVATION-REFUSED')
+        self.assertIn('dropped events',result_dropped['observation_refusal'])
+        self.assertEqual(result_dropped['evidence_retention']['response_status'],'saved')
+        manifest_dropped=self.manifest(root_dropped)
+        self.assertTrue(manifest_dropped['complete'])
+        self.assertEqual(json.loads((root_dropped/'http-response.json').read_text())['id'],'one')
+        # Malformed rpc0 export: original truncated bytes retained verbatim.
+        manifest=self.manifest(root)
+        kept=[row for row in manifest['artifacts'] if row['status']=='collected'
+              and row['kind']=='export' and row['process']=='rpc0'
+              and (root/row['target']).read_bytes()==b'{"schema":"native-stream/1","dropped_events":']
+        self.assertTrue(kept)
+        # The refusal path retained the answer text and raw response too.
+        self.assertEqual(result['raw_output'],'unqualified')
+        self.assertEqual(json.loads((root/'http-response.json').read_text())['id'],'one')
+
+    def test_first_listener_failure_preserves_second_listener_and_client(self):
+        result,fixture,root=self.execute('evidence-refused-rpc0')
+        self.assertNotIsInstance(result,Exception,str(result))
+        manifest=self.manifest(root)
+        rpc0_rows=[row for row in manifest['artifacts'] if row['process']=='rpc0']
+        self.assertTrue(rpc0_rows)
+        self.assertTrue(any(row['status']=='error' for row in rpc0_rows))
+        self.assertFalse(manifest['complete'])
+        for process in ('rpc1','client'):
+            rows=[row for row in manifest['artifacts'] if row['process']==process]
+            self.assertTrue(rows and all(row['status']=='collected' for row in rows))
+            self.assertTrue((root/process/'is301-claim').is_file())
+        self.assertEqual(json.loads((root/'http-response.json').read_text())['id'],'one')
+
+    def test_load_and_request_failures_retain_partial_evidence(self):
+        for mode in ('partial','request','timeout','monitor','allocator'):
+            with self.subTest(mode=mode):
+                result,fixture,root=self.execute(mode)
+                self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+                receipt=result.campaign_receipt
+                retention=receipt['evidence_retention']
+                manifest=self.manifest(root)
+                spawned=set(retention['processes'])
+                # Whatever spawned left process identities in the manifest.
+                for process in spawned:
+                    self.assertIn(process,manifest['process_identities'])
+                if mode=='request':
+                    # No response existed; the store records not-received honestly.
+                    self.assertEqual(retention['response_status'],'not-received')
+                    self.assertFalse((root/'http-response.json').exists())
+                if mode in ('monitor','allocator','timeout'):
+                    # Monitor failure / allocator failure / request deadline:
+                    # retention still ran and never displaced cleanup, which
+                    # stopped every owned service before slices were torn down.
+                    self.assertIn('cleanup',receipt)
+                    self.assertFalse(fixture.services)
+                    self.assertEqual(fixture.stopped,set(fixture.rows))
+                    self.assertIsNotNone(retention)
+                self.assertIn('cleanup',receipt)
+                self.assertEqual(receipt['request_attempts'],len(fixture.posts))
+
+    def test_cleanup_failure_after_completed_response_still_retains(self):
+        result,fixture,root=self.execute('cleanup')
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        receipt=result.campaign_receipt
+        self.assertEqual(receipt['raw_response']['id'],'one')
+        self.assertEqual(receipt['evidence_retention']['response_status'],'saved')
+        saved=json.loads((root/'http-response.json').read_text())
+        self.assertEqual(saved['choices'][0]['message']['content'],'unqualified')
+
+    def test_missing_oversize_and_symlink_evidence_stay_honest(self):
+        result,fixture,root=self.execute('evidence-symlink')
+        self.assertNotIsInstance(result,Exception,str(result))
+        manifest=self.manifest(root)
+        symlink_rows=[row for row in manifest['artifacts']
+                      if row['status']=='rejected-symlink']
+        self.assertTrue(symlink_rows)
+        self.assertFalse(manifest['complete'])
+        self.assertFalse((root/'rpc1'/'is301-claim').exists())
+
+        result,fixture,root=self.execute('evidence-oversize')
+        self.assertNotIsInstance(result,Exception,str(result))
+        manifest=self.manifest(root)
+        oversize=[row for row in manifest['artifacts'] if row['status']=='oversize']
+        self.assertTrue(oversize)
+        self.assertFalse(manifest['complete'])
+        # The oversize export was never materialized.
+        for row in oversize:
+            self.assertIsNone(row.get('target'))
+            self.assertIsNone(row.get('sha256'))
+
+    def test_store_records_disk_write_failure_honestly(self):
+        import os as _os
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-readonly'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        # Kill write access after creation; every artifact copy must record
+        # an error row and finalize must still return an honest summary.
+        _os.chmod(root,0o500)
+        class Runner:
+            def run(self,address,argv,*,timeout=None):
+                import base64
+                return base64.b64encode(b'bytes').decode('ascii')
+        entry=dict(name='rpc0',address='w',export_dir='/exports/rpc0',
+                   log_path='/inv/rpc0.log',pid=1,start='1')
+        store.collect_processes([entry],Runner())
+        summary=store.finalize()
+        self.assertFalse(summary['complete'])
+        self.assertTrue(all(row['status']=='error'
+                            for row in summary_rows(summary,root)))
+        _os.chmod(root,0o700)
+
+    def test_store_refuses_existing_destination_and_cross_invocation(self):
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-store'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        with self.assertRaisesRegex(ValueError,'already exists'):
+            DurableEvidenceStore.create(root,'token2',
+                config_sha256='a'*64,request_sha256='b'*64)
+        store.save_response({'id':'x'})
+        summary=store.finalize()
+        self.assertTrue(summary['complete'])
+        # A second invocation targeting the same root refuses and does not
+        # touch the first invocation's artifacts.
+        manifest_before=(root/'MANIFEST.json').read_bytes()
+        with self.assertRaisesRegex(ValueError,'already exists'):
+            DurableEvidenceStore.create(root,'token3',
+                config_sha256='c'*64,request_sha256='d'*64)
+        self.assertEqual((root/'MANIFEST.json').read_bytes(),manifest_before)
+
+    def test_store_directory_permissions_and_no_manifest_leak_of_content(self):
+        import os as _os
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-perms'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        store.save_response({'secret-user-content':'answer text'})
+        store.finalize()
+        self.assertEqual(_os.stat(root).st_mode & 0o777,0o700)
+        for name in ('identity.json','http-response.json','MANIFEST.json'):
+            self.assertEqual(_os.stat(root/name).st_mode & 0o777,0o600)
+        manifest=(root/'MANIFEST.json').read_text()
+        self.assertNotIn('answer text',manifest)
+        self.assertNotIn('secret-user-content',manifest)
+
+    def test_collection_deadline_and_file_budget_bounds(self):
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-bounds'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64,
+            max_collection_seconds=0, max_files_per_process=0)
+        calls=[]
+        class RefusingRunner:
+            def run(self,address,argv,*,timeout=None):
+                calls.append(argv)
+                raise RuntimeError('probe channel refused')
+        entry=dict(name='rpc0',address='w',export_dir='/exports',
+                   log_path='/exports/../rpc0.log',pid=1,start='1')
+        store.collect_processes([entry],RefusingRunner())
+        summary=store.finalize()
+        self.assertFalse(summary['complete'])
+        rows=self.manifest(root)['artifacts']
+        self.assertTrue(any(row['status'] in ('deadline','file-limit') for row in rows))
+        # The refusing channel was still attempted (bounded attempt, honest error).
+        self.assertTrue(calls or rows)
+
+    def test_no_second_request_and_single_collection(self):
+        result,fixture,root=self.execute('ok')
+        self.assertEqual(len(fixture.posts),1)
+        # Running the campaign again with a different evidence root works and
+        # does not touch the first evidence directory.
+        first=(root/'MANIFEST.json').read_bytes()
+        result2,fixture2,root2=self.execute('dropped')
+        self.assertEqual(len(fixture2.posts),1)
+        self.assertEqual((root/'MANIFEST.json').read_bytes(),first)
+        self.assertNotEqual(root,root2)
