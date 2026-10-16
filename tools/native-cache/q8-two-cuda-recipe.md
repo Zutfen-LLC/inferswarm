@@ -206,6 +206,47 @@ headroom or a plan requiring the full model on the worker is STOP.
    file-cache reclaim at `memory.max` and unrelated host swap are observations,
    not violations by themselves.
 
+### Durable controller-side evidence retention (mandatory)
+
+Before launch, the controller must create a fresh evidence directory outside
+every remote lifecycle namespace (default
+`~/.local/share/inferswarm/q8-two-cuda-evidence-<token>/`, or an explicit
+`--evidence-root` that must not already exist; one invocation never overwrites
+another's directory).  The command refuses to launch if that destination
+cannot be created.  The directory is bound to the invocation token and the
+frozen config/request SHA-256 hashes and is mode 0700 with 0600 artifacts:
+its contents are potentially sensitive user content — never logged, never
+published automatically.
+
+Collection order on every exit path (success, observation refusal, execution
+failure, cleanup failure):
+
+1. the complete HTTP response JSON is saved immediately after receipt,
+   before checkpoint/validation/observation collection can fail — usage,
+   finish metadata and all other returned fields, not just extracted answer
+   text;
+2. owned processes are stopped and leases released (existing cleanup
+   ordering unchanged);
+3. raw bytes are then preserved per process independently — rpc0, rpc1 and
+   client export envelopes, `is301-claim` files and bounded native log
+   tails — with malformed or dropped-event exports retained verbatim before
+   any parsing; a failure collecting rpc0 never prevents the attempt for
+   rpc1 or the client;
+4. a manifest is written last with source host/path, PID/start identity,
+   file size, SHA-256 and per-artifact success/missing/error status.
+
+Bounds and partial-failure behavior: 8 MiB per export/claim file, 2,000,000 B
+per log tail, 80 files per process, 512 MiB total, 480 s collection wall
+time (inside the reserved 20-minute cleanup budget).  Symlinks and path
+escapes are rejected; absent, oversized or partially copied evidence is
+recorded as such and never reported complete.  A retention failure is
+reported separately in the receipt's `evidence_retention` summary and never
+bypasses stopping owned processes, releasing leases, closing owned
+transports or stopping aggregate slices; the guards that may refuse new work
+after monitor failure, cancellation or execution-deadline expiry are never
+disabled to force a copy.  Execution, observation, retention and cleanup
+outcomes stay separate fields in the receipt.
+
 This dispatch permits one load and at most one request: no physical restart,
 retry or tuning. Existing CPU fixtures retain the missing-only restart-reuse
 contract; a later separately reviewed campaign may measure it. Preserve the

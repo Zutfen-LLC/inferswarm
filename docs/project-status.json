@@ -1,205 +1,206 @@
 {
- "capabilities": [
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-    "state": "accepted"
-   },
-   "id": "planning",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-    "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
-   },
-   "scope": "physical",
-   "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
-   "title": "Automatic planning"
+  "capabilities": [
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+        "state": "accepted"
+      },
+      "id": "planning",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+        "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
+      },
+      "scope": "physical",
+      "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
+      "title": "Automatic planning"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+        "state": "accepted"
+      },
+      "id": "serving",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+        "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
+      },
+      "scope": "physical",
+      "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
+      "title": "Distributed serving"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+        "state": "accepted"
+      },
+      "id": "recovery",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+        "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
+      },
+      "scope": "physical",
+      "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
+      "title": "Plan epochs and recovery"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+        "state": "accepted"
+      },
+      "id": "coordinator",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+        "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
+      },
+      "scope": "physical",
+      "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
+      "title": "Separate Coordinator"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
+        "state": "accepted"
+      },
+      "id": "acquisition",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
+        "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
+      },
+      "scope": "cpu-fixture",
+      "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
+      "title": "Selective artifact acquisition"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
+        "state": "accepted"
+      },
+      "id": "orchestration",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
+        "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
+      },
+      "scope": "cpu-fixture",
+      "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
+      "title": "Peer reuse and replacement deltas"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
+        "state": "accepted"
+      },
+      "id": "locality",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
+        "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
+      },
+      "scope": "cpu-fixture",
+      "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
+      "title": "Locality-aware transition planning"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
+        "state": "accepted"
+      },
+      "id": "qualification",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
+        "result": "V5_QUALIFICATION_PASS"
+      },
+      "scope": "physical",
+      "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
+      "title": "Dense Gemma numerical qualification"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991",
+        "state": "accepted"
+      },
+      "id": "cuda-rpc-mvp",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116",
+        "result": "MVP_DISTRIBUTED_INFERENCE_PASS"
+      },
+      "scope": "physical",
+      "summary": "One ordinary Qwen3.8-Flash-Next-UD-IQ1_S text-generation request executed materially on two homogeneous NVIDIA/CUDA hosts using fixed/manual placement and verified participant-local backing; applies only to the tested inferswarm01 RTX 3060 + inferswarm04 RTX 3090 topology and accepted runtime/artifact lineage. The recorded single-host comparison also completed and was faster on the first requests (4.411 versus 3.925 tok/s), so no capacity or speed advantage is established.",
+      "title": "Bounded two-host CUDA/RPC inference"
+    },
+    {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776",
+        "state": "accepted"
+      },
+      "id": "operator-path",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/438c09ff1f3fb0e161f0bbf6d8389554ab8a1515/docs/implementation/ordinary-operator-path-268/product-report.md",
+        "result": "R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS"
+      },
+      "scope": "physical",
+      "summary": "One ordinary run of the `inferswarm.operator` module executed an operator-supplied fixed llama.cpp CUDA/RPC plan with exactly two participants (one client, one remote), one fixed three-range layer placement, and verified participant-local backing; three bounded requests completed on the tested inferswarm01 RTX 3060 plus inferswarm04 RTX 3090 topology with the exact Qwen3.8-Flash-Next-UD-IQ1_S release and accepted llama.cpp lineage. Remote request compute is attributed by request-bracketed CUDA backend graph-log deltas plus pinned source semantics; remote sampled SM stayed zero and is not positive utilization. This is not a planner, a capacity or speed result, or a numerical-equivalence, mixed-vendor, dynamic-scheduling, production, or Vulkan claim.",
+      "title": "Ordinary fixed-topology CUDA/RPC operator path"
+    }
+  ],
+  "frontier": {
+    "execution": {
+      "constraints": [
+        "Issue #280 candidate-B-only result (comment 6073758406) executed authorization 6073673930 on accepted main c2f0396cbff20ac0c5c7ddda3412ffad43a6db26 with exactly one launch and two requests, B-cold then B-warm, a 10.479 s physical phase, and no R1 repeat, retry, replacement, or extra request. B-cold established the same-request two-die mechanism on the frozen placement (blocks 0\u201318 on die A; blocks 19\u201335 plus the tied output role on die B): die A weights 877,856,768 B (45.63%), KV 79,691,776 B, 445 completed commands; die B weights 1,046,089,728 B (54.37%), KV 71,303,168 B, 393 completed commands; forty graphs admitted; logical boundaries of 573,440 B and two host-staging legs totaling 1,146,880 B, which are logical and staging bytes rather than measured PCIe wire traffic. B-warm failed attribution admission (timeline completion identity does not match recorded event/value) and is not an admissible hardware result. Both responses passed the deterministic task rubric. B-cold synchronized copy time was 23.05% of request wall against the frozen 20% screen. Terminal STOP: the mechanism is proven for the cold request only, warm attribution failed, and no successor work is authorized.",
+        "Issue #280 remains open and no maintainer disposition of the candidate-B-only STOP is recorded, so acceptance is pending and nothing is inferred from the result, the merged PR #296 engineering, or green CI. The result is bounded: one V340L on inferswarm05, Qwen2.5-3B-Instruct-Q4_K_M (which fits a single die, so this is a mechanism result and not a capacity result), the pinned llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 Vulkan build with the PR #286 successor overlay, and one frozen placement. Custody is append-only: candidate-B-only evidence is retained at controller /home/zutfen/is280b-6073673930-evidence/ and host inferswarm05:/home/hermes/is280b-6073673930/ (TERMINAL.json, MANIFEST.sha256) and is not imported into this repository; the earlier r3 evidence at /home/zutfen/is280r3-evidence/ and inferswarm05:~/is280r3-physical/ is unchanged.",
+        "Issue #289 and the merged PR #290 launcher and PR #296 kernel-verified serving-process identity mode are CPU and loopback engineering, not physical evidence; PR #296 does not change the pinned llama.cpp executable. The accepted PR #286 successor source identity and the frozen model, prompts, observer, thresholds, and STOP limits are unchanged.",
+        "Issue #281 (V340L, RX 5600 XT and healthy RX580 Vulkan pooling) is queued behind an accepted #280 result and an explicit CONTINUE decision; neither exists, because the latest #280 result is STOP with acceptance pending. #281 has no recorded plan, plan approval, budget, or execution authorization, its first deliverable would be a concise plan, and no hardware relocation or purchase is assumed. One V340L result cannot establish multi-card scaling or justify a purchase.",
+        "Issue #188 is roadmap authority and not an execution ticket. Its priority order is: #280, then #281 when queued, then #279 (CUDA capacity/value proposal, open and planning only). Mixed NVIDIA/AMD work is deferred, #239/R8-J remains blocked with its frozen contract and sealed holdout unchanged, and #244 is closed not-planned. No CUDA implementation or physical work is assigned.",
+        "Research direction, not an authorization: the open capability question is a model or workload that is demonstrably infeasible under a declared single-resource envelope and is correctly executable when additional heterogeneous resources are added. It is a separate claim from GPU-residency expansion, where the single-resource comparison can still complete, and from performance. Issues #279 and #281 are the existing gates where this question would be scoped; this status creates no new prerequisite issue, experiment, or authority.",
+        "The separately accepted #264 bounded pilot remains limited to its path-transition scope: four fresh-process units observed SUBGROUP/subgroup/32x1x1 to LARGE/hybrid/128x1x1 at output.weight, with both arms screening-variable; numerical root cause and H2/H3/H5 theorem closure remain open. Acceptance authority: https://github.com/Zutfen-LLC/inferswarm/issues/264#issuecomment-5969219338.",
+        "The #250 predecessor remains accepted as the ARM_A_STOPS_LADDER localized boundary only; observation https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750 and acceptance https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070 remain preserved. This was not established as root cause.",
+        "Issue #264's sole live minimal experimental selector is subgroup32\u2192large128 hybrid for the output.weight MMV q4_K*f32 route; dimensions/types and frozen comparator identity are scoped to that candidate only. The cooperative-matrix candidate is dead; do not revive it.",
+        "Four fresh-process units at the frozen execution head observed the actual path transition at all 10 output events per unit. BASE and candidate both differ across their two full-row digests and are screening-variable; matching candidate response tokens do not establish numerical stability or causality.",
+        "The bounded pilot stopped at two units per arm; no third units or retry. Controller preservation verified the accepted #262 150-file inventory unchanged and 69 new retained files byte-identical across remote and local roots. The pure report's preservation field remains external-pending by design.",
+        "Issue #266 is COMPLETED (closed completed), and PR #256 is MERGED to main as 442e2a02ce89e7fb42bceff1f7a47c8789c17733 (https://github.com/Zutfen-LLC/inferswarm/pull/256); the aggregate #254/#258/#260/#262/#264 stack is historical R8-I3C authority, not a pending review frontier. The bounded #264 result is accepted, and PR #265 merged into the aggregate producer branch as b3b28825d860b01b40f7b5697d5a50266ecaeb39 after exact-head review and Final CPU Validation on 28120bb57bfa9b8997d3d616c24e59a70f96a9af (run 37122285620). Those historical receipts are not validation receipts for the current #255 head. A source/CI/subagent PASS or additive report head grants no new physical authority. No automerge, R8-J, dead-control, or broad-matrix work is authorized.",
+        "The completed #258 prospective theorem (merged PR #259) keeps historical A3 terminal-capability separate from hypothesis coverage: closure remains impossible, required_arms is empty, and A5 remains observationally capable but nonterminal. #260/#262/#264 use distinct instrumented source identities; their path observations do not reopen historical theorem closure.",
+        "Issue #241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED; #244 and #239 remain blocked on their Vulkan/comparator path. Issue #255's accepted capability is limited to its bounded tested homogeneous NVIDIA/CUDA two-host MVP; it establishes no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority. The #255 observation asserts the MVP_DISTRIBUTED_INFERENCE_PASS terminal only within that accepted scope."
+      ],
+      "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280",
+      "state": "blocked",
+      "step": "Issue #280 has no unspent physical authorization; Issue #281 lacks a separately approved plan and physical execution authority, and Issue #279 remains planning-only. The single-use candidate-B-only authorization (https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073673930) was consumed by exactly one launch and two requests and is spent; the earlier 2-launch/4-request authorization (comment 6060425902) and the eight-launch/sixteen-request campaign authority were spent before it. Living status is informational and grants no further execution authority: an observed result, a merge, or green CI never authorizes a rerun, retry, relaunch, R1 repeat, or successor, each of which requires a new explicit maintainer decision"
+    },
+    "objective": "Issue #268 is accepted as R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS on exact reviewed head 438c09ff1f3fb0e161f0bbf6d8389554ab8a1515, merged as 4c6df96cd03e50fbb990256507eb859769536aad (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776), and Issue #255 remains accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). Both are bounded to the homogeneous NVIDIA/CUDA two-host topology inferswarm01 RTX 3060 plus inferswarm04 RTX 3090, the exact Qwen3.8-Flash-Next-UD-IQ1_S release and llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 lineage, fixed placement, and verified participant-local backing; they establish no capacity or speed advantage over the recorded single-host comparison. The Issue #188 roadmap priority of 2026-10-06 is AMD-only Vulkan same-request pooling: Issue #280 first, Issue #281 queued behind an accepted #280 result and an explicit CONTINUE decision, and Issue #279 (CUDA capacity/value proposal) open at lower priority as planning only. Issue #280 asks whether the two dies of one V340L can hold useful parts of one model and both execute one request through Vulkan. Its single-use candidate-B-only physical experiment terminated STOP: the cold request proved the same-request two-die mechanism, the warm request failed attribution admission, and the cold synchronized-copy share exceeded its frozen 20% screen. The result is bounded to one V340L, one small model that fits a single die, and one frozen placement; it is not a verdict on dual-die Vulkan execution in general.",
+    "prerequisite": {
+      "acceptance": {
+        "reference": null,
+        "state": "pending"
+      },
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073758406",
+        "result": "STOP"
+      },
+      "title": "Issue #280 candidate-B-only physical result"
+    },
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280",
+    "title": "Issue #280 \u2014 AMD-only Vulkan same-request pooling (candidate-B-only result STOP; authorization spent)"
   },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-    "state": "accepted"
-   },
-   "id": "serving",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-    "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
-   },
-   "scope": "physical",
-   "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
-   "title": "Distributed serving"
+  "limits": [
+    "Issue #313 bounded two-CUDA software slice: the opt-in `two-gpu` Q8 placement keeps the full source and layers 0-40 on the CPU coordinator, assigns complete layers 41-44 and 45-47 plus output to two independently budgeted CUDA devices on one assigned-only worker, and lowers to the pinned native RPC route through two owned listeners bound to `CUDA0` and `CUDA1` and registered as `RPC0` and `RPC1` (`--gpu-layers 8 --tensor-split 4,4`). The cross-device transition is coordinator-mediated; P2P/server-local copy is neither assumed nor enabled. Offline regressions cover exact ownership, selector order, output placement, independent VRAM/worker-RAM accounting, assigned-only projection, refusals and old-mode preservation; the pinned native CPU fixture covers simultaneous two-listener connection, distinct-key repair staging, exact readback and zero-payload warm reuse without establishing CUDA execution. Ordinary admission still refuses unknown allocations/capabilities. The separate explicit `experimental-q8-two-cuda` command retains that blocked admission and unaccepted output while bounding one later authorized request with exact config/request/GPU identities, immutable assigned guards, systemd memory/swap/deadline limits, sampled per-GPU reserve/attribution, and complete owned cleanup. Sampled GPU telemetry may remain INCONCLUSIVE and is not a hard CUDA cap or qualification. `docs/implementation/q8-two-cuda-313.md` and `tools/native-cache/q8-two-cuda-recipe.md` record the implementation and one-attempt Hermes gate. No CUDA execution, capacity fit, numerical result, physical authorization, exact-current-head Final CPU Validation, merge or issue closure is claimed.",
+    "Issue #302 / PR #305 is a staged offline, fail-closed Q8 collector/reconciliation/normal-runner framework, not completed usable-runner delivery. Maintainer exact-head review https://github.com/Zutfen-LLC/inferswarm/pull/305#pullrequestreview-5483410569 holds acceptance pending offline receipt/correlation/allocation corrections and separately authorized native pre-POST inventory/selectors plus actual controller-to-native request correlation. Synthetic-contract evidence cannot grant live admission; static admission does not grant #300 physical qualification. No new native transport/build, hosted final validation, physical execution, deployment, merge or closure is authorized; #302 and #299 stay open, #303 pending and #300 unchanged.",
+    "Issue #309 (https://github.com/Zutfen-LLC/inferswarm/issues/309) is an explicitly dispatched CPU-development slice for a default-off, one-layer qwen4exp native scheduling experiment, separate from whole-layer qwen_q8 ownership. The additive overlay and small CPU/loopback RPC fixtures await exact-head review; no CUDA compatibility, real-model acceptance, resident GPU fit, overlap performance, hardware execution, or #300 completion is claimed. The bounded hardware recipe in tools/native-moe-overlap/hardware-recipe.md requires separate dispatch; existing #299/#302/#303 and historical numerical results remain unchanged.",
+    "Issue #311 (https://github.com/Zutfen-LLC/inferswarm/issues/311): corrected PR #317 merged at 6b2fb08b79ace5589cceac5f0c4ca62fedba312e, including reviewed correction cae2512d02bd8233f0c9c461a8ad74cc0623bb47. It composes #99/#101 authority/inventory/delta, #200 atomic publication and #316 protocol-v7 integrity with repair-aware disk admission; the preserved two-repair overflow remains a superseded claim, not an erased result. The next bounded development connection admits coordinator-full-source/participant-assigned-rpc-backing/1 in ordinary CPU worker startup with assigned-only metadata/backing verification, finite per-role observer/cache build identities, immutable native upload guards and honest source/scratch/storage charges. Compact actual pinned-loader/owned-startup regressions cover cold/restart/delta reuse and explicit partial/duplicate-upload refusal. Coordinator full GGUF source/read/hash dependency remains; small tensors below the native hash threshold still send bytes. CUDA/runtime identity qualification, #302 live observer gaps, full-Qwen inference and physical 16 GiB RAM/two-12 GiB-GPU acceptance remain open. This coding connection awaits maintainer review; no physical authority, #311/#300 closure, permanent backend selection or Final CPU Validation dispatch is recorded.",
+    "Issue #321 (https://github.com/Zutfen-LLC/inferswarm/issues/321) is an explicitly authorized bounded coding integration from main 203133661cfef9ce343d4402644c338fa54b4148: an opt-in derived MoE harness reuses the unchanged native-cache v7 composer and accepts exact assigned whole routed banks only for GGUF/RPC/split=0. CPU loopback fixtures exercise actual graph execution, cold publication, worker restart/hash reuse, unchanged-weight zero SET payload, expert mapping and negative controls; these are engineering observations awaiting maintainer review, not accepted CUDA arithmetic, GPU fit, full-model correctness or physical evidence. The independent numerical checker still refuses rpc-remote-unverified. The reviewed worker/build identity table and stock v6 defaults remain unchanged. tools/moe-overlap/native-cache-recipe.md describes a later separately dispatched 05-to-03 T=1 cold/restart pair. No merge, Final CPU Validation dispatch, inference-host operation or #311/#313/#315 closure is authorized by this coding result.",
+    "Issue #311/#313/#315 CUDA prerequisite: PR #319 merged at e9ff3a3d33860f2fcfa1adfb6e32f39712e2a929 with reviewed e9625bae1aac2d76c4896d61b10a57b8d165222c. The bounded follow-up adds explicit step-a-cpu05-cuda03 selection of BOTH complete uploaded Step A manifests (CPU05 client 91f7ada4cb5d9805a292ec14b56518f80cb1b550834f30f225aeed676fcd518e and CUDA03 worker 46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73); the historical CPU pair, its defaults and accepted bytes remain unchanged. Preparation projection, admission and both runner/collector checks bind the selected pair; unknown selectors, mixed participants, missing identities, wrong backends and changed deployed manifest fields refuse. Full provenance and candidate-evidence limitations are in tools/native-cache/step-a-build-pair/README.md. Debug/-O0 builds are functional-test descriptions, not benchmarks or physical qualification; missing discovery/live-hash/link evidence, incomplete CPU samples and mislabeled CUDA memory.peak units are not filled by inference. tools/native-cache/cuda-prerequisite-recipe.md bounds future Step B to assigned whole tensors on inferswarm05 plus only the x16 GPU on inferswarm03, with at most 10 GiB owned host RAM, at least 4 GiB host headroom, measured VRAM minus at least 512 MiB reserve, restart zero-payload reuse and exact readback. Coordinator full-source dependence and existing live-observer/fit gates remain. This coding follow-up awaits maintainer review; no physical execution, inference, accepted capability, #311/#313/#315/#300 closure, merge or Final CPU Validation dispatch is recorded.",
+    "Research / proof of concept; no released production runtime.",
+    "Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.",
+    "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
+    "Issues #255 and #268 are accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991) and R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776) only for the bounded tested homogeneous NVIDIA/CUDA two-host topology, exact Qwen3.8-Flash-Next-UD-IQ1_S and llama.cpp lineage, fixed placement, verified participant-local backing, and ordinary text generation. The operator path is a fixed-topology path for exactly two participants and one three-range layer placement, not a general heterogeneous planner or runtime. No numerical-equivalence, capacity or speed advantage over the recorded single-host comparison, mixed-vendor, production-readiness, dynamic-scheduling, or R8-J/Vulkan authority is implied.",
+    "Correctness in the accepted CUDA/RPC results means coherent, repeatable generation, not numerical equivalence: the accepted R8-D record (Issue #195, PR #197) is a scoped FAIL with exact-token divergence from the non-RPC reference on two of four corpus cases (case-256 at generated position 5; case-4096 immediate EOS), and R8-G characterized the divergence as non-monotonic without identifying one cause. ADR 0010 does not define product correctness as bitwise identity.",
+    "Whole-model feasibility expansion with heterogeneous resources is not yet demonstrated. Accepted capacity-positive evidence is GPU-residency expansion where the single-resource comparison still completed (R2 and R5A against a matched single-GPU offload or source-backed control; Issue #35 on a 14B Q4_K_M model, where the over-capacity single-device control completed at about 0.2 tok/s), plus one homogeneous NVIDIA Gemma chain whose single 12 GiB GPU-resident envelope was infeasible (R6 census, qualified for its frozen subject by V5). These are separate claims and none implies a speedup.",
+    "Each V340L die is a distinct HBM resource of about 8 GiB. Accepted Issue #243 evidence covers independent per-die execution on one tested host, not one coherent 16 GiB pool, peer or cross-die execution, numerical qualification, or universal cooling; no accepted same-request dual-die result exists.",
+    "Storage is verified artifact backing and a cache or Source, never GPU memory and never a kernel-executing resource; accepted physical evidence uses local SSD backing, and any NVMe, CXL, or other storage role beyond verified artifact backing remains a future question under the Fabric Doctrine.",
+    "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
+    "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier.",
+    "IS326 durable-evidence follow-up to PR #326 (unresolved-invocation gap): the experimental-q8-two-cuda driver now creates a fresh controller-owned evidence directory before launch, outside remote lifecycle namespaces, bound to the invocation token and frozen config/request hashes, and on every exit path preserves the complete sole HTTP response JSON (saved at receipt, before validation or observation collection can fail) plus original bytes per owned process independently (rpc0/rpc1/client export envelopes, is301-claim files, bounded log tails; malformed or dropped-event exports retained verbatim before parsing) with a manifest-last SHA-256 ledger, finite file/byte/time bounds, and symlink/path-escape rejection. Retention failure never displaces stop/lease/transport/slice cleanup and is reported separately from execution, observation and cleanup outcomes; output_accepted=false and physical_qualified=false are unchanged. The cause of the original invocation directories' later disappearance remains unresolved; lifecycle release removes lease markers, not invocation directories, and this record does not attribute the loss. Offline regressions with synthetic fixtures cover all exit paths; no inference-host access, hardware run, or revision of historical verdicts is claimed."
+  ],
+  "runtime": {
+    "integration_branch": "inferswarm-research",
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
+    "repository": "https://github.com/Zutfen-LLC/FreeToken"
   },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-    "state": "accepted"
-   },
-   "id": "recovery",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-    "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
-   },
-   "scope": "physical",
-   "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
-   "title": "Plan epochs and recovery"
-  },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-    "state": "accepted"
-   },
-   "id": "coordinator",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-    "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
-   },
-   "scope": "physical",
-   "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
-   "title": "Separate Coordinator"
-  },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
-    "state": "accepted"
-   },
-   "id": "acquisition",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
-    "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
-   },
-   "scope": "cpu-fixture",
-   "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
-   "title": "Selective artifact acquisition"
-  },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
-    "state": "accepted"
-   },
-   "id": "orchestration",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
-    "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
-   },
-   "scope": "cpu-fixture",
-   "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
-   "title": "Peer reuse and replacement deltas"
-  },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
-    "state": "accepted"
-   },
-   "id": "locality",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
-    "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
-   },
-   "scope": "cpu-fixture",
-   "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
-   "title": "Locality-aware transition planning"
-  },
-  {
-   "acceptance": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
-    "state": "accepted"
-   },
-   "id": "qualification",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
-    "result": "V5_QUALIFICATION_PASS"
-   },
-   "scope": "physical",
-   "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
-   "title": "Dense Gemma numerical qualification"
-  },
-  {
-   "id": "cuda-rpc-mvp",
-   "title": "Bounded two-host CUDA/RPC inference",
-   "scope": "physical",
-   "summary": "One ordinary Qwen3.8-Flash-Next-UD-IQ1_S text-generation request executed materially on two homogeneous NVIDIA/CUDA hosts using fixed/manual placement and verified participant-local backing; applies only to the tested inferswarm01 RTX 3060 + inferswarm04 RTX 3090 topology and accepted runtime/artifact lineage. The recorded single-host comparison also completed and was faster on the first requests (4.411 versus 3.925 tok/s), so no capacity or speed advantage is established.",
-   "observation": {
-    "result": "MVP_DISTRIBUTED_INFERENCE_PASS",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5971666116"
-   },
-   "acceptance": {
-    "state": "accepted",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991"
-   }
-  },
-  {
-   "id": "operator-path",
-   "title": "Ordinary fixed-topology CUDA/RPC operator path",
-   "scope": "physical",
-   "summary": "One ordinary run of the `inferswarm.operator` module executed an operator-supplied fixed llama.cpp CUDA/RPC plan with exactly two participants (one client, one remote), one fixed three-range layer placement, and verified participant-local backing; three bounded requests completed on the tested inferswarm01 RTX 3060 plus inferswarm04 RTX 3090 topology with the exact Qwen3.8-Flash-Next-UD-IQ1_S release and accepted llama.cpp lineage. Remote request compute is attributed by request-bracketed CUDA backend graph-log deltas plus pinned source semantics; remote sampled SM stayed zero and is not positive utilization. This is not a planner, a capacity or speed result, or a numerical-equivalence, mixed-vendor, dynamic-scheduling, production, or Vulkan claim.",
-   "observation": {
-    "result": "R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/438c09ff1f3fb0e161f0bbf6d8389554ab8a1515/docs/implementation/ordinary-operator-path-268/product-report.md"
-   },
-   "acceptance": {
-    "state": "accepted",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776"
-   }
-  }
- ],
- "frontier": {
-  "title": "Issue #280 — AMD-only Vulkan same-request pooling (candidate-B-only result STOP; authorization spent)",
-  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280",
-  "objective": "Issue #268 is accepted as R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS on exact reviewed head 438c09ff1f3fb0e161f0bbf6d8389554ab8a1515, merged as 4c6df96cd03e50fbb990256507eb859769536aad (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776), and Issue #255 remains accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991). Both are bounded to the homogeneous NVIDIA/CUDA two-host topology inferswarm01 RTX 3060 plus inferswarm04 RTX 3090, the exact Qwen3.8-Flash-Next-UD-IQ1_S release and llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 lineage, fixed placement, and verified participant-local backing; they establish no capacity or speed advantage over the recorded single-host comparison. The Issue #188 roadmap priority of 2026-10-06 is AMD-only Vulkan same-request pooling: Issue #280 first, Issue #281 queued behind an accepted #280 result and an explicit CONTINUE decision, and Issue #279 (CUDA capacity/value proposal) open at lower priority as planning only. Issue #280 asks whether the two dies of one V340L can hold useful parts of one model and both execute one request through Vulkan. Its single-use candidate-B-only physical experiment terminated STOP: the cold request proved the same-request two-die mechanism, the warm request failed attribution admission, and the cold synchronized-copy share exceeded its frozen 20% screen. The result is bounded to one V340L, one small model that fits a single die, and one frozen placement; it is not a verdict on dual-die Vulkan execution in general.",
-  "prerequisite": {
-   "title": "Issue #280 candidate-B-only physical result",
-   "observation": {
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073758406",
-    "result": "STOP"
-   },
-   "acceptance": {
-    "state": "pending",
-    "reference": null
-   }
-  },
-  "execution": {
-   "state": "blocked",
-   "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/280",
-   "step": "Issue #280 has no unspent physical authorization; Issue #281 lacks a separately approved plan and physical execution authority, and Issue #279 remains planning-only. The single-use candidate-B-only authorization (https://github.com/Zutfen-LLC/inferswarm/issues/280#issuecomment-6073673930) was consumed by exactly one launch and two requests and is spent; the earlier 2-launch/4-request authorization (comment 6060425902) and the eight-launch/sixteen-request campaign authority were spent before it. Living status is informational and grants no further execution authority: an observed result, a merge, or green CI never authorizes a rerun, retry, relaunch, R1 repeat, or successor, each of which requires a new explicit maintainer decision",
-   "constraints": [
-    "Issue #280 candidate-B-only result (comment 6073758406) executed authorization 6073673930 on accepted main c2f0396cbff20ac0c5c7ddda3412ffad43a6db26 with exactly one launch and two requests, B-cold then B-warm, a 10.479 s physical phase, and no R1 repeat, retry, replacement, or extra request. B-cold established the same-request two-die mechanism on the frozen placement (blocks 0–18 on die A; blocks 19–35 plus the tied output role on die B): die A weights 877,856,768 B (45.63%), KV 79,691,776 B, 445 completed commands; die B weights 1,046,089,728 B (54.37%), KV 71,303,168 B, 393 completed commands; forty graphs admitted; logical boundaries of 573,440 B and two host-staging legs totaling 1,146,880 B, which are logical and staging bytes rather than measured PCIe wire traffic. B-warm failed attribution admission (timeline completion identity does not match recorded event/value) and is not an admissible hardware result. Both responses passed the deterministic task rubric. B-cold synchronized copy time was 23.05% of request wall against the frozen 20% screen. Terminal STOP: the mechanism is proven for the cold request only, warm attribution failed, and no successor work is authorized.",
-    "Issue #280 remains open and no maintainer disposition of the candidate-B-only STOP is recorded, so acceptance is pending and nothing is inferred from the result, the merged PR #296 engineering, or green CI. The result is bounded: one V340L on inferswarm05, Qwen2.5-3B-Instruct-Q4_K_M (which fits a single die, so this is a mechanism result and not a capacity result), the pinned llama.cpp b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 Vulkan build with the PR #286 successor overlay, and one frozen placement. Custody is append-only: candidate-B-only evidence is retained at controller /home/zutfen/is280b-6073673930-evidence/ and host inferswarm05:/home/hermes/is280b-6073673930/ (TERMINAL.json, MANIFEST.sha256) and is not imported into this repository; the earlier r3 evidence at /home/zutfen/is280r3-evidence/ and inferswarm05:~/is280r3-physical/ is unchanged.",
-    "Issue #289 and the merged PR #290 launcher and PR #296 kernel-verified serving-process identity mode are CPU and loopback engineering, not physical evidence; PR #296 does not change the pinned llama.cpp executable. The accepted PR #286 successor source identity and the frozen model, prompts, observer, thresholds, and STOP limits are unchanged.",
-    "Issue #281 (V340L, RX 5600 XT and healthy RX580 Vulkan pooling) is queued behind an accepted #280 result and an explicit CONTINUE decision; neither exists, because the latest #280 result is STOP with acceptance pending. #281 has no recorded plan, plan approval, budget, or execution authorization, its first deliverable would be a concise plan, and no hardware relocation or purchase is assumed. One V340L result cannot establish multi-card scaling or justify a purchase.",
-    "Issue #188 is roadmap authority and not an execution ticket. Its priority order is: #280, then #281 when queued, then #279 (CUDA capacity/value proposal, open and planning only). Mixed NVIDIA/AMD work is deferred, #239/R8-J remains blocked with its frozen contract and sealed holdout unchanged, and #244 is closed not-planned. No CUDA implementation or physical work is assigned.",
-    "Research direction, not an authorization: the open capability question is a model or workload that is demonstrably infeasible under a declared single-resource envelope and is correctly executable when additional heterogeneous resources are added. It is a separate claim from GPU-residency expansion, where the single-resource comparison can still complete, and from performance. Issues #279 and #281 are the existing gates where this question would be scoped; this status creates no new prerequisite issue, experiment, or authority.",
-    "The separately accepted #264 bounded pilot remains limited to its path-transition scope: four fresh-process units observed SUBGROUP/subgroup/32x1x1 to LARGE/hybrid/128x1x1 at output.weight, with both arms screening-variable; numerical root cause and H2/H3/H5 theorem closure remain open. Acceptance authority: https://github.com/Zutfen-LLC/inferswarm/issues/264#issuecomment-5969219338.",
-    "The #250 predecessor remains accepted as the ARM_A_STOPS_LADDER localized boundary only; observation https://github.com/Zutfen-LLC/inferswarm/pull/251#issuecomment-5904093750 and acceptance https://github.com/Zutfen-LLC/inferswarm/issues/250#issuecomment-5904094070 remain preserved. This was not established as root cause.",
-    "Issue #264's sole live minimal experimental selector is subgroup32→large128 hybrid for the output.weight MMV q4_K*f32 route; dimensions/types and frozen comparator identity are scoped to that candidate only. The cooperative-matrix candidate is dead; do not revive it.",
-    "Four fresh-process units at the frozen execution head observed the actual path transition at all 10 output events per unit. BASE and candidate both differ across their two full-row digests and are screening-variable; matching candidate response tokens do not establish numerical stability or causality.",
-    "The bounded pilot stopped at two units per arm; no third units or retry. Controller preservation verified the accepted #262 150-file inventory unchanged and 69 new retained files byte-identical across remote and local roots. The pure report's preservation field remains external-pending by design.",
-    "Issue #266 is COMPLETED (closed completed), and PR #256 is MERGED to main as 442e2a02ce89e7fb42bceff1f7a47c8789c17733 (https://github.com/Zutfen-LLC/inferswarm/pull/256); the aggregate #254/#258/#260/#262/#264 stack is historical R8-I3C authority, not a pending review frontier. The bounded #264 result is accepted, and PR #265 merged into the aggregate producer branch as b3b28825d860b01b40f7b5697d5a50266ecaeb39 after exact-head review and Final CPU Validation on 28120bb57bfa9b8997d3d616c24e59a70f96a9af (run 37122285620). Those historical receipts are not validation receipts for the current #255 head. A source/CI/subagent PASS or additive report head grants no new physical authority. No automerge, R8-J, dead-control, or broad-matrix work is authorized.",
-    "The completed #258 prospective theorem (merged PR #259) keeps historical A3 terminal-capability separate from hypothesis coverage: closure remains impossible, required_arms is empty, and A5 remains observationally capable but nonterminal. #260/#262/#264 use distinct instrumented source identities; their path observations do not reopen historical theorem closure.",
-    "Issue #241 remains accepted as R8I3_COMPARATOR_V2_BLOCKED; #244 and #239 remain blocked on their Vulkan/comparator path. Issue #255's accepted capability is limited to its bounded tested homogeneous NVIDIA/CUDA two-host MVP; it establishes no numerical equivalence, mixed-vendor readiness, production readiness, or new R8-J/Vulkan execution authority. The #255 observation asserts the MVP_DISTRIBUTED_INFERENCE_PASS terminal only within that accepted scope."
-   ]
-  }
- },
- "limits": [
-  "Issue #313 bounded two-CUDA software slice: the opt-in `two-gpu` Q8 placement keeps the full source and layers 0-40 on the CPU coordinator, assigns complete layers 41-44 and 45-47 plus output to two independently budgeted CUDA devices on one assigned-only worker, and lowers to the pinned native RPC route through two owned listeners bound to `CUDA0` and `CUDA1` and registered as `RPC0` and `RPC1` (`--gpu-layers 8 --tensor-split 4,4`). The cross-device transition is coordinator-mediated; P2P/server-local copy is neither assumed nor enabled. Offline regressions cover exact ownership, selector order, output placement, independent VRAM/worker-RAM accounting, assigned-only projection, refusals and old-mode preservation; the pinned native CPU fixture covers simultaneous two-listener connection, distinct-key repair staging, exact readback and zero-payload warm reuse without establishing CUDA execution. Ordinary admission still refuses unknown allocations/capabilities. The separate explicit `experimental-q8-two-cuda` command retains that blocked admission and unaccepted output while bounding one later authorized request with exact config/request/GPU identities, immutable assigned guards, systemd memory/swap/deadline limits, sampled per-GPU reserve/attribution, and complete owned cleanup. Sampled GPU telemetry may remain INCONCLUSIVE and is not a hard CUDA cap or qualification. `docs/implementation/q8-two-cuda-313.md` and `tools/native-cache/q8-two-cuda-recipe.md` record the implementation and one-attempt Hermes gate. No CUDA execution, capacity fit, numerical result, physical authorization, exact-current-head Final CPU Validation, merge or issue closure is claimed.",
-  "Issue #302 / PR #305 is a staged offline, fail-closed Q8 collector/reconciliation/normal-runner framework, not completed usable-runner delivery. Maintainer exact-head review https://github.com/Zutfen-LLC/inferswarm/pull/305#pullrequestreview-5483410569 holds acceptance pending offline receipt/correlation/allocation corrections and separately authorized native pre-POST inventory/selectors plus actual controller-to-native request correlation. Synthetic-contract evidence cannot grant live admission; static admission does not grant #300 physical qualification. No new native transport/build, hosted final validation, physical execution, deployment, merge or closure is authorized; #302 and #299 stay open, #303 pending and #300 unchanged.",
-  "Issue #309 (https://github.com/Zutfen-LLC/inferswarm/issues/309) is an explicitly dispatched CPU-development slice for a default-off, one-layer qwen4exp native scheduling experiment, separate from whole-layer qwen_q8 ownership. The additive overlay and small CPU/loopback RPC fixtures await exact-head review; no CUDA compatibility, real-model acceptance, resident GPU fit, overlap performance, hardware execution, or #300 completion is claimed. The bounded hardware recipe in tools/native-moe-overlap/hardware-recipe.md requires separate dispatch; existing #299/#302/#303 and historical numerical results remain unchanged.",
-  "Issue #311 (https://github.com/Zutfen-LLC/inferswarm/issues/311): corrected PR #317 merged at 6b2fb08b79ace5589cceac5f0c4ca62fedba312e, including reviewed correction cae2512d02bd8233f0c9c461a8ad74cc0623bb47. It composes #99/#101 authority/inventory/delta, #200 atomic publication and #316 protocol-v7 integrity with repair-aware disk admission; the preserved two-repair overflow remains a superseded claim, not an erased result. The next bounded development connection admits coordinator-full-source/participant-assigned-rpc-backing/1 in ordinary CPU worker startup with assigned-only metadata/backing verification, finite per-role observer/cache build identities, immutable native upload guards and honest source/scratch/storage charges. Compact actual pinned-loader/owned-startup regressions cover cold/restart/delta reuse and explicit partial/duplicate-upload refusal. Coordinator full GGUF source/read/hash dependency remains; small tensors below the native hash threshold still send bytes. CUDA/runtime identity qualification, #302 live observer gaps, full-Qwen inference and physical 16 GiB RAM/two-12 GiB-GPU acceptance remain open. This coding connection awaits maintainer review; no physical authority, #311/#300 closure, permanent backend selection or Final CPU Validation dispatch is recorded.",
-  "Issue #321 (https://github.com/Zutfen-LLC/inferswarm/issues/321) is an explicitly authorized bounded coding integration from main 203133661cfef9ce343d4402644c338fa54b4148: an opt-in derived MoE harness reuses the unchanged native-cache v7 composer and accepts exact assigned whole routed banks only for GGUF/RPC/split=0. CPU loopback fixtures exercise actual graph execution, cold publication, worker restart/hash reuse, unchanged-weight zero SET payload, expert mapping and negative controls; these are engineering observations awaiting maintainer review, not accepted CUDA arithmetic, GPU fit, full-model correctness or physical evidence. The independent numerical checker still refuses rpc-remote-unverified. The reviewed worker/build identity table and stock v6 defaults remain unchanged. tools/moe-overlap/native-cache-recipe.md describes a later separately dispatched 05-to-03 T=1 cold/restart pair. No merge, Final CPU Validation dispatch, inference-host operation or #311/#313/#315 closure is authorized by this coding result.",
-  "Issue #311/#313/#315 CUDA prerequisite: PR #319 merged at e9ff3a3d33860f2fcfa1adfb6e32f39712e2a929 with reviewed e9625bae1aac2d76c4896d61b10a57b8d165222c. The bounded follow-up adds explicit step-a-cpu05-cuda03 selection of BOTH complete uploaded Step A manifests (CPU05 client 91f7ada4cb5d9805a292ec14b56518f80cb1b550834f30f225aeed676fcd518e and CUDA03 worker 46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73); the historical CPU pair, its defaults and accepted bytes remain unchanged. Preparation projection, admission and both runner/collector checks bind the selected pair; unknown selectors, mixed participants, missing identities, wrong backends and changed deployed manifest fields refuse. Full provenance and candidate-evidence limitations are in tools/native-cache/step-a-build-pair/README.md. Debug/-O0 builds are functional-test descriptions, not benchmarks or physical qualification; missing discovery/live-hash/link evidence, incomplete CPU samples and mislabeled CUDA memory.peak units are not filled by inference. tools/native-cache/cuda-prerequisite-recipe.md bounds future Step B to assigned whole tensors on inferswarm05 plus only the x16 GPU on inferswarm03, with at most 10 GiB owned host RAM, at least 4 GiB host headroom, measured VRAM minus at least 512 MiB reserve, restart zero-payload reuse and exact readback. Coordinator full-source dependence and existing live-observer/fit gates remain. This coding follow-up awaits maintainer review; no physical execution, inference, accepted capability, #311/#313/#315/#300 closure, merge or Final CPU Validation dispatch is recorded.",
-  "Research / proof of concept; no released production runtime.",
-  "Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.",
-  "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
-  "Issues #255 and #268 are accepted as MVP_DISTRIBUTED_INFERENCE_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/255#issuecomment-5974171991) and R8K_QWEN_CUDA_ORDINARY_OPERATOR_PATH_PASS (https://github.com/Zutfen-LLC/inferswarm/issues/268#issuecomment-5979357776) only for the bounded tested homogeneous NVIDIA/CUDA two-host topology, exact Qwen3.8-Flash-Next-UD-IQ1_S and llama.cpp lineage, fixed placement, verified participant-local backing, and ordinary text generation. The operator path is a fixed-topology path for exactly two participants and one three-range layer placement, not a general heterogeneous planner or runtime. No numerical-equivalence, capacity or speed advantage over the recorded single-host comparison, mixed-vendor, production-readiness, dynamic-scheduling, or R8-J/Vulkan authority is implied.",
-  "Correctness in the accepted CUDA/RPC results means coherent, repeatable generation, not numerical equivalence: the accepted R8-D record (Issue #195, PR #197) is a scoped FAIL with exact-token divergence from the non-RPC reference on two of four corpus cases (case-256 at generated position 5; case-4096 immediate EOS), and R8-G characterized the divergence as non-monotonic without identifying one cause. ADR 0010 does not define product correctness as bitwise identity.",
-  "Whole-model feasibility expansion with heterogeneous resources is not yet demonstrated. Accepted capacity-positive evidence is GPU-residency expansion where the single-resource comparison still completed (R2 and R5A against a matched single-GPU offload or source-backed control; Issue #35 on a 14B Q4_K_M model, where the over-capacity single-device control completed at about 0.2 tok/s), plus one homogeneous NVIDIA Gemma chain whose single 12 GiB GPU-resident envelope was infeasible (R6 census, qualified for its frozen subject by V5). These are separate claims and none implies a speedup.",
-  "Each V340L die is a distinct HBM resource of about 8 GiB. Accepted Issue #243 evidence covers independent per-die execution on one tested host, not one coherent 16 GiB pool, peer or cross-die execution, numerical qualification, or universal cooling; no accepted same-request dual-die result exists.",
-  "Storage is verified artifact backing and a cache or Source, never GPU memory and never a kernel-executing resource; accepted physical evidence uses local SSD backing, and any NVMe, CXL, or other storage role beyond verified artifact backing remains a future question under the Fabric Doctrine.",
-  "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
-  "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
- ],
- "runtime": {
-  "integration_branch": "inferswarm-research",
-  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
-  "repository": "https://github.com/Zutfen-LLC/FreeToken"
- },
- "schema": "inferswarm.project-status/1"
+  "schema": "inferswarm.project-status/1"
 }

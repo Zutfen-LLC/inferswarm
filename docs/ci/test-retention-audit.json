@@ -5912,12 +5912,12 @@
     "test_q8_experiment": {
       "baseline_group": "issue-99-103",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 6,
+      "baseline_test_count": 17,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-99-103",
-      "invariant": "The real opt-in CLI/driver retains blocked ordinary admission and unknown bounds, freezes one request, verifies aggregate systemd limits and UUID mapping, supervises source helpers, stops and cleans all owned jobs on partial spawn/request/timeout/allocator/monitor failures, and never accepts or qualifies output.",
-      "lineage": "Issue #313 opt-in experimental campaign correction to PR #326",
+      "invariant": "The real opt-in CLI/driver retains blocked ordinary admission and unknown bounds, freezes one request, verifies aggregate systemd limits and UUID mapping, supervises source helpers, stops and cleans all owned jobs on partial spawn/request/timeout/allocator/monitor failures, preserves raw evidence (complete HTTP response, per-process export envelopes, is301-claims, logs, SHA-256 manifest) durably on every exit path without displacing cleanup, and never accepts or qualifies output.",
+      "lineage": "Issue #313 opt-in experimental campaign correction to PR #326; IS326 durable evidence retention follow-up",
       "named_by_evidence": [],
       "owned_surfaces": {
         "evidence_read": [
@@ -5927,14 +5927,15 @@
           "inferswarm/operator/q8_experiment.py",
           "inferswarm/operator/__main__.py",
           "inferswarm/operator/lifecycle.py",
-          "inferswarm/operator/runtime.py"
+          "inferswarm/operator/runtime.py",
+          "inferswarm/operator/evidence_retention.py"
         ]
       },
       "pinned_by_evidence": [],
       "rationale": "Offline config/CLI/driver with fake process interfaces plus owned systemd command construction and launch rollback; no hardware, model bytes or physical authorization.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 6
+      "test_count_at_audit": 17
     },
     "test_run_full_cpu_suite": {
       "baseline_group": "repo-integrity",
