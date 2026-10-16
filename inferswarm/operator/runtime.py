@@ -137,6 +137,9 @@ class OperatorRunner:
         # Internal synthetic plumbing only: run_config/CLI never exposes this.
         self.binding_transport=binding_transport; self.identity_reader=identity_reader
         self.observation_mode=observation_mode; self.clock=clock
+        # #313 durable evidence retention read transport (experimental path
+        # only); None on ordinary paths.
+        self.evidence_transport=None
         # #302 real collector path: production wiring supplies these through
         # run_config; tests inject recording doubles.
         self.collector=collector
@@ -146,6 +149,10 @@ class OperatorRunner:
         # nonce so labeled synthetic evidence can carry the same correlation
         # key; production leaves this None and generates a fresh secret.
         self.request_nonce=None
+        # #313 durable evidence retention (experimental path only): set by
+        # the experimental driver before execution; None on every ordinary
+        # path, which stays byte-for-byte unchanged in behavior.
+        self.evidence=None
 
     def _verify_profiled_sources(self,plan,client,remote):
         """Ordinary owned startup's sole backing admission, before RPC spawn."""
@@ -480,6 +487,8 @@ class OperatorRunner:
         client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
         tunnel=None; error=None; result=None; cleanup_error=None
         rows={}; identities={}; export_dirs={}
+        evidence_store=self.evidence
+        evidence_entries=[]
         try:
             if campaign_guard is not None:
                 campaign_guard.begin(plan,spec,client,remote)
@@ -496,8 +505,26 @@ class OperatorRunner:
                 self.leases.port(remote.execution_address,host,port)
                 export=str(Path(self.leases.invocation_dir(remote.execution_address))/('exports-'+process.name))
                 export_dirs[process.name]=export
+                log_path=str(Path(self.leases.invocation_dir(
+                    remote.execution_address))/(process.name+'.log'))
+                # Register the attempted role + artifact paths BEFORE the
+                # launch is dispatched: if the process starts but its spawn
+                # reply is lost, cleanup still stops the leases and
+                # retention still attempts these known paths; the PID/start
+                # identity stays honestly unknown (None), never fabricated.
+                if evidence_store is not None:
+                    evidence_store.register_attempt(process.name,
+                        remote.execution_address,export,log_path)
                 rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
                     name=process.name,binding_id=process.binding_id)
+                if evidence_store is not None:
+                    evidence_store.register_process(process.name,remote.execution_address,
+                        rows[process.name]['pid'],str(rows[process.name]['start']))
+                    evidence_entries.append(dict(name=process.name,
+                        address=remote.execution_address,export_dir=export,
+                        log_path=log_path,
+                        pid=rows[process.name]['pid'],
+                        start=str(rows[process.name]['start'])))
                 if campaign_guard is not None: campaign_guard.process_started(rows)
             self.leases.port(client.execution_address,'127.0.0.1',client.port)
             deadline=time.monotonic()+spec.startup_timeout_seconds
@@ -535,8 +562,22 @@ class OperatorRunner:
                     executable_sha256=remote.runtime_sha256,assigned_guard=guards[process.binding_id]))
             client_export=str(Path(self.leases.invocation_dir(client.execution_address))/'exports-client')
             export_dirs['client']=client_export
+            client_log=str(Path(self.leases.invocation_dir(
+                client.execution_address))/'client.log')
+            # Same pre-dispatch registration for the client launch.
+            if evidence_store is not None:
+                evidence_store.register_attempt('client',
+                    client.execution_address,client_export,client_log)
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
                 export=client_export,**self._assigned_spawn(plan,client,sources))
+            if evidence_store is not None:
+                evidence_store.register_process('client',client.execution_address,
+                    rows['client']['pid'],str(rows['client']['start']))
+                evidence_entries.append(dict(name='client',
+                    address=client.execution_address,export_dir=client_export,
+                    log_path=client_log,
+                    pid=rows['client']['pid'],
+                    start=str(rows['client']['start'])))
             if campaign_guard is not None: campaign_guard.process_started(rows)
             opened=self.tunnel_factory(client.execution_address,client.port)
             tunnel,local_port=opened if isinstance(opened,tuple) else (opened,client.port)
@@ -567,6 +608,13 @@ class OperatorRunner:
                 timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
             if campaign_guard is not None:
                 campaign_guard.raw_response=response
+            if evidence_store is not None:
+                # Preserve the complete response JSON immediately after
+                # receipt, before checkpoint/validation/observation can
+                # fail; never allowed to disturb execution or cleanup.
+                try: evidence_store.save_response(response)
+                except BaseException: pass
+            if campaign_guard is not None:
                 campaign_guard.checkpoint()
             choice=response['choices'][0]; output=choice['message']['content']
             if not isinstance(output,str) or not output or not choice['finish_reason'] or not response['id']:
@@ -636,6 +684,27 @@ class OperatorRunner:
             try: campaign_guard.after_cleanup(self.last_cleanup)
             except BaseException as exc:
                 cleanup_error=RuntimeError(f'experimental supervision cleanup failed: {exc}')
+        # Retention is strictly LAST: acknowledged processes, ambiguous
+        # spawns (stopped by after_cleanup -> stop_units), leases, the SSH
+        # tunnel and aggregate slices are all stopped before any evidence
+        # byte is collected, so slow or failed retention can never defer an
+        # owned stop.  Best-effort and bounded; an honest partial record is
+        # recorded and never masks the campaign's own result or error.
+        if evidence_store is not None:
+            try:
+                # Bind retention to the campaign's EXISTING absolute
+                # deadline: probes clamp to the remaining budget (minus a
+                # manifest reserve) and stop once it expires -- retention
+                # never grants itself a fresh window after the campaign
+                # budget is gone.  Owned-process shutdown has already run.
+                if (campaign_guard is not None
+                        and campaign_guard.execute_deadline is not None):
+                    evidence_store.begin_collection_budget(
+                        campaign_guard.execute_deadline)
+                evidence_store.collect_processes(evidence_entries,
+                    self.evidence_transport)
+            except BaseException as exc:
+                evidence_store._event('collect-wrapper-failed',exc)
         if error is not None:
             if cleanup_error is not None: raise error from cleanup_error
             raise error

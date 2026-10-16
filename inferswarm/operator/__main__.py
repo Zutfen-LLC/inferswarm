@@ -14,12 +14,17 @@ def main(argv=None):
         help='one explicitly authorized, unqualified #313 systemd-supervised diagnostic')
     experiment.add_argument('--config',required=True,help='strict profiled operator config JSON')
     experiment.add_argument('--envelope',required=True,help='strict q8-two-cuda-experiment/1 JSON')
+    experiment.add_argument('--evidence-root',required=False,help=(
+        'absolute controller-local directory for durable raw-evidence retention; '
+        'must not already exist (default: fresh token directory under '
+        '~/.local/share/inferswarm)'))
     args=parser.parse_args(argv)
     try:
         if args.command=='run': result=run_config(args.config)
         else:
             from .q8_experiment import run_experimental_campaign
-            result=run_experimental_campaign(args.config,args.envelope)
+            result=run_experimental_campaign(args.config,args.envelope,
+                evidence_root=args.evidence_root)
         print(json.dumps(result,sort_keys=True))
         return 0
     except Exception as exc:

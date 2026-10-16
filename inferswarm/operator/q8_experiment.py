@@ -611,7 +611,8 @@ class ExperimentalCampaignError(RuntimeError):
 
 
 def run_experimental_campaign(config_path,envelope_path,*,commands=None,transport=None,
-                              runner_factory=None):
+                              runner_factory=None,evidence_root=None,
+                              evidence_transport=None):
     """Run exactly one unqualified request under the reviewed #313 envelope."""
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
@@ -619,7 +620,18 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     request_sha=hashlib.sha256(canonical(dict(plan.request))).hexdigest()
     envelope=validate_experimental_envelope(plan,_strict_json(envelope_path),
         config_sha256=config_sha,request_sha256=request_sha)
-    manager=ExperimentalLeaseManager(transport or SSHTransport(),secrets.token_hex(16))
+    # The controller-owned durable evidence destination is created fresh
+    # BEFORE any launch, outside every remote lifecycle namespace, bound to
+    # this invocation's token and both frozen hashes.  Refusal here is the
+    # safe outcome: nothing has launched yet.
+    token=secrets.token_hex(16)
+    if evidence_root is None:
+        evidence_root=str(Path.home()/'.local'/'share'/'inferswarm'
+            /('q8-two-cuda-evidence-'+token))
+    from .evidence_retention import DurableEvidenceStore
+    evidence_store=DurableEvidenceStore.create(evidence_root,token,
+        config_sha256=config_sha,request_sha256=request_sha)
+    manager=ExperimentalLeaseManager(transport or SSHTransport(),token)
     guard=SystemdCampaignGuard(envelope,manager,commands or SSHCommandRunner())
     if runner_factory is None:
         from .runtime import JSONHTTP, OperatorRunner, ssh_tunnel
@@ -628,13 +640,34 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
             collector=NativeObserverCollector(transport=SupervisedCollectorTransport(manager),selective=True))
     else:
         runner=runner_factory(manager)
-    result={}; failure=None
+    # Experimental path only: the runner preserves raw evidence into the
+    # controller-owned store on every exit path.
+    runner.evidence=evidence_store
+    runner.evidence_transport=(evidence_transport if evidence_transport is not None
+                               else guard.commands)
+    result={}; failure=None; interrupted=None
     try: result=runner._execute_two_gpu_diagnostic(plan,plan.admission,campaign_guard=guard)
+    except (KeyboardInterrupt,SystemExit) as exc:
+        # Catchable interruption: owned cleanup already ran inside the
+        # driver's finally path.  Finalize the evidence manifest, then
+        # re-raise the original interrupt unchanged -- retention failure
+        # must never mask it, and no recovery is promised past this point.
+        interrupted=exc
+        result=dict(guard.execution_result or {})
+        result.update(status='INTERRUPTED',error=str(exc) or 'interrupted',
+                      error_type=type(exc).__name__,raw_response=guard.raw_response)
     except Exception as exc:
         failure=exc
         result=dict(guard.execution_result)
         result.update(status='STOPPED',error=str(exc),error_type=type(exc).__name__,
                       raw_response=guard.raw_response)
+    # Finalize durable retention on EVERY catchable exit path (success,
+    # campaign failure, raised error, KeyboardInterrupt/SystemExit) and
+    # record its honest summary separately from execution/observation/
+    # cleanup outcomes.  Never allowed to mask or replace the campaign's
+    # own result or exception.  (No recovery from SIGKILL or power loss.)
+    evidence_summary=evidence_store.finalize()
+    result.update(evidence_retention=evidence_summary)
     result.update(schema='q8-two-gpu-experimental-campaign/1',
         experimental_opt_in=True,output_accepted=False,physical_qualified=False,
         execution_authorized=False,experimental_execution_authorized=True,
@@ -648,6 +681,13 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         helper_receipts=manager.helper_receipts,spawn_receipts=manager.spawn_receipts,
         verified_backing=guard.verified_backing,cleanup=runner.last_cleanup,
         final_aggregate_receipts=getattr(guard,'final_aggregates',{}))
+    if interrupted is not None:
+        result.update(samples=list(guard._samples),
+            last_aggregate_observations=guard.last_aggregates,
+            last_gpu_observations=guard.last_gpu_rows,
+            last_host_available=guard.last_host_available,
+            monitor_failure=str(guard._monitor_error) if guard._monitor_error is not None else None)
+        raise interrupted
     if failure is not None:
         result.update(samples=list(guard._samples),
             last_aggregate_observations=guard.last_aggregates,
