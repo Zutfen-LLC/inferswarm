@@ -5912,7 +5912,7 @@
     "test_q8_experiment": {
       "baseline_group": "issue-99-103",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 17,
+      "baseline_test_count": 20,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-99-103",
@@ -5935,7 +5935,7 @@
       "rationale": "Offline config/CLI/driver with fake process interfaces plus owned systemd command construction and launch rollback; no hardware, model bytes or physical authorization.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 17
+      "test_count_at_audit": 20
     },
     "test_run_full_cpu_suite": {
       "baseline_group": "repo-integrity",

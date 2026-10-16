@@ -225,21 +225,27 @@ failure, cleanup failure):
    before checkpoint/validation/observation collection can fail — usage,
    finish metadata and all other returned fields, not just extracted answer
    text;
-2. owned processes are stopped and leases released (existing cleanup
-   ordering unchanged);
+2. owned processes are stopped and leases released, INCLUDING units whose
+   spawn reply was lost and the aggregate slices (acknowledged stops via
+   lease cleanup, then the remaining registered units and slices via the
+   supervision cleanup) — retention waits for every stop;
 3. raw bytes are then preserved per process independently — rpc0, rpc1 and
    client export envelopes, `is301-claim` files and bounded native log
    tails — with malformed or dropped-event exports retained verbatim before
    any parsing; a failure collecting rpc0 never prevents the attempt for
    rpc1 or the client;
 4. a manifest is written last with source host/path, PID/start identity,
-   file size, SHA-256 and per-artifact success/missing/error status.
+   file size, SHA-256 and per-artifact success/missing/error status. An
+   existing but empty export directory records an honest missing-evidence
+   gap; remote reads use O_NOFOLLOW and a regular-file check so replaced or
+   symlinked sources are refused rather than followed.
 
 Bounds and partial-failure behavior: 8 MiB per export/claim file, 2,000,000 B
 per log tail, 80 files per process, 512 MiB total, 480 s collection wall
 time (inside the reserved 20-minute cleanup budget).  Symlinks and path
-escapes are rejected; absent, oversized or partially copied evidence is
-recorded as such and never reported complete.  A retention failure is
+escapes are rejected on both the listing and the read; absent, oversized,
+empty-directory or partially copied evidence is recorded as such and never
+reported complete.  A retention failure is
 reported separately in the receipt's `evidence_retention` summary and never
 bypasses stopping owned processes, releasing leases, closing owned
 transports or stopping aggregate slices; the guards that may refuse new work

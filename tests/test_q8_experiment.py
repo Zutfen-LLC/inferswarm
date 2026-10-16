@@ -602,3 +602,79 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
         self.assertEqual(len(fixture2.posts),1)
         self.assertEqual((root/'MANIFEST.json').read_bytes(),first)
         self.assertNotEqual(root,root2)
+
+    def test_collection_waits_for_all_owned_stops_including_ambiguous_spawn(self):
+        """Review follow-up: retention must not precede any owned stop.
+
+        In the lost-spawn-reply path the acknowledged rpc0 is stopped by
+        leases.cleanup(), but the ambiguous rpc1 unit and the deadline
+        sentinels are stopped only by after_cleanup -> stop_units /
+        cleanup_budgets. Collection runs strictly after all of them.
+        """
+        order=[]
+        result,fixture,root=self.execute('partial')
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        receipt=result.campaign_receipt
+        self.assertEqual(receipt['evidence_retention']['response_status'],'not-received')
+        # Nothing owned outlives the run: the acknowledged rpc0, the
+        # ambiguous rpc1 unit and both deadline sentinels were all stopped
+        # (sentinels/registered units via after_cleanup -> stop_units /
+        # cleanup_budgets) before the campaign error surfaced.
+        self.assertFalse(fixture.services)
+        manifest=self.manifest(root)
+        # rpc0 (acknowledged) identities retained; rpc1 never had a receipt.
+        self.assertIn('rpc0',manifest['process_identities'])
+        self.assertNotIn('rpc1',manifest['process_identities'])
+        # Ordering guard: collection must run only after every stop. The
+        # fixture records service removal ('systemctl stop' commands) and
+        # probe commands in one shared log; no retention probe may precede
+        # the last owned stop.
+        stop_indexes=[index for index,(address,argv) in enumerate(fixture.commands)
+                      if list(argv[:4])==['sudo','-n','systemctl','stop']]
+        probe_indexes=[index for index,(address,argv) in enumerate(fixture.commands)
+                       if len(argv)>3 and argv[0]=='python3' and argv[1]=='-c'
+                       and ('os.listdir' in argv[2] or 'base64' in argv[2])]
+        self.assertTrue(stop_indexes and probe_indexes)
+        self.assertGreater(min(probe_indexes),max(stop_indexes))
+
+    def test_existing_but_empty_export_directory_is_not_complete(self):
+        """Review follow-up: an empty export dir records an honest gap."""
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-empty'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        import base64 as _b64
+        class Runner:
+            def run(self,address,argv,*,timeout=None):
+                if 'os.listdir' in argv[2]:
+                    return '{}'
+                return _b64.b64encode(b'log bytes').decode('ascii')
+        store.register_process('rpc0','w',101,'200')
+        store.collect_processes([dict(name='rpc0',address='w',
+            export_dir='/exports/rpc0',log_path='/inv/rpc0.log',
+            pid=101,start='200')],Runner())
+        summary=store.finalize()
+        self.assertFalse(summary['complete'])
+        rows=self.manifest(root)['artifacts']
+        self.assertTrue(any(row['status']=='missing' and row['kind']=='export-dir'
+                            and 'no claim or envelope' in str(row.get('error'))
+                            for row in rows))
+        self.assertTrue(any(row['status']=='collected' and row['kind']=='log'
+                            for row in rows))
+
+    def test_reads_refuse_replaced_or_symlinked_sources(self):
+        """Review follow-up: O_NOFOLLOW + regular-file check on every read."""
+        import os as _os
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore, READ_PROGRAM
+        self.assertIn('O_NOFOLLOW',READ_PROGRAM)
+        self.assertIn('S_ISREG',READ_PROGRAM)
+        root=self.root/'ev-nofollow'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        real=self.root/'real-target'; real.write_bytes(b'secret referent')
+        link=self.root/'log-link'; _os.symlink(real,link)
+        import subprocess
+        proc=subprocess.run(['python3','-c',READ_PROGRAM,str(link),'64'],
+                            capture_output=True,text=True)
+        self.assertNotEqual(proc.returncode,0)  # symlink refused, not followed
+        self.assertEqual(proc.stdout,'')

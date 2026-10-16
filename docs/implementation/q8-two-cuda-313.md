@@ -114,7 +114,9 @@ A failed observation or violation stops owned units, including a unit whose
 spawn reply was lost. `memory.events:max` alone is retained as reclaim evidence,
 not treated as OOM. Cleanup retains final native service results and helper
 completion receipts and verifies that the aggregate slices are inactive.
-After cleanup stops the owned processes (so terminal exports have flushed),
+After cleanup stops every owned unit — acknowledged processes, ambiguous
+spawns whose reply was lost, and the aggregate slices — (so terminal
+exports have flushed),
 a controller-owned durable evidence directory — created fresh before launch,
 outside the remote lifecycle namespaces, bound to the invocation token and
 both frozen hashes — preserves original bytes on every exit path: the
@@ -124,7 +126,8 @@ independently (rpc0, rpc1, client), the native export envelopes,
 `is301-claim` files and bounded log tails, with malformed or dropped-event
 exports retained verbatim before parsing. A manifest-last SHA-256 ledger
 records per-artifact success/missing/error status under finite
-file/byte/time bounds and rejects symlinks and path escapes; absent,
+file/byte/time bounds and rejects symlinks and path escapes on both listing
+and read (O_NOFOLLOW + regular-file check); absent, empty-directory,
 oversized or partially copied evidence is never reported complete. A
 retention failure never bypasses stop/lease-release/transport/slice cleanup
 and is reported separately (`evidence_retention`) from execution,

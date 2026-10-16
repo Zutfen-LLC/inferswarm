@@ -71,9 +71,18 @@ STAT_PROGRAM = (
     "print(json.dumps(out))\n")
 
 READ_PROGRAM = (
-    "import base64,sys\n"
+    "import base64,os,stat,sys\n"
     "limit=int(sys.argv[2])\n"
-    "with open(sys.argv[1],'rb') as handle: data=handle.read(limit+1)\n"
+    "fd=os.open(sys.argv[1],os.O_RDONLY|os.O_NOFOLLOW)\n"
+    "try:\n"
+    "    if not stat.S_ISREG(os.fstat(fd).st_mode): sys.exit(4)\n"
+    "    data=b''\n"
+    "    while len(data)<=limit:\n"
+    "        chunk=os.read(fd,min(1<<20,limit+1-len(data)))\n"
+    "        if not chunk: break\n"
+    "        data+=chunk\n"
+    "finally:\n"
+    "    os.close(fd)\n"
     "sys.stdout.write(base64.b64encode(data).decode('ascii'))\n")
 
 # Frozen collection bounds.  The byte bounds mirror the collector families
@@ -343,9 +352,12 @@ class DurableEvidenceStore:
         self._row(entry, kind, source_path, _COLLECTED, size=size,
                   sha256=hashlib.sha256(data).hexdigest(), target=target)
 
-    def _stat_listing(self, runner, address, directory):
+    def _stat_listing(self, runner, address, directory, clock):
         if directory is None:
             return {'missing': True}
+        if (self._collect_deadline is not None
+                and clock() >= self._collect_deadline):
+            return {'error': 'collection deadline reached before listing'}
         argv = ['python3', '-c', STAT_PROGRAM, str(directory)]
         return json.loads(runner.run(address, argv, timeout=STAT_TIMEOUT_SECONDS))
 
@@ -375,11 +387,12 @@ class DurableEvidenceStore:
         listing = None
         try:
             listing = self._stat_listing(runner, entry['address'],
-                                         export_dir)
+                                         export_dir, clock)
         except Exception as exc:
             listing = {'error': str(exc)}
         if not isinstance(listing, dict):
             listing = {'error': 'unparseable listing'}
+        export_rows = 0
         if listing.get('missing') is True:
             self._row(entry, 'export-dir', export_dir, 'missing')
         elif 'error' in listing:
@@ -401,6 +414,7 @@ class DurableEvidenceStore:
                     self._row(entry, kind, source_path, 'error',
                               error=info.get('error'))
                 elif entry_type == 'file':
+                    export_rows += 1
                     if info.get('size', 0) > self.max_file_bytes:
                         self._row(entry, kind, source_path, 'oversize')
                         continue
@@ -409,6 +423,11 @@ class DurableEvidenceStore:
                 else:
                     self._row(entry, kind, source_path, 'error',
                               error='unparseable stat entry')
+        if export_rows == 0:
+            # An existing but empty export directory is not a complete
+            # diagnostic record for this process: record the gap honestly.
+            self._row(entry, 'export-dir', export_dir, 'missing',
+                      error='export directory holds no claim or envelope')
         log_path = entry.get('log_path')
         if log_path is not None:
             self._copy(entry, 'log', Path(log_path).name, log_path,

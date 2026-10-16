@@ -487,7 +487,7 @@ class OperatorRunner:
         client_argv=(spec.executable,*spec.args,'--host','127.0.0.1','--port',str(client.port))
         tunnel=None; error=None; result=None; cleanup_error=None
         rows={}; identities={}; export_dirs={}
-        evidence=self.evidence
+        evidence_store=self.evidence
         evidence_entries=[]
         try:
             if campaign_guard is not None:
@@ -507,8 +507,8 @@ class OperatorRunner:
                 export_dirs[process.name]=export
                 rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
                     name=process.name,binding_id=process.binding_id)
-                if evidence is not None:
-                    evidence.register_process(process.name,remote.execution_address,
+                if evidence_store is not None:
+                    evidence_store.register_process(process.name,remote.execution_address,
                         rows[process.name]['pid'],str(rows[process.name]['start']))
                     evidence_entries.append(dict(name=process.name,
                         address=remote.execution_address,export_dir=export,
@@ -555,8 +555,8 @@ class OperatorRunner:
             export_dirs['client']=client_export
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
                 export=client_export,**self._assigned_spawn(plan,client,sources))
-            if evidence is not None:
-                evidence.register_process('client',client.execution_address,
+            if evidence_store is not None:
+                evidence_store.register_process('client',client.execution_address,
                     rows['client']['pid'],str(rows['client']['start']))
                 evidence_entries.append(dict(name='client',
                     address=client.execution_address,export_dir=client_export,
@@ -594,11 +594,11 @@ class OperatorRunner:
                 timeout=(campaign_guard.request_timeout_seconds() if campaign_guard is not None else 900))
             if campaign_guard is not None:
                 campaign_guard.raw_response=response
-            if evidence is not None:
+            if evidence_store is not None:
                 # Preserve the complete response JSON immediately after
                 # receipt, before checkpoint/validation/observation can
                 # fail; never allowed to disturb execution or cleanup.
-                try: evidence.save_response(response)
+                try: evidence_store.save_response(response)
                 except BaseException: pass
             if campaign_guard is not None:
                 campaign_guard.checkpoint()
@@ -642,18 +642,6 @@ class OperatorRunner:
                 try: self.last_cleanup=self.leases.cleanup()
                 except BaseException as exc:
                     cleanup_error=RuntimeError(f'incomplete owned cleanup: {exc}')
-                # Owned processes are stopped and leases are released above;
-                # NOW, while terminal exports have flushed but nothing else
-                # can remove them, preserve original bytes durably on the
-                # controller.  Strictly best-effort and bounded: a retention
-                # failure is recorded honestly and must never displace the
-                # still-required stop/slice/transport cleanup that follows.
-                if evidence is not None:
-                    try:
-                        evidence.collect_processes(evidence_entries,
-                            self.evidence_transport)
-                    except BaseException as exc:
-                        evidence._event('collect-wrapper-failed',exc)
         if error is None:
             try:
                 evidence=[]
@@ -682,6 +670,18 @@ class OperatorRunner:
             try: campaign_guard.after_cleanup(self.last_cleanup)
             except BaseException as exc:
                 cleanup_error=RuntimeError(f'experimental supervision cleanup failed: {exc}')
+        # Retention is strictly LAST: acknowledged processes, ambiguous
+        # spawns (stopped by after_cleanup -> stop_units), leases, the SSH
+        # tunnel and aggregate slices are all stopped before any evidence
+        # byte is collected, so slow or failed retention can never defer an
+        # owned stop.  Best-effort and bounded; an honest partial record is
+        # recorded and never masks the campaign's own result or error.
+        if evidence_store is not None:
+            try:
+                evidence_store.collect_processes(evidence_entries,
+                    self.evidence_transport)
+            except BaseException as exc:
+                evidence_store._event('collect-wrapper-failed',exc)
         if error is not None:
             if cleanup_error is not None: raise error from cleanup_error
             raise error
