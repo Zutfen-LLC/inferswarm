@@ -1076,6 +1076,11 @@ def validate_final_validation_receipt(envelope: dict,
     if "execution" in envelope:
         validate_execution_block(envelope["execution"], git_commit_sha=sha,
                                  github_run_id=envelope["github_run_id"])
+        completion = envelope["execution"].get("completion")
+        if completion is not None:
+            if any(r.get("attempt") != str(envelope["github_run_attempt"])
+                   for r in completion.get("records", [])):
+                raise GateOrderingError("completion attempt differs from final run")
     return sha == expected_sha
 
 
@@ -1505,7 +1510,8 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         if final_validation_receipt.get("execution", {}).get("mode") == "verified_ordinary_ci":
             import ordinary_ci_reuse
             receipt_request = dict(receipt_request, suite=dict(
-                final_head.suite, suite_config=ordinary_ci_reuse.suite_configuration()))
+                final_head.suite, suite_config=ordinary_ci_reuse.suite_configuration(
+                    source=final_validation_receipt["execution"]["ordinary_source"])))
         if not validate_receipt(final_validation_receipt["suite_receipt"],
                                 receipt_request):
             raise GateOrderingError(
