@@ -89,6 +89,8 @@ def _owner(name, contract):
     binding = dict(contract.bindings)
     if name in ('token_embd.weight','per_layer_token_embd.weight'): return binding['loader']
     layer = int(name.split('.')[1]) if name.startswith('blk.') else 48
+    if contract.selection=='two-gpu':
+        return binding['loader'] if layer<41 else binding['remote_gpu0'] if layer<45 else binding['remote_gpu1']
     return binding['loader'] if layer<14 else binding['remote_gpu'] if contract.selection=='one-gpu' and layer>=45 else binding['remote_cpu']
 
 
@@ -117,7 +119,7 @@ def _states(contract):
                 ple=(h['qwen4exp.ple.conv_kernel']-1)*h['qwen4exp.ple.ngram_size']*h['qwen4exp.hyper_connection.count']*h['qwen4exp.embedding_length']
                 result.append(RequiredState(f'cache_ple_r_l{layer}',owner.binding_id,owner.memory_id,'f32',4*ple*rows,dependencies=dep+('token-predecessors',)))
     loader=dict(contract.bindings)['loader']
-    final=dict(contract.bindings)['remote_gpu' if contract.selection=='one-gpu' else 'remote_cpu']
+    final=dict(contract.bindings)['remote_gpu1' if contract.selection=='two-gpu' else 'remote_gpu' if contract.selection=='one-gpu' else 'remote_cpu']
     result.extend((RequiredState('client-control',loader.binding_id,loader.memory_id,'native-cell-sequence-lineage/1',None,
         dependencies=('positions','output-selectors','attention-masks','kv-row-indices','recurrent-source-rollback-indices','qsa-maps-bias','token-predecessors')),
         RequiredState('final-output-state',final.binding_id,final.memory_id,'native-hc-mix-logits/1',None,dependencies=OUTPUTS)))
@@ -132,12 +134,20 @@ def _boundaries(contract):
     n=contract.workload.microbatch
     shape=(embd,hc,n); strides=(4,4*embd,4*embd*hc)
     state=_states(contract)
-    edges=[(14,binding['loader'],binding['remote_cpu'])]
-    if contract.selection=='one-gpu': edges.append((45,binding['remote_cpu'],binding['remote_gpu']))
+    if contract.selection=='two-gpu':
+        edges=[(41,binding['loader'],binding['remote_gpu0']),
+               (45,binding['remote_gpu0'],binding['remote_gpu1'])]
+    else:
+        edges=[(14,binding['loader'],binding['remote_cpu'])]
+        if contract.selection=='one-gpu': edges.append((45,binding['remote_cpu'],binding['remote_gpu']))
     result=[]
     for before,src,dst in edges:
-        route=(hosts[src.binding_id],hosts[dst.binding_id]) if before==14 else (hosts[src.binding_id],hosts[binding['loader'].binding_id],hosts[dst.binding_id]) if contract.route=='client-mediated' else (hosts[src.binding_id],hosts[dst.binding_id])
-        legs=(link.link_id,) if before==14 else (link.link_id,link.link_id) if contract.route=='client-mediated' else ()
+        cross_host=hosts[src.binding_id]!=hosts[dst.binding_id]
+        route=((hosts[src.binding_id],hosts[dst.binding_id]) if cross_host else
+               (hosts[src.binding_id],hosts[binding['loader'].binding_id],hosts[dst.binding_id])
+               if contract.route=='client-mediated' else (hosts[src.binding_id],hosts[dst.binding_id]))
+        legs=((link.link_id,) if cross_host else
+              (link.link_id,link.link_id) if contract.route=='client-mediated' else ())
         result.append(Boundary(f'completed-layer-{before-1}/{before}',before,src.binding_id,dst.binding_id,
             shape,'f32-completed-hc-residual/1',4*embd*hc*n,None,strides,
             'view-base-range-and-layout-must-be-observed','completed-layer-before-consumer;plan-epoch/request/ubatch-fenced',
@@ -197,12 +207,19 @@ def _charges(config, contract, assignments, states, boundaries, options):
     for s in states:
         if s.lower_bound_bytes is None:
             add(s.state_id,s.memory_id,'required',None,('serve','cleanup'),evidence='unknown:'+s.state_id)
-    loader=dict(contract.bindings)['loader']; remote_cpu=dict(contract.bindings)['remote_cpu']
+    loader=dict(contract.bindings)['loader']
+    remote=next(p for p in config.participants if p.role=='remote')
+    worker_ram=(options['worker_host_memory_id'] if contract.selection=='two-gpu'
+                else dict(contract.bindings)['remote_cpu'].memory_id)
+    if contract.selection=='two-gpu':
+        for index in range(2):
+            add('worker-runtime-heap:rpc'+str(index),worker_ram,'required',None,resident,
+                evidence='unknown:worker-runtime-heap')
     for p in config.participants:
         # Complete source is a bounded selected backend scaffold, not eligibility.
         for backing in p.backing:
             add('source-backing:'+p.participant_id+':'+backing.member,backing.memory_id,'backing',backing.size_bytes,PHASES)
-        ram=loader.memory_id if p.role=='client' else remote_cpu.memory_id
+        ram=loader.memory_id if p.role=='client' else worker_ram
         add('verification-read-buffer:'+p.participant_id,ram,'transient',None,('verification',),evidence='unknown:verification-buffer')
         add('verification-page-residence:'+p.participant_id,ram,'required',None,('verification',),evidence='unknown:verification-residence')
         add(('assigned-page-residence:' if p.role=='remote' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else 'source-page-residence:')+p.participant_id,ram,'required',None,resident,evidence='unknown:source-residence')
@@ -212,34 +229,44 @@ def _charges(config, contract, assignments, states, boundaries, options):
     add('whole-source-mmap',loader.memory_id,'virtual',total,resident)
     add('PLE-active-backed-residence',loader.memory_id,'required',None,resident,evidence='unknown:PLE-residence')
     requirements.append(CapabilityRequirement(loader.runtime_id,'lazy-mmap','lazy PLE mmap support'))
-    for label,mid in (('full-tensor-loader',loader.memory_id),('FNV-cache-message-staging',loader.memory_id),('remote-receive-staging',remote_cpu.memory_id)):
-        amount=(1<<20) if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else LARGEST_BANK
+    staging_labels=(('remote-receive-staging:rpc0','remote-receive-staging:rpc1')
+                    if contract.selection=='two-gpu' else ('remote-receive-staging',))
+    for label,mid in (('full-tensor-loader',loader.memory_id),('FNV-cache-message-staging',loader.memory_id),
+                      *((name,worker_ram) for name in staging_labels)):
+        amount=(1<<20) if label.startswith('remote-receive-staging') and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else LARGEST_BANK
         if label=='FNV-cache-message-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1': amount=352
-        phases=('load','serve') if label=='remote-receive-staging' and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else ('load',)
+        phases=('load','serve') if label.startswith('remote-receive-staging') and options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1' else ('load',)
         add(label,mid,'transient',amount,phases)
     for boundary in boundaries:
         # Logical residual is only a lower bound. The complete split inventory,
         # repeated copies and side inputs require a runtime-scoped upper bound.
         add('boundary-wire:'+boundary.semantic_id,loader.memory_id,'virtual',None,('serve',),evidence='unknown:wire-bound')
-        if boundary.before_layer==45 and contract.route=='client-mediated':
+        if boundary.route_hosts==(dict(contract.binding_hosts)[boundary.producer_binding],
+                                  dict(contract.binding_hosts)[loader.binding_id],
+                                  dict(contract.binding_hosts)[boundary.consumer_binding]):
             add('boundary-bounce-lower-bound',loader.memory_id,'transient',boundary.logical_bytes,('serve',))
             add('boundary-bounce-overlap',loader.memory_id,'transient',None,('serve',),evidence='unknown:bounce-overlap')
-        requirements.append(CapabilityRequirement(remote_cpu.runtime_id,'route:'+contract.route,'copy route '+contract.route))
+            if contract.selection=='two-gpu':
+                add('boundary-worker-rpc-payload',worker_ram,'transient',boundary.logical_bytes,('serve',))
+                add('boundary-worker-rpc-overlap',worker_ram,'transient',None,('serve',),
+                    evidence='unknown:worker-rpc-overlap')
+        route_runtime=(dict(contract.bindings)['remote_gpu0'].runtime_id if contract.selection=='two-gpu'
+                       else dict(contract.bindings)['remote_cpu'].runtime_id)
+        requirements.append(CapabilityRequirement(route_runtime,'route:'+contract.route,'copy route '+contract.route))
     selective=options['source_contract']=='coordinator-full-source/participant-assigned-rpc-backing/1'
     if options['rpc_cache']=='enabled':
-        remote=next(p for p in config.participants if p.role=='remote')
         disk=options['participant_backing']['memory_id'] if selective else remote.backing[0].memory_id
         if not selective: add('assigned-cache-disk',disk,'optional',sum(r.length for r in remote.cache_ranges),PHASES)
         if selective:
-            add('native-cache-scratch',remote_cpu.memory_id,'transient',1<<20,('load',))
-            add('assigned-metadata-and-guard',remote_cpu.memory_id,'required',2<<20,resident)
-            add('assigned-descriptor-layout',remote_cpu.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
+            add('native-cache-scratch',worker_ram,'transient',1<<20,('load',))
+            add('assigned-metadata-and-guard',worker_ram,'required',2<<20,resident)
+            add('assigned-descriptor-layout',worker_ram,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
             add('coordinator-assigned-metadata-and-guard',loader.memory_id,'required',2<<20,resident)
             add('coordinator-assigned-descriptor-layout',loader.memory_id,'required',None,resident,evidence='unknown:assigned-native-descriptor-layout')
             add('prepared-backing-budget',disk,'backing',options['participant_backing']['limit_bytes'],PHASES)
         else:
-            add('full-tensor-cache-hit-vector',remote_cpu.memory_id,'transient',LARGEST_BANK,('load',))
-            add('cache-hit-vector-overlap',remote_cpu.memory_id,'transient',None,('load',),evidence='unknown:cache-vector-overlap')
+            add('full-tensor-cache-hit-vector',worker_ram,'transient',LARGEST_BANK,('load',))
+            add('cache-hit-vector-overlap',worker_ram,'transient',None,('load',),evidence='unknown:cache-vector-overlap')
     for mirror in options['host_mirrors']:
         add('host-mirror:'+mirror['allocation_id'],mirror['memory_id'],'optional',mirror['bytes'],('load','serve','cleanup'),evidence=mirror['evidence_id'])
     bounds={b['allocation_id']:b for b in options['bounds']}
@@ -330,11 +357,12 @@ def _validate_metadata(metadata):
 
 def _validate_options(config,metadata):
     if config.strategy_id!=STRATEGY_ID: raise ValueError('unsupported strategy id')
-    if config.selection not in ('one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
+    if config.selection not in ('two-gpu','one-gpu','cpu-only'): raise ValueError('unsupported explicit selection')
     options=thaw(config.strategy_options)
     from .assigned_backing import CONTRACT, role_identity
     selective=options['source_contract']==CONTRACT
     base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
+    if config.selection=='two-gpu': base_fields+=('rpc_endpoints','worker_host_memory_id','subject_memory_ids')
     if selective: base_fields+=('participant_backing',)
     if selective and 'build_pair' in options: base_fields+=('build_pair',)
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
@@ -353,12 +381,37 @@ def _validate_options(config,metadata):
             raise ValueError('observer options: exact per-role manifest/executable deployment paths required')
         for value in observer.values():
             text(value,'observer deployment path')
-    keys(options['bindings'],('loader','remote_cpu','remote_gpu') if config.selection=='one-gpu' else ('loader','remote_cpu'),'strategy bindings')
+    binding_fields=(('loader','remote_gpu0','remote_gpu1') if config.selection=='two-gpu' else
+                    ('loader','remote_cpu','remote_gpu') if config.selection=='one-gpu' else
+                    ('loader','remote_cpu'))
+    keys(options['bindings'],binding_fields,'strategy bindings')
     if options['route'] not in ('client-mediated','server-local'): raise ValueError('unsupported explicit copy route')
+    if config.selection=='two-gpu':
+        if options['subject_memory_ids']!=[options['worker_host_memory_id']]:
+            raise ValueError('two-gpu subject memory ids must name only worker host RAM')
+        if options['route']!='client-mediated': raise ValueError('two-gpu requires the client-mediated copy route')
+        endpoints=options['rpc_endpoints']
+        if not isinstance(endpoints,list) or len(endpoints)!=2 or len(set(endpoints))!=2:
+            raise ValueError('two-gpu requires two distinct RPC endpoints')
+        remote=next(p for p in config.participants if p.role=='remote')
+        if endpoints[0]!=remote.rpc_endpoint: raise ValueError('two-gpu primary RPC endpoint mismatch')
+        endpoint_hosts=[]; endpoint_ports=[]
+        for endpoint in endpoints:
+            text(endpoint,'two-gpu RPC endpoint')
+            host,sep,port=endpoint.rpartition(':')
+            if not host or not sep or not port.isdecimal() or not 1<=int(port)<=65535:
+                raise ValueError('two-gpu RPC endpoint must be host:port')
+            endpoint_hosts.append(host); endpoint_ports.append(int(port))
+        if endpoint_hosts[0]!=endpoint_hosts[1]:
+            raise ValueError('two-gpu RPC endpoints must address the same owned worker host')
+        if endpoint_ports[0]!=remote.port or endpoint_ports[0]==endpoint_ports[1]:
+            raise ValueError('two-gpu RPC endpoints must use two distinct owned listener ports')
     if options['source_contract'] not in ('full-source-both-hosts/1',CONTRACT): raise ValueError('unsupported full-source backing contract')
+    if config.selection=='two-gpu' and options['source_contract']!=CONTRACT:
+        raise ValueError('two-gpu requires assigned-only worker backing')
     if selective:
-        if config.selection not in ('cpu-only','one-gpu') or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed observer builds, the cpu-only or explicitly reviewed one-gpu pair, and enabled cache only')
-        if config.selection=='one-gpu' and options['route']!='client-mediated': raise ValueError('selective one-gpu backing requires the client-mediated copy route')
+        if config.selection not in ('cpu-only','one-gpu','two-gpu') or options['rpc_cache']!='enabled' or observer is None: raise ValueError('selective backing supports reviewed observer builds, the cpu-only or explicitly reviewed CUDA pair, and enabled cache only')
+        if config.selection in ('one-gpu','two-gpu') and options['route']!='client-mediated': raise ValueError('selective CUDA backing requires the client-mediated copy route')
         from .assigned_backing import CPU_BACKEND, CUDA_BACKEND, HISTORICAL_BUILD_PAIR
         build_pair=options.get('build_pair',HISTORICAL_BUILD_PAIR)
         text(build_pair,'selective backing build pair')
@@ -391,14 +444,23 @@ def _validate_options(config,metadata):
     computes={c.compute_id:c for c in config.profiles.snapshot.compute_units}
     memories={m.memory_id:m for m in config.profiles.snapshot.memory_resources}
     runtimes={r.runtime_id:r for r in config.profiles.snapshot.runtime_capabilities}
+    if config.selection=='two-gpu':
+        worker_memory=memories.get(options['worker_host_memory_id'])
+        remote=next(p for p in config.participants if p.role=='remote')
+        if worker_memory is None or worker_memory.host_id!=remote.host_id or worker_memory.kind!='ram':
+            raise ValueError('two-gpu worker host memory domain mismatch')
     for key,bid in options['bindings'].items():
         p,b=bindings[bid]
-        gpu=key=='remote_gpu'
+        gpu=key.startswith('remote_gpu')
         if p.role!=('client' if key=='loader' else 'remote'):
             raise ValueError('fixed binding participant role')
         if computes[b.compute_id].backend!=('cuda' if gpu else 'cpu') or memories[b.memory_id].kind!=('vram' if gpu else 'ram'):
             raise ValueError('fixed binding backend/memory legality')
-        if b.native_selector!=('CUDA0' if gpu else 'CPU') or b.visible_selector!=('CPU' if key=='loader' else 'RPC1' if gpu else 'RPC0'):
+        expected_native=({'loader':'CPU','remote_gpu0':'CUDA0','remote_gpu1':'CUDA1'}[key]
+                         if config.selection=='two-gpu' else 'CUDA0' if gpu else 'CPU')
+        expected_visible=({'loader':'CPU','remote_gpu0':'RPC0','remote_gpu1':'RPC1'}[key]
+                          if config.selection=='two-gpu' else 'CPU' if key=='loader' else 'RPC1' if gpu else 'RPC0')
+        if b.native_selector!=expected_native or b.visible_selector!=expected_visible:
             raise ValueError('fixed native/visible selector translation')
         if runtimes[b.runtime_id].source_revision!=RUNTIME_PIN: raise ValueError('runtime source pin mismatch')
         if runtimes[b.runtime_id].route!=options['route']: raise ValueError('runtime route context mismatch')
@@ -463,7 +525,7 @@ def validate_q8_ownership(candidate, metadata):
     if candidate.boundaries!=_boundaries(contract):
         raise ValueError('boundary schema: exact shape/layout/authority/route/side-input source contract required')
     h=dict(metadata.model_metadata); n=contract.workload.microbatch
-    expected_cuts=(14,45) if contract.selection=='one-gpu' else (14,)
+    expected_cuts=(41,45) if contract.selection=='two-gpu' else (14,45) if contract.selection=='one-gpu' else (14,)
     if tuple(b.before_layer for b in candidate.boundaries)!=expected_cuts: raise ValueError('boundary schema: exact completed-layer cuts')
     for b in candidate.boundaries:
         expected_shape=(h['qwen4exp.embedding_length'],h['qwen4exp.hyper_connection.count'],n)
@@ -494,7 +556,8 @@ def q8_candidates(config, metadata):
         'bounds':sorted(options['bounds'],key=lambda row:row['allocation_id']),
         'host_mirrors':sorted(options['host_mirrors'],key=lambda row:row['allocation_id'])}
     candidate=LegalCandidate(config.selection,assignments,states,boundaries,charges,requirements,
-        (options['source_contract'],RUNTIME_PIN,RUNTIME_TREE,metadata.source,metadata.header_identities,NativeQ8Options(config.selection)),
+        (options['source_contract'],RUNTIME_PIN,RUNTIME_TREE,metadata.source,metadata.header_identities,
+         NativeQ8Options(config.selection,gpu_layers=8 if config.selection=='two-gpu' else 35)),
         subject=profile_subject(config,profile_mode=config.profile_mode),required_charge_ids=tuple(c.allocation_id for c in charges),
         calculated_evidence=(SOURCE_EVIDENCE,),unsupported=unsupported,semantic_contract=(contract,),
         canonical_strategy_options=freeze(normalized_options))
@@ -659,15 +722,16 @@ class NativeQ8Options:
     kv_unified: bool = False
 
     def __post_init__(self):
-        if (self.selection not in ('one-gpu','cpu-only') or type(self.gpu_layers) is not int or
+        expected_layers=8 if self.selection=='two-gpu' else 35
+        if (self.selection not in ('two-gpu','one-gpu','cpu-only') or type(self.gpu_layers) is not int or
                 (self.gpu_layers,self.split_mode,self.fit,self.lazy_mode,self.load_mode,self.kv_offload,self.op_offload)
-                !=(35,'layer','off','on','none',True,False) or type(self.kv_offload) is not bool or type(self.op_offload) is not bool
+                !=(expected_layers,'layer','off','on','none',True,False) or type(self.kv_offload) is not bool or type(self.op_offload) is not bool
                 or self.flash_attention!='off' or self.kv_unified is not False):
             raise ValueError('fixed native options: no adaptive fit, overrides, CPU-MoE or alternative split')
 
     @property
     def tensor_split(self):
-        return (31,4) if self.selection=='one-gpu' else (1,)
+        return (4,4) if self.selection=='two-gpu' else (31,4) if self.selection=='one-gpu' else (1,)
 
     def layer_device_indices(self):
         # Source-exact float32 cumulative splits and upper_bound, output slot 48.
@@ -681,6 +745,14 @@ class NativeQ8Options:
         splits=[f32(v/total) for v in splits]
         start=49-self.gpu_layers
         return tuple(None if layer<start else bisect.bisect_right(splits,f32((layer-start)/self.gpu_layers)) for layer in range(49))
+
+
+@dataclass(frozen=True)
+class Q8RPCProcess:
+    name: str
+    endpoint: str
+    binding_id: str
+    native_selector: str
 
 
 @dataclass(frozen=True)
@@ -707,20 +779,44 @@ def q8_llama_cpp_spec(plan):
     client=next(p for p in plan.participants if p.role=='client')
     remote=next(p for p in plan.participants if p.role=='remote')
     options=thaw(plan.strategy_options)
-    native_options=NativeQ8Options(plan.selection)
+    native_options=NativeQ8Options(plan.selection,gpu_layers=8 if plan.selection=='two-gpu' else 35)
     binding=dict(plan.candidate.semantic_contract[0].bindings)
-    device=','.join(binding[k].visible_selector for k in ('remote_cpu','remote_gpu') if k in binding)
-    native=','.join(binding[k].native_selector for k in ('remote_cpu','remote_gpu') if k in binding)
+    binding_order=('remote_gpu0','remote_gpu1') if plan.selection=='two-gpu' else ('remote_cpu','remote_gpu')
+    device=','.join(binding[k].visible_selector for k in binding_order if k in binding)
+    native=','.join(binding[k].native_selector for k in binding_order if k in binding)
+    rpc=','.join(options['rpc_endpoints']) if plan.selection=='two-gpu' else remote.rpc_endpoint
+    rpc_args=() if plan.selection=='two-gpu' else ('--device',native)
     w=plan.workload
-    args=('--rpc',remote.rpc_endpoint,'--device',device,'--split-mode',native_options.split_mode,'--gpu-layers',str(native_options.gpu_layers),
+    args=('--rpc',rpc,'--device',device,'--split-mode',native_options.split_mode,'--gpu-layers',str(native_options.gpu_layers),
           '--tensor-split',','.join(str(n) for n in native_options.tensor_split),'--fit',native_options.fit,'--lazy-mode',native_options.lazy_mode,'--load-mode',native_options.load_mode,
           '--no-op-offload','--kv-offload','--cache-type-k','f16','--cache-type-v','f16',
           '--flash-attn',native_options.flash_attention,'--no-kv-unified',
           '--model',client.source_path,'--ctx-size',str(w.context),'--batch-size',str(w.batch),
           '--ubatch-size',str(w.microbatch),'--parallel',str(w.slots),'--no-warmup')
-    return Q8LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,remote.rpc_endpoint,
-        device,args,('--device',native),plan.candidate.assignments,plan.candidate.required_state,plan.candidate.boundaries,
+    return Q8LaunchSpec(client.runtime_executable,client.runtime_sha256,client.execution_address,rpc,
+        device,args,rpc_args,plan.candidate.assignments,plan.candidate.required_state,plan.candidate.boundaries,
         w.context,w.slots,options['startup_timeout_seconds'],plan.admission.execution_ready,plan.admission.deficits)
+
+
+def q8_rpc_processes(plan):
+    """Return owned RPC process intents without changing legacy launch receipts."""
+    remote=next(p for p in plan.participants if p.role=='remote')
+    options=thaw(plan.strategy_options)
+    binding=dict(plan.candidate.semantic_contract[0].bindings)
+    if plan.selection=='two-gpu':
+        return tuple(Q8RPCProcess('rpc'+str(index),endpoint,
+            options['bindings']['remote_gpu'+str(index)],binding['remote_gpu'+str(index)].native_selector)
+            for index,endpoint in enumerate(options['rpc_endpoints']))
+    key='remote_gpu' if plan.selection=='one-gpu' else 'remote_cpu'
+    return (Q8RPCProcess('rpc',remote.rpc_endpoint,options['bindings'][key],binding[key].native_selector),)
+
+
+def q8_participant_build_backend(plan, participant):
+    """Strategy-owned reviewed build backend for one participant."""
+    from .assigned_backing import CPU_BACKEND, CUDA_BACKEND
+    if participant.role=='client': return CPU_BACKEND
+    if participant.role!='remote': raise ValueError('unsupported Q8 participant role')
+    return CPU_BACKEND if plan.selection=='cpu-only' else CUDA_BACKEND
 
 # Startup-only source expectations. These private tables are definitions, not
 # observation IDs, executable expressions or caller-extensible catalog inputs.
@@ -938,8 +1034,10 @@ def _q8_startup_components(context, startup):
     options = thaw(c.strategy_options)
     bindings = {b.binding_id:(p, b) for p in c.participants for b in p.bindings}
     loader = bindings[options['bindings']['loader']][1]
-    remote_cpu = bindings[options['bindings']['remote_cpu']][1]
-    final = bindings[options['bindings']['remote_gpu' if c.selection == 'one-gpu' else 'remote_cpu']]
+    worker_ram=(options['worker_host_memory_id'] if c.selection=='two-gpu'
+                else bindings[options['bindings']['remote_cpu']][1].memory_id)
+    final = bindings[options['bindings']['remote_gpu1' if c.selection=='two-gpu'
+        else 'remote_gpu' if c.selection == 'one-gpu' else 'remote_cpu']]
     result = []
 
     def add(site, member='', dims=(None,), minimum=None, request=None, *, enabled=True,
@@ -1018,7 +1116,7 @@ def _q8_startup_components(context, startup):
     add('rpc.send', partition='load-only', lifetime='load-call', pending=(
         ('v7-descriptor=352;borrowed-source-payload;synchronous-ack;no-weight-sized-message-copy' if selective else 'SEND-SET-request-new-array=sizeof-rpc_tensor+8+payload;ABI/actual-payload-UNKNOWN'),
         'hash-hit-no-payload;shared_ptr-dispatch-lifetime;load-or-request-not-permanent-base',))
-    b_ram = (remote.participant_id, remote_cpu.memory_id)
+    b_ram = (remote.participant_id, worker_ram)
     add('rpc.alloc', domain=b_ram, pending=('B-RAM-proxy-metadata-not-remote-physical-buffer;alloc-response-remote_size-UNKNOWN',))
     add('rpc.receive', partition='load-only', lifetime='load-call', domain=b_ram, pending=(('v7-fixed-1MiB-scratch;actual-stack/layout/overlap-UNKNOWN' if selective else 'RECEIVE-vector-frame-length/overlap-UNKNOWN;not-SEND-envelope'),))
     add('rpc.cache-hit', partition='load-only', lifetime='load-call', domain=b_ram,

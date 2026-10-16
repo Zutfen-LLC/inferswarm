@@ -1727,6 +1727,18 @@ def reconcile_dynamic(plan, static_receipt, evidence, request_identity, *, mode=
     _binding_now(mode, clock)
     if type(plan) is not _Plan or plan.strategy_id != 'qwen38-q8-fixed/1':
         raise ValueError('dynamic reconciliation: typed profiled plan required')
+    if plan.selection == 'two-gpu':
+        # The retained #301 transfer ABI names RPC operations, but it does not
+        # bind each occurrence to the RPC registration/device ordinal.  With
+        # two owned listeners, accepting those facts without their endpoint
+        # join would be ambiguous: it cannot prove the required
+        # RPC0 -> coordinator staging -> RPC1 transition. Keep execution
+        # admission honest until a separately reviewed observer/build receipt
+        # adds that join; static planning and lowering remain testable offline.
+        raise ValueError('dynamic reconciliation: two-gpu placement observation '
+                         'unsupported by retained transfer ABI: RPC transfer '
+                         'facts lack endpoint/device ordinal needed to join '
+                         'RPC0 -> coordinator staging -> RPC1')
     if type(static_receipt) is not PhaseReceipt:
         raise ValueError('dynamic reconciliation: typed static receipt required')
     if (static_receipt.schema != RECEIPT_SCHEMA or static_receipt.phase != 'static'

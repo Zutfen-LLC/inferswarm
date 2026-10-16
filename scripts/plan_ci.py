@@ -216,6 +216,8 @@ GROUP_TEST_MODULES = {
         "test_bounded_acquisition",
         "test_issue311_startup",
         "test_issue311_cuda_backing",
+        "test_issue313_two_gpu",
+        "test_q8_experiment",
         # Issue #255: bounded CUDA/RPC product execution and local baseline.
         "test_issue255_mvp",
         "test_issue255_measure",
@@ -842,6 +844,8 @@ PATH_GROUPS = {
     "scripts/issue311_native_backing.py": ["issue-99-103", "moe-overlap-prototype"],
     "tests/test_issue311_cuda_backing.py": ["issue-99-103"],
     "tests/test_issue311_preparation.py": ["issue-99-103"],
+    "tests/test_issue313_two_gpu.py": ["issue-99-103"],
+    "tests/test_q8_experiment.py": ["issue-99-103"],
     "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],
 
     # Issue #246 topology: the former monolithic vulkan-v0-b bucket split

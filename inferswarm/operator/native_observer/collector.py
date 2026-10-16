@@ -56,6 +56,11 @@ class SSHCollectorTransport:
     ENVELOPE_MAX_BYTES = 8 << 20
     EXECUTABLE_MAX_BYTES = 300 << 20
 
+    def run(self,address,command,**kwargs):
+        """Execution seam; experimental campaigns may supervise this read-only helper."""
+        return subprocess.run(['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10',
+                               address,command],**kwargs)
+
     def read_bytes(self, address: str, path: str, *, max_bytes: int) -> bytes:
         if type(max_bytes) is not int or max_bytes < 1:
             raise ValueError('collector read requires an explicit positive bound')
@@ -67,10 +72,9 @@ class SSHCollectorTransport:
                    "data=open(sys.argv[1],'rb').read(limit+1)\n"
                    "if len(data)>limit: sys.exit(3)\n"
                    "sys.stdout.write(base64.b64encode(data).decode('ascii'))")
-        proc = subprocess.run(
-            ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', address,
-             'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)
-             + ' ' + str(int(max_bytes))],
+        proc = self.run(address,
+            'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)
+            + ' ' + str(int(max_bytes)),
             capture_output=True, timeout=SSH_TIMEOUT_SECONDS)
         if proc.returncode == 3:
             raise CollectorError(f'collector read exceeds family bound '
@@ -97,9 +101,8 @@ class SSHCollectorTransport:
     def list_dir(self, address: str, path: str) -> list[str]:
         program = ("import sys\n"
                    "print('\\n'.join(sorted(p.name for p in __import__('pathlib').Path(sys.argv[1]).iterdir())))")
-        proc = subprocess.run(
-            ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', address,
-             'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path)],
+        proc = self.run(address,
+            'python3 -c ' + shlex.quote(program) + ' ' + shlex.quote(path),
             capture_output=True, text=True, timeout=SSH_TIMEOUT_SECONDS)
         if proc.returncode != 0:
             raise CollectorError(f'collector listing failed ({address}:{path}): {proc.stderr[-300:]!r}')
@@ -156,10 +159,8 @@ class HostFactsReader:
         self.transport = transport or SSHCollectorTransport()
 
     def read(self, participant, *, listening=(), environment=None):
-        proc = subprocess.run(
-            ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-             participant.execution_address,
-             'python3 -c ' + shlex.quote(_HOST_FACTS_PROGRAM)],
+        proc = self.transport.run(participant.execution_address,
+            'python3 -c ' + shlex.quote(_HOST_FACTS_PROGRAM),
             capture_output=True, text=True, timeout=SSH_TIMEOUT_SECONDS)
         if proc.returncode != 0:
             raise CollectorError('host facts read failed ('
@@ -195,9 +196,8 @@ class ProcIdentityReader:
     def read(self, participant, pid: int, *, expected_executable: str,
              expected_sha256: str, expected_argv: tuple[str, ...],
              visibility_environment: tuple[str, ...] = ()) -> ProcessIdentity:
-        proc = subprocess.run(
-            ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', participant.execution_address,
-             'python3 -c ' + shlex.quote(_IDENTITY_PROGRAM) + ' ' + str(int(pid))],
+        proc = self.transport.run(participant.execution_address,
+            'python3 -c ' + shlex.quote(_IDENTITY_PROGRAM) + ' ' + str(int(pid)),
             capture_output=True, text=True, timeout=SSH_TIMEOUT_SECONDS)
         if proc.returncode != 0:
             raise CollectorError(f'identity read failed ({participant.participant_id}): {proc.stderr[-300:]!r}')

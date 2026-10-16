@@ -561,6 +561,26 @@ def _q8_cache_eligible(length):
     return length > 10 * 1024 * 1024
 
 
+def _q8_native_repair_reserve(tensors, descriptors, *, simultaneous_bindings=()):
+    """Bound retained RPC copies plus active replacement files.
+
+    Historical one-listener modes retain the original single-largest temporary
+    allowance. The fixed two-listener topology can repair one assigned key per
+    listener concurrently, so it reserves the largest eligible tensor in each
+    disjoint binding bank.
+    """
+    lengths={(c['sha256'],c['length']):c['length'] for c in descriptors.values()
+             if _q8_cache_eligible(c['length'])}
+    active=[]
+    for bid in simultaneous_bindings:
+        active.append(max((descriptors[t['state_id']]['length'] for t in tensors
+                           if t['binding_id']==bid and
+                           _q8_cache_eligible(descriptors[t['state_id']]['length'])),
+                          default=0))
+    if not active: active=[max(lengths.values(),default=0)]
+    return sum(lengths.values())+sum(active)+16384*(len(lengths)+1)
+
+
 def verify_q8_role(participant, plan_payload, fnv_binary=None):
     """Read-only full-source + exact ranges on client and ALL remote bindings.
 
@@ -778,9 +798,12 @@ def verify_assigned_role(p, payload, fnv_binary):
             checked+=1
         counts[a['binding_id']]+=1
         ranges.append(dict(state_id=name,member=a['member'],offset=a['absolute_offset'],length=a['encoded_bytes'],sha256=c['sha256'],binding_id=a['binding_id'],memory_id=a['memory_id'],authority=a['authority'],cache_eligible=eligible,cache_key=c['cache_key']))
-    # Repair allowance is unchanged from #317, including durable hardlink splits.
-    lengths={(c['sha256'],c['length']):c['length'] for c in descriptors.values() if _q8_cache_eligible(c['length'])}
-    minimum=sum(lengths.values())+max(lengths.values(),default=0)+16384*(len(lengths)+1)
+    binding_rows={b['binding_id']:b for b in p['bindings']}
+    dual_cuda=(len(binding_rows)==2 and
+               {b['native_selector'] for b in binding_rows.values()}=={'CUDA0','CUDA1'})
+    simultaneous=tuple(sorted(bids)) if dual_cuda else ()
+    minimum=_q8_native_repair_reserve(tensors,descriptors,
+                                      simultaneous_bindings=simultaneous)
     budget=payload['backing_budget']
     if budget['reserve_bytes']<minimum: raise ValueError('native durable repair reserve required')
     seen=set(); usage=0
@@ -788,11 +811,26 @@ def verify_assigned_role(p, payload, fnv_binary):
         if path.is_symlink(): raise ValueError('nonregular retained backing entry')
         info=path.lstat(); inode=(info.st_dev,info.st_ino)
         if inode not in seen: usage+=max(info.st_size,info.st_blocks*512); seen.add(inode)
+    banks={}
+    if dual_cuda:
+        for bid in sorted(bids):
+            bank=dict(metadata)
+            bank['tensors']=[t for t in tensors if t['binding_id']==bid]
+            if not bank['tensors']: raise ValueError('assigned binding guard is empty: '+bid)
+            banks[bid]=bank
     overhead=max(len(assigned_guard_bytes(metadata)),4096)+16384
+    overhead+=sum(max(len(assigned_guard_bytes(bank)),4096) for bank in banks.values())
     if usage+budget['reserve_bytes']+overhead>budget['limit_bytes'] or shutil.disk_usage(root).free<budget['min_free_bytes']+budget['reserve_bytes']+overhead:
         raise ValueError('selective backing disk budget/free headroom exceeded')
     path=publish_assigned_guard(root, metadata)
-    return dict(schema='q8-source-receipt/1',role='remote',participant_id=p['participant_id'],status='VERIFIED-not-consumed',plan_digest=payload['plan_digest'],metadata_digest=payload['metadata']['metadata_digest'],source_contract=SELECTIVE_CONTRACT,rpc_cache=True,source_identity=payload['metadata']['source'],runtime_sha256=p['runtime_sha256'],member_identities=payload['model']['members'],verified_members=[],header_identities=[],binding_expectations=p['bindings'],assigned_count=len(assigned),binding_counts=counts,range_identities=ranges,cache_ranges=len(tensors),eligible_cache_ranges=checked,eligible_cache_reads=checked,backing='assigned-immutable-native-backing',physical_observation=False,cache_consumed=False,assigned_guard_path=str(path),retained_backing_bytes=usage,native_repair_reserve_bytes=minimum)
+    # A multi-listener worker receives one immutable guard per binding. The
+    # durable cache remains shared only after every object/native view above
+    # has been authenticated. Native endpoint placement is established by
+    # endpoint-bound execution observations, not inferred from these guards.
+    result=dict(schema='q8-source-receipt/1',role='remote',participant_id=p['participant_id'],status='VERIFIED-not-consumed',plan_digest=payload['plan_digest'],metadata_digest=payload['metadata']['metadata_digest'],source_contract=SELECTIVE_CONTRACT,rpc_cache=True,source_identity=payload['metadata']['source'],runtime_sha256=p['runtime_sha256'],member_identities=payload['model']['members'],verified_members=[],header_identities=[],binding_expectations=p['bindings'],assigned_count=len(assigned),binding_counts=counts,range_identities=ranges,cache_ranges=len(tensors),eligible_cache_ranges=checked,eligible_cache_reads=checked,backing='assigned-immutable-native-backing',physical_observation=False,cache_consumed=False,assigned_guard_path=str(path),retained_backing_bytes=usage,native_repair_reserve_bytes=minimum)
+    if banks:
+        result['assigned_guard_paths']={bid:publish_assigned_guard(root,bank) for bid,bank in banks.items()}
+    return result
 
 
 def main():
