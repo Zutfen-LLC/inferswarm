@@ -65,6 +65,8 @@ PRE-REVIEW PHASE (cheap, reviewer-trust gates only)
 -> FINAL-HEAD PHASE (requirements proven against one final reviewed head)
   one full CPU suite (mandatory; never omitted from a campaign plan)
     — satisfied by the HOSTED Final CPU Validation run on the exact head
+      (fresh execution, prior Final execution, or authenticated complete
+      ordinary CI outcomes as specified below)
       (Issue #226); a separate local full-suite run is NOT additionally
       required, and the full suite is not run on every PR push
   one hosted exact-head CI (mandatory; never omitted from a campaign plan)
@@ -441,9 +443,10 @@ validation. The canonical final validation configuration is: default
 tests directory (`root/tests`), default jobs schedule, default per-task
 timeout (1800 s), no retained-artifact request. Because the normalized
 suite configuration is part of the request identity, a suite run under a
-different jobs/tests/timeout/retention configuration can never satisfy
-the canonical final-head request even when it discovers the same test
-IDs. Both final gates must bind to that one exact SHA:
+different jobs/tests/timeout/retention configuration cannot satisfy
+the canonical final-head request merely by discovering the same test IDs.
+The sole alternate schedule is the independently derived complete ordinary CI
+job schedule under the outcome verification rules below. Both final gates must bind to that one exact SHA:
 
 - the suite receipt must validate (structurally, per above) against the
   final-head request identity;
@@ -669,7 +672,7 @@ exposing the stable check **Final CPU Validation Gate**. Properties:
 
 - **Trigger**: `workflow_dispatch` only, with the required 40-hex
   `expected_sha` input (plus an optional `pr_number` for audit
-  navigation). The dispatch `--ref` is transport only; `expected_sha` is
+  navigation, and required to opt into PR-bound ordinary CI reuse). The dispatch `--ref` is transport only; `expected_sha` is
   the execution authority. The workflow is invoked after maintainer GO
   as process doctrine — the workflow deliberately does not encode a
   maintainer-approval receipt (there is no agent-self-asserted review
@@ -690,8 +693,8 @@ exposing the stable check **Final CPU Validation Gate**. Properties:
   canonical plan and requires the executed population, count, and
   configuration to match it.
 - **Fixed-point checks**: the deterministic finalizer `--check` and
-  `sync_project_status.py --check` run as steps on the same exact head
-  before the receipt is composed; a failure of either fails the gate.
+  its embedded `status-sync` stage run on the same exact head before the
+  receipt is composed; status is not checked a second time. A failure fails the gate.
 - **Receipt**: the run retains a structured artifact binding the
   envelope schema (`hosted-final-validation-receipt/1`), the exact
   `expected_sha`/checked-out SHA, the GitHub run id/attempt, the
@@ -723,7 +726,8 @@ default of `None`; the pre-#226 four-argument call keeps its exact
 semantics). The envelope satisfies the full-suite requirement ONLY
 through its embedded suite receipt validated against the FULL
 independently derived final-head identity — same SHA, same canonical
-suite configuration, same environment authority — plus proven
+suite configuration (or the verified ordinary CI schedule below), same
+environment authority — plus proven
 finalizer/status checks. A bare workflow-success boolean can never
 satisfy the gate; supplying BOTH a local suite receipt and a hosted
 final-validation receipt is a fail-closed error (exactly one
@@ -764,11 +768,13 @@ or external cache). A prior run is an eligible source only if **all** hold:
   independently derived** suite configuration, population digests, count and
   environment authority.
 
-Anything else — no source, ordinary CI, failed/cancelled/pending/skipped runs,
+Anything else in this prior-Final source class — no source, ordinary CI,
+failed/cancelled/pending/skipped runs,
 legacy receipts without an `execution` block, reuse receipts (so reuse chains
 cannot form), other heads or configurations, tampered/expired/oversized/malformed
 artifacts, any API outage, rate limit, permission loss or unexpected error —
-runs the canonical suite exactly as before. A lookup problem is never a PASS
+tries the ordinary-CI source class below, then runs the canonical suite if
+that also fails verification. A lookup problem is never a PASS
 and never fails the job by itself; only malformed inputs or a failed canonical
 request derivation do. Lookup effort is bounded (3 run pages, 8 probed
 candidates, 2 MiB artifacts).
@@ -806,7 +812,7 @@ Dispatches that start while the first is still executing queue behind it and so
 find its published artifact; a dispatch that has to run in parallel (for
 example a different dispatch ref) does not see an unfinished source and runs the
 suite. Artifacts expire after 90 days, after which the suite runs again. Ordinary
-CI is a different contract and is never reused here. Untrusted inputs
+CI uses the separate outcome verification path below. Untrusted inputs
 (`expected_sha`, `pr_number`) reach scripts only via quoted environment
 bindings and are validated strictly (the optional `pr_number` must now be a
 plain positive integer with no surrounding whitespace).
@@ -882,3 +888,63 @@ hosted CI, no change to qualification thresholds, no alteration of accepted
 evidence, no redesign of #148 group selection, no general build cache, and
 no agent-implementation authority: these semantics are repository-owned and
 agent-independent.
+
+## Reusing complete ordinary CI outcomes
+
+Final CPU Validation first tries the existing prior-Final receipt path. If none
+qualifies, `ordinary_ci_reuse.py` can reuse ordinary CI only when `pr_number` is
+supplied and the existing Issue #323 verifier authenticates the current PR,
+exact head, associated successful run and latest attempt. Both hosted gates
+remain required. This is validation reuse, not review or execution authority.
+
+`ci_unittest.py` uses the normal unittest loader and runner while recording
+started IDs, successful terminal outcomes, explicit skips and reasons, actual
+checkout SHA/tree, package versions, Python patch version, OS/architecture and
+test environment switches, compiler/CMake/OpenSSL versions and hosted image
+identity. Each successful CI job uploads these records as
+`ci-outcomes-<job>`. Workflow ownership/parity and canonical loader discovery
+must independently agree, and every job must have an unexpired artifact whose
+bytes match the Actions API digest and whose run/head/repository binding agrees
+with the authenticated run. Every expected ID must start and finish exactly
+once; missing, duplicate, extra, failed or incomplete outcomes disable reuse.
+
+A pull-request merge checkout may differ from the reviewed head only when its
+recorded Git tree exactly equals the final checkout tree. Different dependency
+versions, platform or test switches disable reuse. Finalizer/status checks
+always execute on the final checkout. Population equality alone is insufficient.
+All skipped IDs are physically rechecked in the final environment before PASS;
+a skip may remain a skip or pass, but a failure, incomplete execution or timeout
+blocks composition. Their source skip identities/reasons remain in the outcome
+artifacts and skipped IDs are included in the final receipt.
+
+Lookup uncertainty executes the canonical full suite. After a reuse decision,
+composition reauthenticates the PR/run/attempt and every artifact, detects source
+changes, and confirms skipped tests; failure at that point fails the gate.
+The decision file is only a pointer. Old ordinary runs without outcome records
+fall back; the historical 4,376-ID population match does not retroactively
+qualify those runs.
+
+The resulting `verified_ordinary_ci` execution block records the source run,
+attempt, tree, per-job artifact IDs/digests and confirmed skipped IDs. Its suite
+configuration records the actual ordinary job schedule (workflow-derived plan
+digest and job count), rather than claiming the canonical four-worker schedule
+ran. Handoff allows only that independently derived alternate schedule and
+still requires the exact head, full population, environment authority and
+authenticated ordinary CI. Reused Final receipts remain ineligible as sources.
+
+Bounded lookup uses the existing verifier pagination bounds, one complete
+artifact listing (at most 100 entries), and one size-bounded download per
+unittest job, repeated at composition. Outcome artifacts expire after 30 days.
+Skip confirmation has a 1,800-second subprocess bound.
+
+Repository integrity removes only redundant invocations: finalizer owns status
+synchronization and Issue #187 producer/manifest checks, and
+`TestCLI.test_self_check_cli` owns the planner CLI self-check. Their focused
+regression suites still run. The eight `TestAggregateGate` mirror tests were
+removed because `TestRealGateScript` exercises those paths against the actual
+workflow, including every shard and malformed/unselected results. Source-pin,
+tamper, invalidation and custody controls remain.
+
+Documentation impact: this changes validation scheduling, not accepted
+capabilities, recorded campaign outcomes, integration branches or hardware
+authorization. `project-status.json` and retained evidence remain unchanged.

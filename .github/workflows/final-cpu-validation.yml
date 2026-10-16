@@ -15,7 +15,7 @@ name: Final CPU Validation
 # else runs). Invoked after maintainer GO per
 # docs/campaign-gate-ordering.md, e.g.:
 #   gh workflow run final-cpu-validation.yml \
-#     --ref <pr-branch> -f expected_sha=<exact-reviewed-head-sha>
+#     --ref <pr-branch> -f expected_sha=<exact-reviewed-head-sha> -f pr_number=<n>
 #
 # Duplicate-dispatch policy (Issue #291): the concurrency group below only
 # SERIALIZES same-head dispatches; it cannot stop a later dispatch from
@@ -31,7 +31,9 @@ name: Final CPU Validation
 # recording execution.mode = verified_prior_execution with the source
 # run/attempt/artifact digest.  Any doubt (no source, API outage, rate limit,
 # missing permission, any failed verification) runs the full suite.  Ordinary
-# CI is never a source.  pr_number stays audit-only.
+# CI outcomes use a separate authenticated PR-bound path: supply pr_number,
+# require complete terminal outcomes and matching tree/runtime, and confirm
+# skipped IDs on this checkout. Missing/incompatible records run the suite.
 #
 # Untrusted dispatch inputs reach scripts ONLY through quoted environment
 # bindings (EXPECTED_SHA / PR_NUMBER), never spliced into script source.
@@ -50,7 +52,7 @@ on:
         required: true
         type: string
       pr_number:
-        description: "PR number for audit/navigation (optional; SHA is authority)"
+        description: "PR number (enables authenticated ordinary CI reuse; SHA is authority)"
         required: false
         type: string
 
@@ -149,11 +151,8 @@ jobs:
           # The suite FAIL fails the Final CPU Validation Gate here.
           exit $suite_rc
 
-      - name: Run deterministic finalizer check (Issue #130)
+      - name: Run deterministic finalizer and project-status check (Issue #130)
         run: python3 scripts/finalize_repository.py --check
-
-      - name: Run project-status check
-        run: python3 scripts/sync_project_status.py --check
 
       - name: Compose and validate final-validation receipt (fail closed)
         env:
@@ -201,7 +200,7 @@ jobs:
         run: |
           echo "Final CPU Validation PASS on exact head $EXPECTED_SHA"
           if [ "$REUSE" = "true" ]; then
-            echo "execution: verified_prior_execution (suite not re-run)"
+            echo "execution: verified reuse (see receipt for prior Final or ordinary CI source)"
           else
             echo "execution: executed (canonical suite ran in this run)"
           fi

@@ -40,7 +40,9 @@ Trust model (reuse is a CACHE of one specific kind of proof, never a bypass):
   gate FAILS: it never mints PASS and never claims an execution that did
   not happen.
 
-Ordinary CI is never a source.  ``pr_number`` is audit-only.
+Complete ordinary CI is a separate source class in ordinary_ci_reuse.py.
+It requires a current PR association; pr_number remains audit-only for the
+prior-Final source class.
 """
 from __future__ import annotations
 
@@ -724,7 +726,7 @@ def _write_output(environ: Mapping[str, str], key: str, value: str) -> None:
 
 
 def _cmd_lookup(args, environ, api_factory, request_factory) -> int:
-    expected_sha, _ = _inputs(environ)
+    expected_sha, pr_number = _inputs(environ)
     request = request_factory(Path(args.repo_root))
     run_id_raw = environ.get("GITHUB_RUN_ID", "")
     token = environ.get("GITHUB_TOKEN", "")
@@ -747,6 +749,11 @@ def _cmd_lookup(args, environ, api_factory, request_factory) -> int:
                 current_run_id=int(run_id_raw),
                 dispatch_sha=environ.get("GITHUB_SHA", ""),
                 repository=repository)
+            if decision["action"] == "run" and environ.get("GITHUB_SHA") == expected_sha:
+                import ordinary_ci_reuse
+                decision = ordinary_ci_reuse.lookup(
+                    api, request=request, current_run_id=int(run_id_raw),
+                    pr_number=pr_number, root=Path(args.repo_root).resolve())
         except Exception as error:  # noqa: BLE001 — fail closed
             decision = _decision(
                 "run", f"lookup unavailable (fail closed): "
@@ -761,8 +768,7 @@ def _cmd_lookup(args, environ, api_factory, request_factory) -> int:
         print(f"  rejected run {item['run_id']}: {item['reason']}")
     if reused:
         src = decision["source"]
-        print(f"  source run {src['run_id']} attempt {src['run_attempt']} "
-              f"artifact {src['artifact_id']} {src['artifact_digest']}")
+        print(f"  source run {src['run_id']} attempt {src['run_attempt']}")
     return 0
 
 
@@ -781,6 +787,12 @@ def _compose_reuse_authenticated(args, environ, api_factory, *, request,
         api = api_factory(
             api_url=environ.get("GITHUB_API_URL", "https://api.github.com"),
             repository=repository, token=token)
+        if decision.get("source_kind") == "verified_ordinary_ci":
+            import ordinary_ci_reuse
+            return ordinary_ci_reuse.compose(
+                decision, api=api, request=request, current_run_id=int(run_id),
+                attempt=attempt, pr_number=pr_number, dispatch_sha=dispatch_sha,
+                root=Path(args.repo_root).resolve())
         return compose_reuse_envelope(
             decision, api=api, repository=repository, request=request,
             expected_sha=expected_sha, github_run_id=run_id,

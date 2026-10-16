@@ -5849,6 +5849,31 @@
       "replacement": null,
       "test_count_at_audit": 9
     },
+    "test_ordinary_ci_reuse": {
+      "baseline_group": "issue-213-gate-ordering",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": null,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "issue-213-gate-ordering",
+      "invariant": "Final validation reuses ordinary CI only with authenticated current PR/run/attempt, exact same tree, complete disjoint terminal outcomes, compatible environment and physical skip confirmation.",
+      "lineage": "complete ordinary-CI outcome reuse",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "scripts/ci_unittest.py",
+          "scripts/ordinary_ci_reuse.py",
+          "scripts/final_validation_reuse.py",
+          "scripts/issue213_gate_orchestration.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Current ordinary-CI reuse behavior: authenticated complete outcomes, same-tree merge refs, compatible environment, skip confirmation, fallback and source reauthentication.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": 13
+    },
     "test_plan_ci": {
       "baseline_group": "repo-integrity",
       "baseline_serial_seconds": 0.61,

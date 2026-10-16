@@ -52,7 +52,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # granularity (Issue #287), ``tests.<module>.<Class>[.<test>]``.
 _UNITTEST_RE = re.compile(
     r"(?:^|\n)\s*(?:python3?|\.venv/bin/python)\s+"
-    r"-m\s+unittest((?:\s+tests\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})+)",
+    r"-m\s+(?:unittest|scripts\.ci_unittest)((?:\s+tests\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})+)",
 )
 
 # Shard jobs of a sharded group all report under the bare group id.
