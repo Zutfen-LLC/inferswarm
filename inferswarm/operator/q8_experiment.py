@@ -739,11 +739,23 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         helper_receipts=manager.helper_receipts,spawn_receipts=manager.spawn_receipts,
         verified_backing=guard.verified_backing,cleanup=runner.last_cleanup,
         final_aggregate_receipts=getattr(guard,'final_aggregates',{}))
-    if session is not None:
-        guard.report(result,failure=failure,interrupted=interrupted,cleanup=runner.last_cleanup)
-        result['schema']='q8-two-gpu-experimental-session/1'
-        evidence_store.save_session_json('session-report.json',result)
-    evidence_summary=evidence_store.finalize()
+    try:
+        if session is not None:
+            guard.report(result,failure=failure,interrupted=interrupted,cleanup=runner.last_cleanup)
+            result['schema']='q8-two-gpu-experimental-session/1'
+            try:
+                evidence_store.save_session_json('session-report.json',result)
+            except (KeyboardInterrupt,SystemExit) as exc:
+                # A first interrupt may arrive after execution/cleanup, while
+                # publishing the report. Preserve it just like an execution
+                # interrupt; never skip the manifest or overwrite a partial file.
+                if interrupted is None: interrupted=exc
+                result.update(status='INTERRUPTED',error=str(interrupted) or 'interrupted',
+                              error_type=type(interrupted).__name__)
+                result['report_interruption']=dict(type=type(exc).__name__,reason=str(exc))
+                evidence_store.save_session_json('session-report-interrupted.json',result)
+    finally:
+        evidence_summary=evidence_store.finalize()
     result.update(evidence_retention=evidence_summary)
     if interrupted is not None:
         if session is not None:

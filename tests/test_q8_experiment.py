@@ -525,6 +525,35 @@ class ExperimentalDriverTests(unittest.TestCase):
         self.assertEqual(len(values[str(counter)]['raw']),16384)
         self.assertIsNone(values[str(missing)])
 
+    def test_session_final_report_interrupt_finalizes_partial_manifest(self):
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        original=DurableEvidenceStore._write_new
+        for kind in (KeyboardInterrupt,SystemExit):
+            with self.subTest(kind=kind.__name__):
+                interrupt=kind('interrupted final report write')
+                def stop_report(store,name,payload):
+                    if name=='session-report.json': raise interrupt
+                    return original(store,name,payload)
+                with patch.object(DurableEvidenceStore,'_write_new',stop_report):
+                    result,fixture,root=self.execute('report-'+kind.__name__,session=self.session())
+                self.assertIs(result,interrupt)
+                self.assertEqual(len(fixture.posts),3)
+                self.assertFalse(fixture.services)
+                receipt=result.campaign_receipt
+                self.assertEqual(receipt['outcomes']['execution'],'COMPLETED')
+                self.assertEqual(receipt['status'],'INTERRUPTED')
+                self.assertEqual(receipt['outcomes']['cleanup'],'COMPLETE')
+                self.assertFalse(receipt['evidence_retention']['complete'])
+                manifest=json.loads((root/'MANIFEST.json').read_text())
+                self.assertFalse(manifest['complete'])
+                self.assertEqual(len([r for r in manifest['response']['rows']
+                    if r['status']=='collected']),3)
+                recovered=json.loads((root/'session-report-interrupted.json').read_text())
+                self.assertEqual(recovered['requests'],receipt['requests'])
+                self.assertEqual(recovered['setup'],receipt['setup'])
+                self.assertTrue(recovered['samples'])
+                self.assertTrue((root/'request-03-response.json').exists())
+
     def test_session_cli_reaches_same_load_once_driver(self):
         code,result,fixture,_=self.execute(session=self.session(),cli_path=True)
         self.assertEqual(code,0)
