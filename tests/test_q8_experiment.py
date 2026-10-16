@@ -1,4 +1,5 @@
 """Offline exercise of the opt-in CLI and real bounded campaign path."""
+import base64
 import contextlib
 import copy
 import hashlib
@@ -26,6 +27,7 @@ class CampaignFixture:
     def __init__(self,mode='ok'):
         self.mode=mode; self.rows={}; self.stopped=set(); self.services=set()
         self.commands=[]; self.posts=[]; self.tunnel=None; self.rejected=False
+        self.probe_timeouts=[]
         self.failure=threading.Event()
         # Synthetic remote evidence surfaces (#326 durable retention):
         # per-address filesystem of original export/claim/log bytes the
@@ -82,6 +84,9 @@ class CampaignFixture:
             files[str(Path(export_dir)/'is301-claim')]=str(Path(invocation)/(name+'.log'))
         if self.mode=='evidence-oversize' and name=='rpc1':
             files[str(Path(export_dir)/(label+'-'+str(row['pid'])+'-0001.json'))]=b'x'*(9<<20)
+        if self.mode=='big-log' and name=='rpc1':
+            # Log larger than the 2 MB retention bound: the tail must be kept.
+            files[str(Path(invocation)/(name+'.log'))]=(b'x'*(2_000_000)+b'TAIL-MARKER\n')
         self.files.setdefault(address,{}).update(files)
         return export_dir
 
@@ -103,12 +108,18 @@ class CampaignFixture:
             return _json.dumps(out)
         payload=tree[path]
         if isinstance(payload,str): raise RuntimeError('refusing to follow symlink: '+path)
+        if 'os.lseek' in program:
+            # Tail probe: original size line, then the LAST bound bytes.
+            limit=int(argv[4])
+            return (_json.dumps(len(payload))+'\n'
+                    +_b64.b64encode(payload[-limit:] if limit else b'').decode('ascii'))
         return _b64.b64encode(payload[:int(argv[4])+1]).decode('ascii')
 
     def run(self,address,argv,**kwargs):
         self.commands.append((address,tuple(argv)))
         if argv[:2]==['python3','-c'] and len(argv)>3 and (
                 'os.listdir' in argv[2] or 'base64' in argv[2]):
+            self.probe_timeouts.append(kwargs.get('timeout'))
             if self.mode=='evidence-refused-rpc0' and 'os.listdir' in argv[2] \
                     and 'exports-rpc0' in argv[3]:
                 # First-listener probe channel refuses; rpc1/client must survive.
@@ -171,6 +182,7 @@ class CampaignFixture:
     def get(self,*args,**kwargs): return {'status':'ok'}
     def post(self,url,payload,timeout):
         self.posts.append(payload)
+        if self.mode=='interrupt': raise KeyboardInterrupt
         if self.mode=='request': raise RuntimeError('request failed')
         if self.mode=='timeout': raise TimeoutError('request deadline')
         if self.mode in ('allocator','monitor'):
@@ -352,6 +364,7 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
         config=self.root/'config.json'; self.envelope=self.root/'envelope.json'
         self.config=config; self.build_manifest=build_manifest
         config.write_text(json.dumps(rejoin_profiles(raw)))
+        self.seen_timeouts=[]
         self.raw=dict(schema='q8-two-cuda-experiment/1',opt_in=experiment.EXPERIMENTAL_OPT_IN,
             config_sha256=hashlib.sha256(config.read_bytes()).hexdigest(),
             request_sha256=hashlib.sha256(canonical(dict(self.plan.request))).hexdigest(),
@@ -375,6 +388,7 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
                 result=experiment.run_experimental_campaign(self.config,self.envelope,
                     commands=fixture,transport=fixture,runner_factory=runner,
                     evidence_root=str(evidence_root),evidence_transport=fixture)
+            except KeyboardInterrupt as exc: result=exc
             except Exception as exc: result=exc
         return result,fixture,evidence_root
 
@@ -622,9 +636,24 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
         # cleanup_budgets) before the campaign error surfaced.
         self.assertFalse(fixture.services)
         manifest=self.manifest(root)
-        # rpc0 (acknowledged) identities retained; rpc1 never had a receipt.
+        # rpc0 (acknowledged) identities retained with its real PID; rpc1
+        # never had a receipt, but its attempted role/paths are registered
+        # with an honestly unknown (null) PID/start -- never fabricated.
         self.assertIn('rpc0',manifest['process_identities'])
-        self.assertNotIn('rpc1',manifest['process_identities'])
+        self.assertEqual(manifest['process_identities']['rpc0']['pid'],
+            fixture.rows[(fixture.remote.execution_address,'rpc0')]['pid'])
+        self.assertIn('rpc1',manifest['process_identities'])
+        self.assertIsNone(manifest['process_identities']['rpc1']['pid'])
+        self.assertIsNone(manifest['process_identities']['rpc1']['start'])
+        # rpc1's pre-registered paths were still attempted after every stop
+        # (its export dir never existed -> honest missing rows), so it is
+        # not 'omitted' -- but the unknown identity and missing rows keep
+        # the manifest honestly incomplete.
+        rpc1_rows=[row for row in manifest['artifacts'] if row['process']=='rpc1']
+        self.assertTrue(rpc1_rows)
+        self.assertTrue(all(row['status']!='collected' for row in rpc1_rows))
+        self.assertFalse(manifest['complete'])
+        self.assertEqual(receipt['evidence_retention']['complete'],False)
         # Ordering guard: collection must run only after every stop. The
         # fixture records service removal ('systemctl stop' commands) and
         # probe commands in one shared log; no retention probe may precede
@@ -649,17 +678,14 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
                 if 'os.listdir' in argv[2]:
                     return '{}'
                 return _b64.b64encode(b'log bytes').decode('ascii')
-        store.register_process('rpc0','w',101,'200')
         store.collect_processes([dict(name='rpc0',address='w',
-            export_dir='/exports/rpc0',log_path='/inv/rpc0.log',
+            export_dir='/exports/rpc0',log_path=None,
             pid=101,start='200')],Runner())
         summary=store.finalize()
         self.assertFalse(summary['complete'])
         rows=self.manifest(root)['artifacts']
         self.assertTrue(any(row['status']=='missing' and row['kind']=='export-dir'
                             and 'no claim or envelope' in str(row.get('error'))
-                            for row in rows))
-        self.assertTrue(any(row['status']=='collected' and row['kind']=='log'
                             for row in rows))
 
     def test_reads_refuse_replaced_or_symlinked_sources(self):
@@ -678,3 +704,161 @@ class DurableEvidenceRetentionTests(unittest.TestCase):
                             capture_output=True,text=True)
         self.assertNotEqual(proc.returncode,0)  # symlink refused, not followed
         self.assertEqual(proc.stdout,'')
+
+    def test_lost_launch_reply_still_attempts_registered_paths(self):
+        """Correction A: pre-dispatch registration of attempted processes.
+
+        rpc1's spawn reply is lost: its role and artifact paths were
+        registered BEFORE dispatch, so retention still attempts them after
+        every owned stop, the PID/start identity stays honestly null, and
+        the manifest cannot claim completeness.  rpc0's acknowledged
+        identity keeps its real PID.
+        """
+        result,fixture,root=self.execute('partial')
+        self.assertIsInstance(result,experiment.ExperimentalCampaignError)
+        manifest=self.manifest(root)
+        self.assertIn('rpc1',manifest['process_identities'])
+        identity=manifest['process_identities']['rpc1']
+        self.assertIsNone(identity['pid']); self.assertIsNone(identity['start'])
+        rpc1_rows=[row for row in manifest['artifacts'] if row['process']=='rpc1']
+        self.assertTrue(rpc1_rows)
+        self.assertTrue(all(row['status']!='collected' for row in rpc1_rows))
+        self.assertFalse(manifest['complete'])
+        self.assertFalse(result.campaign_receipt['evidence_retention']['complete'])
+        # Acknowledged rpc0 keeps its real identity.
+        self.assertEqual(manifest['process_identities']['rpc0']['pid'],
+            fixture.rows[(fixture.remote.execution_address,'rpc0')]['pid'])
+        # Cleanup still ran for every acknowledged/ambiguous unit first.
+        self.assertFalse(fixture.services)
+
+    def test_omitted_attempt_never_yields_complete_manifest(self):
+        """Correction A (store level): an attempted process that is never
+        enumerated for collection keeps complete=false -- no falsely
+        complete manifest, no fabricated identity."""
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        root=self.root/'ev-omitted'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        store.register_attempt('rpc1','w','/exports/rpc1','/inv/rpc1.log')
+        # finalize() without any collect_processes(): the attempted launch
+        # must surface as an omission, never as completeness.
+        summary=store.finalize()
+        self.assertFalse(summary['complete'])
+        manifest=self.manifest(root)
+        self.assertEqual(manifest['omitted_processes'],['rpc1'])
+        self.assertIsNone(manifest['process_identities']['rpc1']['pid'])
+        self.assertIsNone(manifest['process_identities']['rpc1']['start'])
+
+    def test_keyboard_interrupt_finalizes_manifest_then_reraises(self):
+        """Correction B: catchable interruption finalizes the manifest after
+        cleanup and re-raises the original KeyboardInterrupt unchanged."""
+        result,fixture,root=self.execute('interrupt')
+        self.assertIsInstance(result,KeyboardInterrupt)
+        # Owned cleanup still ran before the interrupt surfaced.
+        self.assertFalse(fixture.services)
+        self.assertEqual(fixture.stopped,set(fixture.rows))
+        if fixture.tunnel is not None: self.assertTrue(fixture.tunnel.done)
+        # The manifest was finalized despite the interrupt: honest partial
+        # record -- no response was received, but every spawned process's
+        # artifacts were still collected after owned cleanup.
+        manifest=self.manifest(root)
+        self.assertEqual(manifest['response']['status'],'not-received')
+        self.assertFalse((root/'http-response.json').exists())
+        self.assertIn('rpc0',manifest['process_identities'])
+        rows=[row for row in manifest['artifacts'] if row['kind']=='log']
+        self.assertTrue(rows and all(row['status']=='collected' for row in rows))
+
+    def test_oversize_log_retains_last_bounded_bytes(self):
+        """Correction C: logs over the 2 MB bound keep their tail with an
+        explicit truncation record; export refusal behavior is unchanged."""
+        result,fixture,root=self.execute('big-log')
+        self.assertNotIsInstance(result,Exception,str(result))
+        manifest=self.manifest(root)
+        rpc1_log=[row for row in manifest['artifacts']
+                  if row['process']=='rpc1' and row['kind']=='log']
+        self.assertEqual(len(rpc1_log),1)
+        row=rpc1_log[0]
+        self.assertEqual(row['status'],'collected')
+        self.assertTrue(row['truncated'])
+        self.assertEqual(row['original_size'],2_000_000+len(b'TAIL-MARKER\n'))
+        self.assertEqual(row['size'],2_000_000)
+        self.assertEqual(row['retained_range'],
+                         [len(b'TAIL-MARKER\n'),2_000_000+len(b'TAIL-MARKER\n')])
+        kept=(root/row['target']).read_bytes()
+        self.assertEqual(len(kept),2_000_000)
+        self.assertTrue(kept.endswith(b'TAIL-MARKER\n'))
+        self.assertEqual(row['sha256'],hashlib.sha256(kept).hexdigest())
+        # Smaller logs are still copied whole (rpc0, client).
+        for process in ('rpc0','client'):
+            log=[r for r in manifest['artifacts']
+                 if r['process']==process and r['kind']=='log']
+            self.assertEqual(len(log),1)
+            self.assertFalse(log[0]['truncated'])
+            self.assertEqual(log[0]['original_size'],log[0]['size'])
+        # Export oversize refusal is unchanged: oversize exports (not logs)
+        # are still rejected whole.
+        result2,_,root2=self.execute('evidence-oversize')
+        manifest2=self.manifest(root2)
+        oversize=[r for r in manifest2['artifacts'] if r['status']=='oversize']
+        self.assertTrue(oversize)
+        self.assertTrue(all(r['kind']!='log' for r in oversize))
+        for r in oversize:
+            self.assertIsNone(r.get('target')); self.assertIsNone(r.get('sha256'))
+
+    def test_retention_uses_campaign_absolute_deadline_not_fresh_budget(self):
+        """Correction D: collection clamps to the campaign's existing
+        absolute deadline; no fresh 480 s window after budget expiry."""
+        from inferswarm.operator.evidence_retention import (
+            DurableEvidenceStore, MANIFEST_RESERVE_SECONDS)
+        root=self.root/'ev-deadline'
+        store=DurableEvidenceStore.create(root,'token1',
+            config_sha256='a'*64,request_sha256='b'*64,
+            max_collection_seconds=480)
+        clock=[1000.0]
+        # Campaign budget expires at 1010; binding happens AFTER expiry
+        # (slow cleanup).  Collection must not grant a fresh 480 s window.
+        clock[0]=1015.0
+        store.begin_collection_budget(1010.0, clock=lambda: clock[0])
+        store.collect_processes([dict(name='rpc0',address='w',
+            export_dir='/exports/rpc0',log_path='/inv/rpc0.log',
+            pid=1,start='1')], RefusingProbeRunner(self), clock=lambda: clock[0])
+        summary=store.finalize()
+        self.assertFalse(summary['complete'])
+        rows=self.manifest(root)['artifacts']
+        self.assertTrue(rows)
+        # No probe was started at all: the budget was already expired, and
+        # every row honestly reflects that (error/missing/deadline cascade).
+        self.assertEqual(self.seen_timeouts,[])
+        self.assertTrue(all(row['status']!='collected' for row in rows),
+                        [row['status'] for row in rows])
+        self.assertTrue(any(row['status']=='deadline' for row in rows))
+        # A healthy remaining budget clamps probe timeouts to what is left.
+        root2=self.root/'ev-clamp'
+        store2=DurableEvidenceStore.create(root2,'token1',
+            config_sha256='a'*64,request_sha256='b'*64)
+        clock2=[2000.0]
+        store2.begin_collection_budget(2000.0+MANIFEST_RESERVE_SECONDS+7,
+                                       clock=lambda: clock2[0])
+        store2.collect_processes([dict(name='rpc0',address='w',
+            export_dir='/exports/rpc0',log_path='/inv/rpc0.log',
+            pid=1,start='1')], RecordingProbeRunner(self), clock=lambda: clock2[0])
+        self.assertTrue(self.seen_timeouts)
+        self.assertTrue(all(t<=7 for t in self.seen_timeouts),self.seen_timeouts)
+
+
+class RefusingProbeRunner:
+    """Probe channel that records any attempted probe as a failure."""
+    def __init__(self,test=None): self.calls=0; self.test=test
+    def run(self,address,argv,*,timeout=None):
+        self.calls+=1
+        if self.test is not None: self.test.seen_timeouts.append(timeout)
+        raise RuntimeError('probe channel refused')
+
+
+class RecordingProbeRunner:
+    """Serves probe requests while recording the clamped timeouts."""
+    def __init__(self,test): self.test=test
+    def run(self,address,argv,*,timeout=None):
+        self.test.seen_timeouts.append(timeout)
+        if 'os.listdir' in argv[2]: return json.dumps({'missing':True})
+        return base64.b64encode(b'x').decode('ascii')

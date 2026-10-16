@@ -218,9 +218,16 @@ frozen config/request SHA-256 hashes and is mode 0700 with 0600 artifacts:
 its contents are potentially sensitive user content — never logged, never
 published automatically.
 
-Collection order on every exit path (success, observation refusal, execution
-failure, cleanup failure):
+Collection order on every CATCHABLE exit path (success, observation refusal,
+execution failure, cleanup failure, KeyboardInterrupt/SystemExit after the
+cleanup path; no recovery is promised for SIGKILL or power loss):
 
+0. each attempted process's role and artifact paths (export dir, log path)
+   are registered BEFORE its launch is dispatched: if the process starts but
+   its spawn reply is lost, cleanup still stops the leases and retention
+   still attempts those pre-registered paths; the PID/start identity is
+   recorded as honestly unknown (null), never fabricated, and an attempted
+   process that is never enumerated keeps the manifest honestly incomplete;
 1. the complete HTTP response JSON is saved immediately after receipt,
    before checkpoint/validation/observation collection can fail — usage,
    finish metadata and all other returned fields, not just extracted answer
@@ -233,7 +240,10 @@ failure, cleanup failure):
    client export envelopes, `is301-claim` files and bounded native log
    tails — with malformed or dropped-event exports retained verbatim before
    any parsing; a failure collecting rpc0 never prevents the attempt for
-   rpc1 or the client;
+   rpc1 or the client; a log larger than the 2,000,000 B bound keeps its
+   LAST bounded bytes with an explicit truncation record (original size and
+   retained byte range) instead of being rejected whole — export files keep
+   whole-file limits and refusal behavior unchanged;
 4. a manifest is written last with source host/path, PID/start identity,
    file size, SHA-256 and per-artifact success/missing/error status. An
    existing but empty export directory records an honest missing-evidence
@@ -241,8 +251,11 @@ failure, cleanup failure):
    symlinked sources are refused rather than followed.
 
 Bounds and partial-failure behavior: 8 MiB per export/claim file, 2,000,000 B
-per log tail, 80 files per process, 512 MiB total, 480 s collection wall
-time (inside the reserved 20-minute cleanup budget).  Symlinks and path
+per log tail, 80 files per process, 512 MiB total, and collection time
+clamped to the campaign's EXISTING absolute deadline minus a 30 s manifest
+reserve (never a fresh 480 s window after the campaign budget has expired;
+each probe's timeout is clamped to the remaining budget and no probe starts
+once it is gone).  Symlinks and path
 escapes are rejected on both the listing and the read; absent, oversized,
 empty-directory or partially copied evidence is recorded as such and never
 reported complete.  A retention failure is
@@ -251,7 +264,14 @@ bypasses stopping owned processes, releasing leases, closing owned
 transports or stopping aggregate slices; the guards that may refuse new work
 after monitor failure, cancellation or execution-deadline expiry are never
 disabled to force a copy.  Execution, observation, retention and cleanup
-outcomes stay separate fields in the receipt.
+outcomes stay separate fields in the receipt, and an interrupt's original
+exception/exit status is re-raised unchanged after finalization.
+
+Trust assumption (deliberately narrow, unchanged by this round): trusted
+experiment hosts, invocation-owned directories and bounded pinned producers.
+The read-only probes refuse symlinks and non-regular files at the target
+path; no ancestor-symlink traversal defense or directory-enumeration
+redesign is claimed or implemented here.
 
 This dispatch permits one load and at most one request: no physical restart,
 retry or tuning. Existing CPU fixtures retain the missing-only restart-reuse

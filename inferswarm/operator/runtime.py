@@ -505,6 +505,16 @@ class OperatorRunner:
                 self.leases.port(remote.execution_address,host,port)
                 export=str(Path(self.leases.invocation_dir(remote.execution_address))/('exports-'+process.name))
                 export_dirs[process.name]=export
+                log_path=str(Path(self.leases.invocation_dir(
+                    remote.execution_address))/(process.name+'.log'))
+                # Register the attempted role + artifact paths BEFORE the
+                # launch is dispatched: if the process starts but its spawn
+                # reply is lost, cleanup still stops the leases and
+                # retention still attempts these known paths; the PID/start
+                # identity stays honestly unknown (None), never fabricated.
+                if evidence_store is not None:
+                    evidence_store.register_attempt(process.name,
+                        remote.execution_address,export,log_path)
                 rows[process.name]=self._spawn_profiled_rpc(plan,remote,argv,sources,export,
                     name=process.name,binding_id=process.binding_id)
                 if evidence_store is not None:
@@ -512,8 +522,7 @@ class OperatorRunner:
                         rows[process.name]['pid'],str(rows[process.name]['start']))
                     evidence_entries.append(dict(name=process.name,
                         address=remote.execution_address,export_dir=export,
-                        log_path=str(Path(self.leases.invocation_dir(
-                            remote.execution_address))/(process.name+'.log')),
+                        log_path=log_path,
                         pid=rows[process.name]['pid'],
                         start=str(rows[process.name]['start'])))
                 if campaign_guard is not None: campaign_guard.process_started(rows)
@@ -553,6 +562,12 @@ class OperatorRunner:
                     executable_sha256=remote.runtime_sha256,assigned_guard=guards[process.binding_id]))
             client_export=str(Path(self.leases.invocation_dir(client.execution_address))/'exports-client')
             export_dirs['client']=client_export
+            client_log=str(Path(self.leases.invocation_dir(
+                client.execution_address))/'client.log')
+            # Same pre-dispatch registration for the client launch.
+            if evidence_store is not None:
+                evidence_store.register_attempt('client',
+                    client.execution_address,client_export,client_log)
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
                 export=client_export,**self._assigned_spawn(plan,client,sources))
             if evidence_store is not None:
@@ -560,8 +575,7 @@ class OperatorRunner:
                     rows['client']['pid'],str(rows['client']['start']))
                 evidence_entries.append(dict(name='client',
                     address=client.execution_address,export_dir=client_export,
-                    log_path=str(Path(self.leases.invocation_dir(
-                        client.execution_address))/'client.log'),
+                    log_path=client_log,
                     pid=rows['client']['pid'],
                     start=str(rows['client']['start'])))
             if campaign_guard is not None: campaign_guard.process_started(rows)
@@ -678,6 +692,15 @@ class OperatorRunner:
         # recorded and never masks the campaign's own result or error.
         if evidence_store is not None:
             try:
+                # Bind retention to the campaign's EXISTING absolute
+                # deadline: probes clamp to the remaining budget (minus a
+                # manifest reserve) and stop once it expires -- retention
+                # never grants itself a fresh window after the campaign
+                # budget is gone.  Owned-process shutdown has already run.
+                if (campaign_guard is not None
+                        and campaign_guard.execute_deadline is not None):
+                    evidence_store.begin_collection_budget(
+                        campaign_guard.execute_deadline)
                 evidence_store.collect_processes(evidence_entries,
                     self.evidence_transport)
             except BaseException as exc:

@@ -645,17 +645,27 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     runner.evidence=evidence_store
     runner.evidence_transport=(evidence_transport if evidence_transport is not None
                                else guard.commands)
-    result={}; failure=None
+    result={}; failure=None; interrupted=None
     try: result=runner._execute_two_gpu_diagnostic(plan,plan.admission,campaign_guard=guard)
+    except (KeyboardInterrupt,SystemExit) as exc:
+        # Catchable interruption: owned cleanup already ran inside the
+        # driver's finally path.  Finalize the evidence manifest, then
+        # re-raise the original interrupt unchanged -- retention failure
+        # must never mask it, and no recovery is promised past this point.
+        interrupted=exc
+        result=dict(guard.execution_result or {})
+        result.update(status='INTERRUPTED',error=str(exc) or 'interrupted',
+                      error_type=type(exc).__name__,raw_response=guard.raw_response)
     except Exception as exc:
         failure=exc
         result=dict(guard.execution_result)
         result.update(status='STOPPED',error=str(exc),error_type=type(exc).__name__,
                       raw_response=guard.raw_response)
-    # Finalize durable retention on EVERY exit path (success, campaign
-    # failure, raised error) and record its honest summary separately from
-    # execution/observation/cleanup outcomes.  Never allowed to mask or
-    # replace the campaign's own result or exception.
+    # Finalize durable retention on EVERY catchable exit path (success,
+    # campaign failure, raised error, KeyboardInterrupt/SystemExit) and
+    # record its honest summary separately from execution/observation/
+    # cleanup outcomes.  Never allowed to mask or replace the campaign's
+    # own result or exception.  (No recovery from SIGKILL or power loss.)
     evidence_summary=evidence_store.finalize()
     result.update(evidence_retention=evidence_summary)
     result.update(schema='q8-two-gpu-experimental-campaign/1',
@@ -671,6 +681,13 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         helper_receipts=manager.helper_receipts,spawn_receipts=manager.spawn_receipts,
         verified_backing=guard.verified_backing,cleanup=runner.last_cleanup,
         final_aggregate_receipts=getattr(guard,'final_aggregates',{}))
+    if interrupted is not None:
+        result.update(samples=list(guard._samples),
+            last_aggregate_observations=guard.last_aggregates,
+            last_gpu_observations=guard.last_gpu_rows,
+            last_host_available=guard.last_host_available,
+            monitor_failure=str(guard._monitor_error) if guard._monitor_error is not None else None)
+        raise interrupted
     if failure is not None:
         result.update(samples=list(guard._samples),
             last_aggregate_observations=guard.last_aggregates,

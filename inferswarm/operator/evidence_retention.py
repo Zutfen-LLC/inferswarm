@@ -24,10 +24,25 @@ Hard rules (IS326 follow-up):
   honest status rows instead.
 * Bounded always: finite per-file, per-process file-count, total-byte and
   wall-time budgets; a symlink, a path escape, an oversized or a partially
-  copied artifact is recorded as incomplete, never as collected.
+  copied artifact is recorded as incomplete, never as collected.  Log
+  retention keeps the LAST ``max_log_bytes`` bytes with an explicit
+  truncation record; export envelopes keep whole-file limits and refusal.
+* Honest identity: each attempted process is registered BEFORE its launch
+  is dispatched (``register_attempt``), so a lost spawn reply still leaves
+  its role and artifact paths with an unknown (``null``) PID/start -- never
+  a fabricated identity -- and an omitted process keeps ``complete`` false.
+* Manifest finalized on every catchable exit, including
+  KeyboardInterrupt/SystemExit after the owned cleanup path; no recovery is
+  promised for SIGKILL or power loss.
 * Sensitive content: artifacts are 0600 inside a 0700 directory, never logged,
   never published automatically; the manifest carries hashes and statuses
   only.
+
+Trust assumption (deliberately narrow): trusted experiment hosts,
+invocation-owned directories, and the bounded pinned producers that write
+them.  The read-only probes defend against symlinks and non-regular files
+at the target path, but no ancestor-symlink traversal defense or
+directory-enumeration redesign is claimed or implemented here.
 """
 from __future__ import annotations
 
@@ -85,6 +100,28 @@ READ_PROGRAM = (
     "    os.close(fd)\n"
     "sys.stdout.write(base64.b64encode(data).decode('ascii'))\n")
 
+# Tail read for log retention: streams at most ``bound`` bytes from the END
+# of the file (seek-based, one forward read of the final bound bytes) plus
+# the original size, so an oversized log keeps its last bounded bytes with
+# an explicit truncation record instead of being rejected whole.
+TAIL_PROGRAM = (
+    "import base64,os,stat,sys\n"
+    "limit=int(sys.argv[2])\n"
+    "fd=os.open(sys.argv[1],os.O_RDONLY|os.O_NOFOLLOW)\n"
+    "try:\n"
+    "    if not stat.S_ISREG(os.fstat(fd).st_mode): sys.exit(4)\n"
+    "    size=os.fstat(fd).st_size\n"
+    "    os.lseek(fd,max(0,size-limit),os.SEEK_SET)\n"
+    "    data=b''\n"
+    "    while len(data)<limit:\n"
+    "        chunk=os.read(fd,min(1<<20,limit-len(data)))\n"
+    "        if not chunk: break\n"
+    "        data+=chunk\n"
+    "finally:\n"
+    "    os.close(fd)\n"
+    "print(size)\n"
+    "sys.stdout.write(base64.b64encode(data).decode('ascii'))\n")
+
 # Frozen collection bounds.  The byte bounds mirror the collector families
 # (8 MiB envelopes, 2,000,000 B log tail); the collection deadline fits well
 # inside the reserved 1200 s cleanup budget so retention can never starve the
@@ -95,6 +132,7 @@ MAX_RESPONSE_BYTES = 8 << 20
 MAX_FILES_PER_PROCESS = 80
 MAX_TOTAL_BYTES = 512 << 20
 MAX_COLLECTION_SECONDS = 480
+MANIFEST_RESERVE_SECONDS = 30
 STAT_TIMEOUT_SECONDS = 60
 
 _NAME = frozenset('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-')
@@ -144,6 +182,9 @@ class DurableEvidenceStore:
         self._rows = []
         self._events = []
         self._processes = {}
+        self._attempted = {}
+        self._collected_processes = set()
+        self._absolute_deadline = None
         self._collected_bytes = 0
         self._files_by_process = {}
         self._collect_deadline = None
@@ -213,6 +254,27 @@ class DurableEvidenceStore:
 
     # ------------------------------------------------- identity registration
 
+    def register_attempt(self, name, address, export_dir, log_path):
+        """Register one attempted process BEFORE its launch is dispatched.
+
+        Records the known role and artifact paths with an honestly unknown
+        (``None``) PID/start.  If the process starts but its spawn reply is
+        lost, cleanup still ran against the leases and retention can still
+        attempt these known paths; the identity stays ``None`` rather than
+        being fabricated.  A later acknowledged :meth:`register_process`
+        fills in the real PID/start.  Any attempt that is never collected
+        keeps ``complete`` false.
+        """
+        if self._finalized or not _safe_component(name):
+            return
+        self._processes.setdefault(name, dict(source_host=address,
+                                              pid=None, start=None))
+        self._attempted[name] = dict(source_host=address,
+                                     export_dir=(None if export_dir is None
+                                                 else str(export_dir)),
+                                     log_path=(None if log_path is None
+                                               else str(log_path)))
+
     def register_process(self, name, address, pid, start):
         """Bind one owned process identity into the manifest.
 
@@ -265,6 +327,29 @@ class DurableEvidenceStore:
 
     # ---------------------------------------------------- artifact retention
 
+    def begin_collection_budget(self, absolute_deadline, *, clock=time.monotonic):
+        """Bind retention to the campaign's EXISTING absolute deadline.
+
+        The wall deadline for collection becomes
+        ``min(absolute_deadline - MANIFEST_RESERVE_SECONDS, now +
+        max_collection_seconds)``: no fresh budget is granted after the
+        campaign budget has expired, and manifest finalization always has
+        reserved time.  Idempotent; earliest binding wins.
+        """
+        if self._finalized or self._collected:
+            return
+        manifest_deadline = absolute_deadline - MANIFEST_RESERVE_SECONDS
+        capped = clock() + self.max_collection_seconds
+        candidate = min(manifest_deadline, capped)
+        if self._absolute_deadline is None:
+            self._absolute_deadline = absolute_deadline
+            self._collect_deadline = candidate
+            self._event('budget-bound', dict(
+                absolute_deadline=absolute_deadline,
+                collect_deadline=candidate))
+        elif candidate < self._collect_deadline:
+            self._collect_deadline = candidate
+
     def collect_processes(self, entries, runner, *, clock=time.monotonic):
         """Collect raw bytes for each process independently, never raising.
 
@@ -273,12 +358,48 @@ class DurableEvidenceStore:
         ...) never prevents the attempt for rpc1 or the client.  Idempotent:
         a second call is a no-op.  ``runner`` is the fixed command runner
         (``run(address, argv, *, timeout) -> stdout text``).
+
+        When :meth:`begin_collection_budget` bound an earlier absolute
+        deadline, that deadline (minus the manifest reserve) governs; the
+        per-call budget below only applies when no absolute deadline was
+        bound.  Processes registered via :meth:`register_attempt` but absent
+        from ``entries`` (launch reply lost) are still attempted through
+        their pre-registered paths, with their unknown identity recorded
+        honestly.
         """
         if self._finalized or self._collected:
             return
         self._collected = True
-        self._collect_deadline = clock() + self.max_collection_seconds
+        if self._collect_deadline is None:
+            self._collect_deadline = clock() + self.max_collection_seconds
+        by_name = {}
         for entry in entries:
+            name = entry.get('name')
+            if isinstance(name, str):
+                by_name.setdefault(name, entry)
+        merged = []
+        for name in dict.fromkeys([*(e.get('name') for e in entries),
+                                   *sorted(self._attempted)]):
+            if name is None:
+                continue
+            registered = self._attempted.get(name)
+            entry = by_name.get(name)
+            if entry is not None:
+                merged.append(entry)
+            elif registered is not None:
+                # Attempted launch whose reply was lost: retention still
+                # tries the pre-registered known paths.  PID/start stay
+                # unknown (None) -- never fabricated.
+                merged.append(dict(name=name,
+                    address=registered['source_host'],
+                    export_dir=registered['export_dir'],
+                    log_path=registered['log_path'],
+                    pid=self._processes.get(name, {}).get('pid'),
+                    start=self._processes.get(name, {}).get('start')))
+        for entry in merged:
+            if isinstance(entry.get('name'), str):
+                self._collected_processes.add(entry['name'])
+        for entry in merged:
             try:
                 self._collect_one(entry, runner, clock)
             except BaseException as exc:  # retention never escapes
@@ -288,11 +409,18 @@ class DurableEvidenceStore:
                           'error', error=exc)
 
     def _row(self, entry, kind, source_path, status, *, size=None,
-             sha256=None, target=None, error=None):
+             sha256=None, target=None, error=None, truncated=None,
+             original_size=None, retained_range=None):
         row = dict(process=entry['name'], kind=kind,
                    source_host=entry.get('address'), source_path=source_path,
                    pid=entry.get('pid'), start=entry.get('start'),
                    status=status, size=size, sha256=sha256, target=target)
+        if truncated is not None:
+            row['truncated'] = truncated
+        if original_size is not None:
+            row['original_size'] = original_size
+        if retained_range is not None:
+            row['retained_range'] = retained_range
         if error is not None:
             row['error'] = str(error)[-500:]
         self._rows.append(row)
@@ -321,7 +449,7 @@ class DurableEvidenceStore:
             return
         try:
             data = self._read_remote(runner, entry['address'], source_path,
-                                     bound)
+                                     bound, clock)
         except ValueError as exc:
             if 'exceeds bound' in str(exc):
                 self._row(entry, kind, source_path, 'oversize', error=exc)
@@ -352,6 +480,15 @@ class DurableEvidenceStore:
         self._row(entry, kind, source_path, _COLLECTED, size=size,
                   sha256=hashlib.sha256(data).hexdigest(), target=target)
 
+    def _probe_timeout(self, clock):
+        """Clamp each probe timeout to the remaining collection budget."""
+        if self._collect_deadline is None:
+            return STAT_TIMEOUT_SECONDS
+        remaining = self._collect_deadline - clock()
+        if remaining <= 0:
+            return 0
+        return max(1, min(STAT_TIMEOUT_SECONDS, int(remaining)))
+
     def _stat_listing(self, runner, address, directory, clock):
         if directory is None:
             return {'missing': True}
@@ -359,17 +496,81 @@ class DurableEvidenceStore:
                 and clock() >= self._collect_deadline):
             return {'error': 'collection deadline reached before listing'}
         argv = ['python3', '-c', STAT_PROGRAM, str(directory)]
-        return json.loads(runner.run(address, argv, timeout=STAT_TIMEOUT_SECONDS))
+        return json.loads(runner.run(address, argv,
+                                     timeout=self._probe_timeout(clock)))
 
-    def _read_remote(self, runner, address, path, bound):
+    def _read_remote(self, runner, address, path, bound, clock):
         """Read at most ``bound`` original bytes; raise ValueError on oversize."""
         import base64
         argv = ['python3', '-c', READ_PROGRAM, str(path), str(int(bound))]
-        encoded = runner.run(address, argv, timeout=STAT_TIMEOUT_SECONDS)
+        encoded = runner.run(address, argv,
+                             timeout=self._probe_timeout(clock))
         data = base64.b64decode(encoded.encode('ascii'), validate=True)
         if len(data) > bound:
             raise ValueError('evidence read exceeds bound')
         return data
+
+    def _read_tail(self, runner, address, path, bound, clock):
+        """Read the LAST ``bound`` bytes; return ``(data, original_size)``.
+
+        The tail program emits the original file size on its first line and
+        the base64 of the final ``bound`` bytes after it; the reader-side
+        bound stays enforced on the returned data.
+        """
+        import base64
+        argv = ['python3', '-c', TAIL_PROGRAM, str(path), str(int(bound))]
+        output = runner.run(address, argv,
+                            timeout=self._probe_timeout(clock))
+        newline = output.find('\n')
+        if newline < 0:
+            raise ValueError('tail probe returned no size line')
+        original_size = int(output[:newline])
+        data = base64.b64decode(output[newline + 1:].encode('ascii'),
+                                validate=True)
+        if len(data) > bound:
+            raise ValueError('evidence tail exceeds bound')
+        return data, original_size
+
+    def _copy_log_tail(self, entry, name, source_path, runner, bound, clock):
+        """Retain the last ``bound`` bytes of a log with an honest record.
+
+        A log larger than the bound keeps its final ``bound`` bytes plus a
+        truncation row (original size and retained byte range); a bounded
+        log is copied whole.  Export-file limits and refusal behavior are
+        unchanged -- truncation applies to logs only.
+        """
+        if not _safe_component(name):
+            self._row(entry, 'log', source_path, 'rejected-path')
+            return
+        if not self._budget_ok(entry, 'log', source_path, None, clock):
+            return
+        try:
+            data, original_size = self._read_tail(runner, entry['address'],
+                                                  source_path, bound, clock)
+        except ValueError as exc:
+            self._row(entry, 'log', source_path, 'error', error=exc)
+            return
+        except Exception as exc:
+            self._row(entry, 'log', source_path, 'error', error=exc)
+            return
+        if self._collected_bytes + len(data) > self.max_total_bytes:
+            self._row(entry, 'log', source_path, 'budget')
+            return
+        target = entry['name'] + '/' + name
+        try:
+            size = self._write_new(target, data)
+        except OSError as exc:
+            self._row(entry, 'log', source_path, 'error', error=exc)
+            return
+        self._files_by_process[entry['name']] = (
+            self._files_by_process.get(entry['name'], 0) + 1)
+        self._collected_bytes += size
+        row = dict(truncated=(original_size > len(data)),
+                   original_size=original_size,
+                   retained_range=[original_size - len(data), original_size])
+        self._row(entry, 'log', source_path, _COLLECTED, size=size,
+                  sha256=hashlib.sha256(data).hexdigest(), target=target,
+                  **row)
 
     def _collect_one(self, entry, runner, clock):
         name = entry['name']
@@ -430,8 +631,8 @@ class DurableEvidenceStore:
                       error='export directory holds no claim or envelope')
         log_path = entry.get('log_path')
         if log_path is not None:
-            self._copy(entry, 'log', Path(log_path).name, log_path,
-                       runner, self.max_log_bytes, clock)
+            self._copy_log_tail(entry, Path(log_path).name, log_path,
+                                runner, self.max_log_bytes, clock)
 
     # ------------------------------------------------------------- finalize
 
@@ -452,6 +653,14 @@ class DurableEvidenceStore:
             counts[row['status']] = counts.get(row['status'], 0) + 1
         complete = (not rows or all(row['status'] == _COLLECTED
                                     for row in rows))
+        # An attempted launch that was never enumerated for collection --
+        # not attempted through its known paths, no artifact row at all --
+        # makes the ledger honestly incomplete: an omitted process must not
+        # yield a falsely complete manifest.
+        omitted = sorted(name for name in self._attempted
+                         if name not in self._collected_processes)
+        if omitted:
+            complete = False
         if self._response_row is not None:
             counts[_COLLECTED] = counts.get(_COLLECTED, 0) + 1
         elif self._response_status not in ('saved', 'not-received'):
@@ -469,6 +678,7 @@ class DurableEvidenceStore:
                                     max_total_bytes=self.max_total_bytes,
                                     max_collection_seconds=self.max_collection_seconds),
                         process_identities=dict(sorted(self._processes.items())),
+                        omitted_processes=omitted,
                         response=dict(status=self._response_status,
                                       row=self._response_row),
                         artifacts=rows,

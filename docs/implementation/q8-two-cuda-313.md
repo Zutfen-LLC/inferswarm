@@ -119,20 +119,35 @@ spawns whose reply was lost, and the aggregate slices — (so terminal
 exports have flushed),
 a controller-owned durable evidence directory — created fresh before launch,
 outside the remote lifecycle namespaces, bound to the invocation token and
-both frozen hashes — preserves original bytes on every exit path: the
+both frozen hashes — preserves original bytes on every catchable exit path
+(including KeyboardInterrupt/SystemExit after the cleanup path; no recovery
+is promised for SIGKILL or power loss): each attempted process's role and
+artifact paths are registered before its launch is dispatched, so a lost
+spawn reply still gets its known paths attempted with an honestly unknown
+(null) PID/start and never a complete manifest; the
 complete sole HTTP response JSON saved immediately at receipt (before
 validation or observation collection can fail) and, per process
 independently (rpc0, rpc1, client), the native export envelopes,
 `is301-claim` files and bounded log tails, with malformed or dropped-event
-exports retained verbatim before parsing. A manifest-last SHA-256 ledger
+exports retained verbatim before parsing; a log larger than the 2,000,000 B
+bound keeps its last bounded bytes with an explicit truncation record
+(original size and retained byte range) while export files keep whole-file
+limits and refusal behavior. A manifest-last SHA-256 ledger
 records per-artifact success/missing/error status under finite
-file/byte/time bounds and rejects symlinks and path escapes on both listing
+file/byte/time bounds — collection time clamped to the campaign's existing
+absolute deadline minus a manifest reserve, never a fresh window after
+budget expiry — and rejects symlinks and path escapes on both listing
 and read (O_NOFOLLOW + regular-file check); absent, empty-directory,
-oversized or partially copied evidence is never reported complete. A
+oversized or partially copied evidence is never reported complete, and an
+attempted process that is never enumerated is recorded as an omission. A
 retention failure never bypasses stop/lease-release/transport/slice cleanup
 and is reported separately (`evidence_retention`) from execution,
-observation and cleanup outcomes. Artifacts are potentially sensitive user
-content: 0700/0600, never logged or published automatically.
+observation and cleanup outcomes; an interrupt's original exception or exit
+status is re-raised unchanged after finalization. Artifacts are potentially
+sensitive user content: 0700/0600, never logged or published automatically.
+The read path assumes trusted experiment hosts, invocation-owned directories
+and bounded pinned producers; no ancestor-symlink traversal defense or
+directory-enumeration redesign is claimed.
 The selected GPU UUID pair is set explicitly in `CUDA_VISIBLE_DEVICES` for
 both listeners; CUDA0/CUDA1 refer to that frozen visible order, not an assumed
 match between CUDA and `nvidia-smi` physical indices.

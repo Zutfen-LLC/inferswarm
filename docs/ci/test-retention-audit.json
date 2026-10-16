@@ -5912,11 +5912,11 @@
     "test_q8_experiment": {
       "baseline_group": "issue-99-103",
       "baseline_serial_seconds": null,
-      "baseline_test_count": 20,
+      "baseline_test_count": 25,
       "category": "CURRENT_CONTRACT",
       "disposition": "retain",
       "group": "issue-99-103",
-      "invariant": "The real opt-in CLI/driver retains blocked ordinary admission and unknown bounds, freezes one request, verifies aggregate systemd limits and UUID mapping, supervises source helpers, stops and cleans all owned jobs on partial spawn/request/timeout/allocator/monitor failures, preserves raw evidence (complete HTTP response, per-process export envelopes, is301-claims, logs, SHA-256 manifest) durably on every exit path without displacing cleanup, and never accepts or qualifies output.",
+      "invariant": "The real opt-in CLI/driver retains blocked ordinary admission and unknown bounds, freezes one request, verifies aggregate systemd limits and UUID mapping, supervises source helpers, stops and cleans all owned jobs on partial spawn/request/timeout/allocator/monitor failures, preserves raw evidence (complete HTTP response, per-process export envelopes, is301-claims, oversize logs as bounded tails with truncation records, SHA-256 manifest) durably on every catchable exit path including KeyboardInterrupt/SystemExit without displacing cleanup, registers each attempted process's role and artifact paths before its launch (unknown PID/start recorded honestly, omitted attempts never complete), clamps retention to the campaign's existing absolute deadline with a manifest reserve, and never accepts or qualifies output.",
       "lineage": "Issue #313 opt-in experimental campaign correction to PR #326; IS326 durable evidence retention follow-up",
       "named_by_evidence": [],
       "owned_surfaces": {
