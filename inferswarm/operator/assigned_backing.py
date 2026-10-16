@@ -25,6 +25,27 @@ ROLE_BACKENDS = (('remote', (CPU_BACKEND, CUDA_BACKEND)), ('client', (CPU_BACKEN
 HISTORICAL_BUILD_PAIR = 'historical-cpu'
 STEP_A_BUILD_PAIR = 'step-a-cpu05-cuda03'
 STEP_A_MANIFESTS = ROOT/'tools/native-cache/step-a-build-pair'
+OPTIMIZED_BUILD_PAIR = 'optimized-cpu05-cuda03'
+# Deliberately absent until the real candidate has been reviewed and committed.
+# No caller/config path or supplied hash can populate this finite authority.
+OPTIMIZED_CPU_MANIFEST = ROOT/'tools/native-cache/optimized-cpu-build-pair/cpu05-llama-server.build-manifest.json'
+
+
+def optimized_cpu_identities():
+    """One additive CPU successor, always paired with the unchanged Step A CUDA worker."""
+    from .phased_observation import parse_build_manifest
+    pair = step_a_identities()
+    try:
+        candidate = parse_build_manifest(json.loads(OPTIMIZED_CPU_MANIFEST.read_text()))
+    except FileNotFoundError as exc:
+        raise ValueError('selective backing unreviewed optimized CPU build identity') from exc
+    expected = tuple(o.replace('=-O0 -g0', '=-O3 -g0') for o in pair['client'].build_options)
+    expected += ('-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',)
+    if (candidate.build_options != expected
+            or candidate.patch_sha256 != pair['client'].patch_sha256
+            or any('ggml-cuda' in name for name, _ in candidate.backend_libraries)):
+        raise ValueError('selective backing optimized CPU options/patch/backend mismatch')
+    return dict(client=candidate, remote=pair['remote'])
 
 
 def step_a_identities():
@@ -64,6 +85,11 @@ def role_identity(role, backend=CPU_BACKEND, *, build_pair=HISTORICAL_BUILD_PAIR
     """
     from .phased_observation import parse_build_manifest
     key = role_key(role, backend)
+    if build_pair == OPTIMIZED_BUILD_PAIR:
+        pair = optimized_cpu_identities()  # Missing CPU review refuses BOTH roles.
+        if backend != (CPU_BACKEND if role=='client' else CUDA_BACKEND):
+            raise ValueError('selective backing wrong backend for optimized CPU build pair: '+role)
+        return pair[role]
     if build_pair == STEP_A_BUILD_PAIR:
         pair = step_a_identities()  # Load BOTH roles, even when collecting just one.
         if backend != (CPU_BACKEND if role=='client' else CUDA_BACKEND):
