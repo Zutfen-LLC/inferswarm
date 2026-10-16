@@ -5872,7 +5872,7 @@
       "rationale": "Current ordinary-CI reuse behavior: authenticated complete outcomes, same-tree merge refs, compatible environment, skip confirmation, fallback and source reauthentication.",
       "referenced_by_scripts": [],
       "replacement": null,
-      "test_count_at_audit": 13
+      "test_count_at_audit": 16
     },
     "test_plan_ci": {
       "baseline_group": "repo-integrity",

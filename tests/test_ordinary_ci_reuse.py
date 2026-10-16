@@ -40,6 +40,41 @@ class RecordValidation(unittest.TestCase):
                                           runtime={'python': '3.12'}, tree=TREE,
                                           run_id=9001, attempt=1)
 
+    def test_real_workflow_population_matches_canonical_discovery(self):
+        from collections import Counter
+        import run_full_cpu_suite as runner
+        expected = [i for ids in ordinary.schedule().values() for i in ids]
+        discovered = runner.ids_for_units(runner.discover_units(ROOT, ROOT / 'tests'))
+        self.assertTrue(all(i.startswith('tests.test_') for i in expected))
+        self.assertTrue(all(i.startswith('test_') for i in discovered))
+        self.assertEqual(Counter(map(ordinary.canonical_test_id, expected)),
+                         Counter(discovered))
+
+    def test_import_prefix_is_exact_and_does_not_merge_other_namespaces(self):
+        for i in IDS:
+            self.assertEqual(ordinary.canonical_test_id(i), i.removeprefix('tests.'))
+        for bad in (IDS[0].removeprefix('tests.'), 'other.' + IDS[0], 'tests.' + IDS[0],
+                    'test_other.Example.test_one.extra', 'Example.test_one'):
+            with self.subTest(test_id=bad), self.assertRaises(ValueError):
+                ordinary.canonical_test_id(bad)
+
+    def test_normalization_preserves_duplicates_and_exact_skip_identity(self):
+        r = record(skip=True)
+        self.assertEqual(self.validate([r]), IDS)
+        r['started_ids'].append(IDS[0])
+        r['outcomes'].append([IDS[0], 'skip', 'absent'])
+        with self.assertRaises(ValueError):
+            self.validate([r])
+        r = record()
+        r['started_ids'][0] = IDS[0].removeprefix('tests.')
+        r['outcomes'][0][0] = IDS[0].removeprefix('tests.')
+        with self.assertRaises(ValueError):
+            self.validate([r])
+        r = record()
+        r['outcomes'][0][0] = 'tests.test_other.Example.test_one'
+        with self.assertRaises(ValueError):
+            self.validate([r])
+
     def test_terminal_success_and_explicit_skip(self):
         self.assertEqual(self.validate([record()]), [])
         self.assertEqual(self.validate([record(skip=True)]), IDS)
@@ -111,7 +146,7 @@ class Authentication(unittest.TestCase):
                 ('ordinary_ci_reuse.outcomes.runtime_identity', {'python': '3.12'}),
                 ('ordinary_ci_reuse.outcomes.git_value', TREE),
                 ('run_full_cpu_suite.discover_units', []),
-                ('run_full_cpu_suite.ids_for_units', IDS)):
+                ('run_full_cpu_suite.ids_for_units', [i.removeprefix('tests.') for i in IDS])):
             self.addCleanup(patch.stopall)
             patch(target, return_value=value).start()
         self.records = [record()]

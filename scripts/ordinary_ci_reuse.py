@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,18 @@ ROOT = Path(__file__).resolve().parents[1]
 MODE = 'verified_ordinary_ci'
 PREFIX = 'ci-outcomes-'
 MAX_BYTES = 2 * 1024 * 1024
+
+
+def canonical_test_id(workflow_id):
+    """Map only the workflow loader's exact ``tests.`` import prefix.
+
+    Per-job started/outcome IDs and skipped IDs retain their original spelling.
+    Canonical discovery imports test modules directly from the tests directory.
+    """
+    match = re.fullmatch(r"tests\.(test_\w+\.\w+\.\w+)", workflow_id)
+    if match is None:
+        raise ValueError('unexpected workflow test identity: ' + repr(workflow_id))
+    return match.group(1)
 
 
 def schedule(root=ROOT):
@@ -103,7 +116,7 @@ def authenticate(api, *, request, current_run_id, pr_number, root=ROOT,
     # Reuse the canonical loader authority, not just workflow count/parity.
     import run_full_cpu_suite as runner
     discovered = runner.ids_for_units(runner.discover_units(root, root / 'tests'))
-    if Counter(expected_all) != Counter(discovered):
+    if Counter(map(canonical_test_id, expected_all)) != Counter(discovered):
         raise ValueError('ordinary workflow does not cover the entire canonical population')
     listing = api.list_artifacts(run_id)
     if listing.get('total_count') != len(listing.get('artifacts', [])):
