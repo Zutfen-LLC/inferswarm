@@ -587,12 +587,23 @@ class ParallelCompletion(unittest.TestCase):
                 self.assertEqual(worktrees.count('worktree '), 1)
 
     def test_whole_module_worker_loading_cannot_silently_drop_extra_ids(self):
+        self._assert_worker_loader_drift()
+
+    def test_worker_loader_negative_control_inside_outer_worktree(self):
+        from contextlib import chdir
+        with tempfile.TemporaryDirectory(prefix='nested-loader-test-') as td:
+            outer = Path(td) / 'worktree-outer'
+            outer.mkdir()
+            with chdir(outer):
+                self._assert_worker_loader_drift()
+
+    def _assert_worker_loader_drift(self):
         root, events, ids, environment = self.fixture({'test_completion_loader_drift': '''
             import unittest
             from pathlib import Path
             class Fixture(unittest.TestCase):
                 def test_run(self): pass
-            if Path.cwd().name.startswith('worktree-'):
+            if Path(__file__).resolve().parents[1].name.startswith('worktree-'):
                 class Extra(unittest.TestCase):
                     def test_extra(self): pass
         '''})
