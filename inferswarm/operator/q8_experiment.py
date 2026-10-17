@@ -613,6 +613,12 @@ class SystemdCampaignGuard:
             part=self.client if name in ('client','demand') else self.remote
             log=str(Path(self.leases.invocation_dir(part.execution_address))/(name+'.log'))
             text=self._run(part,['tail','-c','16384','--',log])
+            # At the pin this Debug diagnostic precedes reserve-and-retry;
+            # the terminal error is a separate "failed to allocate graph".
+            # Remove only the exact backend-change diagnostic text, never a
+            # line/tail that could also contain an allocator/device failure.
+            text=text.replace('failed to allocate graph, reserving '
+                              '(backend_ids_changed = 1)', '')
             if re.search(r'(?i)(out of memory|failed to allocate|bad_alloc|illegal memory access|device.*lost|CUDA error)',text):
                 raise RuntimeError('owned allocator/device failure: '+name)
         self._inspect(dict(rows))

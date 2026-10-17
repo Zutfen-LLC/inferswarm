@@ -758,7 +758,6 @@ class OperatorRunner:
         from .q8_session import ENDPOINT, response_metrics
         store=self.evidence
         guard.setup['load_ended_monotonic']=guard.clock()
-        demand_record=None
         demand_pending=getattr(guard,'demand_profile',None) is not None
         result=dict(status='EXECUTED-OUTPUT-UNACCEPTED',plan_id=plan.plan_id,
             plan_digest=plan.digest,selection=plan.selection,rpc_processes=process_receipts,
@@ -768,10 +767,6 @@ class OperatorRunner:
                 'PID/UUID residency, graph submission and utilization are not kernel execution proof',
                 'nonstreaming wall time is not TTFT; correctness is not evaluated'])
         guard.execution_result=result
-        if demand_record is not None:
-            # The demand capture ran beside the loaded session; keep its honest
-            # outcome visible without turning it into request acceptance.
-            result['demand_capture']=demand_record
         for index,request in enumerate(guard.session.payload()['requests'],1):
             guard.phase='request'; guard.phase_index=index
             body=request['body']
@@ -895,6 +890,12 @@ class OperatorRunner:
         """
         from .q8_demand import demand_client_argv
         profile=guard.demand_profile
+        # Keep this same record through admission, dispatch and readback.
+        # The outer campaign retains execution_result even when any step
+        # raises; report() then attaches the real terminal cause.
+        record=dict(enabled=True,attempted=False,status='NOT-STARTED',
+                    bound_request=profile.request_index)
+        guard.execution_result['demand_capture']=record
         options=thaw(plan.strategy_options)
         # Identity admission: read the reviewed successor manifest through the
         # same collector transport used for the observer builds; it returns the
@@ -931,7 +932,7 @@ class OperatorRunner:
         invocation=self.leases.invocation_dir(client.execution_address)
         prompt_remote=str(Path(invocation)/'demand-prompt.txt')
         output_remote=str(Path(invocation)/'demand-profile.json')
-        log_remote=str(Path(invocation)/'demand-client.log')
+        log_remote=str(Path(invocation)/'demand.log')
         # Fresh-path enforcement happens on the client host at spawn time
         # (the lifecycle transport refuses an existing record/log), and the
         # CLI itself opens its output with O_CREAT|O_EXCL ("wx").
@@ -959,7 +960,7 @@ class OperatorRunner:
             threads=_client_host_threads(guard,client)))
         argv[argv.index('__demand_profile__')]=output_remote
         argv[argv.index('__demand_prompt__')]=prompt_remote
-        record=dict(status='STARTED',bound_request=profile.request_index,
+        record.update(status='STARTED',
             client_sha256=profile.client_sha256,
             manifest_sha256=identity.transformed_manifest_sha256,
             workload_sha256=workload,prompt_sha256=profile.prompt_sha256,
@@ -976,8 +977,11 @@ class OperatorRunner:
         guard.phase='demand'
         # The client connects to the already-listening owned workers; reuse the
         # same owned supervision/cleanup by running through the lease manager.
+        spawn_options=self._assigned_spawn(plan,client,sources)
+        record['attempted']=True
         rows['demand']=self.leases.spawn(client.execution_address,'demand',argv,
-            **self._assigned_spawn(plan,client,sources))
+            **spawn_options)
+        record['spawn_receipt']=dict(rows['demand'])
         if store is not None:
             store.register_process('demand',client.execution_address,
                 rows['demand']['pid'],str(rows['demand']['start']))

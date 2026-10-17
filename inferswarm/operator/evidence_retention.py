@@ -639,6 +639,11 @@ class DurableEvidenceStore:
                         listing.get(file_name), dict) else {}
                 kind = 'claim' if file_name == CLAIM_NAME else 'export'
                 source_path = str(Path(export_dir) / file_name)
+                # An invocation-directory export listing can contain the
+                # separately registered log. Retain it once, through the
+                # bounded log-tail path below, without a target collision.
+                if source_path == entry.get('log_path'):
+                    continue
                 entry_type = info.get('type')
                 if entry_type == 'symlink':
                     self._row(entry, kind, source_path, 'rejected-symlink')

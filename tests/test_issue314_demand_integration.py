@@ -451,6 +451,8 @@ class _ProbeCommands:
 
     def __init__(self):
         self.tail_calls = []
+        self.log_tail = ''
+        self.oom = 0
 
     def run(self, address, argv, **kwargs):
         head = argv[0]
@@ -470,12 +472,12 @@ class _ProbeCommands:
         if head == 'grep':
             return 'MemAvailable: 134217728 kB\n'
         if head == 'cat':
-            return 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n'
+            return f'low 0\nhigh 0\nmax 0\noom {self.oom}\noom_kill 0\n'
         if head == 'python3':
             return json.dumps({p: 'raw' for p in argv[3:]})
         if head == 'tail':
             self.tail_calls.append((address, argv[-1]))
-            return ''
+            return self.log_tail
         if head == 'getconf':
             return '8\n'
         raise AssertionError(argv)
@@ -619,6 +621,32 @@ class MonitoredDemandHandoffTests(unittest.TestCase):
         rows['demand'] = row
         self.guard.process_started(rows)
         return row
+
+    def test_exact_backend_change_reservation_is_not_an_allocator_stop(self):
+        self.commands.log_tail = ('ggml_backend_sched_alloc_splits: failed to allocate graph, '
+                                  'reserving (backend_ids_changed = 1)\n')
+        _monitor_tick(self.guard)
+        self.assertIsNone(self.guard._monitor_error)
+
+    def test_terminal_and_combined_failures_still_stop(self):
+        benign = ('ggml_backend_sched_alloc_splits: failed to allocate graph, '
+                  'reserving (backend_ids_changed = 1)')
+        for text in ('ggml_backend_sched_alloc_splits: failed to allocate graph\n',
+                     benign + '\nggml_backend_sched_alloc_splits: failed to allocate graph\n',
+                     benign + ' CUDA error: out of memory\n',
+                     benign + ' failed to allocate buffer of size 4096\n',
+                     'failed to allocate graph, reserving (backend_ids_changed = 0)\n',
+                     'failed to allocate buffer, reserving\n'):
+            with self.subTest(text=text):
+                self.commands.log_tail = text
+                with self.assertRaisesRegex(RuntimeError, 'allocator/device'):
+                    _monitor_tick(self.guard)
+
+    def test_benign_log_never_hides_cgroup_oom(self):
+        self.commands.log_tail = 'failed to allocate graph, reserving (backend_ids_changed = 1)\n'
+        self.commands.oom = 1
+        with self.assertRaisesRegex(RuntimeError, 'allocator/OOM'):
+            _monitor_tick(self.guard)
 
     def test_monitor_advances_through_handoff_without_false_stop(self):
         """Ticks before the handoff, in the mid-state (client retired, demand
@@ -797,7 +825,7 @@ class DemandCompletionReadbackTests(unittest.TestCase):
         self.guard, self.leases, self.rows = _make_guard_state(
             self.commands, self.transport, with_client=False)
 
-    def capture(self, *, result='success', refuse_export=False,
+    def capture(self, *, result='success', refuse_export=False, fail_at=None,
                 inspect_refuses=False, completion_override=None):
         from inferswarm.operator.runtime import OperatorRunner
         from unittest.mock import patch
@@ -816,7 +844,10 @@ class DemandCompletionReadbackTests(unittest.TestCase):
         client = SimpleNamespace(execution_address='client-host',
                                  source_path='/srv/models/q8/model.gguf')
         remote = SimpleNamespace(execution_address='remote-host')
-        store = _StubStore(refuse={'demand-export.json'} if refuse_export else set())
+        refuse = {'demand-export.json'} if refuse_export else set()
+        if fail_at == 'before-spawn':
+            refuse.add('demand-capture-started.json')
+        store = _StubStore(refuse=refuse)
         if inspect_refuses:
             self.transport.refuse_inspect_after_exit = {('client-host', 'demand')}
         elif result is None:
@@ -830,6 +861,12 @@ class DemandCompletionReadbackTests(unittest.TestCase):
 
         def call(address, payload):
             receipt = original_call(address, payload)
+            if payload.get('name') == 'demand':
+                if fail_at == 'spawn-reply' and payload['action'] == 'spawn':
+                    raise RuntimeError('demand spawn reply lost')
+                if fail_at == 'guard-stop' and payload['action'] == 'alive':
+                    self.guard._monitor_error = RuntimeError('owned allocator/device failure: demand')
+                    self.guard.checkpoint()
             if (completion_override is not None and payload['action'] == 'inspect'
                     and payload['name'] == 'demand'
                     and self.transport.state[(address, 'demand')].get('exited')):
@@ -841,6 +878,8 @@ class DemandCompletionReadbackTests(unittest.TestCase):
             EXECUTABLE_MAX_BYTES = 300 << 20
 
             def read_json(self, address, path, *, max_bytes):
+                if fail_at == 'identity':
+                    raise ValueError('candidate manifest unavailable')
                 return self.manifest
 
             def read_bytes(self, address, path, *, max_bytes):
@@ -863,8 +902,49 @@ class DemandCompletionReadbackTests(unittest.TestCase):
                 (), store)
         return record, store
 
+    def test_failed_capture_remains_enabled_with_attempt_and_terminal_cause(self):
+        for stage, attempted in (('identity', False), ('before-spawn', False),
+                                 ('spawn-reply', True), ('guard-stop', True)):
+            with self.subTest(stage=stage):
+                self.setUp()
+                with self.assertRaises((RuntimeError, ValueError)) as caught:
+                    self.capture(fail_at=stage)
+                report = self.guard.report(dict(self.guard.execution_result), failure=caught.exception)
+                record = report.get('demand_capture')
+                self.assertIsNotNone(record)
+                self.assertTrue(record['enabled'])
+                self.assertEqual(record['attempted'], attempted)
+                self.assertEqual(record['failure']['reason'], str(caught.exception))
+                self.assertNotEqual(report['outcomes']['demand_capture'], 'disabled')
+                self.assertNotIn('export_retained', record)
+                if stage == 'guard-stop':
+                    self.assertEqual(record['status'], 'GUARD-STOPPED')
+                    self.assertEqual(report['outcomes']['demand_capture'], 'GUARD-STOPPED')
+                    self.assertIn('spawn_receipt', record)
+
+    def test_default_off_report_remains_disabled(self):
+        report = self.guard.report({}, failure=RuntimeError('ordinary client failed'))
+        self.assertEqual(report['outcomes']['demand_capture'], 'disabled')
+        self.assertNotIn('demand_capture', report)
+
+    def test_enabled_capture_stopped_before_entry_is_not_disabled(self):
+        self.guard.demand_profile = self.profile
+        error = RuntimeError('session client did not exit before demand capture')
+        report = self.guard.report({}, failure=error)
+        self.assertFalse(report['demand_capture']['attempted'])
+        self.assertEqual(report['demand_capture']['failure']['reason'], str(error))
+        self.assertEqual(report['outcomes']['demand_capture'], 'FAILED')
+
+    def test_later_campaign_failure_preserves_a_retained_export(self):
+        record, _ = self.capture()
+        report = self.guard.report(dict(self.guard.execution_result),
+                                   failure=RuntimeError('later observer failure'))
+        self.assertEqual(report['outcomes']['demand_capture'], 'EXPORTED')
+        self.assertEqual(report['demand_capture'], record)
+
     def test_nested_success_reaches_export_readback_and_retention(self):
         record, store = self.capture(result='success')
+        self.assertEqual(store.attempts[0][-1], record['log_path'])
         self.assertEqual(record['unit_result'], 'success', record)
         self.assertEqual(record['export_status'], 'retained', record)
         self.assertEqual(record['status'], 'FINISHED', record)
@@ -932,9 +1012,10 @@ class _StubStore:
     def __init__(self, refuse=None):
         self.saved = []
         self.refuse = refuse or set()
+        self.attempts = []
 
     def register_attempt(self, *args, **kwargs):
-        pass
+        self.attempts.append(args)
 
     def register_process(self, *args, **kwargs):
         pass
@@ -1009,6 +1090,8 @@ class RetainedDemandLifecycleTests(unittest.TestCase):
         DemandCompletionReadbackTests.setUpClass()
         fixture = DemandCompletionReadbackTests
         state = dict(exited=False, retained=False, loaded=False, identities=0)
+        local_run = lifecycle.subprocess.run
+        log_bytes = b'native demand log retained\n'
         events = []
         unit = 'inferswarm-q8-313-retained-demand.service'
         fields = dict(MainPID='123', ActiveState='active', SubState='running',
@@ -1019,6 +1102,10 @@ class RetainedDemandLifecycleTests(unittest.TestCase):
 
         def command(argv, **kwargs):
             if argv[2] == 'systemd-run':
+                log_path = next(a.split('append:', 1)[1] for a in argv
+                                if a.startswith('--property=StandardOutput=append:'))
+                state['log_path'] = log_path
+                Path(log_path).write_bytes(log_bytes)
                 state['retained'] = '--property=RemainAfterExit=yes' in argv
                 state['loaded'] = True
                 events.append('spawn')
@@ -1059,6 +1146,9 @@ class RetainedDemandLifecycleTests(unittest.TestCase):
             commands = _ProbeCommands()
             probe = commands.run
             def run(address, argv, **kwargs):
+                if argv[0] == 'tail':
+                    commands.tail_calls.append((address, argv[-1]))
+                    return Path(argv[-1]).read_text() if Path(argv[-1]).is_file() else ''
                 if ('--property=ActiveState' in argv and '--property=ControlGroup' in argv
                         and '--property=MemoryMax' not in argv):
                     return 'ActiveState=inactive\nControlGroup=\n'
@@ -1095,6 +1185,9 @@ class RetainedDemandLifecycleTests(unittest.TestCase):
                 record = runner._run_demand_capture(plan, guard, {}, {}, client, None, (), store)
             self.assertEqual(record['status'], 'FINISHED', record)
             self.assertTrue((Path(td)/'evidence/demand-export.json').is_file())
+            self.assertEqual(record['log_path'], state['log_path'])
+            self.assertIn(('client-host', state['log_path']), commands.tail_calls)
+            self.assertEqual(store._attempted['demand']['log_path'], state['log_path'])
             self.assertEqual(record['supervision']['properties']['SubState'], 'exited')
             self.assertNotIn('demand', guard.rows)
             self.assertIn('demand', manager.owned['client-host'])
@@ -1107,6 +1200,16 @@ class RetainedDemandLifecycleTests(unittest.TestCase):
             self.assertFalse((Path(td)/'lease/active').exists())
             self.assertEqual(events, ['spawn', 'self-exit', 'export', 'stop'])
             self.assertFalse(state['loaded'])
+            # The production collector reads the registered path through a
+            # local stand-in for host transport; only staged temporary files
+            # are inspected, with all service commands still faked.
+            def retained_read(address, argv, **kwargs):
+                return local_run(argv, capture_output=True, text=True, check=True, **kwargs).stdout
+            store.collect_processes([], SimpleNamespace(run=retained_read))
+            kept = [row for row in store._rows if row['kind'] == 'log']
+            self.assertEqual(len(kept), 1, store._rows)
+            self.assertEqual(kept[0]['status'], 'collected', kept)
+            self.assertEqual((Path(td)/'evidence'/kept[0]['target']).read_bytes(), log_bytes)
 
 
 class DemandEndToEndCampaignTests(unittest.TestCase):
@@ -1163,7 +1266,7 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
                                      prompt='measure me')
         return raw
 
-    def test_demand_capture_completes_after_session_with_workers_kept(self):
+    def _execute_capture(self, *, fail_at=None):
         import copy as _copy
         import contextlib as _contextlib
         import io as _io
@@ -1209,6 +1312,8 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
                     self2.demand_exited = True
                     return {'alive': False}
                 receipt = super().call(address, payload)
+                if action == 'spawn' and payload['name'] == 'demand' and fail_at == 'spawn-reply':
+                    raise RuntimeError('demand spawn reply lost')
                 if action == 'inspect' and payload.get('name') == 'demand':
                     row = self2.rows[(address, 'demand')]
                     exited = getattr(self2, 'demand_exited', False)
@@ -1272,6 +1377,26 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
                     evidence_transport=fixture, session_path=session_path)
             except BaseException as exc:
                 result = exc
+        return result, fixture, evidence_root
+
+    def test_capture_exception_is_durably_reported_as_attempted(self):
+        result, fixture, evidence_root = self._execute_capture(fail_at='spawn-reply')
+        self.assertIsInstance(result, self._driver.experiment.ExperimentalCampaignError)
+        receipt = result.campaign_receipt
+        capture = receipt['demand_capture']
+        self.assertTrue(capture['enabled'])
+        self.assertTrue(capture['attempted'])
+        self.assertEqual(capture['status'], 'FAILED')
+        self.assertIn('demand spawn reply lost', capture['failure']['reason'])
+        self.assertEqual(receipt['outcomes']['demand_capture'], 'FAILED')
+        self.assertFalse((evidence_root/'demand-export.json').exists())
+        retained = json.loads((evidence_root/'session-report.json').read_text())
+        self.assertEqual(retained['demand_capture'], capture)
+        self.assertFalse(fixture.services)
+
+    def test_demand_capture_completes_after_session_with_workers_kept(self):
+        session = self.demand_session()
+        result, fixture, evidence_root = self._execute_capture()
         self.assertIsInstance(result, dict, str(result)[:2000])
         capture = result.get('demand_capture')
         self.assertIsNotNone(capture, str(result)[:2000])
