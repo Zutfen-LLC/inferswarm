@@ -759,9 +759,7 @@ class OperatorRunner:
         store=self.evidence
         guard.setup['load_ended_monotonic']=guard.clock()
         demand_record=None
-        if getattr(guard,'demand_profile',None) is not None:
-            demand_record=self._run_demand_capture(plan,guard,rows,sources,
-                client,remote,processes,store)
+        demand_pending=getattr(guard,'demand_profile',None) is not None
         result=dict(status='EXECUTED-OUTPUT-UNACCEPTED',plan_id=plan.plan_id,
             plan_digest=plan.digest,selection=plan.selection,rpc_processes=process_receipts,
             verified_backing=sources,requests=guard.request_records,
@@ -861,6 +859,34 @@ class OperatorRunner:
                     if not saved and 'failure' not in record:
                         raise RuntimeError('session final request metadata retention failed')
         guard.phase='cleanup'; guard.phase_index=None
+        if demand_pending:
+            # The pinned RPC server serves ONE connection synchronously
+            # (ggml-rpc.cpp accept loop). While the ordinary session client
+            # is loaded it owns the workers' connections, so a second client
+            # would block forever at device registration. Run the capture
+            # only AFTER the frozen session's requests, with the ordinary
+            # client stopped first; the workers stay up and their validated
+            # assigned cache then serves the demand client's load (the
+            # existing #311 restart-reuse path, zero re-transfer).
+            row=rows['client']
+            stopped=self.leases._call(client.execution_address,'stop',
+                name='client',pid=row['pid'],start=row['start'])
+            if not isinstance(stopped,dict) or 'signal' not in stopped:
+                raise RuntimeError('demand capture requires stopping the '
+                    'session client first: '+str(stopped))
+            deadline=time.monotonic()+10
+            while self.leases.alive(client.execution_address,'client') and time.monotonic()<deadline:
+                self.pause(.05)
+            if self.leases.alive(client.execution_address,'client'):
+                raise RuntimeError('session client did not exit before demand capture')
+            del rows['client']
+            del self.leases.owned[client.execution_address]['client']
+            if tunnel is not None and tunnel.poll() is None:
+                tunnel.terminate()
+            demand_record=self._run_demand_capture(plan,guard,rows,sources,
+                client,remote,processes,store)
+            if demand_record is not None:
+                result['demand_capture']=demand_record
         return result
 
     def _run_demand_capture(self,plan,guard,rows,sources,client,remote,processes,store):
@@ -1005,17 +1031,25 @@ class OperatorRunner:
                 if store is not None:
                     # Structural export only: selected expert IDs by layer/phase;
                     # the #312 emitter never writes prompts or token text.
+                    # save_session_json returns False (never raises) on
+                    # failure; a refused write must downgrade the status
+                    # instead of labelling an unretained export 'retained'.
                     try:
-                        store.save_session_json('demand-export.json',
+                        saved=store.save_session_json('demand-export.json',
                             json.loads(export_bytes))
                     except Exception as exc:
-                        record['export_status']='retention-failed'
+                        saved=False
                         record['retention_error']=str(exc)
+                    if not saved:
+                        record['export_status']='retention-failed'
+                    else:
+                        record['export_retained']=True
         record['status']=('FINISHED' if record.get('export_status')=='retained'
                           else 'FAILED')
-        if store is not None:
-            store.save_session_json('demand-capture-finished.json',record)
-        guard.phase='request'
+        if store is not None and not store.save_session_json(
+                'demand-capture-finished.json',record):
+            record['finished_record_retained']=False
+        guard.phase='cleanup'; guard.phase_index=None
         return record
 
     def _run_profiled_collected(self,plan):

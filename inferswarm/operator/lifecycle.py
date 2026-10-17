@@ -205,7 +205,7 @@ def _onhost(p):
         return row
     if action in ('alive','listening','log','inspect','stop','release'):
         if action=='log':
-            if p['name'] not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported log')
+            if p['name'] not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported log')
             return {'text':(root/token/(p['name']+'.log')).read_text(errors='replace')[-2000000:]}
         if action=='release':
             for rec in marker.glob('*.json'):
@@ -217,7 +217,7 @@ def _onhost(p):
             (marker/'token').unlink(); marker.rmdir()
             return {'lease':'released'}
         name=p['name']
-        if name not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported process name')
+        if name not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported process name')
         row=json.loads((marker/(name+'.json')).read_text())
         if row['token']!=token or row['pid']!=p['pid'] or row['start']!=p['start']:
             raise ValueError('ownership record mismatch')

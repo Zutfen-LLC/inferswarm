@@ -294,7 +294,73 @@ class DemandSessionFlowTests(unittest.TestCase):
 
     def test_lifecycle_admits_only_the_finite_process_names(self):
         source = (ROOT / 'inferswarm/operator/lifecycle.py').read_text()
-        self.assertIn("('client','rpc','rpc0','rpc1','demand')", source)
+        # Every allowlist (spawn, log, alive/inspect/stop) accepts 'demand'
+        # together: a name admitted at spawn but refused at alive/stop would
+        # strand the process outside lease-managed cleanup.
+        self.assertEqual(source.count("('client','rpc','rpc0','rpc1','demand')"), 3)
+        self.assertNotIn("('client','rpc','rpc0','rpc1')", source)
+
+    def test_lifecycle_demands_full_lifecycle_end_to_end(self):
+        """Spawn/alive/stop/release all accept 'demand' on the real lifecycle."""
+        import importlib.util as ilu
+        import tempfile as tf
+        import time as _time
+        spec = ilu.spec_from_file_location('lc_demand', ROOT / 'inferswarm/operator/lifecycle.py')
+        if spec is None or spec.loader is None:
+            self.fail('cannot load lifecycle module')
+        lc = ilu.module_from_spec(spec); spec.loader.exec_module(lc)
+        with tf.TemporaryDirectory() as td:
+            root = str(Path(td) / 'lease')
+
+            class Local:
+                def call(self, address, payload):
+                    return lc._onhost(payload)
+
+            t = Local()
+            t.call('h', dict(action='admit', root=root, token='tok'))
+            row = t.call('h', dict(action='spawn', root=root, token='tok',
+                                   name='demand', argv=['/bin/sleep', '5']))
+            try:
+                self.assertTrue(t.call('h', dict(action='alive', root=root,
+                    token='tok', name='demand', pid=row['pid'], start=row['start']))['alive'])
+                log = t.call('h', dict(action='log', root=root, token='tok', name='demand'))
+                self.assertIn('text', log)
+            finally:
+                stopped = t.call('h', dict(action='stop', root=root, token='tok',
+                                           name='demand', pid=row['pid'], start=row['start']))
+                self.assertIn('signal', stopped)
+                deadline = _time.monotonic() + 5
+                while _time.monotonic() < deadline and t.call('h', dict(
+                        action='alive', root=root, token='tok', name='demand',
+                        pid=row['pid'], start=row['start']))['alive']:
+                    _time.sleep(0.05)
+            self.assertFalse(t.call('h', dict(action='alive', root=root,
+                token='tok', name='demand', pid=row['pid'], start=row['start']))['alive'])
+            self.assertEqual(t.call('h', dict(action='release', root=root,
+                                              token='tok'))['lease'], 'released')
+
+    def test_capture_runs_after_session_requests_with_client_stopped(self):
+        """The pinned RPC server serves one connection; the ordinary client
+        must be stopped before the demand client can connect."""
+        source = (ROOT / 'inferswarm/operator/runtime.py').read_text()
+        self.assertIn('demand_pending', source)
+        # The stop happens before _run_demand_capture and after the request loop.
+        self.assertLess(source.index("guard.phase='cleanup'; guard.phase_index=None"),
+                        source.index('stopped=self.leases._call(client.execution_address,\'stop\''))
+        self.assertLess(source.index('del rows[\'client\']'),
+                        source.index('demand_record=self._run_demand_capture'))
+
+    def test_failed_export_retention_downgrades_status(self):
+        """A refused save_session_json (returns False) is never 'retained'."""
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        with tempfile.TemporaryDirectory() as td:
+            store = DurableEvidenceStore.create(Path(td) / 'e', 'tok',
+                config_sha256=A64, request_sha256=C64,
+                max_total_bytes=1)  # force budget refusal
+            self.assertFalse(store.save_session_json('demand-export.json',
+                                                     {'x': 'y' * 100}))
+            summary = store.finalize()
+            self.assertFalse(summary['complete'])
 
 
 class DemandExportDurabilityTests(unittest.TestCase):
