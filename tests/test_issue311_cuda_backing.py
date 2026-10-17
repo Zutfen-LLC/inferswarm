@@ -748,11 +748,44 @@ class OptimizedCpuPrerequisiteTests(unittest.TestCase):
 
     def test_unrecorded_optimized_pair_refuses_even_accepted_worker(self):
         selector = 'optimized-cpu05-cuda03'
-        with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
-            role_identity('remote', CUDA_BACKEND, build_pair=selector)
-        raw = step_a_mapping(); raw['strategy_options']['build_pair'] = selector
-        with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
-            build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
+        with tempfile.TemporaryDirectory() as td, patch.object(
+                assigned_backing, 'OPTIMIZED_CPU_MANIFEST', Path(td)/'absent.json'):
+            with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
+                role_identity('remote', CUDA_BACKEND, build_pair=selector)
+            raw = step_a_mapping(); raw['strategy_options']['build_pair'] = selector
+            with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
+                build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
+
+    def test_real_reviewed_cpu_identity_is_additive_and_keeps_cuda_worker(self):
+        selector = assigned_backing.OPTIMIZED_BUILD_PAIR
+        path = assigned_backing.OPTIMIZED_CPU_MANIFEST
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),
+                         'f2c97e88b28fe59f11a0f6940269a94f37b3d219dfce65a60227cc8f67c5e9da')
+        client = role_identity('client', build_pair=selector)
+        self.assertEqual(client.executable_sha256,
+                         '8fbea89ca86a22572fe9b83807a7943a75dccaaaa0ec283c4fc24508c90b3156')
+        self.assertEqual(client, parse_build_manifest(json.loads(path.read_text())))
+        self.assertEqual(list(client.build_options), self.recipe().optimized_options())
+        self.assertEqual(role_identity('client', build_pair=STEP_A_BUILD_PAIR).executable_sha256,
+                         '91f7ada4cb5d9805a292ec14b56518f80cb1b550834f30f225aeed676fcd518e')
+        worker = role_identity('remote', CUDA_BACKEND, build_pair=selector)
+        self.assertEqual(worker, role_identity('remote', CUDA_BACKEND, build_pair=STEP_A_BUILD_PAIR))
+        self.assertEqual(worker.executable_sha256,
+                         '46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73')
+        from tests.test_issue313_two_gpu import two_gpu_mapping
+        raw, _ = two_gpu_mapping()
+        raw['strategy_options']['build_pair'] = selector
+        raw['participants'][0]['runtime_sha256'] = client.executable_sha256
+        raw['participants'][1]['runtime_sha256'] = worker.executable_sha256
+        def plan(value):
+            return build_plan(parse_config(rejoin_profiles(value), now=NOW,
+                                          profile_mode='replay'), now=NOW)
+        candidate = plan(copy.deepcopy(raw))
+        self.assertEqual(candidate.selection, 'two-gpu')
+        self.assertFalse(candidate.admission.execution_ready)
+        del raw['strategy_options']['build_pair']
+        with self.assertRaisesRegex(ValueError, 'unreviewed per-role runtime identity'):
+            plan(raw)
 
     def test_explicit_reviewed_candidate_pair_and_mixed_identity_rejection(self):
         m = self.recipe()

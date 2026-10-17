@@ -26,7 +26,7 @@ HISTORICAL_BUILD_PAIR = 'historical-cpu'
 STEP_A_BUILD_PAIR = 'step-a-cpu05-cuda03'
 STEP_A_MANIFESTS = ROOT/'tools/native-cache/step-a-build-pair'
 OPTIMIZED_BUILD_PAIR = 'optimized-cpu05-cuda03'
-# Deliberately absent until the real candidate has been reviewed and committed.
+# Additive reviewed candidate identity; historical pairs remain unchanged.
 # No caller/config path or supplied hash can populate this finite authority.
 OPTIMIZED_CPU_MANIFEST = ROOT/'tools/native-cache/optimized-cpu-build-pair/cpu05-llama-server.build-manifest.json'
 

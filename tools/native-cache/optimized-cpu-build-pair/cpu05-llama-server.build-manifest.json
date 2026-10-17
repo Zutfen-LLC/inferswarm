@@ -1,0 +1,84 @@
+{
+  "schema": "q8-native-build-manifest/2",
+  "base_revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "base_tree": "950999fe62b7fe55f44ab5b7394e3c8542f37f12",
+  "patch_sha256": "df52ba458ad8c6758de9084b2cc56d4dcdae9683f97405f1a4b17f88e738bfd4",
+  "transformed_manifest_sha256": "629886f199f2455f4be1b939ce0e7ccd8e6a0d99b263c3176013283ef3bbc80d",
+  "protocol": "inferswarm-native-observation/2",
+  "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "build_options": [
+    "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_C_FLAGS_DEBUG=-O3 -g0",
+    "-DCMAKE_CXX_FLAGS_DEBUG=-O3 -g0",
+    "-DBUILD_SHARED_LIBS=OFF",
+    "-DGGML_RPC=ON",
+    "-DGGML_CUDA=OFF",
+    "-DGGML_VULKAN=OFF",
+    "-DGGML_OPENMP=OFF",
+    "-DGGML_BLAS=OFF",
+    "-DGGML_NATIVE=OFF",
+    "-DLLAMA_OPENSSL=OFF",
+    "-DLLAMA_BUILD_TESTS=OFF",
+    "-DLLAMA_BUILD_EXAMPLES=OFF",
+    "-DLLAMA_BUILD_TOOLS=ON",
+    "-DLLAMA_BUILD_APP=OFF",
+    "-DLLAMA_BUILD_UI=OFF",
+    "-DLLAMA_USE_PREBUILT_UI=OFF",
+    "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+  ],
+  "executable_sha256": "8fbea89ca86a22572fe9b83807a7943a75dccaaaa0ec283c4fc24508c90b3156",
+  "backend_libraries": [
+    {
+      "name": "common/libllama-common-base.a",
+      "sha256": "724c71d856c8a38a4af92527743a3caf34397f1b1d5dd9a66c5001ccc994fe15"
+    },
+    {
+      "name": "common/libllama-common.a",
+      "sha256": "ad3d460f80fc63c4eb8948adaaf48c0f49c09ccb8e5290f2e0dc03a467e22f46"
+    },
+    {
+      "name": "ggml/src/ggml-rpc/libggml-rpc.a",
+      "sha256": "e57ec28bee888f4c9362efca85933a131abb4465fb40d13ad69184d7a7ac9c4e"
+    },
+    {
+      "name": "ggml/src/libggml-base.a",
+      "sha256": "26d53c32c9ce41593b057603350f1803af40f8f0693f686e75ec0cc5794c0e54"
+    },
+    {
+      "name": "ggml/src/libggml-cpu.a",
+      "sha256": "638aa300dcbdcf52b66fdeea7408654b95de911101a9c87733e1e5cfb71f3f83"
+    },
+    {
+      "name": "ggml/src/libggml.a",
+      "sha256": "bc7c252898241548b1fd76c32cd6d671618f8d33690bcc1e41580c244b89e9e5"
+    },
+    {
+      "name": "src/libllama.a",
+      "sha256": "bb610b105eb825646d106349d02f7e252e78a0ad9f7860b1822126ba8606577d"
+    },
+    {
+      "name": "tools/mtmd/libmtmd.a",
+      "sha256": "a0e306e8cd16d14be162a528e54e606a3c35695a1cabe58dee864be7218ac27a"
+    },
+    {
+      "name": "tools/server/libllama-server-impl.a",
+      "sha256": "508468e567c5f410afba4c1177e64a0b44c8419e877bbef1518ad8a3fb146752"
+    },
+    {
+      "name": "tools/server/libserver-context.a",
+      "sha256": "328e2c8a74b36b8bbdad6fc91e3763745d70aa0afd5005e742637890c2fd777b"
+    },
+    {
+      "name": "tools/ui/libllama-ui.a",
+      "sha256": "28751e676b01937442ebc82d645e798c82c9abdd041c9ae7590ae6609248472e"
+    },
+    {
+      "name": "vendor/cpp-httplib/libcpp-httplib.a",
+      "sha256": "acfaedb2385c1894bff8f46c9b97202ba9df21514e0c2970fa8946e4648c6874"
+    },
+    {
+      "name": "vendor/hash/libvendor-hash.a",
+      "sha256": "c70a9f59584c2c2741477338f8bc1a18322a15259b5946422945eb6081bda4f6"
+    }
+  ]
+}
