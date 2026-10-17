@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 import zipfile
 from pathlib import Path
@@ -17,6 +18,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 import ci_unittest as outcomes
 import ordinary_ci_reuse as ordinary
 import issue213_gate_orchestration as gate
+import run_full_cpu_suite as runner
 from tests.test_issue323_verified_ordinary_ci import world_for
 from tests.test_issue291_final_validation_reuse import make_request
 
@@ -318,13 +320,55 @@ class PartialCoverage(unittest.TestCase):
         self.repack()
         fresh[0]['started_ids'].append(IDS[0])
         fresh[0]['outcomes'].append([IDS[0], 'skip', 'still absent'])
+        # Each parallel worker retains its own recorder invocation.
+        recheck = copy.deepcopy(fresh[0])
+        recheck['started_ids'] = [fresh[0]['started_ids'].pop()]
+        recheck['outcomes'] = [fresh[0]['outcomes'].pop()]
+        fresh.append(recheck)
         with patch.object(ordinary, 'execute_completion', return_value=fresh) as execute:
             envelope = self.compose(self.lookup())
         self.assertEqual(execute.call_args.args[0]['selectors'],
                          ['tests.test_missing', IDS[0]])
         self.assertEqual(envelope['execution']['ordinary_source']['skipped_ids'], IDS[:1])
         self.assertIn([IDS[0], 'skip', 'still absent'],
-                      envelope['execution']['completion']['records'][0]['outcomes'])
+                      [row for r in envelope['execution']['completion']['records']
+                       for row in r['outcomes']])
+        # Global coverage alone cannot disguise records from a different task plan.
+        bad = copy.deepcopy(envelope)
+        left, right = bad['execution']['completion']['records']
+        left['started_ids'][0], right['started_ids'][0] = right['started_ids'][0], left['started_ids'][0]
+        left['outcomes'][0], right['outcomes'][0] = right['outcomes'][0], left['outcomes'][0]
+        with self.assertRaisesRegex(gate.GateOrderingError, 'assigned tasks'):
+            gate.validate_final_validation_receipt(bad, SHA)
+
+    def test_parallel_schedule_is_bound_and_legacy_serial_receipts_still_handoff(self):
+        import hosted_ci_verification as ci
+        fresh = self.partial()
+        with patch.object(ordinary, 'execute_completion', return_value=fresh):
+            envelope = self.compose(self.lookup())
+
+        def handoff(candidate):
+            return gate.handoff_gate_status(
+                self.request, None, None, True, candidate,
+                ci_verifier=ci.HostedCiVerifier(self.api, ci.CANONICAL_REPOSITORY,
+                                                pr_number=7))
+
+        self.assertTrue(handoff(envelope)['handoff_complete'])
+        for change in (lambda e: e['execution']['completion']['schedule'].update(workers=4),
+                       lambda e: e['execution']['completion']['schedule']['tasks'][0].update(tmpdir_mode='inherited'),
+                       lambda e: e['execution']['completion']['schedule'].update(timeout=9000)):
+            bad = copy.deepcopy(envelope); change(bad)
+            with self.assertRaises(gate.GateOrderingError):
+                handoff(bad)
+        missing = copy.deepcopy(envelope)
+        missing['execution']['completion'].pop('schedule')
+        with self.assertRaises(gate.GateOrderingError):
+            handoff(missing)
+        # A genuine old serial receipt carries the independently derived old config.
+        legacy = copy.deepcopy(missing)
+        legacy['suite_receipt']['suite']['suite_config'] = ordinary.suite_configuration(
+            source=legacy['execution']['ordinary_source'])
+        self.assertTrue(handoff(legacy)['handoff_complete'])
 
     def test_incomplete_module_is_repeated_and_zero_savings_falls_back(self):
         self.partial()
@@ -373,6 +417,7 @@ class PartialCoverage(unittest.TestCase):
             (root / 'scripts').mkdir(); (root / 'tests').mkdir()
             (root / 'tests/__init__.py').touch()
             shutil.copy(ROOT / 'scripts/ci_unittest.py', root / 'scripts/ci_unittest.py')
+            shutil.copy(ROOT / 'scripts/run_full_cpu_suite.py', root / 'scripts/run_full_cpu_suite.py')
             (root / 'tests/test_cached.py').write_text(
                 'import unittest\nclass Cached(unittest.TestCase):\n'
                 ' def test_passed(self): raise AssertionError("cached test reran")\n')
@@ -399,22 +444,163 @@ class PartialCoverage(unittest.TestCase):
                     plan = ordinary.completion_plan({
                         'artifacts': [{'job': 'cached'}], 'skipped_ids': []}, root)
                 self.assertEqual(plan['reused_ids'], [cached.removeprefix('tests.')])
-                with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1'):
+                self.addCleanup(sys.modules.pop, 'test_cached', None)
+                self.addCleanup(sys.modules.pop, 'test_missing', None)
+                with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1',
+                                INFER_SWARM_SUITE_TMPDIR=str(root.parent / (root.name + '-workers'))), patch.object(
+                        runner, 'discover_units', self.real_discover), patch.object(
+                        runner, 'ids_for_units', self.real_ids):
                     records = ordinary.execute_completion(plan, root)
             self.assertEqual(records[0]['started_ids'], MISSING)
             self.assertEqual(records[0]['outcomes'][1][1], 'skip')
-            self.assertTrue((root / 'fixture-started').exists())
+            self.assertFalse((root / 'fixture-started').exists())
             # A real failing fresh test must block even if reused tests passed.
             path = root / 'tests/test_missing.py'
             path.write_text(path.read_text().replace(
                 'self.assertTrue(Path("fixture-started").exists())', 'self.fail("fresh failure")'))
-            with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1'):
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+            subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                            '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'failure'],
+                           check=True)
+            with patch.dict(os.environ, GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1',
+                            INFER_SWARM_SUITE_TMPDIR=str(root.parent / (root.name + '-workers'))), patch.object(
+                    runner, 'discover_units', self.real_discover), patch.object(
+                    runner, 'ids_for_units', self.real_ids):
                 with self.assertRaisesRegex(ValueError, 'completion failed'):
                     ordinary.execute_completion(plan, root)
 
     # Save real functions before Authentication.setUp installs its mocks.
     real_runtime = staticmethod(outcomes.runtime_identity)
     real_git = staticmethod(outcomes.git_value)
+    real_discover = staticmethod(runner.discover_units)
+    real_ids = staticmethod(runner.ids_for_units)
+
+
+class ParallelCompletion(unittest.TestCase):
+    """Exercise the actual completion call site using tiny committed repos."""
+
+    def fixture(self, bodies):
+        import shutil
+        base = Path(tempfile.mkdtemp(prefix='parallel-completion-test-'))
+        self.addCleanup(shutil.rmtree, base, ignore_errors=True)
+        root, events = base / 'repo', base / 'events'
+        (root / 'scripts').mkdir(parents=True)
+        (root / 'tests').mkdir()
+        (root / 'tests/__init__.py').touch()
+        events.mkdir()
+        for script in ('ci_unittest.py', 'run_full_cpu_suite.py'):
+            shutil.copy(ROOT / 'scripts' / script, root / 'scripts' / script)
+        ids = []
+        for module, body in bodies.items():
+            sys.modules.pop(module, None)
+            self.addCleanup(sys.modules.pop, module, None)
+            (root / 'tests' / (module + '.py')).write_text(textwrap.dedent(body))
+            ids.append(f'tests.{module}.Fixture.test_run')
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+        subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                        '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'fixture'], check=True)
+        environment = dict(GITHUB_RUN_ID='10000', GITHUB_RUN_ATTEMPT='1',
+                           CI_TEST_EVENTS=str(events),
+                           INFER_SWARM_SUITE_TMPDIR=str(base / 'workers'))
+        return root, events, ids, environment
+
+    def test_real_completion_overlaps_modules_preserves_fixtures_and_skip_rechecks(self):
+        body = '''
+            import os, time, unittest
+            from pathlib import Path
+            class Fixture(unittest.TestCase):
+                @classmethod
+                def setUpClass(cls):
+                    cls.marker = Path('class-fixture')
+                    cls.marker.write_text(__name__)
+                def test_run(self):
+                    events = Path(os.environ['CI_TEST_EVENTS'])
+                    (events / (__name__ + '.start')).write_text(str(os.getpid()))
+                    deadline = time.monotonic() + 4
+                    while len(list(events.glob('*.start'))) < 4:
+                        if time.monotonic() > deadline:
+                            self.fail('completion did not execute modules concurrently')
+                        time.sleep(.01)
+                    self.assertEqual(self.marker.read_text(), __name__)
+                    (events / (__name__ + '.end')).touch()
+        '''
+        names = ('test_parallel_alpha', 'test_parallel_beta',
+                 'test_parallel_gamma', 'test_issue117_arm_b_retention')
+        root, events, ids, environment = self.fixture(dict.fromkeys(names, body))
+        # A covered passing test in this module must not repeat with its skip.
+        skip = 'tests.test_parallel_skip.Fixture.test_skip'
+        (root / 'tests/test_parallel_skip.py').write_text(
+            'import unittest\nclass Fixture(unittest.TestCase):\n'
+            ' def test_cached(self): self.fail("covered test reran")\n'
+            ' @unittest.skip("host resource absent")\n def test_skip(self): pass\n')
+        self.addCleanup(sys.modules.pop, 'test_parallel_skip', None)
+        subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+        subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                        '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'skip fixture'], check=True)
+        plan = dict(reused_ids=['test_parallel_skip.Fixture.test_cached'],
+                    fresh_ids=sorted(ids + [skip]),
+                    selectors=['tests.' + name for name in sorted(names)] + [skip])
+        with patch.dict(os.environ, environment):
+            records = ordinary.execute_completion(plan, root)
+        self.assertGreater(len(records), 1, 'completion still used one serial process')
+        actual = [row for record in records for row in record['outcomes']]
+        self.assertCountEqual([row[0] for row in actual], ids + [skip])
+        self.assertIn([skip, 'skip', 'host resource absent'], actual)
+        self.assertEqual(len(list(events.glob('*.end'))), 4)
+        self.assertEqual(len({p.read_text() for p in events.glob('*.start')}), 4)
+        self.assertFalse((root / 'class-fixture').exists(), 'worker modified parent root')
+        worktrees = subprocess.check_output(
+            ['git', '-C', str(root), 'worktree', 'list', '--porcelain'], text=True)
+        self.assertEqual(worktrees.count('worktree '), 1)
+
+    def test_failure_and_overall_timeout_stop_workers_and_remove_worktrees(self):
+        for body, bound, error in (
+                ('self.fail("fresh failure")', 30, 'fresh failure'),
+                ('time.sleep(20)', 2, 'overall timeout')):
+            with self.subTest(error=error):
+                source = '''
+                    import os, time, unittest
+                    from pathlib import Path
+                    class Fixture(unittest.TestCase):
+                        def test_run(self):
+                            Path(os.environ['CI_TEST_EVENTS'], __name__ + '.pid').write_text(str(os.getpid()))
+                            BODY
+                '''.replace('BODY', body)
+                root, events, ids, environment = self.fixture({
+                    'test_completion_failure_a': source,
+                    'test_completion_failure_b': source})
+                plan = dict(reused_ids=[], fresh_ids=ids,
+                            selectors=['tests.' + i.split('.')[1] for i in ids])
+                with patch.dict(os.environ, environment), patch.object(
+                        ordinary, 'COMPLETION_TIMEOUT_SECONDS', bound):
+                    with self.assertRaisesRegex(ValueError, error):
+                        ordinary.execute_completion(plan, root)
+                self.assertTrue(list(events.glob('*.pid')))
+                for pid in events.glob('*.pid'):
+                    with self.assertRaises(ProcessLookupError):
+                        os.kill(int(pid.read_text()), 0)
+                worktrees = subprocess.check_output(
+                    ['git', '-C', str(root), 'worktree', 'list', '--porcelain'], text=True)
+                self.assertEqual(worktrees.count('worktree '), 1)
+
+    def test_whole_module_worker_loading_cannot_silently_drop_extra_ids(self):
+        root, events, ids, environment = self.fixture({'test_completion_loader_drift': '''
+            import unittest
+            from pathlib import Path
+            class Fixture(unittest.TestCase):
+                def test_run(self): pass
+            if Path.cwd().name.startswith('worktree-'):
+                class Extra(unittest.TestCase):
+                    def test_extra(self): pass
+        '''})
+        plan = dict(reused_ids=[], fresh_ids=ids,
+                    selectors=['tests.test_completion_loader_drift'])
+        with patch.dict(os.environ, environment):
+            with self.assertRaisesRegex(ValueError, 'worker module loading differs'):
+                ordinary.execute_completion(plan, root)
 
 
 if __name__ == '__main__':

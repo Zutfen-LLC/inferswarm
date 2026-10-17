@@ -75,6 +75,21 @@ class OutcomeRunner(unittest.TextTestRunner):
     resultclass = OutcomeResult
 
 
+def write_record(result, started, runtime, directory):
+    """Retain the same outcome format for ordinary CI and selected workers."""
+    record = {'schema': SCHEMA, 'run_id': os.environ.get('GITHUB_RUN_ID'),
+              'attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'job': os.environ.get('GITHUB_JOB'),
+              'checkout_sha': git_value(ROOT, 'HEAD'),
+              'tree': git_value(ROOT, 'HEAD^{tree}'),
+              'runtime': runtime, 'started_unix': started,
+              'ended_unix': time.time(), 'ok': result.wasSuccessful(),
+              'started_ids': result.started_ids, 'outcomes': result.outcomes}
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f'{uuid.uuid4().hex}.json').write_text(json.dumps(record))
+
+
 def main(argv=None):
     started = time.time()
     runtime = runtime_identity()
@@ -84,17 +99,7 @@ def main(argv=None):
     result = program.result
     out = os.environ.get('CI_OUTCOMES_DIR')
     if out:
-        record = {'schema': SCHEMA, 'run_id': os.environ.get('GITHUB_RUN_ID'),
-                  'attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
-                  'job': os.environ.get('GITHUB_JOB'),
-                  'checkout_sha': git_value(ROOT, 'HEAD'),
-                  'tree': git_value(ROOT, 'HEAD^{tree}'),
-                  'runtime': runtime, 'started_unix': started,
-                  'ended_unix': time.time(), 'ok': result.wasSuccessful(),
-                  'started_ids': result.started_ids, 'outcomes': result.outcomes}
-        directory = Path(out)
-        directory.mkdir(parents=True, exist_ok=True)
-        (directory / f'{uuid.uuid4().hex}.json').write_text(json.dumps(record))
+        write_record(result, started, runtime, out)
     return 0 if result.wasSuccessful() else 1
 
 

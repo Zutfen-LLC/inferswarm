@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODE = 'verified_ordinary_ci'
 PREFIX = 'ci-outcomes-'
 MAX_BYTES = 2 * 1024 * 1024
+COMPLETION_TIMEOUT_SECONDS = 7200
 
 
 def canonical_test_id(workflow_id):
@@ -53,12 +54,22 @@ def schedule(root=ROOT):
     return parity.job_executed_ids(doc, root=root)
 
 
-def suite_configuration(root=ROOT, source=None):
+def suite_configuration(root=ROOT, source=None, *, completion_schedule=None):
     jobs = schedule(root)
     if source is not None and len(source['artifacts']) < len(jobs):
         jobs = {a['job']: jobs[a['job']] for a in source['artifacts']}
-        jobs['final_completion'] = completion_plan(source, root)['fresh_ids']
-    return {'schema': 'suite-config/1', 'tests_dir': 'tests', 'jobs': len(jobs),
+        plan = completion_plan(source, root)
+        jobs['final_completion'] = plan['fresh_ids']
+        if completion_schedule is not None:
+            if completion_schedule != _completion_schedule(plan):
+                raise ValueError('parallel completion schedule differs from this head')
+            jobs['final_completion'] = dict(ids=plan['fresh_ids'], **completion_schedule)
+    elif completion_schedule is not None:
+        raise ValueError('unexpected parallel completion schedule')
+    job_count = len(jobs)
+    if completion_schedule is not None:
+        job_count += completion_schedule['workers'] - 1
+    return {'schema': 'suite-config/1', 'tests_dir': 'tests', 'jobs': job_count,
             'plan_digest': hashlib.sha256(json.dumps(jobs, sort_keys=True).encode()).hexdigest(),
             'timeout': 7200.0, 'retain_dir': None}
 
@@ -230,20 +241,53 @@ def completion_plan(source, root=ROOT):
                          ['tests.' + i for i in sorted(skipped - repeated)]}
 
 
+def _completion_schedule(plan):
+    """Bind the existing runner's task plan, including its isolation policy."""
+    import run_full_cpu_suite as runner
+    grouped = {}
+    for test_id in plan['fresh_ids']:
+        canonical = canonical_test_id(test_id)
+        grouped.setdefault(canonical.split('.')[0], []).append(canonical)
+    units = [runner.Unit(name, tuple(ids)) for name, ids in sorted(grouped.items())]
+    workers, tasks = runner.build_tasks(units, runner.DEFAULT_MAX_JOBS)
+    return {'schema': 'parallel-cpu-completion/1', 'workers': workers,
+            'tasks': runner._task_dicts(tasks), 'timeout': COMPLETION_TIMEOUT_SECONDS}
+
+
+def _validate_completion_tasks(records, plan, configuration):
+    expected = [tuple(sorted(i for i in plan['fresh_ids']
+                             if i.split('.')[1] in task['modules']))
+                for task in configuration['tasks']]
+    actual = [tuple(sorted(r['started_ids'])) for r in records]
+    if Counter(actual) != Counter(expected):
+        raise ValueError('parallel completion records differ from assigned tasks')
+
+
 def execute_completion(plan, root=ROOT):
-    """Use the existing outcome recorder, but launch whole missing modules."""
+    """Execute selected modules through the canonical bounded worker runner."""
+    import run_full_cpu_suite as runner
+    configuration = _completion_schedule(plan)
     with tempfile.TemporaryDirectory(prefix='ci-completion-') as temporary:
-        process = subprocess.run(
-            [sys.executable, '-m', 'scripts.ci_unittest', *plan['selectors'], '-v'],
-            cwd=root, env=dict(os.environ, CI_OUTCOMES_DIR=temporary), timeout=7200)
-        if process.returncode:
-            raise ValueError('ordinary CI completion failed')
+        try:
+            result = runner.run_suite(
+                root, jobs=runner.DEFAULT_MAX_JOBS,
+                selected_ids=[canonical_test_id(i) for i in plan['fresh_ids']],
+                outcomes_dir=Path(temporary), timeout=COMPLETION_TIMEOUT_SECONDS,
+                overall_timeout=COMPLETION_TIMEOUT_SECONDS)
+        except runner.SuiteError as error:
+            raise ValueError('ordinary CI completion failed: ' + str(error)) from error
+        if not result['ok']:
+            raise ValueError('ordinary CI completion failed: ' + result['diagnostics'])
+        if (result['jobs'] != configuration['workers']
+                or result['tasks'] != configuration['tasks']):
+            raise ValueError('parallel completion executed a different task schedule')
         records = [json.loads(p.read_text()) for p in Path(temporary).glob('*.json')]
         validate_records(records, expected=plan['fresh_ids'],
                          runtime=outcomes.runtime_identity(),
                          tree=outcomes.git_value(root, 'HEAD^{tree}'),
                          run_id=os.environ['GITHUB_RUN_ID'],
                          attempt=os.environ['GITHUB_RUN_ATTEMPT'])
+        _validate_completion_tasks(records, plan, configuration)
         return records
 
 
@@ -265,14 +309,16 @@ def compose(decision, *, api, request, current_run_id, attempt, pr_number,
         validate_records(fresh, expected=plan['fresh_ids'],
                          runtime=outcomes.runtime_identity(), tree=source['tree'],
                          run_id=current_run_id, attempt=attempt)
-        completion = {'reused_ids': plan['reused_ids'], 'records': fresh}
+        completion = {'reused_ids': plan['reused_ids'], 'records': fresh,
+                      'schedule': _completion_schedule(plan)}
         records = records + fresh
     else:
         rechecks = confirm_skips(source['skipped_ids'], root)
         records = records + (rechecks if isinstance(rechecks, list) else [])
     # Record the actual ordinary schedule. It is an explicitly allowed alternate
     # schedule, never claimed to be execution of the canonical subprocess plan.
-    suite = dict(request.suite, suite_config=suite_configuration(root, source))
+    suite = dict(request.suite, suite_config=suite_configuration(
+        root, source, completion_schedule=None if completion is None else completion['schedule']))
     receipt = gate.SuiteReceipt(request.git_commit_sha, suite, request.environment,
                                 'PASS', suite['count'],
                                 min(r['started_unix'] for r in records),
@@ -339,8 +385,9 @@ def validate_execution(execution, *, git_commit_sha, github_run_id):
 
     if len(artifacts) < len(schedule()):
         completion = execution.get('completion')
-        require(isinstance(completion, dict) and set(completion) == {
-            'reused_ids', 'records'}, 'partial completion evidence missing')
+        require(isinstance(completion, dict) and set(completion) in (
+            {'reused_ids', 'records'}, {'reused_ids', 'records', 'schedule'}),
+            'partial completion evidence missing')
         plan = completion_plan(source)
         require(completion['reused_ids'] == plan['reused_ids'],
                 'partial reused population mismatch')
@@ -351,6 +398,10 @@ def validate_execution(execution, *, git_commit_sha, github_run_id):
             validate_records(records, expected=plan['fresh_ids'],
                              runtime=records[0]['runtime'], tree=source['tree'],
                              run_id=github_run_id, attempt=records[0]['attempt'])
+            if 'schedule' in completion:
+                require(completion['schedule'] == _completion_schedule(plan),
+                        'parallel completion schedule mismatch')
+                _validate_completion_tasks(records, plan, completion['schedule'])
         except (ValueError, KeyError, TypeError) as error:
             raise gate.GateOrderingError('invalid completion outcomes: ' + str(error)) from error
     else:

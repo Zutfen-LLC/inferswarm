@@ -948,8 +948,20 @@ no eligible artifacts, or an uncertain plan uses the canonical full fallback.
 Partial receipts retain `execution.completion.reused_ids` and the actual fresh
 outcome records, including skips and timestamps. Their suite time window includes
 both source and fresh records. Full-compatible receipts keep their existing
-shape. Completion has a 7,200-second subprocess bound; failures and incomplete
-outcomes fail the final gate.
+shape. Uncovered modules and skip rechecks use the existing canonical runner's
+bounded rolling window of at most four workers, preserving whole-module/class
+fixtures, isolated worker worktrees, co-location and TMPDIR policies. Each task
+writes the ordinary per-test outcome format; task/module progress is printed
+while it runs. A 7,200-second overall completion deadline terminates and cleans up
+outstanding workers; failures and incomplete outcomes fail the final gate.
+
+New partial receipts also retain `execution.completion.schedule`: the worker
+bound, phased module assignments, TMPDIR modes and timeout. The suite
+configuration binds this actual schedule, and handoff independently re-derives
+it and checks each task's exact fresh outcomes as well as the disjoint full
+population. Existing serial partial receipts remain readable with their original
+schedule identity. This restores concurrency to completion without changing
+authenticated reuse or test requirements; no speedup is assumed from test counts.
 
 Publication compatibility: publish these helper and handoff-validator changes
 together. Dispatch Final CPU Validation with the workflow definition on the

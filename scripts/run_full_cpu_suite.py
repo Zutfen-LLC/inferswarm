@@ -252,20 +252,39 @@ def _atomic_json(path: Path, payload: dict) -> None:
     temporary.replace(path)
 
 
-def worker_main(root: Path, tests_dir: Path, module_names: list[str], expected_ids: list[str], receipt: Path) -> int:
-    """Execute complete module suites and write an atomic receipt in all cases."""
+def worker_main(root: Path, tests_dir: Path, module_names: list[str], expected_ids: list[str], receipt: Path,
+                *, outcomes_dir: Path | None = None, progress_file: Path | None = None) -> int:
+    """Execute assigned module suites/skip rechecks and retain an atomic receipt."""
     started = time.monotonic()
     payload: dict = {"schema": SCHEMA, "ok": False, "expected_ids": expected_ids}
     try:
         sys.path.insert(0, str(root))
         sys.path.insert(0, str(tests_dir))
         suites = [unittest.defaultTestLoader.loadTestsFromName(name) for name in module_names]
+        result_class = RecordingResult
+        if outcomes_dir is not None:
+            import ci_unittest as outcomes
+            wall_started = time.time()
+            runtime = outcomes.runtime_identity()
+            class ProgressResult(outcomes.OutcomeResult):
+                last_module = None
+
+                def startTest(self, test):  # noqa: N802
+                    module = test.id().rsplit('.', 2)[0]
+                    if progress_file is not None and module != self.last_module:
+                        _atomic_json(progress_file, {'module': module})
+                        self.last_module = module
+                    super().startTest(test)
+
+            result_class = ProgressResult
         loaded_ids = [test.id() for suite in suites for test in flatten(suite)]
         if loaded_ids != expected_ids:
             raise SuiteError("worker module loading differs from parent discovery: "
                              f"expected {expected_ids!r}, got {loaded_ids!r}")
-        runner = unittest.TextTestRunner(verbosity=2, resultclass=RecordingResult)
+        runner = unittest.TextTestRunner(verbosity=2, resultclass=result_class)
         result: RecordingResult = runner.run(unittest.TestSuite(suites))
+        if outcomes_dir is not None:
+            outcomes.write_record(result, wall_started, runtime, outcomes_dir)
         payload.update({
             "started_ids": result.started_ids,
             "tests_run": result.testsRun,
@@ -374,12 +393,29 @@ def _task_environment(task: Task, temporary: Path) -> dict[str, str]:
 
 
 def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | None = None,
-              timeout: float = 1800.0, retain_dir: Path | None = None) -> dict:
+              timeout: float = 1800.0, retain_dir: Path | None = None,
+              selected_ids: list[str] | None = None, outcomes_dir: Path | None = None,
+              overall_timeout: float | None = None) -> dict:
     """Execute the phased schedule through a rolling window of bounded workers."""
+    deadline = None if overall_timeout is None else time.monotonic() + overall_timeout
+    if overall_timeout is not None and overall_timeout <= 0:
+        raise ValueError('overall timeout must be positive')
+    if (selected_ids is None) != (outcomes_dir is None):
+        raise SuiteError('selected execution requires both IDs and an outcome directory')
     root, tests_dir = Path(root).resolve(), Path(tests_dir or Path(root) / "tests").resolve()
     ensure_clean_git_worktree(root)
     units = discover_units(root, tests_dir)
+    discovered_ids = {unit.name: unit.ids for unit in units}
+    if selected_ids is not None:
+        selected = set(selected_ids)
+        if (not selected or len(selected) != len(selected_ids)
+                or not selected <= set(ids_for_units(units))):
+            raise SuiteError('selected identities are missing, duplicate or outside discovery')
+        units = [Unit(unit.name, tuple(i for i in unit.ids if i in selected))
+                 for unit in sorted(units, key=lambda u: u.name) if selected.intersection(unit.ids)]
     serial_ids = ids_for_units(units)
+    if outcomes_dir is not None:
+        serial_ids = ['tests.' + i for i in serial_ids]
     requested = default_jobs(len(units)) if jobs is None else jobs
     selected_jobs, tasks = build_tasks(units, requested)
     config = suite_config_for(root, tests_dir, jobs, selected_jobs,
@@ -401,21 +437,31 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
         pending = list(tasks)
         running: list[tuple[Task, subprocess.Popen, Path, Path, float]] = []
         outstanding_roots: list[Path] = []
+        progress_seen: dict[int, str] = {}
         try:
             while pending or running:
                 # Fill the rolling window: at most selected_jobs live workers,
                 # isolated tasks first, then population buckets in order.
                 while pending and len(running) < selected_jobs:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        raise SuiteError('selected completion exceeded its overall timeout')
                     task = pending.pop(0)
                     worker_root = prepare_worker_root(root, temporary, task.index)
                     outstanding_roots.append(worker_root)
                     modules_path = artifacts / f"task-{task.index}-modules.json"
                     expected_path = artifacts / f"task-{task.index}-expected.json"
                     receipt = artifacts / f"task-{task.index}.json"
-                    modules_path.write_text(
-                        json.dumps([unit.name for unit in task.units]), encoding="utf-8")
-                    expected_path.write_text(
-                        json.dumps(ids_for_units(task.units)), encoding="utf-8")
+                    module_names = [unit.name for unit in task.units]
+                    expected_ids = ids_for_units(task.units)
+                    if outcomes_dir is not None:
+                        # Whole modules retain the canonical exact-loader check.
+                        # Only source skip rechecks load individual test selectors.
+                        module_names = [selector for unit in task.units for selector in (
+                            ['tests.' + unit.name] if unit.ids == discovered_ids[unit.name]
+                            else ['tests.' + i for i in unit.ids])]
+                        expected_ids = ['tests.' + i for i in expected_ids]
+                    modules_path.write_text(json.dumps(module_names), encoding="utf-8")
+                    expected_path.write_text(json.dumps(expected_ids), encoding="utf-8")
                     worker_script = worker_root / "scripts" / Path(__file__).name
                     if not worker_script.is_file():
                         worker_script = Path(__file__).resolve()
@@ -437,6 +483,11 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                                    "--root", str(worker_root), "--tests-dir", str(worker_tests),
                                    "--modules-file", str(modules_path),
                                    "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
+                        if outcomes_dir is not None:
+                            command.extend(['--ci-outcomes-dir', str(outcomes_dir),
+                                            '--progress-file', str(artifacts / f'task-{task.index}-progress.json')])
+                            print(f'[cpu-completion] start task {task.index}: {", ".join(module_names)}',
+                                  file=sys.stderr, flush=True)
                         process = subprocess.Popen(command, cwd=worker_root, text=True,
                                                    stdout=out, stderr=err,
                                                    env=_task_environment(task, temporary))
@@ -447,7 +498,17 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 finished = None
                 while finished is None and running:
                     now = time.monotonic()
+                    if deadline is not None and now >= deadline:
+                        raise SuiteError('selected completion exceeded its overall timeout')
                     for slot, entry in enumerate(running):
+                        if outcomes_dir is not None:
+                            progress = artifacts / f'task-{entry[0].index}-progress.json'
+                            if progress.is_file():
+                                module = json.loads(progress.read_text())['module']
+                                if progress_seen.get(entry[0].index) != module:
+                                    progress_seen[entry[0].index] = module
+                                    print(f'[cpu-completion] task {entry[0].index} module {module}',
+                                          file=sys.stderr, flush=True)
                         if entry[1].poll() is not None:
                             finished = slot
                             break
@@ -467,6 +528,9 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 task, process, receipt, worker_root, started_at = running.pop(finished)
                 process.wait()
                 ended_at = time.monotonic()
+                if outcomes_dir is not None:
+                    print(f'[cpu-completion] finished task {task.index} exit={process.returncode} '
+                          f'elapsed={ended_at - started_at:.3f}s', file=sys.stderr, flush=True)
                 remove_worker_root(root, worker_root)
                 outstanding_roots.remove(worker_root)
                 if process.returncode:
@@ -665,6 +729,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--modules-file", type=Path)
     parser.add_argument("--expected-ids-file", type=Path)
     parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--ci-outcomes-dir", type=Path)
+    parser.add_argument("--progress-file", type=Path)
     args = parser.parse_args(argv)
     tests_dir = args.tests_dir or args.root / "tests"
     if args.worker:
@@ -675,7 +741,8 @@ def main(argv: list[str] | None = None) -> int:
             expected_ids = json.loads(args.expected_ids_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as error:
             parser.error(f"cannot read worker assignment: {error}")
-        return worker_main(args.root, tests_dir, modules, expected_ids, args.receipt)
+        return worker_main(args.root, tests_dir, modules, expected_ids, args.receipt,
+                           outcomes_dir=args.ci_outcomes_dir, progress_file=args.progress_file)
     try:
         if args.list_only:
             payload = plan(args.root, tests_dir, args.jobs)
