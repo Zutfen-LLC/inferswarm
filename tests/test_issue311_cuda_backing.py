@@ -638,5 +638,170 @@ class DriverResolutionTests(unittest.TestCase):
                     self.recipe.driver_resolution(self.cxx, self.probe)
 
 
+
+
+class OptimizedCpuPrerequisiteTests(unittest.TestCase):
+    """Offline candidate recipe and finite reviewed-pair handoff; no native build."""
+
+    def recipe(self):
+        path = ROOT/'tools/native-cache/operator-build-cpu-optimized.py'
+        self.assertTrue(path.is_file(), 'additive optimized CPU recipe missing')
+        return load_recipe(path)
+
+    def flags_fixture(self, binary, suffix=''):
+        binary.mkdir(parents=True, exist_ok=True)
+        m = self.recipe()
+        options = m.optimized_options()
+        cache = '\n'.join(o[2:].split('=', 1)[0]+':STRING='+o.split('=', 1)[1]
+                          for o in options)
+        (binary/'CMakeCache.txt').write_text(cache+'\nCMAKE_C_FLAGS:STRING=\nCMAKE_CXX_FLAGS:STRING=\n'
+            'CMAKE_C_COMPILER:FILEPATH=/synthetic/cc\nCMAKE_CXX_COMPILER:FILEPATH=/synthetic/c++\n')
+        rows = [dict(file='fixture.'+ext, directory=str(binary),
+                     arguments=[compiler, '-O3', '-g0', *suffix.split(), '-c', 'fixture.'+ext])
+                for ext,compiler in (('c','cc'),('cpp','c++'))]
+        (binary/'compile_commands.json').write_text(json.dumps(rows))
+        return rows
+
+    def test_optimized_options_change_only_optimization_and_export_metadata(self):
+        m = self.recipe()
+        base = load_recipe(CUDA_RECIPE).cpu_build_options(CPU_RECIPE)
+        expected = [o.replace('=-O0 -g0', '=-O3 -g0') for o in base]
+        self.assertEqual(m.optimized_options(), expected+['-DCMAKE_EXPORT_COMPILE_COMMANDS=ON'])
+        self.assertEqual(m.cpu.compose.__code__.co_code, load_recipe(CPU_RECIPE).compose.__code__.co_code)
+        self.assertEqual(m.cpu.PIN, 'b29c606e28a01b1bc8c1351026a0fa6e616bf6c4')
+
+    def test_effective_flags_cannot_retain_o0_or_disable_assertions(self):
+        m = self.recipe()
+        with tempfile.TemporaryDirectory() as td:
+            binary = Path(td)/'build'
+            self.flags_fixture(binary)
+            report = m.inspect_effective_flags(binary)
+            self.assertEqual(report['translation_units'], 2)
+            for bad in ('-O0', '-O2', '-DNDEBUG', '-DNDEBUG=1', '-Wp,-DNDEBUG'):
+                self.flags_fixture(binary, bad)
+                with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, 'effective CPU flags'):
+                    m.inspect_effective_flags(binary)
+            self.flags_fixture(binary)
+            (binary/'compile_commands.json').write_text('[]')
+            with self.assertRaisesRegex(ValueError, 'compile commands'):
+                m.inspect_effective_flags(binary)
+
+    def test_candidate_receipts_complete_separate_and_no_overwrite(self):
+        m = self.recipe()
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td)/'candidate'
+            def compose(archive, out):
+                out.mkdir(exist_ok=False)
+                source = out/'source'; source.mkdir()
+                return source, '4'*64
+            def run(command, **kwargs):
+                binary = output/'build'
+                if '--build' not in command:
+                    self.flags_fixture(binary)
+                else:
+                    (binary/'bin').mkdir()
+                    for name in ('llama-server','ggml-rpc-server','is311-loader'):
+                        (binary/'bin'/name).write_bytes(('synthetic '+name).encode())
+                    for name in ('ggml/src/libggml-base.a','src/libllama.a'):
+                        target = binary/name; target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes(b'synthetic archive')
+                return SimpleNamespace(returncode=0)
+            before = {p:p.read_bytes() for p in [IDENTITY_TABLE, CPU_RECIPE,
+                      *assigned_backing.STEP_A_MANIFESTS.glob('*')] if p.is_file()}
+            with patch.object(m.cpu,'compose',side_effect=compose), \
+                 patch.object(m.subprocess,'run',side_effect=run), \
+                 patch.object(m.subprocess,'check_output',return_value='synthetic compiler\n') as versions:
+                result = m.build('fixture.tar',output,'cmake')
+                self.assertEqual(result['compiler_versions']['C']['path'], '/synthetic/cc')
+                self.assertEqual(result['compiler_versions']['CXX']['path'], '/synthetic/c++')
+                self.assertIn(unittest.mock.call(['/synthetic/c++','--version'],text=True),versions.call_args_list)
+                self.assertIn('not an accepted runtime identity', result['note'])
+                for role in ('client','remote'):
+                    entry = result['roles'][role]
+                    body = json.loads(Path(entry['manifest']).read_text())
+                    identity = parse_build_manifest(body)
+                    self.assertEqual(identity.executable_sha256, m.cpu.digest(entry['executable']))
+                    self.assertEqual(identity.patch_sha256, assigned_backing.step_a_identities()['client'].patch_sha256)
+                    self.assertTrue(identity.backend_libraries)
+                    self.assertEqual(list(identity.build_options), m.optimized_options())
+                self.assertEqual(result['effective_flags']['translation_units'], 2)
+                self.assertEqual(result['loader_sha256'],m.cpu.digest(output/'build/bin/is311-loader'))
+                with self.assertRaises(FileExistsError): m.build('fixture.tar',output,'cmake')
+            for path,data in before.items(): self.assertEqual(path.read_bytes(),data)
+
+    def test_bad_effective_flags_stop_before_build_or_manifest(self):
+        m = self.recipe()
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td)/'candidate'
+            def compose(archive, out):
+                out.mkdir(); source = out/'source'; source.mkdir()
+                return source, '4'*64
+            def configure(command, **kwargs):
+                self.flags_fixture(output/'build','-O0')
+            with patch.object(m.cpu,'compose',side_effect=compose), \
+                 patch.object(m.subprocess,'run',side_effect=configure) as run:
+                with self.assertRaisesRegex(ValueError,'effective CPU flags'):
+                    m.build('synthetic.tar',output,'cmake')
+                self.assertEqual(run.call_count,1)  # configure only; never native compilation
+            self.assertFalse((output/'llama-server.build-manifest.json').exists())
+            self.assertFalse((output/'optimized-cpu-receipt.json').exists())
+
+    def test_unrecorded_optimized_pair_refuses_even_accepted_worker(self):
+        selector = 'optimized-cpu05-cuda03'
+        with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
+            role_identity('remote', CUDA_BACKEND, build_pair=selector)
+        raw = step_a_mapping(); raw['strategy_options']['build_pair'] = selector
+        with self.assertRaisesRegex(ValueError, 'unreviewed optimized CPU'):
+            build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
+
+    def test_explicit_reviewed_candidate_pair_and_mixed_identity_rejection(self):
+        m = self.recipe()
+        body = step_a_bodies()['client']
+        body['build_options'] = m.optimized_options()
+        body['executable_sha256'] = 'a'*64  # synthetic review fixture, never production authority
+        selector = 'optimized-cpu05-cuda03'
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td)/'reviewed.json'; path.write_text(json.dumps(body))
+            with patch.object(assigned_backing, 'OPTIMIZED_CPU_MANIFEST',path):
+                self.assertEqual(role_identity('client',build_pair=selector),parse_build_manifest(body))
+                self.assertEqual(role_identity('remote',CUDA_BACKEND,build_pair=selector),
+                                 role_identity('remote',CUDA_BACKEND,build_pair=STEP_A_BUILD_PAIR))
+                raw = step_a_mapping(); raw['strategy_options']['build_pair'] = selector
+                raw['participants'][0]['runtime_sha256'] = body['executable_sha256']
+                def plan(raw):
+                    return build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
+                self.assertEqual(dict(plan(copy.deepcopy(raw)).strategy_options)['build_pair'],selector)
+                # Exercise the intended fixed two-GPU placement as well, without hardware.
+                from tests.test_issue313_two_gpu import two_gpu_mapping
+                from inferswarm.operator.source import q8_source_payload
+                dual, _ = two_gpu_mapping()
+                dual['strategy_options']['build_pair'] = selector
+                dual['participants'][0]['runtime_sha256'] = body['executable_sha256']
+                dual['participants'][1]['runtime_sha256'] = assigned_backing.step_a_identities()['remote'].executable_sha256
+                dual_plan = plan(dual)
+                self.assertEqual(dual_plan.selection,'two-gpu')
+                self.assertFalse(dual_plan.admission.execution_ready)
+                payload = q8_source_payload(dual_plan)
+                self.assertEqual(payload['prepared_metadata']['runtime']['executable_sha256'],
+                                 assigned_backing.step_a_identities()['remote'].executable_sha256)
+                for role in ('client','remote'):
+                    mixed = copy.deepcopy(raw)
+                    mixed['participants'][0 if role=='client' else 1]['runtime_sha256'] = role_identity(role).executable_sha256
+                    with self.subTest(role=role), self.assertRaisesRegex(ValueError,'unreviewed per-role runtime identity'):
+                        plan(mixed)
+                omitted = copy.deepcopy(raw); del omitted['strategy_options']['build_pair']
+                with self.assertRaisesRegex(ValueError,'unreviewed per-role runtime identity'): plan(omitted)
+                unknown = copy.deepcopy(raw); unknown['strategy_options']['build_pair']='unknown-optimized'
+                with self.assertRaisesRegex(ValueError,'unknown selective backing build pair'): plan(unknown)
+                for field,value in (('build_options',step_a_bodies()['client']['build_options']),
+                                    ('patch_sha256','f'*64)):
+                    bad = copy.deepcopy(body); bad[field]=value; path.write_text(json.dumps(bad))
+                    with self.subTest(field=field), self.assertRaisesRegex(ValueError,'optimized CPU'):
+                        role_identity('client',build_pair=selector)
+                path.write_text(json.dumps(body))
+                with self.assertRaisesRegex(ValueError,'wrong backend'):
+                    role_identity('remote',CPU_BACKEND,build_pair=selector)
+
+
 if __name__ == '__main__':
     unittest.main()
