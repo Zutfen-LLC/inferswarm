@@ -110,6 +110,7 @@
     "test_issue311_startup",
     "test_issue311_cuda_backing",
     "test_issue313_two_gpu",
+    "test_issue314_demand_integration",
     "test_q8_experiment",
     "test_issue255_mvp",
     "test_issue255_measure",
@@ -1890,6 +1891,9 @@
    "issue-99-103"
   ],
   "tests/test_issue313_two_gpu.py": [
+   "issue-99-103"
+  ],
+  "tests/test_issue314_demand_integration.py": [
    "issue-99-103"
   ],
   "tests/test_moe_native_cache.py": [

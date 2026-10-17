@@ -187,7 +187,9 @@ class ExperimentalLeaseManager(LeaseManager):
     def spawn(self, address, name, argv, cache=None, export=None, assigned=None):
         if name in ('rpc0', 'rpc1'):
             memory = _LIMITS['worker_memory_max_bytes'] // 2
-        elif name == 'client':
+        elif name in ('client', 'demand'):
+            # The demand client runs beside the loaded session inside the same
+            # coordinator aggregate; no separate cap is minted.
             memory = _LIMITS['coordinator_memory_max_bytes']
         else:
             raise ValueError('experimental campaign refuses ancillary persistent process: '+name)
@@ -648,9 +650,16 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
                               session_path=None):
     """One load and one request, or an explicitly frozen bounded session."""
     session=None
+    demand_profile=None
     if session_path is not None:
         from .q8_session import validate_session
-        session=validate_session(_strict_json(session_path))
+        raw_session=_strict_json(session_path)
+        session=validate_session(raw_session)
+        # #314 opt-in demand capture: validate the explicit block against the
+        # frozen session BEFORE anything launches. Default (no block) keeps the
+        # exact existing behavior.
+        from .q8_demand import validate_demand
+        demand_profile=validate_demand(raw_session,session)
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
     if force_fresh_source_hash and source_digest_cache is None:
@@ -685,6 +694,8 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     else:
         from .q8_session import SystemdSessionGuard
         guard=SystemdSessionGuard(envelope,manager,commands or SSHCommandRunner(),session=session)
+        if demand_profile is not None:
+            guard.demand_profile=demand_profile
         if not evidence_store.save_session_json('frozen-session.json',session.payload()):
             evidence_store.finalize()
             raise ValueError('could not retain frozen session before launch')

@@ -99,7 +99,7 @@ def _onhost(p):
         return {'port':'available'}
     if action=='spawn':
         name=p['name']
-        if name not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported process name')
+        if name not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported process name')
         record=marker/(name+'.json'); log=root/token/(name+'.log')
         if record.exists() or log.exists(): raise ValueError('process record/log already exists')
         env=os.environ.copy()

@@ -5287,6 +5287,34 @@
       "replacement": null,
       "test_count_at_audit": 19
     },
+    "test_issue314_demand_integration": {
+      "baseline_group": "issue-99-103",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 13,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "issue-99-103",
+      "invariant": "The opt-in #314 demand-capture session block is default-off inert, binds exactly one measured request whose prompt is the capture prompt, propagates the exact fixed 41/45 two-gpu native lowering arguments, refuses unsupported options before any model load, keeps demand capture separate from general observer completeness, and reports drops/missing exports honestly through the durable evidence store.",
+      "lineage": "Issue #314 native expert-demand integration; successor to #312 collector/reducer and #313 guarded two-CUDA path",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "inferswarm/operator/q8_demand.py",
+          "inferswarm/operator/q8_experiment.py",
+          "inferswarm/operator/q8_session.py",
+          "inferswarm/operator/lifecycle.py",
+          "tools/native-moe-overlap/demand_fixture.cpp",
+          "tools/native-moe-overlap/demand.cpp",
+          "tools/native-moe-overlap/summarize_demand.py"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Offline argument/validation/lifecycle/evidence coverage with synthetic CPU fixtures only. No native build on hosts, worker connection, model load, inference, placement economics or execution authority.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": 13
+    },
     "test_issue323_verified_ordinary_ci": {
       "baseline_group": "issue-213-gate-ordering",
       "baseline_serial_seconds": null,
