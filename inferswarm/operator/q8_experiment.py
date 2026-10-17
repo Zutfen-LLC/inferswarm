@@ -333,6 +333,11 @@ class SystemdCampaignGuard:
         self.execution_result={}; self.raw_response=None
         self.last_aggregates={}; self.last_gpu_rows=[]; self.last_host_available={}
         self._stop=threading.Event(); self._thread=None; self._samples=[]; self._monitor_error=None
+        # Serializes monitored-set swaps (process_started, client->demand
+        # handoff) against whole monitor ticks: a tick either samples the
+        # complete pre-state or the complete post-state, never a half-swapped
+        # set (a stopped-but-still-monitored or already-unowned row).
+        self._rows_lock=threading.RLock()
         if hasattr(leases,'configure'): leases.configure(self)
 
     def _run(self,part,argv): return self.commands.run(part.execution_address,argv)
@@ -472,10 +477,34 @@ class SystemdCampaignGuard:
     def _inspect(self,rows):
         receipts={}
         for name in rows:
-            part=self.client if name=='client' else self.remote
-            expected=(110<<30) if name=='client' else (5<<30)
+            # 'demand' is a COORDINATOR process like the ordinary client: it
+            # runs on the client host inside the coordinator aggregate, so it
+            # must be inspected there under the coordinator cap -- never on
+            # the remote host under a worker cap.
+            coordinator=name in ('client','demand')
+            part=self.client if coordinator else self.remote
+            expected=(_LIMITS['coordinator_memory_max_bytes'] if coordinator
+                      else _LIMITS['worker_memory_max_bytes']//2)
             row=self.leases.inspect(part.execution_address,name)
             props=row['properties']; receipts[name]=row
+            spawn=rows[name]
+            supervision=(spawn.get('supervision') if isinstance(spawn,dict) else None)
+            # The demand unit is the one owned process that legitimately
+            # FINISHES while still monitored: the capture wait detects its
+            # exit and then retires it from this set. Between exit and
+            # retirement a monitor tick may inspect it. A terminal inactive
+            # unit whose systemd unit identity matches the spawned
+            # supervision and whose Result is an own-exit result
+            # ('success'/'exit-code') is a classified completion, not a
+            # loss. Every other inactive or mismatched state -- a killed,
+            # OOM-killed, timed-out, recycled or unobservable unit -- stays
+            # a supervision failure that stops the campaign.
+            completed=(name=='demand' and getattr(self,'phase',None)=='demand'
+                and isinstance(supervision,dict)
+                and row.get('unit')==supervision.get('unit')
+                and props['ActiveState']=='inactive'
+                and props.get('Result') in ('success','exit-code'))
+            if completed: continue
             if props['ActiveState']!='active' or int(props['MainPID'])!=rows[name]['pid']:
                 raise RuntimeError('systemd ownership mismatch: '+name)
             if int(props['MemoryMax'])!=expected or int(props['MemorySwapMax'])!=0:
@@ -504,11 +533,53 @@ class SystemdCampaignGuard:
         return sample
 
     def process_started(self,rows):
-        self.rows=dict(rows)
-        self.checkpoint()
-        # Verify the parent slice, per-service cap, ownership and timer before
-        # allowing any further launch or the frozen request.
-        self._inspect(rows)
+        with self._rows_lock:
+            self.rows=dict(rows)
+            self.checkpoint()
+            # Verify the parent slice, per-service cap, ownership and timer before
+            # allowing any further launch or the frozen request.
+            self._inspect(rows)
+
+    def retire_client_for_demand(self,address,row):
+        """#314 synchronized client->demand monitored-ownership handoff.
+
+        Stops the ordinary session client, confirms its exit, and only then
+        removes it from the monitored set and the lease-owned set -- all as
+        one critical section against monitor ticks (which sample under the
+        same lock). A tick therefore sees either the still-running client or
+        the set without it: never a stopped-but-monitored unit (false
+        ownership mismatch) and never an already-unowned row (KeyError).
+        Real process-loss supervision of every other owned process is
+        unchanged throughout.
+        """
+        with self._rows_lock:
+            stopped=self.leases._call(address,'stop',
+                name='client',pid=row['pid'],start=row['start'])
+            if not isinstance(stopped,dict) or 'signal' not in stopped:
+                raise RuntimeError('demand capture requires stopping the '
+                    'session client first: '+str(stopped))
+            deadline=self.clock()+10
+            while self.leases.alive(address,'client') and self.clock()<deadline:
+                self.pause(.05)
+            if self.leases.alive(address,'client'):
+                raise RuntimeError('session client did not exit before demand capture')
+            # Stop confirmed: retire the row from monitoring and ownership
+            # atomically so terminal cleanup never double-stops the client.
+            self.rows.pop('client',None)
+            del self.leases.owned[address]['client']
+
+    def retire_finished_demand(self,address):
+        """Retire the finished demand process from the monitored set.
+
+        Called only after the capture wait confirmed the demand unit exited.
+        Lease ownership is KEPT so terminal cleanup still stops the unit and
+        retains its final systemd receipt; only monitoring is retired, under
+        the same lock, so no tick can observe the exited-but-monitored unit.
+        """
+        with self._rows_lock:
+            if self.leases.alive(address,'demand'):
+                raise RuntimeError('demand process still alive at monitored retirement')
+            self.rows.pop('demand',None)
 
     def resource_sample(self,rows):
         sample=self._sample(dict(rows))
@@ -517,7 +588,9 @@ class SystemdCampaignGuard:
             self.client.host_id:self._memory(self.client,_LIMITS['coordinator_min_host_headroom_bytes'])}
         sample['aggregates']={a:self.budget(a) for a in self.leases.slices}
         for name in dict(rows):
-            part=self.client if name=='client' else self.remote
+            # Same coordinator/worker attribution as _inspect: the demand
+            # process's log lives on the CLIENT host's invocation directory.
+            part=self.client if name in ('client','demand') else self.remote
             log=str(Path(self.leases.invocation_dir(part.execution_address))/(name+'.log'))
             text=self._run(part,['tail','-c','16384','--',log])
             if re.search(r'(?i)(out of memory|failed to allocate|bad_alloc|illegal memory access|device.*lost|CUDA error)',text):
@@ -528,8 +601,12 @@ class SystemdCampaignGuard:
     def _monitor(self):
         try:
             while not self._stop.wait(2):
-                self.checkpoint()
-                self._samples.append(self.resource_sample(dict(self.rows)))
+                # Whole-tick locking against monitored-set swaps: a tick
+                # samples either the complete pre-handoff or the complete
+                # post-handoff set, never a half-swapped one.
+                with self._rows_lock:
+                    self.checkpoint()
+                    self._samples.append(self.resource_sample(dict(self.rows)))
         except BaseException as exc:
             self._monitor_error=exc
             # Sweep until the main path acknowledges STOP. This also catches a

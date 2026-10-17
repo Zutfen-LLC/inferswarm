@@ -180,3 +180,58 @@ changes normal model execution, the accepted workers, 41/45 placement,
 selective backing, source-digest reuse or resource limits. Profiling remains
 distinct from evaluation prompts; prompts/token IDs/generated text stay out
 of structural exports. No fit, speedup, correctness or GPU claim follows.
+
+## Third review pass (PR #337 head 3f42add1): two runner defects
+
+Both findings were reproduced RED on a pristine `git archive` of the
+reviewed head (same test file, same assertions) and are corrected here.
+
+1. **Monitored ownership through the client->demand handoff** — the reviewed
+   head stopped the ordinary client and deleted it from the runner rows and
+   lease ownership, but `CampaignGuard.rows` kept the copy registered by
+   `process_started`; the next 2 s monitor tick inspected the removed
+   client, raised `KeyError('client')`, and the monitor error path called
+   `stop_units()`, aborting demand capture. The handoff is now ONE
+   synchronized guard transition (`retire_client_for_demand`): stop
+   confirmed, then atomic removal from the monitored set AND lease
+   ownership, all under a `_rows_lock` the monitor ticks and every
+   `process_started` registration also hold. The demand process is
+   registered with `process_started` under the same lock and inspected as a
+   COORDINATOR process (client host, coordinator cap, client-host log
+   tail); after its confirmed exit it leaves only the monitored set
+   (`retire_finished_demand`) while lease ownership is retained for
+   terminal cleanup. Real process-loss detection is unchanged: any other
+   inactive/mismatched unit — including a killed demand unit between exit
+   and retirement — still stops the campaign, and the owned-unit sweep
+   stops every still-owned process. A terminal demand unit with an own-exit
+   systemd result is a classified completion, not a loss.
+2. **Lifecycle completion response shape** — `lifecycle.py` returns the
+   systemd receipt nested (`{'unit', 'properties': {..., 'Result'}}`) but
+   the runner read a top-level `Result`, so every successful capture was
+   classified `unknown-exit`/FAILED and never reached export readback. The
+   runner now consumes the real shape: `success` reaches bounded export
+   readback and retention; `exit-code` is an honest `client-exit` failure;
+   missing/malformed completion stays `unknown-exit`; a signal/oom/timeout
+   result is a genuine process loss that retains the honest receipt and
+   raises (campaign stop). `save_session_json` returning False still
+   downgrades to `retention-failed`, never `retained`.
+
+Regressions added (real runner/guard methods, external host operations
+faked): monitor ticks advancing through the handoff without a false STOP;
+tick blocking inside the critical section; coordinator/worker cap and
+log-host attribution; genuine demand loss stopping the campaign with full
+owned cleanup; finished-demand classification; nested success reaching
+export readback; failed/malformed completion never claiming success;
+retention failure after successful execution; and one end-to-end
+`run_experimental_campaign` with an opt-in demand block (client stop before
+demand spawn, no worker stop before capture, durable `demand-export.json`,
+`outcomes.demand_capture=EXPORTED`).
+
+Local: issue314 (30), q8_experiment+issue313+issue311 (133),
+native_moe_overlap+plan_ci+project_status (174), finalize_repository (73),
+issue299_runtime, `finalize_repository.py --check` and
+`sync_project_status.py --check` green; `plan_ci.py --mode pr` classifies
+every changed path into the existing `issue-99-103` group (no registration
+change needed — the module was already registered on all four surfaces).
+Still no host contact, native build, model execution, identity promotion or
+Final CPU Validation; the composed client remains a candidate receipt.

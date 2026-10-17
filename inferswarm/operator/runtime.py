@@ -868,19 +868,13 @@ class OperatorRunner:
             # client stopped first; the workers stay up and their validated
             # assigned cache then serves the demand client's load (the
             # existing #311 restart-reuse path, zero re-transfer).
-            row=rows['client']
-            stopped=self.leases._call(client.execution_address,'stop',
-                name='client',pid=row['pid'],start=row['start'])
-            if not isinstance(stopped,dict) or 'signal' not in stopped:
-                raise RuntimeError('demand capture requires stopping the '
-                    'session client first: '+str(stopped))
-            deadline=time.monotonic()+10
-            while self.leases.alive(client.execution_address,'client') and time.monotonic()<deadline:
-                self.pause(.05)
-            if self.leases.alive(client.execution_address,'client'):
-                raise RuntimeError('session client did not exit before demand capture')
-            del rows['client']
-            del self.leases.owned[client.execution_address]['client']
+            # The handoff runs as ONE locked transition on the campaign
+            # guard: the ordinary client leaves monitoring and lease
+            # ownership only after its stop is confirmed, so a concurrent
+            # monitor tick can never inspect the removed client (KeyError)
+            # or an unsupervised worker.
+            guard.retire_client_for_demand(client.execution_address,rows['client'])
+            del rows['client']  # runner-local bookkeeping; guard owns the rest
             if tunnel is not None and tunnel.poll() is None:
                 tunnel.terminate()
             demand_record=self._run_demand_capture(plan,guard,rows,sources,
@@ -987,6 +981,11 @@ class OperatorRunner:
         if store is not None:
             store.register_process('demand',client.execution_address,
                 rows['demand']['pid'],str(rows['demand']['start']))
+        # Register the demand process with the campaign guard UNDER THE SAME
+        # LOCK the monitor ticks under: from here on it is supervised like
+        # every owned process (identity, coordinator cap, slice, deadline),
+        # inspected on the CLIENT host as a coordinator process.
+        guard.process_started(rows)
         # Bounded synchronous wait inside the campaign deadline; the supervised
         # unit carries the same RuntimeMaxSec backstop.
         deadline=guard.execute_deadline
@@ -1004,10 +1003,29 @@ class OperatorRunner:
             exit_row=self.leases.inspect(client.execution_address,'demand')
         except Exception as exc:
             exit_row={'inspect_error':str(exc)}
-        unit_result=(exit_row.get('Result') if isinstance(exit_row,dict) else None)
+        # The lifecycle 'inspect' action returns the systemd receipt NESTED:
+        # {'unit': ..., 'properties': {...,'Result': ...}}. Reading a
+        # top-level 'Result' would classify every successful capture as
+        # unknown-exit/FAILED and never read the export back. Failed,
+        # missing or malformed completion information stays unsuccessful.
+        properties=(exit_row.get('properties') if isinstance(exit_row,dict) else None)
+        unit_result=(properties.get('Result') if isinstance(properties,dict) else None)
+        if not isinstance(unit_result,str):
+            unit_result=None
         record.update(ended_monotonic=guard.clock(),
             ended_at=datetime.now(timezone.utc).isoformat(),
             supervision=exit_row,unit_result=unit_result)
+        if unit_result not in (None,'success','exit-code'):
+            # A signal/oom/timeout/core-dump result is a genuine process
+            # LOSS, not an own-exit failure: retain the honest receipt, then
+            # stop the campaign (owned cleanup then stops every still-owned
+            # process) instead of recording a mere failed capture.
+            record.update(export_status='process-lost',status='FAILED')
+            if store is not None and not store.save_session_json(
+                    'demand-capture-finished.json',record):
+                record['finished_record_retained']=False
+            raise RuntimeError('demand capture process lost: systemd unit '
+                'result '+unit_result)
         export_bytes=None
         if unit_result=='success':
             try:
@@ -1049,6 +1067,10 @@ class OperatorRunner:
         if store is not None and not store.save_session_json(
                 'demand-capture-finished.json',record):
             record['finished_record_retained']=False
+        # The exited demand unit now leaves the MONITORED set (its outcome is
+        # durably recorded); lease ownership is retained so terminal cleanup
+        # still stops the unit and retains its final systemd receipt.
+        guard.retire_finished_demand(client.execution_address)
         guard.phase='cleanup'; guard.phase_index=None
         return record
 

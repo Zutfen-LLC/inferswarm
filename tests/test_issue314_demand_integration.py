@@ -13,6 +13,8 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from types import SimpleNamespace
 
@@ -341,14 +343,24 @@ class DemandSessionFlowTests(unittest.TestCase):
 
     def test_capture_runs_after_session_requests_with_client_stopped(self):
         """The pinned RPC server serves one connection; the ordinary client
-        must be stopped before the demand client can connect."""
+        must be stopped before the demand client can connect. The stop/retire
+        runs as ONE synchronized guard transition BEFORE _run_demand_capture
+        and after the request loop."""
         source = (ROOT / 'inferswarm/operator/runtime.py').read_text()
         self.assertIn('demand_pending', source)
-        # The stop happens before _run_demand_capture and after the request loop.
+        # The synchronized handoff precedes the capture and follows the
+        # request loop's phase reset.
         self.assertLess(source.index("guard.phase='cleanup'; guard.phase_index=None"),
-                        source.index('stopped=self.leases._call(client.execution_address,\'stop\''))
-        self.assertLess(source.index('del rows[\'client\']'),
+                        source.index('guard.retire_client_for_demand('))
+        self.assertLess(source.index('guard.retire_client_for_demand('),
                         source.index('demand_record=self._run_demand_capture'))
+        # The retired client leaves monitoring only through the guard's
+        # locked transition (no unsynchronized del of guard-visible state).
+        self.assertNotIn("del self.leases.owned[client.execution_address]['client']",
+                         source)
+        # The runner's local row removal follows the confirmed stop.
+        self.assertLess(source.index('guard.retire_client_for_demand('),
+                        source.index("del rows['client']"))
 
     def test_failed_export_retention_downgrades_status(self):
         """A refused save_session_json (returns False) is never 'retained'."""
@@ -402,6 +414,667 @@ class DemandExportDurabilityTests(unittest.TestCase):
             self.assertFalse(summary['complete'], summary)
             manifest = json.loads((root / 'MANIFEST.json').read_text())
             self.assertIn('omitted_processes', json.dumps(manifest))
+
+
+# ---------------------------------------------------------------------------
+# Third review pass (#337): monitored handoff + lifecycle response shape.
+# Drives the REAL guard/monitor methods and the REAL runner demand path with
+# external host operations faked (no source-string-only assertions).
+# ---------------------------------------------------------------------------
+
+from inferswarm.operator.q8_experiment import _LIMITS as _Q8_LIMITS
+from inferswarm.operator.q8_experiment import ExperimentalEnvelope
+
+_COORD_CAP = _Q8_LIMITS['coordinator_memory_max_bytes']
+_WORKER_SERVICE_CAP = _Q8_LIMITS['worker_memory_max_bytes'] // 2
+_WORKER_AGGREGATE_CAP = _Q8_LIMITS['worker_memory_max_bytes']
+
+
+def _guard_envelope():
+    return ExperimentalEnvelope(
+        config_sha256=A64, request_sha256=C64,
+        gpu_bindings=(('CUDA0', 'GPU-' + 'a' * 32), ('CUDA1', 'GPU-' + 'b' * 32)),
+        limits=tuple(sorted(_Q8_LIMITS.items())),
+        normal_admission_status='BLOCKED-UNKNOWN-ALLOCATION',
+        normal_technical_feasibility='FEASIBLE',
+        normal_execution_ready=False,
+        unknown_allocations=('u1',))
+
+
+class _ProbeCommands:
+    """Answers the guard's read-only host probes with valid in-bounds values.
+
+    Aggregate slice caps follow SystemdCampaignGuard.budget's expectation
+    (remote aggregate = full worker cap, client aggregate = coordinator cap);
+    per-service caps come from the spawn supervision rows themselves.
+    """
+
+    def __init__(self):
+        self.tail_calls = []
+
+    def run(self, address, argv, **kwargs):
+        head = argv[0]
+        if head == 'sudo' and '--property=LoadState' in argv:
+            return 'LoadState=loaded\nActiveState=inactive\n'
+        if head in ('sudo', 'systemctl') and 'show' in argv:
+            cap = (_COORD_CAP if address == 'client-host' else _WORKER_AGGREGATE_CAP)
+            return ('MemoryMax={}\nMemorySwapMax=0\nMemoryCurrent=1024\n'
+                    'MemorySwapCurrent=0\nControlGroup=/{}.slice\n').format(cap, address)
+        if head in ('sudo', 'systemctl', 'systemd-run'):
+            return ''
+        if head == 'nvidia-smi':
+            if '--query-gpu=' in argv[1]:
+                return ('0, GPU-' + 'a' * 32 + ', 2048, 1\n'
+                        '1, GPU-' + 'b' * 32 + ', 2048, 1\n')
+            return ''
+        if head == 'grep':
+            return 'MemAvailable: 134217728 kB\n'
+        if head == 'cat':
+            return 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n'
+        if head == 'python3':
+            return json.dumps({p: 'raw' for p in argv[3:]})
+        if head == 'tail':
+            self.tail_calls.append((address, argv[-1]))
+            return ''
+        if head == 'getconf':
+            return '8\n'
+        raise AssertionError(argv)
+
+
+class _FakeTransport:
+    """LocalTransport-shaped lifecycle fake mirroring lifecycle._onhost's
+    documented action shapes (inspect returns {'unit', 'properties': {...}})."""
+
+    def __init__(self):
+        self.state = {}            # (address, name) -> spawn row + alive/exited
+        self.extra = {}            # (address, name) -> {'Result': ...} override
+        self.pending_death = {}    # (address, name) -> systemd Result on 1st alive
+        self.refuse_inspect_after_exit = set()
+        self.stop_hook = None
+        self.next_pid = 100
+
+    def call(self, address, payload):
+        action = payload['action']
+        if action == 'admit':
+            return {'lease': 'admitted'}
+        if action == 'port':
+            return {'port': 'available'}
+        if action == 'write':
+            data = __import__('base64').b64decode(payload['data'])
+            return {'written': len(data)}
+        if action == 'spawn':
+            name = payload['name']
+            self.next_pid += 1
+            row = dict(pid=self.next_pid, start='200', token=payload['token'],
+                       alive=True, exited=False,
+                       supervision=payload['supervision'])
+            self.state[(address, name)] = row
+            return dict(pid=row['pid'], start=row['start'], token=row['token'],
+                        supervision=payload['supervision'])
+        name = payload.get('name')
+        key = (address, name)
+        if action == 'alive':
+            row = self.state[key]
+            if key in self.pending_death and not row.get('exited'):
+                result = self.pending_death.pop(key)
+                row['alive'] = False
+                row['exited'] = True
+                row['Result'] = result
+            return {'alive': bool(row.get('alive'))}
+        if action == 'inspect':
+            row = self.state[key]
+            # A completion-read refusal is scoped to AFTER the unit exited:
+            # the process_started inspection of a live unit must still work.
+            if (key in self.refuse_inspect_after_exit and row.get('exited')):
+                raise RuntimeError('synthetic inspect refusal')
+            supervision = row['supervision']
+            props = dict(
+                MainPID=str(row['pid']),
+                ActiveState=('inactive' if row.get('exited') else 'active'),
+                Result=self.extra.get(key, {}).get('Result',
+                                                   row.get('Result', 'success')),
+                MemoryCurrent='1024', MemoryPeak='2048',
+                MemorySwapCurrent='0',
+                MemoryMax=str(supervision['memory_max_bytes']),
+                MemorySwapMax='0',
+                RuntimeMaxUSec='2h 39min 59s', KillMode='control-group',
+                ControlGroup='/' + supervision['slice'] + '/' + supervision['unit'])
+            return dict(unit=supervision['unit'], properties=props)
+        if action == 'stop':
+            if self.stop_hook is not None:
+                self.stop_hook(name)
+            row = self.state[key]
+            row['alive'] = False
+            row['exited'] = True
+            return dict(signal='systemd-stop', unit=row['supervision']['unit'],
+                        properties=dict(Result='success', MemorySwapCurrent='0'))
+        if action == 'release':
+            return {'lease': 'released'}
+        raise AssertionError(action)
+
+
+def _make_guard_state(commands, transport, *, with_client=True):
+    """Real ExperimentalLeaseManager + SystemdSessionGuard over the fakes."""
+    from inferswarm.operator.q8_experiment import ExperimentalLeaseManager
+    from inferswarm.operator.q8_session import SystemdSessionGuard
+    leases = ExperimentalLeaseManager(transport, 'monitor-token')
+    for address in ('client-host', 'remote-host'):
+        leases.leases[address] = '/tmp/lease-' + address
+        leases.owned[address] = {}
+    session = validate_session(session_raw())
+    guard = SystemdSessionGuard(_guard_envelope(), leases, commands, session=session)
+    # The focused tests wire the topology fields begin() derives and never
+    # start the background monitor thread; ticks are driven explicitly.
+    leases.slices = {'client-host': 'coord.slice', 'remote-host': 'work.slice'}
+    guard.client = SimpleNamespace(execution_address='client-host',
+                                   host_id='client-h')
+    guard.remote = SimpleNamespace(execution_address='remote-host',
+                                   host_id='remote-h')
+    guard.uids = {a: '1000' for a in leases.leases}
+    guard.gids = {a: '1000' for a in leases.leases}
+    guard.execute_deadline = time.monotonic() + 3600
+    guard.started = time.monotonic()
+    rows = {}
+    if with_client:
+        rows['client'] = leases.spawn('client-host', 'client', ['/bin/true'])
+    rows['rpc0'] = leases.spawn('remote-host', 'rpc0', ['/bin/true'])
+    rows['rpc1'] = leases.spawn('remote-host', 'rpc1', ['/bin/true'])
+    guard.process_started(rows)
+    return guard, leases, rows
+
+
+def _monitor_tick(guard):
+    """One real monitor-loop iteration (the fixed body: tick under the lock)."""
+    with guard._rows_lock:
+        guard.checkpoint()
+        sample = guard.resource_sample(dict(guard.rows))
+    guard._samples.append(sample)
+    return sample
+
+
+class MonitoredDemandHandoffTests(unittest.TestCase):
+    """Defect 1: monitored ownership through the client->demand handoff.
+
+    The reviewed head stopped the ordinary client and deleted it from the
+    runner rows and lease ownership, but CampaignGuard.rows kept the copy
+    registered by process_started: the next monitor tick inspected the
+    removed client, raised KeyError('client'), and called stop_units(),
+    aborting demand capture. These drive the real guard + lease manager.
+    """
+
+    def setUp(self):
+        self.commands = _ProbeCommands()
+        self.transport = _FakeTransport()
+        self.guard, self.leases, self.rows = _make_guard_state(
+            self.commands, self.transport)
+
+    def _register_demand(self):
+        row = self.leases.spawn('client-host', 'demand', ['/bin/true'])
+        rows = dict(self.guard.rows)
+        rows['demand'] = row
+        self.guard.process_started(rows)
+        return row
+
+    def test_monitor_advances_through_handoff_without_false_stop(self):
+        """Ticks before the handoff, in the mid-state (client retired, demand
+        not yet registered) and after registration: no KeyError, no false
+        STOP, both workers supervised throughout, demand supervised after
+        registration, and checkpoint() stays clean."""
+        _monitor_tick(self.guard)
+        self.assertEqual(set(self.guard.rows), {'client', 'rpc0', 'rpc1'})
+        # The synchronized handoff: stop confirmed, then atomic retirement.
+        self.guard.retire_client_for_demand('client-host', self.rows['client'])
+        self.assertNotIn('client', self.guard.rows)
+        self.assertNotIn('client', self.leases.owned['client-host'])
+        # Mid-handoff tick (post-retirement, pre-registration) samples the
+        # remaining supervised set without raising.
+        _monitor_tick(self.guard)
+        self.assertEqual(set(self.guard.rows), {'rpc0', 'rpc1'})
+        # Demand registration: supervised from here on.
+        self._register_demand()
+        _monitor_tick(self.guard)
+        self.assertEqual(set(self.guard.rows), {'rpc0', 'rpc1', 'demand'})
+        self.assertIsNone(self.guard._monitor_error)
+        self.guard.checkpoint()  # the campaign was NOT aborted
+
+    def test_monitor_tick_cannot_observe_the_transition_mid_flight(self):
+        """While the handoff critical section is in progress (client already
+        stopped system-side, not yet retired), a concurrent monitor tick must
+        block on the transition lock rather than observe the half-swapped
+        state (a stopped-but-monitored client) and falsely stop the campaign."""
+        stop_started = threading.Event()
+        allow_removal = threading.Event()
+
+        def hook(name):
+            if name == 'client':
+                stop_started.set()
+                allow_removal.wait(10)
+
+        self.transport.stop_hook = hook
+        handoff = threading.Thread(
+            target=self.guard.retire_client_for_demand,
+            args=('client-host', self.rows['client']))
+        handoff.start()
+        self.assertTrue(stop_started.wait(10))
+        tick_done = threading.Event()
+        tick_errors = []
+
+        def tick():
+            try:
+                _monitor_tick(self.guard)
+            except BaseException as exc:
+                tick_errors.append(exc)
+            finally:
+                tick_done.set()
+
+        thread = threading.Thread(target=tick)
+        thread.start()
+        thread.join(1.0)
+        self.assertFalse(tick_done.is_set(),
+                         'monitor tick observed the half-swapped monitored set')
+        allow_removal.set()
+        handoff.join(10)
+        thread.join(10)
+        self.assertTrue(tick_done.is_set())
+        self.assertEqual(tick_errors, [])
+        self.assertNotIn('client', self.guard.rows)
+
+    def test_demand_attributed_to_coordinator_host_and_cap(self):
+        """The demand process is a COORDINATOR process: inspected on the
+        client host under the coordinator aggregate/service cap, its log
+        tailed on the client host; workers keep their worker caps."""
+        self._register_demand()
+        receipts = self.guard._inspect(dict(self.guard.rows))
+        self.assertEqual(receipts['demand']['properties']['MemoryMax'],
+                         str(_COORD_CAP))
+        self.assertEqual(receipts['rpc0']['properties']['MemoryMax'],
+                         str(_WORKER_SERVICE_CAP))
+        self.assertEqual(receipts['rpc1']['properties']['MemoryMax'],
+                         str(_WORKER_SERVICE_CAP))
+        self.assertIn(('client-host', 'demand'), self.transport.state)
+        self.assertNotIn(('remote-host', 'demand'), self.transport.state)
+        _monitor_tick(self.guard)
+        demand_log = str(Path('/tmp/lease-client-host/monitor-token') /
+                         'demand.log')
+        self.assertIn(('client-host', demand_log), self.commands.tail_calls)
+
+    def test_genuine_demand_loss_stops_campaign_and_cleans_up_owned(self):
+        """A demand unit dying abnormally while monitored is a real process
+        loss: the monitor tick raises and the owned-unit sweep stops every
+        still-owned process (client, both workers, demand)."""
+        self.guard.phase = 'demand'
+        self._register_demand()
+        self.transport.state[('client-host', 'demand')]['alive'] = False
+        self.transport.state[('client-host', 'demand')]['exited'] = True
+        self.transport.state[('client-host', 'demand')]['Result'] = 'oom-kill'
+        with self.assertRaisesRegex(RuntimeError, 'demand'):
+            _monitor_tick(self.guard)
+        self.leases.stop_units()
+        stopped = {name for (_address, name), row in self.transport.state.items()
+                   if row.get('exited')}
+        self.assertEqual(stopped, {'client', 'rpc0', 'rpc1', 'demand'})
+
+    def test_finished_demand_completion_is_classified_not_a_loss(self):
+        """Between demand exit and monitored retirement a tick observes a
+        terminal unit with an own-exit result: a classified completion, not a
+        process loss; retirement keeps lease ownership for terminal cleanup."""
+        self.guard.phase = 'demand'
+        self._register_demand()
+        self.transport.state[('client-host', 'demand')]['alive'] = False
+        self.transport.state[('client-host', 'demand')]['exited'] = True
+        self.transport.state[('client-host', 'demand')]['Result'] = 'success'
+        _monitor_tick(self.guard)  # must not raise
+        self.guard.retire_finished_demand('client-host')
+        self.assertNotIn('demand', self.guard.rows)
+        self.assertIn('demand', self.leases.owned['client-host'])
+        _monitor_tick(self.guard)  # post-retirement tick stays clean
+
+
+class DemandCompletionReadbackTests(unittest.TestCase):
+    """Defect 2: the runner must read the actual lifecycle response shape.
+
+    lifecycle.py's inspect action returns {'unit', 'properties': {...}} with
+    Result NESTED under properties; the reviewed head read a top-level
+    'Result', classifying every successful capture unknown-exit/FAILED and
+    never reaching export readback. These drive the REAL
+    OperatorRunner._run_demand_capture with external reads faked.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from inferswarm.operator.assigned_backing import optimized_cpu_identities
+        cls.executable = b'synthetic-demand-client-bytes'
+        cls.executable_sha = hashlib.sha256(cls.executable).hexdigest()
+        reviewed = optimized_cpu_identities()['client']
+        cls.manifest = dict(
+            schema='q8-native-build-manifest/2',
+            base_revision=reviewed.base_revision, base_tree=reviewed.base_tree,
+            patch_sha256=reviewed.patch_sha256,
+            transformed_manifest_sha256='e' * 64,
+            protocol=reviewed.protocol, compiler=reviewed.compiler,
+            build_options=list(reviewed.build_options),
+            executable_sha256=cls.executable_sha,
+            backend_libraries=[dict(name=n, sha256=d)
+                               for n, d in reviewed.backend_libraries])
+        cls.export = json.dumps({'schema': 'native-demand/1', 'rows': [],
+                                 'observed_rows': 0, 'dropped_rows': 0,
+                                 'capacity_rows': 4}).encode()
+        raw = session_raw(demand=demand_block(
+            client_sha256=cls.executable_sha))
+        cls.profile = validate_demand(raw, validate_session(session_raw()))
+
+    def setUp(self):
+        self.commands = _ProbeCommands()
+        self.transport = _FakeTransport()
+        self.guard, self.leases, self.rows = _make_guard_state(
+            self.commands, self.transport, with_client=False)
+
+    def capture(self, *, result='success', refuse_export=False,
+                inspect_refuses=False):
+        from inferswarm.operator.runtime import OperatorRunner
+        from unittest.mock import patch
+        runner = OperatorRunner.__new__(OperatorRunner)
+        runner.leases = self.leases
+        runner.pause = lambda _seconds: None
+        self.guard.demand_profile = self.profile
+        self.guard.phase = 'demand'
+        plan = SimpleNamespace(
+            strategy_options=dict(
+                rpc_endpoints=['w.example:5000', 'w.example:5001'],
+                source_contract='full-source-both-hosts/1'),
+            model=SimpleNamespace(source_id='qwen3.8', revision='r1',
+                                  representation='Q8_0'),
+            workload=SimpleNamespace(context=4096, batch=2048, microbatch=512))
+        client = SimpleNamespace(execution_address='client-host',
+                                 source_path='/srv/models/q8/model.gguf')
+        remote = SimpleNamespace(execution_address='remote-host')
+        store = _StubStore(refuse={'demand-export.json'} if refuse_export else set())
+        if inspect_refuses:
+            self.transport.refuse_inspect_after_exit = {('client-host', 'demand')}
+        elif result is None:
+            self.transport.extra[('client-host', 'demand')] = {'Result': None}
+        else:
+            self.transport.extra[('client-host', 'demand')] = {'Result': result}
+        # The unit exits with `result` during the capture wait (first alive).
+        self.transport.pending_death[('client-host', 'demand')] = (
+            'success' if result is None else result)
+
+        class FakeCollector:
+            MANIFEST_MAX_BYTES = 1 << 20
+            EXECUTABLE_MAX_BYTES = 300 << 20
+
+            def read_json(self, address, path, *, max_bytes):
+                return self.manifest
+
+            def read_bytes(self, address, path, *, max_bytes):
+                if 'demand-profile' in path:
+                    return self.export
+                return self.executable
+
+        FakeCollector.manifest = self.manifest
+        FakeCollector.export = self.export
+        FakeCollector.executable = self.executable
+        source_payload = {'metadata': {'model_metadata': [
+            ['general.file_type', 7]]}}
+        with patch('inferswarm.operator.native_observer.collector.'
+                   'SSHCollectorTransport', FakeCollector), \
+             patch('inferswarm.operator.source.q8_source_payload',
+                   return_value=source_payload):
+            record = OperatorRunner._run_demand_capture(
+                runner, plan, self.guard, dict(self.rows), {}, client, remote,
+                (), store)
+        return record, store
+
+    def test_nested_success_reaches_export_readback_and_retention(self):
+        record, store = self.capture(result='success')
+        self.assertEqual(record['unit_result'], 'success', record)
+        self.assertEqual(record['export_status'], 'retained', record)
+        self.assertEqual(record['status'], 'FINISHED', record)
+        self.assertEqual(record['export_sha256'],
+                         hashlib.sha256(self.export).hexdigest())
+        self.assertTrue(record.get('export_retained'))
+        self.assertEqual(store.saved, ['demand-capture-started.json',
+                                       'demand-export.json',
+                                       'demand-capture-finished.json'])
+        # The finished demand leaves the monitored set; lease ownership is
+        # retained so terminal cleanup still stops the unit.
+        self.assertNotIn('demand', self.guard.rows)
+        self.assertIn('demand', self.leases.owned['client-host'])
+
+    def test_failed_exit_never_claims_success_or_reads_export(self):
+        record, store = self.capture(result='exit-code')
+        self.assertEqual(record['export_status'], 'client-exit', record)
+        self.assertEqual(record['status'], 'FAILED', record)
+        self.assertNotIn('demand-export.json', store.saved)
+        self.assertNotIn('export_retained', record)
+
+    def test_malformed_or_missing_completion_stays_unsuccessful(self):
+        # Result missing/non-string inside properties.
+        record, store = self.capture(result=None)
+        self.assertEqual(record['export_status'], 'unknown-exit', record)
+        self.assertEqual(record['status'], 'FAILED', record)
+        self.assertNotIn('demand-export.json', store.saved)
+        # The inspect channel itself failing stays unsuccessful too.
+        record, store = self.capture(inspect_refuses=True)
+        self.assertEqual(record['export_status'], 'unknown-exit', record)
+        self.assertEqual(record['status'], 'FAILED', record)
+        self.assertNotIn('demand-export.json', store.saved)
+
+    def test_abnormal_unit_result_is_a_process_loss_stopping_the_campaign(self):
+        with self.assertRaisesRegex(RuntimeError, 'process lost'):
+            self.capture(result='oom-kill')
+
+    def test_retention_failure_after_successful_execution_is_never_retained(self):
+        record, store = self.capture(result='success', refuse_export=True)
+        self.assertEqual(record['export_status'], 'retention-failed', record)
+        self.assertEqual(record['status'], 'FAILED', record)
+        self.assertNotIn('export_retained', record)
+        self.assertIn('demand-capture-started.json', store.saved)
+        self.assertIn('demand-capture-finished.json', store.saved)
+
+
+class _StubStore:
+    def __init__(self, refuse=None):
+        self.saved = []
+        self.refuse = refuse or set()
+
+    def register_attempt(self, *args, **kwargs):
+        pass
+
+    def register_process(self, *args, **kwargs):
+        pass
+
+    def save_session_json(self, name, value):
+        if name in self.refuse:
+            return False
+        self.saved.append(name)
+        return True
+
+
+class DemandEndToEndCampaignTests(unittest.TestCase):
+    """Full run_experimental_campaign with an opt-in demand block: the real
+    monitor thread, guard, runner handoff, capture and durable retention on
+    faked hosts (adapted from tests.test_q8_experiment.CampaignFixture)."""
+
+    def setUp(self):
+        from tests import test_q8_experiment as driver
+        from tests import test_issue313_two_gpu as topology
+        from tests.test_issue311_cuda_backing import rejoin_profiles, synthetic_table
+        self._driver = driver
+        plan_builder = topology.TwoGpuTopologyTests()
+        self.plan = plan_builder.build(lambda raw: raw['strategy_options']
+                                       ['participant_backing'].update(
+                                           limit_bytes=48 << 30,
+                                           min_free_bytes=64 << 30,
+                                           reserve_bytes=12 << 30))
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.config = root / 'config.json'
+        self.envelope = root / 'envelope.json'
+        raw, manifest = topology.two_gpu_mapping()
+        raw['strategy_options']['participant_backing'].update(
+            limit_bytes=48 << 30, min_free_bytes=64 << 30, reserve_bytes=12 << 30)
+        self.config.write_text(json.dumps(rejoin_profiles(raw)))
+        self._manifest = manifest
+        self._topology = topology
+        self._synthetic_table = synthetic_table
+        from inferswarm.operator.assigned_backing import optimized_cpu_identities
+        self.executable = b'end-to-end-demand-client-bytes'
+        self.executable_sha = hashlib.sha256(self.executable).hexdigest()
+        reviewed = optimized_cpu_identities()['client']
+        self.manifest = dict(
+            schema='q8-native-build-manifest/2',
+            base_revision=reviewed.base_revision, base_tree=reviewed.base_tree,
+            patch_sha256=reviewed.patch_sha256,
+            transformed_manifest_sha256='f' * 64,
+            protocol=reviewed.protocol, compiler=reviewed.compiler,
+            build_options=list(reviewed.build_options),
+            executable_sha256=self.executable_sha,
+            backend_libraries=[dict(name=n, sha256=d)
+                               for n, d in reviewed.backend_libraries])
+        self.export = json.dumps({'schema': 'native-demand/1', 'rows': [],
+                                  'observed_rows': 0, 'dropped_rows': 0,
+                                  'capacity_rows': 4}).encode()
+
+    def demand_session(self):
+        from tests.test_issue314_demand_integration import session_raw
+        raw = session_raw()
+        raw['requests'][1]['body']['prompt'] = 'measure me'
+        raw['demand'] = demand_block(client_sha256=self.executable_sha,
+                                     prompt='measure me')
+        return raw
+
+    def test_demand_capture_completes_after_session_with_workers_kept(self):
+        import copy as _copy
+        import contextlib as _contextlib
+        import io as _io
+        from unittest.mock import patch
+        from inferswarm.operator.config import parse_config_json
+        from inferswarm.operator.plan import build_plan
+        from inferswarm.operator.profiles import canonical
+        from inferswarm.operator.runtime import OperatorRunner
+        from tests.issue299_fixture import NOW
+
+        session = self.demand_session()
+        session_path = Path(self.temp.name) / 'session.json'
+        session_path.write_text(json.dumps(session))
+        envelope = dict(schema='q8-two-cuda-experiment/1',
+                        opt_in=self._driver.experiment.EXPERIMENTAL_OPT_IN,
+                        config_sha256=hashlib.sha256(
+                            self.config.read_bytes()).hexdigest(),
+                        request_sha256=hashlib.sha256(
+                            canonical(session)).hexdigest(),
+                        limits=dict(self._driver.experiment._LIMITS),
+                        gpu_bindings=[dict(selector='CUDA0', uuid='GPU-' + 'a' * 32),
+                                      dict(selector='CUDA1', uuid='GPU-' + 'b' * 32)])
+        self.envelope.write_text(json.dumps(envelope))
+
+        class DemandFixture(self._driver.CampaignFixture):
+            """CampaignFixture + the demand lifecycle/collector surfaces."""
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.events = []
+
+            def call(self2, address, payload):
+                action = payload['action']
+                if action == 'write':
+                    data = __import__('base64').b64decode(payload['data'])
+                    return {'written': len(data)}
+                if action == 'spawn':
+                    self2.events.append(('spawn', payload['name']))
+                if action == 'stop':
+                    self2.events.append(('stop', payload['name']))
+                if action == 'alive' and payload.get('name') == 'demand':
+                    # The capture client exits promptly after connecting.
+                    return {'alive': False}
+                return super().call(address, payload)
+
+            def run(self2, address, argv, **kwargs):
+                if argv[0] == 'getconf':
+                    return '8\n'
+                return super().run(address, argv, **kwargs)
+
+        fixture = DemandFixture('ok')
+        fixture.plan = self.plan
+        fixture.remote = next(p for p in self.plan.participants
+                              if p.role == 'remote')
+        evidence_root = Path(self.temp.name) / 'evidence-demand'
+
+        class FakeCollector:
+            MANIFEST_MAX_BYTES = 1 << 20
+            EXECUTABLE_MAX_BYTES = 300 << 20
+
+            def read_json(self, address, path, *, max_bytes):
+                return self.manifest
+
+            def read_bytes(self, address, path, *, max_bytes):
+                if 'demand-profile' in path:
+                    return self.export
+                return self.executable
+
+        FakeCollector.manifest = self.manifest
+        FakeCollector.export = self.export
+        FakeCollector.executable = self.executable
+
+        def runner_factory(manager):
+            fixture.identity_reader = fixture
+            return OperatorRunner(fixture, manager, fixture,
+                                  fixture.tunnel_factory, collector=fixture)
+
+        def parse_fixture(text, base_dir):
+            return parse_config_json(text, base_dir=base_dir, now=NOW,
+                                     profile_mode='replay')
+
+        experiment = self._driver.experiment
+        with patch.object(experiment, 'parse_config_json',
+                          side_effect=parse_fixture), \
+             patch.object(experiment, 'build_plan',
+                          side_effect=lambda config: build_plan(config, now=NOW)), \
+             patch.object(self._topology.assigned_backing, 'identities',
+                          return_value=self._synthetic_table(self._manifest)), \
+             patch('inferswarm.operator.native_observer.collector.'
+                   'SSHCollectorTransport', FakeCollector):
+            try:
+                result = experiment.run_experimental_campaign(
+                    self.config, self.envelope, commands=fixture,
+                    transport=fixture, runner_factory=runner_factory,
+                    evidence_root=str(evidence_root),
+                    evidence_transport=fixture, session_path=session_path)
+            except BaseException as exc:
+                result = exc
+        self.assertIsInstance(result, dict, str(result)[:2000])
+        capture = result.get('demand_capture')
+        self.assertIsNotNone(capture, str(result)[:2000])
+        self.assertEqual(capture['status'], 'FINISHED', str(capture)[:2000])
+        self.assertEqual(capture['export_status'], 'retained')
+        self.assertEqual(capture['unit_result'], 'success')
+        self.assertEqual(result['outcomes']['demand_capture'], 'EXPORTED')
+        # The capture ran AFTER the frozen session's requests and after the
+        # ordinary client stopped; the workers stayed up for cache reuse.
+        self.assertEqual(len(fixture.posts), len(session['requests']))
+        spawned = {name for (_addr, name) in fixture.rows}
+        self.assertEqual(spawned, {'rpc0', 'rpc1', 'client', 'demand'})
+        # Event order: the ordinary client's stop precedes the demand spawn,
+        # and NO worker was stopped before the demand client spawned (the
+        # workers stay up to serve the assigned-cache reuse); both are only
+        # stopped by terminal cleanup afterwards.
+        demand_spawn = fixture.events.index(('spawn', 'demand'))
+        client_stop = fixture.events.index(('stop', 'client'))
+        self.assertLess(client_stop, demand_spawn)
+        pre_capture_stops = {name for kind, name in fixture.events[:demand_spawn]
+                             if kind == 'stop'}
+        self.assertEqual(pre_capture_stops, {'client'})
+        post = [name for kind, name in fixture.events[demand_spawn:]
+                if kind == 'stop']
+        self.assertIn('demand', post)
+        # Durable retention on the controller side.
+        export = json.loads((evidence_root / 'demand-export.json').read_text())
+        self.assertEqual(export['schema'], 'native-demand/1')
+        finished = json.loads((evidence_root /
+                               'demand-capture-finished.json').read_text())
+        self.assertEqual(finished['status'], 'FINISHED')
 
 
 if __name__ == '__main__':
