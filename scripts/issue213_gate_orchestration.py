@@ -1511,7 +1511,9 @@ def handoff_gate_status(final_head: FinalHeadRequest,
             import ordinary_ci_reuse
             receipt_request = dict(receipt_request, suite=dict(
                 final_head.suite, suite_config=ordinary_ci_reuse.suite_configuration(
-                    source=final_validation_receipt["execution"]["ordinary_source"])))
+                    source=final_validation_receipt["execution"]["ordinary_source"],
+                    completion_schedule=final_validation_receipt["execution"].get(
+                        "completion", {}).get("schedule"))))
         if not validate_receipt(final_validation_receipt["suite_receipt"],
                                 receipt_request):
             raise GateOrderingError(
