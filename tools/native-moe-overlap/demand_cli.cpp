@@ -127,6 +127,9 @@ int main(int argc, char ** argv) {
         if (n <= 0 || n > 4096) throw std::runtime_error("prompt token bound exceeded");
         tokens.resize(n);
         auto cp = llama_context_default_params();
+        // Capture maps exactly this single-sequence, last-output-only batch
+        // contract; do not request extra logits/routed work for profiling.
+        cp.embeddings = false;
         cp.n_ctx = (uint32_t)(n + decode_steps + 16);
         cp.n_batch = cp.n_ubatch = (uint32_t)n;
         cp.cb_eval = observer::callback;

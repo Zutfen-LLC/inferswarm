@@ -144,7 +144,8 @@ python3 tools/native-moe-overlap/summarize_demand.py /fresh/profile.json \
 ```
 
 The JSON contains only grouped selected expert IDs (per token, layer, step,
-explicit prefill/decode), scalar identity/workload labels, coverage/drop counts,
+explicit prefill/decode), original zero-based request token positions,
+scalar identity/workload labels, coverage/drop counts,
 and measured callback ID readback/collection milliseconds. It has no raw prompt,
 token IDs, generated response, hidden tensor or routed result. Per-phase
 frequency/co-selection, missing layers, retained vs observed/expected rows, and
@@ -160,3 +161,19 @@ additive wall time or GPU kernel time. For economics use current
 the strategy's context-bound metric/unit/statistic representation; do not rank
 by this frequency alone or transfer Qwen3.6 routing evidence to Qwen3.8.
 Training/profiling prompts and later evaluation prompts stay separate.
+
+Coverage follows the supported CLI's single contiguous sequence, one prefill
+batch (`n_batch = n_ubatch = prompt length`), and one-token decode batches.
+With `llama_batch_get_one` (`logits=null`) and `embeddings=false`, only the last
+output is requested. At the pin, qwen4exp prunes non-output rows **before the
+final FFN**: earlier prefill routers cover every prompt position, while the
+final router covers only position `prompt length - 1`. Decode positions start
+at `prompt length`. Both ordinary and private overlap capture retain this
+mapping without requesting extra logits or routed work. The export declares
+`token_coverage=qwen4exp-last-output`, per-step `token_start`, and per-row
+`token_positions`; the reducer checks the exact expected per-layer mapping.
+Complete means all expected executed router rows were retained, not that the
+final layer routed every prompt token. Unexecuted positions have no demand
+entry; missing observations and drops still make coverage incomplete. Other
+batch/output selections are unsupported; exports lacking this coverage
+contract are refused by the reducer.

@@ -361,6 +361,59 @@ class NativeDemandCPU(unittest.TestCase):
         self.assertTrue(self.fixture("repeat")["identical"])
         self.assertEqual(self.fixture("off"), {"active": False, "rows": 0})
 
+    def test_two_token_prefill_retains_final_output_position(self):
+        capture = self.fixture("prefill-last")
+        early, final = capture["rows"][:2]
+        self.assertEqual(early["tokens"], [[1, 3], [0, 2]])
+        self.assertEqual(early["token_positions"], [0, 1])
+        self.assertEqual(final["tokens"], [[2, 3]])
+        self.assertEqual(final["token_positions"], [1])
+        self.assertEqual([r["token_positions"] for r in capture["rows"][2:]], [[2], [2]])
+        report = self.summary.summarize(capture, self.expected())
+        self.assertTrue(report["coverage"]["complete"])
+        self.assertEqual(report["coverage"]["expected_token_rows"], 5)
+        self.assertEqual(report["coverage"]["retained_token_rows"], 5)
+        self.assertEqual(report["phase_demand"]["prefill"]["0"]["tokens"], 2)
+        self.assertEqual(report["phase_demand"]["prefill"]["1"]["tokens"], 1)
+        self.assertEqual(report["coverage"]["retained_token_positions"][1],
+                         {"phase": "prefill", "step": 0, "layer": 1, "token_positions": [1]})
+
+    def test_output_selected_coverage_preserves_missing_and_rejects_duplicates(self):
+        capture = self.fixture("prefill-missing")
+        report = self.summary.summarize(capture, self.expected())
+        self.assertFalse(report["coverage"]["complete"])
+        self.assertEqual(report["coverage"]["missing_layer_steps"], [{"step": 0, "layer": 1}])
+        self.assertNotIn("1", report["phase_demand"]["prefill"])
+        self.assertEqual(report["coverage"]["retained_token_rows"], 4)
+        self.assertTrue(self.fixture("prefill-duplicate")["duplicate_refused"])
+        capture = self.fixture("prefill-last")
+        capture["rows"].append(capture["rows"][1])
+        capture["observed_rows"] += 1
+        with self.assertRaisesRegex(ValueError, "duplicate layer"):
+            self.summary.summarize(capture, self.expected())
+
+    def test_private_final_router_uses_same_positions_and_actual_row_budget(self):
+        capture = self.fixture("prefill-private")
+        self.assertEqual(capture["rows"][1]["token_positions"], [1])
+        self.assertTrue(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+        capture = self.fixture("final-cost-budget")
+        self.assertEqual((capture["observed_rows"], capture["dropped_rows"]), (2, 1))
+        self.assertEqual([r["layer"] for r in capture["rows"]], [0])
+        self.assertEqual(capture["rows"][0]["token_positions"], [0, 1])
+        self.assertFalse(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+
+    def test_reducer_checks_exact_supported_token_position_mapping(self):
+        for row_index, positions in ((0, [0, 0]), (0, [1, 0]), (1, [0]), (1, []), (2, [0])):
+            with self.subTest(row=row_index, positions=positions):
+                capture = self.fixture("prefill-last")
+                capture["rows"][row_index]["token_positions"] = positions
+                with self.assertRaisesRegex(ValueError, "token position"):
+                    self.summary.summarize(capture, self.expected())
+        capture = self.fixture("prefill-last")
+        del capture["token_coverage"]
+        with self.assertRaisesRegex(ValueError, "unsupported token coverage"):
+            self.summary.summarize(capture, self.expected())
+
     def test_collector_does_not_mutate_router_ids_or_caller_output(self):
         self.assertEqual(self.fixture("integrity"), {"ids_unchanged": True, "output_equal": True})
 
@@ -373,8 +426,8 @@ class NativeDemandCPU(unittest.TestCase):
 
     def test_bounded_capture_and_missing_layer_are_not_claimed_complete(self):
         capture = self.fixture("bounded")
-        self.assertEqual(capture["step_meta"], [{"phase": "prefill", "step": 0, "tokens": 1},
-                                                {"phase": "decode", "step": 1, "tokens": 1}])
+        self.assertEqual(capture["step_meta"], [{"phase": "prefill", "step": 0, "tokens": 1, "token_start": 0},
+                                                {"phase": "decode", "step": 1, "tokens": 1, "token_start": 1}])
         report = self.summary.summarize(capture, self.expected())
         self.assertEqual(report["coverage"]["dropped_rows"], 2)
         self.assertEqual(report["coverage"]["missing_layers"], [1])

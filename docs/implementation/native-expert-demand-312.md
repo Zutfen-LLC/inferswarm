@@ -26,6 +26,19 @@ Only the selected K IDs are retained, grouped by layer, explicit phase,
 step, and token row. The dedicated single-request profiling CLI marks prefill
 and decode explicitly: a one-token prompt is still prefill.
 
+The supported CLI uses one contiguous prefill batch and one-token decode
+batches with `llama_batch_get_one`, `logits=null`, and `embeddings=false`.
+Pinned qwen4exp drops non-output rows before the final FFN. Earlier prefill
+routers therefore retain all prompt positions; the final router retains only
+the last original prompt position. Capture records zero-based request token
+positions and the `qwen4exp-last-output` coverage contract; decode positions
+continue after the prompt. The reducer validates each layer against that
+expected coverage, preserves retained positions, and reports missing
+layer/step observations. Completeness describes executed routing, not
+all-prompt coverage at the final layer. Unexecuted positions remain absent;
+no extra logits or expert work are requested. Arbitrary output selections,
+multi-sequence batches, and split prefill mappings are unsupported.
+
 The profiling buffer has independent finite row/byte/step bounds. It does
 not consume the general observer's 512-event budget or remove its refusal.
 Drops remain visible and cannot yield a complete profile. Re-export does

@@ -47,6 +47,35 @@ int main(int argc, char ** argv) {
                   << ",\"dedicated_accepted\":" << (dedicated_accepted ? "true" : "false") << "}\n";
         return 0;
     }
+    if (mode == "prefill-last" || mode == "prefill-private" ||
+        mode == "prefill-missing" || mode == "prefill-duplicate") {
+        is312::capture prefill(id, 2, 4, 2, 8);
+        const int32_t early[] = {1,3,0,2, 0,2,3,1};
+        const int32_t last[] = {2,3,0,1};
+        source full{early, sizeof(early)}, output{last, sizeof(last)};
+        prefill.begin("prefill", 0, 2);
+        if (!is312::observe_argsort(&prefill, "ffn_moe_argsort-0", false, true,
+                                   4, 2, 4, 16, read, &full)) return 3;
+        if (mode == "prefill-private") prefill.record(1, last, 2, 1, 0.0);
+        else if (mode != "prefill-missing" &&
+            !is312::observe_argsort(&prefill, "ffn_moe_argsort-1", false, true,
+                                   4, 1, 4, 16, read, &output)) {
+            std::cerr << prefill.error() << '\n';
+            return 3;
+        }
+        if (mode == "prefill-duplicate") {
+            const bool refused = !is312::observe_argsort(&prefill, "ffn_moe_argsort-1", false,
+                true, 4, 1, 4, 16, read, &output) && !prefill.error().empty();
+            std::cout << "{\"duplicate_refused\":" << (refused ? "true" : "false") << "}\n";
+            return 0;
+        }
+        prefill.begin("decode", 1, 1);
+        // The private overlap path calls record directly with packed IDs.
+        prefill.record(0, last, 2, 1, 0.0);
+        prefill.record(1, last, 2, 1, 0.0);
+        std::cout << prefill.export_json() << '\n';
+        return 0;
+    }
     if (mode == "large") {
         is312::capture big(id, 48, 4, 2, 700);
         const int32_t ids[] = {1, 3, 0, 2};
@@ -61,7 +90,7 @@ int main(int argc, char ** argv) {
         return 0;
     }
     if (mode == "adapter") {
-        is312::capture adapter(id, 1, 4, 2, 4);
+        is312::capture adapter(id, 2, 4, 2, 4);
         const int32_t argsort[] = {1,3,0,2, 0,2,3,1, 2,1,0,3};
         const int32_t decode[] = {3,0,2,1};
         source s{argsort, sizeof(argsort)};
@@ -96,6 +125,16 @@ int main(int argc, char ** argv) {
                   << ",\"shape_failed\":" << (shape_failed ? "true" : "false")
                   << ",\"type_failed\":" << (type_failed ? "true" : "false")
                   << ",\"layer_failed\":" << (layer_failed ? "true" : "false") << "}\n";
+        return 0;
+    }
+    if (mode == "final-cost-budget") {
+        is312::capture limited(id, 2, 4, 2, 2, 620);
+        limited.begin("prefill", 0, 2);
+        const int32_t ids[] = {1, 3, 0, 2};
+        limited.record(1, ids, 2, 1, 0.0);
+        limited.record_cost(1, {0.25, 0.5, 0.75, 64, 32, 64});
+        limited.record(0, ids, 2, 2, 0.0);
+        std::cout << limited.export_json() << '\n';
         return 0;
     }
     if (mode == "cost-budget") {

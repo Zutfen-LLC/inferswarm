@@ -30,10 +30,11 @@ struct row {
     unsigned step, layer;
     double readback_ms;
     std::vector<std::vector<int32_t>> tokens;
+    std::vector<unsigned> token_positions;
     bool has_cost = false;
     overlap_cost cost = {};
 };
-struct step_info { std::string phase; unsigned step, tokens; };
+struct step_info { std::string phase; unsigned step, tokens, token_start; };
 class capture {
 public:
     capture(identity id, unsigned layers, unsigned experts, unsigned top_k, unsigned capacity,
@@ -45,12 +46,14 @@ public:
     unsigned expert_count() const { return experts_; }
     unsigned top_k() const { return top_k_; }
     unsigned layer_count() const { return layers_; }
-    unsigned current_tokens() const { return tokens_; }
+    // Supported CLI only: one contiguous sequence, logits=null, embeddings=false.
+    // Pinned qwen4exp prunes to the last output row before its final FFN.
+    unsigned expected_tokens(unsigned layer) const { return layer + 1 == layers_ ? 1 : tokens_; }
     void fail(std::string message) { error_ = std::move(message); }
     const std::string & error() const { return error_; }
 private:
     identity id_;
-    unsigned layers_, experts_, top_k_, capacity_, tokens_ = 0;
+    unsigned layers_, experts_, top_k_, capacity_, tokens_ = 0, token_start_ = 0;
     size_t max_bytes_, retained_bytes_ = 0;
     unsigned step_ = 0, steps_ = 0, observed_ = 0, dropped_ = 0;
     std::string phase_, error_;

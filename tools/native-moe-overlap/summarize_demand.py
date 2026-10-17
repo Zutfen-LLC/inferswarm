@@ -22,6 +22,8 @@ IDENTITY = ("model_source", "model_revision", "model_sha256", "representation",
 def summarize(capture, expected, resource_profiles=None):
     if capture.get("schema") != "native-demand/1":
         raise ValueError("unsupported demand schema")
+    if capture.get("token_coverage") != "qwen4exp-last-output":
+        raise ValueError("unsupported token coverage; require single-sequence last-output capture")
     identity = capture["identity"]
     if any(not expected.get(k) or identity.get(k) != expected[k] for k in IDENTITY):
         raise ValueError("model/native/workload identity mismatch")
@@ -34,11 +36,15 @@ def summarize(capture, expected, resource_profiles=None):
     step_meta = capture["step_meta"]
     if not isinstance(step_meta, list) or len(step_meta) != steps:
         raise ValueError("truncated step metadata")
+    token_start = 0
     for i, meta in enumerate(step_meta):
         if (not isinstance(meta, dict) or meta.get("phase") != ("prefill" if i == 0 else "decode") or
                 type(meta.get("step")) is not int or meta["step"] != i or
-                type(meta.get("tokens")) is not int or not 1 <= meta["tokens"] <= 4096):
+                type(meta.get("tokens")) is not int or not 1 <= meta["tokens"] <= 4096 or
+                (i > 0 and meta["tokens"] != 1) or
+                type(meta.get("token_start")) is not int or meta["token_start"] != token_start):
             raise ValueError("invalid step phase/token metadata")
+        token_start += meta["tokens"]
     rows = capture["rows"]
     if (any(type(capture[k]) is not int or capture[k] < 0 for k in
             ("observed_rows", "dropped_rows", "capacity_rows")) or
@@ -47,6 +53,7 @@ def summarize(capture, expected, resource_profiles=None):
             len(rows) > capture["capacity_rows"]):
         raise ValueError("truncated or inconsistent capture rows")
     seen, phases, cost_observations, cost_rows = set(), {}, [], []
+    retained_positions = []
     by_phase = {"prefill": {}, "decode": {}}
     for row in rows:
         phase, step, layer, tokens = (row[k] for k in ("phase", "step", "layer", "tokens"))
@@ -58,8 +65,17 @@ def summarize(capture, expected, resource_profiles=None):
         if phase != step_meta[step]["phase"]:
             raise ValueError("phase differs from step metadata")
         phases[step] = phase
-        if not isinstance(tokens, list) or len(tokens) != step_meta[step]["tokens"]:
+        meta = step_meta[step]
+        expected_positions = ([meta["token_start"] + meta["tokens"] - 1] if layer == layers - 1
+                              else list(range(meta["token_start"], meta["token_start"] + meta["tokens"])))
+        positions = row.get("token_positions")
+        if not isinstance(tokens, list) or len(tokens) != len(expected_positions):
             raise ValueError("invalid token grouping")
+        if (not isinstance(positions, list) or any(type(p) is not int for p in positions) or
+                positions != expected_positions):
+            raise ValueError("invalid token position mapping")
+        retained_positions.append({"phase": phase, "step": step, "layer": layer,
+                                   "token_positions": positions})
         dest = by_phase[phase].setdefault(str(layer), {"frequency": Counter(), "co_selection": Counter(), "tokens": 0, "rows": 0, "readback_ms": 0.0})
         dest["rows"] += 1
         overhead = row["readback_ms"]
@@ -114,8 +130,15 @@ def summarize(capture, expected, resource_profiles=None):
             "observed_gguf": capture.get("observed_gguf"), "resources": resources,
             "phase_demand": by_phase,
             "coverage": {"complete": complete, "expected_rows": steps * layers,
+                         "token_coverage": capture["token_coverage"],
+                         "expected_token_rows": sum((layers - 1) * s["tokens"] + 1 for s in step_meta),
+                         "retained_token_rows": sum(len(r["tokens"]) for r in rows),
+                         "retained_token_positions": retained_positions,
                          "observed_rows": capture["observed_rows"], "retained_rows": len(rows),
                          "dropped_rows": capture["dropped_rows"], "missing_layers": missing,
+                         "missing_layer_steps": [{"step": step, "layer": layer}
+                                                 for step in range(steps) for layer in range(layers)
+                                                 if (step, layer) not in seen],
                          "steps_without_retained_rows": sorted(set(range(steps)) - set(phases)),
                          "step_meta": step_meta},
             "costs": {"observations": cost_observations, "rows": cost_rows,

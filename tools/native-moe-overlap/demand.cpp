@@ -41,7 +41,7 @@ bool observe_argsort(capture * cap, const char * name, bool ask, bool i32,
             throw std::runtime_error("invalid router layer name");
         const unsigned long layer = std::stoul(suffix);
         if (layer >= cap->layer_count() || !i32 || experts != cap->expert_count() ||
-            tokens != cap->current_tokens() || element_stride != sizeof(int32_t) ||
+            tokens != cap->expected_tokens((unsigned)layer) || element_stride != sizeof(int32_t) ||
             token_stride != experts * sizeof(int32_t) || !read || !source ||
             tokens * cap->top_k() * sizeof(int32_t) > 8 * 1024 * 1024)
             throw std::runtime_error("router argsort shape mismatch");
@@ -70,19 +70,20 @@ capture::capture(identity id, unsigned layers, unsigned experts, unsigned top_k,
 void capture::begin(const std::string & phase, unsigned step, unsigned tokens) {
     if ((phase != "prefill" && phase != "decode") || tokens == 0 || tokens > 4096 ||
         steps_ >= 257 || (!steps_ && phase != "prefill") || (steps_ && phase != "decode") ||
-        (steps_ && step != step_ + 1) || (!steps_ && step != 0)) {
+        (steps_ && step != step_ + 1) || (!steps_ && step != 0) || (phase == "decode" && tokens != 1)) {
         throw std::invalid_argument("invalid explicit phase/step/token count");
     }
     phase_ = phase;
     step_ = step;
+    token_start_ += tokens_;
     tokens_ = tokens;
     ++steps_;
-    step_meta_.push_back({phase, step, tokens});
+    step_meta_.push_back({phase, step, tokens, token_start_});
     std::fill(seen_.begin(), seen_.end(), false);
 }
 void capture::record(unsigned layer, const int32_t * ids, unsigned stride, unsigned tokens, double readback_ms) {
     const auto start = std::chrono::steady_clock::now();
-    if (!steps_ || layer >= layers_ || seen_[layer] || tokens != tokens_ || !ids || stride < top_k_ ||
+    if (!steps_ || layer >= layers_ || seen_[layer] || tokens != expected_tokens(layer) || !ids || stride < top_k_ ||
         stride > experts_ || !std::isfinite(readback_ms) || readback_ms < 0) {
         throw std::invalid_argument("invalid router observation");
     }
@@ -90,9 +91,9 @@ void capture::record(unsigned layer, const int32_t * ids, unsigned stride, unsig
     ++observed_;
     // Charge vector/row overhead as well as ID bytes, before allocating any
     // token vectors. Drops are whole observations, never partial token groups.
-    const size_t charge = 256 + size_t(tokens) * (32 + size_t(top_k_) * sizeof(int32_t));
+    const size_t charge = 256 + size_t(tokens) * (32 + sizeof(unsigned) + size_t(top_k_) * sizeof(int32_t));
     if (rows_.size() >= capacity_ || charge > max_bytes_ - retained_bytes_) { ++dropped_; return; }
-    row r{phase_, step_, layer, readback_ms, {}};
+    row r{phase_, step_, layer, readback_ms, {}, {}};
     for (unsigned t = 0; t < tokens; ++t) {
         std::vector<int32_t> selected;
         for (unsigned k = 0; k < top_k_; ++k) {
@@ -104,6 +105,7 @@ void capture::record(unsigned layer, const int32_t * ids, unsigned stride, unsig
             selected.push_back(expert);
         }
         r.tokens.push_back(std::move(selected));
+        r.token_positions.push_back(token_start_ + (layer + 1 == layers_ ? tokens_ - 1 : t));
     }
     rows_.push_back(std::move(r));
     retained_bytes_ += charge;
@@ -123,7 +125,7 @@ void capture::record_cost(unsigned layer, overlap_cost cost) {
     if (it->has_cost) throw std::invalid_argument("duplicate overlap cost");
     constexpr size_t cost_charge = 1024; // six bounded metric envelopes
     if (cost_charge > max_bytes_ - retained_bytes_) {
-        retained_bytes_ -= 256 + size_t(tokens_) * (32 + size_t(top_k_) * sizeof(int32_t));
+        retained_bytes_ -= 256 + it->tokens.size() * (32 + sizeof(unsigned) + size_t(top_k_) * sizeof(int32_t));
         rows_.erase(it);
         ++dropped_;
         return;
@@ -156,13 +158,14 @@ std::string capture::export_json() const {
         << ",\"architecture\":" << quote(id_.gguf_architecture)
         << "},\"layers\":" << layers_ << ",\"expert_count\":" << experts_
         << ",\"top_k\":" << top_k_ << ",\"capacity_rows\":" << capacity_
+        << ",\"token_coverage\":\"qwen4exp-last-output\""
         << ",\"steps\":" << steps_ << ",\"observed_rows\":" << observed_
         << ",\"dropped_rows\":" << dropped_ << ",\"step_meta\":[";
     for (size_t i = 0; i < step_meta_.size(); ++i) {
         if (i) out << ',';
         const auto & s = step_meta_[i];
         out << "{\"phase\":" << quote(s.phase) << ",\"step\":" << s.step
-            << ",\"tokens\":" << s.tokens << '}';
+            << ",\"tokens\":" << s.tokens << ",\"token_start\":" << s.token_start << '}';
     }
     out << "],\"rows\":[";
     for (size_t i = 0; i < rows_.size(); ++i) {
@@ -179,6 +182,11 @@ std::string capture::export_json() const {
                 out << r.tokens[t][k];
             }
             out << ']';
+        }
+        out << "],\"token_positions\":[";
+        for (size_t t = 0; t < r.token_positions.size(); ++t) {
+            if (t) out << ',';
+            out << r.token_positions[t];
         }
         out << ']';
         if (r.has_cost) {
