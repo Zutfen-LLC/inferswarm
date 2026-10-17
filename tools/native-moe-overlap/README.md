@@ -93,3 +93,70 @@ compilation, GPU fit, GPU execution overlap and speed remain separately untested
 
 See [hardware-recipe.md](hardware-recipe.md) for the bounded, separately
 dispatched Hermes handoff. #300 remains open.
+
+## #312 opt-in structural demand (no placement decision)
+
+`build.py --demand` additionally links `native-demand`, a **single-request**
+profiler, without compiling the unrelated server/MTMD closure. It uses the
+pinned `ffn_moe_argsort-<layer>` *compute node* callback:
+`ffn_moe_topk` is a strided view, not itself a compute node. For an optional
+`IS309_MOE` one-layer route, the private CPU-owned packed IDs are captured after
+the router graph; every other layer still uses the ordinary callback. The
+ordinary path and the old intermediate-callback refusal remain unchanged when
+profiling is not active. This never enables `IS309_CAPTURE` (input/output
+tensor retention); the CLI refuses that variable. No model weights or device
+work are changed by capture. The callback adds readbacks/synchronizations only
+in the profiling request. It is **not** a server telemetry mode.
+
+Build after separate approval on an authenticated native source archive (the
+CPU synthetic test only builds `demand_fixture.cpp` + `demand.cpp`). Example
+invocation shape, **not** a hardware dispatch authorization:
+
+```text
+native-demand --model /path/to/model.gguf --prompt-file /private/train-prompt.txt \
+  --output /fresh/profile.json --decode-steps 4 --max-rows 4096 \
+  --model-source <exact-repository> --model-revision <exact-revision> \
+  --model-sha256 <preauthenticated-model-sha256> --representation <format> \
+  --file-type <GGUF-general.file_type> --native-build-sha256 <built-binary-sha256> \
+  --workload-sha256 <preauthenticated-workload-sha256> \
+  --workload-label <nonsemantic-id> --cohort profiling --backend <backend-label>
+```
+
+`--rpc-endpoint <host:port> --rpc-tensors-regex <bank-regex>` optionally uses
+the *existing* native RPC device and `tensor_buft_overrides` loader seam for
+all selected routed banks and scales. `--gpu-layers <N>` optionally requests
+native GPU-layer offload. The selected layer still refuses unsupported
+placement/shape/callback cases; no subset placement is introduced. Run with
+external deadline and resource/health supervision as for #309. No automatic
+weight acquisition or rehashing occurs: model revision/digest, workload digest,
+build digest and backend label are **operator attestations**; the CLI observes
+GGUF architecture, file_type, expert count, top-k and layer count. The CLI
+rejects a file_type mismatch, but independent custody must bind the attested
+digests to the actual inputs and built binary. The offline reducer refuses
+every missing/mismatched expected model/native/workload identity:
+
+```text
+python3 tools/native-moe-overlap/summarize_demand.py /fresh/profile.json \
+  --model-source <exact-repository> --model-revision <exact-revision> \
+  --model-sha256 <digest> --representation <format> \
+  --native-source b29c606e28a01b1bc8c1351026a0fa6e616bf6c4 \
+  --native-build-sha256 <digest> --workload-sha256 <digest>
+```
+
+The JSON contains only grouped selected expert IDs (per token, layer, step,
+explicit prefill/decode), scalar identity/workload labels, coverage/drop counts,
+and measured callback ID readback/collection milliseconds. It has no raw prompt,
+token IDs, generated response, hidden tensor or routed result. Per-phase
+frequency/co-selection, missing layers, retained vs observed/expected rows, and
+incomplete coverage are explicit; a one-token prefill is not decode. Bounded
+memory (`--max-rows`, max 100,000), prompt tokens (4,096), decode steps (256),
+and export (16 MiB); a smaller capacity drops rows *and reports the drop*,
+never invents completeness. Export is fresh-path-only and repeatable from one
+in-memory capture. Full callback/synchronization overhead, per-expert device
+execution and link costs are **unmeasured/unknown**. IS309 `dispatch_ms`,
+`shared_ms` and `join_ms` are separately measured overlapping stages, not
+additive wall time or GPU kernel time. For economics use current
+`resource-profiles/1` measured `RuntimeCapability`/`LinkProfile` evidence and
+the strategy's context-bound metric/unit/statistic representation; do not rank
+by this frequency alone or transfer Qwen3.6 routing evidence to Qwen3.8.
+Training/profiling prompts and later evaluation prompts stay separate.
