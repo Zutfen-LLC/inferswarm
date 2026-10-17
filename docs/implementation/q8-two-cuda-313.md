@@ -5,7 +5,7 @@ a physical result or authorize a hardware run.
 
 ## Fixed topology
 
-`selection: two-gpu` keeps the complete Q8 source and layers 0--40 on the CPU
+By default, `selection: two-gpu` keeps the complete Q8 source and layers 0--40 on the CPU
 coordinator. One small-RAM worker owns two complete CUDA layer ranges:
 
 | owner | native selector | coordinator selector | complete states | encoded weights |
@@ -28,7 +28,8 @@ disconnect. One listener therefore cannot back the client's two persistent
 dispatchers. The worker instead runs two owned processes on distinct ports:
 `rpc0 --device CUDA0` and `rpc1 --device CUDA1`. The coordinator registers both
 listeners in that order and selects `RPC0,RPC1`; `--gpu-layers 8
---tensor-split 4,4` places four complete layers on each. Because these are
+--tensor-split 4,4` places four native slots on each, including output slot 48
+on GPU 1. Because these are
 distinct dispatchers, the GPU0-to-GPU1 boundary uses the existing generic
 coordinator-staged GET/SET route. No P2P or server-local GPU copy is assumed.
 Duplicate ports, different worker hosts, reversed primary ownership and
@@ -42,6 +43,39 @@ prove CUDA placement. Endpoint-bound execution observations provide that proof.
 Both processes and their unknown runtime heaps are owned, accounted and
 cleaned up independently. Existing `cpu-only` and `one-gpu` launch receipt
 shapes remain unchanged.
+
+### Finite opt-in 40/44 variant
+
+Under `selection: two-gpu`, setting
+`strategy_options.placement_variant: "40-44"` selects exactly this alternative:
+
+| owner | complete states | encoded weights (CALCULATED) |
+|---|---|---:|
+| coordinator CPU | embeddings and layers 0--39 | 165,461,443,840 B |
+| worker GPU 0 | layers 40--43 | 11,035,064,960 B |
+| worker GPU 1 | layers 44--47 and output | 11,717,499,520 B |
+
+The option must be absent for the unchanged 41/45 default. Other values,
+including null, and use with `one-gpu` or `cpu-only` refuse. Ownership, local
+state, completed-layer boundaries, canonical plan identity, assigned ranges
+and per-listener guards all follow the selected variant. Native lowering is
+`--gpu-layers 9 --tensor-split 4,5`; the pinned float32 cumulative split and
+upper-bound rule assign slots 40--43 to RPC0 and 44--48 to RPC1. No native
+source, patch, build identity or generic planner changes are required.
+
+From the checked-in Q8 metadata, layers 40 and 44 each have CALCULATED
+2,760,141,696 B encoded weights and 3,268,608 B recurrent state (122,880 B R
+plus 3,145,728 B S). Moving layer 44 to GPU1 while adding layer 40 to GPU0
+leaves GPU0's known bytes unchanged and adds 2,763,410,304 B to GPU1. Both GPU
+weight assignments total 22,752,564,480 B. These are lower bounds: backend
+alignment/repacking, workspace, graph, observer and other unknowns remain
+unknown, and ordinary admission still refuses them. No reserve is reduced.
+The existing experimental result retains `output_accepted:false` and
+`physical_qualified:false`, with observer refusal recorded separately.
+
+The [later comparison recipe](../../tools/native-cache/q8-two-cuda-recipe.md#later-4044-comparison-coding-only)
+uses the accepted optimized CPU/CUDA pair and one candidate load. This coding
+variant establishes no fit, speed, numerical acceptance or hardware authority.
 
 "Shared cache" means one already prepared and completely authenticated durable
 cache root, not a shared upload guard. Each listener receives only its bank's

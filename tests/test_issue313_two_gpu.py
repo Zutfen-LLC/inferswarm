@@ -6,6 +6,7 @@ operator contract and native argv only; they do not prove CUDA execution.
 from __future__ import annotations
 
 import copy
+from dataclasses import asdict, dataclass, replace
 import hashlib
 import json
 from pathlib import Path
@@ -19,12 +20,13 @@ from inferswarm.operator import assigned_backing
 from inferswarm.operator import lifecycle
 from inferswarm.operator.config import parse_config
 from inferswarm.operator.lifecycle import LeaseManager
-from inferswarm.operator.plan import build_plan
+from inferswarm.operator.plan import build_plan, revalidate_admission
 from inferswarm.operator.phased_observation import reconcile_dynamic
-from inferswarm.operator.profiles import thaw
+from inferswarm.operator.profiles import thaw, sha256 as canonical_sha
 from inferswarm.operator.profiles import freeze
 from inferswarm.operator.bindings import ProcessIdentity
-from inferswarm.operator.qwen_q8 import NativeQ8Options, q8_llama_cpp_spec, q8_rpc_processes
+from inferswarm.operator.qwen_q8 import (NativeQ8Options, q8_llama_cpp_spec,
+    q8_rpc_processes, validate_q8_ownership)
 from inferswarm.operator.runtime import OperatorRunner
 from inferswarm.operator.q8_experiment import (EXPERIMENTAL_OPT_IN,
     ExperimentalLeaseManager, SystemdCampaignGuard,
@@ -43,7 +45,7 @@ from issue311_native_backing import prepare_q8_participant, project_q8_preparati
 from issue311_preparation import DiskBudget, StreamingArtifactCache, StreamingNode
 
 
-def two_gpu_mapping():
+def two_gpu_mapping(placement_variant=None):
     """Assigned-only dual-GPU config on one synthetic remote host."""
     raw=q8_mapping('one-gpu')
     raw['selection']='two-gpu'
@@ -108,12 +110,16 @@ def two_gpu_mapping():
             min_free_bytes=1<<30,reserve_bytes=128<<30),observer=dict(OBSERVER))
     remote['backing']=[]
     remote['cache_ranges']=[]
+    first,second=41,45
+    if placement_variant is not None:
+        raw['strategy_options']['placement_variant']=placement_variant
+        first,second=40,44
 
     owners={'binding-A-cpu':[],'binding-B-gpu0':[],'binding-B-gpu1':[]}
     for tensor in metadata().tensors:
         layer=int(tensor.state_id.split('.')[1]) if tensor.state_id.startswith('blk.') else 48
-        owner=('binding-A-cpu' if tensor.state_id in ('token_embd.weight','per_layer_token_embd.weight') or layer<41
-               else 'binding-B-gpu0' if layer<45 else 'binding-B-gpu1')
+        owner=('binding-A-cpu' if tensor.state_id in ('token_embd.weight','per_layer_token_embd.weight') or layer<first
+               else 'binding-B-gpu0' if layer<second else 'binding-B-gpu1')
         owners[owner].append(tensor)
     raw['placement']=[]
     for binding_id,tensors in owners.items():
@@ -144,8 +150,14 @@ def two_gpu_mapping():
 
 
 class TwoGpuTopologyTests(unittest.TestCase):
-    def build(self,mutate=None):
-        raw,manifest=two_gpu_mapping()
+    def build(self,mutate=None,*,placement_variant=None,build_pair=None):
+        raw,manifest=two_gpu_mapping(placement_variant)
+        if build_pair is not None:
+            raw['strategy_options']['build_pair']=build_pair
+            for p in raw['participants']:
+                backend='cpu' if p['role']=='client' else 'cuda'
+                p['runtime_sha256']=assigned_backing.role_identity(p['role'],backend,
+                    build_pair=build_pair).executable_sha256
         if mutate: mutate(raw)
         with patch.object(assigned_backing,'identities',return_value=synthetic_table(manifest)):
             return build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
@@ -183,6 +195,160 @@ class TwoGpuTopologyTests(unittest.TestCase):
         self.assertEqual(spec.args[spec.args.index('--gpu-layers')+1],'8')
         self.assertEqual(NativeQ8Options('two-gpu',gpu_layers=8).layer_device_indices(),
                          (None,)*41+(0,0,0,0,1,1,1,1))
+
+    def test_existing_modes_keep_pre_variant_canonical_bytes(self):
+        from tests.test_issue299_q8_plan import config
+        # Recorded on untouched aa3e1717 with these deterministic fixtures.
+        expected={
+            'two-gpu':('bc6c773d803bcef2dbf26141539768432eaf0c1fde655ed412a80a4da325cb73',
+                       '6209b19b7d1ea35084aafece2678345a4ce7a0c931d06fe2a71770fffdde8893',
+                       '5c19b6891a0d6e07f2cf8f687caee6b0a3115dd7a8873b3e0040be758921f78f'),
+            'one-gpu':('6c2a4f28196609bc40b1ec4cfbb76319180007047305a61b6fdb0fe964863715',
+                       'b1427dcb547ffe2e052f91aa9b0cb6f1f1ea9ca89d42eb14bc9369c2c3d3777e',
+                       'f803f5df62ab05c480ef5f4847214a7e04f4b33dd70f40871f488da0449ff01d'),
+            'cpu-only':('6e8e64d6d8d2f6771bef7bb55ca00e6bcd68851d2d5efb6270b7e51224b03a1e',
+                        'ded88dfa1cf96ecca2776fed703e89bd6f4a20f5a326932b46a760d419319ffb',
+                        '8f65940e86352d4c6a6369b364e6ad9cf52d0359627adc7bc822ce4fa9147e93')}
+        for selection,witness in expected.items():
+            plan=self.build() if selection=='two-gpu' else build_plan(config(selection),now=NOW)
+            with self.subTest(selection=selection):
+                self.assertEqual((plan.digest,canonical_sha(asdict(plan.candidate)),
+                                  canonical_sha(asdict(q8_llama_cpp_spec(plan)))),witness)
+
+    def test_40_44_ownership_state_cuts_and_exact_weight_census(self):
+        baseline=self.build(); plan=self.build(placement_variant='40-44'); c=plan.candidate
+        for a in c.assignments:
+            layer=int(a.state_id.split('.')[1]) if a.state_id.startswith('blk.') else 48
+            expected=('binding-A-cpu' if a.state_id in ('token_embd.weight','per_layer_token_embd.weight') or layer<40
+                      else 'binding-B-gpu0' if layer<44 else 'binding-B-gpu1')
+            self.assertEqual(a.binding_id,expected,a.state_id)
+        weights=lambda p,b: sum(a.encoded_bytes for a in p.candidate.assignments if a.binding_id==b)
+        self.assertEqual(weights(plan,'binding-B-gpu0'),11035064960)
+        self.assertEqual(weights(plan,'binding-B-gpu1'),11717499520)
+        self.assertEqual(weights(plan,'binding-B-gpu0')+weights(plan,'binding-B-gpu1'),22752564480)
+        states={s.state_id:s for s in c.required_state}
+        for layer,bid in ((40,'binding-B-gpu0'),(44,'binding-B-gpu1')):
+            rows=[states[f'cache_{name}_l{layer}'] for name in ('r','s')]
+            self.assertEqual([r.lower_bound_bytes for r in rows],[122880,3145728])
+            self.assertEqual({r.binding_id for r in rows},{bid})
+            self.assertEqual(sum(a.encoded_bytes for a in c.assignments
+                                 if a.state_id.startswith(f'blk.{layer}.')),2760141696)
+        def known(p,bid):
+            return sum(c.bytes for c in p.candidate.charges if c.phase=='serve' and c.bytes is not None
+                       and c.allocation_id.startswith(('encoded-weights:'+bid+'/', 'state-lower-bound:'+bid+'/')))
+        self.assertEqual(known(plan,'binding-B-gpu0'),known(baseline,'binding-B-gpu0'))
+        self.assertEqual(known(plan,'binding-B-gpu1')-known(baseline,'binding-B-gpu1'),2763410304)
+        self.assertEqual([b.before_layer for b in c.boundaries],[40,44])
+        self.assertEqual(c.boundaries[1].route_hosts,('B','A','B'))
+        self.assertEqual(c.boundaries[1].link_legs,('A-B','A-B'))
+        for cuts in (baseline.candidate.boundaries,tuple(replace(b,before_layer=b.before_layer+1) for b in c.boundaries)):
+            with self.assertRaisesRegex(ValueError,'boundary schema'):
+                validate_q8_ownership(replace(c,boundaries=cuts),metadata())
+        bad=replace(c,assignments=baseline.candidate.assignments)
+        with self.assertRaisesRegex(ValueError,'whole-layer ownership'):
+            validate_q8_ownership(bad,metadata())
+
+    def test_40_44_native_float32_map_and_canonical_identity(self):
+        pair=assigned_backing.OPTIMIZED_BUILD_PAIR
+        plan=self.build(placement_variant='40-44',build_pair=pair); spec=q8_llama_cpp_spec(plan)
+        self.assertEqual(spec.args[spec.args.index('--gpu-layers')+1],'9')
+        self.assertEqual(spec.args[spec.args.index('--tensor-split')+1],'4,5')
+        self.assertEqual(NativeQ8Options('two-gpu',gpu_layers=9).layer_device_indices(),
+                         (None,)*40+(0,)*4+(1,)*5)  # Includes output slot 48.
+        self.assertEqual(spec.device,'RPC0,RPC1')
+        self.assertNotEqual(plan.digest,self.build(build_pair=pair).digest)
+        self.assertEqual(thaw(plan.candidate.canonical_strategy_options)['placement_variant'],'40-44')
+        self.assertEqual(plan.candidate.semantic_contract[0].placement_variant,'40-44')
+        self.assertEqual(plan.candidate.source_contract[-1],NativeQ8Options('two-gpu',gpu_layers=9))
+        self.assertNotIn('plan digest integrity mismatch',revalidate_admission(plan,now=NOW).deficits)
+        self.assertNotIn('plan strategy options integrity mismatch',revalidate_admission(plan,now=NOW).deficits)
+        changed=replace(plan,config=replace(plan.config,strategy_options=self.build().strategy_options))
+        self.assertIn('plan strategy options integrity mismatch',revalidate_admission(changed,now=NOW).deficits)
+
+    def test_40_44_static_context_retains_closed_variant_contract(self):
+        from inferswarm.operator.phased_observation import derive_static_plan_context
+        from inferswarm.operator.qwen_q8 import Q8VariantContract
+        plan=self.build(placement_variant='40-44',build_pair=assigned_backing.OPTIMIZED_BUILD_PAIR)
+        context=derive_static_plan_context(plan,metadata(),original_plan_digest=plan.digest)
+        self.assertEqual(context.inventory.weights,plan.candidate.assignments)
+        self.assertFalse(plan.admission.execution_ready)
+        contract=plan.candidate.semantic_contract[0]
+        @dataclass(frozen=True)
+        class ExtraContract(Q8VariantContract):
+            extra: int=0
+        for bad in (replace(contract,placement_variant=('40-44',)),ExtraContract(**vars(contract))):
+            candidate=replace(plan.candidate,semantic_contract=(bad,))
+            with self.assertRaisesRegex(ValueError,'static context typed input'):
+                derive_static_plan_context(replace(plan,candidate=candidate),metadata(),
+                                           original_plan_digest=plan.digest)
+
+    def test_40_44_cache_projection_and_guards_reuse_exact_ranges(self):
+        def payload(variant,previous=None):
+            raw,_=two_gpu_mapping(variant)
+            if previous is not None:
+                # Retain the authenticated old content/native keys across a bank
+                # move; only the new layer gets new synthetic content identities.
+                old={r['state_id']:r for r in previous['participants'][1]['cache_ranges']}
+                next_key=max(int(r['cache_key'],16) for r in old.values())+1
+                for row in raw['participants'][1]['cache_ranges']:
+                    if row['state_id'] in old:
+                        row['cache_key']=old[row['state_id']]['cache_key']
+                    else:
+                        row['cache_key']=format(next_key,'016x'); next_key+=1
+            pair=assigned_backing.OPTIMIZED_BUILD_PAIR
+            raw['strategy_options']['build_pair']=pair
+            for p in raw['participants']:
+                backend='cpu' if p['role']=='client' else 'cuda'
+                p['runtime_sha256']=assigned_backing.role_identity(p['role'],backend,build_pair=pair).executable_sha256
+            plan=build_plan(parse_config(rejoin_profiles(raw),now=NOW,profile_mode='replay'),now=NOW)
+            return plan,q8_source_payload(plan)
+        baseline,old=payload(None); plan,new=payload('40-44',old)
+        self.assertEqual([p.runtime_sha256 for p in plan.participants],
+                         [p.runtime_sha256 for p in baseline.participants])
+        old_rows={r['state_id']:r for r in old['prepared_metadata']['tensors']}
+        rows={r['state_id']:r for r in new['prepared_metadata']['tensors']}
+        missing=set(rows)-set(old_rows)
+        self.assertEqual(missing,{t.state_id for t in metadata().tensors if t.state_id.startswith('blk.40.')})
+        self.assertEqual(sum(rows[n]['encoded_bytes'] for n in missing),2760141696)
+        for name in old_rows:
+            for field in ('member','absolute_offset','encoded_bytes','content_sha256','cache_key','ggml_type','shape'):
+                self.assertEqual(rows[name][field],old_rows[name][field],(name,field))
+            if name.startswith('blk.44.'):
+                self.assertEqual((old_rows[name]['binding_id'],rows[name]['binding_id']),
+                                 ('binding-B-gpu0','binding-B-gpu1'))
+        guards={bid:source_verifier.assigned_guard_bytes(dict(new['prepared_metadata'],
+            tensors=[r for r in rows.values() if r['binding_id']==bid])).decode().splitlines()
+            for bid in ('binding-B-gpu0','binding-B-gpu1')}
+        names={bid:{line.split()[0] for line in lines} for bid,lines in guards.items()}
+        self.assertFalse(names['binding-B-gpu0'] & names['binding-B-gpu1'])
+        self.assertEqual(set.union(*names.values()),set(rows))
+        self.assertTrue(missing<=names['binding-B-gpu0'])
+        self.assertTrue({n for n in rows if n.startswith('blk.44.') or n.startswith('output')}<=names['binding-B-gpu1'])
+
+    def test_unsupported_variants_native_options_and_cache_coverage_refuse(self):
+        with self.assertRaisesRegex(ValueError,'whole-layer ownership'):
+            self.build(lambda raw: raw['strategy_options'].update(placement_variant='40-44'))
+        for variant in ('41-45','39-43','40-45',None,False,9,[],{}):
+            with self.subTest(variant=variant),self.assertRaisesRegex(ValueError,'unsupported Q8 placement variant'):
+                self.build(lambda raw: raw['strategy_options'].update(placement_variant=variant))
+        for selection in ('one-gpu','cpu-only'):
+            raw=q8_mapping(selection); raw['strategy_options']['placement_variant']='40-44'
+            with self.subTest(selection=selection),self.assertRaisesRegex(ValueError,'unsupported Q8 placement variant'):
+                build_plan(parse_config(raw,now=NOW,profile_mode='replay'),now=NOW)
+        for layers in (7,10,35,True,9.0):
+            with self.subTest(layers=layers),self.assertRaisesRegex(ValueError,'fixed native options'):
+                NativeQ8Options('two-gpu',gpu_layers=layers)
+        for prefix in ('blk.40.','blk.44.'):
+            def omit(raw):
+                remote=raw['participants'][1]
+                remote['cache_ranges']=[r for r in remote['cache_ranges'] if not r['state_id'].startswith(prefix)]
+            with self.subTest(prefix=prefix),self.assertRaisesRegex(ValueError,'cache state coverage'):
+                self.build(omit,placement_variant='40-44')
+        plan=self.build(placement_variant='40-44')
+        self.assertFalse(plan.admission.execution_ready)
+        self.assertTrue(any(d.startswith('UNKNOWN allocation:') for d in plan.admission.deficits))
+        with self.assertRaisesRegex(ValueError,'Q8 admission refused:'):
+            OperatorRunner(None,None,None,None)._profiled_admission(plan)
 
     def test_worker_host_and_each_vram_are_independent_domains(self):
         plan=self.build(); charges=plan.candidate.charges
@@ -387,7 +553,12 @@ class TwoGpuTopologyTests(unittest.TestCase):
             runner._assigned_spawn(plan,remote,sources,binding_id='not-a-bank')
 
     def test_diagnostic_runs_two_owned_processes_retains_output_and_cleans_up(self):
-        plan=self.build()
+        self.check_diagnostic(self.build())
+
+    def test_40_44_diagnostic_keeps_unaccepted_flags_and_observer_refusal(self):
+        self.check_diagnostic(self.build(placement_variant='40-44'))
+
+    def check_diagnostic(self,plan):
         class Transport:
             def __init__(self,fail_spawn=None):
                 self.rows={}; self.stopped=set(); self.argv={}; self.fail_spawn=fail_spawn

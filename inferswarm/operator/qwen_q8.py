@@ -84,13 +84,30 @@ class Q8Contract:
     binding_hosts: tuple
     links: tuple
 
+    @property
+    def layer_cuts(self):
+        return (41,45) if self.selection=='two-gpu' else (14,45) if self.selection=='one-gpu' else (14,)
+
+
+@dataclass(frozen=True)
+class Q8VariantContract(Q8Contract):
+    # Only the opt-in contract gains a field, preserving default canonical bytes.
+    placement_variant: str
+
+    @property
+    def layer_cuts(self):
+        if self.selection!='two-gpu' or self.placement_variant!='40-44':
+            raise ValueError('unsupported Q8 placement variant')
+        return (40,44)
+
 
 def _owner(name, contract):
     binding = dict(contract.bindings)
     if name in ('token_embd.weight','per_layer_token_embd.weight'): return binding['loader']
     layer = int(name.split('.')[1]) if name.startswith('blk.') else 48
     if contract.selection=='two-gpu':
-        return binding['loader'] if layer<41 else binding['remote_gpu0'] if layer<45 else binding['remote_gpu1']
+        first,second=contract.layer_cuts
+        return binding['loader'] if layer<first else binding['remote_gpu0'] if layer<second else binding['remote_gpu1']
     return binding['loader'] if layer<14 else binding['remote_gpu'] if contract.selection=='one-gpu' and layer>=45 else binding['remote_cpu']
 
 
@@ -135,8 +152,9 @@ def _boundaries(contract):
     shape=(embd,hc,n); strides=(4,4*embd,4*embd*hc)
     state=_states(contract)
     if contract.selection=='two-gpu':
-        edges=[(41,binding['loader'],binding['remote_gpu0']),
-               (45,binding['remote_gpu0'],binding['remote_gpu1'])]
+        first,second=contract.layer_cuts
+        edges=[(first,binding['loader'],binding['remote_gpu0']),
+               (second,binding['remote_gpu0'],binding['remote_gpu1'])]
     else:
         edges=[(14,binding['loader'],binding['remote_cpu'])]
         if contract.selection=='one-gpu': edges.append((45,binding['remote_cpu'],binding['remote_gpu']))
@@ -363,6 +381,10 @@ def _validate_options(config,metadata):
     selective=options['source_contract']==CONTRACT
     base_fields=('bindings','route','source_contract','rpc_cache','host_mirrors','bounds','startup_timeout_seconds')
     if config.selection=='two-gpu': base_fields+=('rpc_endpoints','worker_host_memory_id','subject_memory_ids')
+    if 'placement_variant' in options:
+        if config.selection!='two-gpu' or options['placement_variant']!='40-44':
+            raise ValueError('unsupported Q8 placement variant')
+        base_fields+=('placement_variant',)
     if selective: base_fields+=('participant_backing',)
     if selective and 'build_pair' in options: base_fields+=('build_pair',)
     keys(options,base_fields+('observer',) if 'observer' in options else base_fields,'strategy options')
@@ -525,7 +547,7 @@ def validate_q8_ownership(candidate, metadata):
     if candidate.boundaries!=_boundaries(contract):
         raise ValueError('boundary schema: exact shape/layout/authority/route/side-input source contract required')
     h=dict(metadata.model_metadata); n=contract.workload.microbatch
-    expected_cuts=(41,45) if contract.selection=='two-gpu' else (14,45) if contract.selection=='one-gpu' else (14,)
+    expected_cuts=contract.layer_cuts
     if tuple(b.before_layer for b in candidate.boundaries)!=expected_cuts: raise ValueError('boundary schema: exact completed-layer cuts')
     for b in candidate.boundaries:
         expected_shape=(h['qwen4exp.embedding_length'],h['qwen4exp.hyper_connection.count'],n)
@@ -543,6 +565,8 @@ def q8_candidates(config, metadata):
     chosen=tuple(sorted((key,bindings[bid]) for key,bid in options['bindings'].items()))
     contract=Q8Contract(config.selection,chosen,config.workload,options['route'],metadata.metadata_digest,metadata.header_identities,metadata.model_metadata,
         tuple(sorted((b.binding_id,p.host_id) for p in config.participants for b in p.bindings)),config.profiles.snapshot.links)
+    if 'placement_variant' in options:
+        contract=Q8VariantContract(**vars(contract),placement_variant=options['placement_variant'])
     assignments=_assignments(config.placement,metadata,contract)
     states=_states(contract)
     boundaries=_boundaries(contract)
@@ -557,7 +581,7 @@ def q8_candidates(config, metadata):
         'host_mirrors':sorted(options['host_mirrors'],key=lambda row:row['allocation_id'])}
     candidate=LegalCandidate(config.selection,assignments,states,boundaries,charges,requirements,
         (options['source_contract'],RUNTIME_PIN,RUNTIME_TREE,metadata.source,metadata.header_identities,
-         NativeQ8Options(config.selection,gpu_layers=8 if config.selection=='two-gpu' else 35)),
+         _native_options(contract)),
         subject=profile_subject(config,profile_mode=config.profile_mode),required_charge_ids=tuple(c.allocation_id for c in charges),
         calculated_evidence=(SOURCE_EVIDENCE,),unsupported=unsupported,semantic_contract=(contract,),
         canonical_strategy_options=freeze(normalized_options))
@@ -722,16 +746,17 @@ class NativeQ8Options:
     kv_unified: bool = False
 
     def __post_init__(self):
-        expected_layers=8 if self.selection=='two-gpu' else 35
+        expected_layers=(8,9) if self.selection=='two-gpu' else (35,)
         if (self.selection not in ('two-gpu','one-gpu','cpu-only') or type(self.gpu_layers) is not int or
-                (self.gpu_layers,self.split_mode,self.fit,self.lazy_mode,self.load_mode,self.kv_offload,self.op_offload)
-                !=(expected_layers,'layer','off','on','none',True,False) or type(self.kv_offload) is not bool or type(self.op_offload) is not bool
+                self.gpu_layers not in expected_layers or
+                (self.split_mode,self.fit,self.lazy_mode,self.load_mode,self.kv_offload,self.op_offload)
+                !=('layer','off','on','none',True,False) or type(self.kv_offload) is not bool or type(self.op_offload) is not bool
                 or self.flash_attention!='off' or self.kv_unified is not False):
             raise ValueError('fixed native options: no adaptive fit, overrides, CPU-MoE or alternative split')
 
     @property
     def tensor_split(self):
-        return (4,4) if self.selection=='two-gpu' else (31,4) if self.selection=='one-gpu' else (1,)
+        return (4,self.gpu_layers-4) if self.selection=='two-gpu' else (31,4) if self.selection=='one-gpu' else (1,)
 
     def layer_device_indices(self):
         # Source-exact float32 cumulative splits and upper_bound, output slot 48.
@@ -745,6 +770,11 @@ class NativeQ8Options:
         splits=[f32(v/total) for v in splits]
         start=49-self.gpu_layers
         return tuple(None if layer<start else bisect.bisect_right(splits,f32((layer-start)/self.gpu_layers)) for layer in range(49))
+
+
+def _native_options(contract):
+    return NativeQ8Options(contract.selection,
+        gpu_layers=49-contract.layer_cuts[0] if contract.selection=='two-gpu' else 35)
 
 
 @dataclass(frozen=True)
@@ -779,7 +809,7 @@ def q8_llama_cpp_spec(plan):
     client=next(p for p in plan.participants if p.role=='client')
     remote=next(p for p in plan.participants if p.role=='remote')
     options=thaw(plan.strategy_options)
-    native_options=NativeQ8Options(plan.selection,gpu_layers=8 if plan.selection=='two-gpu' else 35)
+    native_options=_native_options(plan.candidate.semantic_contract[0])
     binding=dict(plan.candidate.semantic_contract[0].bindings)
     binding_order=('remote_gpu0','remote_gpu1') if plan.selection=='two-gpu' else ('remote_cpu','remote_gpu')
     device=','.join(binding[k].visible_selector for k in binding_order if k in binding)

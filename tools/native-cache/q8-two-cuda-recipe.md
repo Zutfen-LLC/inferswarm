@@ -283,3 +283,69 @@ by ordinary CI, the next smallest physical operation is fresh read-only worker
 inventory plus exact CUDA build admission and the complete
 per-device/host/coordinator memory census. Only after those gates receive
 separate review and dispatch should the one full-Q8 diagnostic above run.
+
+## Later 40/44 comparison (coding only)
+
+This is one proposed comparison for separate physical authorization. The
+implementation approval covers local code, offline tests and a local commit;
+it grants no model reads/hashes, acquisition, host probes or GPU execution.
+The default 41/45 placement and all previous results remain available.
+
+1. Use the existing optimized baseline as the comparator: reported MEASURED
+   native prefill **2.274 s**, native decode **8.568 s**, HTTP wall **13.154 s**,
+   with **28 prompt / 32 generated tokens**. These observations were supplied
+   in the maintainer handoff; their raw session/response artifacts are retained
+   outside this repository. Copy and authenticate the exact prior warmup and
+   short-decode request bytes, settings, session digest and timing provenance
+   before a comparison. Missing inputs or material context drift means STOP
+   for this recipe; the numbers alone do not establish a reproducible baseline.
+2. Keep `selection: two-gpu` and explicitly add
+   `strategy_options.placement_variant: "40-44"`. Reassign complete layer 40
+   from coordinator to GPU0 and complete layer 44 from GPU0 to GPU1, including
+   each layer's state; keep embeddings on CPU and output on GPU1. Recompute the
+   plan/config/profile/session/envelope identities and exact assigned ranges.
+   Retain `build_pair: optimized-cpu05-cuda03`: CPU executable
+   `8fbea89ca86a22572fe9b83807a7943a75dccaaaa0ec283c4fc24508c90b3156`
+   with unchanged CUDA executable
+   `46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73`.
+   Use their [reviewed complete manifests](optimized-cpu-build-pair/README.md);
+   no runtime rebuild, native patch or observer redesign is part of this slice.
+3. With workers stopped, authenticate the old shared assigned cache using the
+   existing preparation/inventory/delta machinery. If all old content remains
+   valid, acquire only missing layer 40: CALCULATED **2,760,141,696 B** of whole
+   tensors. Layer 44 already exists in that cache; update its metadata/binding
+   and move it between immutable listener guards without fetching its weights
+   again. Keep content SHA/native keys, source extent/type/shape and repair
+   reserves authenticated. Retain old valid objects; do not clear the cache or
+   silently broaden acquisition if the census differs. Reuse the established
+   coordinator source-digest cache only while its witnesses remain valid;
+   the new CPU assignment is a subset of the old one. Existing source
+   verification and cache-miss rules still apply.
+4. Treat the fit as narrowly plausible, unproved. CALCULATED GPU0 weights stay
+   **11,035,064,960 B**; GPU1 weights become **11,717,499,520 B**. GPU1 gains
+   **2,763,410,304 B** including recurrent state. The latest reported MEASURED
+   minimum free GPU1 memory was **3,234 MiB** on the baseline; subtraction gives
+   CALCULATED **598.607 MiB** remaining, only **86.607 MiB** above the unchanged
+   **512 MiB** reserve, before unknown workspace/alignment/graph/observer costs.
+   This historical sample is not current headroom or a fit proof. Admit actual
+   per-device and host budgets using the existing resource checks; STOP on
+   allocation failure, reserve breach or any other frozen resource failure.
+5. Freeze one outer start T0 covering acquisition through cleanup: execution
+   STOP **T0 + 160 minutes**, absolute end **T0 + 180 minutes**, final **20
+   minutes** reserved for owned cleanup. Keep the existing **110 GiB aggregate
+   coordinator / 10 GiB aggregate worker** caps, **zero owned swap**, host
+   headroom, disk/repair/free-space/transfer limits, and **900 s per-request**
+   timeout. Enforce the existing spanning watchdog and actual byte counters;
+   neither preparation nor session entry resets those absolute deadlines.
+6. One candidate load, then exactly the retained warmup and the identical short
+   decode, using the existing bounded `--session` path and fresh evidence root.
+   Native argv must show `--gpu-layers 9 --tensor-split 4,5`; both listener
+   PID/start/UUID joins and exact guards remain required. No extra prefill,
+   prompt change, reload, tuning, retry or retry into PASS. Stop on resource
+   failure and preserve the attempt. Report verification/acquisition, load,
+   warmup and measured short-decode timings separately, plus returned token
+   counts and the existing correctness diagnostics. Exclude warmup from timing
+   summaries while charging its budget. Preserve raw responses, resource peaks,
+   cleanup and observer saturation/refusal separately; keep
+   `output_accepted:false` and `physical_qualified:false`. A completed HTTP
+   request does not resolve the observer's existing endpoint attribution gap.
