@@ -16,6 +16,7 @@ import signal
 import socket
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -312,3 +313,271 @@ class NativePackaging(unittest.TestCase):
         self.assertNotIn("ggml/src/ggml-backend.cpp", patch)
         self.assertNotIn("ggml/src/ggml-rpc", patch)
         self.assertNotIn("inferswarm/operator/qwen_q8.py", patch)
+
+
+class NativeDemandCPU(unittest.TestCase):
+    """Compile only the tiny capture seam; never build or run llama here."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.binary = Path(cls.tmp.name) / "demand-fixture"
+        cls.tool = ROOT / "tools/native-moe-overlap"
+        subprocess.run(["c++", "-std=c++17", "-O0", "-I", str(cls.tool),
+                        str(cls.tool / "demand_fixture.cpp"),
+                        str(cls.tool / "demand.cpp"), "-o", str(cls.binary)], check=True)
+        spec = importlib.util.spec_from_file_location("native_demand_summary", cls.tool / "summarize_demand.py")
+        cls.summary = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.summary)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def fixture(self, scenario):
+        p = subprocess.run([str(self.binary), scenario], capture_output=True, text=True, check=True)
+        return json.loads(p.stdout)
+
+    def expected(self):
+        return {"model_source": "qwen3.8", "model_revision": "r38", "model_sha256": "a" * 64,
+                "representation": "Q8", "native_source": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+                "native_build_sha256": "b" * 64, "workload_sha256": "c" * 64}
+
+    def test_per_layer_phase_and_joint_demand_from_real_capture(self):
+        capture = self.fixture("ordinary")
+        self.assertEqual(capture["rows"][0]["phase"], "prefill")  # one token, never inferred decode
+        self.assertEqual(capture["rows"][0]["tokens"], [[1, 3]])
+        self.assertEqual(capture["rows"][1]["tokens"], [[2, 3]])
+        self.assertEqual(capture["rows"][2]["phase"], "decode")
+        report = self.summary.summarize(capture, self.expected())
+        self.assertEqual(report["phase_demand"]["prefill"]["0"]["frequency"], {"1": 1, "3": 1})
+        self.assertEqual(report["phase_demand"]["prefill"]["0"]["co_selection"], {"1,3": 1})
+        self.assertEqual(report["phase_demand"]["decode"]["0"]["frequency"], {"1": 1, "2": 1})
+        self.assertEqual(report["phase_demand"]["prefill"]["1"]["frequency"], {"2": 1, "3": 1})
+        self.assertEqual(report["coverage"]["complete"], True)
+        self.assertIsNone(report["costs"]["per_expert_execution_ms"])
+        self.assertIsNone(report["costs"]["link_ms"])
+
+    def test_repeat_export_is_identical_and_default_off_is_inert(self):
+        self.assertTrue(self.fixture("repeat")["identical"])
+        self.assertEqual(self.fixture("off"), {"active": False, "rows": 0})
+
+    def test_two_token_prefill_retains_final_output_position(self):
+        capture = self.fixture("prefill-last")
+        early, final = capture["rows"][:2]
+        self.assertEqual(early["tokens"], [[1, 3], [0, 2]])
+        self.assertEqual(early["token_positions"], [0, 1])
+        self.assertEqual(final["tokens"], [[2, 3]])
+        self.assertEqual(final["token_positions"], [1])
+        self.assertEqual([r["token_positions"] for r in capture["rows"][2:]], [[2], [2]])
+        report = self.summary.summarize(capture, self.expected())
+        self.assertTrue(report["coverage"]["complete"])
+        self.assertEqual(report["coverage"]["expected_token_rows"], 5)
+        self.assertEqual(report["coverage"]["retained_token_rows"], 5)
+        self.assertEqual(report["phase_demand"]["prefill"]["0"]["tokens"], 2)
+        self.assertEqual(report["phase_demand"]["prefill"]["1"]["tokens"], 1)
+        self.assertEqual(report["coverage"]["retained_token_positions"][1],
+                         {"phase": "prefill", "step": 0, "layer": 1, "token_positions": [1]})
+
+    def test_output_selected_coverage_preserves_missing_and_rejects_duplicates(self):
+        capture = self.fixture("prefill-missing")
+        report = self.summary.summarize(capture, self.expected())
+        self.assertFalse(report["coverage"]["complete"])
+        self.assertEqual(report["coverage"]["missing_layer_steps"], [{"step": 0, "layer": 1}])
+        self.assertNotIn("1", report["phase_demand"]["prefill"])
+        self.assertEqual(report["coverage"]["retained_token_rows"], 4)
+        self.assertTrue(self.fixture("prefill-duplicate")["duplicate_refused"])
+        capture = self.fixture("prefill-last")
+        capture["rows"].append(capture["rows"][1])
+        capture["observed_rows"] += 1
+        with self.assertRaisesRegex(ValueError, "duplicate layer"):
+            self.summary.summarize(capture, self.expected())
+
+    def test_private_final_router_uses_same_positions_and_actual_row_budget(self):
+        capture = self.fixture("prefill-private")
+        self.assertEqual(capture["rows"][1]["token_positions"], [1])
+        self.assertTrue(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+        capture = self.fixture("final-cost-budget")
+        self.assertEqual((capture["observed_rows"], capture["dropped_rows"]), (2, 1))
+        self.assertEqual([r["layer"] for r in capture["rows"]], [0])
+        self.assertEqual(capture["rows"][0]["token_positions"], [0, 1])
+        self.assertFalse(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+
+    def test_reducer_checks_exact_supported_token_position_mapping(self):
+        for row_index, positions in ((0, [0, 0]), (0, [1, 0]), (1, [0]), (1, []), (2, [0])):
+            with self.subTest(row=row_index, positions=positions):
+                capture = self.fixture("prefill-last")
+                capture["rows"][row_index]["token_positions"] = positions
+                with self.assertRaisesRegex(ValueError, "token position"):
+                    self.summary.summarize(capture, self.expected())
+        capture = self.fixture("prefill-last")
+        del capture["token_coverage"]
+        with self.assertRaisesRegex(ValueError, "unsupported token coverage"):
+            self.summary.summarize(capture, self.expected())
+
+    def test_collector_does_not_mutate_router_ids_or_caller_output(self):
+        self.assertEqual(self.fixture("integrity"), {"ids_unchanged": True, "output_equal": True})
+
+    def test_repeated_steps_count_the_same_selected_pair_twice(self):
+        capture = self.fixture("repeated-steps")
+        report = self.summary.summarize(capture, self.expected())
+        self.assertEqual(report["phase_demand"]["decode"]["0"]["co_selection"]["1,2"], 2)
+        self.assertEqual(report["coverage"]["expected_rows"], 6)
+        self.assertTrue(report["coverage"]["complete"])
+
+    def test_bounded_capture_and_missing_layer_are_not_claimed_complete(self):
+        capture = self.fixture("bounded")
+        self.assertEqual(capture["step_meta"], [{"phase": "prefill", "step": 0, "tokens": 1, "token_start": 0},
+                                                {"phase": "decode", "step": 1, "tokens": 1, "token_start": 1}])
+        report = self.summary.summarize(capture, self.expected())
+        self.assertEqual(report["coverage"]["dropped_rows"], 2)
+        self.assertEqual(report["coverage"]["missing_layers"], [1])
+        self.assertFalse(report["coverage"]["complete"])
+        with self.assertRaisesRegex(ValueError, "identity mismatch"):
+            self.summary.summarize(capture, {**self.expected(), "model_source": "qwen3.6"})
+        with self.assertRaisesRegex(ValueError, "truncated"):
+            self.summary.summarize({**capture, "rows": capture["rows"][:-1]}, self.expected())
+
+    def test_byte_budget_drops_whole_rows_without_partial_ids(self):
+        capture = self.fixture("byte-budget")
+        report = self.summary.summarize(capture, self.expected())
+        self.assertFalse(report["coverage"]["complete"])
+        self.assertGreater(report["coverage"]["dropped_rows"], 0)
+        self.assertEqual(report["coverage"]["retained_rows"] + report["coverage"]["dropped_rows"],
+                         report["coverage"]["observed_rows"])
+
+    def test_native_callback_is_bound_to_computed_argsort_and_private_router(self):
+        cli = (self.tool / "demand_cli.cpp").read_text()
+        private = (self.tool / "overlay/src/llama-moe-overlap.cpp").read_text()
+        self.assertIn('is312::observe_argsort(', cli)
+        self.assertIn('ggml_backend_tensor_get(static_cast<ggml_tensor *>(source)', cli)
+        self.assertIn('s.ids->data', private)
+        self.assertIn('is312::active()', private)
+        self.assertIn('if (std::getenv("IS309_CAPTURE")) throw', cli)
+        self.assertNotIn('IS309_CAPTURE', (self.tool / "demand.cpp").read_text())
+        source = Path('/home/zutfen/llama.cpp-252')
+        if source.is_dir():
+            self.assertIn('cb(selected_experts->src[0], "ffn_moe_argsort", il);',
+                          (source / 'src/llama-graph.cpp').read_text())
+            subprocess.run(['c++', '-std=c++17', '-fsyntax-only', '-I', str(source / 'include'),
+                            '-I', str(source / 'ggml/include'), '-I', str(self.tool),
+                            str(self.tool / 'demand_cli.cpp')], check=True)
+
+    def test_selected_layer_uses_existing_native_rpc_override_seam(self):
+        cli = (self.tool / "demand_cli.cpp").read_text()
+        private = (self.tool / "overlay/src/llama-moe-overlap.cpp").read_text()
+        self.assertIn('ggml_backend_rpc_add_server(', cli)
+        self.assertIn('ggml_backend_rpc_buffer_type(', cli)
+        self.assertIn('params.tensor_buft_overrides =', cli)
+        self.assertIn('"--rpc-tensors-regex"', cli)
+        self.assertIn('is312::dedicated_callback(cparams.cb_eval)', private)
+
+    def test_computed_argsort_adapter_strided_prefill_decode_and_failures(self):
+        result = self.fixture("adapter")
+        self.assertEqual(result["rows"][0]["tokens"], [[1, 3], [0, 2], [2, 1]])
+        self.assertEqual(result["rows"][0]["phase"], "prefill")
+        self.assertEqual(result["rows"][1]["phase"], "decode")
+        self.assertEqual(result["rows"][1]["tokens"], [[3, 0]])
+        self.assertEqual(result["read_bytes"], 32)  # only K=2 IDs x four tokens
+        self.assertTrue(result["nonmatching_ignored"])
+        self.assertTrue(result["ids_unchanged"])
+        self.assertTrue(result["output_equal"])
+        self.assertTrue(result["shape_failed"])
+        self.assertTrue(result["type_failed"])
+        self.assertTrue(result["layer_failed"])
+        self.assertEqual(self.fixture("off"), {"active": False, "rows": 0})
+
+    def test_dedicated_capture_exceeds_generic_observer_limit(self):
+        capture = self.fixture("large")
+        self.assertEqual(capture["observed_rows"], 48 * 13)
+        self.assertEqual(len(capture["rows"]), 48 * 13)
+        self.assertEqual(capture["dropped_rows"], 0)
+        self.assertTrue(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+
+    def test_measured_private_overlap_costs_follow_phase_step_layer(self):
+        capture = self.fixture("costs")
+        report = self.summary.summarize(capture, self.expected())
+        row = capture["rows"][0]
+        self.assertEqual((row["phase"], row["step"], row["layer"]), ("prefill", 0, 0))
+        costs = row["cost_observations"]
+        self.assertEqual({x["metric"]["name"] for x in costs},
+                         {"dispatch_ms", "shared_ms", "join_ms", "input_bytes", "routing_bytes", "result_bytes"})
+        for item in costs:
+            self.assertEqual(item["evidence_class"], "measured")
+            self.assertEqual(item["metric"]["statistic"], "observation")
+        self.assertEqual(next(x["metric"]["value"] for x in costs if x["metric"]["name"] == "join_ms"), 0.75)
+        self.assertEqual(report["costs"]["observations"], costs)
+        self.assertEqual(report["costs"]["rows"], [{"phase": "prefill", "step": 0,
+                                                    "layer": 0, "observations": costs}])
+        self.assertIsNone(report["costs"]["per_expert_execution_ms"])
+        self.assertIsNone(report["costs"]["link_ms"])
+        self.assertEqual({x["metric"]["name"] for x in report["costs"]["unknown"]},
+                         {"device_kernel_ms", "per_expert_execution_ms", "link_ms"})
+        self.assertTrue(all(x["metric"]["value"] is None and x["evidence_class"] == "unknown"
+                            for x in report["costs"]["unknown"]))
+
+    def test_cost_budget_discards_id_row_as_one_unit(self):
+        capture = self.fixture("cost-budget")
+        self.assertEqual(capture["observed_rows"], 1)
+        self.assertEqual(capture["dropped_rows"], 1)
+        self.assertEqual(capture["rows"], [])
+        self.assertFalse(self.summary.summarize(capture, self.expected())["coverage"]["complete"])
+
+    def test_profiler_is_active_before_context_reservation_builds_overlap_graph(self):
+        # Pinned llama_context construction reserves/builds graphs before the
+        # first decode. Its existing callback refusal must admit this profiler
+        # during reservation too, without recording a synthetic token step.
+        cli = (self.tool / "demand_cli.cpp").read_text()
+        self.assertLess(cli.index('is312::set_active(&cap);'),
+                        cli.index('llama_init_from_model(model.get(), cp)'))
+        self.assertLess(cli.index('llama_init_from_model(model.get(), cp)'),
+                        cli.index('cap.begin("prefill", 0,'))
+
+    def test_only_registered_callback_is_admitted_during_capture(self):
+        self.assertEqual(self.fixture("callback-identity"),
+                         {"off_refused": True, "other_refused": True, "dedicated_accepted": True})
+
+    def test_resource_snapshot_reuses_validated_types_without_claiming_freshness(self):
+        fixture_spec = importlib.util.spec_from_file_location("issue299_fixture", ROOT / "tests/issue299_fixture.py")
+        fixture = importlib.util.module_from_spec(fixture_spec)
+        fixture_spec.loader.exec_module(fixture)
+        snapshot = fixture.synthetic_profiles()
+        runtime = snapshot["runtime_capabilities"][0]
+        runtime["source_revision"] = self.expected()["native_source"]
+        runtime["binary_sha256"] = self.expected()["native_build_sha256"]
+        fixture.reseal_profiles(snapshot)
+        report = self.summary.summarize(self.fixture("ordinary"), self.expected(), snapshot)
+        self.assertEqual(report["resources"]["digest"], fixture.profile_digest(snapshot))
+        self.assertIn(runtime["runtime_id"], report["resources"]["runtime_ids"])
+        self.assertIn("A-B", report["resources"]["link_ids"])
+        self.assertEqual(report["resources"]["runtime_evidence"][runtime["evidence_id"]],
+                         next(e["sha256"] for e in snapshot["evidence"] if e["evidence_id"] == runtime["evidence_id"]))
+        self.assertNotEqual(report["resources"]["validation"], "fresh")
+        self.assertEqual(self.summary.summarize(self.fixture("ordinary"), self.expected())["resources"]["validation"], "unknown")
+        with tempfile.TemporaryDirectory() as td:
+            capture_path, profiles_path = Path(td) / "capture.json", Path(td) / "profiles.json"
+            capture_path.write_text(json.dumps(self.fixture("ordinary")))
+            profiles_path.write_text(json.dumps(snapshot))
+            args = [sys.executable, str(self.tool / "summarize_demand.py"),
+                    str(capture_path), "--resource-profiles", str(profiles_path)]
+            for key, value in self.expected().items():
+                args.extend(["--" + key.replace("_", "-"), value])
+            cli = subprocess.run(args, capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(cli.stdout)["resources"]["digest"], report["resources"]["digest"])
+        with self.assertRaisesRegex(ValueError, "native runtime"):
+            self.summary.summarize(self.fixture("ordinary"), self.expected(), fixture.synthetic_profiles())
+        snapshot["evidence"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "evidence SHA-256"):
+            self.summary.summarize(self.fixture("ordinary"), self.expected(), snapshot)
+
+    def test_identity_provenance_and_bounded_prompt_and_minimal_build_recipe(self):
+        capture = self.fixture("ordinary")
+        self.assertEqual(capture["identity_provenance"]["workload_sha256"], "operator_attested")
+        self.assertEqual(capture["identity_provenance"]["native_build_sha256"], "operator_attested")
+        self.assertEqual(capture["observed_gguf"]["architecture"], "qwen4exp")
+        cli = (self.tool / "demand_cli.cpp").read_text()
+        self.assertIn('std::string prompt(65537', cli)
+        self.assertIn('optional_metadata(model.get(), "general.name")', cli)
+        build = (self.tool / "build.py").read_text()
+        self.assertIn('demand_profile=False', build)
+        self.assertIn('parser.add_argument("--demand"', build)
+        self.assertIn('if demand_profile:', build)

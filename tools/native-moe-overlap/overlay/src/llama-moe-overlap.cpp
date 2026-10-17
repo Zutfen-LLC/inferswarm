@@ -6,6 +6,7 @@
 #include "ggml-cpu.h"
 #include "ggml-rpc.h"
 #include "ggml-impl.h"
+#include "demand.h"
 
 #include <algorithm>
 #include <chrono>
@@ -130,6 +131,15 @@ public:
         // The outer scheduler may reuse src only after this op returns.
         ggml_backend_tensor_set(s.input, src->data, 0, ggml_nbytes(s.input));
         compute(s.cpu, s.router);
+        // The private overlap router is outside the outer scheduler callback.
+        // Its packed I32 IDs already reside on CPU; never enable IS309_CAPTURE
+        // (which retains activations and result tensors) for demand profiling.
+        if (auto * demand = is312::active()) {
+            require(demand->expert_count() >= (unsigned)s.ids->ne[0] &&
+                    demand->top_k() == (unsigned)s.ids->ne[0], "profile top-k mismatch");
+            demand->record(s.cfg.layer, static_cast<const int32_t *>(s.ids->data),
+                           (unsigned)s.ids->ne[0], (unsigned)s.ids->ne[1], 0.0);
+        }
         ggml_backend_tensor_set_async(s.rpc, s.remote_input, s.input->data, 0, ggml_nbytes(s.input));
         ggml_backend_tensor_set_async(s.rpc, s.remote_ids, s.ids->data, 0, ggml_nbytes(s.ids));
         ggml_backend_tensor_set_async(s.rpc, s.remote_weights, s.weights->data, 0, ggml_nbytes(s.weights));
@@ -172,6 +182,10 @@ public:
         s.stats.dispatch_ms = ms(start, dispatched);
         s.stats.shared_ms = ms(shared_start, shared_done);
         s.stats.join_ms = join_ms;
+        if (auto * demand = is312::active()) {
+            demand->record_cost((unsigned)s.cfg.layer, {s.stats.dispatch_ms, s.stats.shared_ms, s.stats.join_ms,
+                s.stats.input_bytes, s.stats.routing_bytes, s.stats.result_bytes});
+        }
         if (!s.cfg.capture_path.empty()) {
             // I309/1, little-endian x86 fixture/Hermes scope: four uint32s,
             // uint64 step, followed by input and result F32 arrays. The
@@ -243,7 +257,10 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn(ggml_tensor * cur, const lla
     require(cur->type == GGML_TYPE_F32 && ggml_is_contiguous(cur) && ggml_n_dims(cur) <= 2,
             "selected activation must be contiguous F32 [embedding,tokens]");
     require(loras && loras->empty(), "LoRA is not supported by this experiment");
-    require(cparams.cb_eval == nullptr, "intermediate eval callbacks are not supported by this experiment");
+    // The dedicated single-request profiler captures this private router
+    // directly. Retain the historical refusal for every other callback user.
+    require(cparams.cb_eval == nullptr || is312::dedicated_callback(cparams.cb_eval),
+            "intermediate eval callbacks are not supported by this experiment");
     require(layer.ffn_up_shexp && layer.ffn_gate_shexp && layer.ffn_down_shexp && layer.ffn_gate_inp_shexp,
             "selected layer lacks the gated shared branch");
     auto state = std::make_shared<llama_moe_overlap>();

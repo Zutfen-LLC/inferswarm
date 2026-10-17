@@ -57,6 +57,7 @@ def source_tree(cache):
         subprocess.run(["patch", "--batch", "--fuzz=0", "-p1", "-i", str(HERE / "native.patch")],
                        cwd=tree, check=True, stdout=subprocess.DEVNULL)
         shutil.copytree(HERE / "overlay", tree, dirs_exist_ok=True)
+        shutil.copy2(HERE / "demand.h", tree / "src/demand.h")
         entries = {str(p.relative_to(tree)): digest(p) for p in sorted(tree.rglob("*")) if p.is_file()}
         dest = cache / "native-source"
         # Compare every input on every use. Existing objects also include this
@@ -70,7 +71,7 @@ def source_tree(cache):
     return dest, entries
 
 
-def build(cache, jobs=2, server=False, cuda=False):
+def build(cache, jobs=2, server=False, cuda=False, demand_profile=False):
     cache = Path(cache).resolve()
     cache.mkdir(parents=True, exist_ok=True)
     source, entries = source_tree(cache)
@@ -102,7 +103,8 @@ def build(cache, jobs=2, server=False, cuda=False):
     (out / "build-info.cpp").write_text(build_info)
     inc = ["-I" + str(p) for p in full_build.includes(source, out)]
     ggml = full_build.GGML_BASE + full_build.GGML_REG + tuple("ggml/src/" + p for p in full_build.GGML_CPU + full_build.GGML_RPC)
-    llama = full_build.VENDOR_HASH + full_build.LLAMA_CORE + ("src/llama-moe-overlap.cpp",) + full_build._models(source)
+    demand = (str(HERE / "demand.cpp"),)
+    llama = full_build.VENDOR_HASH + full_build.LLAMA_CORE + ("src/llama-moe-overlap.cpp",) + demand + full_build._models(source)
     extras = (full_build.COMMON + full_build.MTMD + full_build._mtmd_models(source) +
               full_build.SERVER_CTX + full_build.SERVER_IMPL +
               ("vendor/cpp-httplib/httplib.cpp",)) if server else ()
@@ -133,6 +135,8 @@ def build(cache, jobs=2, server=False, cuda=False):
     rels = list(dict.fromkeys(ggml + cuda_rels + llama + extras + generated))
     mains = {"native-ffn-fixture": str(HERE / "native_ffn_fixture.cpp"),
              "rpc-worker": str(REPO / "tools/moe-overlap/rpc_worker.cpp")}
+    if demand_profile:
+        mains["native-demand"] = str(HERE / "demand_cli.cpp")
     if server:
         mains["llama-server"] = "tools/server/main.cpp"
         mains["ggml-rpc-server"] = "tools/rpc/rpc-server.cpp"
@@ -167,6 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--cache", type=Path, default=REPO / ".cache/native-moe-overlap")
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--server", action="store_true")
+    parser.add_argument("--demand", action="store_true", help="add native demand client without server closure")
     parser.add_argument("--cuda", action="store_true", help="build only; separate hardware authorization required")
     args = parser.parse_args()
-    print(json.dumps(build(args.cache, args.jobs, args.server, args.cuda), sort_keys=True))
+    print(json.dumps(build(args.cache, args.jobs, args.server, args.cuda, args.demand), sort_keys=True))
