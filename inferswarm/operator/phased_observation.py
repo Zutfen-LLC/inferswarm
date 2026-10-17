@@ -127,7 +127,7 @@ def _static_options(value, path):
             _static_object(child, child_path)
             for j, (_, binding) in enumerate(child):
                 _static_scalar(binding, str, child_path + '[' + str(j) + '][1]')
-        elif name in ('route', 'source_contract', 'rpc_cache'):
+        elif name in ('route', 'source_contract', 'rpc_cache', 'placement_variant'):
             _static_scalar(child, str, child_path)
         elif name == 'startup_timeout_seconds':
             _static_scalar(child, int, child_path)
@@ -159,6 +159,8 @@ def _static_request(value, path):
 
 def _static_record(value, expected, path):
     """Closed declaration-order walk; a new/unsupported field never passes."""
+    if expected is _q8.Q8Contract and type(value) is _q8.Q8VariantContract:
+        expected = _q8.Q8VariantContract
     if type(value) is not expected:
         _static_bad(path)
     for field in fields(expected):
@@ -391,8 +393,8 @@ def _static_field(owner, name, value, path):
             return _static_scalar(value, int, path)
         if name in ('kv_offload', 'op_offload', 'kv_unified'):
             return _static_scalar(value, bool, path)
-    elif owner is _q8.Q8Contract:
-        if name in ('selection', 'route'):
+    elif owner in (_q8.Q8Contract, _q8.Q8VariantContract):
+        if name in ('selection', 'route', 'placement_variant'):
             return _static_scalar(value, str, path)
         if name == 'metadata_digest':
             return _static_scalar(value, 'digest', path)

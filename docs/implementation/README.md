@@ -73,6 +73,9 @@ The bounded issue #313 software slice is documented in
 Hermes handoff in
 [`../../tools/native-cache/q8-two-cuda-recipe.md`](../../tools/native-cache/q8-two-cuda-recipe.md).
 It is an offline fixed-topology implementation, not physical qualification.
+Its finite `placement_variant: "40-44"` alternative is opt-in; omission retains
+the 41/45 default. The linked handoff describes one later comparison without
+granting hardware authority or weakening resource reserves.
 
 <!-- project-status:frontier:start -->
 **[Issue #280 — AMD-only Vulkan same-request pooling (candidate-B-only result STOP; authorization spent)](https://github.com/Zutfen-LLC/inferswarm/issues/280)**
