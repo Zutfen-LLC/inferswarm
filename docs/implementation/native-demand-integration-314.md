@@ -97,15 +97,42 @@ the reducer's exact token-position mapping.
 
 ## Tests
 
-`tests/test_issue314_demand_integration.py` (13 tests): default-off
+`tests/test_issue314_demand_integration.py` (16 tests): default-off
 inertness; measured-request/prompt binding incl. warmup refusal; bounds,
 digest, path and unknown-field refusals; reviewed-manifest digest binding;
 exact 41/45 argument propagation (both endpoints, device order, layer/tensor
 split 4,4, gpu 8, offload/KV/flash/ctx/batch/ubatch/threads); source-level
 unsupported-option refusal; real #312 capture/reducer fixtures for
 phase/position mapping and capacity/drop reporting; coordinator-cap spawn
-parity with ancillary refusal; and durable export on success plus honest
-interrupted-collection incompleteness through the real evidence store.
+parity with ancillary refusal; durable export on success plus honest
+interrupted-collection incompleteness through the real evidence store; and
+the review-correction pins (parsed-manifest use, authenticated file_type
+mapping, client-host thread observation).
+
+## Independent review and correction pass
+
+One scoped independent review at `06a5498e` returned NO-GO with one blocking
+defect and related findings; all were corrected at `a9befed7`:
+
+1. Manifest admission double-decoded `read_json`'s parsed object and
+   therefore rejected every valid manifest (blocking).
+2. `file_type` was hardcoded; it is now mapped from the plan's
+   authenticated model metadata (the pinned Q8 model is file_type 7).
+3. Threads were guessed from the controller; they are now observed on the
+   client host through the guard channel, refusing when unobservable.
+4. Prompt staging/export read touched controller-local paths for
+   client-host files; a bounded exclusive lifecycle `write` action (owned
+   invocation directory only, 64 KiB, O_EXCL, escape-refused) stages the
+   prompt and the collector transport reads the export back.
+5. The capture was marked FINISHED regardless of the supervised unit's
+   result; the unit `Result` now decides and nonzero/unknown exits are
+   honest failure states.
+6. The CLI refused legacy `--gpu-layers`, changing main's behavior; exact
+   legacy behavior is restored and operator-only flags outside the parity
+   block are refused instead of ignored.
+
+The reviewer's probes (default-off canonical byte identity, digest bypass
+refusal, warmup binding refusal) all passed unchanged.
 
 Feasible local checks run: composed CPU build of `native-demand`
 (-O3/Debug, RPC v7, links clean), `-fsyntax-only` against the pinned tree,
