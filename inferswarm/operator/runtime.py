@@ -24,14 +24,30 @@ from .strategy import llama_cpp_spec
 ASSIGNMENT = re.compile(r'load_tensors: layer\s+(\d+) assigned to device (\S+), is_swa = [01]')
 
 
-def _default_client_threads():
-    """Mirror the pinned server's -t default: common_cpu_get_num_math() =
-    online CPUs (hybrid-aware), not hardware_concurrency."""
-    import os
+def _model_file_type(plan):
+    """general.file_type from the plan's authenticated model metadata."""
+    from .source import q8_source_payload
+    payload = q8_source_payload(plan)
+    rows = payload.get('metadata', {}).get('model_metadata')
+    if isinstance(rows, list):
+        for key, value in rows:
+            if key == 'general.file_type':
+                return value
+    raise ValueError('plan model metadata lacks general.file_type')
+
+
+def _client_host_threads(guard, client):
+    """Mirror the pinned server's -t default ON THE CLIENT HOST: observe the
+    client's own online CPU count through the guard's read-only channel
+    (postprocess_cpu_params -> common_cpu_get_num_math -> sysconf), never the
+    controller's."""
     try:
-        return os.sysconf('SC_NPROCESSORS_ONLN') or 4
-    except (ValueError, OSError):
-        return 4
+        raw = guard.commands.run(client.execution_address,
+            ['getconf', 'NPROCESSORS_ONLN'])
+        return int(raw.strip())
+    except Exception:
+        raise ValueError('client host thread count unobservable; refusing '
+                         'to guess a thread setting')
 
 
 def observed_placement(log,plan):
@@ -853,24 +869,26 @@ class OperatorRunner:
         Reuses this invocation's owned workers (already listening), assigned
         backing, supervision aggregates and the campaign deadline. The demand
         client is a SEPARATELY reviewed CPU successor identity: its digest must
-        equal the plan-declared client identity's reviewed successor manifest,
-        never a caller-provided bypass. The capture prompt equals its frozen
-        measured request prompt, so warmup and measured requests cannot mix.
+        equal its reviewed successor manifest, never a caller-provided bypass.
+        The capture prompt equals its frozen measured request prompt, so warmup
+        and measured requests cannot mix.
         """
         from .q8_demand import demand_client_argv
         profile=guard.demand_profile
         options=thaw(plan.strategy_options)
-        # Identity admission: the declared digest must equal the digested
-        # reviewed successor manifest (read once through the same transport
-        # used for the observer builds), and the executable bytes must match.
+        # Identity admission: read the reviewed successor manifest through the
+        # same collector transport used for the observer builds; it returns the
+        # PARSED object. The executable bytes are then read and hashed.
         from .native_observer.collector import SSHCollectorTransport
         transport=SSHCollectorTransport()
         try:
-            manifest=json.loads(transport.read_json(client.execution_address,
+            manifest=transport.read_json(client.execution_address,
                 profile.client_manifest_path,
-                max_bytes=SSHCollectorTransport.MANIFEST_MAX_BYTES))
+                max_bytes=SSHCollectorTransport.MANIFEST_MAX_BYTES)
         except Exception as exc:
             raise ValueError('demand client manifest unreadable: '+str(exc)) from exc
+        if not isinstance(manifest,dict):
+            raise ValueError('demand client manifest is not a JSON object')
         from .phased_observation import parse_build_manifest
         identity=parse_build_manifest(manifest)
         if identity.executable_sha256!=profile.client_sha256:
@@ -888,40 +906,51 @@ class OperatorRunner:
         if hashlib.sha256(executable).hexdigest()!=profile.client_sha256:
             raise ValueError('demand client executable bytes do not match its digest')
         # The measured request's prompt IS the capture prompt (validated at
-        # session load); write it once into the owned invocation directory.
-        invocation=Path(self.leases.invocation_dir(client.execution_address))
-        prompt_path=invocation/'demand-prompt.txt'
-        output_path=invocation/'demand-profile.json'
-        if prompt_path.exists() or output_path.exists():
-            raise ValueError('demand capture paths must be fresh per invocation')
+        # session load); stage it on the CLIENT host inside the owned
+        # invocation directory through the same channel that spawns there.
+        invocation=self.leases.invocation_dir(client.execution_address)
+        prompt_remote=str(Path(invocation)/'demand-prompt.txt')
+        output_remote=str(Path(invocation)/'demand-profile.json')
+        log_remote=str(Path(invocation)/'demand-client.log')
+        # Fresh-path enforcement happens on the client host at spawn time
+        # (the lifecycle transport refuses an existing record/log), and the
+        # CLI itself opens its output with O_CREAT|O_EXCL ("wx").
         prompt_bytes=profile.prompt.encode('utf-8')
-        with prompt_path.open('xb') as handle:
-            handle.write(prompt_bytes); handle.flush(); os.fsync(handle.fileno())
+        program=('import sys\n'
+                 'data=sys.stdin.buffer.read()\n'
+                 'open(sys.argv[1],"xb").write(data)\n')
+        proc=self.leases.transport.call(client.execution_address,
+            dict(action='write',root=self.leases.leases[client.execution_address],
+                 token=self.leases.token,path=prompt_remote,
+                 data=__import__('base64').b64encode(prompt_bytes).decode('ascii')))
+        if not isinstance(proc,dict) or proc.get('written')!=len(prompt_bytes):
+            raise ValueError('demand capture prompt staging failed on the client host')
         workload=profile.workload_sha256(guard.session.digest)
+        file_type=_model_file_type(plan)
         argv=list(demand_client_argv(profile,
             rpc_endpoints=options['rpc_endpoints'],
             model_path=client.source_path,
-            file_type=15,  # Q8 GGUF general.file_type of the pinned Q8 model
+            file_type=file_type,
             workload_sha256=workload,
             model_source=plan.model.source_id, model_revision=plan.model.revision,
             representation=plan.model.representation,
             context=plan.workload.context, batch=plan.workload.batch,
             microbatch=plan.workload.microbatch,
-            threads=_default_client_threads()))
-        argv[argv.index('__demand_profile__')]=str(output_path)
-        argv[argv.index('__demand_prompt__')]=str(prompt_path)
+            threads=_client_host_threads(guard,client)))
+        argv[argv.index('__demand_profile__')]=output_remote
+        argv[argv.index('__demand_prompt__')]=prompt_remote
         record=dict(status='STARTED',bound_request=profile.request_index,
             client_sha256=profile.client_sha256,
             manifest_sha256=identity.transformed_manifest_sha256,
             workload_sha256=workload,prompt_sha256=profile.prompt_sha256,
-            argv=argv,started_monotonic=guard.clock(),
+            file_type=file_type,argv=argv,started_monotonic=guard.clock(),
             started_at=datetime.now(timezone.utc).isoformat(),
-            output_path=str(output_path))
+            output_path=output_remote,log_path=log_remote)
         if store is not None:
             # Register the attempted role/artifact paths BEFORE dispatch, so a
             # lost spawn reply still gets retention attempted on known paths.
             store.register_attempt('demand',client.execution_address,
-                str(invocation),'demand.log')
+                invocation,log_remote)
             if not store.save_session_json('demand-capture-started.json',record):
                 raise RuntimeError('demand capture metadata retention failed')
         guard.phase='demand'
@@ -941,20 +970,31 @@ class OperatorRunner:
                 break
             if deadline is not None and time.monotonic()>=deadline:
                 raise TimeoutError('demand capture exceeded the campaign deadline')
-            if output_path.exists() and not self.leases.alive(client.execution_address,'demand'):
-                break
             self.pause(.5)
-        exit_row=self.leases.inspect(client.execution_address,'demand')
-        record.update(status='FINISHED',ended_monotonic=guard.clock(),
-            ended_at=datetime.now(timezone.utc).isoformat(),
-            supervision=exit_row)
-        # Durable export on success; missing/dropped/failed capture stays honest.
-        export_bytes=None
+        # The supervised unit's own result decides success; the export is only
+        # read afterwards. A nonzero unit result is a failed capture, never a
+        # silently complete profile.
         try:
-            export_bytes=output_path.read_bytes()
-        except OSError as exc:
-            record['export_status']='missing'
-            record['export_error']=str(exc)
+            exit_row=self.leases.inspect(client.execution_address,'demand')
+        except Exception as exc:
+            exit_row={'inspect_error':str(exc)}
+        unit_result=(exit_row.get('Result') if isinstance(exit_row,dict) else None)
+        record.update(ended_monotonic=guard.clock(),
+            ended_at=datetime.now(timezone.utc).isoformat(),
+            supervision=exit_row,unit_result=unit_result)
+        export_bytes=None
+        if unit_result=='success':
+            try:
+                export_bytes=transport.read_bytes(client.execution_address,
+                    output_remote,
+                    max_bytes=16*1024*1024+1)
+            except Exception as exc:
+                record['export_status']='missing'
+                record['export_error']=str(exc)
+        elif unit_result is not None:
+            record['export_status']='client-exit'
+        else:
+            record['export_status']='unknown-exit'
         if export_bytes is not None:
             if len(export_bytes)>16*1024*1024:
                 record['export_status']='oversize'
@@ -971,6 +1011,8 @@ class OperatorRunner:
                     except Exception as exc:
                         record['export_status']='retention-failed'
                         record['retention_error']=str(exc)
+        record['status']=('FINISHED' if record.get('export_status')=='retained'
+                          else 'FAILED')
         if store is not None:
             store.save_session_json('demand-capture-finished.json',record)
         guard.phase='request'

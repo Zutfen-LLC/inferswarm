@@ -151,12 +151,13 @@ class SystemdSessionGuard(SystemdCampaignGuard):
         record = result.get('demand_capture')
         if record is None:
             return 'disabled'
-        status = record.get('export_status')
-        if status == 'retained':
+        if record.get('status') == 'FINISHED' and record.get('export_status') == 'retained':
             return 'EXPORTED'
-        if status in ('missing', 'oversize', 'retention-failed'):
+        status = record.get('export_status')
+        if status in ('missing', 'oversize', 'retention-failed',
+                      'client-exit', 'unknown-exit'):
             return 'COLLECTION-' + status.upper().replace('-', '_')
-        return 'NO-EXPORT'
+        return 'FAILED'
 
     def report(self, result, *, failure=None, interrupted=None, cleanup=None):
         refused = 'observation_refusal' in result

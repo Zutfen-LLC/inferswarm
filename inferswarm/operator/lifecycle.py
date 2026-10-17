@@ -97,6 +97,19 @@ def _onhost(p):
             try: s.bind((p['bind'],p['port']))
             except OSError as exc: raise ValueError(f'port occupied/unavailable: {p["bind"]}:{p["port"]}') from exc
         return {'port':'available'}
+    if action=='write':
+        # #314 demand-capture prompt staging: bounded exclusive-create inside
+        # the OWNED invocation directory only; never an arbitrary path.
+        import base64 as _b64
+        target=Path(p['path'])
+        root=Path(root)/token
+        try: target.relative_to(root)
+        except ValueError: raise ValueError('write must stay inside the owned invocation directory')
+        data=_b64.b64decode(p['data'],validate=True)
+        if len(data)>65536: raise ValueError('write exceeds the demand prompt bound')
+        with target.open('xb') as handle:
+            handle.write(data); handle.flush(); os.fsync(handle.fileno())
+        return {'written':len(data)}
     if action=='spawn':
         name=p['name']
         if name not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported process name')

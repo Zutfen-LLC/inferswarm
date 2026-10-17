@@ -158,9 +158,20 @@ int main(int argc, char ** argv) {
             number(required(args, "--ubatch-size"), 262144);
             if (required(args, "--parallel") != "1") throw std::invalid_argument("--parallel must be 1");
             number(required(args, "--threads"), 1024);
-        } else if (args.count("--gpu-layers") && args.at("--gpu-layers") != "0") {
-            // The legacy single-endpoint path never lowered gpu layers; keep it.
-            throw std::invalid_argument("--gpu-layers belongs to the operator parity block");
+        } else {
+            // Legacy single-endpoint path: preserve main's exact behavior,
+            // including an optional --gpu-layers the operator block does not
+            // own. Operator-only flags without --rpc-endpoints are refused
+            // rather than silently ignored.
+            const std::set<std::string> operator_only = {
+                "--devices", "--tensor-split", "--split-mode", "--fit", "--lazy-mode",
+                "--load-mode", "--kv-offload", "--no-op-offload", "--cache-type-k",
+                "--cache-type-v", "--flash-attn", "--no-kv-unified", "--ctx-size",
+                "--batch-size", "--ubatch-size", "--parallel", "--threads"};
+            for (const auto & entry : args)
+                if (operator_only.count(entry.first))
+                    throw std::invalid_argument(
+                        "option requires the operator parity block: " + entry.first);
         }
         const std::string prompt_file = required(args, "--prompt-file");
         std::ifstream input(prompt_file, std::ios::binary);

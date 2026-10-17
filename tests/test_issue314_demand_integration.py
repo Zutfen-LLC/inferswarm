@@ -153,10 +153,14 @@ class DemandArgumentParityTests(unittest.TestCase):
                 '"--gpu-layers must be 8 for the 41/45 two-gpu lowering"',
                 '"--tensor-split must be 4,4 for the 41/45 two-gpu lowering"',
                 '"--devices must be RPC0,RPC1 in endpoint order"',
-                '"unsupported profiling option: "'):
+                '"unsupported profiling option: "',
+                # Operator-only flags never silently drop outside the block.
+                '"option requires the operator parity block: "'):
             self.assertIn(fragment, source)
         # Unknown flags are refused, never silently stored.
         self.assertIn('const std::set<std::string> accepted', source)
+        # The legacy path keeps main's optional --gpu-layers behavior.
+        self.assertIn('params.n_gpu_layers = (int)number(args.at("--gpu-layers"), 512)', source)
 
 
 class DemandCLIOptionRefusalTests(unittest.TestCase):
@@ -226,10 +230,35 @@ class DemandSessionFlowTests(unittest.TestCase):
         # Direct method binding on a minimally constructed guard instance.
         real = SystemdSessionGuard._demand_outcome
         self.assertEqual(real(guard, {}), 'disabled')
-        self.assertEqual(real(guard, {'demand_capture': {'export_status': 'retained'}}), 'EXPORTED')
+        retained = {'status': 'FINISHED', 'export_status': 'retained'}
+        self.assertEqual(real(guard, {'demand_capture': retained}), 'EXPORTED')
+        # A captured export without retained bytes is NOT a complete export.
+        self.assertEqual(real(guard, {'demand_capture': {'export_status': 'retained'}}),
+                         'FAILED')
         self.assertEqual(real(guard, {'demand_capture': {'export_status': 'missing'}}),
                          'COLLECTION-MISSING')
-        self.assertEqual(real(guard, {'demand_capture': {}}), 'NO-EXPORT')
+        # A nonzero demand-client exit is an honest failure state.
+        self.assertEqual(real(guard, {'demand_capture': {'export_status': 'client-exit'}}),
+                         'COLLECTION-CLIENT_EXIT')
+        self.assertEqual(real(guard, {'demand_capture': {}}), 'FAILED')
+
+    def test_runner_reads_parsed_manifest_not_double_decoded(self):
+        """The manifest admission path uses read_json's PARSED object."""
+        source = (ROOT / 'inferswarm/operator/runtime.py').read_text()
+        self.assertIn('manifest=transport.read_json(client.execution_address', source)
+        self.assertNotIn('json.loads(transport.read_json', source)
+
+    def test_runner_maps_file_type_from_authenticated_plan_metadata(self):
+        source = (ROOT / 'inferswarm/operator/runtime.py').read_text()
+        self.assertIn('file_type=_model_file_type(plan)', source)
+        self.assertIn("key == 'general.file_type'", source)
+        self.assertNotIn('file_type=15', source)
+
+    def test_runner_observes_client_host_threads_not_controller_guess(self):
+        source = (ROOT / 'inferswarm/operator/runtime.py').read_text()
+        self.assertIn('threads=_client_host_threads(guard,client)', source)
+        self.assertIn("'getconf', 'NPROCESSORS_ONLN'", source)
+        self.assertNotIn('os.sysconf', source)
 
     def test_demand_spawn_uses_coordinator_cap_and_owned_name(self):
         caps = {}
