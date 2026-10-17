@@ -97,9 +97,22 @@ def _onhost(p):
             try: s.bind((p['bind'],p['port']))
             except OSError as exc: raise ValueError(f'port occupied/unavailable: {p["bind"]}:{p["port"]}') from exc
         return {'port':'available'}
+    if action=='write':
+        # #314 demand-capture prompt staging: bounded exclusive-create inside
+        # the OWNED invocation directory only; never an arbitrary path.
+        import base64 as _b64
+        target=Path(p['path'])
+        root=Path(root)/token
+        try: target.relative_to(root)
+        except ValueError: raise ValueError('write must stay inside the owned invocation directory')
+        data=_b64.b64decode(p['data'],validate=True)
+        if len(data)>65536: raise ValueError('write exceeds the demand prompt bound')
+        with target.open('xb') as handle:
+            handle.write(data); handle.flush(); os.fsync(handle.fileno())
+        return {'written':len(data)}
     if action=='spawn':
         name=p['name']
-        if name not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported process name')
+        if name not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported process name')
         record=marker/(name+'.json'); log=root/token/(name+'.log')
         if record.exists() or log.exists(): raise ValueError('process record/log already exists')
         env=os.environ.copy()
@@ -136,6 +149,11 @@ def _onhost(p):
                 '--property=RuntimeMaxSec='+str(supervision['runtime_max_seconds']),
                 '--property=StandardOutput=append:'+str(log),
                 '--property=StandardError=append:'+str(log)]
+            if name=='demand':
+                # This client exits normally before terminal cleanup. Keep
+                # its unit/result loaded until our explicit owned stop;
+                # ordinary long-running servers retain their old lifecycle.
+                command.append('--property=RemainAfterExit=yes')
             if 'slice' in supervision:
                 if not re.fullmatch(r'[A-Za-z0-9_.-]+\.slice',supervision['slice']):
                     raise ValueError('invalid owned slice')
@@ -192,7 +210,7 @@ def _onhost(p):
         return row
     if action in ('alive','listening','log','inspect','stop','release'):
         if action=='log':
-            if p['name'] not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported log')
+            if p['name'] not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported log')
             return {'text':(root/token/(p['name']+'.log')).read_text(errors='replace')[-2000000:]}
         if action=='release':
             for rec in marker.glob('*.json'):
@@ -204,7 +222,7 @@ def _onhost(p):
             (marker/'token').unlink(); marker.rmdir()
             return {'lease':'released'}
         name=p['name']
-        if name not in ('client','rpc','rpc0','rpc1'): raise ValueError('unsupported process name')
+        if name not in ('client','rpc','rpc0','rpc1','demand'): raise ValueError('unsupported process name')
         row=json.loads((marker/(name+'.json')).read_text())
         if row['token']!=token or row['pid']!=p['pid'] or row['start']!=p['start']:
             raise ValueError('ownership record mismatch')
@@ -213,6 +231,8 @@ def _onhost(p):
             unit=row['supervision']['unit']
             fields=('MainPID','ActiveState','Result','MemoryCurrent','MemoryPeak',
                     'MemorySwapCurrent','MemoryMax','MemorySwapMax','RuntimeMaxUSec','KillMode','ControlGroup')
+            if name=='demand':
+                fields+=('LoadState','SubState','RemainAfterExit','ExecMainCode','ExecMainStatus')
             shown=subprocess.run(['sudo','-n','systemctl','show',unit,
                 *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)
             if shown.returncode:
@@ -232,6 +252,8 @@ def _onhost(p):
             unit=row['supervision']['unit']
             fields=('ActiveState','Result','ExecMainCode','ExecMainStatus','MemoryPeak',
                     'MemorySwapCurrent','MemoryMax','MemorySwapMax')
+            if name=='demand':
+                fields+=('LoadState','SubState','RemainAfterExit','MainPID','ControlGroup')
             try:
                 shown=subprocess.run(['sudo','-n','systemctl','show',unit,
                     *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)

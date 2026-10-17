@@ -221,6 +221,7 @@ GROUP_TEST_MODULES = {
         "test_issue311_startup",
         "test_issue311_cuda_backing",
         "test_issue313_two_gpu",
+        "test_issue314_demand_integration",
         "test_q8_experiment",
         # Issue #255: bounded CUDA/RPC product execution and local baseline.
         "test_issue255_mvp",
@@ -849,6 +850,7 @@ PATH_GROUPS = {
     "tests/test_issue311_cuda_backing.py": ["issue-99-103"],
     "tests/test_issue311_preparation.py": ["issue-99-103"],
     "tests/test_issue313_two_gpu.py": ["issue-99-103"],
+    "tests/test_issue314_demand_integration.py": ["issue-99-103"],
     "tests/test_q8_experiment.py": ["issue-99-103"],
     "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],
 

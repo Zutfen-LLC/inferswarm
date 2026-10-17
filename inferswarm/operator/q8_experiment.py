@@ -187,7 +187,9 @@ class ExperimentalLeaseManager(LeaseManager):
     def spawn(self, address, name, argv, cache=None, export=None, assigned=None):
         if name in ('rpc0', 'rpc1'):
             memory = _LIMITS['worker_memory_max_bytes'] // 2
-        elif name == 'client':
+        elif name in ('client', 'demand'):
+            # The demand client runs beside the loaded session inside the same
+            # coordinator aggregate; no separate cap is minted.
             memory = _LIMITS['coordinator_memory_max_bytes']
         else:
             raise ValueError('experimental campaign refuses ancillary persistent process: '+name)
@@ -227,6 +229,34 @@ def _duration_usec(value):
     if not tokens or ''.join(n+u for n,u in tokens)!=value.replace(' ',''):
         raise ValueError('unverifiable systemd runtime deadline')
     return sum(int(n)*units[u] for n,u in tokens)
+
+
+def _demand_completion_result(receipt,spawn):
+    """Read a retained, owned demand unit's actual terminal result.
+
+    A missing unit can expose default properties: absence is never success.
+    The same predicate is used by monitor ticks and final export readback.
+    """
+    if not isinstance(receipt,dict) or not isinstance(spawn,dict): return None
+    supervision=spawn.get('supervision')
+    props=receipt.get('properties')
+    if (not isinstance(supervision,dict) or not supervision.get('unit')
+            or receipt.get('unit')!=supervision['unit'] or not isinstance(props,dict)
+            or props.get('LoadState')!='loaded' or props.get('RemainAfterExit')!='yes'
+            or props.get('MainPID')!='0'):
+        return None
+    result=props.get('Result')
+    if not isinstance(result,str) or not result: return None
+    state=(props.get('ActiveState'),props.get('SubState'))
+    if result=='success':
+        return result if (state==('active','exited')
+            and props.get('ExecMainCode')=='1' and props.get('ExecMainStatus')=='0') else None
+    if result=='exit-code':
+        status=props.get('ExecMainStatus')
+        return result if (state==('failed','failed') and props.get('ExecMainCode')=='1'
+            and isinstance(status,str) and status.isdecimal() and 0<int(status)<=255) else None
+    # Signals, OOM and timeouts remain genuine process-loss outcomes.
+    return result if state in (('failed','failed'),('inactive','dead')) else None
 
 
 def _digest(value, label):
@@ -331,6 +361,11 @@ class SystemdCampaignGuard:
         self.execution_result={}; self.raw_response=None
         self.last_aggregates={}; self.last_gpu_rows=[]; self.last_host_available={}
         self._stop=threading.Event(); self._thread=None; self._samples=[]; self._monitor_error=None
+        # Serializes monitored-set swaps (process_started, client->demand
+        # handoff) against whole monitor ticks: a tick either samples the
+        # complete pre-state or the complete post-state, never a half-swapped
+        # set (a stopped-but-still-monitored or already-unowned row).
+        self._rows_lock=threading.RLock()
         if hasattr(leases,'configure'): leases.configure(self)
 
     def _run(self,part,argv): return self.commands.run(part.execution_address,argv)
@@ -470,10 +505,26 @@ class SystemdCampaignGuard:
     def _inspect(self,rows):
         receipts={}
         for name in rows:
-            part=self.client if name=='client' else self.remote
-            expected=(110<<30) if name=='client' else (5<<30)
+            # 'demand' is a COORDINATOR process like the ordinary client: it
+            # runs on the client host inside the coordinator aggregate, so it
+            # must be inspected there under the coordinator cap -- never on
+            # the remote host under a worker cap.
+            coordinator=name in ('client','demand')
+            part=self.client if coordinator else self.remote
+            expected=(_LIMITS['coordinator_memory_max_bytes'] if coordinator
+                      else _LIMITS['worker_memory_max_bytes']//2)
             row=self.leases.inspect(part.execution_address,name)
             props=row['properties']; receipts[name]=row
+            # The demand unit is the one owned process that legitimately
+            # FINISHES while still monitored: the capture wait detects its
+            # exit and then retires it from this set. Between exit and
+            # retirement, a retained active/exited unit with a verified
+            # zero exit status is completion. A normal nonzero exit is an
+            # honest failed capture; missing/mismatched or killed/OOM/
+            # timed-out units remain supervision failures.
+            completed=(name=='demand' and getattr(self,'phase',None)=='demand'
+                and _demand_completion_result(row,rows[name]) in ('success','exit-code'))
+            if completed: continue
             if props['ActiveState']!='active' or int(props['MainPID'])!=rows[name]['pid']:
                 raise RuntimeError('systemd ownership mismatch: '+name)
             if int(props['MemoryMax'])!=expected or int(props['MemorySwapMax'])!=0:
@@ -502,11 +553,53 @@ class SystemdCampaignGuard:
         return sample
 
     def process_started(self,rows):
-        self.rows=dict(rows)
-        self.checkpoint()
-        # Verify the parent slice, per-service cap, ownership and timer before
-        # allowing any further launch or the frozen request.
-        self._inspect(rows)
+        with self._rows_lock:
+            self.rows=dict(rows)
+            self.checkpoint()
+            # Verify the parent slice, per-service cap, ownership and timer before
+            # allowing any further launch or the frozen request.
+            self._inspect(rows)
+
+    def retire_client_for_demand(self,address,row):
+        """#314 synchronized client->demand monitored-ownership handoff.
+
+        Stops the ordinary session client, confirms its exit, and only then
+        removes it from the monitored set and the lease-owned set -- all as
+        one critical section against monitor ticks (which sample under the
+        same lock). A tick therefore sees either the still-running client or
+        the set without it: never a stopped-but-monitored unit (false
+        ownership mismatch) and never an already-unowned row (KeyError).
+        Real process-loss supervision of every other owned process is
+        unchanged throughout.
+        """
+        with self._rows_lock:
+            stopped=self.leases._call(address,'stop',
+                name='client',pid=row['pid'],start=row['start'])
+            if not isinstance(stopped,dict) or 'signal' not in stopped:
+                raise RuntimeError('demand capture requires stopping the '
+                    'session client first: '+str(stopped))
+            deadline=self.clock()+10
+            while self.leases.alive(address,'client') and self.clock()<deadline:
+                self.pause(.05)
+            if self.leases.alive(address,'client'):
+                raise RuntimeError('session client did not exit before demand capture')
+            # Stop confirmed: retire the row from monitoring and ownership
+            # atomically so terminal cleanup never double-stops the client.
+            self.rows.pop('client',None)
+            del self.leases.owned[address]['client']
+
+    def retire_finished_demand(self,address):
+        """Retire the finished demand process from the monitored set.
+
+        Called only after the capture wait confirmed the demand unit exited.
+        Lease ownership is KEPT so terminal cleanup still stops the unit and
+        retains its final systemd receipt; only monitoring is retired, under
+        the same lock, so no tick can observe the exited-but-monitored unit.
+        """
+        with self._rows_lock:
+            if self.leases.alive(address,'demand'):
+                raise RuntimeError('demand process still alive at monitored retirement')
+            self.demand_state=self.rows.pop('demand',None)
 
     def resource_sample(self,rows):
         sample=self._sample(dict(rows))
@@ -515,7 +608,9 @@ class SystemdCampaignGuard:
             self.client.host_id:self._memory(self.client,_LIMITS['coordinator_min_host_headroom_bytes'])}
         sample['aggregates']={a:self.budget(a) for a in self.leases.slices}
         for name in dict(rows):
-            part=self.client if name=='client' else self.remote
+            # Same coordinator/worker attribution as _inspect: the demand
+            # process's log lives on the CLIENT host's invocation directory.
+            part=self.client if name in ('client','demand') else self.remote
             log=str(Path(self.leases.invocation_dir(part.execution_address))/(name+'.log'))
             text=self._run(part,['tail','-c','16384','--',log])
             if re.search(r'(?i)(out of memory|failed to allocate|bad_alloc|illegal memory access|device.*lost|CUDA error)',text):
@@ -526,8 +621,12 @@ class SystemdCampaignGuard:
     def _monitor(self):
         try:
             while not self._stop.wait(2):
-                self.checkpoint()
-                self._samples.append(self.resource_sample(dict(self.rows)))
+                # Whole-tick locking against monitored-set swaps: a tick
+                # samples either the complete pre-handoff or the complete
+                # post-handoff set, never a half-swapped one.
+                with self._rows_lock:
+                    self.checkpoint()
+                    self._samples.append(self.resource_sample(dict(self.rows)))
         except BaseException as exc:
             self._monitor_error=exc
             # Sweep until the main path acknowledges STOP. This also catches a
@@ -583,6 +682,18 @@ class SystemdCampaignGuard:
                 if props is None: raise RuntimeError('final systemd receipt missing: '+name)
                 if props['Result'] not in ('success','signal'):
                     raise RuntimeError('owned systemd job failed: '+name+': '+props['Result'])
+                # systemd can prune a retained exited unit's empty cgroup.
+                # Its live swap counter then becomes unavailable, not zero.
+                # Accept that only for the verified owned completion, with
+                # the frozen zero-swap cap still recorded; aggregate limits
+                # and final empty-slice checks above remain authoritative.
+                if (name=='demand' and props['MemorySwapCurrent'] in (
+                        str(2**64-1),'[not set]') and props.get('ControlGroup')==''
+                        and props.get('MemorySwapMax')=='0'
+                        and props.get('MemoryMax')==str(_LIMITS['coordinator_memory_max_bytes'])
+                        and _demand_completion_result(row,getattr(self,'demand_state',None))=='success'):
+                    row['memory_swap_current_status']='unavailable-after-exit'
+                    continue
                 if int(props['MemorySwapCurrent'])!=0:
                     raise RuntimeError('owned swap violation retained at cleanup: '+name)
         if self.started is not None and self.clock()>self.started+_LIMITS['total_seconds']:
@@ -648,9 +759,16 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
                               session_path=None):
     """One load and one request, or an explicitly frozen bounded session."""
     session=None
+    demand_profile=None
     if session_path is not None:
         from .q8_session import validate_session
-        session=validate_session(_strict_json(session_path))
+        raw_session=_strict_json(session_path)
+        session=validate_session(raw_session)
+        # #314 opt-in demand capture: validate the explicit block against the
+        # frozen session BEFORE anything launches. Default (no block) keeps the
+        # exact existing behavior.
+        from .q8_demand import validate_demand
+        demand_profile=validate_demand(raw_session,session)
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
     if force_fresh_source_hash and source_digest_cache is None:
@@ -685,6 +803,8 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     else:
         from .q8_session import SystemdSessionGuard
         guard=SystemdSessionGuard(envelope,manager,commands or SSHCommandRunner(),session=session)
+        if demand_profile is not None:
+            guard.demand_profile=demand_profile
         if not evidence_store.save_session_json('frozen-session.json',session.payload()):
             evidence_store.finalize()
             raise ValueError('could not retain frozen session before launch')

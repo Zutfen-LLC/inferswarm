@@ -39,7 +39,8 @@ class DiagnosticSession:
 
 
 def validate_session(raw):
-    if (not isinstance(raw, dict) or set(raw) != {'schema', 'requests'}
+    if (not isinstance(raw, dict)
+            or not {'schema', 'requests'} <= set(raw) <= {'schema', 'requests', 'demand'}
             or raw['schema'] != 'q8-two-cuda-session/1'):
         raise ValueError('strict q8-two-cuda-session/1 required')
     requests = raw['requests']
@@ -88,6 +89,10 @@ class SystemdSessionGuard(SystemdCampaignGuard):
     """Only the explicit session path lifts the old sole-request restriction."""
     def __init__(self, *args, session, **kwargs):
         self.session = session
+        # #314 opt-in demand capture for exactly one measured request; None
+        # keeps the exact pre-#314 session behavior (default off).
+        self.demand_profile = None
+        self.demand_state = None
         self.phase = 'verification'
         self.phase_index = None
         self.setup = {}
@@ -141,6 +146,19 @@ class SystemdSessionGuard(SystemdCampaignGuard):
         sample['raw_cpu_disk_counters'] = counters
         return sample
 
+    def _demand_outcome(self, result):
+        """Honest demand-capture outcome; absent means default-off, not zero."""
+        record = result.get('demand_capture')
+        if record is None:
+            return 'disabled'
+        if record.get('status') == 'FINISHED' and record.get('export_status') == 'retained':
+            return 'EXPORTED'
+        status = record.get('export_status')
+        if status in ('missing', 'oversize', 'retention-failed',
+                      'client-exit', 'unknown-exit'):
+            return 'COLLECTION-' + status.upper().replace('-', '_')
+        return 'FAILED'
+
     def report(self, result, *, failure=None, interrupted=None, cleanup=None):
         refused = 'observation_refusal' in result
         complete = (len(self.request_records) == self.session.count
@@ -162,7 +180,11 @@ class SystemdSessionGuard(SystemdCampaignGuard):
                 timing_resources='REPORTED-WITH-MISSING-FIELDS',
                 observer=('REFUSED' if refused else ('COMPLETE' if result.get('listener_observations') else 'INCOMPLETE')),
                 observer_scope='two RPC terminal streams; no per-request native dynamic acceptance',
-                cleanup='COMPLETE' if cleanup_ok else 'FAILED-OR-INCOMPLETE'),
+                cleanup='COMPLETE' if cleanup_ok else 'FAILED-OR-INCOMPLETE',
+                # #314 demand capture is reported SEPARATELY from general
+                # observer completeness: a ring-saturated observer refusal
+                # neither erases the structural demand export nor is relabeled.
+                demand_capture=self._demand_outcome(result)),
             output_accepted=False, physical_qualified=False)
         if getattr(self, 'cleanup_error', None) is not None:
             result['cleanup_failure'] = self.cleanup_error

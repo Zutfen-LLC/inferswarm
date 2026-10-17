@@ -1,4 +1,5 @@
 // #312 opt-in, single-request native capture. No prompt or token IDs exported.
+// #314: exact two-RPC 41/45 operator parity; unknown flags are refused.
 #include "demand.h"
 #include "llama.h"
 #include "ggml.h"
@@ -12,6 +13,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -57,6 +59,35 @@ struct observer {
             }, t);
     }
 };
+
+// Exactly the accepted NativeQ8Options two-gpu lowering used by the guarded
+// 41/45 operator path (q8_llama_cpp_spec); one-gpu/cpu-only lowering is NOT
+// accepted here because no reviewed worker pair backs it for profiling.
+struct native_options {
+    int gpu_layers = 8;                       // 49 - layer_cuts[0] (41) == 8
+    std::vector<float> tensor_split = {4.0f, 4.0f};
+    static const native_options & fixed() {
+        static const native_options options;
+        return options;
+    }
+};
+
+std::vector<std::string> split(const std::string & value, char sep) {
+    std::vector<std::string> parts;
+    std::string item;
+    for (char c : value) {
+        if (c == sep) { parts.push_back(item); item.clear(); }
+        else item.push_back(c);
+    }
+    parts.push_back(item);
+    return parts;
+}
+bool host_port(const std::string & endpoint) {
+    const auto parts = split(endpoint, ':');
+    if (parts.size() != 2 || parts[0].empty()) return false;
+    for (char c : parts[1]) if (!std::isdigit(static_cast<unsigned char>(c))) return false;
+    return !parts[1].empty() && parts[1].size() <= 5;
+}
 } // namespace
 
 int main(int argc, char ** argv) {
@@ -67,6 +98,23 @@ int main(int argc, char ** argv) {
             if (i + 1 >= argc || std::string(argv[i]).compare(0, 2, "--") != 0 ||
                 !args.emplace(argv[i], argv[i + 1]).second) throw std::invalid_argument("invalid flag/value pair");
         }
+        // Complete accepted option table: anything else is refused before any
+        // model load, so an unsupported setting can never silently drop.
+        const std::set<std::string> accepted = {
+            "--model", "--output", "--max-rows", "--decode-steps", "--prompt-file",
+            "--model-sha256", "--native-build-sha256", "--workload-sha256", "--cohort",
+            "--workload-label", "--backend", "--file-type", "--model-source", "--model-revision",
+            "--representation",
+            // two-gpu operator parity (values validated below)
+            "--rpc-endpoints", "--devices", "--gpu-layers", "--tensor-split", "--split-mode",
+            "--fit", "--lazy-mode", "--load-mode", "--kv-offload", "--no-op-offload",
+            "--cache-type-k", "--cache-type-v", "--flash-attn", "--no-kv-unified",
+            "--ctx-size", "--batch-size", "--ubatch-size", "--parallel", "--threads",
+            // legacy single-endpoint overlap selection (existing #309 seam)
+            "--rpc-endpoint", "--rpc-tensors-regex"};
+        for (const auto & entry : args)
+            if (!accepted.count(entry.first))
+                throw std::invalid_argument("unsupported profiling option: " + entry.first);
         const std::string model_path = required(args, "--model");
         const std::string output = required(args, "--output");
         const unsigned max_rows = number(required(args, "--max-rows"), 100000);
@@ -75,10 +123,56 @@ int main(int argc, char ** argv) {
         if (required(args, "--cohort") != "profiling") throw std::invalid_argument("cohort must be profiling, not evaluation");
         if (std::getenv("IS309_CAPTURE")) throw std::invalid_argument("IS309_CAPTURE retains unrelated tensors: refuse");
         const bool rpc = args.count("--rpc-endpoint") != 0;
+        const bool operator_mode = args.count("--rpc-endpoints") != 0;
+        if (operator_mode && rpc) throw std::invalid_argument("single overlap endpoint and operator endpoints are exclusive");
         if (rpc != (args.count("--rpc-tensors-regex") != 0))
             throw std::invalid_argument("RPC endpoint and bank override regex must be paired");
         if (std::getenv("IS309_MOE") && !rpc)
             throw std::invalid_argument("selected overlap requires explicit existing RPC bank overrides");
+        // Validate the complete operator parity block BEFORE loading a model.
+        // Every value must equal the fixed NativeQ8Options two-gpu lowering.
+        if (operator_mode) {
+            const auto & fixed = native_options::fixed();
+            const std::string endpoints = required(args, "--rpc-endpoints");
+            const auto parts = split(endpoints, ',');
+            if (parts.size() != 2 || !host_port(parts[0]) || !host_port(parts[1]) || parts[0] == parts[1])
+                throw std::invalid_argument("--rpc-endpoints requires two distinct host:port values");
+            if (split(required(args, "--devices"), ',') != std::vector<std::string>({"RPC0", "RPC1"}))
+                throw std::invalid_argument("--devices must be RPC0,RPC1 in endpoint order");
+            if (required(args, "--gpu-layers") != std::to_string(fixed.gpu_layers))
+                throw std::invalid_argument("--gpu-layers must be 8 for the 41/45 two-gpu lowering");
+            if (required(args, "--tensor-split") != "4,4")
+                throw std::invalid_argument("--tensor-split must be 4,4 for the 41/45 two-gpu lowering");
+            if (required(args, "--split-mode") != "layer") throw std::invalid_argument("--split-mode must be layer");
+            if (required(args, "--fit") != "off") throw std::invalid_argument("--fit must be off");
+            if (required(args, "--lazy-mode") != "on") throw std::invalid_argument("--lazy-mode must be on");
+            if (required(args, "--load-mode") != "none") throw std::invalid_argument("--load-mode must be none");
+            if (required(args, "--kv-offload") != "on") throw std::invalid_argument("--kv-offload must be on");
+            if (required(args, "--no-op-offload") != "on") throw std::invalid_argument("--no-op-offload must be on");
+            if (required(args, "--cache-type-k") != "f16" || required(args, "--cache-type-v") != "f16")
+                throw std::invalid_argument("--cache-type-k/v must be f16");
+            if (required(args, "--flash-attn") != "off") throw std::invalid_argument("--flash-attn must be off");
+            if (required(args, "--no-kv-unified") != "on") throw std::invalid_argument("--no-kv-unified must be on");
+            number(required(args, "--ctx-size"), 262144);
+            number(required(args, "--batch-size"), 262144);
+            number(required(args, "--ubatch-size"), 262144);
+            if (required(args, "--parallel") != "1") throw std::invalid_argument("--parallel must be 1");
+            number(required(args, "--threads"), 1024);
+        } else {
+            // Legacy single-endpoint path: preserve main's exact behavior,
+            // including an optional --gpu-layers the operator block does not
+            // own. Operator-only flags without --rpc-endpoints are refused
+            // rather than silently ignored.
+            const std::set<std::string> operator_only = {
+                "--devices", "--tensor-split", "--split-mode", "--fit", "--lazy-mode",
+                "--load-mode", "--kv-offload", "--no-op-offload", "--cache-type-k",
+                "--cache-type-v", "--flash-attn", "--no-kv-unified", "--ctx-size",
+                "--batch-size", "--ubatch-size", "--parallel", "--threads"};
+            for (const auto & entry : args)
+                if (operator_only.count(entry.first))
+                    throw std::invalid_argument(
+                        "option requires the operator parity block: " + entry.first);
+        }
         const std::string prompt_file = required(args, "--prompt-file");
         std::ifstream input(prompt_file, std::ios::binary);
         if (!input) throw std::runtime_error("prompt file unreadable");
@@ -88,17 +182,38 @@ int main(int argc, char ** argv) {
         if (prompt_bytes == 0 || prompt_bytes > 65536) throw std::runtime_error("prompt byte bound exceeded");
         prompt.resize((size_t)prompt_bytes);
         auto params = llama_model_default_params();
-        if (args.count("--gpu-layers")) params.n_gpu_layers = (int)number(args.at("--gpu-layers"), 512);
-        ggml_backend_dev_t rpc_devices[2] = {nullptr, nullptr};
+        ggml_backend_dev_t rpc_devices[3] = {nullptr, nullptr, nullptr};
         llama_model_tensor_buft_override overrides[2] = {};
         std::string regex;
-        if (rpc) {
+        if (operator_mode) {
+            // Mirror common/arg.cpp: register each endpoint's RPC devices in
+            // order, then select RPC0,RPC1. Device ordinals are assigned by
+            // registration order in this process only.
+            const auto parts = split(required(args, "--rpc-endpoints"), ',');
+            unsigned registered = 0;
+            for (const auto & endpoint : parts) {
+                auto * reg = ggml_backend_rpc_add_server(endpoint.c_str());
+                ggml_backend_dev_t dev = nullptr;
+                if (reg) dev = ggml_backend_reg_dev_get(reg, 0);
+                if (!dev)
+                    throw std::runtime_error("native RPC device unavailable: " + endpoint);
+                rpc_devices[registered++] = dev;
+            }
+            params.devices = rpc_devices;
+            const auto & fixed = native_options::fixed();
+            params.n_gpu_layers = fixed.gpu_layers;
+            params.split_mode = LLAMA_SPLIT_MODE_LAYER;
+            params.load_mode = LLAMA_LOAD_MODE_NONE;
+            params.lazy_mode = LLAMA_LAZY_MODE_ON;
+            params.tensor_split = fixed.tensor_split.data();
+        } else if (rpc) {
             const std::string endpoint = required(args, "--rpc-endpoint");
             regex = required(args, "--rpc-tensors-regex");
             auto * reg = ggml_backend_rpc_add_server(endpoint.c_str());
             if (!reg || !(rpc_devices[0] = ggml_backend_reg_dev_get(reg, 0)))
                 throw std::runtime_error("native RPC device unavailable");
             params.devices = rpc_devices;
+            if (args.count("--gpu-layers")) params.n_gpu_layers = (int)number(args.at("--gpu-layers"), 512);
             overrides[0] = {regex.c_str(), ggml_backend_rpc_buffer_type(endpoint.c_str(), 0)};
             params.tensor_buft_overrides = overrides;
         }
@@ -117,7 +232,8 @@ int main(int argc, char ** argv) {
             required(args, "--model-sha256"), required(args, "--representation"),
             "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4", required(args, "--native-build-sha256"),
             required(args, "--workload-sha256"), "profiling", required(args, "--workload-label"),
-            required(args, "--backend"), "single-request;file_type=" + file_type,
+            required(args, "--backend"), std::string("single-request;file_type=") + file_type
+                + (operator_mode ? ";two-gpu-41-45" : ""),
             optional_metadata(model.get(), "general.name"), file_type, architecture};
         is312::capture cap(id, layers, experts, top_k, max_rows);
         observer obs{cap};
@@ -130,8 +246,25 @@ int main(int argc, char ** argv) {
         // Capture maps exactly this single-sequence, last-output-only batch
         // contract; do not request extra logits/routed work for profiling.
         cp.embeddings = false;
-        cp.n_ctx = (uint32_t)(n + decode_steps + 16);
-        cp.n_batch = cp.n_ubatch = (uint32_t)n;
+        if (operator_mode) {
+            // Exact accepted context settings from the guarded operator path.
+            cp.n_ctx = (uint32_t)number(required(args, "--ctx-size"), 262144);
+            cp.n_batch = cp.n_ubatch = (uint32_t)number(required(args, "--batch-size"), 262144);
+            const unsigned ubatch = number(required(args, "--ubatch-size"), 262144);
+            cp.n_ubatch = (uint32_t)ubatch;
+            cp.n_seq_max = 1;
+            cp.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+            cp.type_k = GGML_TYPE_F16;
+            cp.type_v = GGML_TYPE_F16;
+            cp.offload_kqv = true;
+            cp.op_offload = false;
+            cp.kv_unified = false;
+            const unsigned threads = number(required(args, "--threads"), 1024);
+            cp.n_threads = cp.n_threads_batch = (int)threads;
+        } else {
+            cp.n_ctx = (uint32_t)(n + decode_steps + 16);
+            cp.n_batch = cp.n_ubatch = (uint32_t)n;
+        }
         cp.cb_eval = observer::callback;
         cp.cb_eval_user_data = &obs;
         is312::set_dedicated_callback(observer::callback);

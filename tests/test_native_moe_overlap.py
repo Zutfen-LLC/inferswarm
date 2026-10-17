@@ -25,6 +25,39 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "tools/native-moe-overlap/build.py"
 
+# Portable resolution of the pinned llama.cpp source tree (b29c606e, tree
+# 950999fe): an explicit env override, else the checkout beside the repo.
+# Absent trees skip the optional source-bound assertions instead of failing;
+# when present, BOTH the pinned commit and its tree SHA are authenticated.
+_PIN_COMMIT = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
+_PIN_TREE = "950999fe62b7fe55f44ab5b7394e3c8542f37f12"
+
+
+def _pinned_source():
+    import os
+    import subprocess as _sp
+    candidates = []
+    override = os.environ.get("MOE_OVERLAP_PINNED_SOURCE")
+    if override:
+        candidates.append(Path(override))
+    candidates.append(ROOT.parent / ("llama.cpp-" + _PIN_COMMIT[:7]))
+    for source in candidates:
+        if (source / "src/llama-graph.cpp").is_file():
+            try:
+                head = _sp.run(["git", "rev-parse", "HEAD"], cwd=source,
+                               capture_output=True, text=True, timeout=30)
+                tree = _sp.run(["git", "rev-parse", "HEAD^{tree}"], cwd=source,
+                               capture_output=True, text=True, timeout=30)
+            except (OSError, _sp.SubprocessError):
+                return None
+            if (head.returncode or tree.returncode
+                    or head.stdout.strip() != _PIN_COMMIT
+                    or tree.stdout.strip() != _PIN_TREE):
+                raise AssertionError(
+                    "pinned source tree identity drift: " + str(source))
+            return source
+    return None
+
 
 def load_build():
     spec = importlib.util.spec_from_file_location("native_moe_build", BUILD)
@@ -454,8 +487,8 @@ class NativeDemandCPU(unittest.TestCase):
         self.assertIn('is312::active()', private)
         self.assertIn('if (std::getenv("IS309_CAPTURE")) throw', cli)
         self.assertNotIn('IS309_CAPTURE', (self.tool / "demand.cpp").read_text())
-        source = Path('/home/zutfen/llama.cpp-252')
-        if source.is_dir():
+        source = _pinned_source()
+        if source is not None:
             self.assertIn('cb(selected_experts->src[0], "ffn_moe_argsort", il);',
                           (source / 'src/llama-graph.cpp').read_text())
             subprocess.run(['c++', '-std=c++17', '-fsyntax-only', '-I', str(source / 'include'),
