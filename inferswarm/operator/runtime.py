@@ -1008,10 +1008,10 @@ class OperatorRunner:
         # top-level 'Result' would classify every successful capture as
         # unknown-exit/FAILED and never read the export back. Failed,
         # missing or malformed completion information stays unsuccessful.
-        properties=(exit_row.get('properties') if isinstance(exit_row,dict) else None)
-        unit_result=(properties.get('Result') if isinstance(properties,dict) else None)
-        if not isinstance(unit_result,str):
-            unit_result=None
+        # Demand's RemainAfterExit unit must still be loaded and match the
+        # owned spawn; default properties of an absent unit prove nothing.
+        from .q8_experiment import _demand_completion_result
+        unit_result=_demand_completion_result(exit_row,rows['demand'])
         record.update(ended_monotonic=guard.clock(),
             ended_at=datetime.now(timezone.utc).isoformat(),
             supervision=exit_row,unit_result=unit_result)

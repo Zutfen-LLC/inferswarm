@@ -235,3 +235,33 @@ every changed path into the existing `issue-99-103` group (no registration
 change needed — the module was already registered on all four surfaces).
 Still no host contact, native build, model execution, identity promotion or
 Final CPU Validation; the composed client remains a candidate receipt.
+
+## Completion lifecycle correction (from head `3ba45811`)
+
+The supervised demand service alone now sets `RemainAfterExit=yes`. Successful
+transient services otherwise become eligible for garbage collection before
+their completion receipt and later explicit stop can be collected. Ordinary
+client/RPC services keep their existing launch and cleanup behavior.
+
+Demand inspection includes loaded/retained state and the main process's exit
+code. Monitor ticks and export readback use the same owned-unit check:
+`active/exited`, `MainPID=0`, `ExecMainCode=1`, `ExecMainStatus=0` is successful
+completion; a normal nonzero exit remains a failed capture. Missing or
+mismatched units never prove success, and signals/OOM/timeouts still stop the
+campaign. The finished service remains lease-owned until explicit stop and
+release; no stop error is suppressed.
+
+Systemd may prune an exited service's empty cgroup while retaining the unit.
+Its unavailable live swap counter is retained as unavailable, never rewritten
+to zero. That terminal case requires the owned successful completion, the
+unchanged coordinator/zero-swap caps, and an empty cgroup; aggregate enforcement
+and final empty-slice checks remain in place.
+
+Focused regressions drive the real lifecycle launch/inspect/stop/release and
+runner export retention with only system calls and host reads faked, including
+the launch-controlled unit lifetime and pruned-cgroup counters. Wrong-unit,
+malformed, failed-exit, timeout, retention refusal and default-off controls are
+preserved. No real service, native build, model read or hardware operation was
+performed. This is a correction to the existing opt-in path, with no change to
+capability, accepted identity, frozen limits or execution authority; managed
+status declarations remain unchanged.

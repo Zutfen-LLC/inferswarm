@@ -149,6 +149,11 @@ def _onhost(p):
                 '--property=RuntimeMaxSec='+str(supervision['runtime_max_seconds']),
                 '--property=StandardOutput=append:'+str(log),
                 '--property=StandardError=append:'+str(log)]
+            if name=='demand':
+                # This client exits normally before terminal cleanup. Keep
+                # its unit/result loaded until our explicit owned stop;
+                # ordinary long-running servers retain their old lifecycle.
+                command.append('--property=RemainAfterExit=yes')
             if 'slice' in supervision:
                 if not re.fullmatch(r'[A-Za-z0-9_.-]+\.slice',supervision['slice']):
                     raise ValueError('invalid owned slice')
@@ -226,6 +231,8 @@ def _onhost(p):
             unit=row['supervision']['unit']
             fields=('MainPID','ActiveState','Result','MemoryCurrent','MemoryPeak',
                     'MemorySwapCurrent','MemoryMax','MemorySwapMax','RuntimeMaxUSec','KillMode','ControlGroup')
+            if name=='demand':
+                fields+=('LoadState','SubState','RemainAfterExit','ExecMainCode','ExecMainStatus')
             shown=subprocess.run(['sudo','-n','systemctl','show',unit,
                 *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)
             if shown.returncode:
@@ -245,6 +252,8 @@ def _onhost(p):
             unit=row['supervision']['unit']
             fields=('ActiveState','Result','ExecMainCode','ExecMainStatus','MemoryPeak',
                     'MemorySwapCurrent','MemoryMax','MemorySwapMax')
+            if name=='demand':
+                fields+=('LoadState','SubState','RemainAfterExit','MainPID','ControlGroup')
             try:
                 shown=subprocess.run(['sudo','-n','systemctl','show',unit,
                     *('--property='+field for field in fields)],capture_output=True,text=True,timeout=10)

@@ -529,8 +529,13 @@ class _FakeTransport:
                 raise RuntimeError('synthetic inspect refusal')
             supervision = row['supervision']
             props = dict(
-                MainPID=str(row['pid']),
-                ActiveState=('inactive' if row.get('exited') else 'active'),
+                MainPID=('0' if row.get('exited') else str(row['pid'])),
+                ActiveState=('failed' if row.get('exited') and row.get('Result') != 'success' else 'active'),
+                SubState=('exited' if row.get('exited') and row.get('Result') == 'success'
+                          else ('failed' if row.get('exited') else 'running')),
+                LoadState='loaded', RemainAfterExit=('yes' if name == 'demand' else 'no'),
+                ExecMainCode=('1' if row.get('exited') else '0'),
+                ExecMainStatus=('2' if row.get('Result') == 'exit-code' else '0'),
                 Result=self.extra.get(key, {}).get('Result',
                                                    row.get('Result', 'success')),
                 MemoryCurrent='1024', MemoryPeak='2048',
@@ -729,6 +734,29 @@ class MonitoredDemandHandoffTests(unittest.TestCase):
         self.assertIn('demand', self.leases.owned['client-host'])
         _monitor_tick(self.guard)  # post-retirement tick stays clean
 
+    def test_unloaded_wrong_unit_and_abnormal_completion_are_not_accepted(self):
+        self.guard.phase = 'demand'
+        self._register_demand()
+        self.transport.state[('client-host', 'demand')].update(
+            alive=False, exited=True, Result='success')
+        original = self.transport.call
+        from unittest.mock import patch
+        for field, value in (('LoadState', 'not-found'), ('RemainAfterExit', 'no'),
+                             ('ExecMainStatus', '2'), ('MainPID', '999'),
+                             ('Result', 'timeout'), ('SubState', 'running'),
+                             ('unit', 'unowned.service')):
+            def inspect(address, payload):
+                receipt = original(address, payload)
+                if payload['action'] == 'inspect' and payload['name'] == 'demand':
+                    if field == 'unit':
+                        receipt['unit'] = value
+                    else:
+                        receipt['properties'][field] = value
+                return receipt
+            with self.subTest(field=field), patch.object(self.transport, 'call', side_effect=inspect):
+                with self.assertRaises((RuntimeError, ValueError)):
+                    _monitor_tick(self.guard)
+
 
 class DemandCompletionReadbackTests(unittest.TestCase):
     """Defect 2: the runner must read the actual lifecycle response shape.
@@ -770,7 +798,7 @@ class DemandCompletionReadbackTests(unittest.TestCase):
             self.commands, self.transport, with_client=False)
 
     def capture(self, *, result='success', refuse_export=False,
-                inspect_refuses=False):
+                inspect_refuses=False, completion_override=None):
         from inferswarm.operator.runtime import OperatorRunner
         from unittest.mock import patch
         runner = OperatorRunner.__new__(OperatorRunner)
@@ -798,6 +826,15 @@ class DemandCompletionReadbackTests(unittest.TestCase):
         # The unit exits with `result` during the capture wait (first alive).
         self.transport.pending_death[('client-host', 'demand')] = (
             'success' if result is None else result)
+        original_call = self.transport.call
+
+        def call(address, payload):
+            receipt = original_call(address, payload)
+            if (completion_override is not None and payload['action'] == 'inspect'
+                    and payload['name'] == 'demand'
+                    and self.transport.state[(address, 'demand')].get('exited')):
+                return completion_override(receipt)
+            return receipt
 
         class FakeCollector:
             MANIFEST_MAX_BYTES = 1 << 20
@@ -819,7 +856,8 @@ class DemandCompletionReadbackTests(unittest.TestCase):
         with patch('inferswarm.operator.native_observer.collector.'
                    'SSHCollectorTransport', FakeCollector), \
              patch('inferswarm.operator.source.q8_source_payload',
-                   return_value=source_payload):
+                   return_value=source_payload), \
+             patch.object(self.transport, 'call', side_effect=call):
             record = OperatorRunner._run_demand_capture(
                 runner, plan, self.guard, dict(self.rows), {}, client, remote,
                 (), store)
@@ -861,8 +899,25 @@ class DemandCompletionReadbackTests(unittest.TestCase):
         self.assertNotIn('demand-export.json', store.saved)
 
     def test_abnormal_unit_result_is_a_process_loss_stopping_the_campaign(self):
-        with self.assertRaisesRegex(RuntimeError, 'process lost'):
-            self.capture(result='oom-kill')
+        for result in ('oom-kill', 'signal', 'timeout'):
+            with self.subTest(result=result):
+                self.setUp()
+                with self.assertRaisesRegex(RuntimeError, 'process lost'):
+                    self.capture(result=result)
+
+    def test_unloaded_wrong_unit_and_malformed_completion_never_export(self):
+        for override in (
+                lambda row: dict(row, unit='unowned.service'),
+                lambda row: dict(row, properties=dict(row['properties'], LoadState='not-found')),
+                lambda row: dict(row, properties=dict(row['properties'], ExecMainStatus='2')),
+                lambda row: dict(row, properties=[]),
+                lambda row: {'unit': row['unit']},
+                lambda row: None):
+            self.setUp()
+            record, store = self.capture(completion_override=override)
+            self.assertEqual(record['export_status'], 'unknown-exit', record)
+            self.assertEqual(record['status'], 'FAILED', record)
+            self.assertNotIn('demand-export.json', store.saved)
 
     def test_retention_failure_after_successful_execution_is_never_retained(self):
         record, store = self.capture(result='success', refuse_export=True)
@@ -889,6 +944,169 @@ class _StubStore:
             return False
         self.saved.append(name)
         return True
+
+
+class RetainedDemandLifecycleTests(unittest.TestCase):
+    """Actual lifecycle launch, completion inspection and explicit cleanup.
+
+    Only systemctl/systemd-run and /proc identity are faked; no service starts.
+    The command's retention property controls whether successful exit keeps
+    its receipt, rather than assuming inactive transient units stay loaded.
+    """
+
+    def test_retention_property_is_demand_only(self):
+        from unittest.mock import patch
+        from inferswarm.operator import lifecycle
+        for name in ('client', 'rpc', 'rpc0', 'rpc1', 'demand'):
+            calls = []
+            def command(argv, **kwargs):
+                calls.append(argv)
+                return SimpleNamespace(returncode=0, stdout='123\n', stderr='')
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as root, \
+                 patch.object(lifecycle.subprocess, 'run', side_effect=command), \
+                 patch.object(lifecycle, 'identity', return_value='start'):
+                lifecycle._onhost(dict(action='admit', root=root, token='launch'))
+                lifecycle._onhost(dict(action='spawn', root=root, token='launch',
+                    name=name, argv=['/never-executed'], supervision=dict(
+                        unit=name+'.service', memory_max_bytes=_COORD_CAP,
+                        memory_swap_max_bytes=0, runtime_max_seconds=60)))
+                argv = calls[0]
+                self.assertEqual('--property=RemainAfterExit=yes' in argv, name == 'demand')
+                for unchanged in ('--property=Type=simple', '--property=KillMode=control-group',
+                                  '--property=MemorySwapMax=0', '--property=RuntimeMaxSec=60'):
+                    self.assertIn(unchanged, argv)
+
+    def test_unavailable_counter_never_hides_bad_receipts_or_nonzero_swap(self):
+        from unittest.mock import patch
+        guard, leases, _ = _make_guard_state(_ProbeCommands(), _FakeTransport(), with_client=False)
+        row = leases.spawn('client-host', 'demand', ['/never-executed'])
+        guard.demand_state = row
+        receipt = dict(unit=row['supervision']['unit'], properties=dict(
+            LoadState='loaded', ActiveState='active', SubState='exited', MainPID='0',
+            RemainAfterExit='yes', Result='success', ExecMainCode='1', ExecMainStatus='0',
+            MemoryMax=str(_COORD_CAP), MemorySwapMax='0',
+            MemorySwapCurrent=str(2**64-1), ControlGroup=''))
+        for field, value in (('unit','unowned.service'), ('LoadState','not-found'),
+                             ('ExecMainStatus','2'), ('MemorySwapMax','1'),
+                             ('MemorySwapCurrent','1'), ('MemorySwapCurrent','unknown')):
+            bad = dict(receipt, properties=dict(receipt['properties']))
+            if field == 'unit':
+                bad['unit'] = value
+            else:
+                bad['properties'][field] = value
+            cleanup = {'client-host': {'lease': 'released', 'demand': bad}}
+            with self.subTest(field=field, value=value), \
+                 patch.object(leases, 'cleanup_budgets', return_value={'client-host': {}}):
+                with self.assertRaises((RuntimeError, ValueError)):
+                    guard.after_cleanup(cleanup)
+
+    def test_success_receipt_export_and_explicit_stop_release(self):
+        from unittest.mock import patch
+        from inferswarm.operator import lifecycle
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        from inferswarm.operator.runtime import OperatorRunner
+        from inferswarm.operator.evidence_retention import DurableEvidenceStore
+        DemandCompletionReadbackTests.setUpClass()
+        fixture = DemandCompletionReadbackTests
+        state = dict(exited=False, retained=False, loaded=False, identities=0)
+        events = []
+        unit = 'inferswarm-q8-313-retained-demand.service'
+        fields = dict(MainPID='123', ActiveState='active', SubState='running',
+            LoadState='loaded', RemainAfterExit='yes', Result='success',
+            ExecMainCode='0', ExecMainStatus='0', MemoryCurrent='1024', MemoryPeak='2048',
+            MemorySwapCurrent='0', MemoryMax=str(_COORD_CAP), MemorySwapMax='0',
+            RuntimeMaxUSec='60s', KillMode='control-group', ControlGroup='/coord.slice/'+unit)
+
+        def command(argv, **kwargs):
+            if argv[2] == 'systemd-run':
+                state['retained'] = '--property=RemainAfterExit=yes' in argv
+                state['loaded'] = True
+                events.append('spawn')
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+            if argv[3] == 'stop':
+                if not state['loaded']:
+                    return SimpleNamespace(returncode=5, stdout='', stderr='Unit not loaded')
+                events.append('stop')
+                state['loaded'] = False
+                return SimpleNamespace(returncode=0, stdout='', stderr='')
+            if '--value' in argv:
+                return SimpleNamespace(returncode=0, stdout='123\n', stderr='')
+            props = dict(fields)
+            if state['exited']:
+                # systemd prunes empty cgroups even for active/exited units;
+                # retain the result, with unavailable live counters honest.
+                props.update(MainPID='0', ActiveState='active', SubState='exited', ExecMainCode='1',
+                    MemoryCurrent=str(2**64-1), MemorySwapCurrent=str(2**64-1), ControlGroup='')
+            if not state['loaded']:
+                props.update(LoadState='not-found', MainPID='0', ActiveState='inactive',
+                             SubState='dead', RemainAfterExit='no', ExecMainCode='0')
+            requested = [a.split('=', 1)[1] for a in argv if a.startswith('--property=')]
+            return SimpleNamespace(returncode=0, stdout='\n'.join(k+'='+props[k] for k in requested), stderr='')
+
+        def identity(pid):
+            state['identities'] += 1
+            if state['identities'] > 1 and not state['exited']:
+                state.update(exited=True, loaded=state['retained'])
+                events.append('self-exit')
+            return None if state['exited'] else 'start'
+
+        with tempfile.TemporaryDirectory() as td, \
+             patch.object(lifecycle.subprocess, 'run', side_effect=command), \
+             patch.object(lifecycle, 'identity', side_effect=identity):
+            manager = ExperimentalLeaseManager(lifecycle.LocalTransport(), 'retained')
+            manager.acquire('client-host', str(Path(td)/'lease'))
+            manager.acquire('remote-host', str(Path(td)/'worker-lease'))
+            commands = _ProbeCommands()
+            probe = commands.run
+            def run(address, argv, **kwargs):
+                if ('--property=ActiveState' in argv and '--property=ControlGroup' in argv
+                        and '--property=MemoryMax' not in argv):
+                    return 'ActiveState=inactive\nControlGroup=\n'
+                return probe(address, argv, **kwargs)
+            commands.run = run
+            guard = SystemdSessionGuard(_guard_envelope(), manager, commands,
+                                       session=validate_session(session_raw()))
+            manager.slices = {'client-host': 'coord.slice', 'remote-host': 'work.slice'}
+            guard.client = SimpleNamespace(execution_address='client-host', host_id='client-h')
+            guard.remote = SimpleNamespace(execution_address='remote-host', host_id='remote-h')
+            guard.execute_deadline = time.monotonic()+60
+            guard.demand_profile = fixture.profile
+            store = DurableEvidenceStore.create(Path(td)/'evidence', 'retained',
+                                                config_sha256=A64, request_sha256=C64)
+            plan = SimpleNamespace(strategy_options=dict(rpc_endpoints=['w:5000','w:5001'],
+                        source_contract='full-source-both-hosts/1'),
+                model=SimpleNamespace(source_id='qwen3.8', revision='r1', representation='Q8_0'),
+                workload=SimpleNamespace(context=4096, batch=2048, microbatch=512))
+            client = SimpleNamespace(execution_address='client-host', source_path='/never-read')
+            class Collector:
+                MANIFEST_MAX_BYTES = 1 << 20
+                EXECUTABLE_MAX_BYTES = 300 << 20
+                def read_json(self, *args, **kwargs):
+                    return fixture.manifest
+                def read_bytes(self, address, path, **kwargs):
+                    if 'demand-profile' in path:
+                        _monitor_tick(guard)  # real active/exited completion before retirement
+                        events.append('export')
+                        return fixture.export
+                    return fixture.executable
+            runner = OperatorRunner(None, manager, None, None)
+            with patch('inferswarm.operator.native_observer.collector.SSHCollectorTransport', Collector), \
+                 patch('inferswarm.operator.runtime._model_file_type', return_value=7):
+                record = runner._run_demand_capture(plan, guard, {}, {}, client, None, (), store)
+            self.assertEqual(record['status'], 'FINISHED', record)
+            self.assertTrue((Path(td)/'evidence/demand-export.json').is_file())
+            self.assertEqual(record['supervision']['properties']['SubState'], 'exited')
+            self.assertNotIn('demand', guard.rows)
+            self.assertIn('demand', manager.owned['client-host'])
+            cleanup = manager.cleanup()
+            guard.after_cleanup(cleanup)
+            self.assertEqual(cleanup['client-host']['lease'], 'released', cleanup)
+            self.assertEqual(cleanup['client-host']['demand']['properties']['ExecMainStatus'], '0')
+            self.assertEqual(cleanup['client-host']['demand']['properties']['MemorySwapCurrent'], str(2**64-1))
+            self.assertEqual(cleanup['client-host']['demand']['memory_swap_current_status'], 'unavailable-after-exit')
+            self.assertFalse((Path(td)/'lease/active').exists())
+            self.assertEqual(events, ['spawn', 'self-exit', 'export', 'stop'])
+            self.assertFalse(state['loaded'])
 
 
 class DemandEndToEndCampaignTests(unittest.TestCase):
@@ -988,8 +1206,18 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
                     self2.events.append(('stop', payload['name']))
                 if action == 'alive' and payload.get('name') == 'demand':
                     # The capture client exits promptly after connecting.
+                    self2.demand_exited = True
                     return {'alive': False}
-                return super().call(address, payload)
+                receipt = super().call(address, payload)
+                if action == 'inspect' and payload.get('name') == 'demand':
+                    row = self2.rows[(address, 'demand')]
+                    exited = getattr(self2, 'demand_exited', False)
+                    receipt['unit'] = row['supervision']['unit']
+                    receipt['properties'].update(LoadState='loaded', RemainAfterExit='yes',
+                        SubState='exited' if exited else 'running',
+                        MainPID='0' if exited else str(row['pid']),
+                        ExecMainCode='1' if exited else '0', ExecMainStatus='0')
+                return receipt
 
             def run(self2, address, argv, **kwargs):
                 if argv[0] == 'getconf':
@@ -1051,6 +1279,7 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
         self.assertEqual(capture['export_status'], 'retained')
         self.assertEqual(capture['unit_result'], 'success')
         self.assertEqual(result['outcomes']['demand_capture'], 'EXPORTED')
+        self.assertEqual(result['outcomes']['cleanup'], 'COMPLETE')
         # The capture ran AFTER the frozen session's requests and after the
         # ordinary client stopped; the workers stayed up for cache reuse.
         self.assertEqual(len(fixture.posts), len(session['requests']))

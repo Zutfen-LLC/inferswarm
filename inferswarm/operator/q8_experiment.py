@@ -231,6 +231,34 @@ def _duration_usec(value):
     return sum(int(n)*units[u] for n,u in tokens)
 
 
+def _demand_completion_result(receipt,spawn):
+    """Read a retained, owned demand unit's actual terminal result.
+
+    A missing unit can expose default properties: absence is never success.
+    The same predicate is used by monitor ticks and final export readback.
+    """
+    if not isinstance(receipt,dict) or not isinstance(spawn,dict): return None
+    supervision=spawn.get('supervision')
+    props=receipt.get('properties')
+    if (not isinstance(supervision,dict) or not supervision.get('unit')
+            or receipt.get('unit')!=supervision['unit'] or not isinstance(props,dict)
+            or props.get('LoadState')!='loaded' or props.get('RemainAfterExit')!='yes'
+            or props.get('MainPID')!='0'):
+        return None
+    result=props.get('Result')
+    if not isinstance(result,str) or not result: return None
+    state=(props.get('ActiveState'),props.get('SubState'))
+    if result=='success':
+        return result if (state==('active','exited')
+            and props.get('ExecMainCode')=='1' and props.get('ExecMainStatus')=='0') else None
+    if result=='exit-code':
+        status=props.get('ExecMainStatus')
+        return result if (state==('failed','failed') and props.get('ExecMainCode')=='1'
+            and isinstance(status,str) and status.isdecimal() and 0<int(status)<=255) else None
+    # Signals, OOM and timeouts remain genuine process-loss outcomes.
+    return result if state in (('failed','failed'),('inactive','dead')) else None
+
+
 def _digest(value, label):
     if (not isinstance(value, str) or len(value) != 64
             or any(c not in '0123456789abcdef' for c in value)):
@@ -487,23 +515,15 @@ class SystemdCampaignGuard:
                       else _LIMITS['worker_memory_max_bytes']//2)
             row=self.leases.inspect(part.execution_address,name)
             props=row['properties']; receipts[name]=row
-            spawn=rows[name]
-            supervision=(spawn.get('supervision') if isinstance(spawn,dict) else None)
             # The demand unit is the one owned process that legitimately
             # FINISHES while still monitored: the capture wait detects its
             # exit and then retires it from this set. Between exit and
-            # retirement a monitor tick may inspect it. A terminal inactive
-            # unit whose systemd unit identity matches the spawned
-            # supervision and whose Result is an own-exit result
-            # ('success'/'exit-code') is a classified completion, not a
-            # loss. Every other inactive or mismatched state -- a killed,
-            # OOM-killed, timed-out, recycled or unobservable unit -- stays
-            # a supervision failure that stops the campaign.
+            # retirement, a retained active/exited unit with a verified
+            # zero exit status is completion. A normal nonzero exit is an
+            # honest failed capture; missing/mismatched or killed/OOM/
+            # timed-out units remain supervision failures.
             completed=(name=='demand' and getattr(self,'phase',None)=='demand'
-                and isinstance(supervision,dict)
-                and row.get('unit')==supervision.get('unit')
-                and props['ActiveState']=='inactive'
-                and props.get('Result') in ('success','exit-code'))
+                and _demand_completion_result(row,rows[name]) in ('success','exit-code'))
             if completed: continue
             if props['ActiveState']!='active' or int(props['MainPID'])!=rows[name]['pid']:
                 raise RuntimeError('systemd ownership mismatch: '+name)
@@ -579,7 +599,7 @@ class SystemdCampaignGuard:
         with self._rows_lock:
             if self.leases.alive(address,'demand'):
                 raise RuntimeError('demand process still alive at monitored retirement')
-            self.rows.pop('demand',None)
+            self.demand_state=self.rows.pop('demand',None)
 
     def resource_sample(self,rows):
         sample=self._sample(dict(rows))
@@ -662,6 +682,18 @@ class SystemdCampaignGuard:
                 if props is None: raise RuntimeError('final systemd receipt missing: '+name)
                 if props['Result'] not in ('success','signal'):
                     raise RuntimeError('owned systemd job failed: '+name+': '+props['Result'])
+                # systemd can prune a retained exited unit's empty cgroup.
+                # Its live swap counter then becomes unavailable, not zero.
+                # Accept that only for the verified owned completion, with
+                # the frozen zero-swap cap still recorded; aggregate limits
+                # and final empty-slice checks above remain authoritative.
+                if (name=='demand' and props['MemorySwapCurrent'] in (
+                        str(2**64-1),'[not set]') and props.get('ControlGroup')==''
+                        and props.get('MemorySwapMax')=='0'
+                        and props.get('MemoryMax')==str(_LIMITS['coordinator_memory_max_bytes'])
+                        and _demand_completion_result(row,getattr(self,'demand_state',None))=='success'):
+                    row['memory_swap_current_status']='unavailable-after-exit'
+                    continue
                 if int(props['MemorySwapCurrent'])!=0:
                     raise RuntimeError('owned swap violation retained at cleanup: '+name)
         if self.started is not None and self.clock()>self.started+_LIMITS['total_seconds']:
