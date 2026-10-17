@@ -134,6 +134,27 @@ defect and related findings; all were corrected at `a9befed7`:
 The reviewer's probes (default-off canonical byte identity, digest bypass
 refusal, warmup binding refusal) all passed unchanged.
 
+## Second review pass (complete report disposition)
+
+The reviewer's full report added three findings beyond the six above; all
+are corrected at `cda47e28`:
+
+1. **Blocking** — the lifecycle admitted `demand` at spawn but refused it in
+   the `log` and `alive/inspect/stop` allowlists, so the first liveness
+   check failed and lease cleanup could not stop the unit (the aggregate
+   slice backstop still bounded it). All three allowlists now admit
+   `demand` together, pinned by an end-to-end spawn/alive/log/stop/release
+   regression on the real lifecycle.
+2. **Blocking** — the pinned RPC server serves ONE connection synchronously,
+   so the demand client could never register while the loaded session client
+   held the workers' connections. The capture now runs AFTER the frozen
+   session's requests with the ordinary client stopped (lease row removed)
+   first; the workers stay up and their validated assigned cache serves the
+   demand client's load through the existing #311 restart-reuse path.
+3. **Contained** — `save_session_json` returns False on refusal; its result
+   is now honored so a refused export write downgrades to
+   `retention-failed` instead of labelling the export `retained`.
+
 Feasible local checks run: composed CPU build of `native-demand`
 (-O3/Debug, RPC v7, links clean), `-fsyntax-only` against the pinned tree,
 focused suites (issue314, q8_experiment, issue313, native_moe_overlap,
