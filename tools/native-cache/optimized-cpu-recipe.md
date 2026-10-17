@@ -2,8 +2,10 @@
 
 Coding base: fetched main `02e00ac5eb465257bbc2d124bf84773770260967`.
 This is a later-execution recipe, NOT hardware or full-model authorization.
-No candidate binary has been built, reviewed or accepted by this coding change;
-no speedup is claimed. Historical identities and evidence remain unchanged.
+PR #332 supplied this build recipe. The subsequent candidate identity review
+is recorded in [the additive build-pair note](optimized-cpu-build-pair/README.md).
+No speedup or physical qualification is claimed. Historical identities and
+evidence remain unchanged.
 
 ## Intended delta
 
@@ -72,12 +74,13 @@ python3 tools/native-cache/operator-build-cpu-optimized.py \
    toolchain comparison and check logs for maintainer review. Only after that
    review, record the complete real client manifest additively at
    `tools/native-cache/optimized-cpu-build-pair/cpu05-llama-server.build-manifest.json`.
-   This file is deliberately absent now. Do not insert placeholders, copy a
+   The actual reviewed candidate now occupies this path. Future replacements
+   require their own identity review. Do not insert placeholders, copy a
    synthetic test identity, mutate the historical tables/manifests, or promote
    a caller-supplied hash. The recipe never installs or records approval itself.
 
-The finite `optimized-cpu05-cuda03` selector refuses BOTH roles until that
-reviewed client manifest exists in the reviewed repository. It always uses the
+The finite `optimized-cpu05-cuda03` selector binds that reviewed client manifest
+and refuses BOTH roles if it is absent. It always uses the
 unchanged complete Step A CUDA worker manifest, executable
 `46345f6c4df4f229aa11e76514c6c6eff9c9a148257f9232a505c8173d2ebf73`.
 Omission/`historical-cpu` and `step-a-cpu05-cuda03` keep their prior meanings.
@@ -142,7 +145,8 @@ Rebind profiles honestly; do not carry an old config hash over changed bytes.
 Focused offline tests extend the already registered `test_issue311_cuda_backing`
 module; no separate certification or CI population is introduced. No accepted
 capability, physical result or execution authority changes, so generated project
-status remains unchanged; this additive recipe describes the unreviewed handoff.
+status remains unchanged. The additive build-pair note records identity review
+only; the later controlled follow-through still requires separate authorization.
 After separate publication authorization and exact-head review, batch the final
 changes and use the existing authenticated ordinary-CI reuse path in
 `docs/campaign-gate-ordering.md` at merge readiness. Do not repeatedly run full
