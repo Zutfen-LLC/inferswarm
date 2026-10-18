@@ -117,12 +117,12 @@ class FinalValidationWorkflowTests(unittest.TestCase):
 
     def test_control1_ordinary_pr_plan_stays_targeted_for_narrow_change(self):
         import plan_ci
-        plan = plan_ci.plan(["docs/campaign-gate-ordering.md"],
-                            mode="pr")
+        plan = plan_ci.plan(["docs/README.md"], mode="pr")
         self.assertEqual(plan["mode"], "targeted")
-        self.assertIn("repo-integrity", plan["groups"])
-        self.assertIn("issue-213-gate-ordering", plan["groups"])
+        self.assertEqual(plan["groups"], ["repo-integrity"])
         self.assertFalse(plan["full_regression"])
+        policy = plan_ci.plan(["docs/campaign-gate-ordering.md"], mode="pr")
+        self.assertTrue(policy["full_regression"])
         # and the workflow-touching PR itself legitimately fails closed
         # to full regression (CI_WORKFLOW_PREFIXES), which is the
         # ordinary workflow-change doctrine, unchanged by #226.

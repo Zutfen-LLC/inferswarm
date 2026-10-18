@@ -34,7 +34,9 @@ class Selection(unittest.TestCase):
     def test_native_dependency_policy_and_unknown_escalate_full(self):
         for path in ('inferswarm/operator/native_observer/full_build.py',
                      'tests/fixtures/issue299/native-observer-overlay.patch',
-                     'tools/native-cache/server.cpp', 'requirements-test.txt',
+                     'tools/native-cache/server.cpp', 'tools/moe-overlap/build.py',
+                     'scripts/issue264_source_patch.py', 'scripts/issue280_source.py',
+                     'requirements-test.txt',
                      'docs/new-family/requirements.txt', 'pyproject.toml',
                      'scripts/merge_validation.py', 'scripts/run_full_cpu_suite.py',
                      'docs/campaign-gate-ordering.md', '.github/workflows/ci.yml',

@@ -1202,12 +1202,14 @@ NATIVE_INTERFACE_PREFIXES = (
     "tools/native-moe-overlap/", "tools/native-cache/",
     "inferswarm/operator/native_observer/", "tests/fixtures/issue299/overlay/",
 )
-NATIVE_INTERFACE_SUFFIXES = (".c", ".cc", ".cpp", ".h", ".hpp", ".cu", ".cuh", ".patch", ".cmake")
+NATIVE_INTERFACE_PATHS = ("tools/moe-overlap/build.py", "scripts/issue280_source.py")
+NATIVE_INTERFACE_SUFFIXES = ("_source_patch.py", ".c", ".cc", ".cpp", ".h", ".hpp", ".cu", ".cuh", ".patch", ".cmake")
 
 
 def high_risk_path(path):
     name = Path(path).name
-    return (path.startswith(NATIVE_INTERFACE_PREFIXES)
+    return (path in NATIVE_INTERFACE_PATHS
+            or path.startswith(NATIVE_INTERFACE_PREFIXES)
             or path.endswith(NATIVE_INTERFACE_SUFFIXES)
             or name == "CMakeLists.txt"
             or (name.startswith("requirements") and name.endswith(".txt")))
@@ -1403,6 +1405,7 @@ def build_registry():
             pattern: list(g) for pattern, g in sorted(PATH_GROUPS.items())
         },
         "full_regression_paths": _sort_unique(FULL_REGRESSION_PATHS),
+        "native_interface_paths": list(NATIVE_INTERFACE_PATHS),
         "native_interface_prefixes": list(NATIVE_INTERFACE_PREFIXES),
         "native_interface_suffixes": list(NATIVE_INTERFACE_SUFFIXES),
     }

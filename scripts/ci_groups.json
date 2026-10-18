@@ -246,6 +246,10 @@
    ]
   }
  },
+ "native_interface_paths": [
+  "tools/moe-overlap/build.py",
+  "scripts/issue280_source.py"
+ ],
  "native_interface_prefixes": [
   "tools/native-moe-overlap/",
   "tools/native-cache/",
@@ -253,6 +257,7 @@
   "tests/fixtures/issue299/overlay/"
  ],
  "native_interface_suffixes": [
+  "_source_patch.py",
   ".c",
   ".cc",
   ".cpp",
