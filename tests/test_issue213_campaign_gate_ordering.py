@@ -1226,9 +1226,9 @@ class PreservationTests(unittest.TestCase):
         self.assertNotIn("shelve", source)
         self.assertNotIn("dbm", source)
 
-    def test_planner_semantics_preserved(self):
-        # the #148 planner still selects repo-integrity + fail-closed for
-        # this change's paths and its self-test module list is intact.
+    def test_validation_policy_docs_require_full_regression(self):
+        # Validation-policy documents are selection authority; the existing
+        # planner now conservatively escalates these changes to full.
         proc = subprocess.run(
             [sys.executable, "-c",
              "import sys; sys.path.insert(0, 'scripts'); "
@@ -1237,12 +1237,11 @@ class PreservationTests(unittest.TestCase):
             capture_output=True, text=True, cwd=str(ROOT))
         payload = json.loads(proc.stdout)
         self.assertIn("repo-integrity", payload["groups"])
-        self.assertFalse(payload["full_regression"])
+        self.assertTrue(payload["full_regression"])
 
-    def test_planner_maps_runner_and_orchestration_paths(self):
-        # The runner maps to repo-integrity (unchanged #148 semantics, no
-        # second planner) and the orchestration module to its own group;
-        # the orchestration paths alone do NOT trigger full regression.
+    def test_planner_escalates_runner_and_orchestration_policy(self):
+        # The existing planner classifies validation execution/receipt
+        # authority as full risk while keeping its registry wiring.
         proc = subprocess.run(
             [sys.executable, "-c",
              "import sys; sys.path.insert(0, 'scripts'); "
@@ -1251,7 +1250,7 @@ class PreservationTests(unittest.TestCase):
              " 'scripts/issue213_gate_orchestration.py'], 'pr')))"],
             capture_output=True, text=True, cwd=str(ROOT))
         payload = json.loads(proc.stdout)
-        self.assertFalse(payload["full_regression"])
+        self.assertTrue(payload["full_regression"])
         self.assertIn("repo-integrity", payload["groups"])
         self.assertIn("issue-213-gate-ordering", payload["groups"])
         # and the group registry stays wired through ci_groups.json

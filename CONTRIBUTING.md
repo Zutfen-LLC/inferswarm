@@ -63,6 +63,12 @@ for the normative rule.
 The repository is documentation plus CPU-only evidence tooling. Nothing here
 needs a GPU.
 
+Ordinary PRs use [risk-based merge validation](docs/ci-impact-planning.md#risk-based-merge-validation): affected CI groups plus always-run cross-cutting
+smoke. After exact-head review, `handoff --risk-based` authenticates selected
+jobs and reports any uncovered groups. Full-risk plans require the existing
+full proof; a scoped PASS cannot claim full qualification. Explicit full
+validation, main regression and weekly repository regression remain available.
+
 Work that follows a physical/research campaign handoff (evidence PRs with
 independent review) must schedule validation per the
 [campaign gate ordering](docs/campaign-gate-ordering.md) rule: cheap

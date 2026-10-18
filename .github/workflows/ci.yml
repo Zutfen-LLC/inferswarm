@@ -20,6 +20,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly full regression on main; manual full and push-to-main remain.
+    - cron: "23 4 * * 1"
   workflow_dispatch:
     inputs:
       full_regression:
@@ -189,7 +192,7 @@ jobs:
 
       - name: Check CI planner and full-suite runner tests
         # Registry parity requires every repo-integrity module to run here.
-        run: python3 -m scripts.ci_unittest tests.test_plan_ci tests.test_run_full_cpu_suite -v
+        run: python3 -m scripts.ci_unittest tests.test_plan_ci tests.test_run_full_cpu_suite tests.test_merge_validation tests.test_cross_cutting_smoke -v
 
       - name: Check internal Markdown links
         run: |

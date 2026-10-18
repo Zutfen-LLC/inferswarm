@@ -146,3 +146,21 @@ and unittest semantics, recording terminal outcomes for authenticated final
 validation reuse. Final Validation executes uncovered modules and required skip
 rechecks. The full runner remains the fallback. See
 [campaign gate ordering](../docs/campaign-gate-ordering.md#reusing-complete-ordinary-ci-outcomes).
+
+## Merge-validation scope and fail-fast feedback
+
+Ordinary merge checks use affected groups plus the always-run three-test
+`test_cross_cutting_smoke` module in `repo-integrity`. See the
+[risk matrix and exact-head handoff](../docs/ci-impact-planning.md#risk-based-merge-validation).
+The full population stays in manual full validation, pushes to main and the
+Monday 04:23 UTC repository workflow. Scoped output never proves full coverage.
+
+The CPU worker runner defaults to fail-fast: unittest stops on its first
+failure, the parent stops refilling the queue, stops/reaps owned process trees
+(including detached descendants on Linux), preserves failure/progress output,
+and removes temporary worktrees. Incomplete execution has no PASS receipt or
+executed identity digest. Task start/end/duration and current module appear on
+stderr, keeping `--json` stdout machine-readable. `--retain-dir` keeps task logs.
+For intentional diagnostic collection, `--collect-all` finishes remaining
+workers/tests and still reports FAIL on any failure. It executes directly and
+does not consume or publish the guarded full-validation completion cache.

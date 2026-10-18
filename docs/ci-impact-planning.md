@@ -65,10 +65,96 @@ CI workflow (full regression is the default), or push to `main` — every
 push to `main` runs the complete CPU regression contract regardless of
 the changed paths.
 
+## Risk-based merge validation
+
+Ordinary PRs use the planner's affected groups plus always-on `repo-integrity`.
+That job includes the explicit three-test cross-cutting smoke module
+[`test_cross_cutting_smoke.py`](../tests/test_cross_cutting_smoke.py): artifact
+identity rejects changed bytes, operator data freezes and round-trips, and the
+numerical core rejects nonfinite input. These tiny synthetic checks supplement
+repository integrity; they provide no native or numerical qualification claim.
+
+The existing planner has two scoped inputs: `--mode pr` selects ordinary CI
+consumer groups; `--mode merge` adds native source/build full-qualification
+requirements for final handoff. `handoff --risk-based` always requests merge
+mode. A native PR may therefore have affected-only ordinary CI and still require
+full Final CPU qualification before merge. Dependency, validation-policy and
+unknown/malformed-path escalation apply in both modes. Explicit `--mode full`
+continues to select every group. This preserves ordinary impact selection and
+frozen consumer-registration tests without weakening final qualification.
+
+After review, run the existing handoff with `--risk-based` from a clean checkout
+of the exact reviewed head (fetch the current PR base commit first):
+
+```bash
+python3 scripts/finalize_repository.py --check
+python3 scripts/sync_project_status.py --check
+.venv/bin/python scripts/issue213_gate_orchestration.py handoff --risk-based \
+  --repo Zutfen-LLC/inferswarm --pr <number> --finalizer-ok --out /tmp/handoff.json
+```
+
+The handoff reads the current open PR's base/head from GitHub, classifies the
+local three-dot diff with `plan_ci.py`, derives the exact expected test population
+from existing workflow/registry parity, and uses the existing exact-head CI
+verifier. Every selected job (including all shards) must succeed on the same
+run/attempt as `CI Gate`. Missing, skipped, failed, cancelled or stale checks
+block. Head, base and checkout drift during handoff block. No tests execute
+during this receipt assembly. `reused_groups`, `uncovered_groups`, required test
+IDs and a population digest make scope visible.
+
+| Changed surface | Final merge validation | Tradeoff |
+|---|---|---|
+| Classified ordinary prose | Integrity + three smoke tests | Other qualification families wait for full regression |
+| Operator Python controller, profiles, acquisition | `issue-99-103` + integrity/smoke | Concrete operator/acquisition dependency scope; unrelated native and R8-I families wait |
+| Native source, patches, CMake/build interfaces, native observer build tooling | Full | Native integration can affect behavior beyond controller fixtures |
+| Broad dependencies, environment, planner/validation policy or workflow | Full | Selection or execution authority itself changed |
+| Unknown, malformed or empty path set | Full | Scope cannot be established conservatively |
+
+`inferswarm/operator/runtime.py` is Python orchestration, not native source. Its
+existing affected group retains the mocked runtime, binding, lifecycle, observer
+and build-supervision controls, including `test_issue299_native_build` and
+`test_issue299_native_producer` (both explicitly offline). It does not select
+`moe-overlap-prototype` or `r8i-qwen-qualification`. Native observer sources and
+build tooling escalate to full. The path reason list exposes this dependency
+scope; no blanket "all operator edits are native" rule is used.
+
+A targeted handoff reports `validation_scope=scoped`,
+`full_suite_receipt_valid=false` and the groups left uncovered. It never creates
+a `hosted-final-validation-receipt/1`, an executed full-population digest, or a
+claim of full qualification. The full receipt validators reject scoped output.
+For a full-risk plan, the same command requires the existing exact-head full
+suite proof (`--final-validation-receipt <file>` or `--suite-receipt <file>`) and
+ordinary CI. A missing proof stays blocked. Campaigns with a frozen full-suite
+requirement continue to use the full handoff regardless of path selection.
+This validation-policy change itself selects full qualification when published.
+
+What moves out of ordinary per-PR validation: receipt composition no longer
+executes every unselected qualification/native family or rechecks their host-local
+skips merely to turn a scoped result into full qualification. Those families
+remain in explicit full validation and full regression. On PR #338, retained
+Final CPU run `39081139368` covered 4,499 tests: 1,791 reused and 2,708 freshly
+executed in completion. Its ordinary selection was `repo-integrity`,
+`issue-99-103`, and `issue-213-gate-ordering`. The operator-only portion of that diff would use `issue-99-103` plus
+`repo-integrity`, leaving other groups uncovered instead of running completion.
+Actual PR #338 also changed `tests/test_ordinary_ci_reuse.py`; that validation-
+policy change conservatively requires full proof under the new rule. The
+measured run lasted 24m47s, including a 22m50s composition/completion step. These are historical
+measurements, not predicted wall-clock savings: module intervals include setup
+and teardown, and logs do not separate compilation from execution.
+
+Full regression remains enabled on each push to `main` and manual CI dispatch.
+A repository-owned weekly run now uses Monday 04:23 UTC (`ci.yml`, full mode);
+this is an additional backstop for dormant lineages and changes missed by
+selection. It introduces no external automation. The default-branch schedule
+starts only after this workflow change merges; scheduled coverage cannot prevent
+a cross-family regression in a scoped PR from reaching main first. No tests,
+thresholds, hardware acceptance or execution authorization are removed. No live
+branch protection/settings are changed by this policy patch.
+
 ## Hosted Final CPU Validation (Issue #226)
 
 Ordinary PR CI above stays impact-selected and never runs the full
-suite through the canonical runner on a PR push. The full CPU requirement is
+suite through the canonical runner on a PR push. For full-risk plans and frozen campaign requirements, the full CPU requirement is
 validated HOSTED exactly
 once, explicitly, on the maintainer-reviewed PR head:
 [`final-cpu-validation.yml`](../.github/workflows/final-cpu-validation.yml)

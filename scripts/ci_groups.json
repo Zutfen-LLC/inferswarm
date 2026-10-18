@@ -3,6 +3,10 @@
   "repo-integrity"
  ],
  "full_regression_paths": [
+  "AGENTS.md",
+  "CONTRIBUTING.md",
+  "docs/campaign-gate-ordering.md",
+  "docs/ci-impact-planning.md",
   "docs/ci/retired-lineage-pins.sha256",
   "docs/ci/retired-test-rows.json",
   "docs/ci/test-retention-audit.json",
@@ -10,6 +14,8 @@
   "docs/finalization.md",
   "docs/project-status.json",
   "docs/status-maintenance.md",
+  "poetry.lock",
+  "pyproject.toml",
   "requirements-test.txt",
   "scripts/bootstrap_test_env.py",
   "scripts/check_ci_test_retention.py",
@@ -17,11 +23,28 @@
   "scripts/ci_groups.json",
   "scripts/ci_unittest.py",
   "scripts/ci_workflow_parity.py",
+  "scripts/final_validation_reuse.py",
   "scripts/finalize_repository.py",
+  "scripts/hosted_ci_verification.py",
+  "scripts/issue213_gate_orchestration.py",
+  "scripts/merge_validation.py",
   "scripts/ordinary_ci_reuse.py",
   "scripts/plan_ci.py",
+  "scripts/run_full_cpu_suite.py",
   "scripts/sync_project_status.py",
-  "tests/test_plan_ci.py"
+  "setup.cfg",
+  "setup.py",
+  "tests/README.md",
+  "tests/test_cross_cutting_smoke.py",
+  "tests/test_issue213_campaign_gate_ordering.py",
+  "tests/test_issue226_final_validation_ci.py",
+  "tests/test_issue291_final_validation_reuse.py",
+  "tests/test_issue323_verified_ordinary_ci.py",
+  "tests/test_merge_validation.py",
+  "tests/test_ordinary_ci_reuse.py",
+  "tests/test_plan_ci.py",
+  "tests/test_run_full_cpu_suite.py",
+  "uv.lock"
  ],
  "groups": {
   "issue-109-110": {
@@ -217,10 +240,34 @@
     "test_issue131_cpu_test_env",
     "test_plan_ci",
     "test_run_full_cpu_suite",
+    "test_merge_validation",
+    "test_cross_cutting_smoke",
     "test_ci_test_retention"
    ]
   }
  },
+ "native_interface_paths": [
+  "tools/moe-overlap/build.py",
+  "scripts/issue280_source.py"
+ ],
+ "native_interface_prefixes": [
+  "tools/native-moe-overlap/",
+  "tools/native-cache/",
+  "inferswarm/operator/native_observer/",
+  "tests/fixtures/issue299/overlay/"
+ ],
+ "native_interface_suffixes": [
+  "_source_patch.py",
+  ".c",
+  ".cc",
+  ".cpp",
+  ".h",
+  ".hpp",
+  ".cu",
+  ".cuh",
+  ".patch",
+  ".cmake"
+ ],
  "path_rules": {
   ".github/ISSUE_TEMPLATE/": [
    "repo-integrity"

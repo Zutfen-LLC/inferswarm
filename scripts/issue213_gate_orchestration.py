@@ -2307,6 +2307,8 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
                                           "handoff")
     parser.add_argument("--root", type=Path,
                         default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--risk-based", action="store_true",
+                        help="derive scoped/full merge requirements using the planner and current PR base")
     parser.add_argument("--final-validation-receipt",
                         help="hosted-final-validation-receipt/1 JSON")
     parser.add_argument("--suite-receipt",
@@ -2327,7 +2329,7 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
                         help="optionally pin the deciding ordinary CI run")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
-    if not args.final_validation_receipt and not args.suite_receipt:
+    if not args.risk_based and not args.final_validation_receipt and not args.suite_receipt:
         print("handoff: usage error: supply --final-validation-receipt "
               "and/or --suite-receipt")
         return 2
@@ -2367,9 +2369,17 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
         claim = (build_hosted_ci_status(head.git_commit_sha,
                                         args.hosted_ci_run_id)
                  if args.hosted_ci_run_id else None)
-        result = handoff_gate_status(head, suite, claim, args.finalizer_ok,
-                                     envelope, ci_verifier=verifier)
-    except (GateOrderingError, ValueError) as error:
+        if args.risk_based:
+            import merge_validation
+            result = merge_validation.handoff_status(
+                head, root=args.root, ci_verifier=verifier,
+                finalizer_ok=args.finalizer_ok, suite_receipt=suite,
+                final_validation_receipt=envelope, hosted_ci_status=claim)
+        else:
+            result = handoff_gate_status(head, suite, claim, args.finalizer_ok,
+                                         envelope, ci_verifier=verifier)
+    except (GateOrderingError, ValueError, ci_verification.CiApiError,
+            subprocess.SubprocessError, OSError, KeyError, TypeError) as error:
         print(f"handoff: FAIL (fail closed) {error}")
         return 1
     Path(args.out).write_text(
@@ -2378,7 +2388,8 @@ def _cmd_handoff(argv: list[str], *, environ, api_factory,
     verdict = result["hosted_ci_verdict"]
     print(f"handoff: {'COMPLETE' if result['handoff_complete'] else 'INCOMPLETE'}"
           f" head={result['final_head_sha']} "
-          f"suite={result['full_suite_receipt_valid']} "
+          f"scope={result.get('validation_scope', 'full')} "
+          f"full-suite={result['full_suite_receipt_valid']} "
           f"ordinary-ci={verdict['verdict']}"
           f"{(' ' + verdict['reason_code']) if verdict['reason_code'] else ''}")
     return 0 if result["handoff_complete"] else 1
@@ -2411,4 +2422,6 @@ def main(argv: list[str] | None = None, *, environ=None, api_factory=None,
 
 
 if __name__ == "__main__":
+    # Imported handoff helpers must share the CLI's request/error classes.
+    sys.modules["issue213_gate_orchestration"] = sys.modules[__name__]
     raise SystemExit(main())

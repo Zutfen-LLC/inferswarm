@@ -155,7 +155,7 @@ jobs:
       - name: Run deterministic finalizer and project-status check (Issue #130)
         run: python3 scripts/finalize_repository.py --check
 
-      - name: Compose and validate final-validation receipt (fail closed)
+      - name: Execute uncovered CPU tests; Compose and validate full receipt (fail closed)
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           PR_NUMBER: ${{ inputs.pr_number }}

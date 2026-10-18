@@ -43,6 +43,9 @@ derived mechanically from the repository, never from a caller-supplied key.
 from __future__ import annotations
 
 import argparse
+import ctypes
+import functools
+import signal
 import hashlib
 import json
 import os
@@ -253,7 +256,8 @@ def _atomic_json(path: Path, payload: dict) -> None:
 
 
 def worker_main(root: Path, tests_dir: Path, module_names: list[str], expected_ids: list[str], receipt: Path,
-                *, outcomes_dir: Path | None = None, progress_file: Path | None = None) -> int:
+                *, outcomes_dir: Path | None = None, progress_file: Path | None = None,
+                failfast: bool = True) -> int:
     """Execute assigned module suites/skip rechecks and retain an atomic receipt."""
     started = time.monotonic()
     payload: dict = {"schema": SCHEMA, "ok": False, "expected_ids": expected_ids}
@@ -261,27 +265,34 @@ def worker_main(root: Path, tests_dir: Path, module_names: list[str], expected_i
         sys.path.insert(0, str(root))
         sys.path.insert(0, str(tests_dir))
         suites = [unittest.defaultTestLoader.loadTestsFromName(name) for name in module_names]
-        result_class = RecordingResult
+        class ProgressMixin:
+            last_module = None
+
+            def startTest(self, test):  # noqa: N802
+                module = test.id().rsplit('.', 2)[0]
+                if progress_file is not None and module != self.last_module:
+                    _atomic_json(progress_file, {'module': module})
+                    self.last_module = module
+                super().startTest(test)
+
+        class ProgressResult(ProgressMixin, RecordingResult):
+            pass
+
+        result_class = ProgressResult
         if outcomes_dir is not None:
             import ci_unittest as outcomes
             wall_started = time.time()
             runtime = outcomes.runtime_identity()
-            class ProgressResult(outcomes.OutcomeResult):
-                last_module = None
 
-                def startTest(self, test):  # noqa: N802
-                    module = test.id().rsplit('.', 2)[0]
-                    if progress_file is not None and module != self.last_module:
-                        _atomic_json(progress_file, {'module': module})
-                        self.last_module = module
-                    super().startTest(test)
+            class ProgressOutcomeResult(ProgressMixin, outcomes.OutcomeResult):
+                pass
 
-            result_class = ProgressResult
+            result_class = ProgressOutcomeResult
         loaded_ids = [test.id() for suite in suites for test in flatten(suite)]
         if loaded_ids != expected_ids:
             raise SuiteError("worker module loading differs from parent discovery: "
                              f"expected {expected_ids!r}, got {loaded_ids!r}")
-        runner = unittest.TextTestRunner(verbosity=2, resultclass=result_class)
+        runner = unittest.TextTestRunner(verbosity=2, resultclass=result_class, failfast=failfast)
         result: RecordingResult = runner.run(unittest.TestSuite(suites))
         if outcomes_dir is not None:
             outcomes.write_record(result, wall_started, runtime, outcomes_dir)
@@ -290,6 +301,7 @@ def worker_main(root: Path, tests_dir: Path, module_names: list[str], expected_i
             "tests_run": result.testsRun,
             "failures": len(result.failures),
             "errors": len(result.errors),
+            "failed_tests": [test.id() for test, _ in result.failures + result.errors],
             "skipped": len(result.skipped),
             "ok": result.wasSuccessful() and result.started_ids == expected_ids,
         })
@@ -339,17 +351,90 @@ def ensure_clean_git_worktree(root: Path) -> None:
         raise SuiteError("refusing dirty Git worktree: commit or stash before the isolated full suite")
 
 
+def _children(pid: int) -> set[int]:
+    """Linux child census, including children that created their own session."""
+    try:
+        return {int(p) for p in Path(f"/proc/{pid}/task/{pid}/children").read_text().split()}
+    except FileNotFoundError:
+        return set()
+
+
+def _descendants(pids: set[int]) -> set[int]:
+    owned, pending = set(pids), list(pids)
+    while pending:
+        for pid in _children(pending.pop()) - owned:
+            owned.add(pid)
+            pending.append(pid)
+    return owned
+
+
+def _stop_pids(pids: set[int]) -> None:
+    # Freeze before the final census: a terminating worker cannot start a new
+    # build between enumeration and termination. Only this invocation's trees.
+    def send(pid, sig):
+        try:
+            os.kill(pid, sig)
+        except ProcessLookupError:
+            pass
+    owned = _descendants(pids)
+    for pid in owned:
+        send(pid, signal.SIGSTOP)
+    owned = _descendants(owned)
+    for pid in owned:
+        send(pid, signal.SIGKILL)
+    deadline = time.monotonic() + 5
+    while owned and time.monotonic() < deadline:
+        for pid in list(owned):
+            try:
+                reaped, _ = os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                reaped = 0
+            if reaped or not Path(f"/proc/{pid}").exists():
+                owned.remove(pid)
+        if owned:
+            time.sleep(.01)
+    if owned:
+        raise SuiteError(f"could not reap owned worker descendants: {sorted(owned)}")
+
+
+def _worker_ownership(function):
+    @functools.wraps(function)
+    def owned_run(*args, **kwargs):
+        if not sys.platform.startswith("linux"):
+            return function(*args, **kwargs)
+        libc = ctypes.CDLL(None, use_errno=True)
+        previous = ctypes.c_int()
+        if libc.prctl(37, ctypes.byref(previous), 0, 0, 0) or libc.prctl(36, 1, 0, 0, 0):
+            raise SuiteError("cannot enable Linux worker descendant reaping")
+        existing = _children(os.getpid())
+        try:
+            return function(*args, **kwargs)
+        finally:
+            try:
+                # Orphans of exited workers (including detached sessions) are
+                # adopted here, never left behind after a failed validation.
+                _stop_pids(_children(os.getpid()) - existing)
+            finally:
+                if libc.prctl(36, previous.value, 0, 0, 0):
+                    raise SuiteError("cannot restore Linux child subreaper")
+    return owned_run
+
+
 def stop_workers(processes: list[subprocess.Popen]) -> None:
-    """Terminate, reap, then force-kill every live worker before cleanup."""
-    for process in processes:
-        if process.poll() is None:
-            process.terminate()
+    """Stop and reap owned process trees before worktree removal."""
+    if sys.platform.startswith("linux"):
+        # Popen reaps its direct children; this helper also reaps adopted
+        # grandchildren. Do not poll leaders until the descendant census.
+        _stop_pids({p.pid for p in processes})
+        for process in processes:
+            process.wait()
+        return
     for process in processes:
         try:
-            process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.communicate()
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
 
 
 def prepare_worker_root(root: Path, temporary: Path, index: int) -> Path:
@@ -392,10 +477,11 @@ def _task_environment(task: Task, temporary: Path) -> dict[str, str]:
     return environment
 
 
+@_worker_ownership
 def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | None = None,
               timeout: float = 1800.0, retain_dir: Path | None = None,
               selected_ids: list[str] | None = None, outcomes_dir: Path | None = None,
-              overall_timeout: float | None = None) -> dict:
+              overall_timeout: float | None = None, failfast: bool = True) -> dict:
     """Execute the phased schedule through a rolling window of bounded workers."""
     deadline = None if overall_timeout is None else time.monotonic() + overall_timeout
     if overall_timeout is not None and overall_timeout <= 0:
@@ -435,6 +521,7 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
         temporary = Path(temporary_name)
         artifacts = retain_dir if retain_dir is not None else temporary
         pending = list(tasks)
+        all_processes: list[subprocess.Popen] = []
         running: list[tuple[Task, subprocess.Popen, Path, Path, float]] = []
         outstanding_roots: list[Path] = []
         progress_seen: dict[int, str] = {}
@@ -443,6 +530,10 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 # Fill the rolling window: at most selected_jobs live workers,
                 # isolated tasks first, then population buckets in order.
                 while pending and len(running) < selected_jobs:
+                    # Reap completed workers before refilling any slot. A failed
+                    # sibling may already have finished alongside a successful one.
+                    if any(entry[1].poll() is not None for entry in running):
+                        break
                     if deadline is not None and time.monotonic() >= deadline:
                         raise SuiteError('selected completion exceeded its overall timeout')
                     task = pending.pop(0)
@@ -483,14 +574,17 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                                    "--root", str(worker_root), "--tests-dir", str(worker_tests),
                                    "--modules-file", str(modules_path),
                                    "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
+                        if not failfast:
+                            command.append("--collect-all")
+                        command.extend(["--progress-file", str(temporary / f"task-{task.index}-progress.json")])
+                        print(f"[cpu-suite] start task {task.index} ({task.phase}): {len(expected_ids)} tests",
+                              file=sys.stderr, flush=True)
                         if outcomes_dir is not None:
-                            command.extend(['--ci-outcomes-dir', str(outcomes_dir),
-                                            '--progress-file', str(artifacts / f'task-{task.index}-progress.json')])
-                            print(f'[cpu-completion] start task {task.index}: {", ".join(module_names)}',
-                                  file=sys.stderr, flush=True)
+                            command.extend(['--ci-outcomes-dir', str(outcomes_dir)])
                         process = subprocess.Popen(command, cwd=worker_root, text=True,
                                                    stdout=out, stderr=err,
-                                                   env=_task_environment(task, temporary))
+                                                   env=_task_environment(task, temporary), start_new_session=True)
+                    all_processes.append(process)
                     running.append((task, process, receipt, worker_root, time.monotonic()))
                 # Reap whichever live worker finishes first: a crashing task is
                 # detected promptly regardless of phase order, and its slot
@@ -501,24 +595,17 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     if deadline is not None and now >= deadline:
                         raise SuiteError('selected completion exceeded its overall timeout')
                     for slot, entry in enumerate(running):
-                        if outcomes_dir is not None:
-                            progress = artifacts / f'task-{entry[0].index}-progress.json'
-                            if progress.is_file():
-                                module = json.loads(progress.read_text())['module']
-                                if progress_seen.get(entry[0].index) != module:
-                                    progress_seen[entry[0].index] = module
-                                    print(f'[cpu-completion] task {entry[0].index} module {module}',
-                                          file=sys.stderr, flush=True)
+                        progress = temporary / f'task-{entry[0].index}-progress.json'
+                        if progress.is_file():
+                            module = json.loads(progress.read_text())['module']
+                            if progress_seen.get(entry[0].index) != module:
+                                progress_seen[entry[0].index] = module
+                                print(f'[cpu-suite] task {entry[0].index} module {module}',
+                                      file=sys.stderr, flush=True)
                         if entry[1].poll() is not None:
                             finished = slot
                             break
                         if now - entry[4] > timeout:
-                            entry[1].terminate()
-                            try:
-                                entry[1].communicate(timeout=10)
-                            except subprocess.TimeoutExpired:
-                                entry[1].kill()
-                                entry[1].communicate()
                             raise SuiteError(
                                 f"task {entry[0].index} ({entry[0].phase}) timed out "
                                 f"after {timeout} seconds")
@@ -528,9 +615,8 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 task, process, receipt, worker_root, started_at = running.pop(finished)
                 process.wait()
                 ended_at = time.monotonic()
-                if outcomes_dir is not None:
-                    print(f'[cpu-completion] finished task {task.index} exit={process.returncode} '
-                          f'elapsed={ended_at - started_at:.3f}s', file=sys.stderr, flush=True)
+                print(f'[cpu-suite] end task {task.index} exit={process.returncode} '
+                      f'duration={ended_at - started_at:.3f}s', file=sys.stderr, flush=True)
                 remove_worker_root(root, worker_root)
                 outstanding_roots.remove(worker_root)
                 if process.returncode:
@@ -541,7 +627,8 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     diagnostics.append(
                         f"task {task.index} ({task.phase}) exit={process.returncode}\n{stdout}\n{stderr}")
                 if not receipt.is_file():
-                    raise SuiteError(f"task {task.index} ({task.phase}) exited without a receipt")
+                    raise SuiteError(f"task {task.index} ({task.phase}) exited without a receipt\n" +
+                                     "\n".join(diagnostics))
                 try:
                     receipts.append(json.loads(receipt.read_text(encoding="utf-8")))
                 except (OSError, json.JSONDecodeError) as error:
@@ -554,9 +641,28 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     "elapsed_seconds": receipts[-1].get("elapsed_seconds"),
                     "tests_run": receipts[-1].get("tests_run"),
                 })
+                if failfast and (process.returncode or receipts[-1].get("ok") is not True):
+                    diagnostics.append(f"fail-fast: task {task.index} failed; "
+                                       f"failed tests={receipts[-1].get('failed_tests', [])}; "
+                                       f"cancelled running tasks={[e[0].index for e in running]}; "
+                                       f"not started={[t.index for t in pending]}")
+                    stop_workers([entry[1] for entry in running])
+                    for entry in running:
+                        for stream in ("stdout", "stderr"):
+                            path = artifacts / f"task-{entry[0].index}-{stream}.txt"
+                            diagnostics.append(f"cancelled task {entry[0].index} {stream}:\n" +
+                                               path.read_text(errors="replace"))
+                        remove_worker_root(root, entry[3])
+                        outstanding_roots.remove(entry[3])
+                    running.clear()
+                    pending.clear()
+                    break
         except BaseException as error:
-            stop_workers([entry[1] for entry in running])
             cleanup_error = None
+            try:
+                stop_workers(all_processes)
+            except SuiteError as stop_error:
+                cleanup_error = stop_error
             for worker_root in list(outstanding_roots):
                 try:
                     remove_worker_root(root, worker_root)
@@ -723,6 +829,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--retain-dir", type=Path,
                         help="keep per-task assignment/receipt files and summary.json here")
+    parser.add_argument("--collect-all", action="store_true",
+                        help="diagnostic mode: finish queued tests after failures")
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--tests-dir", type=Path)
@@ -742,10 +850,16 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, json.JSONDecodeError) as error:
             parser.error(f"cannot read worker assignment: {error}")
         return worker_main(args.root, tests_dir, modules, expected_ids, args.receipt,
-                           outcomes_dir=args.ci_outcomes_dir, progress_file=args.progress_file)
+                           outcomes_dir=args.ci_outcomes_dir, progress_file=args.progress_file,
+                           failfast=not args.collect_all)
     try:
         if args.list_only:
             payload = plan(args.root, tests_dir, args.jobs)
+        elif args.collect_all:
+            payload = run_suite(args.root, tests_dir, jobs=args.jobs, timeout=args.timeout,
+                                retain_dir=args.retain_dir, failfast=False)
+            if args.retain_dir is not None:
+                _atomic_json(args.retain_dir / "summary.json", payload)
         else:
             payload = run_single_head_suite(args.root, tests_dir=tests_dir,
                                             jobs=args.jobs,

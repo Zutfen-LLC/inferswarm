@@ -23,6 +23,9 @@ Usage::
     # Explicit paths on the command line
     python3 scripts/plan_ci.py --mode pr -- path1 path2 ...
 
+    # Final merge qualification (native interfaces escalate to full)
+    python3 scripts/plan_ci.py --mode merge -- path/to/changed/file
+
     # Force full regression (push-to-main, manual, or fail-closed escalation)
     python3 scripts/plan_ci.py --mode full
 
@@ -88,6 +91,24 @@ SELF_AUTHORITY_PATHS = [
     "scripts/ci_unittest.py",
     "scripts/ordinary_ci_reuse.py",
     "scripts/ci_workflow_parity.py",
+    "scripts/merge_validation.py",
+    "scripts/run_full_cpu_suite.py",
+    "scripts/issue213_gate_orchestration.py",
+    "scripts/hosted_ci_verification.py",
+    "scripts/final_validation_reuse.py",
+    "tests/test_merge_validation.py",
+    "tests/test_cross_cutting_smoke.py",
+    "tests/test_run_full_cpu_suite.py",
+    "tests/test_ordinary_ci_reuse.py",
+    "tests/test_issue213_campaign_gate_ordering.py",
+    "tests/test_issue226_final_validation_ci.py",
+    "tests/test_issue291_final_validation_reuse.py",
+    "tests/test_issue323_verified_ordinary_ci.py",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "tests/README.md",
+    "docs/ci-impact-planning.md",
+    "docs/campaign-gate-ordering.md",
 ]
 
 # CI workflow files: a workflow change can alter how any group runs.
@@ -98,6 +119,11 @@ ENV_AUTHORITY_PATHS = [
     "requirements-test.txt",
     "scripts/bootstrap_test_env.py",
     "scripts/check_test_env.py",
+    "pyproject.toml",
+    "uv.lock",
+    "poetry.lock",
+    "setup.py",
+    "setup.cfg",
 ]
 
 # Repository-wide authority surfaces: finalizer, generated status,
@@ -146,6 +172,8 @@ GROUP_TEST_MODULES = {
         "test_issue131_cpu_test_env",
         "test_plan_ci",
         "test_run_full_cpu_suite",
+        "test_merge_validation",
+        "test_cross_cutting_smoke",
         # Issue #246: retention audit + retired-lineage integrity.
         "test_ci_test_retention",
     ],
@@ -1170,6 +1198,30 @@ FULL_REGRESSION_PATHS = (
 )
 
 
+# Native execution/build interfaces escalate even inside otherwise mapped
+# operator directories. Python controller edits keep their concrete affected
+# group; they do not imply a change to a native runtime implementation.
+NATIVE_INTERFACE_PREFIXES = (
+    "tools/native-moe-overlap/", "tools/native-cache/",
+    "inferswarm/operator/native_observer/", "tests/fixtures/issue299/overlay/",
+)
+NATIVE_INTERFACE_PATHS = ("tools/moe-overlap/build.py", "scripts/issue280_source.py")
+NATIVE_INTERFACE_SUFFIXES = ("_source_patch.py", ".c", ".cc", ".cpp", ".h", ".hpp", ".cu", ".cuh", ".patch", ".cmake")
+
+
+def high_risk_path(path):
+    """Native interfaces require full qualification at the final merge gate."""
+    return (path in NATIVE_INTERFACE_PATHS
+            or path.startswith(NATIVE_INTERFACE_PREFIXES)
+            or path.endswith(NATIVE_INTERFACE_SUFFIXES)
+            or Path(path).name == "CMakeLists.txt")
+
+
+def dependency_path(path):
+    name = Path(path).name
+    return name.startswith("requirements") and name.endswith(".txt")
+
+
 def _module_groups():
     """Reverse index: test module name -> groups listing it."""
     index = {}
@@ -1255,9 +1307,12 @@ def _validate_paths(paths):
 def plan(changed_paths, mode="pr", force_full_reason=None):
     """Compute the CI plan for a changed-path set.
 
+    ``pr`` retains ordinary affected-group selection. ``merge`` adds native
+    full-qualification requirements at handoff; dependencies, policy and unknown
+    paths remain full in either mode. ``full`` selects every group explicitly.
     Deterministic: same inputs -> identical plan dict.
     """
-    if mode not in ("pr", "full"):
+    if mode not in ("pr", "merge", "full"):
         raise ValueError(f"unknown mode: {mode!r}")
 
     reasons = []
@@ -1300,6 +1355,12 @@ def plan(changed_paths, mode="pr", force_full_reason=None):
                     reasons.append(
                         "fail-closed: repository authority surface changed: "
                         f"{path}")
+                if dependency_path(path):
+                    full = True
+                    reasons.append(f"fail-closed: dependency interface changed: {path}")
+                if mode == "merge" and high_risk_path(path):
+                    full = True
+                    reasons.append(f"fail-closed: merge qualification native/build interface changed: {path}")
                 pgroups, classified = classify_path(path)
                 if not classified:
                     full = True
@@ -1357,6 +1418,9 @@ def build_registry():
             pattern: list(g) for pattern, g in sorted(PATH_GROUPS.items())
         },
         "full_regression_paths": _sort_unique(FULL_REGRESSION_PATHS),
+        "native_interface_paths": list(NATIVE_INTERFACE_PATHS),
+        "native_interface_prefixes": list(NATIVE_INTERFACE_PREFIXES),
+        "native_interface_suffixes": list(NATIVE_INTERFACE_SUFFIXES),
     }
 
 
@@ -1398,8 +1462,8 @@ def self_check():
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--mode", choices=("pr", "full"), default="pr",
-                    help="pr: classify changed paths; full: force full regression")
+    ap.add_argument("--mode", choices=("pr", "merge", "full"), default="pr",
+                    help="pr: CI impact selection; merge: final qualification risk; full: all groups")
     ap.add_argument("--self-check", action="store_true",
                     help="validate the group registry and exit")
     ap.add_argument("--emit-registry", action="store_true",
