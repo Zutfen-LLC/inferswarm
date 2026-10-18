@@ -120,9 +120,12 @@ python3 tools/native-hot-experts/comparison.py prepare \
 
 This writes `plan.json` and the frozen base session, 0700 directory / 0600 files.
 It records source/request/provenance hashes, fixed constraints, pending actual
-tokenization, missing identity promotion and `execution_authorized:false`. It is
+tokenization, conservative identity-status placeholders and `execution_authorized:false`. It is
 useful even while the immutable compact preparation artifact is not ready.
 Existing destinations refuse, never overwrite an earlier freeze.
+The offline plan writer does not dynamically read identity promotion: its pending
+candidate strings are template metadata. Actual build admission uses the reviewed
+manifest through the existing finite selector, not these non-authorizing strings.
 
 The checked-in example is immutable INTENT, not invented compact hashes. During
 later authorized preparation, under the existing aggregate-owned helper and the
@@ -183,9 +186,11 @@ its **own entire canonical arm session**, not the base bodies, historical sessio
 hash or the other arm's digest. Freeze each exact config/envelope raw hash too.
 
 Both configs must use `build_pair: hot-experts-candidate-cpu05-cuda03` and the
-**same candidate coordinator binary/build receipt**. The reviewed candidate
-identity receipt is deliberately absent until a later real05 build and separate
-reviewed promotion. Do not substitute a locally built executable, self-mint an
+**same candidate coordinator binary/build receipt**. The complete
+[reviewed CPU05 manifest](reviewed-cpu05-llama-server.build-manifest.json) now
+records static identity admission after independent bundle review; the
+[implementation record](../../docs/implementation/layer7-hot-experts-314.md#buildidentity-handoff-and-reviewed-cpu05-promotion)
+states its hashes and verification limits. Do not substitute another executable, self-mint an
 identity, use the old optimized binary for A or weaken identity admission. The
 prepared/runner integration and actual tokenizer gate must be complete before
 execution is eligible. Missing receipts mean refusal. Preparing files here is

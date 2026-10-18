@@ -75,7 +75,7 @@ and compact hashes are emitted only by authenticated preparation. Global expert
 394 maps to compact index 4. The whole source member remains independently
 bound to checked-in model metadata and its recorded SHA-256.
 
-## Build/identity handoff, not promotion
+## Build/identity handoff and reviewed CPU05 promotion
 
 `tools/native-moe-overlap/hot-build-composed.py` composes the authenticated native
 pin, complete RPC-v7 assigned-cache and observer patches, native overlap and H5.
@@ -85,7 +85,7 @@ and version, executable and library hashes, effective flags, commands and
 producer-format per-target manifests. No accepted ordinary/CUDA identity file
 or executable is overwritten.
 
-Future build-only command, after separate authorization on 05:
+Recorded build-only recipe; a repeat requires separate authorization on 05:
 
 ```bash
 python3 tools/native-moe-overlap/hot-build-composed.py \
@@ -94,13 +94,27 @@ python3 tools/native-moe-overlap/hot-build-composed.py \
 ```
 
 Archive identity remains authenticated by the existing composer. The candidate
-receipt is not authority. The finite pair
-`hot-experts-candidate-cpu05-cuda03` intentionally refuses while
-`tools/native-hot-experts/reviewed-cpu05-llama-server.build-manifest.json` is
-absent. A later reviewed identity promotion must bind the real 05 server and
-library/source/compiler closure; the remote remains the accepted Step-A CUDA03
-worker. No such file is created here. Local fixture-only portable options are
-explicitly barred from server builds and cannot satisfy this pair.
+receipt alone is not authority. After independent review of the actual CPU05
+build bundle, the complete manifest is recorded at
+`tools/native-hot-experts/reviewed-cpu05-llama-server.build-manifest.json` for
+the existing `hot-experts-candidate-cpu05-cuda03` selector. Its raw file SHA-256
+is `ec07b52e6e89c9a41d2616c50f4897710856fb0aa7e4187e22004e01d0e16fa2`;
+the parser's canonical manifest SHA-256 is
+`9f0af4e0626dd8c451202a81e593cd1096ba64847307c589a5cfd74c209e41d3`.
+The CPU05 executable SHA-256 is
+`96fedaa14697c22106ae6f8c751a98bea06284520531f78a7b6afa296a2b8601`.
+The remote remains the accepted Step-A CUDA03 worker. Historical and optimized
+selectors are unchanged; fixture-only portable options remain barred for servers.
+
+The privately supplied review bundle SHA-256 is
+`ddd372f345dd7ea1faf8a33f2816a3dbde4546a1dc46ab85da8f4dff2175eafb`.
+Independent review verified all 85 indexed evidence files, the complete role
+manifest/receipt equality, all 13 library identities against the link set,
+233 compilation commands with `-O3 -g0` and assertions, and the 3,606-input
+source-inventory digest. Binary payloads were absent: on-host hash receipts were
+reconciled, not independently rehashed remotely. No rebuild is needed to record
+this identity. This is static build admission only, not numerical correctness,
+GPU fit, performance acceptance or model/hardware execution authorization.
 
 ## Comparison and correctness boundary
 
@@ -150,7 +164,7 @@ Actual build/identity handoff is
 Durable local sources, executables, libraries, original receipts and validation
 logs are retained at `/home/zutfen/data/is314-local-development/` (not merely in
 24-hour scratch). The handoff maps original build paths to durable copies.
-These are local development artifacts, not the future 05 candidate or accepted
+These are local development artifacts, not the reviewed 05 candidate or accepted
 runtime identities.
 
 ### Scoped independent review and blocker disposition
