@@ -1,7 +1,8 @@
 """Focused #313 two-CUDA-device planning/lowering regressions.
 
-All profiles and build identities here are synthetic.  They prove the fixed
-operator contract and native argv only; they do not prove CUDA execution.
+Planning fixtures use synthetic profiles and build identities; the focused
+H5 identity regression also reads the reviewed manifest. These prove static
+operator contracts and native argv only; they do not prove CUDA execution.
 """
 from __future__ import annotations
 
@@ -940,9 +941,27 @@ class HotCandidateIntegrationTests(unittest.TestCase):
             expired.set_outer_start(100)
 
     def test_unbuilt_candidate_is_not_promoted(self):
-        with self.assertRaisesRegex(ValueError, 'not reviewed'):
-            assigned_backing.role_identity('client', 'cpu',
-                build_pair='hot-experts-candidate-cpu05-cuda03')
+        with tempfile.TemporaryDirectory() as td, patch.object(
+                assigned_backing, 'HOT_CPU_MANIFEST', Path(td)/'missing.json'):
+            for role, backend in (('client', 'cpu'), ('remote', 'cuda')):
+                with self.subTest(role=role), self.assertRaisesRegex(ValueError, 'not reviewed'):
+                    assigned_backing.role_identity(role, backend,
+                        build_pair='hot-experts-candidate-cpu05-cuda03')
+
+    def test_reviewed_hot_candidate_selects_exact_cpu_identity_and_unchanged_cuda(self):
+        from inferswarm.operator.phased_observation import parse_build_manifest
+        raw=assigned_backing.HOT_CPU_MANIFEST.read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+            'ec07b52e6e89c9a41d2616c50f4897710856fb0aa7e4187e22004e01d0e16fa2')
+        expected=parse_build_manifest(json.loads(raw))
+        self.assertEqual(expected.manifest_sha256,
+            '9f0af4e0626dd8c451202a81e593cd1096ba64847307c589a5cfd74c209e41d3')
+        client=assigned_backing.role_identity('client', 'cpu', build_pair=assigned_backing.HOT_BUILD_PAIR)
+        self.assertEqual(client, expected)
+        self.assertEqual(client.executable_sha256,
+            '96fedaa14697c22106ae6f8c751a98bea06284520531f78a7b6afa296a2b8601')
+        remote=assigned_backing.role_identity('remote', 'cuda', build_pair=assigned_backing.HOT_BUILD_PAIR)
+        self.assertEqual(remote, assigned_backing.step_a_identities()['remote'])
 
     def test_session_hot_opt_in_is_frozen_and_default_off(self):
         from inferswarm.operator.q8_session import validate_session
