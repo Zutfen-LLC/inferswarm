@@ -267,6 +267,8 @@ def execute_completion(plan, root=ROOT):
     """Execute selected modules through the canonical bounded worker runner."""
     import run_full_cpu_suite as runner
     configuration = _completion_schedule(plan)
+    print(f"[full-validation] test execution: {len(plan['reused_ids'])} reused, "
+          f"{len(plan['fresh_ids'])} fresh; {configuration['workers']} workers", file=sys.stderr, flush=True)
     with tempfile.TemporaryDirectory(prefix='ci-completion-') as temporary:
         try:
             result = runner.run_suite(
@@ -315,6 +317,7 @@ def compose(decision, *, api, request, current_run_id, attempt, pr_number,
     else:
         rechecks = confirm_skips(source['skipped_ids'], root)
         records = records + (rechecks if isinstance(rechecks, list) else [])
+    print("[full-validation] receipt assembly: required test execution complete", file=sys.stderr, flush=True)
     # Record the actual ordinary schedule. It is an explicitly allowed alternate
     # schedule, never claimed to be execution of the canonical subprocess plan.
     suite = dict(request.suite, suite_config=suite_configuration(

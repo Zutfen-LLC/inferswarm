@@ -102,6 +102,13 @@ and that fact is material to safe or valid execution. If a bounded run fails,
 preserve and report the failure; do not convert it into an approval loop or
 retry-until-PASS campaign.
 
+For ordinary PR merge validation, follow the [risk-based scope rule](docs/ci-impact-planning.md#risk-based-merge-validation) and run
+`issue213_gate_orchestration.py handoff --risk-based` on the exact reviewed
+head. A targeted result proves selected CI groups plus always-run cross-cutting
+smoke and reports uncovered groups; it is not full qualification. Native/build,
+broad dependency, validation-policy and unknown changes require full proof.
+Use the full handoff below for campaigns with a frozen full-suite requirement.
+
 Campaign/review handoffs follow `docs/campaign-gate-ordering.md` (Issues
 #213/#224/#226): run the cheap pre-review gates, push the exact head and open the
 PR, obtain the default independent review — the maintainer's exact-head PR

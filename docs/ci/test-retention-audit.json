@@ -1053,6 +1053,26 @@
       "replacement": null,
       "test_count_at_audit": 11
     },
+    "test_cross_cutting_smoke": {
+      "baseline_group": "repo-integrity",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": null,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "repo-integrity",
+      "invariant": "Always-run artifact identity custody, immutable operator data, and nonfinite numerical rejection with tiny synthetic inputs.",
+      "lineage": "risk-based merge validation",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": []
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Always-run artifact identity custody, immutable operator data, and nonfinite numerical rejection with tiny synthetic inputs.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": null
+    },
     "test_derive_phase1_placement_v2": {
       "baseline_group": "phase1-analysis",
       "baseline_serial_seconds": 0.36,
@@ -5790,6 +5810,26 @@
       ],
       "replacement": null,
       "test_count_at_audit": 19
+    },
+    "test_merge_validation": {
+      "baseline_group": "repo-integrity",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": null,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "repo-integrity",
+      "invariant": "Risk-based merge selection, exact-head required CI jobs, explicit scoped/full separation, and weekly full regression.",
+      "lineage": "risk-based merge validation",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": []
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Risk-based merge selection, exact-head required CI jobs, explicit scoped/full separation, and weekly full regression.",
+      "referenced_by_scripts": [],
+      "replacement": null,
+      "test_count_at_audit": null
     },
     "test_moe_native_cache": {
       "baseline_group": "moe-overlap-prototype",

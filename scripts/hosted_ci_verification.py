@@ -292,7 +292,8 @@ class HostedCiVerifier:
     satisfy ``handoff_gate_status``.
     """
 
-    def __init__(self, api, repository: str, *, pr_number: int | None = None):
+    def __init__(self, api, repository: str, *, pr_number: int | None = None,
+                 required_success_jobs: tuple[str, ...] = ()):
         if not isinstance(repository, str) or not _REPO_RE.fullmatch(
                 repository):
             raise ValueError(f"repository is malformed: {repository!r}")
@@ -304,6 +305,7 @@ class HostedCiVerifier:
         self.api = api
         self.repository = repository
         self.pr_number = pr_number
+        self.required_success_jobs = tuple(sorted(set(REQUIRED_SUCCESS_JOBS) | set(required_success_jobs)))
 
     # -- public --------------------------------------------------------
     def verify(self, expected_sha: str, *,
@@ -758,7 +760,7 @@ class HostedCiVerifier:
                 "gate_job_not_success",
                 f"{CI_GATE_JOB_NAME!r} is {gate['status']!r}/"
                 f"{gate['conclusion']!r}")
-        for name in REQUIRED_SUCCESS_JOBS:
+        for name in self.required_success_jobs:
             named = [j for j in jobs if j["name"] == name]
             if len(named) > 1:
                 raise _Blocked("ambiguous_evidence",

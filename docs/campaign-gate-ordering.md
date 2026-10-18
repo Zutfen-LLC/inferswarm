@@ -14,6 +14,22 @@ deduplication**, never test semantics, exact-head correctness guarantees, or
 #148 CI impact planning — the planner and the `CI Gate` remain authoritative
 for what CI runs.
 
+## Ordinary PR scope
+
+Ordinary merge validation now follows the [risk-based planner rule](ci-impact-planning.md#risk-based-merge-validation): affected groups plus explicit
+always-run cross-cutting smoke, authenticated by the existing exact-head CI
+verifier. `handoff --risk-based` derives scope from the current PR/base diff.
+A scoped success lists the uncovered groups and cannot satisfy full
+qualification. Native/build interfaces, broad dependencies, validation policy
+and unclassified changes still require the full proof described below.
+
+The full-suite ordering/receipt contract in this document remains the explicit
+full-validation path and remains mandatory for campaigns whose frozen handoff
+requires it. Small ordinary PRs do not dispatch Final CPU Validation merely to
+fill the groups omitted by selected CI. Full regression remains on main,
+manual dispatch, and the repository's Monday 04:23 UTC schedule. Review remains
+independent and exact-head in either case.
+
 ## Motivation (observed in #210 / PR #212, revised by #224)
 
 The pre-#213 convention ran expensive validation in this order:

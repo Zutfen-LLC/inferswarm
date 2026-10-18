@@ -236,6 +236,70 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(single["serial_ids"], single["executed_ids"])
         self.assertEqual(single["serial_ids"], alpha_first)
 
+    @unittest.skipUnless(sys.platform.startswith("linux"), "Linux process-tree reaping")
+    def test_failfast_stops_owned_detached_descendants_and_queued_tasks(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory(prefix="failfast-markers-") as temporary:
+            markers = Path(temporary)
+            pids = markers / "pids"
+            queued = markers / "queued"
+            later = markers / "later"
+            child = ("import os,pathlib,subprocess,sys,time; "
+                     "p=subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)'], start_new_session=True); "
+                     f"pathlib.Path({str(pids)!r}).write_text(str(os.getpid())+' '+str(p.pid)); "
+                     "time.sleep(60)")
+            root, tests = fixture(self, {
+                "test_ff_fail.py": "import pathlib,time,unittest\nclass F(unittest.TestCase):\n"
+                    " def test_a_failure(self):\n"
+                    f"  marker=pathlib.Path({str(pids)!r})\n"
+                    "  deadline=time.monotonic()+5\n"
+                    "  while not marker.exists() and time.monotonic()<deadline: time.sleep(.01)\n"
+                    "  self.assertTrue(marker.exists(), 'sibling did not launch')\n"
+                    "  self.fail('fast failure identity')\n"
+                    f" def test_b_not_run(self): pathlib.Path({str(later)!r}).touch()\n",
+                "test_ff_long.py": "import subprocess,sys,time,unittest\nclass L(unittest.TestCase):\n"
+                    f" def test_long(self): subprocess.Popen([sys.executable,'-c',{child!r}], start_new_session=True); time.sleep(60)\n",
+                "test_ff_queued.py": "import pathlib,unittest\nclass Q(unittest.TestCase):\n"
+                    f" def test_queue(self): pathlib.Path({str(queued)!r}).touch()\n",
+            })
+            for args in (("init", "-q"), ("config", "user.email", "fixture@example.invalid"),
+                         ("config", "user.name", "Fixture"), ("add", "."), ("commit", "-qm", "fixture")):
+                subprocess.run(["git", *args], cwd=root, check=True)
+            owned = frozenset({"test_ff_fail", "test_ff_long", "test_ff_queued"})
+            started = time.monotonic()
+            with patch.object(runner, "ISOLATED_MODULES", owned):
+                result = runner.run_suite(root, tests, jobs=2, timeout=15)
+            self.assertLess(time.monotonic() - started, 10)
+            self.assertFalse(result["ok"])
+            self.assertIsNone(result["executed_digest"])
+            self.assertIn("fast failure identity", result["diagnostics"])
+            self.assertIn("not started=[2]", result["diagnostics"])
+            self.assertFalse(queued.exists())
+            self.assertFalse(later.exists(), "worker did not stop at its first failure")
+            for pid in map(int, pids.read_text().split()):
+                self.assertFalse(Path(f"/proc/{pid}").exists(), f"leaked descendant {pid}")
+            trees = subprocess.check_output(["git", "worktree", "list", "--porcelain"], cwd=root, text=True)
+            self.assertEqual(trees.count("worktree "), 1)
+
+    def test_collect_all_intentionally_finishes_later_tests_and_queued_tasks(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            later, queued = Path(temporary) / "later", Path(temporary) / "queued"
+            root, tests = fixture(self, {
+                "test_ca_fail.py": "import pathlib,unittest\nclass F(unittest.TestCase):\n"
+                    " def test_a_failure(self): self.fail('collect failure')\n"
+                    f" def test_b_later(self): pathlib.Path({str(later)!r}).touch()\n",
+                "test_ca_other.py": "import time,unittest\nclass O(unittest.TestCase):\n def test_other(self): time.sleep(.1)\n",
+                "test_ca_queued.py": "import pathlib,unittest\nclass Q(unittest.TestCase):\n"
+                    f" def test_queue(self): pathlib.Path({str(queued)!r}).touch()\n",
+            })
+            with patch.object(runner, "ISOLATED_MODULES", frozenset({"test_ca_fail", "test_ca_other", "test_ca_queued"})):
+                result = runner.run_suite(root, tests, jobs=2, failfast=False)
+            self.assertFalse(result["ok"])
+            self.assertTrue(later.exists())
+            self.assertTrue(queued.exists())
+            self.assertEqual(sum(t["tests_run"] for t in result["task_timings"]), 4)
+
     def test_validate_receipts_accepts_either_completion_order(self):
         # Deterministic synthetic receipt coverage: with correct identities
         # and digests, validate_receipts must accept beta-first AND
@@ -360,7 +424,7 @@ class ExecutionTests(unittest.TestCase):
             "test_fail.py": "import unittest\nclass F(unittest.TestCase):\n def test_failure(self): self.fail('expected failure')\n",
             "test_error.py": "import unittest\nclass E(unittest.TestCase):\n def test_error(self): raise RuntimeError('expected error')\n",
         })
-        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        result = runner.run_suite(root, tests, jobs=2, timeout=60, failfast=False)
         self.assertFalse(result["ok"])
         self.assertIn("expected failure", result["diagnostics"])
         self.assertIn("expected error", result["diagnostics"])

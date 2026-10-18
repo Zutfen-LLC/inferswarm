@@ -88,6 +88,24 @@ SELF_AUTHORITY_PATHS = [
     "scripts/ci_unittest.py",
     "scripts/ordinary_ci_reuse.py",
     "scripts/ci_workflow_parity.py",
+    "scripts/merge_validation.py",
+    "scripts/run_full_cpu_suite.py",
+    "scripts/issue213_gate_orchestration.py",
+    "scripts/hosted_ci_verification.py",
+    "scripts/final_validation_reuse.py",
+    "tests/test_merge_validation.py",
+    "tests/test_cross_cutting_smoke.py",
+    "tests/test_run_full_cpu_suite.py",
+    "tests/test_ordinary_ci_reuse.py",
+    "tests/test_issue213_campaign_gate_ordering.py",
+    "tests/test_issue226_final_validation_ci.py",
+    "tests/test_issue291_final_validation_reuse.py",
+    "tests/test_issue323_verified_ordinary_ci.py",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "tests/README.md",
+    "docs/ci-impact-planning.md",
+    "docs/campaign-gate-ordering.md",
 ]
 
 # CI workflow files: a workflow change can alter how any group runs.
@@ -98,6 +116,11 @@ ENV_AUTHORITY_PATHS = [
     "requirements-test.txt",
     "scripts/bootstrap_test_env.py",
     "scripts/check_test_env.py",
+    "pyproject.toml",
+    "uv.lock",
+    "poetry.lock",
+    "setup.py",
+    "setup.cfg",
 ]
 
 # Repository-wide authority surfaces: finalizer, generated status,
@@ -146,6 +169,8 @@ GROUP_TEST_MODULES = {
         "test_issue131_cpu_test_env",
         "test_plan_ci",
         "test_run_full_cpu_suite",
+        "test_merge_validation",
+        "test_cross_cutting_smoke",
         # Issue #246: retention audit + retired-lineage integrity.
         "test_ci_test_retention",
     ],
@@ -1170,6 +1195,24 @@ FULL_REGRESSION_PATHS = (
 )
 
 
+# Native execution/build interfaces escalate even inside otherwise mapped
+# operator directories. Python controller edits keep their concrete affected
+# group; they do not imply a change to a native runtime implementation.
+NATIVE_INTERFACE_PREFIXES = (
+    "tools/native-moe-overlap/", "tools/native-cache/",
+    "inferswarm/operator/native_observer/", "tests/fixtures/issue299/overlay/",
+)
+NATIVE_INTERFACE_SUFFIXES = (".c", ".cc", ".cpp", ".h", ".hpp", ".cu", ".cuh", ".patch", ".cmake")
+
+
+def high_risk_path(path):
+    name = Path(path).name
+    return (path.startswith(NATIVE_INTERFACE_PREFIXES)
+            or path.endswith(NATIVE_INTERFACE_SUFFIXES)
+            or name == "CMakeLists.txt"
+            or (name.startswith("requirements") and name.endswith(".txt")))
+
+
 def _module_groups():
     """Reverse index: test module name -> groups listing it."""
     index = {}
@@ -1300,6 +1343,9 @@ def plan(changed_paths, mode="pr", force_full_reason=None):
                     reasons.append(
                         "fail-closed: repository authority surface changed: "
                         f"{path}")
+                if high_risk_path(path):
+                    full = True
+                    reasons.append(f"fail-closed: native/build/dependency interface changed: {path}")
                 pgroups, classified = classify_path(path)
                 if not classified:
                     full = True
@@ -1357,6 +1403,8 @@ def build_registry():
             pattern: list(g) for pattern, g in sorted(PATH_GROUPS.items())
         },
         "full_regression_paths": _sort_unique(FULL_REGRESSION_PATHS),
+        "native_interface_prefixes": list(NATIVE_INTERFACE_PREFIXES),
+        "native_interface_suffixes": list(NATIVE_INTERFACE_SUFFIXES),
     }
 
 
