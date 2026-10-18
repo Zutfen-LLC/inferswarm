@@ -190,15 +190,16 @@ public:
     llama_hot_experts * owner = nullptr;
     ggml_context * ctx = nullptr;
     ggml_backend_t cpu = nullptr;
-    hot_branch router, shared, reduce;
+    hot_branch router, shared, reduce, fast;
     std::array<hot_branch,11> hot = {}, cold = {};
     ggml_tensor * input = nullptr, * ids = nullptr, * weights = nullptr, * slots = nullptr;
+    ggml_tensor * bound_ids = nullptr;
     std::vector<float> remote_result;
     llama_hot_stats stats;
     const int * phase = nullptr;
     int layer = -1;
     ~llama_hot_graph() {
-        for (auto * b : {&router,&shared,&reduce}) ggml_gallocr_free(b->alloc);
+        for (auto * b : {&router,&shared,&reduce,&fast}) ggml_gallocr_free(b->alloc);
         for (auto & b : hot) ggml_gallocr_free(b.alloc);
         for (auto & b : cold) ggml_gallocr_free(b.alloc);
         ggml_backend_free(cpu); ggml_free(ctx);
@@ -219,18 +220,51 @@ public:
         const auto elapsed=[](clock::time_point a,clock::time_point b){return std::chrono::duration<double,std::milli>(b-a).count();};
         s.stats.phase=s.phase?*s.phase:0;
         if (s.stats.phase!=1 && s.stats.phase!=2) GGML_ABORT("IS314 real request phase missing/mixed");
-        ggml_backend_tensor_set(s.input,src->data,0,ggml_nbytes(s.input)); compute(s.cpu,s.router.graph);
-        const auto * ids=static_cast<const int32_t *>(s.ids->data);
+        ggml_backend_tensor_set(s.input,src->data,0,ggml_nbytes(s.input));
+        // Benchmark routing is bound to already-stable caller tensors: read the
+        // boundary directly instead of dispatching an empty router graph whose
+        // only work is copying those bytes. Native routing still computes the
+        // real router graph below.
+        if (!s.bound_ids) compute(s.cpu,s.router.graph);
+        const auto * ids=static_cast<const int32_t *>(s.bound_ids?s.bound_ids->data:s.ids->data);
         const auto * weights=static_cast<const float *>(s.weights->data);
         std::array<int32_t,10> hi={},ci={},hs={},cs={}; std::array<float,10> hw={},cw={};
-        unsigned nh=0,nc=0; std::set<int32_t> selected;
+        unsigned nh=0,nc=0;
         for (int slot=0;slot<10;++slot) {
-            if (ids[slot]<0 || ids[slot]>=(int)s.owner->dense.size() || !selected.insert(ids[slot]).second) GGML_ABORT("IS314 invalid source routing");
+            if (ids[slot]<0 || ids[slot]>=(int)s.owner->dense.size()) GGML_ABORT("IS314 invalid source routing");
+            for (int seen=0;seen<slot;++seen) if (ids[seen]==ids[slot]) GGML_ABORT("IS314 invalid source routing");
             const int dense=s.owner->dense[ids[slot]];
             if (dense>=0) { hi[nh]=dense; hs[nh]=slot; std::memcpy(&hw[nh++],&weights[slot],sizeof(float)); }
             else { ci[nc]=ids[slot]; cs[nc]=slot; std::memcpy(&cw[nc++],&weights[slot],sizeof(float)); }
         }
         if (auto demand=is312::active()) demand->record(s.layer,ids,10,1,0.0);
+        if (!nh) {
+            // Zero-hot step: the reusable ordinary CPU graph is exactly the
+            // source FFN for this routing (same banks, slot order, weighting,
+            // shared contribution and reduction/add order). One private
+            // compute replaces the cold/shared/restore/reduce split; no RPC
+            // dispatch, allocation or upload occurs. Mixed steps below keep
+            // the heterogeneous hot-RPC/cold-CPU path and its overlap.
+            if (!s.fast.graph) GGML_ABORT("IS314 zero-hot fast graph missing");
+            ggml_backend_tensor_set(s.fast.ids,ids,0,10*sizeof(int32_t));
+            ggml_backend_tensor_set(s.fast.weights,weights,0,10*sizeof(float));
+            const auto fast_start=clock::now();
+            compute(s.cpu,s.fast.graph);
+            const auto fast_done=clock::now();
+            std::memcpy(dst->data,s.fast.output->data,ggml_nbytes(dst));
+            ++s.stats.steps; s.stats.hot=nh; s.stats.cold=nc; s.stats.compact_owner=reinterpret_cast<uintptr_t>(s.owner);
+            s.stats.dispatch_ms=0; s.stats.cold_ms=0; s.stats.shared_ms=0; s.stats.join_ms=0;
+            s.stats.fast_ms=elapsed(fast_start,fast_done); s.stats.layer_ms=elapsed(start,clock::now());
+            s.stats.input_bytes=0; s.stats.routing_bytes=0; s.stats.result_bytes=0;
+            std::fprintf(stderr,"IS314_STEP layer=%d phase=%s step=%llu hot=%u cold=%u dispatch_ms=%.6f cold_ms=%.6f shared_ms=%.6f join_ms=%.6f layer_ms=%.6f input_bytes=%llu routing_bytes=%llu result_bytes=%llu ids=",
+                s.layer,s.stats.phase==1?"prefill":"decode",(unsigned long long)s.stats.steps,nh,nc,s.stats.dispatch_ms,s.stats.cold_ms,s.stats.shared_ms,s.stats.join_ms,s.stats.layer_ms,
+                (unsigned long long)s.stats.input_bytes,(unsigned long long)s.stats.routing_bytes,(unsigned long long)s.stats.result_bytes);
+            for (int i=0;i<10;++i) std::fprintf(stderr,"%s%d",i?",":"",ids[i]);
+            std::fprintf(stderr," weight_bits=");
+            for (int i=0;i<10;++i) { uint32_t bits; std::memcpy(&bits,&weights[i],sizeof(bits)); std::fprintf(stderr,"%s%08x",i?",":"",bits); }
+            std::fprintf(stderr,"\n");
+            return;
+        }
         auto & h=s.hot[nh]; auto & c=s.cold[nc];
         const auto dispatch_start=clock::now();
         if (nh) {
@@ -260,7 +294,7 @@ public:
         compute(s.cpu,s.reduce.graph); std::memcpy(dst->data,s.reduce.output->data,ggml_nbytes(dst));
         ++s.stats.steps; s.stats.hot=nh; s.stats.cold=nc; s.stats.compact_owner=reinterpret_cast<uintptr_t>(s.owner);
         s.stats.dispatch_ms=elapsed(dispatch_start,dispatched); s.stats.cold_ms=elapsed(dispatched,cold_done);
-        s.stats.shared_ms=elapsed(cold_done,shared_done); s.stats.join_ms=elapsed(shared_done,joined); s.stats.layer_ms=elapsed(start,clock::now());
+        s.stats.shared_ms=elapsed(cold_done,shared_done); s.stats.join_ms=elapsed(shared_done,joined); s.stats.fast_ms=0; s.stats.layer_ms=elapsed(start,clock::now());
         s.stats.input_bytes=nh?ggml_nbytes(h.input):0; s.stats.routing_bytes=nh*(sizeof(int32_t)+sizeof(float)); s.stats.result_bytes=nh?ggml_nbytes(h.output):0;
         std::fprintf(stderr,"IS314_STEP layer=%d phase=%s step=%llu hot=%u cold=%u dispatch_ms=%.6f cold_ms=%.6f shared_ms=%.6f join_ms=%.6f layer_ms=%.6f input_bytes=%llu routing_bytes=%llu result_bytes=%llu ids=",
             s.layer,s.stats.phase==1?"prefill":"decode",(unsigned long long)s.stats.steps,nh,nc,s.stats.dispatch_ms,s.stats.cold_ms,s.stats.shared_ms,s.stats.join_ms,s.stats.layer_ms,
@@ -296,7 +330,7 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         catch (...) { ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false; throw; }
         ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false;
         check(combined->op==GGML_OP_ADD && layer.ffn_up_shexp,"gated shared branch required");
-        if (cfg.benchmark_routing) llama_hot_bind_routing(s->ctx,combined,il,*cfg.benchmark_routing);
+        if (cfg.benchmark_routing) { llama_hot_bind_routing(s->ctx,combined,il,*cfg.benchmark_routing); s->bound_ids=cfg.benchmark_routing->ids; }
         auto * weighted=ggml_get_tensor(s->ctx,("ffn_moe_weighted-"+std::to_string(il)).c_str()); check(weighted,"source weighted cut missing");
         auto * down=weighted->src[0]; check(down->op==GGML_OP_MUL_MAT_ID,"source expert cut mismatch");
         s->ids=ggml_cont(s->ctx,down->src[2]); s->weights=weighted->src[1];
@@ -318,9 +352,25 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         ggml_graph_clear(s->reduce.graph); ggml_build_forward_expand(s->reduce.graph,s->reduce.output);
         s->shared.output->op=op; std::copy(sources.begin(),sources.end(),std::begin(s->shared.output->src));
         s->allocate(s->reduce,s->cpu);
+        // Zero-hot reusable ordinary CPU graph: the complete source FFN clone
+        // with only the routing boundary as private leaf inputs. Identical
+        // banks, slot association, weighting, shared branch and view/add
+        // reduction order to the ordinary CPU arm; ONE private compute per
+        // all-cold step, with no RPC dispatch, allocation or upload. Mixed
+        // steps never touch it, so the heterogeneous path and its overlap
+        // are unchanged.
+        s->fast.ids=ggml_new_tensor_2d(s->ctx,GGML_TYPE_I32,10,1);
+        s->fast.weights=ggml_new_tensor_3d(s->ctx,GGML_TYPE_F32,1,10,1);
+        ggml_set_input(s->fast.ids); ggml_set_input(s->fast.weights);
+        std::unordered_map<ggml_tensor *,ggml_tensor *> fast_cuts={{s->input,s->input},{down->src[2],s->fast.ids},{weighted->src[1],s->fast.weights}};
+        s->fast.output=ggml_cont(s->ctx,clone(s->ctx,combined,fast_cuts)); ggml_set_output(s->fast.output);
+        s->fast.graph=ggml_new_graph_custom(s->ctx,nodes,false); ggml_build_forward_expand(s->fast.graph,s->fast.output);
+        s->allocate(s->fast,s->cpu);
         for (int count=1;count<=10;++count) for (bool remote : {false,true}) {
             if (remote && owner.dense.end()==std::find_if(owner.dense.begin(),owner.dense.end(),[](int v){return v>=0;})) continue;
             if (remote && count>(int)cfg.hot_spec->document.at("expert_ids").size()) continue;
+            // cold[10] only serves zero-hot steps, which the fast graph now owns.
+            if (!remote && count==10) continue;
             llm_graph_params p={}; p.arch=arch; p.hparams=hparams; p.hparams.n_expert_used_arr.fill(count); p.cparams=cparams;
             p.ubatch=ubatch; p.sched=sched; p.backend_cpu=backend_cpu; p.loras=loras; p.res=res;
             p.cb=[](const llama_ubatch &,ggml_tensor * t,const char * name,int layer){ggml_format_name(t,"%s-%d",name,layer);};
@@ -342,7 +392,7 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         }
         s->remote_result.resize(cur->ne[0]*10);
         size_t local_bytes=0,remote_bytes=0;
-        for (auto * b : {&s->router,&s->shared,&s->reduce}) local_bytes+=ggml_gallocr_get_buffer_size(b->alloc,0);
+        for (auto * b : {&s->router,&s->shared,&s->reduce,&s->fast}) local_bytes+=ggml_gallocr_get_buffer_size(b->alloc,0);
         for (auto & b:s->cold) if (b.alloc) local_bytes+=ggml_gallocr_get_buffer_size(b.alloc,0);
         for (auto & b:s->hot) if (b.alloc) remote_bytes+=ggml_gallocr_get_buffer_size(b.alloc,0);
         std::fprintf(stderr,"IS314_SETUP layer=%d compact_bytes=%zu staging_peak=%zu retained_staging=0 cpu_arena_bytes=%zu rpc_arena_bytes=%zu result_workspace_bytes=%zu metadata_bytes=%zu\n",il,owner.resident,owner.staging_peak,local_bytes,remote_bytes,s->remote_result.size()*sizeof(float),ggml_used_mem(s->ctx));
