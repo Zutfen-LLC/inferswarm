@@ -507,7 +507,7 @@ class ExperimentalDriverTests(unittest.TestCase):
              patch.object(CampaignFixture,'post',measured_post):
             result,_,_=self.execute(session=self.session(1))
         self.assertIsInstance(result,dict,str(type(result)))
-        self.assertEqual(result['requests'][0]['wall_seconds'],10)
+        self.assertAlmostEqual(result['requests'][0]['wall_seconds'],10,delta=1e-9)
 
     def test_session_light_counter_probe_executes_and_discloses_truncation(self):
         import subprocess,sys

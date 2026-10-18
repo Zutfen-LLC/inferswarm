@@ -799,8 +799,9 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
     if hot_request is not None:
-        from .hot_experiment import validate_hot_plan
+        from .hot_experiment import validate_hot_plan, validate_frozen_model
         validate_hot_plan(plan,hot_prepared)
+        validate_frozen_model(plan)
     if force_fresh_source_hash and source_digest_cache is None:
         raise ValueError('force fresh source hash requires source digest cache')
     if source_digest_cache is not None:
