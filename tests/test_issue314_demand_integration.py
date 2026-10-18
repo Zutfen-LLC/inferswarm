@@ -1863,6 +1863,36 @@ def _config314_recipe():
 
 
 class FrozenHotComparisonTests(unittest.TestCase):
+    def test_real_runner_and_guard_tokenize_both_arms_before_request_boundary(self):
+        from inferswarm.operator.runtime import OperatorRunner
+        from unittest.mock import patch
+        class RequestBoundary(Exception):
+            pass
+        helper=self.helper()
+        model=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())['model']
+        for arm in ('A','B'):
+            with self.subTest(arm=arm):
+                guard,leases,rows=_make_guard_state(_ProbeCommands(),_FakeTransport())
+                guard.session=validate_session(helper.arm_sessions('/synthetic/prepared.json','2'*64)[arm])
+                guard.hot_request=SimpleNamespace(enabled=arm=='B')
+                calls=[]
+                def post(url,body,timeout):
+                    calls.append((url,body,timeout))
+                    return {'tokens':[1,2,3]}
+                runner=OperatorRunner(None,leases,SimpleNamespace(post=post),None)
+                runner.evidence=SimpleNamespace(save_session_json=lambda *args:True)
+                with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}), \
+                     patch.object(guard,'before_request',side_effect=RequestBoundary):
+                    with self.assertRaises(RequestBoundary):
+                        runner._execute_diagnostic_session(SimpleNamespace(plan_id='probe',digest='a'*64,
+                            selection='two-gpu'),guard,'http://owned',rows,[],{},None,
+                            SimpleNamespace(runtime_sha256='1'*64),None,[])
+                self.assertEqual(len(calls),5)
+                self.assertTrue(all(row[0]=='http://owned/tokenize' for row in calls))
+                self.assertTrue(all(type(row[2]) is int and 1<=row[2]<=900 for row in calls))
+                self.assertEqual(guard.request_records,[])
+                self.assertEqual(len(guard.execution_result['actual_tokenizer']['requests']),5)
+
     def test_guard_uses_owned_server_tokenizer_before_inference(self):
         from inferswarm.operator.hot_experiment import tokenize_hot_session
         from inferswarm.operator.q8_session import validate_session
@@ -1872,8 +1902,10 @@ class FrozenHotComparisonTests(unittest.TestCase):
             calls.append((url,body,timeout))
             return {'tokens':[1,2,3]}
         saved={}
-        guard=SimpleNamespace(session=validate_session(self.session()),checkpoint=lambda:None,
-            request_timeout=lambda:10)
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        guard=SystemdSessionGuard(None,SimpleNamespace(),None,
+            session=validate_session(self.session()),clock=lambda:1000)
+        guard.set_outer_start(100)
         runner=SimpleNamespace(http=SimpleNamespace(post=post),evidence=SimpleNamespace(
             save_session_json=lambda name,obj:saved.setdefault(name,obj)))
         client=SimpleNamespace(runtime_sha256='1'*64)

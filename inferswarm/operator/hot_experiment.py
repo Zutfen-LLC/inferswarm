@@ -145,7 +145,7 @@ def tokenize_hot_session(runner, guard, plan, base, client):
     for index, request in enumerate(session['requests'], 1):
         guard.checkpoint()
         response = runner.http.post(base+'/tokenize', dict(content=request['body']['prompt'],
-            add_special=True, parse_special=True, with_pieces=False), timeout=guard.request_timeout())
+            add_special=True, parse_special=True, with_pieces=False), timeout=guard.request_timeout_seconds())
         receipt['requests'].append(dict(index=index,
             body_sha256=hashlib.sha256(canonical(request['body'])).hexdigest(),
             token_ids=response.get('tokens')))

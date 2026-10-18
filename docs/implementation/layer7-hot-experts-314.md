@@ -151,7 +151,36 @@ Durable local sources, executables, libraries, original receipts and validation
 logs are retained at `/home/zutfen/data/is314-local-development/` (not merely in
 24-hour scratch). The handoff maps original build paths to durable copies.
 These are local development artifacts, not the future 05 candidate or accepted
-runtime identities. Independent review is the next local gate.
+runtime identities.
+
+### Scoped independent review and blocker disposition
+
+One independent correctness/resource review examined exact implementation head
+`236d3d7186ff819a03512f3bd9919c9e01fe5767`. Its original verdict is preserved
+as NO-GO, with one demonstrated P2 blocker: the tokenizer integration called
+`request_timeout()` although the real `SystemdSessionGuard` exposes the existing
+deadline-clamped `request_timeout_seconds()`. The original namespace-based test
+masked that nonexistent API. Both arms would safely stop after load and before
+the first tokenizer POST. Cleanup contained the failure, but the comparison
+would not function. No other material blocker was reported.
+
+The correction changes that single production call to the real API, replaces
+the masking stub with a real guard, and adds a real
+`OperatorRunner._execute_diagnostic_session` / `SystemdSessionGuard` regression
+for both A and B. The new regression reproduced the AttributeError before the
+fix (RED), then verified exactly five tokenizer POSTs, real deadline-clamped
+integer timeouts and no inference before the request boundary (GREEN).
+Oversized-token refusal remains covered. Eighteen comparison tests and the
+complete affected Python population (108 tests, 16.065 s, zero skips) passed
+after correction. Native source/fixtures/build inputs did not change, so the
+nine loopback results and authenticated build receipts remain applicable;
+there was no redundant native rebuild or broad validation campaign.
+
+Original review/probe/logs and correction RED/GREEN logs are retained under
+`/home/zutfen/data/is314-local-development/validation/`. The independent
+NO-GO report is not relabeled GO: the demonstrated blocker is recorded as
+controller-corrected and regression-verified. Final maintainer review of the
+local corrected head remains pending. No optional-hardening work was added.
 
 ## Validation policy and documentation impact
 
