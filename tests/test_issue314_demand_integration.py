@@ -1863,11 +1863,8 @@ def _config314_recipe():
 
 
 class FrozenHotComparisonTests(unittest.TestCase):
-    def plan(self):
+    def config(self):
         from inferswarm.operator.assigned_backing import HOT_BUILD_PAIR, role_identity
-        from inferswarm.operator.config import parse_config
-        from inferswarm.operator.plan import build_plan
-        from tests.issue299_fixture import NOW
         from tests.test_issue311_cuda_backing import rejoin_profiles
         from tests.test_issue313_two_gpu import two_gpu_mapping
         raw, _ = two_gpu_mapping()
@@ -1876,8 +1873,55 @@ class FrozenHotComparisonTests(unittest.TestCase):
             backend = 'cpu' if part['role'] == 'client' else 'cuda'
             part['runtime_sha256'] = role_identity(part['role'], backend,
                 build_pair=HOT_BUILD_PAIR).executable_sha256
-        config = parse_config(rejoin_profiles(raw), now=NOW, profile_mode='replay')
+        return rejoin_profiles(raw)
+
+    def plan(self):
+        from inferswarm.operator.config import parse_config
+        from inferswarm.operator.plan import build_plan
+        from tests.issue299_fixture import NOW
+        config = parse_config(self.config(), now=NOW, profile_mode='replay')
         return build_plan(config, now=NOW)
+
+    def test_real_campaign_refuses_model_drift_before_lease_or_helper(self):
+        from unittest.mock import Mock, patch
+        from inferswarm.operator import q8_experiment as experiment
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            fixtures=HotExpertManifestTests()
+            payload,paths,_=fixtures.fixture(root)
+            prepared=fixtures.module().prepare(fixtures.frozen(payload),paths,
+                rpc_backend='RPC[synthetic-B.example:5000]')
+            prepared_path=root/'prepared.json'
+            prepared_path.write_bytes(prepared.canonical_bytes)
+            prepared_sha=hashlib.sha256(prepared.canonical_bytes).hexdigest()
+            raw=self.config()
+            raw['model']['members'][0]['sha256']='0'*64
+            config_path=root/'config.json'
+            config_path.write_text(json.dumps(raw))
+            commands=Mock(spec=['run'])
+            commands.run.side_effect=AssertionError('external helper crossed preflight')
+            transport=Mock(spec=['call'])
+            transport.call.side_effect=AssertionError('lease or launch crossed preflight')
+            runner_factory=Mock(side_effect=AssertionError('runner crossed preflight'))
+            for arm,session in self.helper().arm_sessions(str(prepared_path),prepared_sha).items():
+                with self.subTest(arm=arm):
+                    session_path=root/('session-'+arm+'.json')
+                    session_path.write_text(json.dumps(session))
+                    evidence_root=root/('evidence-'+arm)
+                    # Observe the real constructor; parsing/planning and all
+                    # identity validators remain real, with external I/O faked.
+                    with patch.object(experiment,'ExperimentalLeaseManager',
+                            wraps=experiment.ExperimentalLeaseManager) as leases:
+                        with self.assertRaisesRegex(ValueError,'backing source identity mismatch'):
+                            experiment.run_experimental_campaign(config_path,root/'unused-envelope.json',
+                                commands=commands,transport=transport,runner_factory=runner_factory,
+                                evidence_root=str(evidence_root),session_path=session_path,
+                                outer_start_monotonic=100)
+                    leases.assert_not_called()
+                    commands.run.assert_not_called()
+                    transport.call.assert_not_called()
+                    runner_factory.assert_not_called()
+                    self.assertFalse(evidence_root.exists())
 
     def test_frozen_model_preflight_refuses_identity_drift_before_tokenizer_io(self):
         from dataclasses import replace
