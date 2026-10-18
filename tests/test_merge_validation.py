@@ -209,6 +209,67 @@ class Handoff(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(json.loads(output.read_text())['validation_scope'], 'scoped')
 
+    def test_direct_script_full_handoff_preserves_request_and_error_identity(self):
+        # Exercise __main__, rather than importing gate.main: merge_validation
+        # must use the same request/error classes as the executing CLI module.
+        for rel in gate.ENV_AUTHORITY_FILES:
+            path = self.root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('fixture authority\n')
+        (self.root / 'tests').mkdir()
+        (self.root / 'tests/test_entry_fixture.py').write_text(
+            'import unittest\nclass Fixture(unittest.TestCase):\n'
+            ' def test_never_executes(self): raise AssertionError("handoff ran tests")\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'full-risk fixture')
+        sha = self.git('rev-parse', 'HEAD')
+        request = gate.current_final_head_request(self.root)
+        receipt = dict(schema=gate.RECEIPT_SCHEMA, **request.to_dict(),
+                       result='PASS', count=request.suite['count'],
+                       started_unix=1000.0, ended_unix=2000.0)
+        with tempfile.TemporaryDirectory(prefix='merge-entry-') as temporary:
+            output = Path(temporary) / 'handoff.json'
+            proof = Path(temporary) / 'receipt.json'
+            harness = '''
+import runpy, sys
+from pathlib import Path
+sys.path[:0] = [sys.argv[1], str(Path(sys.argv[1]) / 'scripts')]
+import hosted_ci_verification as ci
+from tests.hosted_ci_fakes import authenticated_ci
+api = authenticated_ci(sys.argv[2]).api
+api.pulls[7]['base']['sha'] = sys.argv[3]
+ci.default_api_factory = lambda *args: api
+ci.resolve_token = lambda *args, **kwargs: 'offline-fixture'
+script = str(Path(sys.argv[1]) / 'scripts/issue213_gate_orchestration.py')
+sys.argv = [script] + sys.argv[4:]
+runpy.run_path(script, run_name='__main__')
+'''
+            for mode, expected in (('complete', 0), ('missing', 1), ('malformed', 1)):
+                with self.subTest(mode=mode):
+                    payload = dict(receipt, schema='invalid') if mode == 'malformed' else receipt
+                    proof.write_text(json.dumps(payload))
+                    output.unlink(missing_ok=True)
+                    arguments = ['handoff', '--risk-based', '--root', str(self.root),
+                                 '--repo', ci.CANONICAL_REPOSITORY, '--pr', '7',
+                                 '--finalizer-ok', '--out', str(output)]
+                    if mode != 'missing':
+                        arguments += ['--suite-receipt', str(proof)]
+                    process = subprocess.run(
+                        [sys.executable, '-B', '-c', harness, str(ROOT), sha,
+                         self.base, *arguments], capture_output=True, text=True,
+                        timeout=30)
+                    self.assertEqual(process.returncode, expected,
+                                     process.stdout + process.stderr)
+                    self.assertNotIn('Traceback', process.stdout + process.stderr)
+                    if mode == 'malformed':
+                        self.assertIn('handoff: FAIL', process.stdout)
+                        self.assertFalse(output.exists())
+                    else:
+                        result = json.loads(output.read_text())
+                        self.assertEqual(result['validation_scope'], 'full')
+                        self.assertEqual(result['handoff_complete'], mode == 'complete')
+                        self.assertEqual(result['full_suite_receipt_valid'], mode == 'complete')
+
     def test_wrong_checked_out_head_and_missing_base_object_fail_closed(self):
         head = self.head
         self.head = make_request('a' * 40)

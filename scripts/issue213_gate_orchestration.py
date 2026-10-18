@@ -2422,4 +2422,6 @@ def main(argv: list[str] | None = None, *, environ=None, api_factory=None,
 
 
 if __name__ == "__main__":
+    # Imported handoff helpers must share the CLI's request/error classes.
+    sys.modules["issue213_gate_orchestration"] = sys.modules[__name__]
     raise SystemExit(main())
