@@ -492,6 +492,7 @@ PATH_GROUPS = {
     # MoE overlap prototype (offline harness + build recipe + docs).
     "tools/moe-overlap/": ["moe-overlap-prototype"],
     "tools/native-moe-overlap/": ["moe-overlap-prototype"],
+    "tools/native-hot-experts/": ["moe-overlap-prototype", "issue-99-103"],
     "tools/native-cache/": ["moe-overlap-prototype"],
     "tests/test_native_cache.py": ["moe-overlap-prototype"],
     "tests/test_moe_native_cache.py": ["moe-overlap-prototype"],

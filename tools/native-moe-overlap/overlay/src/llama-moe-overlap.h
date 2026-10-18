@@ -3,10 +3,12 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include "llama-hot-experts.h"
 
 // Experimental model-local configuration. Captured at model creation, never
 // changed underneath a reusable graph. No planner/production Q8 contract.
 struct llama_moe_overlap_config {
+    std::shared_ptr<llama_hot_spec> hot_spec;
     int layer = -1;
     bool overlap = false;
     std::string capture_path; // optional bounded input/output comparison artifact

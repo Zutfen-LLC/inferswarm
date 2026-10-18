@@ -523,6 +523,12 @@ class OperatorRunner:
             sources=self._verify_profiled_sources(plan,client,remote)
             if campaign_guard is not None:
                 campaign_guard.sources_verified(plan,sources)
+            hot_spec_path=None
+            if getattr(campaign_guard,'hot_request',None) is not None:
+                from .hot_experiment import stage_hot_experts
+                hot_spec_path,campaign_guard.hot_record=stage_hot_experts(
+                    self,campaign_guard,plan,sources,client,remote)
+                campaign_guard.phase='load'
             guards=sources[remote.participant_id].get('assigned_guard_paths')
             wanted={p.binding_id for p,_,_,_ in processes}
             if not isinstance(guards,dict) or set(guards)!=wanted or len(set(guards.values()))!=2:
@@ -595,7 +601,8 @@ class OperatorRunner:
                 evidence_store.register_attempt('client',
                     client.execution_address,client_export,client_log)
             rows['client']=self.leases.spawn(client.execution_address,'client',list(client_argv),
-                export=client_export,**self._assigned_spawn(plan,client,sources))
+                export=client_export,**self._assigned_spawn(plan,client,sources),
+                **({'hot_spec':hot_spec_path} if hot_spec_path is not None else {}))
             if evidence_store is not None:
                 evidence_store.register_process('client',client.execution_address,
                     rows['client']['pid'],str(rows['client']['start']))
@@ -767,6 +774,9 @@ class OperatorRunner:
                 'PID/UUID residency, graph submission and utilization are not kernel execution proof',
                 'nonstreaming wall time is not TTFT; correctness is not evaluated'])
         guard.execution_result=result
+        if getattr(guard,'hot_request',None) is not None:
+            from .hot_experiment import tokenize_hot_session
+            result['actual_tokenizer']=tokenize_hot_session(self,guard,plan,base,client)
         for index,request in enumerate(guard.session.payload()['requests'],1):
             guard.phase='request'; guard.phase_index=index
             body=request['body']

@@ -83,6 +83,7 @@ class WireProxy:
         self.worker_port = worker_port
         self.fault = fault
         self.frames = []
+        self.requests = []
         self.connections = 0
         self.sockets = []
         self.stop = threading.Event()
@@ -135,6 +136,11 @@ class WireProxy:
                         raise ValueError("fixture exceeded wire budget")
                     body = self.read(client, size)
                     self.frames.append((command, size))
+                    if command in (6, 7) and len(body) >= 352:
+                        self.requests.append(dict(cmd=command, tensor=body[228:292].split(b'\0',1)[0].decode('ascii'),
+                            shape=list(struct.unpack_from('<IIII',body,20)),offset=struct.unpack_from('<Q',body,296)[0],
+                            length=struct.unpack_from('<Q',body,312)[0],sha256=body[320:352].hex(),
+                            payload=body[352:] if command==6 else None))
                     if command in (10, 16) and self.fault:
                         self.fault_reached.set()
                         if self.fault == "stall":
@@ -337,6 +343,213 @@ class NativeMoEIntegration(unittest.TestCase):
             overlap.write_bytes(blob[:-1])
             with self.assertRaisesRegex(ValueError, "truncated"):
                 comparator.compare(serial, overlap)
+
+
+class NativeHotExperts(unittest.TestCase):
+    """Real source FFN arithmetic vs original CPU, structural wire separately."""
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix='native-hot-314-')
+        cls.root = Path(cls.temp.name)
+        path = ROOT / 'tools/native-moe-overlap/hot-build-composed.py'
+        if not path.is_file():
+            raise AssertionError('missing integrated hot candidate builder')
+        spec = importlib.util.spec_from_file_location('hot_candidate', path)
+        cls.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.mod)
+        retained = os.environ.get('IS314_NATIVE_BUILD')
+        if retained:
+            cls.build = Path(retained)
+        else:
+            pin = cls.mod.base.pin
+            cache = Path(os.environ.get('MOE_OVERLAP_CACHE', cls.root / 'pin'))
+            cache.mkdir(parents=True, exist_ok=True)
+            pin.pin.ensure_source(cache)
+            result = cls.mod.build(os.environ.get('MOE_OVERLAP_TARBALL', cache / 'pin.tar.gz'),
+                                   cls.root / 'candidate', 'cmake', fixtures_only=True, portable_fixtures=True)
+            cls.build = Path(result['build_directory'])
+        cls.binaries = {n: {'path': str(cls.build / 'bin' / n)} for n in ('rpc-worker', 'native-hot-fixture')}
+        cls.selected = [8, 1, 6, 3, 0, 9, 2, 7, 4, 5]
+        import hashlib
+        cls.bank_bytes = {}
+        cls.q8_bytes = {}
+        for kind in ('gate', 'up', 'down'):
+            values = []
+            for eid in range(12):
+                for row in range(32):
+                    for col in range(32):
+                        # Nonuniform signed outputs including cancelling pairs.
+                        value = (eid + 1) / 64 if row == col else 0.0
+                        if kind == 'down': value *= (-1 if eid % 2 else 1)
+                        values.append(value)
+            data = struct.pack('<' + 'f' * len(values), *values)
+            (cls.root / (kind + '.bin')).write_bytes(data)
+            cls.bank_bytes[kind] = data
+            blocks=bytearray()
+            for eid in range(12):
+                for row in range(32):
+                    qs=[0]*32; qs[row]=(eid+1)*(-1 if kind=='down' and eid%2 else 1)
+                    blocks.extend(struct.pack('<e32b',1/64,*qs))
+            cls.q8_bytes[kind]=bytes(blocks)
+            (cls.root/(kind+'.q8.bin')).write_bytes(blocks)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp.cleanup()
+
+    worker = NativeMoEIntegration.worker
+
+    def configure(self, count, endpoint, q8=False, **updates):
+        import hashlib
+        ids = self.selected[:count]
+        if count == 10: ids = ids + [10, 11]  # generic >=10 immutable list
+        rows = []
+        stride=1088 if q8 else 4096
+        for kind, data in (self.q8_bytes if q8 else self.bank_bytes).items():
+            packed = b''.join(data[e*stride:(e+1)*stride] for e in ids)
+            rows.append(dict(source_name=f'blk.7.ffn_{kind}_exps.weight',
+                compact_name=f'is314.fixture.{count}.{kind}', ggml_type=8 if q8 else 0,
+                source_shape=[32,32,12,1],compact_shape=[32,32,len(ids),1],
+                source_sha256=hashlib.sha256(data).hexdigest(),
+                compact_sha256=hashlib.sha256(packed).hexdigest(), expert_bytes=stride,
+                ranges=[dict(expert_id=e,source_offset=e*stride,destination_offset=i*stride,length=stride)
+                        for i,e in enumerate(ids)]))
+        spec = dict(schema='is314-hot-experts/1',layer=7,rpc_backend=f'RPC[{endpoint}]',expert_ids=ids,tensors=rows)
+        spec.update(updates)
+        path = self.root / 'spec.json'; path.write_text(json.dumps(spec))
+        guard = self.root / 'assigned.txt'
+        guard.write_text(''.join(f"{r['compact_name']} {r['ggml_type']} " +
+            ' '.join(map(str,r['compact_shape'])) + f" {stride*len(ids)} {r['compact_sha256']}\n" for r in rows))
+        return path, guard, spec
+
+    def run_hot(self, proxy, count=None, control='', timeout=20):
+        endpoint = f'127.0.0.1:{proxy.port}'
+        env = dict(os.environ, GGML_NO_BACKTRACE='1')
+        for key in ('IS309_MOE', 'IS309_CAPTURE', 'IS314_HOT_SPEC', 'IS311_ASSIGNED'): env.pop(key,None)
+        if count is not None:
+            path, guard, _ = self.configure(count, endpoint,q8=control=='q8')
+            env.update(IS314_HOT_SPEC=str(path),IS311_ASSIGNED=str(guard))
+        return subprocess.run([self.binaries['native-hot-fixture']['path'],endpoint,str(self.root),control],
+                              env=env,capture_output=True,text=True,timeout=timeout)
+
+    def rows(self, result):
+        self.assertEqual(result.returncode,0,result.stderr[-4000:])
+        rows = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
+        self.assertEqual(rows[-1], {'released': True})
+        return rows[:-1]
+
+    def test_hot_candidate_builder_is_additive(self):
+        self.assertEqual(self.mod.optimized.optimized_options(),self.mod.build_options())
+        receipt = json.loads((self.build.parent/'hot-candidate-receipt.json').read_text())
+        self.assertEqual(receipt['rpc_protocol']['major'],7)
+        self.assertTrue(receipt['backend_libraries'])
+        self.assertTrue(receipt['source_inputs'])
+        self.assertTrue(receipt['compiler_versions']['CXX']['sha256'])
+
+    def test_all_hot_counts_source_order_arithmetic_and_reuse(self):
+        with self.worker() as proxy: ordinary = self.rows(self.run_hot(proxy))
+        for count in range(11):
+            with self.subTest(hot=count), self.worker() as proxy:
+                result = self.run_hot(proxy,count)
+                rows = self.rows(result)
+                self.assertEqual([r['output'] for r in rows],[r['output'] for r in ordinary])
+                self.assertEqual(rows[0]['hot'],count)
+                self.assertEqual(rows[0]['cold'],10-count)
+                self.assertEqual(result.stderr.count('IS314_SETUP'),1)
+                self.assertTrue(all(r['owners']==0 for r in rows if r['tokens']>1 or r['layer']!=7))
+                self.assertEqual(len({r['output'][0] for r in rows[:3]}),3)
+                self.assertEqual(len({r['compact_owner'] for r in rows if r['owners']}),1)
+                self.assertEqual(proxy.connections,1)
+                dispatches = sum(c in (10,16) for c,_ in proxy.frames)
+                self.assertEqual(dispatches, sum(r['hot']>0 for r in rows))
+
+    def test_routing_changes_keep_exact_hot_cold_partitions(self):
+        import re
+        with self.worker() as proxy: baseline = self.rows(self.run_hot(proxy))
+        for count in range(11):
+            with self.subTest(hot=count), self.worker() as proxy:
+                result = self.run_hot(proxy,count)
+                rows = self.rows(result)
+                self.assertEqual([r['output'] for r in rows],[r['output'] for r in baseline])
+                routed = [r for r in rows if r['owners']]
+                steps = re.findall(r'IS314_STEP .*?hot=(\d+) cold=(\d+) .*?ids=([0-9,]+) weight_bits=([0-9a-f,]+)',result.stderr)
+                self.assertEqual(len(steps),len(routed))
+                self.assertGreaterEqual(len({s[2] for s in steps}),2)
+                hot_ids = set(self.selected[:count] + ([10,11] if count==10 else []))
+                for row, (hot,cold,ids,bits) in zip(routed,steps):
+                    ids = [int(x) for x in ids.split(',')]
+                    weights = bits.split(',')
+                    self.assertEqual(len(ids),10)
+                    self.assertEqual(len(set(ids)),10)
+                    self.assertEqual(len(weights),10)
+                    self.assertGreater(len(set(weights)),1)
+                    expected = sum(e in hot_ids for e in ids)
+                    self.assertEqual((int(hot),int(cold)),(expected,10-expected))
+                    self.assertEqual((row['hot'],row['cold']),(expected,10-expected))
+
+    def test_encoded_q8_0_slices_use_real_source_moe_graph(self):
+        with self.worker() as proxy: baseline=self.rows(self.run_hot(proxy,None,'q8'))
+        for count in (0,5,10):
+            with self.subTest(hot=count),self.worker() as proxy:
+                actual=self.rows(self.run_hot(proxy,count,'q8'))
+                self.assertEqual([r['output'] for r in actual],[r['output'] for r in baseline])
+                sets=[r for r in proxy.requests if r.get('tensor','').startswith('is314.')]
+                self.assertEqual(len(sets),0 if count==0 else 3)
+                ids=self.selected[:count]+([10,11] if count==10 else [])
+                for row in sets:
+                    kind=row['tensor'].rsplit('.',1)[1]
+                    source=self.q8_bytes[kind]
+                    expected=b''.join(source[e*1088:(e+1)*1088] for e in ids)
+                    self.assertEqual((row['cmd'],row['offset'],row['shape']),
+                                     (6,0,[32,32,len(ids),1]))
+                    self.assertEqual(row['length'],len(expected))
+                    self.assertEqual(row['payload'],expected)  # encoded bytes, no requantization
+                    import hashlib
+                    self.assertEqual(row['sha256'],hashlib.sha256(expected).hexdigest())
+
+    def test_setup_weights_uploaded_once_no_steady_weights(self):
+        with self.worker() as proxy:
+            rows = self.rows(self.run_hot(proxy,5))
+            requests = list(proxy.requests)
+        weights = [r for r in requests if r.get('tensor','').startswith('is314.')]
+        self.assertEqual(len(weights),3)
+        for row in weights:
+            self.assertEqual((row['cmd'],row['offset'],row['length']),(6,0,5*4096))
+            self.assertEqual(row['shape'],[32,32,5,1])
+        self.assertFalse(any(r.get('tensor','').startswith('blk.7.') for r in requests))
+        self.assertEqual(sum(c==0 for c,_ in proxy.frames),sum(c==4 for c,_ in proxy.frames))
+
+    def test_single_token_prefill_keeps_real_phase(self):
+        for control in ('prefill','prefill-no-collector'):
+            with self.subTest(control=control), self.worker() as proxy:
+                rows = self.rows(self.run_hot(proxy,5,control))
+                self.assertEqual(rows[0]['phase'],'prefill')
+                self.assertEqual(rows[0]['hot'],5)
+
+    def test_shared_omission_and_slot_permutation_are_detectable(self):
+        with self.worker() as proxy: baseline = self.rows(self.run_hot(proxy))
+        for control in ('missing-shared','reverse-reduction'):
+            with self.subTest(control=control), self.worker() as proxy:
+                mutated = self.rows(self.run_hot(proxy,None,control))
+                self.assertTrue(any(a['output'] != b['output'] for a,b in zip(baseline,mutated)))
+
+    def test_exact_derived_guard_refuses_partial_view_duplicate_destination(self):
+        for control in ('guard-partial','guard-view','guard-duplicate'):
+            with self.subTest(control=control), self.worker() as proxy:
+                result=self.run_hot(proxy,5,control)
+                self.assertNotEqual(result.returncode,0)
+                self.assertIn('assigned upload refused',result.stderr)
+                self.assertNotIn('IS314_STEP',result.stderr)
+
+    def test_hot_remote_disconnect_and_stall_are_not_fallback(self):
+        with self.worker('disconnect') as proxy:
+            result = self.run_hot(proxy,5,timeout=10)
+            self.assertTrue(proxy.fault_reached.is_set())
+            self.assertNotEqual(result.returncode,0)
+            self.assertNotIn('"released":true',result.stdout)
+        with self.worker('stall') as proxy:
+            with self.assertRaises(subprocess.TimeoutExpired): self.run_hot(proxy,5,timeout=2)
+            self.assertTrue(proxy.fault_reached.is_set())
 
 
 class NativePackaging(unittest.TestCase):

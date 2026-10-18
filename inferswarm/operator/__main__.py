@@ -23,12 +23,15 @@ def main(argv=None):
     experiment.add_argument('--session',help=(
         'explicit load-once q8-two-cuda-session/1 JSON; envelope request_sha256 '
         'must bind the canonical entire ordered session (1..6 including warmups)'))
+    experiment.add_argument('--outer-start-monotonic',type=float,help='shared controller monotonic start for preparation and both comparison arms; never reset between arms')
     args=parser.parse_args(argv)
     try:
         if args.command=='run': result=run_config(args.config)
         else:
             from .q8_experiment import run_experimental_campaign
             options=dict(evidence_root=args.evidence_root)
+            if args.outer_start_monotonic is not None:
+                options['outer_start_monotonic']=args.outer_start_monotonic
             if args.session is not None:
                 options['session_path']=args.session
             if args.source_digest_cache or args.force_fresh_source_hash:

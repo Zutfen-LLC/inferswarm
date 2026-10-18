@@ -1431,5 +1431,743 @@ class DemandEndToEndCampaignTests(unittest.TestCase):
         self.assertEqual(finished['status'], 'FINISHED')
 
 
+class HotExpertManifestTests(unittest.TestCase):
+    """#314 immutable intent and authenticated encoded-slice preparation only."""
+
+    def fixture(self, root, ids=(54, 74, 136, 290, 394)):
+        # Small encoded Q8_0 banks, still 512 global expert IDs. No weights.
+        payload = dict(schema='is314-hot-expert-manifest/1', status='INTENT',
+            model=dict(repository='synthetic/local', revision='fixture-v1',
+                       metadata_sha256=hashlib.sha256(b'metadata').hexdigest()),
+            representation='Q8_0', native_source='b29c606e28a01b1bc8c1351026a0fa6e616bf6c4',
+            provenance_bundle_sha256=hashlib.sha256(b'fixture provenance').hexdigest(),
+            capture_provenance_sha256=None, layer=7, expert_ids=list(ids), sources=[])
+        paths, banks = {}, {}
+        for n, component in enumerate(('gate', 'up', 'down')):
+            slices = [bytes(((i + n) % 256, i // 256)) * 34 for i in range(512)]
+            bank = b''.join(slices)
+            member = component + '.gguf'
+            content = b'prefix!' + bank + b'!tail'
+            path = root / member
+            path.write_bytes(content)
+            paths[member], banks[component] = path, slices
+            payload['sources'].append(dict(component=component,
+                name='blk.7.ffn_' + component + '_exps.weight', member=member,
+                member_sha256=hashlib.sha256(content).hexdigest(),
+                member_size_bytes=len(content), tensor_offset=7,
+                shape=[32, 2, 512, 1], ggml_type=8,
+                tensor_sha256=hashlib.sha256(bank).hexdigest()))
+        return payload, paths, banks
+
+    def module(self):
+        from inferswarm.operator import hot_experts
+        return hot_experts
+
+    def frozen(self, payload):
+        module = self.module()
+        data = module.seal_manifest(payload)
+        return module.load_manifest(data, expected_sha256=json.loads(data)['sha256'])
+
+    def test_preparation_checks_shared_deadline_between_reads(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            payload,paths,_=self.fixture(root)
+            calls=[]
+            def checkpoint():
+                calls.append(1)
+                if len(calls)==3:
+                    raise TimeoutError('outer deadline')
+            outputs={c:root/(c+'.compact') for c in ('gate','up','down')}
+            with self.assertRaisesRegex(TimeoutError,'outer deadline'):
+                self.module().prepare(self.frozen(payload),paths,rpc_backend='RPC[fixture:1]',
+                    output_paths=outputs,checkpoint=checkpoint)
+            self.assertEqual(len(calls),3)
+            self.assertTrue(all(not p.exists() for p in outputs.values()))
+
+    def test_gather_cli_freezes_actual_hashes_under_shared_clock(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); payload,paths,_=self.fixture(root)
+            manifest=self.frozen(payload); manifest_path=root/'manifest.json'
+            manifest_path.write_bytes(manifest.canonical_bytes)
+            clock=root/'clock.json'; _load314_recipe().freeze_clock(clock)
+            output=root/'prepared.json'
+            argv=[sys.executable,str(ROOT/'tools/native-hot-experts/comparison.py'),'gather',
+                '--manifest',str(manifest_path),'--manifest-sha256',manifest.sha256,
+                '--rpc-endpoint','fixture:1','--clock',str(clock),'--output',str(output)]
+            for name,path in paths.items():
+                argv.extend(['--source',name+'='+str(path)])
+            result=subprocess.run(argv,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            prepared=self.module().load_prepared(output.read_bytes(),
+                expected_sha256=hashlib.sha256(output.read_bytes()).hexdigest())
+            self.assertEqual(prepared.native_spec()['rpc_backend'],'RPC[fixture:1]')
+            self.assertEqual(prepared.report()['global_to_local']['394'],4)
+            previous=output.read_bytes()
+            again=subprocess.run(argv,capture_output=True,text=True)
+            self.assertNotEqual(again.returncode,0)
+            self.assertEqual(output.read_bytes(),previous)
+
+    def test_manifest_is_canonical_immutable_and_externally_pinned(self):
+        import copy
+        from dataclasses import FrozenInstanceError
+        with tempfile.TemporaryDirectory() as td:
+            payload, _, _ = self.fixture(Path(td))
+            module = self.module()
+            manifest = self.frozen(payload)
+            expected = manifest.sha256
+            payload['expert_ids'].reverse()
+            self.assertEqual(manifest.expert_ids, (54, 74, 136, 290, 394))
+            returned = manifest.payload(); returned['expert_ids'].reverse()
+            self.assertEqual(manifest.expert_ids[-1], 394)
+            with self.assertRaises((FrozenInstanceError, AttributeError)):
+                manifest.sha256 = 'f' * 64
+            with self.assertRaisesRegex(ValueError, 'expected manifest'):
+                module.load_manifest(module.seal_manifest(payload), expected_sha256=expected)
+            with self.assertRaisesRegex(ValueError, 'canonical'):
+                module.load_manifest(manifest.canonical_bytes + b'\n', expected_sha256=expected)
+            altered = json.loads(manifest.canonical_bytes)
+            altered['sources'][0]['shape'][0] = 64
+            with self.assertRaisesRegex(ValueError, 'self digest'):
+                module.load_manifest(json.dumps(altered, sort_keys=True,
+                    separators=(',', ':')).encode(), expected_sha256=expected)
+            for field in ('model', 'expert_ids', 'sources', 'provenance_bundle_sha256'):
+                changed = copy.deepcopy(manifest.payload())
+                changed[field] = ({'repository': 'other', **changed[field], 'revision': 'other'}
+                    if field == 'model' else list(reversed(changed[field]))
+                    if field in ('expert_ids', 'sources') else 'f' * 64)
+                reason = 'sources must be ordered' if field == 'sources' else 'expected manifest'
+                with self.assertRaisesRegex(ValueError, reason):
+                    module.load_manifest(module.seal_manifest(changed), expected_sha256=expected)
+
+    def test_duplicate_out_of_range_and_invalid_source_metadata_refuse(self):
+        import copy
+        with tempfile.TemporaryDirectory() as td:
+            payload, _, _ = self.fixture(Path(td))
+            for ids in ([54, 54], [-1], [512], [True], [], [1.0]):
+                bad = copy.deepcopy(payload); bad['expert_ids'] = ids
+                with self.subTest(ids=ids), self.assertRaisesRegex(ValueError, 'expert'):
+                    self.frozen(bad)
+            for field, value, reason in (
+                    ('shape', [33, 2, 512, 1], 'shape'),
+                    ('shape', [32, 2, 512, 2], 'shape'),
+                    ('ggml_type', 1, 'Q8_0'),
+                    ('tensor_offset', -1, 'offset'),
+                    ('member_sha256', 'X' * 64, 'SHA-256'),
+                    ('name', 'blk.8.ffn_gate_exps.weight', 'name')):
+                bad = copy.deepcopy(payload); bad['sources'][0][field] = value
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, reason):
+                    self.frozen(bad)
+
+    def test_exact_noncontiguous_gather_global_local_map_and_native_spec(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload, paths, banks = self.fixture(root)
+            manifest = self.frozen(payload)
+            outputs = {c: root / (c + '.compact') for c in banks}
+            result = self.module().prepare(manifest, paths, rpc_backend='RPC0[fixture:1]',
+                output_paths=outputs, max_staging_bytes=340)
+            spec, report = result.native_spec(), result.report()
+            self.assertEqual(spec['schema'], 'is314-hot-experts/1')
+            self.assertEqual(spec['expert_ids'], [54, 74, 136, 290, 394])
+            self.assertEqual(report['global_to_local']['394'], 4)
+            self.assertEqual(report['total_compact_bytes'], 1020)
+            self.assertLessEqual(report['peak_staging_bytes'], 340)
+            lines = result.assigned_lines().decode().splitlines()
+            self.assertEqual(len(lines), 3)
+            for source, row, line in zip(payload['sources'], spec['tensors'], lines):
+                component = source['component']
+                want = b''.join(banks[component][i] for i in manifest.expert_ids)
+                self.assertEqual(outputs[component].read_bytes(), want)
+                self.assertEqual(row['compact_sha256'], hashlib.sha256(want).hexdigest())
+                self.assertEqual(row['source_sha256'], source['tensor_sha256'])
+                self.assertEqual(row['source_shape'], [32, 2, 512, 1])
+                self.assertEqual(row['compact_shape'], [32, 2, 5, 1])
+                self.assertEqual(row['expert_bytes'], 68)
+                self.assertEqual(row['ranges'][-1], dict(expert_id=394,
+                    source_offset=26792, destination_offset=272, length=68))
+                self.assertEqual(line.split(), [row['compact_name'], '8', '32', '2',
+                    '5', '1', '340', hashlib.sha256(want).hexdigest()])
+                self.assertLessEqual(len(row['compact_name'].encode('ascii')), 63)
+                self.assertNotEqual(row['compact_name'], row['source_name'])
+            # Metadata-only preparation computes the very same derived hashes;
+            # no persistent staging files are required by native context setup.
+            hash_only = self.module().prepare(manifest, paths, rpc_backend='RPC0[fixture:1]',
+                max_staging_bytes=68)
+            self.assertEqual(hash_only.native_spec(), spec)
+            self.assertEqual(hash_only.assigned_lines(), result.assigned_lines())
+
+    def test_source_member_tensor_hash_and_bounds_authenticate_before_outputs(self):
+        import copy
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload, paths, _ = self.fixture(root)
+            module = self.module()
+            outputs = {c: root / (c + '.compact') for c in ('gate', 'up', 'down')}
+            manifest = self.frozen(payload)
+            original = paths['down.gguf'].read_bytes()
+            paths['down.gguf'].write_bytes(original[:-1] + b'X')
+            with self.assertRaisesRegex(ValueError, 'member.*SHA-256'):
+                module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertFalse(any(p.exists() for p in outputs.values()))
+            paths['down.gguf'].write_bytes(original)
+            bad = copy.deepcopy(payload); bad['sources'][2]['tensor_sha256'] = 'f' * 64
+            with self.assertRaisesRegex(ValueError, 'tensor.*SHA-256'):
+                module.prepare(self.frozen(bad), paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertFalse(any(p.exists() for p in outputs.values()))
+            bad = copy.deepcopy(payload); bad['sources'][2]['tensor_offset'] = len(original)
+            with self.assertRaisesRegex(ValueError, 'bounds'):
+                self.frozen(bad)
+            with self.assertRaisesRegex(ValueError, 'staging'):
+                module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', max_staging_bytes=67)
+
+    def test_output_destinations_never_overwrite_prior_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload, paths, _ = self.fixture(root)
+            manifest = self.frozen(payload)
+            module = self.module()
+            same = root / 'same'
+            outputs = dict(gate=same, up=same, down=root/'down.compact')
+            with self.assertRaisesRegex(ValueError, 'duplicate output'):
+                module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertFalse(same.exists())
+            outputs = {c: root/(c+'.compact') for c in ('gate', 'up', 'down')}
+            outputs['down'].write_bytes(b'prior accepted bytes')
+            with self.assertRaisesRegex(ValueError, 'output.*exists'):
+                module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertEqual(outputs['down'].read_bytes(), b'prior accepted bytes')
+            self.assertFalse(outputs['gate'].exists())
+            outputs['down'].unlink()
+            outputs['gate'].symlink_to(root/'absent')
+            with self.assertRaisesRegex(ValueError, 'output.*exists'):
+                module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertFalse((root/'absent').exists())
+
+    def test_explicit_allhot_selection_is_not_limited_to_h5(self):
+        with tempfile.TemporaryDirectory() as td:
+            payload, paths, _ = self.fixture(Path(td), ids=(394, 74, 0, 1, 2, 3, 4, 5, 6, 511, 54))
+            manifest = self.frozen(payload)
+            result = self.module().prepare(manifest, paths, rpc_backend='RPC0[fixture:1]')
+            self.assertEqual(result.native_spec()['expert_ids'], payload['expert_ids'])
+            self.assertEqual(result.native_spec()['tensors'][0]['compact_shape'][2], 11)
+            self.assertEqual(result.report()['global_to_local']['394'], 0)
+
+    def test_actual_source_reads_are_bounded_and_no_retained_tensor_hash_is_invented(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            payload, paths, banks = self.fixture(Path(td))
+            for source in payload['sources']:
+                source['tensor_sha256'] = None
+            module = self.module()
+            manifest = self.frozen(payload)
+            original = Path.open
+            reads = []
+            class Reader:
+                def __init__(self, stream): self.stream = stream
+                def __enter__(self): return self
+                def __exit__(self, *args): return self.stream.__exit__(*args)
+                def fileno(self): return self.stream.fileno()
+                def seek(self, *args): return self.stream.seek(*args)
+                def read(self, *args): raise AssertionError('unbounded read is prohibited')
+                def readinto(self, view):
+                    reads.append(len(view))
+                    return self.stream.readinto(view)
+            def open_tracked(path, *args, **kwargs):
+                stream = original(path, *args, **kwargs)
+                return Reader(stream) if args and args[0] == 'rb' else stream
+            with patch.object(Path, 'open', open_tracked):
+                result = module.prepare(manifest, paths, rpc_backend='RPC0[fixture:1]',
+                                        max_staging_bytes=68)
+            self.assertTrue(reads)
+            self.assertEqual(max(reads), 68)
+            self.assertEqual(result.report()['peak_staging_bytes'], 68)
+            for record in result.source_records:
+                bank = b''.join(banks[record['component']])
+                self.assertEqual(record['tensor_sha256'], hashlib.sha256(bank).hexdigest())
+            self.assertTrue(all(source['tensor_sha256'] is None for source in manifest.payload()['sources']))
+            self.assertFalse(list(Path(td).glob('*.compact')))
+
+    def test_exclusive_output_race_preserves_competitor_and_cleans_only_own_files(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload, paths, _ = self.fixture(root)
+            manifest = self.frozen(payload)
+            outputs = {c: root/(c+'.compact') for c in ('gate', 'up', 'down')}
+            original = Path.open
+            def race(path, *args, **kwargs):
+                if path == outputs['up'] and args and args[0] == 'xb':
+                    with original(path, 'wb') as stream: stream.write(b'competitor')
+                return original(path, *args, **kwargs)
+            with patch.object(Path, 'open', race), self.assertRaisesRegex(ValueError, 'output.*exists'):
+                self.module().prepare(manifest, paths, rpc_backend='RPC0[fixture:1]', output_paths=outputs)
+            self.assertEqual(outputs['up'].read_bytes(), b'competitor')
+            self.assertFalse(outputs['gate'].exists())
+            self.assertFalse(outputs['down'].exists())
+
+    def test_derived_guard_uses_actual_native_whole_tensor_upload_checks(self):
+        # Coverage-only follow-up: assigned.h already refuses these cases; this
+        # binds its real reader/checker to the newly emitted compact guard.
+        import os
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            payload, paths, _ = self.fixture(root)
+            prepared = self.module().prepare(self.frozen(payload), paths, rpc_backend='RPC0[fixture:1]')
+            guard = root/'assigned'; guard.write_bytes(prepared.assigned_guard)
+            source = root/'guard.cpp'
+            source.write_text(r'''
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#define GGML_ASSERT(x) assert(x)
+struct rpc_tensor { char name[64]; uint64_t view_src, view_offs; uint32_t type, ne[4]; };
+struct rpc_msg_set_tensor_hash_req { rpc_tensor tensor; uint64_t offset, size; uint8_t sha256[32]; };
+#include "assigned.h"
+int main() {
+  const auto & entry = *assigned_ranges().begin();
+  rpc_msg_set_tensor_hash_req good{};
+  std::strcpy(good.tensor.name, entry.first.c_str());
+  good.tensor.type=entry.second.type; good.size=entry.second.length;
+  for (int i=0;i<4;++i) good.tensor.ne[i]=entry.second.ne[i];
+  for (int i=0;i<32;++i) good.sha256[i]=std::stoi(entry.second.sha.substr(2*i,2),nullptr,16);
+  assert(assigned_upload(good));
+  auto bad=good; bad.tensor.view_src=1; assert(!assigned_upload(bad));
+  bad=good; bad.tensor.view_offs=1; assert(!assigned_upload(bad));
+  bad=good; bad.offset=1; assert(!assigned_upload(bad));
+  bad=good; --bad.size; assert(!assigned_upload(bad));
+  bad=good; ++bad.tensor.ne[2]; assert(!assigned_upload(bad));
+  bad=good; ++bad.tensor.type; assert(!assigned_upload(bad));
+  bad=good; bad.sha256[0]^=1; assert(!assigned_upload(bad));
+  bad=good; std::strcpy(bad.tensor.name,"blk.7.ffn_gate_exps.weight"); assert(!assigned_upload(bad));
+}
+''')
+            binary = root/'guard-fixture'
+            subprocess.run(['c++', '-std=c++17', '-O0', '-I', str(ROOT/'tools/native-cache'),
+                            str(source), '-o', str(binary)], check=True, capture_output=True)
+            subprocess.run([str(binary)], check=True, capture_output=True,
+                           env=dict(os.environ, IS311_ASSIGNED=str(guard)))
+
+    def test_prepared_reader_is_raw_digest_pinned_and_rederives_guard_spec(self):
+        import copy
+        with tempfile.TemporaryDirectory() as td:
+            payload, paths, _ = self.fixture(Path(td))
+            module = self.module()
+            prepared = module.prepare(self.frozen(payload), paths, rpc_backend='RPC0[fixture:1]')
+            raw = prepared.canonical_bytes
+            loaded = module.load_prepared(raw, expected_sha256=hashlib.sha256(raw).hexdigest())
+            self.assertEqual(loaded.native_spec_bytes, prepared.native_spec_bytes)
+            self.assertEqual(loaded.assigned_guard, prepared.assigned_lines())
+            self.assertEqual(loaded.source_records[0]['name'], payload['sources'][0]['name'])
+            with self.assertRaisesRegex(ValueError, 'prepared.*SHA-256'):
+                module.load_prepared(raw, expected_sha256='f'*64)
+            for key, value in (('compact_shape', [32, 2, 4, 1]), ('expert_bytes', 1),
+                               ('source_name', 'other'), ('compact_name', payload['sources'][0]['name'])):
+                bad = json.loads(raw); bad['native_spec']['tensors'][0][key] = value
+                sealed = json.dumps(bad, sort_keys=True, separators=(',', ':')).encode()
+                with self.subTest(key=key), self.assertRaisesRegex(ValueError, 'native spec'):
+                    module.load_prepared(sealed, expected_sha256=hashlib.sha256(sealed).hexdigest())
+            # Full/view/offset-zero semantics cannot be weakened via extra fields.
+            bad = json.loads(raw); bad['native_spec']['tensors'][0]['view_src'] = 1
+            sealed = json.dumps(bad, sort_keys=True, separators=(',', ':')).encode()
+            with self.assertRaisesRegex(ValueError, 'native spec'):
+                module.load_prepared(sealed, expected_sha256=hashlib.sha256(sealed).hexdigest())
+
+    def test_prepared_source_crosscheck_joins_actual_cpu_receipt_and_model_metadata(self):
+        import copy
+        with tempfile.TemporaryDirectory() as td:
+            payload, paths, _ = self.fixture(Path(td))
+            module = self.module()
+            prepared = module.prepare(self.frozen(payload), paths, rpc_backend='RPC0[fixture:1]')
+            metadata = dict(source=dict(source_id=payload['model']['repository'],
+                revision=payload['model']['revision'], representation='Q8_0'),
+                metadata_digest=payload['model']['metadata_sha256'], tensors=[dict(
+                    state_id=s['name'], member=s['member'], absolute_offset=s['tensor_offset'],
+                    shape=s['shape'][:3], ggml_type=8, encoded_bytes=34816) for s in payload['sources']])
+            receipt = dict(schema='q8-source-receipt/1', status='VERIFIED-not-consumed',
+                role='client', backing='full-source', source_identity=metadata['source'],
+                metadata_digest=metadata['metadata_digest'], verified_members=list(paths),
+                member_identities=[[s['member'], s['member_sha256'], s['member_size_bytes']]
+                                   for s in payload['sources']], range_identities=[dict(
+                    state_id=s['name'], member=s['member'], offset=s['tensor_offset'],
+                    length=34816, sha256=s['tensor_sha256']) for s in payload['sources']])
+            module.validate_prepared_sources(prepared, metadata, receipt)
+            for field, value in (('verified_members', []), ('metadata_digest', 'f'*64),
+                                 ('source_identity', {}), ('backing', 'assigned-immutable-native-backing')):
+                bad = copy.deepcopy(receipt); bad[field] = value
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'source receipt'):
+                    module.validate_prepared_sources(prepared, metadata, bad)
+            bad = copy.deepcopy(metadata); bad['tensors'][0]['shape'][0] = 64
+            with self.assertRaisesRegex(ValueError, 'source metadata'):
+                module.validate_prepared_sources(prepared, bad, receipt)
+            bad = copy.deepcopy(receipt); bad['range_identities'][0]['sha256'] = 'f'*64
+            with self.assertRaisesRegex(ValueError, 'source receipt'):
+                module.validate_prepared_sources(prepared, metadata, bad)
+
+    def test_example_intent_binds_checked_in_source_metadata_without_compact_hashes(self):
+        module = self.module()
+        data = (ROOT/'tools/native-hot-experts/example-manifest.json').read_bytes()
+        manifest = module.load_manifest(data, expected_sha256=json.loads(data)['sha256'])
+        payload = manifest.payload()
+        metadata = json.loads((ROOT/'tests/fixtures/issue299/q8-metadata.json').read_text())
+        self.assertEqual(payload['model']['repository'], metadata['source']['source_id'])
+        self.assertEqual(payload['model']['revision'], metadata['source']['revision'])
+        self.assertEqual(payload['model']['metadata_sha256'], metadata['metadata_digest'])
+        self.assertEqual(payload['provenance_bundle_sha256'],
+            '5d52bf5badee1cdbf450d9c5ba59a1089c85ac45f0c386574cf0a7500b3bf42f')
+        self.assertEqual(manifest.expert_ids, (54, 74, 136, 290, 394))
+        self.assertEqual(payload['status'], 'INTENT')
+        capture = ROOT/'tools/native-hot-experts/capture-provenance.json'
+        self.assertEqual(payload['capture_provenance_sha256'],
+                         hashlib.sha256(capture.read_bytes()).hexdigest())
+        for source in payload['sources']:
+            tensor = next(t for t in metadata['tensors'] if t['state_id'] == source['name'])
+            member = next(h for h in metadata['header_identities'] if h[0] == tensor['member'])
+            self.assertEqual(source['member_sha256'], member[5])
+            self.assertEqual(source['member_size_bytes'], member[4])
+            self.assertEqual(source['tensor_offset'], tensor['absolute_offset'])
+            self.assertEqual(source['shape'], tensor['shape'] + [1])
+            self.assertIsNone(source['tensor_sha256'])
+            self.assertNotIn('compact_sha256', source)
+            self.assertEqual(module.encoded_expert_bytes(source['shape']), 1740800)
+        self.assertEqual(module.compact_byte_counts(manifest),
+            dict(gate=8704000, up=8704000, down=8704000, total=26112000))
+
+
+
+
+# Portable recipe fixtures: these are synthetic shapes, never hardware evidence.
+import copy
+import math
+
+
+def _canonical314(obj):
+    return json.dumps(obj,sort_keys=True,separators=(',', ':'),allow_nan=False).encode()
+
+
+def _load314_recipe():
+    import importlib.util
+    spec=importlib.util.spec_from_file_location('is314_comparison_tests',ROOT/'tools/native-hot-experts/comparison.py')
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _config314_recipe():
+    provenance=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())
+    return dict(selection='two-gpu',plan_id='synthetic-A',model=provenance['model'],
+        participants=[dict(lifecycle_dir='/synthetic/A')],
+        workload=dict(context=2048,batch=128,microbatch=32,slots=1),
+        strategy_options=dict(build_pair='hot-experts-candidate-cpu05-cuda03',threads=14))
+
+
+class FrozenHotComparisonTests(unittest.TestCase):
+    def test_real_runner_and_guard_tokenize_both_arms_before_request_boundary(self):
+        from inferswarm.operator.runtime import OperatorRunner
+        from unittest.mock import patch
+        class RequestBoundary(Exception):
+            pass
+        helper=self.helper()
+        model=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())['model']
+        for arm in ('A','B'):
+            with self.subTest(arm=arm):
+                guard,leases,rows=_make_guard_state(_ProbeCommands(),_FakeTransport())
+                guard.session=validate_session(helper.arm_sessions('/synthetic/prepared.json','2'*64)[arm])
+                guard.hot_request=SimpleNamespace(enabled=arm=='B')
+                calls=[]
+                def post(url,body,timeout):
+                    calls.append((url,body,timeout))
+                    return {'tokens':[1,2,3]}
+                runner=OperatorRunner(None,leases,SimpleNamespace(post=post),None)
+                runner.evidence=SimpleNamespace(save_session_json=lambda *args:True)
+                with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}), \
+                     patch.object(guard,'before_request',side_effect=RequestBoundary):
+                    with self.assertRaises(RequestBoundary):
+                        runner._execute_diagnostic_session(SimpleNamespace(plan_id='probe',digest='a'*64,
+                            selection='two-gpu'),guard,'http://owned',rows,[],{},None,
+                            SimpleNamespace(runtime_sha256='1'*64),None,[])
+                self.assertEqual(len(calls),5)
+                self.assertTrue(all(row[0]=='http://owned/tokenize' for row in calls))
+                self.assertTrue(all(type(row[2]) is int and 1<=row[2]<=900 for row in calls))
+                self.assertEqual(guard.request_records,[])
+                self.assertEqual(len(guard.execution_result['actual_tokenizer']['requests']),5)
+
+    def test_guard_uses_owned_server_tokenizer_before_inference(self):
+        from inferswarm.operator.hot_experiment import tokenize_hot_session
+        from inferswarm.operator.q8_session import validate_session
+        from unittest.mock import patch
+        calls=[]
+        def post(url,body,timeout):
+            calls.append((url,body,timeout))
+            return {'tokens':[1,2,3]}
+        saved={}
+        from inferswarm.operator.q8_session import SystemdSessionGuard
+        guard=SystemdSessionGuard(None,SimpleNamespace(),None,
+            session=validate_session(self.session()),clock=lambda:1000)
+        guard.set_outer_start(100)
+        runner=SimpleNamespace(http=SimpleNamespace(post=post),evidence=SimpleNamespace(
+            save_session_json=lambda name,obj:saved.setdefault(name,obj)))
+        client=SimpleNamespace(runtime_sha256='1'*64)
+        model=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())['model']
+        with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}):
+            receipt=tokenize_hot_session(runner,guard,None,'http://owned',client)
+        self.assertEqual(len(calls),5)
+        self.assertTrue(all(x[0]=='http://owned/tokenize' for x in calls))
+        self.assertTrue(all(x[1]['add_special'] is True and x[1]['parse_special'] is True for x in calls))
+        self.assertEqual(receipt['tokenizer']['executable_sha256'],'1'*64)
+        self.assertIn('actual-tokenizer.json',saved)
+        runner.http.post=lambda *args,**kwargs:{'tokens':list(range(129))}
+        with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}):
+            with self.assertRaisesRegex(ValueError,'128'):
+                tokenize_hot_session(runner,guard,None,'http://owned',client)
+
+    def test_shared_clock_is_one_immutable_controller_boot_record(self):
+        c=self.helper()
+        with tempfile.TemporaryDirectory() as td:
+            path=Path(td)/'clock.json'
+            record=c.freeze_clock(path)
+            self.assertEqual(c.check_clock(path)['started_monotonic'],record['started_monotonic'])
+            with self.assertRaises(FileExistsError):
+                c.freeze_clock(path)
+            with self.assertRaisesRegex(TimeoutError,'160-minute'):
+                c.check_clock(path,now=record['started_monotonic']+9600)
+            data=json.loads(path.read_bytes());data['boot_id']='different'
+            path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError,'host/boot'):
+                c.check_clock(path)
+
+    def helper(self):
+        return _load314_recipe()
+
+    def session(self):
+        return json.loads((ROOT / 'tools/native-hot-experts/frozen-requests.json').read_text())
+
+    def receipt(self, counts=None):
+        c = self.helper()
+        session = self.session()
+        return {'schema': 'is314-tokenizer-receipt/1', 'model_sha256': c.MODEL_SHA256,
+                'session_sha256': hashlib.sha256(_canonical314(session)).hexdigest(),
+                'tokenizer': {'source_revision': 'b29c606e28a01b1bc8c1351026a0fa6e616bf6c4',
+                              'executable_sha256': '1' * 64, 'add_special': True,
+                              'parse_special': True, 'actual_model_input': True},
+                'requests': [{'index': i+1, 'body_sha256': hashlib.sha256(_canonical314(row['body'])).hexdigest(),
+                              'token_ids': list(range(count))}
+                             for i, (row, count) in enumerate(zip(session['requests'], counts or [14,28,24,22,28]))]}
+
+    def test_frozen_exact_bodies_caps_and_repeat(self):
+        c = self.helper()
+        session = self.session()
+        c.validate_frozen_session(session)
+        provenance=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())
+        for request,row in zip(session['requests'][:2],provenance['request_binding']['requests']):
+            self.assertEqual(hashlib.sha256(_canonical314(request['body'])).hexdigest(),row['body_sha256'])
+        self.assertEqual(session['requests'][4],session['requests'][1])
+        self.assertEqual([r['body']['n_predict'] for r in session['requests']], [8,32,32,32,32])
+        self.assertNotIn('demand', session)
+
+    def test_session_drift_refused(self):
+        c = self.helper()
+        for change in ('prompt','n_predict','seed'):
+            session = self.session()
+            body = session['requests'][2]['body']
+            body[change] = 'changed' if change == 'prompt' else 33
+            with self.assertRaises(ValueError):
+                c.validate_frozen_session(session)
+
+    def test_tokenizer_missing_refused(self):
+        c = self.helper()
+        with self.assertRaisesRegex(ValueError, 'actual.*tokeniz|tokenizer'):
+            c.validate_tokenizer_receipt(None, self.session())
+
+    def test_actual_bound_tokenizer_ids_accepted(self):
+        c = self.helper()
+        self.assertEqual(c.validate_tokenizer_receipt(self.receipt(), self.session()), [14,28,24,22,28])
+
+    def test_tokenizer_oversize_fake_count_wrong_model_or_body_refused(self):
+        c = self.helper()
+        for mutation in ('oversize','fake-count','model','body','bool-id','negative-id','settings','missing-row'):
+            rec = self.receipt()
+            if mutation == 'oversize': rec['requests'][2]['token_ids'] = list(range(129))
+            if mutation == 'fake-count': rec['requests'][2] = {'index': 3, 'count': 4}
+            if mutation == 'model': rec['model_sha256'] = '0' * 64
+            if mutation == 'body': rec['requests'][2]['body_sha256'] = '0' * 64
+            if mutation == 'bool-id': rec['requests'][2]['token_ids'] = [True]
+            if mutation == 'negative-id': rec['requests'][2]['token_ids'] = [-1]
+            if mutation == 'settings': rec['tokenizer']['add_special'] = False
+            if mutation == 'missing-row': rec['requests'].pop()
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                c.validate_tokenizer_receipt(rec, self.session())
+
+    def test_frozen_semantics_independent_of_cross_backend_bytes(self):
+        c = self.helper()
+        self.assertTrue(c.semantic_check(1, ' red red')['pass'])
+        self.assertTrue(c.semantic_check(2, 'A B C D A B C D')['pass'])
+        self.assertFalse(c.semantic_check(2, 'A B C D A D')['pass'])
+        self.assertFalse(c.semantic_check(2, 'A B')['pass'])
+        self.assertTrue(c.semantic_check(3, ' Lima\n')['pass'])
+        self.assertFalse(c.semantic_check(3, 'The city is Lima')['pass'])
+        self.assertTrue(c.semantic_check(4, '[1, 2, 3]')['pass'])
+        self.assertFalse(c.semantic_check(4, '[true,2,3]')['pass'])
+        self.assertFalse(c.semantic_check(4, '```json\n[1,2,3]\n```')['pass'])
+        self.assertTrue(c.semantic_check(5, 'A B C D')['pass'])
+
+    def test_numeric_diagnostics_no_bitwise_or_invented_tolerance(self):
+        c = self.helper()
+        d = c.numerical_diagnostic([1.,2.], [1.01,2.])
+        self.assertTrue(d['finite'])
+        self.assertAlmostEqual(d['max_abs'], .01)
+        self.assertAlmostEqual(d['rms'], math.sqrt(.0001/2))
+        self.assertEqual(d['verdict'], 'DIAGNOSTIC-NOT-QUALIFICATION')
+        self.assertNotIn('pass', d)
+        for a,b in (([],[]),([1.],[1.,2.]),([1.],[float('nan')])):
+            with self.assertRaises(ValueError): c.numerical_diagnostic(a,b)
+
+    def test_numeric_capture_cli_uses_actual_aligned_same_input_records(self):
+        import struct
+        c = self.helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            a=Path(tmp)/'a.bin';b=Path(tmp)/'b.bin'
+            header=struct.pack('<IIIIQ',0x39303349,7,2,1,1)
+            a.write_bytes(header+struct.pack('<ffff',1.,2.,3.,4.))
+            b.write_bytes(header+struct.pack('<ffff',1.,2.,3.01,4.))
+            report=c.compare_numeric_captures(a,b)
+            self.assertEqual(report['verdict'],'DIAGNOSTIC-NOT-QUALIFICATION')
+            self.assertEqual(len(report['records']),1)
+            b.write_bytes(header+struct.pack('<ffff',2.,2.,3.,4.))
+            with self.assertRaisesRegex(ValueError,'input'):
+                c.compare_numeric_captures(a,b)
+
+    def test_config_pair_checks_material_equivalence_and_candidate_pair(self):
+        c = self.helper()
+        a = _config314_recipe()
+        a['strategy_options']['build_pair'] = c.BUILD_PAIR
+        b = copy.deepcopy(a)
+        b['plan_id'] = 'synthetic-B'
+        for part in b['participants']: part['lifecycle_dir'] += '-B'
+        self.assertTrue(c.validate_config_pair(a,b)['materially_equal'])
+        for mutation in ('build','threads','placement','model','batch'):
+            changed = copy.deepcopy(b)
+            if mutation=='build':changed['strategy_options']['build_pair']='optimized-cpu05-cuda03'
+            if mutation=='threads':changed['strategy_options']['threads']=28
+            if mutation=='placement':changed['strategy_options']['placement_variant']='40-44'
+            if mutation=='model':changed['model']['revision']='wrong'
+            if mutation=='batch':changed['workload']['batch']=64
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                c.validate_config_pair(a,changed)
+        bad=copy.deepcopy(a);bad['workload']['context']=4096
+        with self.assertRaises(ValueError): c.validate_config_pair(bad,copy.deepcopy(bad))
+
+    def test_prepare_cli_archives_exact_config_bytes_and_refuses_overwrite(self):
+        import subprocess
+        c = self.helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            config=_config314_recipe()
+            config['strategy_options']['build_pair']=c.BUILD_PAIR
+            a=root/'a.json';b=root/'b.json';prepared=root/'prepared.json'
+            a.write_text(json.dumps(config));b.write_text(json.dumps(config))
+            prepared.write_text('{}')  # Plan writer hashes only; runner owns semantic admission.
+            out=root/'plan'
+            command=[sys.executable,str(ROOT/'tools/native-hot-experts/comparison.py'),'prepare',
+                     '--output',str(out),'--prepared',str(prepared),'--config-a',str(a),'--config-b',str(b)]
+            done=subprocess.run(command,capture_output=True,text=True)
+            self.assertEqual(done.returncode,0,done.stderr)
+            self.assertEqual((out/'config-A.json').read_bytes(),a.read_bytes())
+            plan=json.loads((out/'plan.json').read_text())
+            self.assertEqual(plan['arm_configs']['A']['sha256'],hashlib.sha256(a.read_bytes()).hexdigest())
+            self.assertTrue(plan['config_equivalence']['materially_equal'])
+            self.assertFalse(plan['execution_authorized'])
+            session=json.loads((out/'session-A.json').read_text())
+            self.assertEqual(plan['sessions']['A']['request_sha256'],hashlib.sha256(_canonical314(session)).hexdigest())
+            before=(out/'plan.json').read_bytes()
+            again=subprocess.run(command,capture_output=True,text=True)
+            self.assertNotEqual(again.returncode,0)
+            self.assertEqual((out/'plan.json').read_bytes(),before)
+
+    def test_offline_plan_pending_tokenizer_never_authorizes_execution(self):
+        c = self.helper()
+        plan = c.prepare_plan()
+        self.assertFalse(plan['execution_authorized'])
+        self.assertEqual(plan['arm_order'], ['A','B'])
+        self.assertEqual(plan['budget']['total_seconds'], 10800)
+        self.assertEqual(plan['budget']['execution_stop_seconds'], 9600)
+        self.assertEqual(plan['tokenizer_status'], 'PENDING-ACTUAL-MODEL-TOKENIZATION')
+        self.assertEqual(plan['max_loads_per_arm'], 1)
+        self.assertEqual(plan['retries'], 0)
+        self.assertEqual(plan['native_activation']['environment'], 'IS314_HOT_SPEC')
+
+    def test_arm_sessions_bind_enabled_switch_to_different_full_hashes(self):
+        c = self.helper()
+        sessions = c.arm_sessions('/synthetic/prepared.json', '2' * 64)
+        a, b = sessions['A'], sessions['B']
+        self.assertEqual(a['requests'], b['requests'])
+        self.assertFalse(a['hot_experts']['enabled'])
+        self.assertTrue(b['hot_experts']['enabled'])
+        self.assertNotEqual(hashlib.sha256(_canonical314(a)).hexdigest(), hashlib.sha256(_canonical314(b)).hexdigest())
+        for session in sessions.values(): c.validate_frozen_session(session)
+        with self.assertRaises(ValueError): c.arm_sessions('relative.json', '2' * 64)
+
+    def make_arm(self, root, c, *, bad=False, arm='A'):
+        session=c.arm_sessions('/synthetic/prepared.json', '2' * 64)[arm]
+        responses=['red red', 'A B C D A B C D', 'Lima', '[1,2,3]', 'A B C D']
+        rows=[]
+        for i,(request,text) in enumerate(zip(session['requests'],responses),1):
+            body=request['body']
+            response={'content': text, 'stop': True, 'stop_type': 'limit',
+                      'truncated': False, 'tokens_predicted': 4,
+                      'timings': {'predicted_n': 4, 'prompt_n': 28, 'cache_n': 0,
+                                  'prompt_ms': 10., 'predicted_ms': 20.}}
+            if bad and i==3: response['content']='wrong'
+            (root/f'request-{i:02d}-response.json').write_text(json.dumps(response))
+            rows.append({'index':i,'warmup':request['warmup'],'body':body,
+                         'request_sha256':hashlib.sha256(_canonical314(body)).hexdigest(),
+                         'status':'COMPLETED','wall_seconds':.1})
+        report={'session_sha256':hashlib.sha256(_canonical314(session)).hexdigest(),
+                'frozen_session':session,'requests':rows,'output_accepted':False,
+                'physical_qualified':False,'setup':{},'samples':[],
+                'outcomes':{'execution':'COMPLETED','observer':'REFUSED','cleanup':'COMPLETE'}}
+        (root/'session-report.json').write_text(json.dumps(report))
+
+    def test_compare_actual_retained_shapes_preserves_observer_refusal(self):
+        c=self.helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            a=Path(tmp)/'A';b=Path(tmp)/'B';a.mkdir();b.mkdir()
+            self.make_arm(a,c);self.make_arm(b,c,arm='B')
+            report=c.compare_arms(a,b)
+            self.assertTrue(report['semantic_pass'])
+            self.assertEqual(report['arms']['A']['observer'],'REFUSED')
+            self.assertFalse(report['output_accepted'])
+            self.assertFalse(report['physical_qualified'])
+            self.assertEqual(report['numerical']['verdict'],'NOT-CAPTURED')
+            self.assertEqual(len(report['paired_requests']),4)
+            self.assertEqual(report['paired_requests'][0]['wall_ratio_b_over_a'],1.)
+
+    def test_compare_semantic_failure_does_not_erase_other_results(self):
+        c=self.helper()
+        with tempfile.TemporaryDirectory() as tmp:
+            a=Path(tmp)/'A';b=Path(tmp)/'B';a.mkdir();b.mkdir()
+            self.make_arm(a,c);self.make_arm(b,c,bad=True,arm='B')
+            report=c.compare_arms(a,b)
+            self.assertFalse(report['semantic_pass'])
+            self.assertEqual(len(report['paired_requests']),4)
+
+    def test_compare_refuses_drifted_request_and_missing_response(self):
+        c=self.helper()
+        for mutation in ('drift','missing','extra','over-generation'):
+            with tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp);self.make_arm(root,c)
+                if mutation=='drift':
+                    p=root/'session-report.json';o=json.loads(p.read_text())
+                    o['requests'][2]['body']['n_predict']=33;p.write_text(json.dumps(o))
+                if mutation=='missing':(root/'request-03-response.json').unlink()
+                if mutation=='extra':(root/'request-06-response.json').write_text('{}')
+                if mutation=='over-generation':
+                    p=root/'request-03-response.json';o=json.loads(p.read_text())
+                    o['tokens_predicted']=33;p.write_text(json.dumps(o))
+                with self.subTest(mutation=mutation),self.assertRaises(ValueError):
+                    c.analyze_arm(root)
+
+
 if __name__ == '__main__':
     unittest.main()

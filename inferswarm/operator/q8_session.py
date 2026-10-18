@@ -40,7 +40,7 @@ class DiagnosticSession:
 
 def validate_session(raw):
     if (not isinstance(raw, dict)
-            or not {'schema', 'requests'} <= set(raw) <= {'schema', 'requests', 'demand'}
+            or not {'schema', 'requests'} <= set(raw) <= {'schema', 'requests', 'demand', 'hot_experts'}
             or raw['schema'] != 'q8-two-cuda-session/1'):
         raise ValueError('strict q8-two-cuda-session/1 required')
     requests = raw['requests']
@@ -66,6 +66,8 @@ def validate_session(raw):
             raise ValueError('session seed must be a fixed unsigned 32-bit integer')
         if body['stream'] is not False or type(body['cache_prompt']) is not bool:
             raise ValueError('session requires stream=false and explicit boolean cache_prompt')
+    from .hot_experiment import validate_hot_request
+    validate_hot_request(raw)
     return DiagnosticSession(canonical(raw), len(requests))
 
 
@@ -173,6 +175,8 @@ class SystemdSessionGuard(SystemdCampaignGuard):
                     failure=dict(type=type(terminal).__name__, reason=str(terminal)))
                 record.setdefault('ended_monotonic', self.clock())
                 record.setdefault('ended_at', datetime.now(timezone.utc).isoformat())
+        if hasattr(self, 'hot_record'):
+            result['hot_experts'] = self.hot_record
         refused = 'observation_refusal' in result
         complete = (len(self.request_records) == self.session.count
                     and all(row['status'] == 'COMPLETED' for row in self.request_records))

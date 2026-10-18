@@ -116,6 +116,14 @@ def _onhost(p):
         record=marker/(name+'.json'); log=root/token/(name+'.log')
         if record.exists() or log.exists(): raise ValueError('process record/log already exists')
         env=os.environ.copy()
+        env.pop('IS314_HOT_SPEC',None)
+        if p.get('hot_spec'):
+            spec=Path(p['hot_spec'])
+            if (name!='client' or not spec.is_absolute()
+                    or '..' in spec.parts or not spec.is_relative_to(root/token)
+                    or spec.is_symlink() or not spec.is_file()):
+                raise ValueError('hot spec must be an owned client invocation file')
+            env['IS314_HOT_SPEC']=str(spec)
         if p.get('cache'): env['LLAMA_CACHE']=p['cache']
         env.pop('IS311_ASSIGNED',None)
         if p.get('assigned'): env['IS311_ASSIGNED']=p['assigned']
@@ -160,7 +168,7 @@ def _onhost(p):
                 command.append('--slice='+supervision['slice'])
             if 'cuda_visible_devices' in supervision:
                 command.append('--setenv=CUDA_VISIBLE_DEVICES='+supervision['cuda_visible_devices'])
-            for key in ('LLAMA_CACHE','IS311_ASSIGNED','IS301_EXPORT_DIR','IS301_OBSERVE'):
+            for key in ('LLAMA_CACHE','IS311_ASSIGNED','IS301_EXPORT_DIR','IS301_OBSERVE','IS314_HOT_SPEC'):
                 if key in env: command.append('--setenv='+key+'='+env[key])
             command.extend(('--',*p['argv']))
             try:
@@ -319,8 +327,9 @@ class LeaseManager:
     def invocation_dir(self,address):
         return str(Path(self.leases[address])/self.token)
 
-    def spawn(self,address,name,argv,cache=None,export=None,assigned=None):
-        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache,export=export,assigned=assigned)
+    def spawn(self,address,name,argv,cache=None,export=None,assigned=None,hot_spec=None):
+        result=self._call(address,'spawn',name=name,argv=list(argv),cache=cache,export=export,assigned=assigned,
+                          **({'hot_spec':hot_spec} if hot_spec is not None else {}))
         self.owned[address][name]=result
         return result
 

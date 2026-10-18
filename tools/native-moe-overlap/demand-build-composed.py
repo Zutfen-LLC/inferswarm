@@ -82,7 +82,8 @@ def build(archive, output, cmake):
     # same include explicitly).
     with (source / 'CMakeLists.txt').open('a') as stream:
         stream.write('target_include_directories(llama PRIVATE ggml/src)\n'
-                     'add_executable(native-demand src/demand_cli.cpp src/demand.cpp src/llama-moe-overlap.cpp)\n'
+                     'target_sources(llama PRIVATE src/demand.cpp)\n'
+                     'add_executable(native-demand src/demand_cli.cpp)\n'
                      'target_include_directories(native-demand PRIVATE src ggml/src ggml/src/ggml-cpu ggml/include common)\n'
                      'target_link_libraries(native-demand PRIVATE llama ggml-rpc)\n')
     options = optimized.optimized_options()

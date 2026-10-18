@@ -26,6 +26,26 @@ HISTORICAL_BUILD_PAIR = 'historical-cpu'
 STEP_A_BUILD_PAIR = 'step-a-cpu05-cuda03'
 STEP_A_MANIFESTS = ROOT/'tools/native-cache/step-a-build-pair'
 OPTIMIZED_BUILD_PAIR = 'optimized-cpu05-cuda03'
+HOT_BUILD_PAIR = 'hot-experts-candidate-cpu05-cuda03'
+# Intentionally absent until a real candidate is built and separately reviewed.
+# Receipt generation never writes this authority path.
+HOT_CPU_MANIFEST = ROOT/'tools/native-hot-experts/reviewed-cpu05-llama-server.build-manifest.json'
+
+
+def hot_cpu_identities():
+    from .phased_observation import parse_build_manifest
+    try:
+        candidate = parse_build_manifest(json.loads(HOT_CPU_MANIFEST.read_text()))
+    except FileNotFoundError as exc:
+        raise ValueError('hot-expert candidate not reviewed; build receipt is not promotion') from exc
+    accepted = optimized_cpu_identities()
+    old = accepted['client']
+    if (candidate.base_revision != old.base_revision or candidate.base_tree != old.base_tree
+            or candidate.protocol != old.protocol or candidate.build_options != old.build_options
+            or any('ggml-cuda' in name for name, _ in candidate.backend_libraries)):
+        raise ValueError('hot-expert candidate CPU composition/options mismatch')
+    return dict(client=candidate, remote=accepted['remote'])
+
 # Additive reviewed candidate identity; historical pairs remain unchanged.
 # No caller/config path or supplied hash can populate this finite authority.
 OPTIMIZED_CPU_MANIFEST = ROOT/'tools/native-cache/optimized-cpu-build-pair/cpu05-llama-server.build-manifest.json'
@@ -85,6 +105,11 @@ def role_identity(role, backend=CPU_BACKEND, *, build_pair=HISTORICAL_BUILD_PAIR
     """
     from .phased_observation import parse_build_manifest
     key = role_key(role, backend)
+    if build_pair == HOT_BUILD_PAIR:
+        pair = hot_cpu_identities()
+        if backend != (CPU_BACKEND if role == 'client' else CUDA_BACKEND):
+            raise ValueError('wrong backend for hot-expert candidate build pair')
+        return pair[role]
     if build_pair == OPTIMIZED_BUILD_PAIR:
         pair = optimized_cpu_identities()  # Missing CPU review refuses BOTH roles.
         if backend != (CPU_BACKEND if role=='client' else CUDA_BACKEND):
