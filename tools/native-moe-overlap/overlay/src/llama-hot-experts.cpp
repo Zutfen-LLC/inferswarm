@@ -45,6 +45,31 @@ ggml_tensor * clone(ggml_context * ctx, ggml_tensor * t, std::unordered_map<ggml
     return copy;
 }
 }
+void llama_hot_bind_routing(ggml_context * ctx, ggml_tensor * combined, int layer,
+                            const llama_hot_routing & routing) {
+    auto * weighted=ggml_get_tensor(ctx,("ffn_moe_weighted-"+std::to_string(layer)).c_str());
+    check(weighted && weighted->src[0]->op==GGML_OP_MUL_MAT_ID,"benchmark source routing cut missing");
+    auto * ids=weighted->src[0]->src[2];
+    check(routing.ids && routing.weights && routing.ids->buffer && routing.weights->buffer,
+          "benchmark routing leaves must be allocated");
+    check(routing.ids->type==GGML_TYPE_I32 && routing.ids->ne[0]==10 && routing.ids->ne[1]==1 &&
+          ggml_nelements(routing.ids)==10 && routing.weights->type==GGML_TYPE_F32 &&
+          routing.weights->ne[0]==1 && routing.weights->ne[1]==10 && ggml_nelements(routing.weights)==10 &&
+          ggml_is_contiguous(routing.ids) && ggml_is_contiguous(routing.weights),"benchmark ten routing slots required");
+    // Every gate/up/down MUL_MAT_ID refers to the same original top-k view.
+    // Cut all those references, not just the final down projection.
+    std::set<ggml_tensor *> visited;
+    std::vector<ggml_tensor *> pending={combined};
+    while (!pending.empty()) {
+        auto * t=pending.back(); pending.pop_back();
+        if (!visited.insert(t).second) continue;
+        for (auto & source:t->src) {
+            if (source==ids) source=routing.ids;
+            if (source) pending.push_back(source);
+        }
+    }
+    weighted->src[1]=routing.weights;
+}
 void llama_hot_set_phase(llama_context * ctx,int phase) { ctx->synchronize(); ctx->set_hot_phase(phase); }
 struct llama_hot_spec { nlohmann::json document; };
 llama_moe_overlap_config llama_hot_config(int n_layer) {
@@ -271,6 +296,7 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         catch (...) { ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false; throw; }
         ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false;
         check(combined->op==GGML_OP_ADD && layer.ffn_up_shexp,"gated shared branch required");
+        if (cfg.benchmark_routing) llama_hot_bind_routing(s->ctx,combined,il,*cfg.benchmark_routing);
         auto * weighted=ggml_get_tensor(s->ctx,("ffn_moe_weighted-"+std::to_string(il)).c_str()); check(weighted,"source weighted cut missing");
         auto * down=weighted->src[0]; check(down->op==GGML_OP_MUL_MAT_ID,"source expert cut mismatch");
         s->ids=ggml_cont(s->ctx,down->src[2]); s->weights=weighted->src[1];

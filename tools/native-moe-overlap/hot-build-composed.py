@@ -24,8 +24,8 @@ cpu = base.cpu
 def build_options():
     return optimized.optimized_options()
 
-def build(archive, output, cmake='cmake', fixtures_only=False, portable_fixtures=False):
-    if portable_fixtures and not fixtures_only:
+def build(archive, output, cmake='cmake', fixtures_only=False, portable_fixtures=False, benchmark_only=False):
+    if portable_fixtures and not (fixtures_only or benchmark_only):
         raise ValueError('portable CPU override is only for local fixture builds')
     output = Path(output).resolve()
     source, _ = base.demand_compose(Path(archive), output)
@@ -35,6 +35,7 @@ def build(archive, output, cmake='cmake', fixtures_only=False, portable_fixtures
         stream.write('target_sources(llama PRIVATE src/demand.cpp)\n'
                      'target_include_directories(llama PRIVATE ggml/src)\n')
         for name, main in [('native-hot-fixture', HERE/'native_hot_fixture.cpp'),
+                           ('native-layer7-bench', HERE/'layer7_bench.cpp'),
                            ('rpc-worker', HERE.parent/'moe-overlap/rpc_worker.cpp')]:
             stream.write(f'add_executable({name} "{main}")\n'
                          f'target_include_directories({name} PRIVATE src ggml/src ggml/include vendor)\n'
@@ -43,11 +44,12 @@ def build(archive, output, cmake='cmake', fixtures_only=False, portable_fixtures
                      for p in sorted(source.rglob('*')) if p.is_file()}
     # External fixture/worker source are explicit build inputs too.
     source_inputs.update({str(p):cpu.digest(p) for p in
-                         (HERE/'native_hot_fixture.cpp',HERE.parent/'moe-overlap/rpc_worker.cpp')})
+                         (HERE/'native_hot_fixture.cpp',HERE/'layer7_bench.cpp',HERE.parent/'moe-overlap/rpc_worker.cpp')})
     composite = hashlib.sha256(json.dumps(source_inputs, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     binary = output/'build'
-    names = ['native-hot-fixture', 'rpc-worker']
-    if not fixtures_only: names += ['llama-server', 'ggml-rpc-server']
+    names = ['native-layer7-bench', 'rpc-worker']
+    if not benchmark_only: names.insert(0, 'native-hot-fixture')
+    if not (fixtures_only or benchmark_only): names += ['llama-server', 'ggml-rpc-server']
     options = build_options()
     if portable_fixtures:
         options += [f'-DGGML_{feature}=OFF' for feature in ('AVX','AVX2','FMA','F16C','BMI2','AVX512','AVX512_VBMI','AVX512_VNNI','AMX_TILE','AMX_INT8','AMX_BF16')]
@@ -89,5 +91,6 @@ if __name__ == '__main__':
     scope=parser.add_mutually_exclusive_group()
     scope.add_argument('--server',action='store_true',help='build complete server closure (default)')
     scope.add_argument('--fixtures-only',action='store_true')
+    scope.add_argument('--benchmark-only',action='store_true',help='only matched layer benchmark and CPU loopback worker; no server')
     args=parser.parse_args()
-    print(json.dumps(build(args.archive,args.output,args.cmake,args.fixtures_only,args.portable_fixtures),indent=2))
+    print(json.dumps(build(args.archive,args.output,args.cmake,args.fixtures_only,args.portable_fixtures,args.benchmark_only),indent=2))

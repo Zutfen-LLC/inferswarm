@@ -8,6 +8,15 @@ struct llama_moe_overlap_config;
 struct llama_hot_spec;
 class llama_hot_experts;
 class llama_hot_graph;
+struct ggml_context;
+struct ggml_tensor;
+struct llama_hot_routing {
+    ggml_tensor * ids = nullptr;
+    ggml_tensor * weights = nullptr;
+};
+// Bind source routing cuts before allocation. Arithmetic and slot order stay native.
+void llama_hot_bind_routing(ggml_context * ctx, ggml_tensor * combined, int layer,
+                            const llama_hot_routing & routing);
 llama_moe_overlap_config llama_hot_config(int n_layer);
 struct llama_hot_stats {
     double dispatch_ms=0, cold_ms=0, shared_ms=0, join_ms=0, layer_ms=0;
