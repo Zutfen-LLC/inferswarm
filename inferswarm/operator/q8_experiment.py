@@ -184,7 +184,7 @@ class ExperimentalLeaseManager(LeaseManager):
         if errors: raise RuntimeError('; '.join(errors))
         return receipts
 
-    def spawn(self, address, name, argv, cache=None, export=None, assigned=None):
+    def spawn(self, address, name, argv, cache=None, export=None, assigned=None, hot_spec=None):
         if name in ('rpc0', 'rpc1'):
             memory = _LIMITS['worker_memory_max_bytes'] // 2
         elif name in ('client', 'demand'):
@@ -208,13 +208,14 @@ class ExperimentalLeaseManager(LeaseManager):
                 cuda_visible_devices=(','.join(uuid for _,uuid in self.guard.envelope.gpu_bindings)
                                       if name.startswith('rpc') else ''))
         return self._spawn_supervised(address, name, argv, cache=cache,
-            export=export, assigned=assigned, supervision=supervision)
+            export=export, assigned=assigned, supervision=supervision,
+            **({'hot_spec':hot_spec} if hot_spec is not None else {}))
 
     def _spawn_supervised(self, address, name, argv, *, cache, export, assigned,
-                          supervision):
+                          supervision, hot_spec=None):
         result = self._call(address, 'spawn', name=name, argv=list(argv),
             cache=cache, export=export, assigned=assigned,
-            supervision=supervision)
+            supervision=supervision, **({'hot_spec':hot_spec} if hot_spec is not None else {}))
         self.owned[address][name] = result
         if hasattr(self,'spawn_receipts'):
             self.spawn_receipts.append(dict(address=address,name=name,argv=list(argv),**result))
@@ -370,6 +371,17 @@ class SystemdCampaignGuard:
 
     def _run(self,part,argv): return self.commands.run(part.execution_address,argv)
 
+    def set_outer_start(self, started):
+        import math
+        if (type(started) not in (int,float) or not math.isfinite(started)
+                or not 0 <= started <= self.clock()):
+            raise ValueError('outer start must be an elapsed controller monotonic timestamp')
+        if self.started is not None and self.started != started:
+            raise ValueError('outer start cannot be reset')
+        self.started=started
+        self.execute_deadline=started+_LIMITS['total_seconds']-_LIMITS['cleanup_reserve_seconds']
+        self.checkpoint()
+
     def remaining(self):
         self.checkpoint()
         remaining=int(self.execute_deadline-self.clock())
@@ -452,7 +464,8 @@ class SystemdCampaignGuard:
         return available
 
     def begin(self,plan,spec,client,remote):
-        self.started=self.clock(); self.execute_deadline=self.started+(
+        self.started=self.clock() if self.started is None else self.started
+        self.execute_deadline=self.started+(
             _LIMITS['total_seconds']-_LIMITS['cleanup_reserve_seconds'])
         self.client=client; self.remote=remote
         from .qwen_q8 import q8_rpc_processes
@@ -762,10 +775,12 @@ class ExperimentalCampaignError(RuntimeError):
 def run_experimental_campaign(config_path,envelope_path,*,commands=None,transport=None,
                               runner_factory=None,evidence_root=None,
                               evidence_transport=None,source_digest_cache=None,force_fresh_source_hash=False,
-                              session_path=None):
+                              session_path=None,outer_start_monotonic=None):
     """One load and one request, or an explicitly frozen bounded session."""
     session=None
     demand_profile=None
+    hot_request=None
+    hot_prepared=None
     if session_path is not None:
         from .q8_session import validate_session
         raw_session=_strict_json(session_path)
@@ -775,8 +790,17 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
         # exact existing behavior.
         from .q8_demand import validate_demand
         demand_profile=validate_demand(raw_session,session)
+        from .hot_experiment import validate_hot_request, load_hot_prepared
+        hot_request=validate_hot_request(raw_session)
+        if hot_request is not None:
+            if outer_start_monotonic is None:
+                raise ValueError('hot-expert comparison requires one shared outer-start-monotonic')
+            hot_prepared=load_hot_prepared(hot_request)
     config_bytes=Path(config_path).read_bytes()
     plan=build_plan(parse_config_json(config_bytes.decode('utf-8'),base_dir=Path(config_path).parent))
+    if hot_request is not None:
+        from .hot_experiment import validate_hot_plan
+        validate_hot_plan(plan,hot_prepared)
     if force_fresh_source_hash and source_digest_cache is None:
         raise ValueError('force fresh source hash requires source digest cache')
     if source_digest_cache is not None:
@@ -809,11 +833,20 @@ def run_experimental_campaign(config_path,envelope_path,*,commands=None,transpor
     else:
         from .q8_session import SystemdSessionGuard
         guard=SystemdSessionGuard(envelope,manager,commands or SSHCommandRunner(),session=session)
+        if hot_request is not None:
+            guard.hot_request=hot_request
+            guard.hot_prepared=hot_prepared
+            if not evidence_store.save_session_json('hot-experts-prepared.json',
+                    json.loads(hot_prepared.canonical_bytes)):
+                evidence_store.finalize()
+                raise ValueError('could not retain hot-expert preparation before launch')
         if demand_profile is not None:
             guard.demand_profile=demand_profile
         if not evidence_store.save_session_json('frozen-session.json',session.payload()):
             evidence_store.finalize()
             raise ValueError('could not retain frozen session before launch')
+    if outer_start_monotonic is not None:
+        guard.set_outer_start(outer_start_monotonic)
     if runner_factory is None:
         from .runtime import JSONHTTP, OperatorRunner, ssh_tunnel
         from .native_observer.collector import NativeObserverCollector

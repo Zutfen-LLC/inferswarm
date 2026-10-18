@@ -1,0 +1,218 @@
+{
+  "accepted_identity_promoted": false,
+  "builds": {
+    "candidate": {
+      "backend_libraries": [
+        [
+          "common/libllama-common-base.a",
+          "724c71d856c8a38a4af92527743a3caf34397f1b1d5dd9a66c5001ccc994fe15"
+        ],
+        [
+          "common/libllama-common.a",
+          "acc01e78711f540fd92117e913b77625bda886339d2d53d993257bc9b55a4206"
+        ],
+        [
+          "ggml/src/ggml-rpc/libggml-rpc.a",
+          "f275221625b37eb3c17d1172cb38eaa5d20c669e05f9f21e536d3d1069d94956"
+        ],
+        [
+          "ggml/src/libggml-base.a",
+          "888c72fc295c39ba120f4c297fa906eec6d89eb6edb7f8d71a60e22ed029698a"
+        ],
+        [
+          "ggml/src/libggml-cpu.a",
+          "96ee6ff8dfeed3ec7bc1fdb30c21cc5cc2e0d0a36338e0f4039d387ab14b3512"
+        ],
+        [
+          "ggml/src/libggml.a",
+          "9e5d77fad5369941deb514878f50b30fbcdc3c98d8d5312d07986cf67a4d0cc0"
+        ],
+        [
+          "src/libllama.a",
+          "b60b92ec9fa2559fc897f459aacc1e1990d64cb3d1c70285f79c4a5769b97ed2"
+        ],
+        [
+          "tools/mtmd/libmtmd.a",
+          "1215fb6f38b949754d0b43376aed85031a1045d5a8d197f589338f86a554c589"
+        ],
+        [
+          "tools/server/libllama-server-impl.a",
+          "54ee26e9d1fec1683acd7ad416225f6bae0b5f21f6a655c1b3f109b697d61157"
+        ],
+        [
+          "tools/server/libserver-context.a",
+          "9e50c49bc771229bf4ce04eb9224ea2ba5ccf8e13e6aa933d67fce2ee92ce67d"
+        ],
+        [
+          "tools/ui/libllama-ui.a",
+          "28751e676b01937442ebc82d645e798c82c9abdd041c9ae7590ae6609248472e"
+        ],
+        [
+          "vendor/cpp-httplib/libcpp-httplib.a",
+          "efa81a9a371aab38d85ca50fcb8eee5f720d2024e0212d7f5f5b6bd9b96c5d47"
+        ],
+        [
+          "vendor/hash/libvendor-hash.a",
+          "c70a9f59584c2c2741477338f8bc1a18322a15259b5946422945eb6081bda4f6"
+        ]
+      ],
+      "build_options": [
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_C_FLAGS_DEBUG=-O3 -g0",
+        "-DCMAKE_CXX_FLAGS_DEBUG=-O3 -g0",
+        "-DBUILD_SHARED_LIBS=OFF",
+        "-DGGML_RPC=ON",
+        "-DGGML_CUDA=OFF",
+        "-DGGML_VULKAN=OFF",
+        "-DGGML_OPENMP=OFF",
+        "-DGGML_BLAS=OFF",
+        "-DGGML_NATIVE=OFF",
+        "-DLLAMA_OPENSSL=OFF",
+        "-DLLAMA_BUILD_TESTS=OFF",
+        "-DLLAMA_BUILD_EXAMPLES=OFF",
+        "-DLLAMA_BUILD_TOOLS=ON",
+        "-DLLAMA_BUILD_APP=OFF",
+        "-DLLAMA_BUILD_UI=OFF",
+        "-DLLAMA_USE_PREBUILT_UI=OFF",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+      ],
+      "compiler_identities": {
+        "C": {
+          "path": "/usr/bin/x86_64-linux-gnu-gcc-14",
+          "sha256": "a23ecab8ff08f09ad8c80602c2c5df7f49e09c25905cb8975902e101bf72635f",
+          "version": "x86_64-linux-gnu-gcc-14 (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+        },
+        "CXX": {
+          "path": "/usr/bin/x86_64-linux-gnu-g++-14",
+          "sha256": "6b3696e4dcb85e1c949c732a02befa50e3983ecf94ce7e8e58d9d503b954b79d",
+          "version": "x86_64-linux-gnu-g++-14 (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+        }
+      },
+      "composite_sha256": "03fd01c53399fc8c8bb043afa5af8a524f6beb86f5b5d5c4fc2745372e11c39b",
+      "durable_source_directory": "/home/zutfen/data/is314-local-development/candidate/source",
+      "original_build_directory": "/home/zutfen/.hermes/cache/scratch/is314-native-candidate-final9/build",
+      "portable_fixture_build": false,
+      "receipt": "/home/zutfen/data/is314-local-development/candidate/hot-candidate-receipt.json",
+      "receipt_sha256": "044915fb332c2cb75558b5823f86cff23af61ae07079ceb4d9a7126119ef7093",
+      "roles": {
+        "ggml-rpc-server": {
+          "executable": "/home/zutfen/data/is314-local-development/candidate/build/bin/ggml-rpc-server",
+          "manifest": "/home/zutfen/data/is314-local-development/candidate/ggml-rpc-server.build-manifest.json",
+          "manifest_sha256": "f2fe92fb1284fb535265d8bcc66346d0e83e8c3781324e0ce844c6e4fb485415",
+          "sha256": "3c15070fd7b29f624e6df35421955104b751c907ad5ddb702b64c6ca4b053e8e"
+        },
+        "llama-server": {
+          "executable": "/home/zutfen/data/is314-local-development/candidate/build/bin/llama-server",
+          "manifest": "/home/zutfen/data/is314-local-development/candidate/llama-server.build-manifest.json",
+          "manifest_sha256": "ffb347069d6aab8cc2822abc6f5c8b77e90c87f7ac785190c326b0a1517d7c65",
+          "sha256": "2d2bbf3c539d61fddcfa090bde55a62a3c949df35bf8a22e6adf8fe7afc2cec6"
+        },
+        "native-hot-fixture": {
+          "executable": "/home/zutfen/data/is314-local-development/candidate/build/bin/native-hot-fixture",
+          "manifest": "/home/zutfen/data/is314-local-development/candidate/native-hot-fixture.build-manifest.json",
+          "manifest_sha256": "b681e0aef312f6502699e0d9c7ae3ec418ae2fdd573cd7c103e25b653652f682",
+          "sha256": "a3d29355e90fac675f5822d2295786645797f823a82426d0f924fa93b64d5ac9"
+        },
+        "rpc-worker": {
+          "executable": "/home/zutfen/data/is314-local-development/candidate/build/bin/rpc-worker",
+          "manifest": "/home/zutfen/data/is314-local-development/candidate/rpc-worker.build-manifest.json",
+          "manifest_sha256": "68886451b368e8cbe0662d0f10fe94ca3d98755413ddb656cf4a5e089f9d0451",
+          "sha256": "856e61c0f74a0c74a6a147fba88777a2f2cf0427cce2bf200d7b14a6d79ab325"
+        }
+      },
+      "source_inputs_count": 3606,
+      "validation": "complete server compiled; not executed (host lacks AVX)"
+    },
+    "portable-fixtures": {
+      "backend_libraries": [
+        [
+          "ggml/src/ggml-rpc/libggml-rpc.a",
+          "a091a4fb7647781691e149f2b46bce2b75d8120142fbc4b5b2e4323594325265"
+        ],
+        [
+          "ggml/src/libggml-base.a",
+          "5006718b11f3f6b0de6b6b466468d777d271b1f9895878ad748a2840caa3d788"
+        ],
+        [
+          "ggml/src/libggml-cpu.a",
+          "5be1f7264c558982456426ea2da91da4139b6bbd1569dbd87c5ca3033cd6448f"
+        ],
+        [
+          "ggml/src/libggml.a",
+          "5b7767031a83be11beccc86158bf7fe81e1584e985aa979512d0c8a9fc07fec9"
+        ],
+        [
+          "src/libllama.a",
+          "7f160c281c8e4b7af8c84bf3f21f3a959d93314aae5157fd1692aa03b7c14280"
+        ]
+      ],
+      "build_options": [
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_C_FLAGS_DEBUG=-O3 -g0",
+        "-DCMAKE_CXX_FLAGS_DEBUG=-O3 -g0",
+        "-DBUILD_SHARED_LIBS=OFF",
+        "-DGGML_RPC=ON",
+        "-DGGML_CUDA=OFF",
+        "-DGGML_VULKAN=OFF",
+        "-DGGML_OPENMP=OFF",
+        "-DGGML_BLAS=OFF",
+        "-DGGML_NATIVE=OFF",
+        "-DLLAMA_OPENSSL=OFF",
+        "-DLLAMA_BUILD_TESTS=OFF",
+        "-DLLAMA_BUILD_EXAMPLES=OFF",
+        "-DLLAMA_BUILD_TOOLS=ON",
+        "-DLLAMA_BUILD_APP=OFF",
+        "-DLLAMA_BUILD_UI=OFF",
+        "-DLLAMA_USE_PREBUILT_UI=OFF",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "-DGGML_AVX=OFF",
+        "-DGGML_AVX2=OFF",
+        "-DGGML_FMA=OFF",
+        "-DGGML_F16C=OFF",
+        "-DGGML_BMI2=OFF",
+        "-DGGML_AVX512=OFF",
+        "-DGGML_AVX512_VBMI=OFF",
+        "-DGGML_AVX512_VNNI=OFF",
+        "-DGGML_AMX_TILE=OFF",
+        "-DGGML_AMX_INT8=OFF",
+        "-DGGML_AMX_BF16=OFF"
+      ],
+      "compiler_identities": {
+        "C": {
+          "path": "/usr/bin/x86_64-linux-gnu-gcc-14",
+          "sha256": "a23ecab8ff08f09ad8c80602c2c5df7f49e09c25905cb8975902e101bf72635f",
+          "version": "x86_64-linux-gnu-gcc-14 (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+        },
+        "CXX": {
+          "path": "/usr/bin/x86_64-linux-gnu-g++-14",
+          "sha256": "6b3696e4dcb85e1c949c732a02befa50e3983ecf94ce7e8e58d9d503b954b79d",
+          "version": "x86_64-linux-gnu-g++-14 (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
+        }
+      },
+      "composite_sha256": "dcc22fb4c02633bfcdf86b6770b1ca8e50cec04299ceb61e829971c84b229520",
+      "durable_source_directory": "/home/zutfen/data/is314-local-development/portable-fixtures/source",
+      "original_build_directory": "/home/zutfen/.hermes/cache/scratch/is314-native-portable-final9/build",
+      "portable_fixture_build": true,
+      "receipt": "/home/zutfen/data/is314-local-development/portable-fixtures/hot-candidate-receipt.json",
+      "receipt_sha256": "65a2ea0f9428e8d0deed38fc8655fd2dc1f1e05bf6bde0cce30a055c36a95cb6",
+      "roles": {
+        "native-hot-fixture": {
+          "executable": "/home/zutfen/data/is314-local-development/portable-fixtures/build/bin/native-hot-fixture",
+          "manifest": "/home/zutfen/data/is314-local-development/portable-fixtures/native-hot-fixture.build-manifest.json",
+          "manifest_sha256": "b6b6d6edb2ab1fb6fe90369f8182a49d4694aa3ef96d0529194261d95bea4a54",
+          "sha256": "eb5f90a0acc7e2f171be2886d64fb259d12c48f4705872276f073dbdf5ffb804"
+        },
+        "rpc-worker": {
+          "executable": "/home/zutfen/data/is314-local-development/portable-fixtures/build/bin/rpc-worker",
+          "manifest": "/home/zutfen/data/is314-local-development/portable-fixtures/rpc-worker.build-manifest.json",
+          "manifest_sha256": "e8232212108e8d31cdb612c87c9fef5ef48e474263e5903905b51f34a9a32c10",
+          "sha256": "a03096f6ff16392c17c98b0744b9dccb594b6d5ac5b6e6b6d0f3fa768fcd7604"
+        }
+      },
+      "source_inputs_count": 3606,
+      "validation": "CPU loopback only"
+    }
+  },
+  "native_candidate_05_built": false,
+  "schema": "is314-local-development-build-handoff/1"
+}

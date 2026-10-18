@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 llama_moe_overlap_config llama_moe_overlap_config::from_env(int n_layer) {
+    if (std::getenv("IS314_HOT_SPEC")) return llama_hot_config(n_layer);
     llama_moe_overlap_config cfg;
     const char * value = std::getenv("IS309_MOE");
     if (!value) {
@@ -250,6 +251,10 @@ static ggml_tensor * clone_routed(ggml_context * ctx, ggml_tensor * tensor,
 
 ggml_tensor * llm_graph_context::build_qwen4exp_ffn(ggml_tensor * cur, const llama_layer & layer, int il,
                                                  const llama_moe_overlap_config & cfg) {
+    if (cfg.hot_spec) {
+        if (cfg.layer != il || n_tokens != 1 || cparams.warmup) return build_qwen4exp_ffn_native(cur, layer, il);
+        return build_qwen4exp_ffn_hot(cur, layer, il, cfg);
+    }
     if (cfg.layer != il) {
         return build_qwen4exp_ffn_native(cur, layer, il);
     }

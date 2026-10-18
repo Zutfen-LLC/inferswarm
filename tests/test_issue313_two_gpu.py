@@ -848,3 +848,122 @@ class TwoListenerLifecycleTests(unittest.TestCase):
             self.assertIn('--property=RuntimeMaxSec=9600',launch)
             self.assertEqual(cleanup['local']['lease'],'released')
 
+
+class HotCandidateIntegrationTests(unittest.TestCase):
+    def test_hot_spec_is_explicit_and_inherited_environment_is_cleared(self):
+        import os
+        import time
+        for enabled in (False, True):
+            with tempfile.TemporaryDirectory() as td:
+                manager=LeaseManager(lifecycle.LocalTransport(),'token')
+                manager.acquire('local',td)
+                path=Path(manager.invocation_dir('local'))/'hot-spec.txt'
+                path.write_text('frozen spec')
+                try:
+                    with patch.dict(os.environ, {'IS314_HOT_SPEC':'/inherited/not-authorized'}):
+                        manager.spawn('local','client',[sys.executable,'-u','-c',
+                            'import os,time; print(os.getenv("IS314_HOT_SPEC","OFF")); time.sleep(30)'],
+                            **({'hot_spec':str(path)} if enabled else {}))
+                    deadline=time.monotonic()+3
+                    text=''
+                    while not text and time.monotonic()<deadline:
+                        text=manager.log('local','client').strip()
+                        time.sleep(.01)
+                    self.assertEqual(text,str(path) if enabled else 'OFF')
+                finally:
+                    self.assertEqual(manager.cleanup()['local']['lease'],'released')
+
+    def test_hot_plan_requires_frozen_h5_and_existing_gpu0(self):
+        from inferswarm.operator.hot_experiment import validate_hot_plan
+        from inferswarm.operator.profiles import freeze
+        plan=SimpleNamespace(selection='two-gpu',strategy_options=freeze({
+            'build_pair':assigned_backing.HOT_BUILD_PAIR,
+            'rpc_endpoints':['worker:5000','worker:5001']}))
+        prepared=SimpleNamespace(native_spec=lambda:dict(layer=7,
+            expert_ids=[54,74,136,290,394],rpc_backend='RPC[worker:5000]'))
+        validate_hot_plan(plan,prepared)
+        prepared.native_spec=lambda:dict(layer=7,expert_ids=[54,74,136,290,394],
+                                        rpc_backend='RPC[worker:5001]')
+        with self.assertRaisesRegex(ValueError, 'GPU0'):
+            validate_hot_plan(plan,prepared)
+
+    def test_hot_stage_uses_owned_files_and_changes_only_gpu0_guard(self):
+        from inferswarm.operator.hot_experiment import stage_hot_experts, HotRequest
+        from inferswarm.operator.profiles import freeze
+        import subprocess
+        old='ordinary 8 32 1 1 1 34 '+'a'*64+'\n'
+        extra='is314.derived 8 32 1 1 1 34 '+'b'*64+'\n'
+        with tempfile.TemporaryDirectory() as td:
+            manager=LeaseManager(lifecycle.LocalTransport(),'token')
+            client=SimpleNamespace(participant_id='A',execution_address='A')
+            remote=SimpleNamespace(participant_id='B',execution_address='B')
+            for part in (client,remote):
+                manager.acquire(part.execution_address,str(Path(td)/part.participant_id))
+            guard=SimpleNamespace(hot_request=HotRequest(True,'/prepared','a'*64),
+                checkpoint=lambda:None,
+                _run=lambda part,cmd:subprocess.check_output(cmd,text=True))
+            guard.hot_prepared=SimpleNamespace(native_spec=lambda:dict(layer=7,
+                expert_ids=[54,74,136,290,394],rpc_backend='RPC[worker:5000]'),
+                native_spec_bytes=b'{}',assigned_guard=extra.encode(),report=lambda:{})
+            plan=SimpleNamespace(selection='two-gpu',strategy_options=freeze({
+                'build_pair':assigned_backing.HOT_BUILD_PAIR,
+                'rpc_endpoints':['worker:5000','worker:5001'],
+                'bindings':{'remote_gpu0':'gpu0','remote_gpu1':'gpu1'}}))
+            original=Path(td)/'original'; original.write_text(old)
+            sources={'A':{'assigned_guard_path':str(original)},
+                'B':{'assigned_guard_paths':{'gpu0':str(original),'gpu1':'UNCHANGED'}}}
+            try:
+                with patch('inferswarm.operator.hot_experts.validate_prepared_sources'), \
+                     patch('inferswarm.operator.source.q8_source_payload',return_value={'metadata':{}}):
+                    spec,record=stage_hot_experts(SimpleNamespace(leases=manager),guard,
+                        plan,sources,client,remote)
+                self.assertEqual(Path(spec).read_bytes(),b'{}')
+                self.assertEqual(Path(sources['A']['assigned_guard_path']).read_text(),old+extra)
+                self.assertEqual(Path(sources['B']['assigned_guard_paths']['gpu0']).read_text(),old+extra)
+                self.assertEqual(sources['B']['assigned_guard_paths']['gpu1'],'UNCHANGED')
+                self.assertEqual(original.read_text(),old)
+                self.assertFalse(record['persistent_hash_hits_expected'])
+                self.assertEqual(record['setup_weight_uploads_expected'],3)
+            finally:
+                self.assertTrue(all(x['lease']=='released' for x in manager.cleanup().values()))
+
+    def test_shared_outer_clock_cannot_reset_between_arms(self):
+        guard=SystemdCampaignGuard(None,SimpleNamespace(),None,clock=lambda:1000)
+        guard.set_outer_start(100)
+        self.assertEqual(guard.started,100)
+        self.assertEqual(guard.execute_deadline,100+160*60)
+        self.assertEqual(guard.remaining(),100+160*60-1000)
+        with self.assertRaisesRegex(ValueError,'outer start'):
+            guard.set_outer_start(1001)
+        expired=SystemdCampaignGuard(None,SimpleNamespace(),None,clock=lambda:10000)
+        with self.assertRaisesRegex(TimeoutError,'deadline'):
+            expired.set_outer_start(100)
+
+    def test_unbuilt_candidate_is_not_promoted(self):
+        with self.assertRaisesRegex(ValueError, 'not reviewed'):
+            assigned_backing.role_identity('client', 'cpu',
+                build_pair='hot-experts-candidate-cpu05-cuda03')
+
+    def test_session_hot_opt_in_is_frozen_and_default_off(self):
+        from inferswarm.operator.q8_session import validate_session
+        from inferswarm.operator.hot_experiment import validate_hot_request
+        raw={'schema':'q8-two-cuda-session/1','requests':[{'warmup':False,
+            'body':{'prompt':'x','n_predict':1,'temperature':0,'seed':1,
+                    'stream':False,'cache_prompt':False}}]}
+        self.assertIsNone(validate_hot_request(raw))
+        plain=validate_session(raw).digest
+        raw['hot_experts']={'enabled':True,'prepared_path':'/frozen/prepared.json',
+                            'prepared_sha256':'a'*64}
+        self.assertTrue(validate_hot_request(raw).enabled)
+        self.assertNotEqual(validate_session(raw).digest,plain)
+        raw['hot_experts']['enabled']=1
+        with self.assertRaisesRegex(ValueError, 'boolean'):
+            validate_hot_request(raw)
+
+    def test_guard_merge_keeps_original_names_and_rejects_duplicates(self):
+        from inferswarm.operator.hot_experiment import merge_assigned
+        old='original.weight 8 32 1 1 1 34 '+'a'*64+'\n'
+        derived='is314.derived 8 32 1 1 1 34 '+'b'*64+'\n'
+        self.assertEqual(merge_assigned(old,derived),old+derived)
+        with self.assertRaisesRegex(ValueError, 'duplicate'):
+            merge_assigned(old,old)

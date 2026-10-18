@@ -1970,6 +1970,10 @@
   "tools/native-cache/": [
    "moe-overlap-prototype"
   ],
+  "tools/native-hot-experts/": [
+   "moe-overlap-prototype",
+   "issue-99-103"
+  ],
   "tools/native-moe-overlap/": [
    "moe-overlap-prototype"
   ]

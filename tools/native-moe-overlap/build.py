@@ -104,7 +104,7 @@ def build(cache, jobs=2, server=False, cuda=False, demand_profile=False):
     inc = ["-I" + str(p) for p in full_build.includes(source, out)]
     ggml = full_build.GGML_BASE + full_build.GGML_REG + tuple("ggml/src/" + p for p in full_build.GGML_CPU + full_build.GGML_RPC)
     demand = (str(HERE / "demand.cpp"),)
-    llama = full_build.VENDOR_HASH + full_build.LLAMA_CORE + ("src/llama-moe-overlap.cpp",) + demand + full_build._models(source)
+    llama = full_build.VENDOR_HASH + full_build.LLAMA_CORE + ("src/llama-moe-overlap.cpp", "src/llama-hot-experts.cpp") + demand + full_build._models(source)
     extras = (full_build.COMMON + full_build.MTMD + full_build._mtmd_models(source) +
               full_build.SERVER_CTX + full_build.SERVER_IMPL +
               ("vendor/cpp-httplib/httplib.cpp",)) if server else ()

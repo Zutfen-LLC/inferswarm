@@ -60,31 +60,100 @@
 +++ b/src/llama-graph.h
 @@ -6,0 +7 @@
 +#include "llama-moe-overlap.h"
-@@ -946,0 +948 @@
+@@ -946,0 +948,2 @@
 +    std::vector<std::shared_ptr<llama_moe_overlap>> moe_overlap;
-@@ -1035,0 +1038 @@
++    std::vector<std::shared_ptr<llama_hot_graph>> hot_experts;
+@@ -1035,0 +1038,3 @@
 +    bool moe_overlap_building = false;
-@@ -1050,0 +1054,4 @@
++    std::shared_ptr<llama_hot_experts> * hot_owner = nullptr;
++    const int * hot_phase = nullptr;
+@@ -1050,0 +1054,5 @@
 +
 +    ggml_tensor * build_qwen4exp_ffn(ggml_tensor * cur, const llama_layer & layer, int il,
 +                                    const llama_moe_overlap_config & cfg);
 +    ggml_tensor * build_qwen4exp_ffn_native(ggml_tensor * cur, const llama_layer & layer, int il);
++    ggml_tensor * build_qwen4exp_ffn_hot(ggml_tensor * cur, const llama_layer & layer, int il, const llama_moe_overlap_config & cfg);
 --- a/src/llama-graph.cpp
 +++ b/src/llama-graph.cpp
-@@ -1339,0 +1340 @@
+@@ -1339,0 +1340,2 @@
 +    moe_overlap.clear();
-@@ -1500,0 +1502,4 @@
++    hot_experts.clear();
+@@ -1497,2 +1499,4 @@
+         res->set_params(params);
++        hot_owner = params.hot_owner;
++        hot_phase = params.hot_phase;
+     }
+@@ -1500,0 +1503,4 @@
 +    if (moe_overlap_building) {
 +        ggml_format_name(cur, "%s-%d", name, il);
 +        return;
 +    }
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -20,0 +21 @@
+@@ -20,0 +21,2 @@
 +    llama-moe-overlap.cpp
++    llama-hot-experts.cpp
 --- a/src/llama-model.cpp
 +++ b/src/llama-model.cpp
 @@ -365,0 +366,3 @@
-+    if (std::getenv("IS309_MOE") && arch != LLM_ARCH_QWEN4EXP) {
++    if ((std::getenv("IS309_MOE") || std::getenv("IS314_HOT_SPEC")) && arch != LLM_ARCH_QWEN4EXP) {
 +        throw std::runtime_error("IS309_MOE only supports qwen4exp");
 +    }
+--- a/src/llama-graph.h
++++ b/src/llama-graph.h
+@@ -811 +811,3 @@
+-    llm_graph_result * res;
++    llm_graph_result * res;
++    std::shared_ptr<llama_hot_experts> * hot_owner = nullptr;
++    const int * hot_phase = nullptr;
+--- a/src/llama-context.h
++++ b/src/llama-context.h
+@@ -48,0 +49 @@
++    void set_hot_phase(int phase) { hot_phase = phase; }
+@@ -367,0 +368,2 @@
++    mutable std::shared_ptr<llama_hot_experts> hot_experts;
++    int hot_phase = 0;
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -502,2 +502,5 @@
+     ggml_opt_free(opt_ctx);
++    gf_res_prev.reset();
++    gf_res_reserve.reset();
++    hot_experts.reset();
+ }
+@@ -2490,3 +2493,5 @@
+         /*.res         =*/ res,
++        /*.hot_owner   =*/ &hot_experts,
++        /*.hot_phase   =*/ &hot_phase,
+     };
+ }
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -0,0 +1 @@
++#include "../../src/llama-hot-experts.h"
+@@ -3679,6 +3680,25 @@
+         // note: the sync is done here too, so that the wait is also covered by the yield
+         int ret = 0;
+         queue_tasks.yield_to_queue([&]() {
++            if (std::getenv("IS314_HOT_SPEC")) {
++                int phase = 0;
++                for (int i = off; i < off + batch_view.n_tokens; ++i) {
++                    int token_phase = 0;
++                    for (const auto & slot : slots) {
++                        if (slot.id != batch.tokens[i].id_slot) continue;
++                        if (slot.state == SLOT_STATE_GENERATING) token_phase = 2;
++                        else if (slot.state == SLOT_STATE_PROCESSING_PROMPT ||
++                                 slot.state == SLOT_STATE_DONE_PROMPT ||
++                                 slot.state == SLOT_STATE_STARTED) token_phase = 1;
++                        break;
++                    }
++                    if (phase == 0) phase = token_phase;
++                    else if (token_phase != phase) phase = 3;
++                }
++                // Fence old async work before changing a context-owned phase.
++                // Single-token prompt tails are PREFILL, not inferred decode.
++                llama_hot_set_phase(ctx_tgt, phase);
++            }
+             ret = llama_decode(ctx_tgt, batch_view);
+             if (ret == 0 && has_output) {
+                 llama_synchronize(ctx_tgt);
