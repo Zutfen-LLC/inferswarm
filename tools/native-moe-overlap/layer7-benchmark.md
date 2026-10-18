@@ -50,9 +50,11 @@ constructor-only failure), omit one B slot's contribution, or duplicate a routin
 all must refuse comparison.
 
 **Router matmul/top-k/normalization cost is excluded from both primary arms.**
-H5 retains its normal routing-boundary copy/partition overhead and empty router
-execution at this cut. This makes exact recorded routing feasible without
-pretending the retained trace contains hidden activations. This does not answer
+In the primary bound-routing arms both graphs are cut at the same boundary and
+the executor reads it directly, so neither arm performs router computation;
+H5 retains its input snapshot, partition and dispatch/bookkeeping work at this
+cut. The `native-routing` control keeps both native routers intact and is the
+regression for unchanged router behavior. This does not answer
 full-FFN including router latency or end-to-end model throughput.
 
 ## Protocol and validity
@@ -78,12 +80,26 @@ B additionally records the existing production intervals from
 
 | Field | Exact existing boundaries / included work |
 |---|---|
-| `dispatch_ms` | `dispatch_start` through `dispatched`: async input, compact-ID and routing-weight setters plus `graph_compute_async` return; not remote compute completion. |
-| `cold_ms` | `dispatched` through `cold_done`: cold IDs/weights setters and synchronous CPU cold-branch compute. |
-| `shared_ms` | `cold_done` through `shared_done`: synchronous CPU shared-branch graph. |
-| `join_ms` | `shared_done` through `joined`: response-bearing remote output `GET_TENSOR` plus RPC synchronization, after shared compute. Residual remote wait/result transfer/client work, **not pure GPU or network time**. |
-| `h5_layer_ms` | Inner `start` through stats capture: input snapshot, routing-boundary copy/empty router execution, partition, dispatch/cold/shared/join, slot restoration, native reduction/shared add and output copy. Ends **before** production `IS314_STEP` telemetry emission. |
+| `dispatch_ms` | `dispatch_start` through `dispatched`: async input, compact-ID and routing-weight setters plus `graph_compute_async` return; not remote compute completion. Zero-hot steps report 0 (no dispatch). |
+| `cold_ms` | `dispatched` through `cold_done`: cold IDs/weights setters and synchronous CPU cold-branch compute. Zero-hot steps report 0. |
+| `shared_ms` | `cold_done` through `shared_done`: synchronous CPU shared-branch graph. Zero-hot steps report 0. |
+| `join_ms` | `shared_done` through `joined`: response-bearing remote output `GET_TENSOR` plus RPC synchronization, after shared compute. Residual remote wait/result transfer/client work, **not pure GPU or network time**. Zero-hot steps report 0. |
+| `fast_ms` | Zero-hot steps only: the single synchronous CPU compute of the reusable ordinary source FFN graph (see below). Mixed steps report 0. |
+| `h5_layer_ms` | Inner `start` through stats capture: input snapshot, routing-boundary copy (empty router execution when routing is native-computed; a direct boundary read in bound mode), partition, dispatch/cold/shared/join or the single fast compute, slot restoration and native reduction/shared add where applicable, and output copy. Ends **before** production `IS314_STEP` telemetry emission. |
 | B `total_layer_ms` | Outer compute call plus scheduler synchronization/completion; includes production telemetry/logging overhead and graph scheduling around the inner layer. A has the same outer compute-through-synchronization boundary. Both exclude output readback/diagnostics. |
+
+**Zero-hot fast path.** When a step's routing selects no hot expert, the
+executor runs one prebuilt ordinary CPU source FFN graph — cloned once at
+setup with only the routing boundary (ten IDs and weight bits) and the layer
+input as private leaves — instead of splitting cold/shared/reduce across
+three private computes with slot restoration. It is the same builder,
+weights, slot association, weighting, shared contribution and view/add
+reduction order as the ordinary CPU arm, so an all-cold step performs the
+ordinary CPU work plus only the input snapshot and boundary read. The
+`cold[10]` split branch is no longer built. There is no per-step allocation,
+weight upload or RPC frame; transitions between mixed and all-cold steps
+reuse both paths within one graph lifetime. Mixed steps are unchanged:
+hot-RPC/cold-CPU overlap, join and reduction stay exactly as before.
 
 **Do not add stages to infer total.** Overlap is intentional; join need not equal
 remote execution time. Existing input/routing/result hooks report logical

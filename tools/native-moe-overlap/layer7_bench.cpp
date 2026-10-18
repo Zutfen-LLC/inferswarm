@@ -340,7 +340,7 @@ int main(int argc,char ** argv) {
                     {"ids",r.ids},{"weight_bits",bits(r)},{"hot",stats.hot},{"cold",stats.cold},{"shared_nonzero",shared_nonzero},{"experts_nonzero",experts_nonzero},
                     {"correctness",metrics},{"valid",valid},{"A",{{"arm","A"},{"order",ab?0:1},{"total_layer_ms",am},{"output_sha256",sha(a.data(),a.size()*4)}}},
                     {"B",{{"arm","B"},{"order",ab?1:0},{"total_layer_ms",bm},{"output_sha256",sha(b.data(),b.size()*4)},
-                        {"h5_layer_ms",stats.layer_ms},{"dispatch_ms",stats.dispatch_ms},{"cold_ms",stats.cold_ms},{"shared_ms",stats.shared_ms},{"join_ms",stats.join_ms},
+                        {"h5_layer_ms",stats.layer_ms},{"dispatch_ms",stats.dispatch_ms},{"cold_ms",stats.cold_ms},{"shared_ms",stats.shared_ms},{"join_ms",stats.join_ms},{"fast_ms",stats.fast_ms},
                         {"input_bytes",stats.input_bytes},{"routing_bytes",stats.routing_bytes},{"result_bytes",stats.result_bytes},{"wire_bytes",nullptr},{"owner",stats.compact_owner},{"step",stats.steps}}},
                     {"B_minus_A_ms",bm-am}};
                 for (const std::string arm_name:{"A","B"}) {

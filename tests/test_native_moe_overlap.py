@@ -768,6 +768,37 @@ class NativeHotExperts(unittest.TestCase):
                 dispatches = sum(c in (10,16) for c,_ in proxy.frames)
                 self.assertEqual(dispatches, sum(r['hot']>0 for r in rows))
 
+    def test_zero_hot_fast_path_transitions_and_no_steady_upload(self):
+        """Mixed -> all-cold -> mixed reuses one ordinary CPU graph with no RPC.
+
+        The count=1 fixture selection reverses on step 1 (input[0] negated):
+        steps 0 and 2 are mixed (hot>0, RPC dispatched), step 1 is all-cold.
+        Outputs stay bitwise identical to the ordinary all-CPU path at every
+        step, hot/cold partitions stay exact across the transitions, and the
+        worker sees no dispatch, tensor-set or allocation RPC frame during
+        the all-cold step.
+        """
+        with self.worker() as proxy: ordinary = self.rows(self.run_hot(proxy))
+        with self.worker() as proxy:
+            result = self.run_hot(proxy,1)
+            frames = list(proxy.frames)
+            requests = list(proxy.requests)
+        rows = self.rows(result)
+        self.assertEqual([r['output'] for r in rows],[r['output'] for r in ordinary])
+        self.assertEqual(rows[0]['shape'],0)
+        # steps 0/2 mixed, step 1 all-cold (selection reversal excludes hot id 8)
+        self.assertEqual([(r['hot'],r['cold']) for r in rows[:3]],[(1,9),(0,10),(1,9)])
+        self.assertEqual(len({r['compact_owner'] for r in rows if r['owners']}),1)
+        self.assertEqual(proxy.connections,1)
+        weights = [r for r in requests if r.get('tensor','').startswith('is314.')]
+        self.assertEqual(len(weights),3)  # setup-only compact upload, never per-step
+        dispatches = [c for c,_ in frames if c == 10]
+        # runs 1 and 4 each execute (mixed, all-cold, mixed); all-cold dispatches nothing
+        self.assertEqual(dispatches, [10,10,10,10])
+        import re
+        steps = re.findall(r'IS314_STEP .*?hot=(\d+) cold=(\d+)', result.stderr)
+        self.assertEqual([(int(h),int(c)) for h,c in steps],[(1,9),(0,10),(1,9)]*2)
+
     def test_routing_changes_keep_exact_hot_cold_partitions(self):
         import re
         with self.worker() as proxy: baseline = self.rows(self.run_hot(proxy))
