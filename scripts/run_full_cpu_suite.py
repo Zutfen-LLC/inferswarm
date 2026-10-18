@@ -576,7 +576,7 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                                    "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
                         if not failfast:
                             command.append("--collect-all")
-                        command.extend(["--progress-file", str(artifacts / f"task-{task.index}-progress.json")])
+                        command.extend(["--progress-file", str(temporary / f"task-{task.index}-progress.json")])
                         print(f"[cpu-suite] start task {task.index} ({task.phase}): {len(expected_ids)} tests",
                               file=sys.stderr, flush=True)
                         if outcomes_dir is not None:
@@ -595,7 +595,7 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     if deadline is not None and now >= deadline:
                         raise SuiteError('selected completion exceeded its overall timeout')
                     for slot, entry in enumerate(running):
-                        progress = artifacts / f'task-{entry[0].index}-progress.json'
+                        progress = temporary / f'task-{entry[0].index}-progress.json'
                         if progress.is_file():
                             module = json.loads(progress.read_text())['module']
                             if progress_seen.get(entry[0].index) != module:

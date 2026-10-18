@@ -125,9 +125,11 @@ skips merely to turn a scoped result into full qualification. Those families
 remain in explicit full validation and full regression. On PR #338, retained
 Final CPU run `39081139368` covered 4,499 tests: 1,791 reused and 2,708 freshly
 executed in completion. Its ordinary selection was `repo-integrity`,
-`issue-99-103`, and `issue-213-gate-ordering`. Under this policy that scope needs
-no 2,708-test completion; it remains explicitly scoped. The measured run lasted
-24m47s, including a 22m50s composition/completion step. These are historical
+`issue-99-103`, and `issue-213-gate-ordering`. The operator-only portion of that diff would use `issue-99-103` plus
+`repo-integrity`, leaving other groups uncovered instead of running completion.
+Actual PR #338 also changed `tests/test_ordinary_ci_reuse.py`; that validation-
+policy change conservatively requires full proof under the new rule. The
+measured run lasted 24m47s, including a 22m50s composition/completion step. These are historical
 measurements, not predicted wall-clock savings: module intervals include setup
 and teardown, and logs do not separate compilation from execution.
 

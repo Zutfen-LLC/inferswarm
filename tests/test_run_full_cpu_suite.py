@@ -281,6 +281,21 @@ class ExecutionTests(unittest.TestCase):
             trees = subprocess.check_output(["git", "worktree", "list", "--porcelain"], cwd=root, text=True)
             self.assertEqual(trees.count("worktree "), 1)
 
+    def test_real_retained_run_preserves_exact_artifact_set(self):
+        import issue213_gate_orchestration as gate
+        root, tests = fixture(self, {
+            "test_retained_progress.py": "import unittest\nclass R(unittest.TestCase):\n def test_ok(self): pass\n",
+        })
+        retained = root / "retained"
+        result = runner.run_single_head_suite(root, tests_dir=tests, jobs=1,
+                                               retain_dir=retained)
+        self.assertTrue(result["ok"], result)
+        expected = {"summary.json"} | {
+            f"task-{task['index']}{suffix}" for task in result["tasks"]
+            for suffix in gate.RETAINED_TASK_SUFFIXES}
+        self.assertEqual({p.name for p in retained.iterdir()}, expected)
+        self.assertEqual(gate._retain_directory_state(retained, len(result["tasks"])), "complete")
+
     def test_collect_all_intentionally_finishes_later_tests_and_queued_tasks(self):
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as temporary:
