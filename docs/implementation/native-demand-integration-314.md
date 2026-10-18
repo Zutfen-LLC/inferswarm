@@ -265,3 +265,35 @@ preserved. No real service, native build, model read or hardware operation was
 performed. This is a correction to the existing opt-in path, with no change to
 capability, accepted identity, frozen limits or execution authority; managed
 status declarations remain unchanged.
+
+## Demand guard and receipt follow-up (from merged `54155b94`)
+
+The reported physical attempt remains a historical STOP without a published
+profile. Its exact log diagnostic, `failed to allocate graph, reserving
+(backend_ids_changed = 1)`, is the pinned scheduler's Debug reserve-and-retry
+message (`ggml_backend_sched_alloc_splits`); the subsequent terminal error is
+`failed to allocate graph` and returns failure. The guard now removes only that
+exact diagnostic text before scanning the remaining tail. Adjacent or combined
+allocator/device errors still stop, as do the unchanged cgroup OOM, resource,
+deadline and process-loss checks. No other reservation wording is exempted.
+
+Demand admission and dispatch share a record attached to the campaign result
+before fallible admission. It distinguishes enabled from attempted, records an
+acknowledged spawn when available, and survives exceptions. The final retained
+session report records the actual failure or guard STOP; an enabled capture that
+never launched is not reported as disabled. Only a completed, retained export
+is EXPORTED, including when an unrelated later campaign step fails.
+
+Launch, monitor and retention use the existing owned `demand.log` path. If the
+export-directory listing contains that same registered log, retention reads it
+once through the existing bounded log-tail path, avoiding a filename collision.
+Other export entries retain their existing refusal and size rules.
+
+Focused tests use the production guard, runner, lifecycle and evidence store
+with host/service transports faked. They cover the exact diagnostic, terminal
+and combined failures, independent OOM, failures before and after spawn, durable
+attempt reporting, default-off behavior, and actual log readback. No native
+build, hardware/model execution or new physical result is part of this change.
+Native composition, placement, thread settings, workload, capture/observer
+limits, accepted identities and execution authority are unchanged, so managed
+project status requires no update.

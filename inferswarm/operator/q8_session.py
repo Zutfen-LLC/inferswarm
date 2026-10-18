@@ -147,10 +147,12 @@ class SystemdSessionGuard(SystemdCampaignGuard):
         return sample
 
     def _demand_outcome(self, result):
-        """Honest demand-capture outcome; absent means default-off, not zero."""
+        """Only an absent opt-in is disabled; failed attempts stay visible."""
         record = result.get('demand_capture')
         if record is None:
-            return 'disabled'
+            return 'disabled' if getattr(self, 'demand_profile', None) is None else 'NOT-ATTEMPTED'
+        if record.get('status') in ('GUARD-STOPPED', 'INTERRUPTED', 'NOT-STARTED'):
+            return 'NOT-ATTEMPTED' if record['status'] == 'NOT-STARTED' else record['status']
         if record.get('status') == 'FINISHED' and record.get('export_status') == 'retained':
             return 'EXPORTED'
         status = record.get('export_status')
@@ -160,6 +162,17 @@ class SystemdSessionGuard(SystemdCampaignGuard):
         return 'FAILED'
 
     def report(self, result, *, failure=None, interrupted=None, cleanup=None):
+        if self.demand_profile is not None:
+            record = result.setdefault('demand_capture', dict(
+                enabled=True, attempted=False, status='NOT-STARTED',
+                bound_request=self.demand_profile.request_index))
+            terminal = failure if failure is not None else interrupted
+            if terminal is not None and record.get('status') != 'FINISHED':
+                record.update(status=('GUARD-STOPPED' if self._monitor_error is not None
+                                      else ('INTERRUPTED' if interrupted is not None else 'FAILED')),
+                    failure=dict(type=type(terminal).__name__, reason=str(terminal)))
+                record.setdefault('ended_monotonic', self.clock())
+                record.setdefault('ended_at', datetime.now(timezone.utc).isoformat())
         refused = 'observation_refusal' in result
         complete = (len(self.request_records) == self.session.count
                     and all(row['status'] == 'COMPLETED' for row in self.request_records))
