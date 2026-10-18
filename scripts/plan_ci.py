@@ -23,6 +23,9 @@ Usage::
     # Explicit paths on the command line
     python3 scripts/plan_ci.py --mode pr -- path1 path2 ...
 
+    # Final merge qualification (native interfaces escalate to full)
+    python3 scripts/plan_ci.py --mode merge -- path/to/changed/file
+
     # Force full regression (push-to-main, manual, or fail-closed escalation)
     python3 scripts/plan_ci.py --mode full
 
@@ -1207,12 +1210,16 @@ NATIVE_INTERFACE_SUFFIXES = ("_source_patch.py", ".c", ".cc", ".cpp", ".h", ".hp
 
 
 def high_risk_path(path):
-    name = Path(path).name
+    """Native interfaces require full qualification at the final merge gate."""
     return (path in NATIVE_INTERFACE_PATHS
             or path.startswith(NATIVE_INTERFACE_PREFIXES)
             or path.endswith(NATIVE_INTERFACE_SUFFIXES)
-            or name == "CMakeLists.txt"
-            or (name.startswith("requirements") and name.endswith(".txt")))
+            or Path(path).name == "CMakeLists.txt")
+
+
+def dependency_path(path):
+    name = Path(path).name
+    return name.startswith("requirements") and name.endswith(".txt")
 
 
 def _module_groups():
@@ -1300,9 +1307,12 @@ def _validate_paths(paths):
 def plan(changed_paths, mode="pr", force_full_reason=None):
     """Compute the CI plan for a changed-path set.
 
+    ``pr`` retains ordinary affected-group selection. ``merge`` adds native
+    full-qualification requirements at handoff; dependencies, policy and unknown
+    paths remain full in either mode. ``full`` selects every group explicitly.
     Deterministic: same inputs -> identical plan dict.
     """
-    if mode not in ("pr", "full"):
+    if mode not in ("pr", "merge", "full"):
         raise ValueError(f"unknown mode: {mode!r}")
 
     reasons = []
@@ -1345,9 +1355,12 @@ def plan(changed_paths, mode="pr", force_full_reason=None):
                     reasons.append(
                         "fail-closed: repository authority surface changed: "
                         f"{path}")
-                if high_risk_path(path):
+                if dependency_path(path):
                     full = True
-                    reasons.append(f"fail-closed: native/build/dependency interface changed: {path}")
+                    reasons.append(f"fail-closed: dependency interface changed: {path}")
+                if mode == "merge" and high_risk_path(path):
+                    full = True
+                    reasons.append(f"fail-closed: merge qualification native/build interface changed: {path}")
                 pgroups, classified = classify_path(path)
                 if not classified:
                     full = True
@@ -1449,8 +1462,8 @@ def self_check():
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--mode", choices=("pr", "full"), default="pr",
-                    help="pr: classify changed paths; full: force full regression")
+    ap.add_argument("--mode", choices=("pr", "merge", "full"), default="pr",
+                    help="pr: CI impact selection; merge: final qualification risk; full: all groups")
     ap.add_argument("--self-check", action="store_true",
                     help="validate the group registry and exit")
     ap.add_argument("--emit-registry", action="store_true",

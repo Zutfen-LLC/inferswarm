@@ -74,6 +74,15 @@ identity rejects changed bytes, operator data freezes and round-trips, and the
 numerical core rejects nonfinite input. These tiny synthetic checks supplement
 repository integrity; they provide no native or numerical qualification claim.
 
+The existing planner has two scoped inputs: `--mode pr` selects ordinary CI
+consumer groups; `--mode merge` adds native source/build full-qualification
+requirements for final handoff. `handoff --risk-based` always requests merge
+mode. A native PR may therefore have affected-only ordinary CI and still require
+full Final CPU qualification before merge. Dependency, validation-policy and
+unknown/malformed-path escalation apply in both modes. Explicit `--mode full`
+continues to select every group. This preserves ordinary impact selection and
+frozen consumer-registration tests without weakening final qualification.
+
 After review, run the existing handoff with `--risk-based` from a clean checkout
 of the exact reviewed head (fetch the current PR base commit first):
 

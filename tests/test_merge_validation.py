@@ -42,9 +42,22 @@ class Selection(unittest.TestCase):
                      'docs/campaign-gate-ordering.md', '.github/workflows/ci.yml',
                      'unclassified/new.py'):
             with self.subTest(path=path):
-                plan = plan_ci.plan([path])
+                plan = plan_ci.plan([path], mode='merge')
                 self.assertTrue(plan['full_regression'])
                 self.assertEqual(plan['groups'], sorted(plan_ci.GROUP_TEST_MODULES))
+
+    def test_native_ci_selection_and_dependency_escalation_are_distinct(self):
+        for path in ('inferswarm/operator/native_observer/full_build.py',
+                     'tools/moe-overlap/build.py', 'scripts/issue280_source.py',
+                     'docs/investigations/vulkan-same-request-280/fixtures/recording.cpp'):
+            with self.subTest(path=path):
+                self.assertFalse(plan_ci.plan([path], mode='pr')['full_regression'])
+                self.assertTrue(plan_ci.plan([path], mode='merge')['full_regression'])
+        for path in ('docs/new-family/requirements.txt', 'requirements-test.txt',
+                     'scripts/merge_validation.py', 'unclassified/new.py'):
+            for mode in ('pr', 'merge'):
+                with self.subTest(path=path, mode=mode):
+                    self.assertTrue(plan_ci.plan([path], mode=mode)['full_regression'])
 
     def test_real_selected_population_exactly_matches_modules_and_smoke(self):
         groups = ['issue-99-103', 'repo-integrity']
@@ -146,6 +159,23 @@ class Handoff(unittest.TestCase):
         self.api.get_pull_mutator = None
         (self.root / 'README.md').write_text('dirty')
         with self.assertRaises(gate.GateOrderingError): self.status()
+
+    def test_native_merge_requires_full_proof_even_when_ci_is_targeted(self):
+        path = self.root / 'inferswarm/operator/native_control.cpp'
+        path.write_text('// native fixture\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'native change')
+        self.sha = self.git('rev-parse', 'HEAD')
+        self.head = make_request(self.sha)
+        self.api = world_for(self.sha)
+        self.api.pulls[7]['base']['sha'] = self.base
+        self.verifier = ci.HostedCiVerifier(self.api, ci.CANONICAL_REPOSITORY, pr_number=7)
+        paths = merge._changed_paths(self.root, self.base, self.sha)
+        self.assertFalse(plan_ci.plan(paths, mode='pr')['full_regression'])
+        result = self.status()
+        self.assertEqual(result['validation_scope'], 'full')
+        self.assertTrue(result['full_qualification_required'])
+        self.assertFalse(result['handoff_complete'])
 
     def test_policy_change_requires_existing_full_proof_and_preserves_contract(self):
         path = self.root / 'scripts/plan_ci.py'

@@ -69,7 +69,7 @@ def handoff_status(final_head, *, root, ci_verifier, finalizer_ok,
             or before['head']['sha'] != final_head.git_commit_sha):
         raise ValueError('PR is not open at the checked-out exact head')
     paths = _changed_paths(root, before['base']['sha'], final_head.git_commit_sha)
-    plan = plan_ci.plan(paths)
+    plan = plan_ci.plan(paths, mode='merge')
     print(f"[merge-validation] receipt assembly only: head={final_head.git_commit_sha} "
           f"scope={plan['mode']} selected={plan['groups']}", file=sys.stderr, flush=True)
     if plan['full_regression']:
