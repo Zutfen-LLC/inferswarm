@@ -345,6 +345,180 @@ class NativeMoEIntegration(unittest.TestCase):
                 comparator.compare(serial, overlap)
 
 
+class Layer7BenchContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('layer7_contracts', ROOT/'tools/native-moe-overlap/layer7_bench.py')
+        cls.tool = importlib.util.module_from_spec(spec); spec.loader.exec_module(cls.tool)
+
+    def routing_text(self):
+        ids = '136,17,394,231,54,3,290,411,74,277'
+        bits = ','.join(f'{struct.unpack("<I", struct.pack("<f", (10-i)/55))[0]:08x}' for i in range(10))
+        return '\n'.join(f'IS314_STEP layer=7 phase=decode step={step} hot=5 cold=5 dispatch_ms=1 ids={ids} weight_bits={bits}'
+                         for step in (*range(8,39), *range(84,115)))
+
+    def test_captured_routing_preserves_two_windows_slot_order_and_weight_bits(self):
+        rows = self.tool.parse_routing(self.routing_text())
+        self.assertEqual(len(rows), 62)
+        self.assertEqual([rows[0]['label'], rows[-1]['label']], ['request2:step8', 'request5:step114'])
+        self.assertEqual(rows[0]['ids'], [136,17,394,231,54,3,290,411,74,277])
+        self.assertEqual(len(set(rows[0]['weight_bits'])), 10)
+        self.assertEqual(set(rows[0]), {'label', 'ids', 'weight_bits'})
+
+    def test_captured_routing_rejects_omissions_duplicates_and_invalid_weights(self):
+        text = self.routing_text()
+        first = self.tool.parse_routing(text)[0]['weight_bits'][0]
+        for bad in (text.split('\n',1)[1], text+'\n'+text.splitlines()[0],
+                    text.replace('136,17', '136,136'), text.replace('hot=5 cold=5', 'hot=4 cold=6'),
+                    text.replace(first, '7fc00000')):
+            with self.subTest(bad=bad[:100]), self.assertRaises(ValueError):
+                self.tool.parse_routing(bad)
+
+    def test_result_refuses_changed_input_hash_and_wrong_order(self):
+        rows = [{'type':'setup','comparator':self.tool.comparison_contract('cpu-loopback'),'comparison_mode':'cpu-loopback'}]
+        for case, hot in (('mixed',5), ('all-cold',0)):
+            rows.append(dict(type='pair',case=case,warmup=False,pair=0,order='AB',
+                input_sha256='a'*64,routing_sha256='b'*64,ids=[136,17,394,231,54,3,290,411,74,277] if hot else list(range(10)),
+                weight_bits=['3dcccccd']*10,valid=True,correctness={'pass':True,'finite':True,'exact_equal':True,'max_abs':0,'max_ratio':0,'rms':0,'relative_l2':0},shared_nonzero=True,experts_nonzero=True,hot=hot,cold=10-hot,
+                A=dict(total_layer_ms=1,order=0,input_sha256='a'*64,routing_sha256='b'*64,hot=0,cold=10),
+                B=dict(total_layer_ms=2,owner=123,order=1,input_sha256='a'*64,routing_sha256='b'*64,hot=hot,cold=10-hot)))
+        rows.append(dict(type='summary',valid=True,timing_comparison_valid=True,measured_pairs=2))
+        self.assertTrue(self.tool.validate_result(rows,1,0)['valid'])
+        with self.assertRaisesRegex(ValueError,'comparator'):
+            self.tool.validate_result(rows,1,0,'cpu-cuda')
+        import copy
+        for field, value in (('f32_round',0.1),('association_multiplier',9),('mode','cpu-cuda')):
+            bad=copy.deepcopy(rows);bad[0]['comparator'][field]=value
+            with self.subTest(contract_field=field), self.assertRaisesRegex(ValueError,'comparator'):
+                self.tool.validate_result(bad,1,0)
+        bad=copy.deepcopy(rows);bad[1]['correctness']['max_ratio']=2
+        with self.assertRaisesRegex(ValueError,'comparator metrics'):
+            self.tool.validate_result(bad,1,0)
+        for field, value in (('input_sha256','c'*64), ('routing_sha256','c'*64), ('order',0)):
+            import copy
+            bad=copy.deepcopy(rows);bad[1]['B'][field]=value
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError,'matched input/routing/order'):
+                self.tool.validate_result(bad,1,0)
+
+    def test_result_binds_frozen_comparator_and_requested_mode(self):
+        # A native boolean is not a substitute for the requested contract.
+        rows = [{'type': 'setup', 'comparator': 'wrong', 'comparison_mode': 'cpu-cuda'},
+                {'type': 'summary', 'valid': True, 'timing_comparison_valid': True, 'measured_pairs': 0}]
+        with self.assertRaisesRegex(ValueError, 'comparator'):
+            self.tool.validate_result(rows, 1, 0)
+
+    def test_recipe_cleanup_terminal_paths_with_fake_ssh(self):
+        import textwrap
+        # Only external commands are faked; execute the actual shell traps,
+        # orchestration and termination requests. No SSH/network/GPU operation.
+        for mode in ('success', 'refusal', 'TERM', 'INT', 'cleanup-failure', 'cleanup-unknown', 'startup-failure'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); commands = root/'commands'; commands.mkdir()
+                state = root/'state'; state.mkdir()
+                def script(name, body):
+                    path = commands/name
+                    path.write_text('#!'+sys.executable+'\n'+textwrap.dedent(body)); path.chmod(0o755)
+                script('hostname', "print('inferswarm05')")
+                script('ss', "print('LISTEN')")
+                script('ssh', '''
+                    import os,pathlib,signal,sys,time
+                    s=pathlib.Path(os.environ['FAKE_STATE']); args=sys.argv[1:]
+                    with (s/'calls').open('a') as f:f.write(repr(args)+'\\n')
+                    if '-N' in args:
+                        import socket
+                        sock=socket.socket(socket.AF_UNIX);sock.bind(args[args.index('-S')+1])
+                        while True:time.sleep(.02)
+                    data=sys.stdin.read()
+                    if 'cleanup' in args:
+                        (s/'cleanup-requested').write_text(data)
+                        if os.environ['FAKE_MODE']=='cleanup-unknown':sys.exit(255)
+                        (s/'alive').unlink(missing_ok=True)
+                        print('{"cleanup":"failed"}' if os.environ['FAKE_MODE']=='cleanup-failure' else '{"cleanup":"verified","owned_worker_absent":true,"owned_listener_absent":true}',flush=True)
+                        sys.exit(7 if os.environ['FAKE_MODE']=='cleanup-failure' else 0)
+                    (s/'alive').write_text('owned')
+                    if os.environ['FAKE_MODE']=='startup-failure':sys.exit(9)
+                    print('H5_LAYER7_WORKER_READY pid=123',flush=True)
+                    while (s/'alive').exists():time.sleep(.02)
+                ''')
+                script('python3', '''
+                    import os,pathlib,sys,time
+                    s=pathlib.Path(os.environ['FAKE_STATE'])
+                    if sys.argv[1].endswith('hot-build-composed.py'):
+                        pathlib.Path(sys.argv[sys.argv.index('--output')+1]).mkdir();sys.exit(0)
+                    if sys.argv[1].endswith('layer7_bench.py'):
+                        (s/'benchmark').write_text(' '.join(sys.argv))
+                        if os.environ['FAKE_MODE'] in ('TERM','INT'):
+                            while True:time.sleep(.02)
+                        sys.exit(2 if os.environ['FAKE_MODE']=='refusal' else 0)
+                    os.execv(sys.executable,[sys.executable,*sys.argv[1:]])
+                ''')
+                archive=root/'source.tar';archive.write_text('test-only')
+                env=dict(os.environ, PATH=str(commands)+':'+os.environ['PATH'], FAKE_STATE=str(state), FAKE_MODE=mode)
+                log=root/'log'
+                with log.open('w') as stream:
+                    child=subprocess.Popen(['bash',str(ROOT/'tools/native-moe-overlap/layer7-cpu05.sh'),
+                        str(ROOT),str(archive),str(root/'build'),str(root/'result')],env=env,stdout=stream,stderr=stream,start_new_session=True)
+                    try:
+                        if mode in ('TERM','INT'):
+                            deadline=time.monotonic()+8
+                            while not (state/'benchmark').exists() and child.poll() is None and time.monotonic()<deadline:time.sleep(.02)
+                            self.assertTrue((state/'benchmark').exists(),log.read_text())
+                            child.send_signal(getattr(signal,'SIG'+mode))
+                        child.wait(timeout=15)
+                    finally:
+                        if child.poll() is None:os.killpg(child.pid,signal.SIGKILL);child.wait()
+                self.assertTrue((state/'cleanup-requested').is_file(),log.read_text())
+                self.assertEqual((state/'alive').exists(),mode=='cleanup-unknown',log.read_text())
+                self.assertEqual(child.returncode,0 if mode=='success' else (130 if mode=='INT' else 143 if mode=='TERM' else 2 if mode=='refusal' else child.returncode))
+                if mode!='success':self.assertNotEqual(child.returncode,0,log.read_text())
+                cleanup=json.loads((root/'result'/'cleanup.json').read_text())
+                self.assertEqual(cleanup['cleanup'],'failed' if mode=='cleanup-failure' else 'unknown' if mode=='cleanup-unknown' else 'verified')
+                if (state/'benchmark').exists():self.assertIn('--comparison-mode cpu-cuda',(state/'benchmark').read_text())
+                calls=(state/'calls').read_text();self.assertEqual(calls.count("'-L'"),1);self.assertNotIn("'-R'",calls)
+                self.assertIn('H5_LAYER7_OWNER_TOKEN',(state/'cleanup-requested').read_text())
+
+    def test_remote_cleanup_real_groups_preserves_unrelated_and_refuses_wrong_identity(self):
+        from unittest.mock import patch
+        spec=importlib.util.spec_from_file_location('layer7_remote_test',ROOT/'tools/native-moe-overlap/layer7_remote.py')
+        remote=importlib.util.module_from_spec(spec);spec.loader.exec_module(remote)
+        with tempfile.TemporaryDirectory() as temp:
+            directory=Path(temp);token='a'*32
+            unrelated=subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'],start_new_session=True)
+            child=None
+            try:
+                command=[sys.executable,'-c',
+                    'import subprocess,sys,time; subprocess.Popen([sys.executable,"-c","import signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);time.sleep(30)"]);time.sleep(30)']
+                child,record=remote.spawn_owned(directory,token,command)
+                deadline=time.monotonic()+5
+                while len(remote.members(child.pid))<2 and time.monotonic()<deadline:time.sleep(.02)
+                self.assertEqual(len(remote.members(child.pid)),2)
+                # PID alone cannot authorize signaling, even with the right token.
+                wrong=json.loads((directory/'identity.json').read_text());wrong['root']['start_time']='wrong'
+                (directory/'identity.json').write_text(json.dumps(wrong))
+                with self.assertRaisesRegex(ValueError,'identity changed'):
+                    remote.terminate_owned(directory,token)
+                self.assertIsNone(child.poll());self.assertIsNone(unrelated.poll())
+                (directory/'identity.json').write_text(json.dumps(record))
+                with patch.object(remote.subprocess,'check_output',return_value=f'LISTEN users:(("preexisting",pid={unrelated.pid},fd=3))'):
+                    result=remote.terminate_owned(directory,token)
+                self.assertEqual(result['cleanup'],'verified');self.assertTrue(result['owned_worker_absent'])
+                self.assertTrue(result['owned_listener_absent']);self.assertTrue(result['unrelated_listener_preserved'])
+                self.assertFalse(remote.members(child.pid));self.assertIsNone(unrelated.poll())
+                child.wait(timeout=2)
+            finally:
+                if child:
+                    with contextlib.suppress(ProcessLookupError):os.killpg(child.pid,signal.SIGKILL)
+                    child.wait(timeout=2)
+                unrelated.terminate();unrelated.wait(timeout=2)
+
+    def test_captured_archive_identity_is_checked_before_reading_members(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'wrong.tar.gz'; path.write_bytes(b'not the retained archive')
+            with self.assertRaisesRegex(ValueError, 'SHA-256'):
+                self.tool.extract_routing(path, Path(temp)/'routing.json')
+            self.assertFalse((Path(temp)/'routing.json').exists())
+
+
 class NativeHotExperts(unittest.TestCase):
     """Real source FFN arithmetic vs original CPU, structural wire separately."""
     @classmethod
@@ -438,6 +612,131 @@ class NativeHotExperts(unittest.TestCase):
         self.assertEqual(rows[-1], {'released': True})
         return rows[:-1]
 
+    def test_matched_comparator_native_probe_uses_legacy_formula(self):
+        for mode in ('cpu-loopback','cpu-cuda'):
+            with self.subTest(mode=mode):
+                result=subprocess.run([str(self.build/'bin/native-layer7-bench'),'--endpoint','unused:1',
+                    '--work-dir',str(self.root/'unused-probe'),'--small-test','--comparison-mode',mode,
+                    '--control','comparator-probe'],capture_output=True,text=True,timeout=5)
+                self.assertEqual(result.returncode,0,result.stderr)
+                p=json.loads(result.stdout)
+                self.assertTrue(p['adjacent']['pass']);self.assertFalse(p['adjacent']['exact_equal'])
+                self.assertGreater(p['adjacent']['max_ratio'],0);self.assertLess(p['adjacent']['max_ratio'],1)
+                self.assertFalse(p['excess']['pass']);self.assertGreater(p['excess']['max_ratio'],1)
+                self.assertTrue(p['zero_planes']['pass'])
+                for key in ('nonfinite_output','nonfinite_plane','nonfinite_shared'):
+                    self.assertFalse(p[key]['pass']);self.assertFalse(p[key]['finite'])
+
+    def test_matched_weight_inventory_and_census_bind_all_actual_weights(self):
+        spec=importlib.util.spec_from_file_location('weight_supervisor', ROOT/'tools/native-moe-overlap/layer7_bench.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        receipt=module.run(self.build.parent/'hot-candidate-receipt.json',self.root/'weights-run',
+            loopback=True,small_test=True,pairs=1,warmup=0,timeout=20)
+        self.assertTrue(receipt['valid'],receipt.get('error'))
+        run=self.root/'weights-run';setup=json.loads((run/'stdout.jsonl').read_text().splitlines()[0])
+        self.assertIn('native/weights.json',receipt['artifacts'])
+        self.assertEqual(setup['weights_sha256'],module.digest(run/'native/weights.json'))
+        inventory=json.loads((run/'native/weights.json').read_text())
+        expected={f'blk.7.ffn_{kind}_exps.weight':(8,[32,32,512,1],1088*512) for kind in ('gate','up','down')}
+        expected.update({f'blk.7.ffn_{kind}_shexp.weight':(8,[32,32,1,1],1088) for kind in ('gate','up','down')})
+        expected.update({'blk.7.ffn_gate_inp_shexp.weight':(0,[32,1,1,1],128),'blk.7.ffn_gate_inp.weight':(0,[32,512,1,1],32*512*4)})
+        self.assertEqual({r['name'] for r in inventory['tensors']},set(expected))
+        for row in inventory['tensors']:
+            self.assertEqual((row['ggml_type'],row['shape'],row['byte_length']),expected[row['name']])
+            self.assertRegex(row['sha256'],r'^[0-9a-f]{64}$')
+        native_spec=json.loads((run/'native/spec.json').read_text())
+        for row in native_spec['tensors']:
+            self.assertEqual(row['source_sha256'],next(r['sha256'] for r in inventory['tensors'] if r['name']==row['source_name']))
+        for path in ('native/weights.json','native/spec.json','native/assigned.txt'):
+            self.assertEqual(receipt['artifacts'][path],module.digest(run/path))
+        module.validate_weights(run/'native',setup)
+        (run/'native/weights.json').write_text('{}')
+        with self.assertRaisesRegex(ValueError,'weight.*identity'):
+            module.validate_weights(run/'native',setup)
+
+    def test_matched_cuda_mode_actual_gate_detects_omissions(self):
+        for control in ('', 'missing-shared','missing-expert','bad-partition'):
+            with self.subTest(control=control), self.worker() as proxy:
+                args=[str(self.build/'bin/native-layer7-bench'),'--endpoint',f'127.0.0.1:{proxy.port}',
+                    '--work-dir',str(self.root/('cuda-'+(control or 'complete'))),'--small-test',
+                    '--pairs','1','--warmup','0','--comparison-mode','cpu-cuda']
+                if control:args.extend(['--control',control])
+                result=subprocess.run(args,capture_output=True,text=True,timeout=20)
+                rows=[json.loads(x) for x in result.stdout.splitlines()]
+                self.assertEqual(result.returncode,2 if control else 0,result.stderr)
+                self.assertEqual(rows[-1]['valid'],not bool(control))
+                self.assertEqual(rows[0]['comparison_mode'],'cpu-cuda')
+                if control in ('missing-expert','missing-shared'):
+                    metrics=next(x['correctness'] for x in rows if x['type']=='pair')
+                    self.assertTrue(metrics['finite']);self.assertFalse(metrics['pass']);self.assertGreater(metrics['max_ratio'],1)
+
+    def test_matched_layer7_benchmark_real_graphs_and_guard(self):
+        executable = self.build / 'bin/native-layer7-bench'
+        self.assertTrue(executable.is_file(), 'matched production graph benchmark target missing')
+        with self.worker() as proxy:
+            work = self.root / 'matched'
+            result = subprocess.run([str(executable), '--endpoint', f'127.0.0.1:{proxy.port}',
+                '--work-dir', str(work), '--small-test', '--warmup', '1', '--pairs', '3'],
+                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr[-4000:])
+        rows = [json.loads(line) for line in result.stdout.splitlines()]
+        summary = rows[-1]
+        self.assertTrue(summary['valid'])
+        self.assertEqual(summary['measured_pairs'], 6)
+        pairs = [r for r in rows if r['type'] == 'pair' and not r['warmup']]
+        self.assertEqual(len(pairs), 6)
+        self.assertEqual({r['case'] for r in pairs}, {'mixed', 'all-cold'})
+        self.assertEqual({r['order'] for r in pairs}, {'AB', 'BA'})
+        self.assertEqual(len({r['input_sha256'] for r in pairs}), 3)
+        self.assertTrue(all(r['correctness']['pass'] and r['shared_nonzero'] for r in pairs))
+        self.assertTrue(all((r['hot'], r['cold']) == ((5,5) if r['case']=='mixed' else (0,10)) for r in pairs))
+        self.assertTrue(all(len(set(r['weight_bits'])) > 1 and len(set(r['ids'])) == 10 for r in pairs))
+        self.assertEqual(result.stderr.count('IS314_SETUP'), 1)
+        self.assertEqual(proxy.connections, 1)
+        uploads = [r for r in proxy.requests if r.get('tensor','').startswith('is314.')]
+        self.assertEqual(len(uploads), 3)
+        self.assertTrue(all(r['type'] == 8 if 'type' in r else True for r in uploads))
+        self.assertTrue((work/'assigned.txt').is_file())
+        for control in ('missing-shared', 'missing-expert', 'bad-partition'):
+            with self.subTest(control=control), self.worker() as proxy:
+                failed = subprocess.run([str(executable), '--endpoint', f'127.0.0.1:{proxy.port}',
+                    '--work-dir', str(self.root / control), '--small-test', '--warmup', '0',
+                    '--pairs', '1', '--control', control], capture_output=True, text=True, timeout=20)
+                self.assertNotEqual(failed.returncode, 0)
+                self.assertFalse(json.loads(failed.stdout.splitlines()[-1])['valid'])
+
+    def test_matched_default_native_router_keeps_source_behavior(self):
+        with self.worker() as proxy:
+            result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
+                '--work-dir', str(self.root/'native-router'), '--small-test', '--warmup', '1', '--pairs', '3',
+                '--control', 'native-routing'], capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr[-4000:])
+        rows = [json.loads(s) for s in result.stdout.splitlines()]
+        self.assertFalse(rows[0]['routing_boundary_cut'])
+        self.assertTrue(rows[-1]['valid'])
+        self.assertEqual({r['routing_label'] for r in rows if r['type']=='pair'}, {'native-router-regression'})
+        self.assertTrue(all(r['correctness']['pass'] for r in rows if r['type']=='pair'))
+
+    def test_matched_supervisor_records_actual_candidate_and_timeout(self):
+        path = ROOT / 'tools/native-moe-overlap/layer7_bench.py'
+        self.assertTrue(path.is_file(), 'bounded benchmark supervisor missing')
+        spec = importlib.util.spec_from_file_location('matched_bench', path)
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with self.worker() as proxy:
+            receipt = module.run(self.build.parent/'hot-candidate-receipt.json', self.root/'supervised',
+                endpoint=f'127.0.0.1:{proxy.port}', small_test=True, pairs=2, warmup=1, timeout=20)
+        self.assertTrue(receipt['valid'])
+        self.assertEqual(receipt['candidate']['executable_sha256'], module.digest(self.build/'bin/native-layer7-bench'))
+        self.assertFalse(receipt['physical_gpu_evidence'])
+        self.assertTrue(receipt['candidate']['compiler_versions'])
+        self.assertTrue(receipt['candidate']['libraries'])
+        with self.worker('stall') as proxy:
+            failed = module.run(self.build.parent/'hot-candidate-receipt.json', self.root/'supervised-timeout',
+                endpoint=f'127.0.0.1:{proxy.port}', small_test=True, pairs=1, warmup=0, timeout=1)
+        self.assertFalse(failed['valid'])
+        self.assertTrue(failed['timed_out'])
+        self.assertFalse(failed['timing_comparison_valid'])
+
     def test_hot_candidate_builder_is_additive(self):
         self.assertEqual(self.mod.optimized.optimized_options(),self.mod.build_options())
         receipt = json.loads((self.build.parent/'hot-candidate-receipt.json').read_text())
@@ -445,6 +744,12 @@ class NativeHotExperts(unittest.TestCase):
         self.assertTrue(receipt['backend_libraries'])
         self.assertTrue(receipt['source_inputs'])
         self.assertTrue(receipt['compiler_versions']['CXX']['sha256'])
+        self.assertIn('native-layer7-bench', receipt['roles'])
+        targets = receipt['commands'][-1]
+        if 'native-hot-fixture' not in receipt['roles']:
+            self.assertEqual(targets[targets.index('--target')+1:targets.index('-j')],
+                             ['native-layer7-bench', 'rpc-worker'])
+        self.assertIn(str(ROOT/'tools/native-moe-overlap/layer7_bench.cpp'), receipt['source_inputs'])
 
     def test_all_hot_counts_source_order_arithmetic_and_reuse(self):
         with self.worker() as proxy: ordinary = self.rows(self.run_hot(proxy))

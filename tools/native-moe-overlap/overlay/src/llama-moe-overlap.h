@@ -12,6 +12,9 @@ struct llama_moe_overlap_config {
     int layer = -1;
     bool overlap = false;
     std::string capture_path; // optional bounded input/output comparison artifact
+    // Constructor-only layer microbenchmark cut. No environment/serving toggle.
+    // Both arms bind identical captured/synthetic routing, never activations.
+    const llama_hot_routing * benchmark_routing = nullptr;
     static llama_moe_overlap_config from_env(int n_layer);
 };
 

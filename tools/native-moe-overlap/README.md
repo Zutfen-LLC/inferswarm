@@ -1,5 +1,11 @@
 # One native qwen4exp layer (#309)
 
+For the bounded matched **ordinary CPU vs five-hot H5 layer-7** native target,
+local CPU-loopback command and future CPU05/GPU03 recipe, see
+[layer7-benchmark.md](layer7-benchmark.md). It uses synthetic weights/activations
+and optional captured routing only; it is not activation replay or a hardware
+performance result.
+
 Default-off experimental integration against llama.cpp
 `b29c606e28a01b1bc8c1351026a0fa6e616bf6c4`. This is the actual model's
 `graph::build_layer_ffn` seam, compiled into the native llama library/server.
