@@ -126,17 +126,29 @@ def comparison_helpers():
     return module
 
 
+def validate_frozen_model(plan):
+    """Hash the validated model in the frozen config identity representation."""
+    import hashlib
+    from .profiles import canonical
+    model = plan.model
+    identity = dict(source_id=model.source_id, revision=model.revision,
+        representation=model.representation, members=[
+            dict(name=name, sha256=sha256, size_bytes=size_bytes)
+            for name, sha256, size_bytes in model.members])
+    model_sha = hashlib.sha256(canonical(identity)).hexdigest()
+    if model_sha != comparison_helpers().MODEL_SHA256:
+        raise ValueError('frozen comparison model identity mismatch')
+    return model_sha
+
+
 def tokenize_hot_session(runner, guard, plan, base, client):
     """Actual admitted, already-loaded tokenizer; no extra model or inference."""
     import hashlib
     from .profiles import canonical
-    from .source import q8_source_payload
     helper = comparison_helpers()
     session = guard.session.payload()
     helper.validate_frozen_session(session)
-    model_sha = hashlib.sha256(canonical(q8_source_payload(plan)['model'])).hexdigest()
-    if model_sha != helper.MODEL_SHA256:
-        raise ValueError('frozen comparison model identity mismatch')
+    model_sha = validate_frozen_model(plan)
     receipt = dict(schema='is314-tokenizer-receipt/1', model_sha256=model_sha,
         session_sha256=guard.session.digest, tokenizer=dict(
             source_revision=helper.NATIVE_SOURCE, executable_sha256=client.runtime_sha256,

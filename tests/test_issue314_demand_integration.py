@@ -1863,40 +1863,88 @@ def _config314_recipe():
 
 
 class FrozenHotComparisonTests(unittest.TestCase):
+    def plan(self):
+        from inferswarm.operator.assigned_backing import HOT_BUILD_PAIR, role_identity
+        from inferswarm.operator.config import parse_config
+        from inferswarm.operator.plan import build_plan
+        from tests.issue299_fixture import NOW
+        from tests.test_issue311_cuda_backing import rejoin_profiles
+        from tests.test_issue313_two_gpu import two_gpu_mapping
+        raw, _ = two_gpu_mapping()
+        raw['strategy_options']['build_pair'] = HOT_BUILD_PAIR
+        for part in raw['participants']:
+            backend = 'cpu' if part['role'] == 'client' else 'cuda'
+            part['runtime_sha256'] = role_identity(part['role'], backend,
+                build_pair=HOT_BUILD_PAIR).executable_sha256
+        config = parse_config(rejoin_profiles(raw), now=NOW, profile_mode='replay')
+        return build_plan(config, now=NOW)
+
+    def test_frozen_model_preflight_refuses_identity_drift_before_tokenizer_io(self):
+        from dataclasses import replace
+        from inferswarm.operator.hot_experiment import validate_frozen_model, tokenize_hot_session
+        plan=self.plan()
+        model=plan.model
+        self.assertEqual(validate_frozen_model(plan),
+            'a13849d1ad98cff76713f7cd0f650be1217402d79588327815025bd7d42b48d1')
+        changed=[replace(model,source_id='other'),replace(model,revision='other'),
+                 replace(model,representation='other')]
+        name,sha,size=model.members[0]
+        changed.extend(replace(model,members=(member,)+model.members[1:]) for member in (
+            ('other.gguf',sha,size),(name,'0'*64,size),(name,sha,size+1)))
+        calls=[]
+        runner=SimpleNamespace(http=SimpleNamespace(post=lambda *a,**k:calls.append((a,k))))
+        guard=SimpleNamespace(session=validate_session(self.session()))
+        client=next(p for p in plan.participants if p.role=='client')
+        for changed_model in changed:
+            with self.subTest(model=changed_model):
+                bad=replace(plan,model=changed_model)
+                with self.assertRaisesRegex(ValueError,'frozen comparison model identity mismatch'):
+                    validate_frozen_model(bad)
+                with self.assertRaisesRegex(ValueError,'frozen comparison model identity mismatch'):
+                    tokenize_hot_session(runner,guard,bad,'http://owned',client)
+        self.assertEqual(calls,[])
+
     def test_real_runner_and_guard_tokenize_both_arms_before_request_boundary(self):
         from inferswarm.operator.runtime import OperatorRunner
-        from unittest.mock import patch
-        class RequestBoundary(Exception):
-            pass
+        from inferswarm.operator.source import q8_source_payload
         helper=self.helper()
-        model=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())['model']
+        plan=self.plan()
+        source_model=q8_source_payload(plan)['model']
+        self.assertTrue(all(type(row) is list for row in source_model['members']))
+        self.assertEqual(hashlib.sha256(_canonical314(source_model)).hexdigest(),
+            'bcf68992a91dbb0bed9d37414ceaee2813fbedea39990a2dba73bc066c9d41be')
+        runtime_sha=next(p.runtime_sha256 for p in plan.participants if p.role=='client')
         for arm in ('A','B'):
             with self.subTest(arm=arm):
                 guard,leases,rows=_make_guard_state(_ProbeCommands(),_FakeTransport())
                 guard.session=validate_session(helper.arm_sessions('/synthetic/prepared.json','2'*64)[arm])
                 guard.hot_request=SimpleNamespace(enabled=arm=='B')
-                calls=[]
+                calls=[]; saved={}
                 def post(url,body,timeout):
                     calls.append((url,body,timeout))
-                    return {'tokens':[1,2,3]}
+                    if url.endswith('/tokenize'):
+                        return {'tokens':[1,2,3]}
+                    return {'content':'fixture', 'stop':True, 'stop_type':'eos'}
                 runner=OperatorRunner(None,leases,SimpleNamespace(post=post),None)
-                runner.evidence=SimpleNamespace(save_session_json=lambda *args:True)
-                with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}), \
-                     patch.object(guard,'before_request',side_effect=RequestBoundary):
-                    with self.assertRaises(RequestBoundary):
-                        runner._execute_diagnostic_session(SimpleNamespace(plan_id='probe',digest='a'*64,
-                            selection='two-gpu'),guard,'http://owned',rows,[],{},None,
-                            SimpleNamespace(runtime_sha256='1'*64),None,[])
-                self.assertEqual(len(calls),5)
-                self.assertTrue(all(row[0]=='http://owned/tokenize' for row in calls))
+                runner.evidence=SimpleNamespace(save_session_json=lambda name,value:
+                    saved.__setitem__(name,value) or True)
+                result=runner._execute_diagnostic_session(plan,guard,'http://owned',rows,[],{},
+                    SimpleNamespace(poll=lambda:None),SimpleNamespace(
+                        execution_address='client-host',runtime_sha256=runtime_sha),None,[])
+                self.assertEqual([row[0] for row in calls],
+                    ['http://owned/tokenize']*5+['http://owned/completion']*5)
                 self.assertTrue(all(type(row[2]) is int and 1<=row[2]<=900 for row in calls))
-                self.assertEqual(guard.request_records,[])
-                self.assertEqual(len(guard.execution_result['actual_tokenizer']['requests']),5)
+                self.assertEqual([row['status'] for row in guard.request_records],['COMPLETED']*5)
+                receipt=saved['actual-tokenizer.json']
+                self.assertEqual(receipt,result['actual_tokenizer'])
+                self.assertEqual(receipt['model_sha256'],
+                    'a13849d1ad98cff76713f7cd0f650be1217402d79588327815025bd7d42b48d1')
+                self.assertEqual(receipt['tokenizer']['executable_sha256'],runtime_sha)
+                self.assertEqual(helper.validate_tokenizer_receipt(receipt,guard.session.payload()),[3]*5)
 
     def test_guard_uses_owned_server_tokenizer_before_inference(self):
         from inferswarm.operator.hot_experiment import tokenize_hot_session
         from inferswarm.operator.q8_session import validate_session
-        from unittest.mock import patch
         calls=[]
         def post(url,body,timeout):
             calls.append((url,body,timeout))
@@ -1908,19 +1956,17 @@ class FrozenHotComparisonTests(unittest.TestCase):
         guard.set_outer_start(100)
         runner=SimpleNamespace(http=SimpleNamespace(post=post),evidence=SimpleNamespace(
             save_session_json=lambda name,obj:saved.setdefault(name,obj)))
-        client=SimpleNamespace(runtime_sha256='1'*64)
-        model=json.loads((ROOT/'tools/native-hot-experts/capture-provenance.json').read_bytes())['model']
-        with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}):
-            receipt=tokenize_hot_session(runner,guard,None,'http://owned',client)
+        plan=self.plan()
+        client=next(p for p in plan.participants if p.role=='client')
+        receipt=tokenize_hot_session(runner,guard,plan,'http://owned',client)
         self.assertEqual(len(calls),5)
         self.assertTrue(all(x[0]=='http://owned/tokenize' for x in calls))
         self.assertTrue(all(x[1]['add_special'] is True and x[1]['parse_special'] is True for x in calls))
-        self.assertEqual(receipt['tokenizer']['executable_sha256'],'1'*64)
+        self.assertEqual(receipt['tokenizer']['executable_sha256'],client.runtime_sha256)
         self.assertIn('actual-tokenizer.json',saved)
         runner.http.post=lambda *args,**kwargs:{'tokens':list(range(129))}
-        with patch('inferswarm.operator.source.q8_source_payload',return_value={'model':model}):
-            with self.assertRaisesRegex(ValueError,'128'):
-                tokenize_hot_session(runner,guard,None,'http://owned',client)
+        with self.assertRaisesRegex(ValueError,'128'):
+            tokenize_hot_session(runner,guard,plan,'http://owned',client)
 
     def test_shared_clock_is_one_immutable_controller_boot_record(self):
         c=self.helper()
