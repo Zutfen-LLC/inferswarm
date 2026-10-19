@@ -61,6 +61,9 @@ maximum absolute difference, RMS and relative L2 difference at each stage. Gate
 and up are parallel inputs, so both can be first differing boundaries. This
 locates the first observed discrepancy; it does not establish a specific kernel
 cause or add another acceptance tolerance.
+The separate [offline arithmetic helper](layer7-arithmetic.md) can reconstruct
+the pinned gate/up quantized dot paths and test explicitly labeled activation
+byte hypotheses using the same captured inputs and banks.
 
 Always compare the final A/B output hashes with the supplied uninstrumented
 pair-13 capture. The tool accepts that older schema only for final output and
