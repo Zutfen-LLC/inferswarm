@@ -163,7 +163,11 @@
     "test_moe_overlap_prototype",
     "test_native_moe_overlap",
     "test_native_cache",
-    "test_moe_native_cache"
+    "test_moe_native_cache",
+    "test_factorial_check",
+    "test_factorial_rpc_transport",
+    "test_factorial_run",
+    "test_factorial_native"
    ]
   },
   "r8-qwen-lineage": {
@@ -1762,6 +1766,18 @@
   ],
   "tests/test_evidence_manifest_lifecycle.py": [
    "repo-integrity"
+  ],
+  "tests/test_factorial_check.py": [
+   "moe-overlap-prototype"
+  ],
+  "tests/test_factorial_native.py": [
+   "moe-overlap-prototype"
+  ],
+  "tests/test_factorial_rpc_transport.py": [
+   "moe-overlap-prototype"
+  ],
+  "tests/test_factorial_run.py": [
+   "moe-overlap-prototype"
   ],
   "tests/test_finalize_repository.py": [
    "repo-integrity"

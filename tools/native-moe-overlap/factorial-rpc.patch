@@ -1,0 +1,319 @@
+--- a/ggml/src/ggml-rpc/ggml-rpc.cpp
++++ b/ggml/src/ggml-rpc/ggml-rpc.cpp
+@@ -4,6 +4,8 @@
+ #include "ggml-backend-impl.h"
+ #include "ggml-cpp.h"
+ #include "transport.h"
++#include "factorial-rpc.h"
++#include "factorial-rpc-io.h"
+ extern "C" {
+ #include "hash/sha256/sha256.h"
+ }
+@@ -412,6 +414,13 @@
+     std::condition_variable cvar;
+ };
+
++struct factorial_set_group {
++    std::array<std::shared_ptr<rpc_msg_set_tensor_hash_req>, 3> headers;
++    is_factorial_io::frame frames[3] = {};
++    uint8_t accepted[3] = {};
++    uint64_t deadline_ns = 0;
++};
++
+ class rpc_dispatcher {
+ public:
+     rpc_dispatcher() {
+@@ -420,7 +429,12 @@
+     void send(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size);
+     void send(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size, void * output, size_t output_size);
+     void send_payload(std::shared_ptr<const void> header, size_t header_size, const void * data, size_t size);
+-    void send_async(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size);
++    void send_async(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size, uint64_t graph_uid = 0);
++    bool observation_begin(is_factorial_rpc_stats * stats);
++    bool observation_end();
++    is_factorial_rpc_stats * observation() { return observed.load(); }
++    void set_group(std::shared_ptr<factorial_set_group> group);
++
+     void send_async(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size, void * output, size_t output_size);
+
+     ggml_backend_event_t event_new(ggml_backend_dev_t dev);
+@@ -444,6 +458,10 @@
+         const void                  * payload = nullptr; // borrowed only by synchronous send_payload
+         size_t                        payload_size = 0;
+         std::promise<void>            completion;
++        std::shared_ptr<factorial_set_group> group;
++        is_factorial_rpc_stats       * observation = nullptr;
++        uint64_t                      enqueue_ns = 0;
++        uint64_t                      graph_uid = 0;
+     };
+     using rpc_msg_ptr   = std::shared_ptr<rpc_msg>;
+     using rpc_msg_queue = message_queue<rpc_msg_ptr>;
+@@ -451,6 +469,11 @@
+         rpc_msg_ptr              msg;
+         std::shared_future<void> sf;
+     };
++    void stamp(const rpc_msg_ptr & msg) {
++        msg->observation = observed.load();
++        if (msg->observation) msg->enqueue_ns = is_factorial_io::now_ns();
++    }
++    std::atomic<is_factorial_rpc_stats *> observed{nullptr};
+     rpc_msg_queue    queue;
+     socket_ptr       sock;
+     std::atomic_bool running;
+@@ -469,6 +492,7 @@
+     msg->input_size = input_size;
+     msg->output = nullptr;
+     msg->output_size = 0;
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
+     auto future = msg->completion.get_future();
+     future.wait();
+@@ -485,17 +509,20 @@
+     msg->output = nullptr;
+     msg->output_size = 0;
+     auto future = msg->completion.get_future();
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
+     future.wait();
+ }
+
+-void rpc_dispatcher::send_async(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size) {
++void rpc_dispatcher::send_async(enum rpc_cmd cmd, std::shared_ptr<const void> input, size_t input_size, uint64_t graph_uid) {
+     auto msg = std::make_shared<rpc_msg>();
+     msg->cmd = cmd;
++    msg->graph_uid = graph_uid;
+     msg->input = input;
+     msg->input_size = input_size;
+     msg->output = nullptr;
+     msg->output_size = 0;
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
+ }
+
+@@ -506,6 +533,7 @@
+     msg->input_size = input_size;
+     msg->output = output;
+     msg->output_size = output_size;
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
+     auto future = msg->completion.get_future();
+     future.wait();
+@@ -518,7 +546,41 @@
+     msg->input_size = input_size;
+     msg->output = output;
+     msg->output_size = output_size;
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
++}
++
++bool rpc_dispatcher::observation_begin(is_factorial_rpc_stats * stats) {
++    if (!stats || observed.load() || sock->factorial_tcp_fd() < 0) return false;
++    synchronize(); // All earlier response-bearing items have completed.
++    *stats = {};
++    stats->begin_ns = is_factorial_io::now_ns();
++    stats->timeout_ms = 5000;
++    is_factorial_rpc_stats * expected = nullptr;
++    return observed.compare_exchange_strong(expected, stats);
++}
++
++bool rpc_dispatcher::observation_end() {
++    auto * stats = observed.load();
++    if (!stats) return false;
++    synchronize(); // Caller-owned stats and all borrowed data now quiescent.
++    stats->end_ns = is_factorial_io::now_ns();
++    observed.store(nullptr);
++    return true;
++}
++
++void rpc_dispatcher::set_group(std::shared_ptr<factorial_set_group> group) {
++    auto msg = std::make_shared<rpc_msg>();
++    msg->cmd = RPC_CMD_SET_TENSOR;
++    msg->input_size = msg->output_size = 0;
++    msg->output = nullptr;
++    msg->group = std::move(group);
++    stamp(msg);
++    msg->observation->group_enqueue_ns = msg->enqueue_ns;
++    for (auto & v : msg->observation->sets) v.enqueue_ns = msg->enqueue_ns;
++    auto future = msg->completion.get_future();
++    GGML_ASSERT(queue.push(msg));
++    future.wait(); // Own headers and borrow immutable data through every ACK.
+ }
+
+ ggml_backend_event_t rpc_dispatcher::event_new(ggml_backend_dev_t dev) {
+@@ -555,6 +617,7 @@
+     // to ensure all messages are processed, submit dummy message and wait for it to complete
+     auto msg = std::make_shared<rpc_msg>();
+     msg->cmd = RPC_CMD_NONE;
++    stamp(msg);
+     GGML_ASSERT(queue.push(msg));
+     msg->completion.get_future().wait();
+ }
+@@ -587,7 +650,62 @@
+         if (!queue.pop(&msg_ptr)) {
+             break;
+         }
+-        if (msg_ptr->cmd != RPC_CMD_NONE) {
++        if (msg_ptr->group) {
++            // One FIFO item owns this connection exclusively. Earlier items and
++            // their replies are complete; later graph commands cannot interleave.
++            auto & group = *msg_ptr->group;
++            auto & stats = *msg_ptr->observation;
++            stats.group_dequeue_ns = is_factorial_io::now_ns();
++            const auto status = is_factorial_io::exchange(sock->factorial_tcp_fd(),
++                group.frames, 3, stats.pipeline != 0, group.deadline_ns);
++            for (size_t i = 0; i < 3; ++i) {
++                const auto & wire = group.frames[i].timing;
++                auto & item = stats.sets[i];
++                item.write_begin_ns = wire.write_begin_ns;
++                item.write_end_ns = item.flush_ns = wire.write_end_ns; // TCP flush is a no-op.
++                item.ack_first_ns = wire.reply_first_ns;
++                item.ack_end_ns = wire.reply_end_ns;
++                item.wire_bytes = wire.sent_bytes;
++                stats.tx_wire_bytes += wire.sent_bytes;
++                stats.rx_wire_bytes += wire.received_bytes;
++                stats.tx_payload_bytes += item.payload_bytes;
++                stats.set_commands += wire.write_end_ns != 0;
++                stats.set_acks += wire.reply_end_ns != 0 && group.accepted[i] == 1;
++            }
++            stats.commands += stats.set_commands;
++            stats.group_end_ns = is_factorial_io::now_ns();
++            stats.failed = status != is_factorial_io::error::none;
++            if (stats.failed) GGML_ABORT("factorial SET admission failed: %s (connection shut down)", is_factorial_io::name(status));
++        } else if (msg_ptr->cmd != RPC_CMD_NONE && msg_ptr->observation) {
++            // Same bounded wire engine/instrumentation for both experiment arms.
++            auto & stats = *msg_ptr->observation;
++            GGML_ASSERT(!msg_ptr->payload); // Assigned-weight uploads never enter an observation.
++            is_factorial_io::frame frame = { (uint8_t) msg_ptr->cmd, msg_ptr->input.get(),
++                msg_ptr->input_size, nullptr, 0, msg_ptr->output != nullptr,
++                msg_ptr->output, msg_ptr->output_size, false, {} };
++            const auto status = is_factorial_io::exchange(sock->factorial_tcp_fd(), &frame, 1, false,
++                is_factorial_io::now_ns() + stats.timeout_ms * 1000000);
++            stats.tx_wire_bytes += frame.timing.sent_bytes;
++            stats.rx_wire_bytes += frame.timing.received_bytes;
++            stats.commands += frame.timing.write_end_ns != 0;
++            if (msg_ptr->cmd == RPC_CMD_GRAPH_COMPUTE || msg_ptr->cmd == RPC_CMD_GRAPH_RECOMPUTE) {
++                stats.graph_commands++;
++                stats.graph_enqueue_ns = msg_ptr->enqueue_ns;
++                stats.graph_write_begin_ns = frame.timing.write_begin_ns;
++                stats.graph_write_end_ns = frame.timing.write_end_ns;
++                stats.graph_uid = msg_ptr->graph_uid;
++                stats.graph_recompute = msg_ptr->cmd == RPC_CMD_GRAPH_RECOMPUTE;
++            } else if (msg_ptr->cmd == RPC_CMD_GET_TENSOR) {
++                stats.get_commands++;
++                stats.get_enqueue_ns = msg_ptr->enqueue_ns;
++                stats.get_write_begin_ns = frame.timing.write_begin_ns;
++                stats.get_write_end_ns = frame.timing.write_end_ns;
++                stats.get_first_byte_ns = frame.timing.reply_first_ns;
++                stats.get_last_byte_ns = frame.timing.reply_end_ns;
++            }
++            stats.failed = status != is_factorial_io::error::none;
++            if (stats.failed) GGML_ABORT("factorial RPC failed: %s (connection shut down)", is_factorial_io::name(status));
++        } else if (msg_ptr->cmd != RPC_CMD_NONE) {
+             if (msg_ptr->payload) {
+                 uint8_t cmd = RPC_CMD_SET_TENSOR;
+                 uint64_t size = msg_ptr->input_size + msg_ptr->payload_size;
+@@ -771,6 +889,59 @@
+         }
+     }
+     dispatcher.send_payload(request, sizeof(*request), data, size);
++}
++
++static void ggml_backend_rpc_buffer_set_tensor(ggml_backend_buffer_t, ggml_tensor *, const void *, size_t, size_t);
++
++bool is_factorial_rpc_begin(ggml_backend_t backend, is_factorial_rpc_stats * stats) {
++    if (!backend || !ggml_backend_is_rpc(backend)) return false;
++    return ((ggml_backend_rpc_context *)backend->context)->dispatcher->observation_begin(stats);
++}
++
++bool is_factorial_rpc_end(ggml_backend_t backend) {
++    if (!backend || !ggml_backend_is_rpc(backend)) return false;
++    return ((ggml_backend_rpc_context *)backend->context)->dispatcher->observation_end();
++}
++
++bool is_factorial_rpc_set3(ggml_backend_t backend, const is_factorial_rpc_tensor inputs[3], bool pipeline, uint32_t timeout_ms) {
++    if (!backend || !ggml_backend_is_rpc(backend) || !inputs || timeout_ms < 1 || timeout_ms > 10000) return false;
++    auto dispatcher = ((ggml_backend_rpc_context *)backend->context)->dispatcher;
++    auto * stats = dispatcher->observation();
++    if (!stats || stats->set_commands || stats->group_enqueue_ns) return false;
++    const uint64_t deadline_ns = is_factorial_io::now_ns() + uint64_t(timeout_ms) * 1000000;
++    // Validate the entire group before any staging. No immutable or foreign
++    // buffers, aliases, hash-cache probes, or arbitrary transfer sizes allowed.
++    for (int i = 0; i < 3; ++i) {
++        const auto & in = inputs[i];
++        if (!in.tensor || !in.tensor->buffer || !in.data || !in.size || in.size > 65536 ||
++            in.tensor->buffer->iface.set_tensor != ggml_backend_rpc_buffer_set_tensor ||
++            ggml_backend_buffer_get_usage(in.tensor->buffer) == GGML_BACKEND_BUFFER_USAGE_WEIGHTS ||
++            in.offset > ggml_nbytes(in.tensor) || in.size > ggml_nbytes(in.tensor) - in.offset) return false;
++        auto * ctx = (ggml_backend_rpc_buffer_context *)in.tensor->buffer->context;
++        if (ctx->dispatcher != dispatcher) return false;
++        for (int j = 0; j < i; ++j) if (inputs[j].tensor == in.tensor) return false;
++    }
++    auto group = std::make_shared<factorial_set_group>();
++    group->deadline_ns = deadline_ns;
++    stats->pipeline = pipeline;
++    stats->timeout_ms = timeout_ms;
++    for (int i = 0; i < 3; ++i) {
++        const auto & in = inputs[i];
++        auto request = std::make_shared<rpc_msg_set_tensor_hash_req>();
++        request->tensor = serialize_tensor(in.tensor);
++        request->offset = in.offset;
++        request->size = in.size;
++        request->hash = 0; // All bounded mutable payloads are below HASH_THRESHOLD.
++        stats->sets[i].hash_begin_ns = is_factorial_io::now_ns();
++        sha256_hash(request->sha256, (const uint8_t *)in.data, in.size);
++        stats->sets[i].hash_end_ns = is_factorial_io::now_ns();
++        stats->sets[i].payload_bytes = in.size;
++        group->headers[i] = request;
++        group->frames[i] = { RPC_CMD_SET_TENSOR, request.get(), sizeof(*request),
++            in.data, in.size, true, &group->accepted[i], 1, true, {} };
++    }
++    dispatcher->set_group(std::move(group));
++    return true;
+ }
+
+ static void ggml_backend_rpc_buffer_set_tensor(ggml_backend_buffer_t buffer, ggml_tensor * tensor, const void * data, size_t offset, size_t size) {
+@@ -1070,13 +1241,13 @@
+     if (reuse) {
+         auto request = std::make_shared<rpc_msg_graph_recompute_req>();
+         request->device = rpc_ctx->device;
+-        rpc_ctx->dispatcher->send_async(RPC_CMD_GRAPH_RECOMPUTE, request, sizeof(*request));
++        rpc_ctx->dispatcher->send_async(RPC_CMD_GRAPH_RECOMPUTE, request, sizeof(*request), cgraph->uid);
+     } else {
+         rpc_dev_ctx->last_graph_uid = cgraph->uid;
+         size_t input_size = 0;
+         uint8_t * input = serialize_graph(rpc_ctx->device, cgraph, rpc_ctx->dispatcher, &input_size);
+         std::shared_ptr<uint8_t> input_ptr(input, std::default_delete<uint8_t[]>());
+-        rpc_ctx->dispatcher->send_async(RPC_CMD_GRAPH_COMPUTE, input_ptr, input_size);
++        rpc_ctx->dispatcher->send_async(RPC_CMD_GRAPH_COMPUTE, input_ptr, input_size, cgraph->uid);
+     }
+     return GGML_STATUS_SUCCESS;
+ }
+--- a/ggml/src/ggml-rpc/transport.h
++++ b/ggml/src/ggml-rpc/transport.h
+@@ -20,6 +20,9 @@
+     // here. No-op on TCP.
+     bool flush();
+
++    // Private bounded factorial client only; never available for RDMA/Windows.
++    int factorial_tcp_fd() const;
++
+     socket_ptr accept();
+
+     void get_caps(uint8_t * local_caps);
+--- a/ggml/src/ggml-rpc/transport.cpp
++++ b/ggml/src/ggml-rpc/transport.cpp
+@@ -612,6 +612,14 @@
+     return pimpl->flush();
+ }
+
++int socket_t::factorial_tcp_fd() const {
++#ifdef _WIN32
++    return -1;
++#else
++    return pimpl->use_rdma ? -1 : pimpl->fd;
++#endif
++}
++
+ void socket_t::get_caps(uint8_t * local_caps) {
+     return pimpl->get_caps(local_caps);
+ }

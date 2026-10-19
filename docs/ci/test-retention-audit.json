@@ -1204,6 +1204,90 @@
       "replacement": null,
       "test_count_at_audit": 9
     },
+    "test_factorial_check": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 6,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "Factorial routing, selected-versus-resident indices, full arithmetic/omission checks, once-read bank integrity and exact timed replay/paired contrast contracts.",
+      "lineage": "Opt-in layer7 transport/placement 2x2 diagnostic successor of warmed4a703fdc",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Focused local CPU/loopback contracts for an unmerged diagnostic candidate; no CUDA, whole-model, numerical qualification, acceptance or hardware authorization claim.",
+      "replacement": null,
+      "test_count_at_audit": 6
+    },
+    "test_factorial_native": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 3,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "Actual CPU/RPC five/ten-expert graphs reproduce frozen routing, explicit zero-cold capture and sensitive full-output exact replay checks.",
+      "lineage": "Opt-in layer7 transport/placement 2x2 diagnostic successor of warmed4a703fdc",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Focused local CPU/loopback contracts for an unmerged diagnostic candidate; no CUDA, whole-model, numerical qualification, acceptance or hardware authorization claim.",
+      "replacement": null,
+      "test_count_at_audit": 3
+    },
+    "test_factorial_rpc_transport": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 11,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "Exclusive bounded existing-v7 SET admission under fragmentation and backpressure, all ACKs before graph, with refusal/EOF/deadline/SHA failure poisoning.",
+      "lineage": "Opt-in layer7 transport/placement 2x2 diagnostic successor of warmed4a703fdc",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Focused local CPU/loopback contracts for an unmerged diagnostic candidate; no CUDA, whole-model, numerical qualification, acceptance or hardware authorization claim.",
+      "replacement": null,
+      "test_count_at_audit": 11
+    },
+    "test_factorial_run": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 11,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "Fresh exact-source candidate custody, capped process groups, cleanup and deferred post-cleanup checking for the opt-in factorial fixture.",
+      "lineage": "Opt-in layer7 transport/placement 2x2 diagnostic successor of warmed4a703fdc",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Focused local CPU/loopback contracts for an unmerged diagnostic candidate; no CUDA, whole-model, numerical qualification, acceptance or hardware authorization claim.",
+      "replacement": null,
+      "test_count_at_audit": 11
+    },
     "test_finalize_repository": {
       "baseline_group": "repo-integrity",
       "baseline_serial_seconds": 44.51,
