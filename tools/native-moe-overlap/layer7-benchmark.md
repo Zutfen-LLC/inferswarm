@@ -204,6 +204,9 @@ static and dynamic libraries, runner, flags, RPC major, host/CPU/RAM, exact argv
 recursive raw/native artifact hashes and child cleanup. It never substitutes an accepted binary
 hash for the candidate. It deliberately does not claim physical GPU attribution.
 
+For opt-in failure capture and the bounded original pair 13 diagnostic, see
+[layer7-diagnostic.md](layer7-diagnostic.md). These runs carry no performance claim.
+
 ## Local executable recipe
 
 Use an already installed CMake/Ninja, existing canonical Python and authenticated

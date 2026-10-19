@@ -37,3 +37,13 @@ struct llama_hot_stats {
     uintptr_t compact_owner = 0;
 };
 llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & graph);
+
+// Benchmark readback only. Caller must synchronize and read before the next
+// step or graph rebuild. This accessor does not retain tensors or run work.
+struct llama_hot_observation {
+    ggml_tensor * input=nullptr, * ids=nullptr, * weights=nullptr;
+    ggml_tensor * weighted=nullptr, * shared=nullptr;
+    ggml_tensor * hot_input=nullptr, * hot_ids=nullptr, * hot_weights=nullptr;
+    ggml_tensor * cold_ids=nullptr, * cold_weights=nullptr;
+};
+llama_hot_observation llama_hot_get_observation(const std::shared_ptr<llama_hot_graph> & graph);

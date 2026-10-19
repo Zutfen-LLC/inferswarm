@@ -38,7 +38,7 @@ uint32_t next(uint32_t & state) { state^=state<<13; state^=state>>17; state^=sta
 float sample(uint32_t & state) { return (int(next(state)%2001)-1000)/1000.0f; }
 struct options {
     int d=2560,f=640,threads=8,warmup=5,pairs=20; uint32_t seed=314159;
-    bool small=false; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
+    bool small=false, failure_dump=false, diagnostic_pair13=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
     std::string tokens_list="1";
 };
 int number(const std::string & text,int low,int high) {
@@ -67,19 +67,27 @@ options parse(int argc,char ** argv) {
     options o;
     for (int i=1;i<argc;++i) {
         std::string a=argv[i];
+        if (a=="--failure-dump") { o.failure_dump=true;continue; }
+        if (a=="--diagnostic-pair13") { o.diagnostic_pair13=true;continue; }
         if (a=="--small-test") { o.d=32;o.f=32;o.small=true;continue; }
         require(i+1<argc,"option needs value: "+a); const std::string v=argv[++i];
         if (a=="--endpoint") o.endpoint=v; else if (a=="--work-dir") o.work=v;
         else if (a=="--routing") o.routing=v; else if (a=="--threads") o.threads=number(v,1,128);
         else if (a=="--warmup") o.warmup=number(v,0,20); else if (a=="--pairs") o.pairs=number(v,1,100);
         else if (a=="--seed") o.seed=number(v,1,2147483647); else if (a=="--control") o.control=v;
+        else if (a=="--dump-max-bytes") o.dump_max_bytes=number(v,1,16*1024*1024);
         else if (a=="--tokens") o.tokens_list=v;
         else if (a=="--comparison-mode") o.comparison_mode=v;
         else throw std::runtime_error("unknown option: "+a);
     }
     require(!o.endpoint.empty() && !o.work.empty(),"--endpoint and fresh --work-dir required");
-    require(o.control.empty() || (o.small && (o.control=="missing-shared" || o.control=="missing-expert" || o.control=="bad-partition" || o.control=="native-routing" || o.control=="comparator-probe")),"negative controls require --small-test");
+    require(o.control.empty() || o.control=="fixture-probe" || (o.small && (o.control=="missing-shared" || o.control=="missing-expert" || o.control=="bad-partition" || o.control=="native-routing" || o.control=="comparator-probe" || o.control=="fixture-probe")),"negative controls require --small-test");
     require(o.comparison_mode=="cpu-loopback" || o.comparison_mode=="cpu-cuda","explicit comparison mode required: cpu-loopback|cpu-cuda");
+    if (o.diagnostic_pair13) {
+        require(o.seed==314159 && o.warmup==5 && o.pairs==20 && o.routing.empty() && o.control.empty(),"pair13 diagnostic requires frozen seed/warmup/pairs/synthetic routing");
+        require(o.tokens_list=="1" || o.tokens_list=="1,2,4,8,16","pair13 diagnostic requires original width allocation");
+        o.tokens_list="1,2,4,8,16";
+    }
     for (auto key:{"IS309_MOE","IS309_CAPTURE","IS314_HOT_SPEC","IS311_ASSIGNED"}) require(!std::getenv(key),std::string("refuse inherited ")+key);
     return o;
 }
@@ -310,9 +318,9 @@ json comparison_contract(const std::string & mode) {
         {"zero_plane_fallback",ASSOC},{"plane_source","A weighted slots"}};
 }
 json diagnostic(const std::vector<float> & a,const std::vector<float> & b,
-        const std::vector<float> & planes,const std::vector<float> & shared,size_t d,bool cross_backend) {
+        const std::vector<float> & planes,const std::vector<float> & shared,size_t d,bool cross_backend,bool locate=false) {
     require(d>0 && !a.empty() && a.size()%d==0 && a.size()==b.size() && planes.size()==K*a.size() && shared.size()==a.size(),"comparison shape mismatch");
-    bool finite=true,equal=true,pass=true;double max_abs=0,max_ratio=0,squared=0,ref=0;
+    bool finite=true,equal=true,pass=true;double max_abs=0,max_ratio=0,squared=0,ref=0; json abs_at=nullptr,ratio_at=nullptr;
     for (size_t e=0;e<a.size();++e) {
         double l1=0;
         // weighted slots are [d,K,T], while outputs are [d,T].
@@ -320,21 +328,33 @@ json diagnostic(const std::vector<float> & a,const std::vector<float> & b,
         double tol=ASSOC*l1+(cross_backend?QUANT_HEADROOM:0.0)*l1;
         if (tol<=0.0) tol=ASSOC;
         finite &= std::isfinite(a[e]) && std::isfinite(b[e]) && std::isfinite(shared[e]);equal &= a[e]==b[e];
+        const double error=std::abs(double(a[e])-b[e]);
+        if (locate && (abs_at.is_null() || error>max_abs || ratio_at.is_null() || error/tol>max_ratio)) {
+            json at={{"flat_index",e},{"token",e/d},{"coordinate",e%d},{"A",a[e]},{"B",b[e]},
+                {"abs_error",error},{"scale_l1",l1},{"tolerance",tol},{"ratio",error/tol}};
+            if (abs_at.is_null() || error>max_abs) abs_at=at;
+            if (ratio_at.is_null() || error/tol>max_ratio) ratio_at=at;
+        }
         double d=double(a[e])-b[e];max_abs=std::max(max_abs,std::abs(d));squared+=d*d;ref+=double(a[e])*a[e];
         max_ratio=std::max(max_ratio,std::abs(d)/tol);if (std::abs(d)>tol) pass=false;
     }
-    return {{"pass",finite && pass},{"finite",finite},{"exact_equal",finite && equal},
+    json result={{"pass",finite && pass},{"finite",finite},{"exact_equal",finite && equal},
         {"max_abs",finite?json(max_abs):json(nullptr)},{"max_ratio",finite?json(max_ratio):json(nullptr)},
         {"rms",finite?json(std::sqrt(squared/a.size())):json(nullptr)}, {"relative_l2",finite?json(std::sqrt(squared/std::max(ref,1e-300))):json(nullptr)}};
+    if (locate) {
+        result["max_abs_at"]=finite?abs_at:json(nullptr);
+        result["max_ratio_at"]=finite?ratio_at:json(nullptr);
+    }
+    return result;
 }
 json comparator_probe(bool cross_backend) {
     std::vector<float> a={1},b={std::nextafter(1.0f,2.0f)},planes(K,0),shared={0.1f};planes[0]=1;
-    json out;out["adjacent"]=diagnostic(a,b,planes,shared,1,cross_backend);
-    b[0]=1.02f;out["excess"]=diagnostic(a,b,planes,shared,1,cross_backend);
-    planes[0]=0;b[0]=std::nextafter(1.0f,2.0f);out["zero_planes"]=diagnostic(a,b,planes,shared,1,cross_backend);
-    b[0]=INFINITY;out["nonfinite_output"]=diagnostic(a,b,planes,shared,1,cross_backend);b=a;
-    planes[0]=NAN;out["nonfinite_plane"]=diagnostic(a,b,planes,shared,1,cross_backend);planes[0]=1;
-    shared[0]=INFINITY;out["nonfinite_shared"]=diagnostic(a,b,planes,shared,1,cross_backend);
+    json out;out["adjacent"]=diagnostic(a,b,planes,shared,1,cross_backend,true);
+    b[0]=1.02f;out["excess"]=diagnostic(a,b,planes,shared,1,cross_backend,true);
+    planes[0]=0;b[0]=std::nextafter(1.0f,2.0f);out["zero_planes"]=diagnostic(a,b,planes,shared,1,cross_backend,true);
+    b[0]=INFINITY;out["nonfinite_output"]=diagnostic(a,b,planes,shared,1,cross_backend,true);b=a;
+    planes[0]=NAN;out["nonfinite_plane"]=diagnostic(a,b,planes,shared,1,cross_backend,true);planes[0]=1;
+    shared[0]=INFINITY;out["nonfinite_shared"]=diagnostic(a,b,planes,shared,1,cross_backend,true);
     // Asymmetric [d,K,T] planes: each coordinate must use its own token's
     // scale, including small coordinates beside large ones in either token.
     constexpr size_t d=3,tokens=2;
@@ -346,18 +366,133 @@ json comparator_probe(bool cross_backend) {
     for (size_t e=0;e<a.size();++e) {
         double tol=(ASSOC+(cross_backend?QUANT_HEADROOM:0.0))*K*scales[e/d][e%d];
         b=a;b[e]+=float(tol/2);
-        auto within=diagnostic(a,b,planes,shared,d,cross_backend);
+        auto within=diagnostic(a,b,planes,shared,d,cross_backend,true);
         b=a;b[e]+=float(2*tol);
         out["batch_coordinates"].push_back({{"token",e/d},{"coordinate",e%d},
-            {"within",within},{"excess",diagnostic(a,b,planes,shared,d,cross_backend)}});
+            {"within",within},{"excess",diagnostic(a,b,planes,shared,d,cross_backend,true)}});
     }
+    b=a;b[0]+=0.25f;b[3]+=0.5f;
+    out["different_maxima"]=diagnostic(a,b,planes,shared,d,cross_backend,true);
     return out;
+}
+// All reads occur after execute() synchronized both arms, outside the timers.
+// One capture per run, at most 16 MiB payload plus 64 KiB metadata. A partial
+// directory never has a successful manifest and never changes the comparator.
+json capture(bench & s,const json & row) {
+    const uint32_t endian=1;
+    require(*reinterpret_cast<const uint8_t *>(&endian)==1,"capture requires little endian host");
+    auto observation=llama_hot_get_observation(s.b.result.hot_experts.at(0));
+    const int tokens=row.at("tokens");
+    auto * ai=tokens>1?s.a.routing_batch.at(tokens).ids:s.a.routing.ids;
+    auto * aw=tokens>1?s.a.routing_batch.at(tokens).weights:s.a.routing.weights;
+    if (s.a.native_ids) { ai=s.a.native_ids; aw=s.a.native_weights; }
+    const std::vector<std::pair<std::string,ggml_tensor *>> tensors={
+        {"A.input",s.a.input},{"B.input",observation.input},
+        {"A.ids",ai},{"A.weights",aw},{"B.ids",observation.ids},{"B.weights",observation.weights},
+        {"A.output",s.a.output},{"B.output",s.b.output},
+        {"A.weighted",s.a.weighted},{"A.shared",s.a.shared},
+        {"B.weighted",observation.weighted},{"B.shared",observation.shared},
+        {"B.hot.input",observation.hot_input},{"B.hot.ids",observation.hot_ids},{"B.hot.weights",observation.hot_weights},
+        {"B.cold.ids",observation.cold_ids},{"B.cold.weights",observation.cold_weights}};
+    size_t total=0;
+    for (const auto & entry:tensors) if (auto * t=entry.second) {
+        require(ggml_is_contiguous(t),"capture requires contiguous tensor: "+entry.first);
+        require(ggml_nbytes(t)<=s.o.dump_max_bytes-total,"capture payload budget exceeded");
+        total+=ggml_nbytes(t);
+    }
+    const auto directory=std::filesystem::path(s.o.work)/"capture";
+    require(std::filesystem::create_directory(directory),"capture path must be fresh");
+    json manifest={{"schema","h5-layer7-capture/1"},{"byte_order","little"},{"payload_bytes",total},
+        {"payload_limit_bytes",s.o.dump_max_bytes},{"pair_record",row},{"tensors",json::object()},
+        {"weighted_layout","[coordinate,original_slot,token]; coordinate fastest"},
+        {"output_layout","[coordinate,token]; coordinate fastest"},
+        {"B_unavailable",observation.weighted?json::array():json({"weighted/shared: zero-hot fast graph intermediates not retained"})}};
+    std::map<std::string,std::vector<uint8_t>> bytes;
+    for (const auto & entry:tensors) if (auto * t=entry.second) {
+        auto & data=bytes[entry.first];data.resize(ggml_nbytes(t));
+        ggml_backend_tensor_get(t,data.data(),0,data.size());
+        const auto filename=entry.first+".bin";
+        std::ofstream file(directory/filename,std::ios::binary);file.exceptions(std::ios::badbit|std::ios::failbit);
+        file.write(reinterpret_cast<const char *>(data.data()),data.size());file.close();
+        manifest["tensors"][entry.first]={{"file",filename},{"tensor_name",t->name},{"ggml_type",int(t->type)},
+            {"type_name",ggml_type_name(t->type)},{"shape",{t->ne[0],t->ne[1],t->ne[2],t->ne[3]}},
+            {"strides_bytes",{t->nb[0],t->nb[1],t->nb[2],t->nb[3]}},{"byte_length",data.size()},{"sha256",sha(data.data(),data.size())}};
+    }
+    bool identity=true;
+    for (const std::string arm_name:{"A","B"}) {
+        const auto & input=bytes.at(arm_name+".input");
+        auto routing=bytes.at(arm_name+".ids");const auto & weights=bytes.at(arm_name+".weights");
+        routing.insert(routing.end(),weights.begin(),weights.end());
+        identity &= sha(input.data(),input.size())==row.at("input_sha256").get<std::string>() && sha(routing.data(),routing.size())==row.at("routing_sha256").get<std::string>();
+    }
+    manifest["consumed_identity_matches_pair"]=identity;
+    const auto & ids=bytes.at("B.ids");
+    manifest["slot_map"]=json::array();
+    for (int token=0;token<tokens;++token) {
+        int hot_slot=0,cold_slot=0;
+        for (int slot=0;slot<K;++slot) {
+            int32_t id;std::memcpy(&id,ids.data()+(token*K+slot)*4,4);
+            auto dense=std::find(HOT.begin(),HOT.end(),id);bool hot=dense!=HOT.end();
+            manifest["slot_map"].push_back({{"token",token},{"original_slot",slot},{"global_expert",id},
+                {"branch",hot?"hot":"cold"},{"branch_slot",hot?hot_slot++:cold_slot++},
+                {"compact_expert",hot?json(dense-HOT.begin()):json(nullptr)}});
+        }
+    }
+    for (const std::string name:{"weights.json","spec.json","assigned.txt"}) {
+        std::ifstream f(std::filesystem::path(s.o.work)/name,std::ios::binary);
+        require(bool(f),"capture identity file missing");const std::string data((std::istreambuf_iterator<char>(f)),{});
+        manifest["identities"][name]=sha(data.data(),data.size());
+    }
+    const auto text=manifest.dump(2)+"\n";require(text.size()<=65536,"capture metadata budget exceeded");
+    std::ofstream file(directory/"manifest.json");file.exceptions(std::ios::badbit|std::ios::failbit);file<<text;file.close();
+    return {{"status","complete"},{"manifest","capture/manifest.json"},{"payload_bytes",total},{"consumed_identity_matches_pair",identity}};
 }
 // #346 per-token/throughput derived distributions: plain per-sample transforms
 // of the SAME retained pair times, never separately re-measured quantities.
 bool used_replacement(const std::vector<route> & rows,int candidate) {
     for (auto & r:rows) for (auto id:r.ids) if (id==candidate) return true;
     return false;
+}
+struct fixture { std::vector<route> rows; std::vector<float> input; };
+fixture make_fixture(const options & o,const std::vector<route> & routing,int tokens,
+        const std::string & name,bool shared_set,int pair) {
+    // Deterministic distinct routing row per token. Slot
+    // order rotates per (pair,token). Varied sets replace
+    // COLD slots with distinct unused globals per token —
+    // the five hot experts are the fixed resident set, so
+    // only non-resident slots can differ across tokens.
+    std::vector<route> rows;
+    for (int t=0;t<tokens;++t) {
+        auto &src_row=routing[(size_t(pair)*routing.size()/o.pairs+size_t(t)*(shared_set?0:1))%routing.size()];
+        route r=src_row; r.label=src_row.label;
+        if (o.routing.empty()) {
+            std::rotate(r.ids.begin(),r.ids.begin()+(pair+t*(shared_set?0:1))%K,r.ids.end());
+            std::rotate(r.weights.begin(),r.weights.begin()+(pair+t*(shared_set?0:1))%K,r.weights.end());
+        }
+        for (auto & id:r.ids) {
+            const bool is_hot=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
+            // shared-set rows repeat token 0's replacements verbatim;
+            // varied-set rows must not reuse an earlier token's experts.
+            const bool block_reuse=!shared_set;
+            if (name=="all-cold" && is_hot) {
+                int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
+                        std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
+                        (block_reuse && used_replacement(rows,replacement))) ++replacement;
+                id=replacement;
+            } else if (name=="mixed" && !shared_set && !is_hot) {
+                int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
+                        std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
+                        used_replacement(rows,replacement)) ++replacement;
+                id=replacement;
+            }
+        }
+        if (o.control=="bad-partition") r.ids[1]=r.ids[0];
+        validate(r);rows.push_back(r);
+    }
+    uint32_t state=o.seed+uint32_t(pair+1)*7919+uint32_t(tokens)*104729;
+    std::vector<float> input(o.d*tokens);
+    for (auto & v:input) v=sample(state)*0.8f+0.1f;
+    return {std::move(rows),std::move(input)};
 }
 std::vector<double> divided(const std::vector<double> & v,int tokens) {
     std::vector<double> out;out.reserve(v.size());
@@ -381,7 +516,20 @@ int main(int argc,char ** argv) {
         const auto o=parse(argc,argv);const auto contract=comparison_contract(o.comparison_mode);
         if (o.control=="comparator-probe") { std::cout<<comparator_probe(o.comparison_mode=="cpu-cuda").dump()<<std::endl;return 0; }
         const auto widths=parse_tokens(o.tokens_list);
-        auto routing=routes(o);bench s(o);s.token_widths=widths;s.max_tokens=widths.back();auto setup=clock_type::now();s.setup();
+        auto routing=routes(o);
+        if (o.control=="fixture-probe") {
+            auto f=make_fixture(o,routing,2,"mixed",false,13);
+            json rows=json::array();std::vector<uint8_t> packed(2*K*8);
+            for (int t=0;t<2;++t) {
+                rows.push_back({{"ids",f.rows[t].ids},{"weight_bits",bits(f.rows[t])}});
+                std::memcpy(packed.data()+t*K*4,f.rows[t].ids.data(),K*4);
+                std::memcpy(packed.data()+2*K*4+t*K*4,f.rows[t].weights.data(),K*4);
+            }
+            std::cout<<json({{"case","mixed-varied-set"},{"tokens",2},{"pair",13},{"warmup",false},
+                {"input_sha256",sha(f.input.data(),f.input.size()*4)},{"routing_sha256",sha(packed.data(),packed.size())},{"rows",rows}}).dump()<<std::endl;
+            return 0;
+        }
+        bench s(o);s.token_widths=widths;s.max_tokens=widths.back();auto setup=clock_type::now();s.setup();
         std::ifstream spec_file(o.work+"/spec.json");const std::string spec_bytes((std::istreambuf_iterator<char>(spec_file)),{});
         std::ifstream weights_file(o.work+"/weights.json");const std::string weights_bytes((std::istreambuf_iterator<char>(weights_file)),{});
         std::cout<<json({{"type","setup"},{"schema","h5-layer7-matched/1"},{"setup_ms",ms(setup)},
@@ -389,8 +537,10 @@ int main(int argc,char ** argv) {
             {"tokens_list",widths},
             {"representation","Q8_0"},{"routing_boundary_cut",o.control!="native-routing"},{"routing_scope","provided routing boundary; synthetic activations, not activation replay"},
             {"comparator",contract},{"comparison_mode",o.comparison_mode},{"weights_sha256",sha(weights_bytes.data(),weights_bytes.size())},{"weight_spec_sha256",sha(spec_bytes.data(),spec_bytes.size())}}).dump()<<std::endl;
+        if (o.diagnostic_pair13) std::cout<<json({{"type","diagnostic_selector"},{"id","pr346-t2-pair13-prefix/1"},
+            {"performance_claim",false},{"priming_pairs",68},{"target_case","mixed-varied-set"},{"target_tokens",2},{"target_pair",13}}).dump()<<std::endl;
         // The complete spec and assigned encoded-weight identities are retained in work-dir.
-        json summaries=json::object();int measured=0;
+        json summaries=json::object();int measured=0,primed=0;
         for (int tokens:widths) {
             if (tokens!=1) { const auto rebuild_start=clock_type::now();s.rebuild(tokens);
                 std::cout<<json({{"type","rebuild"},{"tokens",tokens},{"rebuild_ms",ms(rebuild_start)}}).dump()<<std::endl; }
@@ -406,48 +556,13 @@ int main(int argc,char ** argv) {
                     std::vector<double> ta,tb,delta;
                     for (int n=0;n<o.warmup+o.pairs;++n) {
                         bool warm=n<o.warmup;int pair=warm?n:n-o.warmup;
-                        // Deterministic distinct routing row per token. Slot
-                        // order rotates per (pair,token). Varied sets replace
-                        // COLD slots with distinct unused globals per token —
-                        // the five hot experts are the fixed resident set, so
-                        // only non-resident slots can differ across tokens.
-                        std::vector<route> rows;
-                        for (int t=0;t<tokens;++t) {
-                            auto &src_row=routing[(size_t(pair)*routing.size()/o.pairs+size_t(t)*(shared_set?0:1))%routing.size()];
-                            route r=src_row; r.label=src_row.label;
-                            if (o.routing.empty()) {
-                                std::rotate(r.ids.begin(),r.ids.begin()+(pair+t*(shared_set?0:1))%K,r.ids.end());
-                                std::rotate(r.weights.begin(),r.weights.begin()+(pair+t*(shared_set?0:1))%K,r.weights.end());
-                            }
-                            for (auto & id:r.ids) {
-                                const bool is_hot=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
-                                // shared-set rows repeat token 0's replacements verbatim;
-                                // varied-set rows must not reuse an earlier token's experts.
-                                const bool block_reuse=!shared_set;
-                                if (name=="all-cold" && is_hot) {
-                                    int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
-                                            std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
-                                            (block_reuse && used_replacement(rows,replacement))) ++replacement;
-                                    id=replacement;
-                                } else if (name=="mixed" && !shared_set && !is_hot) {
-                                    int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
-                                            std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
-                                            used_replacement(rows,replacement)) ++replacement;
-                                    id=replacement;
-                                }
-                            }
-                            if (o.control=="bad-partition") r.ids[1]=r.ids[0];
-                            validate(r);rows.push_back(r);
-                        }
-                        // mixed requires exactly five hot slots per token; all-cold zero.
+                        auto fixture=make_fixture(o,routing,tokens,name,shared_set,pair);
+                        auto & rows=fixture.rows; auto & input=fixture.input;
                         unsigned hot=0;
                         for (auto & r:rows) for (auto id:r.ids) hot+=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
                         require(hot==size_t(name=="mixed"?5:0)*size_t(tokens),"invalid five-hot/ten-slot partition");
-                        uint32_t state=o.seed+uint32_t(pair+1)*7919+uint32_t(tokens)*104729;
-                        std::vector<float> input(o.d*tokens),a(o.d*tokens),b(o.d*tokens),shared(o.d*tokens),weighted(o.d*K*tokens);
-                        for (auto & v:input) v=sample(state)*0.8f+0.1f;
+                        std::vector<float> a(o.d*tokens),b(o.d*tokens),shared(o.d*tokens),weighted(o.d*K*tokens);
                         if (o.control=="native-routing") input[0]=(name=="mixed"?1.0f:-1.0f)*(0.4f+pair/32.0f);
-                        // Pack the [K,T] boundary both arms read.
                         std::vector<int32_t> ids_flat;std::vector<float> weights_flat;
                         for (auto & r:rows) for (int i=0;i<K;++i) { ids_flat.push_back(r.ids[i]);weights_flat.push_back(r.weights[i]); }
                         for (auto * x:{&s.a,&s.b}) {
@@ -486,7 +601,7 @@ int main(int argc,char ** argv) {
                         ggml_backend_tensor_get(s.a.weighted,weighted.data(),0,weighted.size()*4);
                         bool shared_nonzero=std::any_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x) && x!=0;});
                         bool experts_nonzero=true;for (size_t i=0;i<size_t(K)*tokens;++i) experts_nonzero &= std::any_of(weighted.begin()+i*o.d,weighted.begin()+(i+1)*o.d,[](float x){return std::isfinite(x) && x!=0;});
-                        auto metrics=diagnostic(a,b,weighted,shared,o.d,o.comparison_mode=="cpu-cuda");
+                        auto metrics=diagnostic(a,b,weighted,shared,o.d,o.comparison_mode=="cpu-cuda",o.failure_dump || o.diagnostic_pair13);
                         bool valid=metrics["pass"] && shared_nonzero && experts_nonzero && stats.hot==(name=="mixed"?5:0) && stats.cold==K-(name=="mixed"?5:0) && stats.tokens==unsigned(tokens);
                         std::vector<uint8_t> route_bytes(K*tokens*8);
                         std::memcpy(route_bytes.data(),ids_flat.data(),K*tokens*4);
@@ -513,10 +628,27 @@ int main(int argc,char ** argv) {
                             row[arm_name]["input_sha256"]=input_hash;row[arm_name]["routing_sha256"]=route_hash;
                             row[arm_name]["hot"]=arm_name=="A"?0:stats.hot;row[arm_name]["cold"]=arm_name=="A"?K:stats.cold;
                         }
-                        std::cout<<row.dump()<<std::endl;require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
+                        const bool target=o.diagnostic_pair13 && tokens==2 && name=="mixed" && variant==0 && !warm && pair==13;
+                        if (o.diagnostic_pair13) { row["type"]=target?"pair":"diagnostic-prime";row["performance_claim"]=false; }
+                        bool capture_ok=true;
+                        if (target || (o.failure_dump && !valid)) {
+                            try { row["capture"]=capture(s,row);capture_ok=row["capture"]["consumed_identity_matches_pair"]; }
+                            catch (const std::exception & error) { capture_ok=false;row["capture"]={{"status","failed"},{"error",error.what()}}; }
+                        }
+                        std::cout<<row.dump()<<std::endl;
+                        require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
+                        require(capture_ok,"diagnostic capture failed or consumed identity mismatch");
+                        if (target) {
+                            require(primed==68,"diagnostic prefix count mismatch");
+                            std::cout<<json({{"type","summary"},{"valid",true},{"timing_comparison_valid",false},
+                                {"diagnostic_complete",true},{"performance_claim",false},{"priming_pairs",primed},
+                                {"target_pairs",1},{"measured_pairs",0},{"cases",nullptr}}).dump()<<std::endl;
+                            return 0;
+                        }
+                        if (o.diagnostic_pair13) { ++primed;continue; }
                         if (!warm) {ta.push_back(am);tb.push_back(bm);delta.push_back(bm-am);++measured;}
                     }
-                    summaries[case_name+"@t"+std::to_string(tokens)]={{"tokens",tokens},{"expert_set",tokens>1?(shared_set?"shared":"varied"):"single"},
+                    if (!o.diagnostic_pair13) summaries[case_name+"@t"+std::to_string(tokens)]={{"tokens",tokens},{"expert_set",tokens>1?(shared_set?"shared":"varied"):"single"},
                         {"A_ms",distribution(ta)},{"B_ms",distribution(tb)},{"B_minus_A_ms",distribution(delta)},
                         {"A_ms_per_token",distribution(divided(ta,tokens))},{"B_ms_per_token",distribution(divided(tb,tokens))},
                         {"A_tokens_per_s",distribution(rate(ta,tokens))},{"B_tokens_per_s",distribution(rate(tb,tokens))},

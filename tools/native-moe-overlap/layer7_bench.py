@@ -157,7 +157,7 @@ def validate_weights(native, setup):
             raise ValueError('native expert weight identity mismatch')
 
 
-def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_list=(1,)):
+def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_list=(1,), diagnostic_pair13=False):
     if not rows or rows[0].get('type') != 'setup' or rows[-1].get('type') != 'summary':
         raise ValueError('incomplete native result')
     if (rows[0].get('comparator') != comparison_contract(comparison_mode) or
@@ -167,9 +167,9 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
     if observed_tokens is not None and observed_tokens != list(tokens_list):
         raise ValueError('native token batch list mismatch')
     summary = rows[-1]
-    if not summary.get('valid') or not summary.get('timing_comparison_valid'):
+    if not summary.get('valid') or (not diagnostic_pair13 and not summary.get('timing_comparison_valid')):
         raise ValueError('native comparison invalid')
-    records = [r for r in rows if r.get('type') == 'pair']
+    records = [r for r in rows if r.get('type') in (('pair', 'diagnostic-prime') if diagnostic_pair13 else ('pair',))]
     expected = set()
     for tokens in tokens_list:
         suffix = ('',) if tokens == 1 else ('-varied-set', '-shared-set')
@@ -178,9 +178,27 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
                 for warm, n in ((True, warmup), (False, pairs)):
                     for i in range(n):
                         expected.add((case + tag, tokens, warm, i))
+    if diagnostic_pair13:
+        expected = {(case, 1, warm, i) for case in ('mixed', 'all-cold')
+                    for warm, count in ((True, 5), (False, 20)) for i in range(count)}
+        expected |= {('mixed-varied-set', 2, warm, i)
+                     for warm, count in ((True, 5), (False, 14)) for i in range(count)}
+        sequence = [(case, 1, warm, i) for case in ('mixed', 'all-cold')
+                    for warm, count in ((True, 5), (False, 20)) for i in range(count)]
+        sequence += [('mixed-varied-set', 2, warm, i)
+                     for warm, count in ((True, 5), (False, 14)) for i in range(count)]
+        if ([(r['case'], r['tokens'], r['warmup'], r['pair']) for r in records] != sequence or
+                any(r['type'] != 'diagnostic-prime' for r in records[:-1]) or
+                records[-1]['type'] != 'pair' or
+                any(r.get('performance_claim') is not False for r in records) or
+                summary.get('timing_comparison_valid') is not False or
+                summary.get('diagnostic_complete') is not True or
+                summary.get('priming_pairs') != 68 or summary.get('target_pairs') != 1 or
+                records[-1].get('capture', {}).get('status') != 'complete'):
+            raise ValueError('diagnostic prefix/target/capture mismatch')
     if len(records) != len(expected) or {(r['case'], r.get('tokens', 1), r['warmup'], r['pair']) for r in records} != expected:
         raise ValueError('native paired count/coverage mismatch')
-    measured_expected = len(expected) - sum(1 for (_, _, warm, _) in expected if warm)
+    measured_expected = 0 if diagnostic_pair13 else len(expected) - sum(1 for (_, _, warm, _) in expected if warm)
     if summary['measured_pairs'] != measured_expected:
         raise ValueError('native paired count/coverage mismatch')
     owners = {r['B']['owner'] for r in records}
@@ -237,9 +255,76 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
     return summary
 
 
+PR346_RUN_SHA256 = '89c148c31c222580375ff768b35124be2cbbf267eb739000fd830b4c0a7e1331'
+
+
+def retained_pair13(path):
+    """Authenticate the original run before reading its target boundary hashes."""
+    if digest(path) != PR346_RUN_SHA256:
+        raise ValueError('PR346 retained run archive identity mismatch')
+    targets = []
+    with tarfile.open(path, 'r:gz') as archive:
+        for member in archive.getmembers():
+            if member.isfile() and member.name.endswith('/stdout.jsonl'):
+                if member.size > 16*1024*1024:
+                    raise ValueError('retained stdout budget exceeded')
+                for line in archive.extractfile(member).read().splitlines():
+                    row = json.loads(line)
+                    if (row.get('type') == 'pair' and row.get('case') == 'mixed-varied-set' and
+                            row.get('tokens') == 2 and row.get('pair') == 13 and row.get('warmup') is False):
+                        targets.append(row)
+    if len(targets) != 1:
+        raise ValueError('retained pair13 boundary missing/ambiguous')
+    return targets[0]
+
+
+def validate_capture(native):
+    """Read the bounded raw capture. Check every tensor before offline analysis."""
+    native = Path(native)
+    root = native/'capture'
+    manifest_path = root/'manifest.json'
+    if manifest_path.stat().st_size > 65536:
+        raise ValueError('capture metadata budget exceeded')
+    manifest = json.loads(manifest_path.read_text())
+    if manifest['schema'] != 'h5-layer7-capture/1' or manifest['byte_order'] != 'little':
+        raise ValueError('capture schema/byte order mismatch')
+    limit = manifest['payload_limit_bytes']
+    if type(limit) is not int or not 1 <= limit <= 16*1024*1024:
+        raise ValueError('capture payload limit invalid')
+    total = 0
+    for name, tensor in manifest['tensors'].items():
+        if (not re.fullmatch(r'[AB]\.(?:hot\.|cold\.)?[a-z]+', name) or
+                tensor['file'] != name + '.bin'):
+            raise ValueError('capture tensor filename invalid')
+        shape = tensor['shape']
+        if len(shape) != 4 or any(type(n) is not int or n < 1 for n in shape):
+            raise ValueError('capture tensor shape invalid')
+        size = math.prod(shape)*4
+        if tensor['type_name'] not in ('f32', 'i32') or tensor['byte_length'] != size:
+            raise ValueError('capture tensor type/size mismatch')
+        path = root/tensor['file']
+        total += size
+        if total > limit or path.stat().st_size != size or digest(path) != tensor['sha256']:
+            raise ValueError('capture tensor budget/identity mismatch')
+    if total != manifest['payload_bytes']:
+        raise ValueError('capture payload size mismatch')
+    for name in ('weights.json', 'spec.json', 'assigned.txt'):
+        if digest(native/name) != manifest['identities'][name]:
+            raise ValueError('capture weight identity mismatch')
+    return manifest
+
+
 def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=False,
         pairs=20, warmup=5, timeout=300, threads=8, seed=314159, routing_archive=None, comparison_mode='cpu-loopback',
-        tokens_list=(1,)):
+        tokens_list=(1,), failure_dump=False, diagnostic_pair13=False, dump_max_bytes=16*1024*1024, retained_run=None):
+    if retained_run and (not diagnostic_pair13 or small_test):
+        raise ValueError('retained run requires production-geometry pair13 diagnostic')
+    if diagnostic_pair13:
+        if (pairs, warmup, seed) != (20, 5, 314159) or routing_archive or tuple(tokens_list) not in ((1,), (1, 2, 4, 8, 16)):
+            raise ValueError('pair13 diagnostic requires frozen seed/warmup/pairs/synthetic routing/width allocation')
+        tokens_list = (1, 2, 4, 8, 16)
+    if type(dump_max_bytes) is not int or not 1 <= dump_max_bytes <= 16*1024*1024:
+        raise ValueError('capture payload budget invalid')
     tokens_list = tuple(sorted(set(int(t) for t in tokens_list)))
     if (not tokens_list or any(type(t) is not int or not 1 <= t <= 256 for t in tokens_list)):
         raise ValueError('token batch list invalid')
@@ -267,6 +352,25 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
         scope='layer routing boundary only; synthetic weights+activations; not model/activation replay or qualification')
     worker = None
     try:
+        if diagnostic_pair13:
+            command = [provenance['executable'], '--endpoint', 'unused:1', '--work-dir', str(output/'unused-probe'),
+                       '--control', 'fixture-probe']
+            if small_test:
+                command.append('--small-test')
+            probe = subprocess.run(command, capture_output=True, text=True, check=True, timeout=5)
+            fixture = json.loads(probe.stdout)
+            receipt['selected_fixture'] = fixture
+            receipt['retained_identity_check'] = 'unavailable; no retained archive supplied'
+            if retained_run:
+                old = retained_pair13(retained_run)
+                for key in ('input_sha256', 'routing_sha256'):
+                    if fixture[key] != old[key]:
+                        raise ValueError('selected fixture differs from retained pair13: ' + key)
+                if ([r['ids'] for r in fixture['rows']] != old['ids'] or
+                        [r['weight_bits'] for r in fixture['rows']] != old['weight_bits']):
+                    raise ValueError('selected routing differs from retained pair13')
+                receipt['retained_identity_check'] = 'verified input/routing hashes and slot/weight bits'
+                receipt['retained_run_sha256'] = PR346_RUN_SHA256
         if loopback:
             raw = json.loads(Path(build_receipt).read_text())
             role = raw['roles']['rpc-worker']; worker_path = role['executable']
@@ -295,6 +399,12 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                    '--pairs', str(pairs), '--warmup', str(warmup), '--threads', str(threads), '--seed', str(seed),
                    '--tokens', ','.join(map(str, tokens_list)),
                    '--comparison-mode', comparison_mode]
+        if failure_dump:
+            command.append('--failure-dump')
+        if diagnostic_pair13:
+            command.append('--diagnostic-pair13')
+        if failure_dump or diagnostic_pair13:
+            command.extend(['--dump-max-bytes', str(dump_max_bytes)])
         if small_test:
             command.append('--small-test')
         if routing_archive:
@@ -312,11 +422,17 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                 receipt['timed_out'] = True
                 raise ValueError('native process deadline exceeded; killed and reaped')
         rows = [json.loads(line) for line in (output/'stdout.jsonl').read_text().splitlines()]
+        if failure_dump or diagnostic_pair13:
+            receipt['diagnostic_pair13'] = diagnostic_pair13
+            receipt['capture_requested'] = True
+            receipt['capture_rows'] = [r for r in rows if 'capture' in r]
+            if (output/'native/capture/manifest.json').exists():
+                receipt['capture'] = validate_capture(output/'native')
         if result.returncode:
             raise ValueError(f'native exit {result.returncode}; inspect retained stdout/stderr')
-        summary = validate_result(rows, pairs, warmup, comparison_mode, tokens_list)
+        summary = validate_result(rows, pairs, warmup, comparison_mode, tokens_list, diagnostic_pair13)
         validate_weights(output/'native', rows[0])
-        receipt.update(valid=True, timing_comparison_valid=True, summary=summary)
+        receipt.update(valid=True, timing_comparison_valid=not diagnostic_pair13, summary=summary)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         receipt['error'] = str(error)
     finally:
@@ -342,7 +458,11 @@ if __name__ == '__main__':
     mode.add_argument('--endpoint'); mode.add_argument('--loopback', action='store_true')
     parser.add_argument('--comparison-mode', choices=('cpu-loopback','cpu-cuda'), default='cpu-loopback')
     parser.add_argument('--small-test', action='store_true')
+    parser.add_argument('--failure-dump', action='store_true', help='capture the first refused pair outside timing')
+    parser.add_argument('--diagnostic-pair13', action='store_true', help='original prefix then only T=2 varied-set measured pair 13; no performance claim')
+    parser.add_argument('--dump-max-bytes', type=int, default=16*1024*1024)
     parser.add_argument('--captured-routing', type=Path)
+    parser.add_argument('--retained-run', type=Path, help='authenticate PR346 archive and check pair13 identities before worker launch')
     parser.add_argument('--pairs', type=int, default=20); parser.add_argument('--warmup', type=int, default=5)
     parser.add_argument('--timeout', type=float, default=300); parser.add_argument('--threads', type=int, default=8)
     parser.add_argument('--seed', type=int, default=314159)
@@ -352,7 +472,8 @@ if __name__ == '__main__':
         result = run(args.build_receipt, args.output, endpoint=args.endpoint, loopback=args.loopback,
             small_test=args.small_test, pairs=args.pairs, warmup=args.warmup, timeout=args.timeout,
             threads=args.threads, seed=args.seed, routing_archive=args.captured_routing, comparison_mode=args.comparison_mode,
-            tokens_list=tuple(int(v) for v in args.tokens.split(',')))
+            tokens_list=tuple(int(v) for v in args.tokens.split(',')), failure_dump=args.failure_dump,
+            diagnostic_pair13=args.diagnostic_pair13, dump_max_bytes=args.dump_max_bytes, retained_run=args.retained_run)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         result = dict(valid=False, timing_comparison_valid=False, error=str(error))
     print(json.dumps({k: v for k, v in result.items() if k not in ('candidate', 'host')}, sort_keys=True, allow_nan=False))

@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # FUTURE CPU05 dispatch only, inside the established ssh -A controller.
 set -euo pipefail
-if [[ $# != 4 ]]; then
-  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT\n' "$0" >&2
+if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && $5 == --diagnostic-pair13 ) ]]; then
+  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13 [RETAINED_RUN_ARCHIVE]]\n' "$0" >&2
   exit 2
 fi
 repo=$(realpath "$1")
 archive=$(realpath "$2")
 build=$3
 result=$4
+benchmark_args=(--tokens 1,2,4,8,16)
+if [[ ${5:-} == --diagnostic-pair13 ]]; then
+  benchmark_args=(--diagnostic-pair13 --failure-dump)
+  if [[ $# == 6 ]]; then benchmark_args+=(--retained-run "$(realpath "$6")"); fi
+fi
 [[ $(hostname -s) == inferswarm05 ]] || { printf 'requires CPU05\n' >&2; exit 2; }
 [[ ! -e $build && ! -e $result ]] || { printf 'fresh output paths required\n' >&2; exit 2; }
 python3 "$repo/tools/native-moe-overlap/hot-build-composed.py" \
@@ -98,7 +103,7 @@ PY
 setsid python3 "$repo/tools/native-moe-overlap/layer7_bench.py" \
   --build-receipt "$build/hot-candidate-receipt.json" \
   --output "$result/benchmark" --endpoint 127.0.0.1:50060 --threads 14 --timeout 300 \
-  --tokens 1,2,4,8,16 \
+  "${benchmark_args[@]}" \
   --comparison-mode cpu-cuda &
 benchmark=$!
 wait "$benchmark"

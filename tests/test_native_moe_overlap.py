@@ -462,7 +462,8 @@ class Layer7BenchContracts(unittest.TestCase):
                 log=root/'log'
                 with log.open('w') as stream:
                     child=subprocess.Popen(['bash',str(ROOT/'tools/native-moe-overlap/layer7-cpu05.sh'),
-                        str(ROOT),str(archive),str(root/'build'),str(root/'result')],env=env,stdout=stream,stderr=stream,start_new_session=True)
+                        str(ROOT),str(archive),str(root/'build'),str(root/'result'),
+                        *(['--diagnostic-pair13'] if mode == 'success' else [])],env=env,stdout=stream,stderr=stream,start_new_session=True)
                     try:
                         if mode in ('TERM','INT'):
                             deadline=time.monotonic()+8
@@ -479,6 +480,9 @@ class Layer7BenchContracts(unittest.TestCase):
                 cleanup=json.loads((root/'result'/'cleanup.json').read_text())
                 self.assertEqual(cleanup['cleanup'],'failed' if mode=='cleanup-failure' else 'unknown' if mode=='cleanup-unknown' else 'verified')
                 if (state/'benchmark').exists():self.assertIn('--comparison-mode cpu-cuda',(state/'benchmark').read_text())
+                if mode == 'success':
+                    self.assertIn('--diagnostic-pair13 --failure-dump', (state/'benchmark').read_text())
+                    self.assertNotIn('--tokens', (state/'benchmark').read_text())
                 calls=(state/'calls').read_text();self.assertEqual(calls.count("'-L'"),1);self.assertNotIn("'-R'",calls)
                 self.assertIn('H5_LAYER7_OWNER_TOKEN',(state/'cleanup-requested').read_text())
 
@@ -654,6 +658,44 @@ class Layer7BatchSweepContracts(unittest.TestCase):
                     self.tool.run('/nonexistent/receipt.json', Path(temp)/'x',
                                   loopback=True, small_test=True, tokens_list=bad)
 
+    def test_diagnostic_refuses_unfrozen_selection_before_candidate_access(self):
+        for kwargs in ({'seed': 1}, {'pairs': 14}, {'warmup': 0}, {'tokens_list': (2,)},
+                       {'routing_archive': 'not-a-routing-file'}, {'dump_max_bytes': 0}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                self.tool.run('absent-receipt', 'absent-output', loopback=True,
+                              diagnostic_pair13=True, **kwargs)
+
+    def test_retained_pair13_hash_precedes_archive_reads(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'wrong.tar.gz'; path.write_bytes(b'untrusted archive')
+            with mock.patch.object(self.tool.tarfile, 'open', side_effect=AssertionError('must not read archive')):
+                with self.assertRaisesRegex(ValueError, 'archive identity'):
+                    self.tool.retained_pair13(path)
+
+    def test_retained_pair13_selects_original_index_and_rejects_ambiguity(self):
+        import io, tarfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/'synthetic.tar.gz'
+            def write(records):
+                payload = ('\n'.join(json.dumps(r) for r in records)+'\n').encode()
+                with tarfile.open(path, 'w:gz') as archive:
+                    member = tarfile.TarInfo('retained/benchmark/stdout.jsonl'); member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+            target = self.row('mixed-varied-set', 2, 13, False, 5)
+            other = self.row('mixed-varied-set', 2, 3, False, 5)
+            write([other, target])
+            # Synthetic parser fixture only. Real archives always require the immutable digest.
+            with mock.patch.object(self.tool, 'digest', return_value=self.tool.PR346_RUN_SHA256):
+                self.assertEqual(self.tool.retained_pair13(path), target)
+                write([target, target])
+                with self.assertRaisesRegex(ValueError, 'ambiguous'):
+                    self.tool.retained_pair13(path)
+                write([other])
+                with self.assertRaisesRegex(ValueError, 'missing'):
+                    self.tool.retained_pair13(path)
+
 
 class NativeHotExperts(unittest.TestCase):
     """Real source FFN arithmetic vs original CPU, structural wire separately."""
@@ -779,6 +821,144 @@ class NativeHotExperts(unittest.TestCase):
                         self.assertTrue(row['within']['pass'])
                         self.assertFalse(row['excess']['pass'])
                         self.assertGreater(row['excess']['max_ratio'], 1)
+
+    def test_diagnostic_coordinates_use_actual_comparator_scales(self):
+        scales = ((0.125, 128, 0.25), (256, 0.5, 512))
+        for mode in ('cpu-loopback', 'cpu-cuda'):
+            result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', 'unused:1',
+                '--work-dir', str(self.root/'unused-coordinates'), '--small-test', '--comparison-mode', mode,
+                '--control', 'comparator-probe'], capture_output=True, text=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            probe = json.loads(result.stdout)
+            for row in probe['batch_coordinates']:
+                t, c = row['token'], row['coordinate']
+                for kind in ('within', 'excess'):
+                    metrics = row[kind]
+                    for location in ('max_abs_at', 'max_ratio_at'):
+                        at = metrics[location]
+                        self.assertEqual((at['token'], at['coordinate'], at['flat_index']), (t, c, t*3+c))
+                        self.assertEqual(at['scale_l1'], scales[t][c]*10)
+                        expected = (8*2**-23)*at['scale_l1'] + (2**-7*at['scale_l1'] if mode == 'cpu-cuda' else 0)
+                        self.assertEqual(at['tolerance'], expected)
+                        self.assertEqual(at['abs_error'], abs(at['A']-at['B']))
+                        self.assertEqual(at['ratio'], at['abs_error']/expected)
+                    self.assertEqual(metrics['max_abs'], metrics['max_abs_at']['abs_error'])
+                    self.assertEqual(metrics['max_ratio'], metrics['max_ratio_at']['ratio'])
+            maxima = probe['different_maxima']
+            self.assertEqual(maxima['max_abs_at']['flat_index'], 3)
+            self.assertEqual(maxima['max_ratio_at']['flat_index'], 0)
+            self.assertEqual(probe['zero_planes']['max_ratio_at']['tolerance'], 8*2**-23)
+
+    def diagnostic_tool(self):
+        spec = importlib.util.spec_from_file_location('layer7_diagnostic', ROOT/'tools/native-moe-overlap/layer7_bench.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        return module
+
+    def test_diagnostic_pair13_prefix_capture_roundtrip_and_selection(self):
+        import hashlib
+        tool = self.diagnostic_tool()
+        work = self.root/'pair13-diagnostic'
+        with self.worker() as proxy:
+            result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
+                '--work-dir', str(work), '--small-test', '--threads', '2', '--diagnostic-pair13'],
+                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr[-4000:])
+        rows = [json.loads(line) for line in result.stdout.splitlines()]
+        summary = tool.validate_result(rows, 20, 5, tokens_list=(1,2,4,8,16), diagnostic_pair13=True)
+        self.assertFalse(summary['timing_comparison_valid'])
+        self.assertEqual((summary['priming_pairs'], summary['target_pairs'], summary['measured_pairs']), (68,1,0))
+        self.assertEqual(result.stderr.count('IS314_SETUP'), 2)
+        target, = [r for r in rows if r['type'] == 'pair']
+        self.assertEqual((target['case'], target['tokens'], target['pair'], target['warmup'], target['order']),
+                         ('mixed-varied-set', 2, 13, False, 'BA'))
+        self.assertEqual((target['B']['step'], target['B']['graph_dispatches'], target['B']['graph_recompute_reuse']), (19,19,18))
+        probe = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', 'unused:1', '--work-dir', str(self.root/'unused-selection'),
+            '--small-test', '--control', 'fixture-probe'], capture_output=True, text=True, timeout=5)
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        selected = json.loads(probe.stdout)
+        self.assertEqual(target['input_sha256'], selected['input_sha256'])
+        self.assertEqual(target['routing_sha256'], selected['routing_sha256'])
+        # Frozen input loop: each xorshift call mutates the same state by reference.
+        # Round each C++ F32 operation before the next operation.
+        f32 = lambda x: struct.unpack('<f', struct.pack('<f', x))[0]
+        state = 314159 + 14*7919 + 2*104729
+        values = []
+        for _ in range(64):
+            state ^= (state << 13) & 0xffffffff; state ^= state >> 17; state ^= (state << 5) & 0xffffffff
+            values.append(f32(f32(f32((state % 2001 - 1000)/f32(1000))*f32(.8))+f32(.1)))
+        self.assertEqual(hashlib.sha256(struct.pack('<64f', *values)).hexdigest(), target['input_sha256'])
+        manifest = tool.validate_capture(work)
+        self.assertTrue(manifest['consumed_identity_matches_pair'])
+        self.assertEqual(manifest['B_unavailable'], [])
+        tensors = manifest['tensors']
+        for arm in ('A', 'B'):
+            self.assertEqual(tensors[arm+'.input']['shape'], [32,2,1,1])
+            self.assertEqual(tensors[arm+'.output']['shape'], [32,2,1,1])
+            self.assertEqual(tensors[arm+'.weighted']['shape'], [32,10,2,1])
+            self.assertEqual(tensors[arm+'.ids']['shape'], [10,2,1,1])
+            self.assertEqual(tensors[arm+'.input']['sha256'], target['input_sha256'])
+            self.assertEqual(tensors[arm+'.output']['sha256'], target[arm]['output_sha256'])
+        self.assertEqual(tensors['B.hot.input']['sha256'], target['input_sha256'])
+        self.assertEqual(len(manifest['slot_map']), 20)
+        for slot in manifest['slot_map']:
+            self.assertEqual(target['ids'][slot['token']][slot['original_slot']], slot['global_expert'])
+        data = (work/'capture/A.weighted.bin').read_bytes()
+        planes = struct.unpack('<'+'f'*(len(data)//4), data)
+        for key in ('max_abs_at', 'max_ratio_at'):
+            at = target['correctness'][key]; t,c = at['token'],at['coordinate']
+            self.assertEqual(at['scale_l1'], sum(abs(planes[(t*10+i)*32+c]) for i in range(10)))
+        # Raw bytes include their actual type/stride/identity. Corruption refuses.
+        path = work/'capture/A.output.bin'; original = path.read_bytes()
+        path.write_bytes(bytes([original[0]^1])+original[1:])
+        with self.assertRaisesRegex(ValueError, 'identity'):
+            tool.validate_capture(work)
+        path.write_bytes(original)
+        bad = [dict(r) for r in rows]
+        index = next(i for i,r in enumerate(bad) if r.get('type') == 'pair')
+        bad[index]['pair'] = 0
+        with self.assertRaisesRegex(ValueError, 'prefix'):
+            tool.validate_result(bad, 20, 5, tokens_list=(1,2,4,8,16), diagnostic_pair13=True)
+
+    def test_diagnostic_supervisor_refuses_capture_error_after_comparator_pass(self):
+        tool = self.diagnostic_tool()
+        result = tool.run(self.build.parent/'hot-candidate-receipt.json', self.root/'bounded-supervisor',
+                          loopback=True, small_test=True, threads=2,
+                          diagnostic_pair13=True, dump_max_bytes=1, timeout=30)
+        self.assertFalse(result['valid']); self.assertFalse(result['timing_comparison_valid'])
+        self.assertEqual(result['returncode'], 2)
+        self.assertTrue(result['worker']['reaped'])
+        target, = [r for r in result['capture_rows'] if r['type'] == 'pair']
+        self.assertTrue(target['correctness']['pass'])
+        self.assertEqual(target['capture']['status'], 'failed')
+        self.assertIn('budget', target['capture']['error'])
+
+    def test_failure_dump_default_off_and_bounded_capture_errors(self):
+        tool = self.diagnostic_tool()
+        for capture_args in ([], ['--failure-dump'], ['--failure-dump', '--dump-max-bytes', '1']):
+            work = self.root/('failure-capture-' + str(len(capture_args)))
+            with self.worker() as proxy:
+                result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
+                    '--work-dir', str(work), '--small-test', '--tokens', '2', '--warmup', '0', '--pairs', '1',
+                    '--comparison-mode', 'cpu-cuda', '--control', 'missing-expert', *capture_args],
+                    capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 2, result.stderr[-2000:])
+            rows = [json.loads(line) for line in result.stdout.splitlines()]
+            pair = next(r for r in rows if r['type'] == 'pair')
+            self.assertFalse(pair['correctness']['pass']); self.assertFalse(rows[-1]['valid'])
+            if not capture_args:
+                self.assertNotIn('capture', pair)
+                self.assertNotIn('max_ratio_at', pair['correctness'])
+                self.assertFalse((work/'capture').exists())
+            elif len(capture_args) == 1:
+                self.assertEqual(pair['capture']['status'], 'complete')
+                manifest = tool.validate_capture(work)
+                # The omission control changes B's consumed weight bits. Retain that fact.
+                self.assertFalse(manifest['consumed_identity_matches_pair'])
+                self.assertNotEqual(manifest['tensors']['A.weights']['sha256'], manifest['tensors']['B.weights']['sha256'])
+            else:
+                self.assertEqual(pair['capture']['status'], 'failed')
+                self.assertIn('budget', pair['capture']['error'])
+                self.assertFalse((work/'capture').exists())
 
     def test_matched_weight_inventory_and_census_bind_all_actual_weights(self):
         spec=importlib.util.spec_from_file_location('weight_supervisor', ROOT/'tools/native-moe-overlap/layer7_bench.py')

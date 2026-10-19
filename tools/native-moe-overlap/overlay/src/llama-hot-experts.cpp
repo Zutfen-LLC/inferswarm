@@ -409,6 +409,24 @@ public:
     }
 };
 llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & graph) { return graph->stats; }
+llama_hot_observation llama_hot_get_observation(const std::shared_ptr<llama_hot_graph> & graph) {
+    if (!graph || !graph->stats.steps) return {};
+    auto & s=*graph;
+    llama_hot_observation out;
+    out.input=s.input; out.ids=s.bound_ids?s.bound_ids:s.ids; out.weights=s.weights;
+    // Fast-path intermediates are not retained. Never expose the last mixed
+    // step's slots/shared as observations of an all-cold step.
+    if (!s.stats.hot) return out;
+    out.weighted=s.slots; out.shared=s.shared.output;
+    auto & h=s.hot[s.stats.hot];
+    out.hot_input=h.input; out.hot_ids=h.ids; out.hot_weights=h.weights;
+    if (s.stats.cold) {
+        out.cold_ids=s.cold[s.stats.cold].ids;
+        out.cold_weights=s.cold[s.stats.cold].weights;
+    }
+    return out;
+}
+
 
 ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const llama_layer & layer,int il,const llama_moe_overlap_config & cfg) {
     check(n_expert_used==10 && n_tokens>=1,"requires ten slots and at least one token");
