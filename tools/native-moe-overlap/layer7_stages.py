@@ -26,14 +26,15 @@ def floats(data):
     return struct.unpack('<'+'f'*(len(data)//4), data)
 
 
-def load_capture(directory):
+def load_capture(directory, allow_operand_replay=False):
     """Validate identities/layouts before using executed stage bytes."""
     directory = Path(directory)
     path = directory/'manifest.json'
     if path.stat().st_size > 65536:
         raise ValueError('stage metadata budget exceeded')
     m = json.loads(path.read_text())
-    if (m.get('schema') != 'h5-layer7-stages/1' or m.get('byte_order') != 'little' or
+    replay = allow_operand_replay and m.get('schema') == 'h5-layer7-stages/2'
+    if (m.get('schema') != ('h5-layer7-stages/2' if replay else 'h5-layer7-stages/1') or m.get('byte_order') != 'little' or
             m.get('compact_expert_order') != list(HOT) or m.get('performance_claim') is not False or
             m.get('payload_limit_bytes') != LIMIT):
         raise ValueError('stage schema/contract mismatch')
@@ -45,7 +46,9 @@ def load_capture(directory):
     if base.get('schema') != 'h5-layer7-capture/2':
         raise ValueError('stages require corrected base capture')
     row = m['pair_record']
-    if (row['tokens'] != 2 or row['case'] != 'mixed-varied-set' or
+    tokens = row['tokens']
+    if (tokens not in ((1,2,4,8) if replay else (2,)) or
+            row['case'] not in (('mixed','mixed-varied-set','mixed-shared-set') if replay else ('mixed-varied-set',)) or
             row['warmup'] != base['pair_record']['warmup'] or m['slot_map'] != base['slot_map'] or
             m['input_sha256'] != base['pair_record']['input_sha256'] or
             m['routing_sha256'] != base['pair_record']['routing_sha256'] or
@@ -71,7 +74,7 @@ def load_capture(directory):
                     shape[2:] != [5,1] or meta['B_actual_sha256'] != meta['sha256']):
                 raise ValueError('stage Q8_0 identity mismatch')
         elif (meta['ggml_type'] != 0 or meta['type_name'] != 'f32' or
-              shape[1:] != [10 if name.startswith('A.') else 5,2,1]):
+              shape[1:] != [10 if name.startswith('A.') else 5,tokens,1]):
             raise ValueError('stage F32 layout mismatch')
     if total != m['payload_bytes']:
         raise ValueError('stage payload size mismatch')
@@ -89,8 +92,8 @@ def load_capture(directory):
         width = f if stage in ('gate','up','swiglu') else d
         for arm, count in (('A',10), ('B',5)):
             meta = m['files'][arm+'.'+stage+'.bin']
-            if (meta['shape'] != [width,count,2,1] or
-                    meta['strides_bytes'] != [4,width*4,width*count*4,width*count*2*4] or
+            if (meta['shape'] != [width,count,tokens,1] or
+                    meta['strides_bytes'] != [4,width*4,width*count*4,width*count*tokens*4] or
                     not meta['flags'] & 2):
                 raise ValueError('retained stage dimensions/strides/flags mismatch')
     for bank in ('gate','up','down'):

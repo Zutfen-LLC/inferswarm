@@ -49,7 +49,7 @@ def exact(expected, observed):
 
 def compose(weighted, shared, d, tokens=2, omit=None):
     """Pinned graph: left fold slots 0..9 with F32 adds, then shared add."""
-    if (not 1 <= d <= 2560 or tokens != 2 or len(weighted) != tokens*10*d or
+    if (not 1 <= d <= 2560 or tokens not in (1, 2, 4, 8) or len(weighted) != tokens*10*d or
             len(shared) != tokens*d or
             not all(math.isfinite(v) for v in (*weighted, *shared))):
         raise ValueError('finite bounded composition shapes required')
@@ -68,18 +68,18 @@ def compose(weighted, shared, d, tokens=2, omit=None):
     return result
 
 
-def composition_check(weighted, shared, output, d):
+def composition_check(weighted, shared, output, d, tokens=2):
     try:
-        reference = compose(weighted, shared, d)
+        reference = compose(weighted, shared, d, tokens=tokens)
     except UnsupportedProfile as error:
         return dict(status='unknown', reason=str(error))
     result = exact(reference, output)
     controls = []
-    for token in range(2):
+    for token in range(tokens):
         original = reference[token*d:(token+1)*d]
         for slot in range(11):
             try:
-                changed = compose(weighted, shared, d, omit=slot)[token*d:(token+1)*d]
+                changed = compose(weighted, shared, d, tokens=tokens, omit=slot)[token*d:(token+1)*d]
             except UnsupportedProfile:
                 controls.append(dict(token=token, omitted='shared' if slot == 10 else slot,
                                      status='unknown-subnormal-control'))
@@ -90,7 +90,10 @@ def composition_check(weighted, shared, output, d):
             controls.append(dict(token=token, omitted='shared' if slot == 10 else slot,
                 status=('insensitive-zero-mass' if all(v == 0 for v in mass) else
                         'rejected' if detected else 'insensitive-rounding')))
-        other = output[(1-token)*d:(2-token)*d]
+        if tokens == 1:
+            continue
+        other_token = (token+1)%tokens
+        other = output[other_token*d:(other_token+1)*d]
         controls.append(dict(token=token, omitted='stale-other-token-output',
             status='rejected' if exact(original, other)['status'] == 'mismatch'
                    else 'insensitive-identical-output'))
@@ -112,18 +115,18 @@ def weighting_check(down, weights, observed, d):
     return exact(predicted, observed)
 
 
-def validate_boundary(base, raw, d, slot_map):
+def validate_boundary(base, raw, d, slot_map, tokens=2):
     """Cross-check bytes against the selected pair, never trust a boolean flag."""
     row = base['pair_record']
-    shapes = {name: [d, 2, 1, 1] for name in
+    shapes = {name: [d, tokens, 1, 1] for name in
               ('A.input', 'B.input', 'B.hot.input', 'A.output', 'B.output', 'A.shared', 'B.shared')}
     for arm in ('A', 'B'):
-        shapes[arm+'.ids'] = [10, 2, 1, 1]
-        shapes[arm+'.weights'] = [1, 10, 2, 1]
-        shapes[arm+'.weighted'] = [d, 10, 2, 1]
+        shapes[arm+'.ids'] = [10, tokens, 1, 1]
+        shapes[arm+'.weights'] = [1, 10, tokens, 1]
+        shapes[arm+'.weighted'] = [d, 10, tokens, 1]
     for branch in ('hot', 'cold'):
-        shapes['B.'+branch+'.ids'] = [5, 2, 1, 1]
-        shapes['B.'+branch+'.weights'] = [1, 5, 2, 1]
+        shapes['B.'+branch+'.ids'] = [5, tokens, 1, 1]
+        shapes['B.'+branch+'.weights'] = [1, 5, tokens, 1]
     if set(raw) != set(shapes) or set(base['tensors']) != set(shapes):
         raise ValueError('base tensor coverage mismatch')
     for name, shape in shapes.items():
@@ -145,13 +148,15 @@ def validate_boundary(base, raw, d, slot_map):
             stages.digest(raw['A.input']) != row['input_sha256'] or
             stages.digest(raw['A.ids']+raw['A.weights']) != row['routing_sha256']):
         raise ValueError('consumed boundary identity mismatch')
-    ids = struct.unpack('<20i', raw['A.ids'])
-    weights = struct.unpack('<20I', raw['A.weights'])
-    if (list(ids) != [i for r in row['ids'] for i in r] or
-            [f'{v:08x}' for v in weights] != [i for r in row['weight_bits'] for i in r]):
+    ids = struct.unpack('<'+str(tokens*10)+'i', raw['A.ids'])
+    weights = struct.unpack('<'+str(tokens*10)+'I', raw['A.weights'])
+    row_ids = row['ids'] if tokens == 1 else [i for r in row['ids'] for i in r]
+    row_weights = row['weight_bits'] if tokens == 1 else [i for r in row['weight_bits'] for i in r]
+    if (list(ids) != row_ids or
+            [f'{v:08x}' for v in weights] != row_weights):
         raise ValueError('selected routing ID/weight bits mismatch')
     expected = []
-    for token in range(2):
+    for token in range(tokens):
         counts = dict(hot=0, cold=0)
         token_ids = ids[token*10:(token+1)*10]
         if len(set(token_ids)) != 10 or any(not 0 <= i < 512 for i in token_ids):
@@ -216,15 +221,55 @@ def cpu_projection(helper, bank, inputs, observed, slot_map, d, f, profile=CPU):
     return exact(predictions, actual)
 
 
-def analyze(directory, helper):
+def replay_binding(directory, row, timed_records):
+    if timed_records is None:
+        return 'unknown'
+    binding = json.loads((directory.parent/'replay-binding.json').read_text())
+    if (binding.get('schema') != 'h5-layer7-replay-binding/1' or
+            binding.get('timed_graph_retention') is not False or
+            binding.get('replay_after_all_timed_work') is not True):
+        return 'mismatch'
+    records = [json.loads(line) for line in Path(timed_records).read_text().splitlines()]
+    target = binding['timed_record']
+    if sum(record == target for record in records) != 1:
+        return 'mismatch'
+    for key in ('case','tokens','pair','warmup','order','input_sha256','routing_sha256','ids','weight_bits'):
+        if target[key] != row[key]: return 'mismatch'
+    return 'match' if all(target[arm]['output_sha256'] == row[arm]['output_sha256']
+                          for arm in ('A','B')) else 'mismatch'
+
+
+def analyze_replays(benchmark, helper):
+    benchmark = Path(benchmark)
+    records = [json.loads(line) for line in (benchmark/'stdout.jsonl').read_text().splitlines()]
+    timed = [r for r in records if r.get('type') == 'pair']
+    widths = records[0]['tokens_list']
+    expected = {(t, 'mixed' if t == 1 else 'mixed-'+kind+'-set')
+                for t in widths for kind in (('varied',) if t == 1 else ('varied','shared'))}
+    if (not widths or any(t not in (1,2,4,8) for t in widths) or
+            {(r['tokens'],r['case']) for r in timed} != expected or len(timed) != len(expected) or
+            not records[-1].get('diagnostic_complete')):
+        raise ValueError('bounded MMVQ replay coverage/completion mismatch')
+    reports = []
+    for row in timed:
+        path = benchmark/'native/replays'/('t'+str(row['tokens'])+'-'+row['case'])/'stages'
+        reports.append(analyze(path, helper, True, benchmark/'stdout.jsonl'))
+    return dict(schema='h5-layer7-conditional-replays/1', numerical_qualification=False,
+        performance_claim=False, status='conditional-profile-match' if all(
+            r['status'] == 'conditional-profile-match' for r in reports) else 'inconclusive',
+        profiles=reports, legacy_all_pass=all(r['correctness']['pass'] for r in timed))
+
+
+def analyze(directory, helper, conditional=False, timed_records=None):
     directory = Path(directory)
     if (directory/'manifest.json').stat().st_size > 65536:
         raise ValueError('stage metadata budget exceeded')
     preliminary = json.loads((directory/'manifest.json').read_text())
-    if preliminary['pair_record']['tokens'] != 2:
+    tokens = preliminary['pair_record']['tokens']
+    if tokens not in ((1, 2, 4, 8) if conditional else (2,)):
         return dict(schema='h5-layer7-operand-check/1', status='unknown',
                     reason='only retained T=2 stage layout is supported', end_to_end='unknown')
-    m = stages.load_capture(directory)
+    m = stages.load_capture(directory, allow_operand_replay=conditional)
     base = json.loads((directory.parent/'capture/manifest.json').read_text())
     d = m['files']['gate.q8_0.bin']['shape'][0]
     f = m['files']['A.gate.bin']['shape'][0]
@@ -233,7 +278,7 @@ def analyze(directory, helper):
                     reason='unsupported stage dimensions', end_to_end='unknown')
     raw = {name: (directory.parent/'capture'/meta['file']).read_bytes()
            for name, meta in base['tensors'].items()}
-    validate_boundary(base, raw, d, m['slot_map'])
+    validate_boundary(base, raw, d, m['slot_map'], tokens)
     spec = json.loads((directory.parent/'spec.json').read_text())
     if spec['layer'] != 7 or spec['expert_ids'] != list(stages.HOT):
         raise ValueError('bank layer/expert identity mismatch')
@@ -261,7 +306,7 @@ def analyze(directory, helper):
         if not all(math.isfinite(struct.unpack_from('<e', bank, at)[0])
                    for at in range(0, len(bank), 34)):
             raise ValueError('nonfinite bank scale')
-        if stage != 'down':
+        if stage != 'down' and tokens == 2:
             checks['A.'+stage] = cpu_projection(model, bank, stages.floats(raw['A.input']),
                 data['A.'+stage+'.bin'], m['slot_map'], d, f)
     for arm, slots in (('A', 10), ('B', 5)):
@@ -271,7 +316,7 @@ def analyze(directory, helper):
         checks[arm+'.weighting'] = weighting_check(down, weights, weighted, d)
         restored = stages.floats(raw[arm+'.weighted'])
         selected = []
-        for token in range(2):
+        for token in range(tokens):
             for slot in range(slots):
                 entry = next(e for e in m['slot_map'] if e['token'] == token and
                              (e['original_slot'] == slot if arm == 'A' else
@@ -280,7 +325,38 @@ def analyze(directory, helper):
                 selected.extend(restored[at:at+d])
         checks[arm+'.restored_planes'] = exact(weighted, selected)
         checks[arm+'.composition'] = composition_check(restored, stages.floats(raw[arm+'.shared']),
-                                                       stages.floats(raw[arm+'.output']), d)
+                                                       stages.floats(raw[arm+'.output']), d, tokens)
+    if conditional:
+        module_spec = importlib.util.spec_from_file_location('l7_conditional_mmvq', HERE/'layer7_mmvq_check.py')
+        mmvq = importlib.util.module_from_spec(module_spec); module_spec.loader.exec_module(mmvq)
+        for stage in ('gate', 'up', 'down'):
+            down = stage == 'down'
+            operands = data['B.swiglu.bin'] if down else stages.floats(raw['B.hot.input'])
+            checks['B.'+stage] = mmvq.projection(model, (directory/(stage+'.q8_0.bin')).read_bytes(),
+                operands, data['B.'+stage+'.bin'], m['slot_map'], f if down else d,
+                d if down else f, tokens, down)
+        checks['B.swiglu'] = mmvq.swiglu(data['B.gate.bin'], data['B.up.bin'], data['B.swiglu.bin'], f, tokens)
+        av, bv = stages.floats(raw['A.weighted']), stages.floats(raw['B.weighted'])
+        ac, bc = [], []
+        for e in m['slot_map']:
+            if e['branch'] == 'cold':
+                at = (e['token']*10+e['original_slot'])*d
+                ac.extend(av[at:at+d]); bc.extend(bv[at:at+d])
+        checks['B.cold_reference'] = exact(ac, bc)
+        checks['B.shared_reference'] = exact(stages.floats(raw['A.shared']), stages.floats(raw['B.shared']))
+        sensitive = all(checks['B.'+name].get('sensitive', False) for name in ('gate','up','swiglu','down'))
+        sensitive &= all(c['status'] == 'rejected' for arm in ('A','B')
+            for c in checks[arm+'.composition'].get('negative_controls', []))
+        mismatch = any(c['status'] == 'mismatch' for c in checks.values())
+        complete = all(c['status'] == 'match' for c in checks.values())
+        binding = replay_binding(directory, m['pair_record'], timed_records)
+        return dict(schema='h5-layer7-conditional-check/1', profile=mmvq.PROFILE, assumption=mmvq.ASSUMPTION,
+            tokens=tokens, status='mismatch' if mismatch or binding == 'mismatch' else
+            'conditional-profile-match' if complete and sensitive and binding == 'match' else 'inconclusive',
+            conditional_arithmetic='match' if complete and sensitive else 'mismatch' if mismatch else 'inconclusive',
+            timed_binding=binding, sensitive=sensitive, numerical_qualification=False, performance_claim=False,
+            checks=checks, legacy_comparator=base['pair_record']['correctness'],
+            stage_manifest_sha256=stages.digest((directory/'manifest.json').read_bytes()))
     mismatch = any(c['status'] == 'mismatch' for c in checks.values())
     return dict(schema='h5-layer7-operand-check/1', status='mismatch' if mismatch else 'unknown',
         end_to_end='unknown', numerical_qualification=False, performance_claim=False,
@@ -297,14 +373,19 @@ def analyze(directory, helper):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--capture', type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--capture', type=Path)
+    source.add_argument('--replays', type=Path, help='completed operand-replay benchmark directory')
     parser.add_argument('--helper', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--conditional-mmvq', action='store_true')
+    parser.add_argument('--timed-records', type=Path, help='retained benchmark stdout.jsonl, required for timed binding')
     args = parser.parse_args()
-    result = analyze(args.capture, args.helper)
+    result = analyze_replays(args.replays, args.helper) if args.replays else analyze(
+        args.capture, args.helper, args.conditional_mmvq, args.timed_records)
     with args.output.open('x') as stream:
         json.dump(result, stream, indent=2, allow_nan=False)
         stream.write('\n')
-    print(json.dumps({k: result[k] for k in ('status', 'end_to_end')}))
+    print(json.dumps({k: result[k] for k in ('status', 'numerical_qualification') if k in result}))
     # Unknown must never be consumed as successful acceptance by a shell wrapper.
-    raise SystemExit(2 if result['status'] == 'mismatch' else 3)
+    raise SystemExit(0 if result['status'] == 'conditional-profile-match' else 2 if result['status'] == 'mismatch' else 3)

@@ -38,7 +38,7 @@ uint32_t next(uint32_t & state) { state^=state<<13; state^=state>>17; state^=sta
 float sample(uint32_t & state) { return (int(next(state)%2001)-1000)/1000.0f; }
 struct options {
     int d=2560,f=640,threads=8,warmup=5,pairs=20; uint32_t seed=314159;
-    bool small=false, failure_dump=false, diagnostic_pair13=false, capture_stages=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
+    bool small=false, failure_dump=false, diagnostic_pair13=false, capture_stages=false, operand_replay=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
     std::string tokens_list="1";
 };
 int number(const std::string & text,int low,int high) {
@@ -67,6 +67,7 @@ options parse(int argc,char ** argv) {
     options o;
     for (int i=1;i<argc;++i) {
         std::string a=argv[i];
+        if (a=="--operand-replay") { o.operand_replay=true;continue; }
         if (a=="--capture-stages") { o.capture_stages=true;continue; }
         if (a=="--failure-dump") { o.failure_dump=true;continue; }
         if (a=="--diagnostic-pair13") { o.diagnostic_pair13=true;continue; }
@@ -91,6 +92,11 @@ options parse(int argc,char ** argv) {
     }
     require(!o.capture_stages || o.diagnostic_pair13 || (o.small && o.control=="stage-probe"),"stage capture requires frozen diagnostic or small stage-probe");
     if (o.control=="stage-probe") require(o.tokens_list=="2" && o.warmup==0 && o.pairs<=2,"stage-probe requires T=2, no warmup, one or two pairs");
+    if (o.operand_replay) {
+        require(o.pairs==1 && o.warmup==0 && !o.capture_stages && !o.failure_dump &&
+            !o.diagnostic_pair13 && o.control.empty() && o.routing.empty(),"operand replay requires one pair/no warmup, synthetic routing, no other diagnostic");
+        for(int t:parse_tokens(o.tokens_list)) require(t==1 || t==2 || t==4 || t==8,"operand replay supports MMVQ T=1/2/4/8 only");
+    }
     for (auto key:{"IS309_MOE","IS309_CAPTURE","IS314_HOT_SPEC","IS311_ASSIGNED"}) require(!std::getenv(key),std::string("refuse inherited ")+key);
     return o;
 }
@@ -258,7 +264,7 @@ struct bench {
         auto selected=layer;if (hot && omitted_shared_down) selected.ffn_down_shexp=omitted_shared_down;
         if (hot) {
             auto cfg=llama_hot_config(9);
-            cfg.benchmark_stages=o.capture_stages && tokens==2;
+            cfg.benchmark_stages=o.capture_stages && (tokens==2 || o.operand_replay);
             if (o.control!="native-routing") {
                 if (tokens>1) cfg.benchmark_routing_batch=&x.routing_batch.at(tokens);
                 else cfg.benchmark_routing=&x.routing;
@@ -272,7 +278,7 @@ struct bench {
             }
             x.shared=x.output->src[1];ggml_set_output(x.shared);
             x.weighted=ggml_get_tensor(x.result.get_ctx(),"ffn_moe_weighted-7");ggml_set_output(x.weighted);
-            if (o.capture_stages && tokens==2) x.stages=llama_hot_retain_stages(x.weighted);
+            if (o.capture_stages && (tokens==2 || o.operand_replay)) x.stages=llama_hot_retain_stages(x.weighted);
             if (o.control=="native-routing") {
                 x.native_ids=ggml_cont(x.result.get_ctx(),x.weighted->src[0]->src[2]);ggml_set_output(x.native_ids);
                 x.native_weights=x.weighted->src[1];ggml_set_output(x.native_weights);
@@ -489,12 +495,13 @@ json capture(bench & s,const json & row) {
 // frozen geometry). Default capture keeps its existing 16 MiB payload limit.
 json capture_stages(bench & s,const json & row) {
     constexpr size_t limit=32*1024*1024;
+    const int tokens=row.at("tokens");
     const auto directory=std::filesystem::path(s.o.work)/"stages";
     const auto b=llama_hot_get_stages(s.b.result.hot_experts.at(0));
-    require(s.a.stages[0] && b[0] && row.at("tokens")==2,"executed stages unavailable");
+    require(s.a.stages[0] && b[0] && (tokens==2 || (s.o.operand_replay && (tokens==1 || tokens==4 || tokens==8))),"executed stages unavailable");
     require(std::filesystem::create_directory(directory),"stage directory must be fresh");
     const std::array<std::string,5> names={"gate","up","swiglu","down","weighted"};
-    json manifest={{"schema","h5-layer7-stages/1"},{"byte_order","little"},{"threads",s.o.threads},
+    json manifest={{"schema",s.o.operand_replay?"h5-layer7-stages/2":"h5-layer7-stages/1"},{"byte_order","little"},{"threads",s.o.threads},
         {"pair_record",row},{"payload_limit_bytes",limit},{"files",json::object()},
         {"execution","existing executed graphs with OUTPUT retention; no recomputation"},
         {"perturbation","T=2 A stages and B five-hot stages retained; allocator reuse and eligible fusion may change"},
@@ -514,7 +521,7 @@ json capture_stages(bench & s,const json & row) {
         for (size_t i=0;i<stages.size();++i) {
             auto * t=stages[i];
             require(t && t->type==GGML_TYPE_F32 && ggml_is_contiguous(t) &&
-                t->ne[0]==(i<3?s.o.f:s.o.d) && t->ne[1]==(arm?5:10) && t->ne[2]==2 &&
+                t->ne[0]==(i<3?s.o.f:s.o.d) && t->ne[1]==(arm?5:10) && t->ne[2]==tokens &&
                 t->ne[3]==1 && (t->flags&GGML_TENSOR_FLAG_OUTPUT),"retained stage shape/lifetime mismatch");
             std::vector<uint8_t> bytes(ggml_nbytes(t));ggml_backend_tensor_get(t,bytes.data(),0,bytes.size());
             save(std::string(arm?"B.":"A.")+names[i]+".bin",bytes,metadata(t));
@@ -649,10 +656,13 @@ int main(int argc,char ** argv) {
             {"performance_claim",false},{"priming_pairs",68},{"target_case","mixed-varied-set"},{"target_tokens",2},{"target_pair",13}}).dump()<<std::endl;
         // The complete spec and assigned encoded-weight identities are retained in work-dir.
         json summaries=json::object();int measured=0,primed=0;
+        struct replay_case { fixture input; json row; };
+        std::vector<replay_case> replays; bool legacy_valid=true;
         for (int tokens:widths) {
             if (tokens!=1) { const auto rebuild_start=clock_type::now();s.rebuild(tokens);
                 std::cout<<json({{"type","rebuild"},{"tokens",tokens},{"rebuild_ms",ms(rebuild_start)}}).dump()<<std::endl; }
             for (const std::string name:{"mixed","all-cold"}) {
+                if (o.operand_replay && name!="mixed") continue;
                 // Batched widths run two labeled variants: distinct per-token
                 // expert sets (general workload behavior) and the same set for
                 // every token (ideal expert reuse). The single-token
@@ -745,13 +755,16 @@ int main(int argc,char ** argv) {
                                 row["capture"]=capture(s,row);capture_ok=row["capture"]["consumed_identity_matches_pair"];
                             }
                             catch (const std::exception & error) { capture_ok=false;row["capture"]={{"status","failed"},{"error",error.what()}}; }
-                            if (capture_ok && o.capture_stages && tokens==2) {
+                            if (capture_ok && o.capture_stages && (tokens==2 || o.operand_replay)) {
                                 try { row["stages"]=capture_stages(s,row); }
                                 catch (const std::exception & error) { capture_ok=false;row["stages"]={{"status","failed"},{"error",error.what()}}; }
                             }
                         }
+                        if(o.operand_replay) {
+                            row["performance_claim"]=false;replays.push_back({fixture,row});legacy_valid &= valid;
+                        }
                         std::cout<<row.dump()<<std::endl;
-                        require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
+                        require(valid || o.operand_replay,"invalid comparison: numerical/partition/shared/expert check failed");
                         require(capture_ok,"diagnostic capture failed or consumed identity mismatch");
                         if (target) {
                             require(o.control=="stage-probe" || primed==68,"diagnostic prefix count mismatch");
@@ -770,6 +783,47 @@ int main(int argc,char ** argv) {
                         {"speedup_B_over_A",distribution(ratio(ta,tb))}};
                 }
             }
+        }
+        if(o.operand_replay) {
+            // ALL original timed work is finished. Only now rebuild retained
+            // graphs. Their outputs must equal the corresponding timed bytes.
+            const auto root=s.o.work;s.o.capture_stages=true;
+            std::filesystem::create_directory(root+"/replays");
+            for(auto & saved:replays) {
+                const int t=saved.row.at("tokens");
+                const std::string dir=root+"/replays/t"+std::to_string(t)+"-"+saved.row.at("case").get<std::string>();
+                std::filesystem::create_directory(dir);
+                for(const auto name:{"weights.json","spec.json","assigned.txt"})
+                    std::filesystem::copy_file(root+"/"+name,dir+"/"+name);
+                s.o.work=dir;s.rebuild(t);
+                std::vector<int32_t> ids;std::vector<float> weights;
+                for(auto & r:saved.input.rows) for(int i=0;i<K;++i) {ids.push_back(r.ids[i]);weights.push_back(r.weights[i]);}
+                for(auto * x:{&s.a,&s.b}) {
+                    ggml_backend_tensor_set(x->input,saved.input.input.data(),0,saved.input.input.size()*4);
+                    auto * ri=t>1?x->routing_batch.at(t).ids:x->routing.ids;
+                    auto * rw=t>1?x->routing_batch.at(t).weights:x->routing.weights;
+                    ggml_backend_tensor_set(ri,ids.data(),0,ids.size()*4);
+                    ggml_backend_tensor_set(rw,weights.data(),0,weights.size()*4);
+                }
+                std::vector<float> a(o.d*t),b(o.d*t);
+                if(saved.row.at("order")=="AB") {s.execute(s.a,false,a);s.execute(s.b,true,b);}
+                else {s.execute(s.b,true,b);s.execute(s.a,false,a);}
+                auto row=saved.row;row["A"]["output_sha256"]=sha(a.data(),a.size()*4);
+                row["B"]["output_sha256"]=sha(b.data(),b.size()*4);
+                const bool bound=row["A"]["output_sha256"]==saved.row["A"]["output_sha256"] &&
+                    row["B"]["output_sha256"]==saved.row["B"]["output_sha256"];
+                std::ofstream(dir+"/replay-binding.json")<<json({{"schema","h5-layer7-replay-binding/1"},
+                    {"timed_record",saved.row},{"outputs_equal",bound},{"timed_graph_retention",false},
+                    {"replay_after_all_timed_work",true}}).dump(2)<<"\n";
+                capture(s,row);capture_stages(s,row);
+                std::cout<<json({{"type","operand-replay"},{"tokens",t},{"case",row["case"]},
+                    {"outputs_equal",bound},{"path",dir},{"performance_claim",false}}).dump()<<std::endl;
+                require(bound,"untimed replay output differs from timed output; inconclusive, do not widen profile");
+            }
+            std::cout<<json({{"type","summary"},{"valid",legacy_valid},{"diagnostic_complete",true},
+                {"operand_replay",true},{"timing_comparison_valid",false},{"performance_claim",false},
+                {"replays",replays.size()},{"measured_pairs",measured},{"cases",summaries}}).dump()<<std::endl;
+            return 0;
         }
         std::cout<<json({{"type","summary"},{"valid",true},{"timing_comparison_valid",true},{"measured_pairs",measured},{"cases",summaries}}).dump()<<std::endl;
         return 0;

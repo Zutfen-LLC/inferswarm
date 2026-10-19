@@ -463,7 +463,8 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
     // #346: the cached graph is fixed-width. A batch-width change retires it
     // (the caller has already reset the graph results that referenced it) and
     // builds a fresh graph over the same owner, compact weights and RPC link.
-    if (owner.graph && owner.graph->built_tokens!=unsigned(n_tokens)) owner.graph.reset();
+    if (owner.graph && (owner.graph->built_tokens!=unsigned(n_tokens) ||
+            bool(owner.graph->stages[0])!=cfg.benchmark_stages)) owner.graph.reset();
     if (!owner.graph) {
         auto s=std::make_shared<llama_hot_graph>(); s->owner=&owner; s->layer=il; s->phase=hot_phase;
         constexpr size_t nodes=1024;
@@ -538,7 +539,7 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
             if (remote) for (size_t i=0;i<3;++i) branch_cuts[owner.original[i]]=owner.compact[i];
             b.output=ggml_cont(s->ctx,clone(s->ctx,w,branch_cuts)); ggml_set_output(b.output);
             if (cfg.benchmark_stages && remote && count==5) {
-                check(cfg.benchmark_routing_batch && s->built_tokens==2,"stage retention requires bound T=2 benchmark");
+                check((cfg.benchmark_routing || cfg.benchmark_routing_batch) && s->built_tokens<=8,"stage retention requires bound MMVQ benchmark");
                 s->stages=llama_hot_retain_stages(b.output);
             }
             b.graph=ggml_new_graph_custom(s->ctx,nodes,false); ggml_build_forward_expand(b.graph,b.output);

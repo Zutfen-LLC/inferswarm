@@ -2,6 +2,7 @@
 // Equations follow llama.cpp b29c606e, not a replacement benchmark comparator.
 #include <cmath>
 #include <cfenv>
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <immintrin.h>
@@ -60,4 +61,31 @@ extern "C" float l7_dot_cuda(const uint8_t * w,const uint8_t * q,int n,int fused
         for(int l=0;l<32;++l)lanes[l]=previous[l]+previous[l^offset];
     }
     return lanes[0];
+}
+
+// Conservative Q8_0 MMVQ envelope, independent of float summation order.
+// Integer lane sums are exact. There are at most 4*nblocks float partials;
+// 8*nblocks+64 rounding steps covers separate mul/add as well as FMA and
+// all supported 1/2/4/8-token MMVQ reductions. Scales are exact F16 operands.
+extern "C" void l7_dot_bounds(const uint8_t * w,const uint8_t * low,
+        const uint8_t * high,int n,double * out) {
+    double lower=0,upper=0,mass=0;
+    const double inf=INFINITY;
+    for(int b=0;b<n/32;++b) {
+        int il=0,iu=0,absolute=0;
+        for(int j=0;j<32;++j) {
+            int a=int8_t(w[b*34+2+j]),l=int8_t(low[b*34+2+j]),h=int8_t(high[b*34+2+j]);
+            il+=std::min(a*l,a*h);iu+=std::max(a*l,a*h);
+            absolute+=std::abs(a)*std::max(std::abs(l),std::abs(h));
+        }
+        double a=double(scale(w+b*34))*scale(low+b*34);
+        double c=double(scale(w+b*34))*scale(high+b*34);
+        double l=std::min(std::min(a*il,a*iu),std::min(c*il,c*iu));
+        double h=std::max(std::max(a*il,a*iu),std::max(c*il,c*iu));
+        lower=std::nextafter(lower+l,-inf);upper=std::nextafter(upper+h,inf);
+        mass=std::nextafter(mass+std::max(std::abs(a),std::abs(c))*absolute,inf);
+    }
+    const double nu=(8.0*(n/32)+64)*0x1p-24;
+    const double error=std::nextafter((nu/(1-nu))*mass,inf);
+    out[0]=std::nextafter(lower-error,-inf);out[1]=std::nextafter(upper+error,inf);
 }

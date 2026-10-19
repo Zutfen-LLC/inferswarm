@@ -1,0 +1,10 @@
+{
+  "schema": "layer7-mmvq-heldout/1",
+  "frozen_before_scoring": true,
+  "width_seeds": {"1": 736911, "2": 830427, "4": 431923, "8": 619723},
+  "columns": 64,
+  "hidden": 32,
+  "input_rule": "Random(seed); randint(-64,64)/64, each block first=1",
+  "bank_rule": "Random(seed+100); gate/up half scale=1/512, down=1/256, each integer randint(-5,5)",
+  "routing_rule": "hot order rotates by token modulo five; original slots alternate with five distinct cold experts"
+}

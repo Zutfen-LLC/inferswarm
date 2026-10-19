@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # FUTURE CPU05 dispatch only, inside the established ssh -A controller.
 set -euo pipefail
-if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5 == --diagnostic-stages ) ) ]]; then
-  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]]\n' "$0" >&2
+if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5 == --diagnostic-stages || $5 == --operand-profile ) ) ]]; then
+  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]|--operand-profile]\n' "$0" >&2
   exit 2
 fi
 repo=$(realpath "$1")
@@ -10,6 +10,10 @@ archive=$(realpath "$2")
 build=$3
 result=$4
 benchmark_args=(--tokens 1,2,4,8,16)
+if [[ ${5:-} == --operand-profile ]]; then
+  [[ $# == 5 ]] || { printf 'operand profile takes no retained archive\n' >&2; exit 2; }
+  benchmark_args=(--tokens 1,2,4,8 --pairs 1 --warmup 0 --operand-replay)
+fi
 if [[ ${5:-} == --diagnostic-pair13 || ${5:-} == --diagnostic-stages ]]; then
   benchmark_args=(--diagnostic-pair13 --failure-dump)
   if [[ ${5:-} == --diagnostic-stages ]]; then benchmark_args+=(--capture-stages); fi

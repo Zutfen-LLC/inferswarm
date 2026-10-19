@@ -319,7 +319,11 @@ def validate_capture(native):
 
 def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=False,
         pairs=20, warmup=5, timeout=300, threads=8, seed=314159, routing_archive=None, comparison_mode='cpu-loopback',
-        tokens_list=(1,), failure_dump=False, diagnostic_pair13=False, dump_max_bytes=16*1024*1024, retained_run=None, capture_stages=False):
+        tokens_list=(1,), failure_dump=False, diagnostic_pair13=False, dump_max_bytes=16*1024*1024, retained_run=None, capture_stages=False, operand_replay=False):
+    if operand_replay and (pairs != 1 or warmup != 0 or capture_stages or failure_dump or
+                           diagnostic_pair13 or routing_archive or retained_run or
+                           any(t not in (1,2,4,8) for t in tokens_list)):
+        raise ValueError('operand replay requires one pair/no warmup and MMVQ widths, no other diagnostics')
     if capture_stages and not diagnostic_pair13:
         raise ValueError("stage capture requires frozen pair13 diagnostic")
     if retained_run and (not diagnostic_pair13 or small_test):
@@ -404,6 +408,8 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                    '--pairs', str(pairs), '--warmup', str(warmup), '--threads', str(threads), '--seed', str(seed),
                    '--tokens', ','.join(map(str, tokens_list)),
                    '--comparison-mode', comparison_mode]
+        if operand_replay:
+            command.append("--operand-replay")
         if capture_stages:
             command.append("--capture-stages")
         if failure_dump:
@@ -444,6 +450,17 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                 receipt['capture'] = validate_capture(output/'native')
         if result.returncode:
             raise ValueError(f'native exit {result.returncode}; inspect retained stdout/stderr')
+        if operand_replay:
+            summary = rows[-1]
+            expected = sum(1 if t == 1 else 2 for t in tokens_list)
+            replay_rows = [r for r in rows if r.get('type') == 'operand-replay']
+            if (not summary.get('diagnostic_complete') or not summary.get('operand_replay') or
+                    len(replay_rows) != expected or not all(r['outputs_equal'] for r in replay_rows)):
+                raise ValueError('incomplete or unbound operand replays')
+            validate_weights(output/'native', rows[0])
+            receipt.update(valid=summary['valid'], diagnostic_complete=True, operand_replay=True,
+                           timing_comparison_valid=False, summary=summary)
+            return receipt
         summary = validate_result(rows, pairs, warmup, comparison_mode, tokens_list, diagnostic_pair13)
         validate_weights(output/'native', rows[0])
         receipt.update(valid=True, timing_comparison_valid=not diagnostic_pair13, summary=summary)
@@ -472,6 +489,7 @@ if __name__ == '__main__':
     mode.add_argument('--endpoint'); mode.add_argument('--loopback', action='store_true')
     parser.add_argument('--comparison-mode', choices=('cpu-loopback','cpu-cuda'), default='cpu-loopback')
     parser.add_argument('--small-test', action='store_true')
+    parser.add_argument('--operand-replay', action='store_true', help='bounded MMVQ timed pairs then untimed retained replay; legacy results remain separate')
     parser.add_argument('--capture-stages', action='store_true', help='retain executed T=2 gate/up/SwiGLU/down/weighted tensors; diagnostic only')
     parser.add_argument('--failure-dump', action='store_true', help='capture the first refused pair outside timing')
     parser.add_argument('--diagnostic-pair13', action='store_true', help='original prefix then only T=2 varied-set measured pair 13; no performance claim')
@@ -488,8 +506,8 @@ if __name__ == '__main__':
             small_test=args.small_test, pairs=args.pairs, warmup=args.warmup, timeout=args.timeout,
             threads=args.threads, seed=args.seed, routing_archive=args.captured_routing, comparison_mode=args.comparison_mode,
             tokens_list=tuple(int(v) for v in args.tokens.split(',')), failure_dump=args.failure_dump,
-            diagnostic_pair13=args.diagnostic_pair13, dump_max_bytes=args.dump_max_bytes, retained_run=args.retained_run, capture_stages=args.capture_stages)
+            diagnostic_pair13=args.diagnostic_pair13, dump_max_bytes=args.dump_max_bytes, retained_run=args.retained_run, capture_stages=args.capture_stages, operand_replay=args.operand_replay)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         result = dict(valid=False, timing_comparison_valid=False, error=str(error))
     print(json.dumps({k: v for k, v in result.items() if k not in ('candidate', 'host')}, sort_keys=True, allow_nan=False))
-    raise SystemExit(0 if result['valid'] else 2)
+    raise SystemExit(0 if result['valid'] or result.get('diagnostic_complete') else 2)
