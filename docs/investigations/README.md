@@ -52,6 +52,11 @@ An investigation is evidence in, not a decision or doctrine update out.
   Issue #292 measurement of hosted CPU-validation setup time and dependency
   caching; it records the decision to defer caching and the contract tests that
   gate any future enablement.
+- [strata-adaptation-feasibility.md](strata-adaptation-feasibility.md) — static
+  feasibility study of adapting the Strata MoE engine as an InferSwarm stage
+  server (networked layer split), a model-pack modularity seam beyond
+  Qwen3.8-Flash-Next, and which Strata principles transfer to distributed dense
+  models. No code run, no hardware touched; fleet numbers are ESTIMATED.
 - [data/](data/README.md) — the byte-preserved derivation outputs and their
   `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
   placements, and the Phase1R D3/D4/D7 placements. The tools that produce them
