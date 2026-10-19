@@ -15,6 +15,10 @@ struct llama_moe_overlap_config {
     // Constructor-only layer microbenchmark cut. No environment/serving toggle.
     // Both arms bind identical captured/synthetic routing, never activations.
     const llama_hot_routing * benchmark_routing = nullptr;
+    // #346 batched break-even sweep: same constructor-only contract, T tokens.
+    // Batches apply to tokens available together (prefill or independent
+    // requests); dependent decode steps of one sequence stay one token each.
+    const llama_hot_routing_batch * benchmark_routing_batch = nullptr;
     static llama_moe_overlap_config from_env(int n_layer);
 };
 

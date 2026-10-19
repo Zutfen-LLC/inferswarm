@@ -376,12 +376,17 @@ class Layer7BenchContracts(unittest.TestCase):
 
     def test_result_refuses_changed_input_hash_and_wrong_order(self):
         rows = [{'type':'setup','comparator':self.tool.comparison_contract('cpu-loopback'),'comparison_mode':'cpu-loopback'}]
+        import hashlib, struct
         for case, hot in (('mixed',5), ('all-cold',0)):
+            ids=[136,17,394,231,54,3,290,411,74,277] if hot else list(range(10))
+            bits=['3dcccccd']*10
+            routing_sha=hashlib.sha256(struct.pack('<10i',*ids)+b''.join(bytes.fromhex(b)[::-1] for b in bits)).hexdigest()
             rows.append(dict(type='pair',case=case,warmup=False,pair=0,order='AB',
-                input_sha256='a'*64,routing_sha256='b'*64,ids=[136,17,394,231,54,3,290,411,74,277] if hot else list(range(10)),
-                weight_bits=['3dcccccd']*10,valid=True,correctness={'pass':True,'finite':True,'exact_equal':True,'max_abs':0,'max_ratio':0,'rms':0,'relative_l2':0},shared_nonzero=True,experts_nonzero=True,hot=hot,cold=10-hot,
-                A=dict(total_layer_ms=1,order=0,input_sha256='a'*64,routing_sha256='b'*64,hot=0,cold=10),
-                B=dict(total_layer_ms=2,owner=123,order=1,input_sha256='a'*64,routing_sha256='b'*64,hot=hot,cold=10-hot)))
+                input_sha256='a'*64,routing_sha256=routing_sha,routing_labels=['seeded-synthetic-routing'],
+                ids=ids,
+                weight_bits=bits,valid=True,correctness={'pass':True,'finite':True,'exact_equal':True,'max_abs':0,'max_ratio':0,'rms':0,'relative_l2':0},shared_nonzero=True,experts_nonzero=True,hot=hot,cold=10-hot,
+                A=dict(total_layer_ms=1,order=0,input_sha256='a'*64,routing_sha256=routing_sha,hot=0,cold=10),
+                B=dict(total_layer_ms=2,owner=123,order=1,input_sha256='a'*64,routing_sha256=routing_sha,hot=hot,cold=10-hot)))
         rows.append(dict(type='summary',valid=True,timing_comparison_valid=True,measured_pairs=2))
         self.assertTrue(self.tool.validate_result(rows,1,0)['valid'])
         with self.assertRaisesRegex(ValueError,'comparator'):
@@ -519,6 +524,137 @@ class Layer7BenchContracts(unittest.TestCase):
             self.assertFalse((Path(temp)/'routing.json').exists())
 
 
+
+class Layer7BatchSweepContracts(unittest.TestCase):
+    """#346 bounded token-batch break-even sweep: pure validator/planner contracts.
+
+    Native execution coverage lives in NativeHotExperts below; this class pins
+    the supervisor's token-list handling and result-shape validation without
+    building anything.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location('layer7_bench_sweep', ROOT/'tools/native-moe-overlap/layer7_bench.py')
+        cls.tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.tool)
+
+    @staticmethod
+    def row(case, tokens, pair, warmup, hot, valid=True):
+        ab = pair % 2 == 0
+        order = 'AB' if ab else 'BA'
+        ids = [[t % 512 for t in range(10)]]*tokens if tokens > 1 else [t % 512 for t in range(10)]
+        weight_bits = (['3dcccccd']*10)*tokens if tokens == 1 else [['3dcccccd']*10]*tokens
+        row_ids = ids if tokens > 1 else [ids]
+        row_bits = weight_bits if tokens > 1 else [weight_bits]
+        import hashlib as _hl, struct as _st
+        packed = b''.join(_st.pack('<10i', *t) for t in row_ids) + \
+                 b''.join(bytes.fromhex(b)[::-1] for t in row_bits for b in t)
+        routing_sha = _hl.sha256(packed).hexdigest()
+        return dict(type='pair', case=case, tokens=tokens, pair=pair, warmup=warmup,
+                    order=order,
+                    input_sha256='a'*64, routing_sha256=routing_sha,
+                    routing_labels=['synthetic']*tokens,
+                    ids=ids,
+                    weight_bits=weight_bits,
+                    hot=hot, cold=10-hot, shared_nonzero=True, experts_nonzero=True,
+                    correctness={'pass': True, 'finite': True, 'exact_equal': True,
+                                 'max_abs': 0, 'max_ratio': 0, 'rms': 0, 'relative_l2': 0},
+                    valid=valid,
+                    A=dict(total_layer_ms=1, order=0 if ab else 1, input_sha256='a'*64,
+                           routing_sha256=routing_sha, hot=0, cold=10),
+                    B=dict(total_layer_ms=2, order=1 if ab else 0, input_sha256='a'*64,
+                           routing_sha256=routing_sha, hot=hot, cold=10-hot, owner=123, tokens=tokens))
+
+    def rows_for(self, tokens_list, pairs, warmup):
+        rows = [dict(type='setup', comparator=self.tool.comparison_contract('cpu-loopback'),
+                     comparison_mode='cpu-loopback', tokens_list=list(tokens_list))]
+        measured = 0
+        for tokens in tokens_list:
+            names = ('mixed', 'all-cold') if tokens == 1 else \
+                ('mixed-varied-set', 'mixed-shared-set', 'all-cold-varied-set', 'all-cold-shared-set')
+            for name in names:
+                hot = 5 if name.startswith('mixed') else 0
+                for i in range(warmup + pairs):
+                    warm = i < warmup
+                    rows.append(self.row(name, tokens, i if warm else i - warmup, warm, hot))
+                    if not warm:
+                        measured += 1
+        rows.append(dict(type='summary', valid=True, timing_comparison_valid=True, measured_pairs=measured))
+        return rows
+
+    def test_validate_result_accepts_full_sweep_and_derives_coverage(self):
+        for tokens_list in ((1,), (1, 2), (1, 2, 4, 8, 16)):
+            with self.subTest(tokens=tokens_list):
+                rows = self.rows_for(tokens_list, 2, 1)
+                summary = self.tool.validate_result(rows, 2, 1, 'cpu-loopback', tokens_list)
+                expected_cases = 2 + 4 * (len(tokens_list) - 1)
+                self.assertEqual(summary['measured_pairs'], expected_cases * 2)
+
+    def test_validate_result_refuses_missing_width_and_extra_and_bad_partition(self):
+        rows = self.rows_for((1, 2, 4), 1, 0)
+        self.assertTrue(self.tool.validate_result(rows, 1, 0, 'cpu-loopback', (1, 2, 4))['valid'])
+        dropped = [r for r in rows if not (r.get('type') == 'pair' and r.get('tokens') == 4)]
+        with self.assertRaisesRegex(ValueError, 'count/coverage'):
+            self.tool.validate_result(dropped, 1, 0, 'cpu-loopback', (1, 2, 4))
+        import copy
+        bad = copy.deepcopy(rows)
+        for r in bad:
+            if r.get('type') == 'pair' and r.get('case') == 'mixed-shared-set':
+                r['hot'], r['cold'] = 4, 6
+        with self.assertRaisesRegex(ValueError, 'partition'):
+            self.tool.validate_result(bad, 1, 0, 'cpu-loopback', (1, 2, 4))
+        wrong_list = copy.deepcopy(rows)
+        wrong_list[0]['tokens_list'] = [1, 2, 4, 8]
+        with self.assertRaisesRegex(ValueError, 'token batch list'):
+            self.tool.validate_result(wrong_list, 1, 0, 'cpu-loopback', (1, 2, 4))
+
+    def test_validate_result_rejects_malformed_batch_routing_rows(self):
+        """Review finding (NO-GO P2) regression: batch rows must carry well-formed
+        per-token routing, labels, and a row hash re-derived from the displayed
+        partition — not merely T outer entries."""
+        import copy
+        rows = self.rows_for((1, 2), 1, 0)
+        self.assertTrue(self.tool.validate_result(rows, 1, 0, 'cpu-loopback', (1, 2))['valid'])
+
+        def mutate(fn):
+            bad = copy.deepcopy(rows)
+            for r in bad:
+                if r.get('type') == 'pair':
+                    fn(r)
+            return bad
+
+        def strip(r):
+            if r.get('tokens', 1) > 1:
+                r['ids'] = [[1, 2, 3]] * r['tokens']
+        for name, fn in (
+                ('malformed-inner-rows', strip),
+                ('missing-labels', lambda r: r.pop('routing_labels', None)),
+                ('bad-row-hash', lambda r: r.__setitem__('routing_sha256', '0'*64)
+                    if r.get('tokens', 1) > 1 else None)):
+            with self.subTest(mutation=name), self.assertRaises(ValueError):
+                self.tool.validate_result(mutate(fn), 1, 0, 'cpu-loopback', (1, 2))
+
+    def test_validate_result_rederives_row_hash_from_displayed_partition(self):
+        import hashlib, struct
+        rows = self.rows_for((2,), 1, 0)
+        row = next(r for r in rows if r.get('type') == 'pair')
+        ids = b''.join(struct.pack('<10i', *t) for t in row['ids'])
+        weights = b''.join(bytes.fromhex(b)[::-1] for t in row['weight_bits'] for b in t)
+        row['routing_sha256'] = hashlib.sha256(ids + weights).hexdigest()
+        for arm in ('A', 'B'):
+            row[arm]['routing_sha256'] = row['routing_sha256']
+        rows[0]['tokens_list'] = [2]
+        self.assertTrue(self.tool.validate_result(rows, 1, 0, 'cpu-loopback', (2,))['valid'])
+
+    def test_run_refuses_invalid_token_budgets(self):
+        with tempfile.TemporaryDirectory() as temp:
+            for bad in ((0,), (257,), tuple(range(1, 40)), (1, 2, -1)):
+                with self.subTest(bad=bad[:4]), self.assertRaises(ValueError):
+                    self.tool.run('/nonexistent/receipt.json', Path(temp)/'x',
+                                  loopback=True, small_test=True, tokens_list=bad)
+
+
 class NativeHotExperts(unittest.TestCase):
     """Real source FFN arithmetic vs original CPU, structural wire separately."""
     @classmethod
@@ -627,6 +763,23 @@ class NativeHotExperts(unittest.TestCase):
                 for key in ('nonfinite_output','nonfinite_plane','nonfinite_shared'):
                     self.assertFalse(p[key]['pass']);self.assertFalse(p[key]['finite'])
 
+    def test_matched_comparator_batch_scales_stay_with_each_token_coordinate(self):
+        for mode in ('cpu-loopback', 'cpu-cuda'):
+            with self.subTest(mode=mode):
+                result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', 'unused:1',
+                    '--work-dir', str(self.root/'unused-batch-probe'), '--small-test',
+                    '--comparison-mode', mode, '--control', 'comparator-probe'],
+                    capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                coordinates = json.loads(result.stdout)['batch_coordinates']
+                self.assertEqual({(r['token'], r['coordinate']) for r in coordinates},
+                                 {(t, c) for t in range(2) for c in range(3)})
+                for row in coordinates:
+                    with self.subTest(token=row['token'], coordinate=row['coordinate']):
+                        self.assertTrue(row['within']['pass'])
+                        self.assertFalse(row['excess']['pass'])
+                        self.assertGreater(row['excess']['max_ratio'], 1)
+
     def test_matched_weight_inventory_and_census_bind_all_actual_weights(self):
         spec=importlib.util.spec_from_file_location('weight_supervisor', ROOT/'tools/native-moe-overlap/layer7_bench.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -705,6 +858,90 @@ class NativeHotExperts(unittest.TestCase):
                 self.assertNotEqual(failed.returncode, 0)
                 self.assertFalse(json.loads(failed.stdout.splitlines()[-1])['valid'])
 
+    def test_matched_batch_sweep_real_graphs_and_rebuild(self):
+        """#346: genuine batched expert work at T in {1,2,4} through the real graphs.
+
+        Runs the actual native-layer7-bench with --tokens 1,2,4 against the
+        loopback RPC worker: every case must validate (frozen comparator, exact
+        hot/cold partitions per token, nonzero shared/expert planes), the batch
+        cases must carry per-token routing rows, the single-token compatibility
+        case must keep its historical unsuffixed names, and each rebuild at a
+        new width must emit its own setup line. Output element counts scale
+        with T, proving batched tensors rather than repeated single tokens.
+        """
+        executable = self.build / 'bin/native-layer7-bench'
+        with self.worker() as proxy:
+            work = self.root / 'batch-sweep'
+            result = subprocess.run([str(executable), '--endpoint', f'127.0.0.1:{proxy.port}',
+                '--work-dir', str(work), '--small-test', '--warmup', '1', '--pairs', '2',
+                '--tokens', '1,2,4', '--comparison-mode', 'cpu-cuda'],
+                capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stderr[-4000:])
+        rows = [json.loads(line) for line in result.stdout.splitlines()]
+        summary = rows[-1]
+        self.assertTrue(summary['valid'])
+        pairs = [r for r in rows if r['type'] == 'pair' and not r['warmup']]
+        by_width = {}
+        for r in pairs:
+            by_width.setdefault(r['tokens'], []).append(r)
+        self.assertEqual(sorted(by_width), [1, 2, 4])
+        # T=1 keeps the historical compatibility names, once per case.
+        self.assertEqual({r['case'] for r in by_width[1]}, {'mixed', 'all-cold'})
+        for tokens in (2, 4):
+            self.assertEqual({r['case'] for r in by_width[tokens]},
+                             {'mixed-varied-set', 'mixed-shared-set',
+                              'all-cold-varied-set', 'all-cold-shared-set'})
+        for r in pairs:
+            self.assertTrue(r['valid'] and r['correctness']['pass'], r['case'])
+            want_hot = 5 if r['case'].startswith('mixed') else 0
+            self.assertEqual((r['hot'], r['cold']), (want_hot, 10 - want_hot))
+            self.assertEqual(r['B']['tokens'], r['tokens'])
+            # per-token routing rows: nested for batches, flat ten slots at T=1
+            token_rows = r['ids'] if r['tokens'] > 1 else [r['ids']]
+            self.assertEqual(len(token_rows), r['tokens'])
+            self.assertEqual(len(r['weight_bits']), 10 * r['tokens'] if r['tokens'] == 1 else r['tokens'])
+            for row_ids in token_rows:
+                self.assertEqual(len(set(row_ids)), 10)
+        # varied-set rows differ across tokens; shared-set rows repeat them
+        varied = next(r for r in by_width[4] if r['case'] == 'mixed-varied-set')
+        shared = next(r for r in by_width[4] if r['case'] == 'mixed-shared-set')
+        self.assertTrue(any(a != b for a, b in zip(varied['ids'][0], varied['ids'][1])))
+        self.assertEqual(shared['ids'][0], shared['ids'][1])
+        # one graph set per width; dispatch counters are cumulative per graph,
+        # so mixed rows dispatch and consecutive all-cold rows never increase.
+        self.assertEqual(result.stderr.count('IS314_SETUP'), 3)
+        for tokens in (1, 2, 4):
+            mixed_rows = [r for r in by_width[tokens] if r['case'].startswith('mixed')]
+            cold_rows = [r for r in by_width[tokens] if r['case'].startswith('all-cold')]
+            self.assertTrue(all(r['B']['graph_dispatches'] > 0 for r in mixed_rows))
+            counts = [r['B']['graph_dispatches'] for r in cold_rows]
+            self.assertEqual(counts, sorted(counts))
+            for a, b in zip(counts, counts[1:]):
+                self.assertEqual(a, b)
+        self.assertEqual(proxy.connections, 1)
+        uploads = [r for r in proxy.requests if r.get('tensor', '').startswith('is314.')]
+        self.assertEqual(len(uploads), 3)  # setup-only compact upload, never per-step
+
+    def test_matched_batch_sweep_negative_controls_still_refuse(self):
+        """Omission/bad-partition controls must refuse under batched widths too."""
+        executable = self.build / 'bin/native-layer7-bench'
+        for tokens, control in ((t, c) for t in (2, 4)
+                                for c in ('missing-expert', 'missing-shared', 'bad-partition')):
+            with self.subTest(tokens=tokens, control=control), self.worker() as proxy:
+                failed = subprocess.run([str(executable), '--endpoint', f'127.0.0.1:{proxy.port}',
+                    '--work-dir', str(self.root / (f'batch-{tokens}-' + control)), '--small-test', '--warmup', '0',
+                    '--pairs', '1', '--tokens', str(tokens), '--comparison-mode', 'cpu-cuda',
+                    '--control', control], capture_output=True, text=True, timeout=60)
+                self.assertEqual(failed.returncode, 2, failed.stderr[-4000:])
+                rows = [json.loads(line) for line in failed.stdout.splitlines()]
+                self.assertFalse(rows[-1]['valid'])
+                if control != 'bad-partition':
+                    pair = next(r for r in rows if r['type'] == 'pair')
+                    self.assertEqual(pair['tokens'], tokens)
+                    self.assertTrue(pair['correctness']['finite'])
+                    self.assertFalse(pair['correctness']['pass'])
+                    self.assertGreater(pair['correctness']['max_ratio'], 1)
+
     def test_matched_default_native_router_keeps_source_behavior(self):
         with self.worker() as proxy:
             result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
@@ -716,6 +953,13 @@ class NativeHotExperts(unittest.TestCase):
         self.assertTrue(rows[-1]['valid'])
         self.assertEqual({r['routing_label'] for r in rows if r['type']=='pair'}, {'native-router-regression'})
         self.assertTrue(all(r['correctness']['pass'] for r in rows if r['type']=='pair'))
+        import hashlib
+        for row in (r for r in rows if r['type'] == 'pair'):
+            routing = struct.pack('<10i', *row['ids']) + b''.join(
+                struct.pack('<I', int(bits, 16)) for bits in row['weight_bits'])
+            self.assertEqual(hashlib.sha256(routing).hexdigest(), row['routing_sha256'])
+            self.assertEqual(row['routing_sha256'], row['A']['routing_sha256'])
+            self.assertEqual(row['routing_sha256'], row['B']['routing_sha256'])
 
     def test_matched_supervisor_records_actual_candidate_and_timeout(self):
         path = ROOT / 'tools/native-moe-overlap/layer7_bench.py'

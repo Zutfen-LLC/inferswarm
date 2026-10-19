@@ -157,26 +157,43 @@ def validate_weights(native, setup):
             raise ValueError('native expert weight identity mismatch')
 
 
-def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback'):
+def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_list=(1,)):
     if not rows or rows[0].get('type') != 'setup' or rows[-1].get('type') != 'summary':
         raise ValueError('incomplete native result')
     if (rows[0].get('comparator') != comparison_contract(comparison_mode) or
             rows[0].get('comparison_mode') != comparison_mode):
         raise ValueError('native comparator/mode mismatch')
+    observed_tokens = rows[0].get('tokens_list')
+    if observed_tokens is not None and observed_tokens != list(tokens_list):
+        raise ValueError('native token batch list mismatch')
     summary = rows[-1]
     if not summary.get('valid') or not summary.get('timing_comparison_valid'):
         raise ValueError('native comparison invalid')
     records = [r for r in rows if r.get('type') == 'pair']
-    keys = {(r['case'], r['warmup'], r['pair']) for r in records}
-    expected = {(case, warm, i) for case in ('mixed', 'all-cold')
-                for warm, n in ((True, warmup), (False, pairs)) for i in range(n)}
-    if len(records) != len(expected) or keys != expected or summary['measured_pairs'] != pairs * 2:
+    expected = set()
+    for tokens in tokens_list:
+        suffix = ('',) if tokens == 1 else ('-varied-set', '-shared-set')
+        for case in ('mixed', 'all-cold'):
+            for tag in suffix:
+                for warm, n in ((True, warmup), (False, pairs)):
+                    for i in range(n):
+                        expected.add((case + tag, tokens, warm, i))
+    if len(records) != len(expected) or {(r['case'], r.get('tokens', 1), r['warmup'], r['pair']) for r in records} != expected:
+        raise ValueError('native paired count/coverage mismatch')
+    measured_expected = len(expected) - sum(1 for (_, _, warm, _) in expected if warm)
+    if summary['measured_pairs'] != measured_expected:
         raise ValueError('native paired count/coverage mismatch')
     owners = {r['B']['owner'] for r in records}
     if len(owners) != 1 or not next(iter(owners)):
         raise ValueError('native graph owner not reused')
     for r in records:
         expected_order = 'AB' if r['pair'] % 2 == 0 else 'BA'
+        tokens = r.get('tokens', 1)
+        if tokens not in tokens_list:
+            raise ValueError('native pair token width outside requested sweep')
+        case = r['case']
+        base, _, tag = case.partition('-')
+        want_hot = 5 if base == 'mixed' else 0
         if (r['order'] != expected_order or
                 any(r[arm]['input_sha256'] != r['input_sha256'] or
                     r[arm]['routing_sha256'] != r['routing_sha256'] or
@@ -184,23 +201,54 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback'):
             raise ValueError('matched input/routing/order mismatch')
         if (not r['valid'] or not r['correctness']['pass'] or not r['correctness']['finite'] or
                 not r['shared_nonzero'] or not r['experts_nonzero'] or
-                (r['hot'], r['cold']) != ((5, 5) if r['case'] == 'mixed' else (0, 10))):
+                (r['hot'], r['cold']) != (want_hot, 10 - want_hot)):
             raise ValueError('invalid native numerical/partition/shared/expert result')
+        rows_ids = r['ids'] if tokens > 1 else [r['ids']]
+        rows_bits = r['weight_bits'] if tokens > 1 else [r['weight_bits']]
+        if len(rows_ids) != tokens or len(rows_bits) != tokens:
+            raise ValueError('native per-token routing row count mismatch')
+        if not isinstance(r.get('routing_labels'), list) or len(r['routing_labels']) != tokens:
+            raise ValueError('native per-token routing labels missing')
+        # every token carries ten in-range distinct IDs and finite positive weights;
+        # the row hash is re-derived from the displayed rows so routing attribution
+        # cannot drift from the recorded partition
+        ids_packed = weights_packed = b''
+        for token_ids, token_bits in zip(rows_ids, rows_bits):
+            if (len(token_ids) != 10 or len(token_bits) != 10 or
+                    any(type(v) is not int or not 0 <= v < 512 for v in token_ids) or
+                    len(set(token_ids)) != 10 or
+                    any(not re.fullmatch('[0-9a-f]{8}', b) for b in token_bits)):
+                raise ValueError('native per-token routing row malformed')
+            weights = [struct.unpack('<f', bytes.fromhex(b)[::-1])[0] for b in token_bits]
+            if any(not math.isfinite(w) or w <= 0 for w in weights):
+                raise ValueError('native per-token routing weights invalid')
+            ids_packed += struct.pack('<10i', *token_ids)
+            weights_packed += b''.join(bytes.fromhex(b)[::-1] for b in token_bits)
+        if hashlib.sha256(ids_packed + weights_packed).hexdigest() != r['routing_sha256']:
+            raise ValueError('native routing hash does not match displayed rows')
         if any(not isinstance(r['correctness'].get(key), (int, float)) or
                not math.isfinite(r['correctness'][key]) or r['correctness'][key] < 0
                for key in ('max_abs', 'max_ratio', 'rms', 'relative_l2')) or r['correctness']['max_ratio'] > 1:
             raise ValueError('invalid native comparator metrics')
         if any(not math.isfinite(r[arm]['total_layer_ms']) or r[arm]['total_layer_ms'] <= 0 for arm in ('A', 'B')):
             raise ValueError('invalid native layer time')
+        if r['B'].get('tokens', 1) != tokens:
+            raise ValueError('native B token count mismatch')
     return summary
 
 
 def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=False,
-        pairs=20, warmup=5, timeout=300, threads=8, seed=314159, routing_archive=None, comparison_mode='cpu-loopback'):
+        pairs=20, warmup=5, timeout=300, threads=8, seed=314159, routing_archive=None, comparison_mode='cpu-loopback',
+        tokens_list=(1,)):
+    tokens_list = tuple(sorted(set(int(t) for t in tokens_list)))
+    if (not tokens_list or any(type(t) is not int or not 1 <= t <= 256 for t in tokens_list)):
+        raise ValueError('token batch list invalid')
     if (bool(endpoint) == bool(loopback) or type(pairs) is not int or not 1 <= pairs <= 100 or
             type(warmup) is not int or not 0 <= warmup <= 20 or not 0 < timeout <= 600 or
             type(threads) is not int or not 1 <= threads <= 128 or type(seed) is not int or not 1 <= seed <= 2147483647):
         raise ValueError('endpoint/loopback or bounded benchmark budget invalid')
+    if len(','.join(map(str, tokens_list))) > 63:
+        raise ValueError('token list too long')
     contract = comparison_contract(comparison_mode)  # freeze before launching any work
     for key in ('IS309_MOE', 'IS309_CAPTURE', 'IS314_HOT_SPEC', 'IS311_ASSIGNED'):
         if key in os.environ:
@@ -245,6 +293,7 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                     time.sleep(.02)
         command = [provenance['executable'], '--endpoint', endpoint, '--work-dir', str(output/'native'),
                    '--pairs', str(pairs), '--warmup', str(warmup), '--threads', str(threads), '--seed', str(seed),
+                   '--tokens', ','.join(map(str, tokens_list)),
                    '--comparison-mode', comparison_mode]
         if small_test:
             command.append('--small-test')
@@ -254,7 +303,7 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
             receipt['captured_routing']['row_count'] = len(body['rows'])
             command.extend(['--routing', str(output/'routing.json')])
         receipt.update(command=command, endpoint=endpoint, timeout_seconds=timeout,
-                       local_cpu_loopback=loopback, small_test=small_test)
+                       local_cpu_loopback=loopback, small_test=small_test, tokens_list=list(tokens_list))
         with (output/'stdout.jsonl').open('w') as stdout, (output/'stderr.log').open('w') as stderr:
             try:
                 result = subprocess.run(command, stdout=stdout, stderr=stderr, timeout=timeout)
@@ -265,7 +314,7 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
         rows = [json.loads(line) for line in (output/'stdout.jsonl').read_text().splitlines()]
         if result.returncode:
             raise ValueError(f'native exit {result.returncode}; inspect retained stdout/stderr')
-        summary = validate_result(rows, pairs, warmup, comparison_mode)
+        summary = validate_result(rows, pairs, warmup, comparison_mode, tokens_list)
         validate_weights(output/'native', rows[0])
         receipt.update(valid=True, timing_comparison_valid=True, summary=summary)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
@@ -297,11 +346,13 @@ if __name__ == '__main__':
     parser.add_argument('--pairs', type=int, default=20); parser.add_argument('--warmup', type=int, default=5)
     parser.add_argument('--timeout', type=float, default=300); parser.add_argument('--threads', type=int, default=8)
     parser.add_argument('--seed', type=int, default=314159)
+    parser.add_argument('--tokens', default='1', help='comma-separated bounded batch widths, e.g. 1,2,4,8,16')
     args = parser.parse_args()
     try:
         result = run(args.build_receipt, args.output, endpoint=args.endpoint, loopback=args.loopback,
             small_test=args.small_test, pairs=args.pairs, warmup=args.warmup, timeout=args.timeout,
-            threads=args.threads, seed=args.seed, routing_archive=args.captured_routing, comparison_mode=args.comparison_mode)
+            threads=args.threads, seed=args.seed, routing_archive=args.captured_routing, comparison_mode=args.comparison_mode,
+            tokens_list=tuple(int(v) for v in args.tokens.split(',')))
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         result = dict(valid=False, timing_comparison_valid=False, error=str(error))
     print(json.dumps({k: v for k, v in result.items() if k not in ('candidate', 'host')}, sort_keys=True, allow_nan=False))

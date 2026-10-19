@@ -16,7 +16,8 @@ with the existing response-bearing `GET_TENSOR`. No parallel FFN implementation,
 protocol, placement, cache, quantizer, or accepted runtime identity is introduced.
 
 Default geometry is embedding **2560**, expert/shared hidden **640**, **512**
-global experts, **10** selected slots, **one token**, zero-based layer **7**.
+global experts, **10** selected slots per token, **one token** (the #346 sweep
+extends the batch width), zero-based layer **7**.
 Gate/up are `[2560,640,512,1]`, down `[640,2560,512,1]`. Shared gate/up/down use
 the same embedding/hidden geometry and Q8_0; the shared sigmoid-gate vector is
 F32. `--small-test` explicitly changes embedding/hidden to 32/32, **not global
@@ -64,6 +65,45 @@ Cases: primary `mixed` (hot globals `[54,74,136,290,394]`, five cold slots), the
 unused nonhot globals). Synthetic routing starts in noncontiguous/interleaved
 slot order with nonuniform weights; slot order rotates across changed inputs.
 The all-cold control uses the same H5 setup/owner, with zero RPC graph dispatches.
+
+### Token-batch break-even sweep (#346)
+
+`--tokens 1,2,4,8,16` (bounded: ascending widths, each 1..256, list at most 63
+characters) sweeps genuine batched expert work. Width 1 preserves the historical
+single-token case and its unsuffixed names byte-for-byte; every wider width
+rebuilds both arms and the H5 graph set at that exact width (one
+`IS314_SETUP ... tokens=T` line per width) over the same owner, immutable compact
+weights and RPC connection. Each batch executes **one** H5 step whose routing
+boundary is `[10,T]`, whose hot/cold branch tensors carry per-token ids/weights
+in the `[C,T]` layout the pinned `mul_mat_id` consumes, and whose slot staging is
+`[d,10,T]` — batched tensors, never a loop of single-token RPC calls. A
+repeated-single-token control would be a separate measurement and is not what
+these rows are. The same timers, comparator, AB/BA alternation, per-pair raw
+records and negative controls apply unchanged at every width.
+
+Per-token routing is deterministic and distinct per token (slot order rotates by
+`(pair, token)`). Two labeled variants run at every width >1 and are never
+aggregated: `*-varied-set` gives tokens distinct cold-expert sets within the
+supported resident pool (the five hot globals stay the fixed resident set —
+per-token *varying hot experts* would require multiple grouped graphs per step
+and is out of scope), and `*-shared-set` gives every token the same expert set,
+labeling ideal expert reuse so it cannot be mistaken for general workload
+behavior. Expert-slot uniqueness is enforced per token: the same expert may
+legitimately serve several tokens of one batch.
+
+Batching applies to tokens available together — prefill positions or independent
+requests. It cannot batch future dependent decode steps of one sequence, and
+this layer benchmark alone cannot establish whole-model latency or throughput.
+
+Summaries are keyed `case@tT` and, besides the existing A/B/B−A distributions,
+derive `*_ms_per_token`, `*_tokens_per_s` and `speedup_B_over_A` as plain
+per-sample transforms of the same retained pair times. Each pair row retains
+`tokens`, per-token `ids`/`weight_bits`/`routing_labels` (flat ten-slot fields at
+T=1 for compatibility), and B's cumulative `graph_dispatches` /
+`graph_recompute_reuse` counters; a rebuild at a new width resets them. The
+supervisor (`layer7_bench.py --tokens …`) validates the full coverage grid
+(case × width × warm/measured × index), per-token row counts and B-token
+binding before accepting a run.
 
 Each case warms **5 pairs**, then measures **20 pairs** by default (bounded CLI
 limits: at most 20 warm, 100 measured, supervisor deadline at most 600 seconds).
@@ -196,12 +236,15 @@ activation tensor is extracted. For N measured pairs, native selection is
 all-cold routing is explicitly derived from these rows, not historical routing.
 
 Focused tests live in the already registered `tests.test_native_moe_overlap`:
-`Layer7BenchContracts`, and `NativeHotExperts.test_matched_*` plus the existing
-`test_hot_candidate_builder_is_additive`. Set `IS314_NATIVE_BUILD` to the new
-`BUILD/build` to reuse the benchmark-only build. Tests exercise real CPU/RPC-v7
-source graphs and identity uploads, changed-input graph reuse, AB/BA, both
-partitions, source router default-null behavior, omission failures and bounded
-stalled-transport cleanup. No external orchestration mock replaces arithmetic.
+`Layer7BenchContracts`, `Layer7BatchSweepContracts` (#346), and
+`NativeHotExperts.test_matched_*` (including the #346 batch-sweep execution and
+negative-control tests) plus the existing `test_hot_candidate_builder_is_additive`.
+Set `IS314_NATIVE_BUILD` to the new `BUILD/build` to reuse the benchmark-only
+build. Tests exercise real CPU/RPC-v7 source graphs and identity uploads,
+changed-input graph reuse, AB/BA, both partitions, source router default-null
+behavior, omission failures, batched widths 1/2/4 with per-width rebuild and
+per-token routing shapes, and bounded stalled-transport cleanup. No external
+orchestration mock replaces arithmetic.
 
 ## Later CPU05 / GPU03 GPU0 Hermes dispatch — NOT executed here
 
@@ -225,8 +268,19 @@ bash /reviewed/repo/tools/native-moe-overlap/layer7-cpu05.sh \
   /reviewed/repo /authenticated/source.tar.gz /fresh/candidate /fresh/result
 ```
 
-That script performs only the primary self-contained routing experiment, using
-production dimensions, 5 warm + 20 measured pairs per case. No automatic retry,
+That script performs the primary self-contained routing experiment and the #346
+token-batch sweep (`--tokens 1,2,4,8,16`; 18 cases total — the two historical
+single-token cases plus varied/shared-set mixed and all-cold at each width >1),
+using production dimensions, 5 warm + 20 measured pairs per case. Expected
+steady-state wall time on the 05→03 tunnel is dominated by the ~2.2 ms/step
+dispatch cost already measured in #345: roughly 450 measured pairs × ≈2–4 ms ≈
+1–2 s of timed work plus setup (~60 s weight generation/upload) and one graph-set
+rebuild per width (sub-second each on loopback) — comfortably inside the
+300-second supervisor bound and the worker's 360-second external cap. Candidate
+build requirement: the run needs a fresh `hot-build-composed.py --benchmark-only`
+candidate built from THIS reviewed tree (the #346 overlay changes
+`llama-hot-experts.cpp`/`llama-moe-overlap.cpp`); the accepted CUDA03 worker is
+used unchanged (client-side extension only). No automatic retry,
 rescue/comparator change, or optional captured-routing second experiment follows
 failure. Worker has a 360-second external cap plus 5-second kill-after;
 benchmark has a 300-second bound. `layer7_remote.py` is sent over the one SSH
