@@ -416,7 +416,7 @@ class Layer7BenchContracts(unittest.TestCase):
         import textwrap
         # Only external commands are faked; execute the actual shell traps,
         # orchestration and termination requests. No SSH/network/GPU operation.
-        for mode in ('success', 'refusal', 'TERM', 'INT', 'cleanup-failure', 'cleanup-unknown', 'startup-failure'):
+        for mode in ('success', 'warmed-success', 'refusal', 'TERM', 'INT', 'cleanup-failure', 'cleanup-unknown', 'startup-failure'):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp); commands = root/'commands'; commands.mkdir()
                 state = root/'state'; state.mkdir()
@@ -463,7 +463,8 @@ class Layer7BenchContracts(unittest.TestCase):
                 with log.open('w') as stream:
                     child=subprocess.Popen(['bash',str(ROOT/'tools/native-moe-overlap/layer7-cpu05.sh'),
                         str(ROOT),str(archive),str(root/'build'),str(root/'result'),
-                        *(['--diagnostic-stages'] if mode == 'success' else [])],env=env,stdout=stream,stderr=stream,start_new_session=True)
+                        *(['--diagnostic-stages'] if mode == 'success' else
+                          ['--warmed-operand-sweep'] if mode == 'warmed-success' else [])],env=env,stdout=stream,stderr=stream,start_new_session=True)
                     try:
                         if mode in ('TERM','INT'):
                             deadline=time.monotonic()+8
@@ -475,8 +476,13 @@ class Layer7BenchContracts(unittest.TestCase):
                         if child.poll() is None:os.killpg(child.pid,signal.SIGKILL);child.wait()
                 self.assertTrue((state/'cleanup-requested').is_file(),log.read_text())
                 self.assertEqual((state/'alive').exists(),mode=='cleanup-unknown',log.read_text())
-                self.assertEqual(child.returncode,0 if mode=='success' else (130 if mode=='INT' else 143 if mode=='TERM' else 2 if mode=='refusal' else child.returncode))
-                if mode!='success':self.assertNotEqual(child.returncode,0,log.read_text())
+                self.assertEqual(child.returncode,0 if mode in ('success','warmed-success') else (130 if mode=='INT' else 143 if mode=='TERM' else 2 if mode=='refusal' else child.returncode))
+                if mode not in ('success','warmed-success'):self.assertNotEqual(child.returncode,0,log.read_text())
+                if mode=='warmed-success':
+                    command=(state/'benchmark').read_text()
+                    self.assertIn('--tokens 1,2,4,8 --pairs 20 --warmup 5 --warmed-operand-sweep',command)
+                    self.assertNotIn('1,2,4,8,16',command)
+                    self.assertIn('--threads 14 --timeout 300',command)
                 cleanup=json.loads((root/'result'/'cleanup.json').read_text())
                 self.assertEqual(cleanup['cleanup'],'failed' if mode=='cleanup-failure' else 'unknown' if mode=='cleanup-unknown' else 'verified')
                 if (state/'benchmark').exists():self.assertIn('--comparison-mode cpu-cuda',(state/'benchmark').read_text())

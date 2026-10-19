@@ -5,15 +5,15 @@ if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5
   printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]|--operand-profile|--warmed-operand-sweep]\n' "$0" >&2
   exit 2
 fi
-if [[ ${5:-} == --warmed-operand-sweep ]]; then
-  [[ $# == 5 ]] || { printf 'warmed sweep takes no retained archive\n' >&2; exit 2; }
-  benchmark_args=(--tokens 1,2,4,8 --pairs 20 --warmup 5 --warmed-operand-sweep)
-fi
 repo=$(realpath "$1")
 archive=$(realpath "$2")
 build=$3
 result=$4
 benchmark_args=(--tokens 1,2,4,8,16)
+if [[ ${5:-} == --warmed-operand-sweep ]]; then
+  [[ $# == 5 ]] || { printf 'warmed sweep takes no retained archive\n' >&2; exit 2; }
+  benchmark_args=(--tokens 1,2,4,8 --pairs 20 --warmup 5 --warmed-operand-sweep)
+fi
 if [[ ${5:-} == --operand-profile ]]; then
   [[ $# == 5 ]] || { printf 'operand profile takes no retained archive\n' >&2; exit 2; }
   benchmark_args=(--tokens 1,2,4,8 --pairs 1 --warmup 0 --operand-replay)
