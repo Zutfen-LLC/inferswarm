@@ -8,6 +8,9 @@ import json
 import math
 from pathlib import Path
 import struct
+import sys
+import time
+import statistics
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('l7_operand_arithmetic', HERE/'layer7_arithmetic.py')
@@ -77,9 +80,11 @@ def composition_check(weighted, shared, output, d, tokens=2):
     controls = []
     for token in range(tokens):
         original = reference[token*d:(token+1)*d]
+        token_planes = weighted[token*10*d:(token+1)*10*d]
+        token_shared = shared[token*d:(token+1)*d]
         for slot in range(11):
             try:
-                changed = compose(weighted, shared, d, tokens=tokens, omit=slot)[token*d:(token+1)*d]
+                changed = compose(token_planes, token_shared, d, tokens=1, omit=slot)
             except UnsupportedProfile:
                 controls.append(dict(token=token, omitted='shared' if slot == 10 else slot,
                                      status='unknown-subnormal-control'))
@@ -229,9 +234,10 @@ def replay_binding(directory, row, timed_records):
             binding.get('timed_graph_retention') is not False or
             binding.get('replay_after_all_timed_work') is not True):
         return 'mismatch'
-    records = [json.loads(line) for line in Path(timed_records).read_text().splitlines()]
+    records = timed_records if isinstance(timed_records, list) else [
+        json.loads(line) for line in Path(timed_records).read_text().splitlines()]
     target = binding['timed_record']
-    if sum(record == target for record in records) != 1:
+    if binding.get('outputs_equal') is not True or sum(record == target for record in records) != 1:
         return 'mismatch'
     for key in ('case','tokens','pair','warmup','order','input_sha256','routing_sha256','ids','weight_bits'):
         if target[key] != row[key]: return 'mismatch'
@@ -242,25 +248,63 @@ def replay_binding(directory, row, timed_records):
 def analyze_replays(benchmark, helper):
     benchmark = Path(benchmark)
     records = [json.loads(line) for line in (benchmark/'stdout.jsonl').read_text().splitlines()]
-    timed = [r for r in records if r.get('type') == 'pair']
+    timed = [r for r in records if r.get('type') == 'pair' and not r['warmup']]
     widths = records[0]['tokens_list']
-    expected = {(t, 'mixed' if t == 1 else 'mixed-'+kind+'-set')
-                for t in widths for kind in (('varied',) if t == 1 else ('varied','shared'))}
-    if (not widths or any(t not in (1,2,4,8) for t in widths) or
-            {(r['tokens'],r['case']) for r in timed} != expected or len(timed) != len(expected) or
-            not records[-1].get('diagnostic_complete')):
-        raise ValueError('bounded MMVQ replay coverage/completion mismatch')
+    warmed = records[0].get('warmed_operand_sweep', False)
+    module_spec = importlib.util.spec_from_file_location('l7_bench_contract', HERE/'layer7_bench.py')
+    contract = importlib.util.module_from_spec(module_spec); module_spec.loader.exec_module(contract)
+    contract.validate_result(records, 20 if warmed else 1, 5 if warmed else 0,
+        records[0]['comparison_mode'], widths, operand_replay=True)
     reports = []
+    bank_cache = {}
+    started = time.monotonic()
     for row in timed:
-        path = benchmark/'native/replays'/('t'+str(row['tokens'])+'-'+row['case'])/'stages'
-        reports.append(analyze(path, helper, True, benchmark/'stdout.jsonl'))
-    return dict(schema='h5-layer7-conditional-replays/1', numerical_qualification=False,
+        path = benchmark/'native/replays'/('t'+str(row['tokens'])+'-'+row['case']+
+            ('-p'+str(row['pair']) if warmed else ''))/'stages'
+        report = analyze(path, helper, True, records, bank_cache, row)
+        report.update(case=row['case'], pair=row['pair'])
+        reports.append(report)
+        print(json.dumps(dict(checked=len(reports), expected=len(timed), tokens=row['tokens'],
+            case=row['case'], pair=row['pair'], status=report['status'],
+            analysis_seconds=time.monotonic()-started)), file=sys.stderr, flush=True)
+    matched = all(r['status'] == 'conditional-profile-match' for r in reports)
+    result = dict(schema='h5-layer7-conditional-replays/1', numerical_qualification=False,
         performance_claim=False, status='conditional-profile-match' if all(
             r['status'] == 'conditional-profile-match' for r in reports) else 'inconclusive',
-        profiles=reports, legacy_all_pass=all(r['correctness']['pass'] for r in timed))
+        profiles=reports, legacy_all_pass=all(r['correctness']['pass'] for r in records if r.get('type') == 'pair'),
+        measured_pairs=len(timed), warmup_pairs=sum(r.get('type') == 'pair' and r['warmup'] for r in records),
+        analysis_seconds=time.monotonic()-started, checker_sha256=stages.digest(Path(__file__).read_bytes()),
+        helper_sha256=stages.digest(Path(helper).read_bytes()),
+        timed_records_sha256=stages.digest((benchmark/'stdout.jsonl').read_bytes()))
+    if warmed and matched:
+        result['conditional_performance'] = performance(timed)
+        result['accuracy_assumption'] = reports[0]['assumption']
+    return result
 
 
-def analyze(directory, helper, conditional=False, timed_records=None):
+def performance(timed):
+    """Measured paired wall times only, after the caller validates every replay."""
+    def distribution(values):
+        ordered = sorted(values)
+        return dict(count=len(values), median=statistics.median(values), minimum=ordered[0],
+                    maximum=ordered[-1], p95=ordered[math.ceil(.95*len(values))-1])
+    cases = {}
+    for key in sorted({(r['tokens'],r['case']) for r in timed}):
+        t, case = key
+        rows = [r for r in timed if (r['tokens'],r['case']) == key]
+        a = [r['A']['total_layer_ms'] for r in rows]
+        b = [r['B']['total_layer_ms'] for r in rows]
+        cases[case+'@t'+str(t)] = dict(A_ms=distribution(a), B_ms=distribution(b),
+            B_minus_A_ms=distribution([y-x for x,y in zip(a,b)]),
+            A_ms_per_token=distribution([x/t for x in a]), B_ms_per_token=distribution([x/t for x in b]),
+            A_tokens_per_s=distribution([1000*t/x for x in a]), B_tokens_per_s=distribution([1000*t/x for x in b]),
+            B_faster_count=sum(y<x for x,y in zip(a,b)), AB_count=sum(r['order']=='AB' for r in rows),
+            BA_count=sum(r['order']=='BA' for r in rows))
+    return dict(scope='experimental timings conditional on the assumed vendor accuracy profile; no numerical qualification',
+                excludes=['warmup','setup','replay','checking'], timer='total_layer_ms wall time; no sum of overlapping stages', cases=cases)
+
+
+def analyze(directory, helper, conditional=False, timed_records=None, bank_cache=None, expected_record=None):
     directory = Path(directory)
     if (directory/'manifest.json').stat().st_size > 65536:
         raise ValueError('stage metadata budget exceeded')
@@ -270,6 +314,8 @@ def analyze(directory, helper, conditional=False, timed_records=None):
         return dict(schema='h5-layer7-operand-check/1', status='unknown',
                     reason='only retained T=2 stage layout is supported', end_to_end='unknown')
     m = stages.load_capture(directory, allow_operand_replay=conditional)
+    if expected_record is not None and m['pair_record'] != expected_record:
+        raise ValueError('pair-specific replay does not match the expected timed record')
     base = json.loads((directory.parent/'capture/manifest.json').read_text())
     d = m['files']['gate.q8_0.bin']['shape'][0]
     f = m['files']['A.gate.bin']['shape'][0]
@@ -300,12 +346,19 @@ def analyze(directory, helper, conditional=False, timed_records=None):
             for name in m['files'] if '.q8_0.' not in name}
     if not all(math.isfinite(v) for values in data.values() for v in values):
         raise ValueError('nonfinite stage')
-    # Validate even the unmodeled down-bank scales; nonfinite never becomes unknown.
+    # load_capture hashes every physical file first. Reuse immutable bytes and
+    # finite-scale validation only under that verified content identity.
+    bank_cache = {} if bank_cache is None else bank_cache
+    banks = {}
     for stage in ('gate', 'up', 'down'):
-        bank = (directory/(stage+'.q8_0.bin')).read_bytes()
-        if not all(math.isfinite(struct.unpack_from('<e', bank, at)[0])
-                   for at in range(0, len(bank), 34)):
-            raise ValueError('nonfinite bank scale')
+        identity = m['files'][stage+'.q8_0.bin']['sha256']
+        if identity not in bank_cache:
+            bank = (directory/(stage+'.q8_0.bin')).read_bytes()
+            if not all(math.isfinite(struct.unpack_from('<e', bank, at)[0])
+                       for at in range(0, len(bank), 34)):
+                raise ValueError('nonfinite bank scale')
+            bank_cache[identity] = bank
+        bank = banks[stage] = bank_cache[identity]
         if stage != 'down' and tokens == 2:
             checks['A.'+stage] = cpu_projection(model, bank, stages.floats(raw['A.input']),
                 data['A.'+stage+'.bin'], m['slot_map'], d, f)
@@ -332,7 +385,7 @@ def analyze(directory, helper, conditional=False, timed_records=None):
         for stage in ('gate', 'up', 'down'):
             down = stage == 'down'
             operands = data['B.swiglu.bin'] if down else stages.floats(raw['B.hot.input'])
-            checks['B.'+stage] = mmvq.projection(model, (directory/(stage+'.q8_0.bin')).read_bytes(),
+            checks['B.'+stage] = mmvq.projection(model, banks[stage],
                 operands, data['B.'+stage+'.bin'], m['slot_map'], f if down else d,
                 d if down else f, tokens, down)
         checks['B.swiglu'] = mmvq.swiglu(data['B.gate.bin'], data['B.up.bin'], data['B.swiglu.bin'], f, tokens)

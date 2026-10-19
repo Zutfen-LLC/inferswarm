@@ -6,6 +6,10 @@ the **explicitly assumed vendor accuracy profile** holds for the checked case.
 `numerical_qualification` and `performance_claim` remain false, always. This
 neither qualifies numerical equivalence nor changes any legacy verdict.
 
+The opt-in [warmed sweep preparation](layer7-warmed-sweep.md) preserves this
+profile and adds complete measured-pair replay coverage before reporting
+conditional timing observations. It does not change numerical qualification.
+
 ## Contract frozen before scoring
 
 Profile: `b29c606e-q8_0-mmvq-vendor-accuracy-union/1`, native pin

@@ -128,9 +128,14 @@ class ConditionalMMVQ(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'stages').mkdir();records=root/'stdout.jsonl'
             records.write_text(json.dumps(row)+'\n')
-            binding=dict(schema='h5-layer7-replay-binding/1',timed_record=row,timed_graph_retention=False,replay_after_all_timed_work=True)
+            binding=dict(schema='h5-layer7-replay-binding/1',timed_record=row,outputs_equal=True,timed_graph_retention=False,replay_after_all_timed_work=True)
             (root/'replay-binding.json').write_text(json.dumps(binding))
             self.assertEqual(check.replay_binding(root/'stages',row,records),'match')
+            binding['outputs_equal']=False
+            (root/'replay-binding.json').write_text(json.dumps(binding))
+            self.assertEqual(check.replay_binding(root/'stages',row,records),'mismatch')
+            binding['outputs_equal']=True
+            (root/'replay-binding.json').write_text(json.dumps(binding))
             wrong=copy.deepcopy(row);wrong['B']['output_sha256']='stale'
             self.assertEqual(check.replay_binding(root/'stages',wrong,records),'mismatch')
             wrong=copy.deepcopy(row);wrong['routing_sha256']='old'

@@ -158,7 +158,7 @@ def validate_weights(native, setup):
             raise ValueError('native expert weight identity mismatch')
 
 
-def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_list=(1,), diagnostic_pair13=False):
+def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_list=(1,), diagnostic_pair13=False, operand_replay=False):
     if not rows or rows[0].get('type') != 'setup' or rows[-1].get('type') != 'summary':
         raise ValueError('incomplete native result')
     if (rows[0].get('comparator') != comparison_contract(comparison_mode) or
@@ -168,13 +168,23 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
     if observed_tokens is not None and observed_tokens != list(tokens_list):
         raise ValueError('native token batch list mismatch')
     summary = rows[-1]
-    if not summary.get('valid') or (not diagnostic_pair13 and not summary.get('timing_comparison_valid')):
+    if operand_replay:
+        warmed = rows[0].get('warmed_operand_sweep', False)
+        supported = ((pairs, warmup, tuple(tokens_list)) == (20, 5, (1,2,4,8)) if warmed else
+                     pairs == 1 and warmup == 0 and bool(tokens_list) and all(t in (1,2,4,8) for t in tokens_list))
+        if not supported:
+            raise ValueError('unsupported operand replay grid')
+        if (not summary.get('diagnostic_complete') or not summary.get('operand_replay') or
+                summary.get('timing_comparison_valid') is not False or summary.get('performance_claim') is not False or
+                summary.get('warmed_operand_sweep', False) != warmed):
+            raise ValueError('incomplete operand replay summary')
+    elif not summary.get('valid') or (not diagnostic_pair13 and not summary.get('timing_comparison_valid')):
         raise ValueError('native comparison invalid')
     records = [r for r in rows if r.get('type') in (('pair', 'diagnostic-prime') if diagnostic_pair13 else ('pair',))]
     expected = set()
     for tokens in tokens_list:
         suffix = ('',) if tokens == 1 else ('-varied-set', '-shared-set')
-        for case in ('mixed', 'all-cold'):
+        for case in (('mixed',) if operand_replay else ('mixed', 'all-cold')):
             for tag in suffix:
                 for warm, n in ((True, warmup), (False, pairs)):
                     for i in range(n):
@@ -199,6 +209,19 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
             raise ValueError('diagnostic prefix/target/capture mismatch')
     if len(records) != len(expected) or {(r['case'], r.get('tokens', 1), r['warmup'], r['pair']) for r in records} != expected:
         raise ValueError('native paired count/coverage mismatch')
+    if operand_replay:
+        sequence = [(case, t, warm, i) for t in tokens_list
+                    for case in (('mixed',) if t == 1 else ('mixed-varied-set','mixed-shared-set'))
+                    for warm, count in ((True, warmup), (False, pairs)) for i in range(count)]
+        if [(r['case'], r['tokens'], r['warmup'], r['pair']) for r in records] != sequence:
+            raise ValueError('operand timed grid order mismatch')
+        replay_rows = [r for r in rows if r.get('type') == 'operand-replay']
+        wanted = [(c,t,False,i) for c,t,w,i in sequence if not w]
+        if ([(r['case'],r['tokens'],r.get('warmup',False),r.get('pair',0)) for r in replay_rows] != wanted or
+                summary.get('replays') != len(wanted) or not all(r.get('outputs_equal') is True for r in replay_rows) or
+                rows.index(replay_rows[0]) <= max(i for i,r in enumerate(rows) if r.get('type') == 'pair') or
+                summary.get('valid') != all(r['valid'] for r in records)):
+            raise ValueError('incomplete, duplicate, reordered or unbound operand replay grid')
     measured_expected = 0 if diagnostic_pair13 else len(expected) - sum(1 for (_, _, warm, _) in expected if warm)
     if summary['measured_pairs'] != measured_expected:
         raise ValueError('native paired count/coverage mismatch')
@@ -218,7 +241,9 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
                     r[arm]['routing_sha256'] != r['routing_sha256'] or
                     r[arm]['order'] != expected_order.index(arm) for arm in ('A', 'B'))):
             raise ValueError('matched input/routing/order mismatch')
-        if (not r['valid'] or not r['correctness']['pass'] or not r['correctness']['finite'] or
+        if ((not operand_replay and (not r['valid'] or not r['correctness']['pass'])) or
+                (operand_replay and (r.get('structural_valid', True) is not True or r['valid'] != r['correctness']['pass'])) or
+                not r['correctness']['finite'] or
                 not r['shared_nonzero'] or not r['experts_nonzero'] or
                 (r['hot'], r['cold']) != (want_hot, 10 - want_hot)):
             raise ValueError('invalid native numerical/partition/shared/expert result')
@@ -241,18 +266,22 @@ def validate_result(rows, pairs, warmup, comparison_mode='cpu-loopback', tokens_
             weights = [struct.unpack('<f', bytes.fromhex(b)[::-1])[0] for b in token_bits]
             if any(not math.isfinite(w) or w <= 0 for w in weights):
                 raise ValueError('native per-token routing weights invalid')
+            if operand_replay and sum(v in (54,74,136,290,394) for v in token_ids) != 5:
+                raise ValueError('operand per-token partition mismatch')
             ids_packed += struct.pack('<10i', *token_ids)
             weights_packed += b''.join(bytes.fromhex(b)[::-1] for b in token_bits)
         if hashlib.sha256(ids_packed + weights_packed).hexdigest() != r['routing_sha256']:
             raise ValueError('native routing hash does not match displayed rows')
         if any(not isinstance(r['correctness'].get(key), (int, float)) or
                not math.isfinite(r['correctness'][key]) or r['correctness'][key] < 0
-               for key in ('max_abs', 'max_ratio', 'rms', 'relative_l2')) or r['correctness']['max_ratio'] > 1:
+               for key in ('max_abs', 'max_ratio', 'rms', 'relative_l2')) or (not operand_replay and r['correctness']['max_ratio'] > 1):
             raise ValueError('invalid native comparator metrics')
         if any(not math.isfinite(r[arm]['total_layer_ms']) or r[arm]['total_layer_ms'] <= 0 for arm in ('A', 'B')):
             raise ValueError('invalid native layer time')
         if r['B'].get('tokens', 1) != tokens:
             raise ValueError('native B token count mismatch')
+        if operand_replay and any(not re.fullmatch('[0-9a-f]{64}', r[arm]['output_sha256']) for arm in ('A','B')):
+            raise ValueError('operand output identity malformed')
     return summary
 
 
@@ -319,8 +348,11 @@ def validate_capture(native):
 
 def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=False,
         pairs=20, warmup=5, timeout=300, threads=8, seed=314159, routing_archive=None, comparison_mode='cpu-loopback',
-        tokens_list=(1,), failure_dump=False, diagnostic_pair13=False, dump_max_bytes=16*1024*1024, retained_run=None, capture_stages=False, operand_replay=False):
-    if operand_replay and (pairs != 1 or warmup != 0 or capture_stages or failure_dump or
+        tokens_list=(1,), failure_dump=False, diagnostic_pair13=False, dump_max_bytes=16*1024*1024, retained_run=None, capture_stages=False, operand_replay=False, warmed_operand_sweep=False):
+    operand_replay = operand_replay or warmed_operand_sweep
+    if warmed_operand_sweep and (pairs, warmup, tuple(tokens_list), seed) != (20, 5, (1,2,4,8), 314159):
+        raise ValueError('warmed operand sweep requires frozen 20 pairs/5 warmups, seed and widths')
+    if operand_replay and ((not warmed_operand_sweep and (pairs != 1 or warmup != 0)) or capture_stages or failure_dump or
                            diagnostic_pair13 or routing_archive or retained_run or
                            any(t not in (1,2,4,8) for t in tokens_list)):
         raise ValueError('operand replay requires one pair/no warmup and MMVQ widths, no other diagnostics')
@@ -409,7 +441,7 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
                    '--tokens', ','.join(map(str, tokens_list)),
                    '--comparison-mode', comparison_mode]
         if operand_replay:
-            command.append("--operand-replay")
+            command.append('--warmed-operand-sweep' if warmed_operand_sweep else '--operand-replay')
         if capture_stages:
             command.append("--capture-stages")
         if failure_dump:
@@ -451,12 +483,7 @@ def run(build_receipt, output, *, endpoint=None, loopback=False, small_test=Fals
         if result.returncode:
             raise ValueError(f'native exit {result.returncode}; inspect retained stdout/stderr')
         if operand_replay:
-            summary = rows[-1]
-            expected = sum(1 if t == 1 else 2 for t in tokens_list)
-            replay_rows = [r for r in rows if r.get('type') == 'operand-replay']
-            if (not summary.get('diagnostic_complete') or not summary.get('operand_replay') or
-                    len(replay_rows) != expected or not all(r['outputs_equal'] for r in replay_rows)):
-                raise ValueError('incomplete or unbound operand replays')
+            summary = validate_result(rows, pairs, warmup, comparison_mode, tokens_list, operand_replay=True)
             validate_weights(output/'native', rows[0])
             receipt.update(valid=summary['valid'], diagnostic_complete=True, operand_replay=True,
                            timing_comparison_valid=False, summary=summary)
@@ -490,6 +517,7 @@ if __name__ == '__main__':
     parser.add_argument('--comparison-mode', choices=('cpu-loopback','cpu-cuda'), default='cpu-loopback')
     parser.add_argument('--small-test', action='store_true')
     parser.add_argument('--operand-replay', action='store_true', help='bounded MMVQ timed pairs then untimed retained replay; legacy results remain separate')
+    parser.add_argument('--warmed-operand-sweep', action='store_true', help='frozen seven-case 5 warmup/20 measured grid with every measured pair replayed')
     parser.add_argument('--capture-stages', action='store_true', help='retain executed T=2 gate/up/SwiGLU/down/weighted tensors; diagnostic only')
     parser.add_argument('--failure-dump', action='store_true', help='capture the first refused pair outside timing')
     parser.add_argument('--diagnostic-pair13', action='store_true', help='original prefix then only T=2 varied-set measured pair 13; no performance claim')
@@ -506,7 +534,7 @@ if __name__ == '__main__':
             small_test=args.small_test, pairs=args.pairs, warmup=args.warmup, timeout=args.timeout,
             threads=args.threads, seed=args.seed, routing_archive=args.captured_routing, comparison_mode=args.comparison_mode,
             tokens_list=tuple(int(v) for v in args.tokens.split(',')), failure_dump=args.failure_dump,
-            diagnostic_pair13=args.diagnostic_pair13, dump_max_bytes=args.dump_max_bytes, retained_run=args.retained_run, capture_stages=args.capture_stages, operand_replay=args.operand_replay)
+            diagnostic_pair13=args.diagnostic_pair13, dump_max_bytes=args.dump_max_bytes, retained_run=args.retained_run, capture_stages=args.capture_stages, operand_replay=args.operand_replay, warmed_operand_sweep=args.warmed_operand_sweep)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         result = dict(valid=False, timing_comparison_valid=False, error=str(error))
     print(json.dumps({k: v for k, v in result.items() if k not in ('candidate', 'host')}, sort_keys=True, allow_nan=False))

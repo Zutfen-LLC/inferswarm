@@ -38,7 +38,7 @@ uint32_t next(uint32_t & state) { state^=state<<13; state^=state>>17; state^=sta
 float sample(uint32_t & state) { return (int(next(state)%2001)-1000)/1000.0f; }
 struct options {
     int d=2560,f=640,threads=8,warmup=5,pairs=20; uint32_t seed=314159;
-    bool small=false, failure_dump=false, diagnostic_pair13=false, capture_stages=false, operand_replay=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
+    bool small=false, failure_dump=false, diagnostic_pair13=false, capture_stages=false, operand_replay=false, warmed_operand_sweep=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
     std::string tokens_list="1";
 };
 int number(const std::string & text,int low,int high) {
@@ -67,6 +67,7 @@ options parse(int argc,char ** argv) {
     options o;
     for (int i=1;i<argc;++i) {
         std::string a=argv[i];
+        if (a=="--warmed-operand-sweep") { o.warmed_operand_sweep=true;o.operand_replay=true;continue; }
         if (a=="--operand-replay") { o.operand_replay=true;continue; }
         if (a=="--capture-stages") { o.capture_stages=true;continue; }
         if (a=="--failure-dump") { o.failure_dump=true;continue; }
@@ -93,7 +94,7 @@ options parse(int argc,char ** argv) {
     require(!o.capture_stages || o.diagnostic_pair13 || (o.small && o.control=="stage-probe"),"stage capture requires frozen diagnostic or small stage-probe");
     if (o.control=="stage-probe") require(o.tokens_list=="2" && o.warmup==0 && o.pairs<=2,"stage-probe requires T=2, no warmup, one or two pairs");
     if (o.operand_replay) {
-        require(o.pairs==1 && o.warmup==0 && !o.capture_stages && !o.failure_dump &&
+        require((o.warmed_operand_sweep ? o.pairs==20 && o.warmup==5 && o.tokens_list=="1,2,4,8" && o.seed==314159 : o.pairs==1 && o.warmup==0) && !o.capture_stages && !o.failure_dump &&
             !o.diagnostic_pair13 && o.control.empty() && o.routing.empty(),"operand replay requires one pair/no warmup, synthetic routing, no other diagnostic");
         for(int t:parse_tokens(o.tokens_list)) require(t==1 || t==2 || t==4 || t==8,"operand replay supports MMVQ T=1/2/4/8 only");
     }
@@ -649,7 +650,7 @@ int main(int argc,char ** argv) {
         std::ifstream weights_file(o.work+"/weights.json");const std::string weights_bytes((std::istreambuf_iterator<char>(weights_file)),{});
         std::cout<<json({{"type","setup"},{"schema","h5-layer7-matched/1"},{"setup_ms",ms(setup)},
             {"dimensions",{o.d,o.f,E,K}},{"small_test",o.small},{"seed",o.seed},{"threads",o.threads},
-            {"tokens_list",widths},
+            {"tokens_list",widths},{"pairs",o.pairs},{"warmup",o.warmup},{"warmed_operand_sweep",o.warmed_operand_sweep},
             {"representation","Q8_0"},{"routing_boundary_cut",o.control!="native-routing"},{"routing_scope","provided routing boundary; synthetic activations, not activation replay"},
             {"comparator",contract},{"comparison_mode",o.comparison_mode},{"weights_sha256",sha(weights_bytes.data(),weights_bytes.size())},{"weight_spec_sha256",sha(spec_bytes.data(),spec_bytes.size())}}).dump()<<std::endl;
         if (o.diagnostic_pair13) std::cout<<json({{"type","diagnostic_selector"},{"id","pr346-t2-pair13-prefix/1"},
@@ -720,7 +721,11 @@ int main(int argc,char ** argv) {
                         bool shared_nonzero=std::any_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x) && x!=0;});
                         bool experts_nonzero=true;for (size_t i=0;i<size_t(K)*tokens;++i) experts_nonzero &= std::any_of(weighted.begin()+i*o.d,weighted.begin()+(i+1)*o.d,[](float x){return std::isfinite(x) && x!=0;});
                         auto metrics=diagnostic(a,b,weighted,shared,o.d,o.comparison_mode=="cpu-cuda",o.failure_dump || o.diagnostic_pair13);
-                        bool valid=metrics["pass"] && shared_nonzero && experts_nonzero && stats.hot==(name=="mixed"?5:0) && stats.cold==K-(name=="mixed"?5:0) && stats.tokens==unsigned(tokens);
+                        bool structural_valid=metrics["finite"] && shared_nonzero && experts_nonzero &&
+                            std::all_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x);}) &&
+                            std::all_of(weighted.begin(),weighted.end(),[](float x){return std::isfinite(x);}) &&
+                            stats.hot==(name=="mixed"?5:0) && stats.cold==K-(name=="mixed"?5:0) && stats.tokens==unsigned(tokens);
+                        bool valid=metrics["pass"] && structural_valid;
                         std::vector<uint8_t> route_bytes(K*tokens*8);
                         std::memcpy(route_bytes.data(),ids_flat.data(),K*tokens*4);
                         std::memcpy(route_bytes.data()+K*tokens*4,weights_flat.data(),K*tokens*4);
@@ -731,7 +736,7 @@ int main(int argc,char ** argv) {
                         json row={{"type","pair"},{"case",case_name},{"tokens",tokens},{"pair",pair},{"warmup",warm},{"order",ab?"AB":"BA"},
                             {"routing_labels",labels},{"input_sha256",input_hash},{"routing_sha256",route_hash},
                             {"ids",ids_json},{"weight_bits",weight_bits},{"hot",stats.hot},{"cold",stats.cold},{"shared_nonzero",shared_nonzero},{"experts_nonzero",experts_nonzero},
-                            {"correctness",metrics},{"valid",valid},{"A",{{"arm","A"},{"order",ab?0:1},{"total_layer_ms",am},{"output_sha256",sha(a.data(),a.size()*4)}}},
+                            {"correctness",metrics},{"valid",valid},{"structural_valid",structural_valid},{"A",{{"arm","A"},{"order",ab?0:1},{"total_layer_ms",am},{"output_sha256",sha(a.data(),a.size()*4)}}},
                             {"B",{{"arm","B"},{"order",ab?1:0},{"total_layer_ms",bm},{"output_sha256",sha(b.data(),b.size()*4)},
                                 {"h5_layer_ms",stats.layer_ms},{"dispatch_ms",stats.dispatch_ms},{"cold_ms",stats.cold_ms},{"shared_ms",stats.shared_ms},{"join_ms",stats.join_ms},{"fast_ms",stats.fast_ms},
                                 {"input_bytes",stats.input_bytes},{"routing_bytes",stats.routing_bytes},{"result_bytes",stats.result_bytes},{"wire_bytes",nullptr},{"owner",stats.compact_owner},{"step",stats.steps},
@@ -761,10 +766,10 @@ int main(int argc,char ** argv) {
                             }
                         }
                         if(o.operand_replay) {
-                            row["performance_claim"]=false;replays.push_back({fixture,row});legacy_valid &= valid;
+                            row["performance_claim"]=false;if(!warm) replays.push_back({fixture,row});legacy_valid &= valid;
                         }
                         std::cout<<row.dump()<<std::endl;
-                        require(valid || o.operand_replay,"invalid comparison: numerical/partition/shared/expert check failed");
+                        require(valid || (o.operand_replay && structural_valid),"invalid comparison: numerical/partition/shared/expert check failed");
                         require(capture_ok,"diagnostic capture failed or consumed identity mismatch");
                         if (target) {
                             require(o.control=="stage-probe" || primed==68,"diagnostic prefix count mismatch");
@@ -789,13 +794,15 @@ int main(int argc,char ** argv) {
             // graphs. Their outputs must equal the corresponding timed bytes.
             const auto root=s.o.work;s.o.capture_stages=true;
             std::filesystem::create_directory(root+"/replays");
+            int replay_width=0;
             for(auto & saved:replays) {
                 const int t=saved.row.at("tokens");
-                const std::string dir=root+"/replays/t"+std::to_string(t)+"-"+saved.row.at("case").get<std::string>();
-                std::filesystem::create_directory(dir);
+                const std::string dir=root+"/replays/t"+std::to_string(t)+"-"+saved.row.at("case").get<std::string>()+
+                    (o.warmed_operand_sweep?"-p"+std::to_string(saved.row.at("pair").get<int>()):"");
+                require(std::filesystem::create_directory(dir),"fresh pair-specific replay directory required");
                 for(const auto name:{"weights.json","spec.json","assigned.txt"})
                     std::filesystem::copy_file(root+"/"+name,dir+"/"+name);
-                s.o.work=dir;s.rebuild(t);
+                s.o.work=dir;if(replay_width!=t) {s.rebuild(t);replay_width=t;}
                 std::vector<int32_t> ids;std::vector<float> weights;
                 for(auto & r:saved.input.rows) for(int i=0;i<K;++i) {ids.push_back(r.ids[i]);weights.push_back(r.weights[i]);}
                 for(auto * x:{&s.a,&s.b}) {
@@ -815,14 +822,16 @@ int main(int argc,char ** argv) {
                 std::ofstream(dir+"/replay-binding.json")<<json({{"schema","h5-layer7-replay-binding/1"},
                     {"timed_record",saved.row},{"outputs_equal",bound},{"timed_graph_retention",false},
                     {"replay_after_all_timed_work",true}}).dump(2)<<"\n";
-                capture(s,row);capture_stages(s,row);
+                auto captured=capture(s,row);
+                require(captured["consumed_identity_matches_pair"],"replay consumed identity mismatch");
+                capture_stages(s,row);
                 std::cout<<json({{"type","operand-replay"},{"tokens",t},{"case",row["case"]},
-                    {"outputs_equal",bound},{"path",dir},{"performance_claim",false}}).dump()<<std::endl;
+                    {"pair",row["pair"]},{"warmup",false},{"outputs_equal",bound},{"path",dir},{"performance_claim",false}}).dump()<<std::endl;
                 require(bound,"untimed replay output differs from timed output; inconclusive, do not widen profile");
             }
             std::cout<<json({{"type","summary"},{"valid",legacy_valid},{"diagnostic_complete",true},
-                {"operand_replay",true},{"timing_comparison_valid",false},{"performance_claim",false},
-                {"replays",replays.size()},{"measured_pairs",measured},{"cases",summaries}}).dump()<<std::endl;
+                {"operand_replay",true},{"warmed_operand_sweep",o.warmed_operand_sweep},{"timing_comparison_valid",false},{"performance_claim",false},
+                {"replays",replays.size()},{"measured_pairs",measured},{"cases",o.warmed_operand_sweep?json(nullptr):summaries}}).dump()<<std::endl;
             return 0;
         }
         std::cout<<json({{"type","summary"},{"valid",true},{"timing_comparison_valid",true},{"measured_pairs",measured},{"cases",summaries}}).dump()<<std::endl;

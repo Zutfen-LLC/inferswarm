@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # FUTURE CPU05 dispatch only, inside the established ssh -A controller.
 set -euo pipefail
-if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5 == --diagnostic-stages || $5 == --operand-profile ) ) ]]; then
-  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]|--operand-profile]\n' "$0" >&2
+if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5 == --diagnostic-stages || $5 == --operand-profile || $5 == --warmed-operand-sweep ) ) ]]; then
+  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]|--operand-profile|--warmed-operand-sweep]\n' "$0" >&2
   exit 2
+fi
+if [[ ${5:-} == --warmed-operand-sweep ]]; then
+  [[ $# == 5 ]] || { printf 'warmed sweep takes no retained archive\n' >&2; exit 2; }
+  benchmark_args=(--tokens 1,2,4,8 --pairs 20 --warmup 5 --warmed-operand-sweep)
 fi
 repo=$(realpath "$1")
 archive=$(realpath "$2")
@@ -21,8 +25,15 @@ if [[ ${5:-} == --diagnostic-pair13 || ${5:-} == --diagnostic-stages ]]; then
 fi
 [[ $(hostname -s) == inferswarm05 ]] || { printf 'requires CPU05\n' >&2; exit 2; }
 [[ ! -e $build && ! -e $result ]] || { printf 'fresh output paths required\n' >&2; exit 2; }
-python3 "$repo/tools/native-moe-overlap/hot-build-composed.py" \
-  --archive "$archive" --output "$build" --benchmark-only
+if [[ ${5:-} == --warmed-operand-sweep ]]; then
+  # Preparation happens before any worker/tunnel start. Keep the established
+  # benchmark and worker caps below unchanged.
+  timeout --signal=TERM --kill-after=5 900 python3 "$repo/tools/native-moe-overlap/hot-build-composed.py" \
+    --archive "$archive" --output "$build" --benchmark-only
+else
+  python3 "$repo/tools/native-moe-overlap/hot-build-composed.py" \
+    --archive "$archive" --output "$build" --benchmark-only
+fi
 mkdir "$result"
 result=$(realpath "$result")
 # Fresh token binds a remote artifact and one owned process GROUP, not a name
