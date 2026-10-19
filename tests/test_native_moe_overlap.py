@@ -763,6 +763,23 @@ class NativeHotExperts(unittest.TestCase):
                 for key in ('nonfinite_output','nonfinite_plane','nonfinite_shared'):
                     self.assertFalse(p[key]['pass']);self.assertFalse(p[key]['finite'])
 
+    def test_matched_comparator_batch_scales_stay_with_each_token_coordinate(self):
+        for mode in ('cpu-loopback', 'cpu-cuda'):
+            with self.subTest(mode=mode):
+                result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', 'unused:1',
+                    '--work-dir', str(self.root/'unused-batch-probe'), '--small-test',
+                    '--comparison-mode', mode, '--control', 'comparator-probe'],
+                    capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                coordinates = json.loads(result.stdout)['batch_coordinates']
+                self.assertEqual({(r['token'], r['coordinate']) for r in coordinates},
+                                 {(t, c) for t in range(2) for c in range(3)})
+                for row in coordinates:
+                    with self.subTest(token=row['token'], coordinate=row['coordinate']):
+                        self.assertTrue(row['within']['pass'])
+                        self.assertFalse(row['excess']['pass'])
+                        self.assertGreater(row['excess']['max_ratio'], 1)
+
     def test_matched_weight_inventory_and_census_bind_all_actual_weights(self):
         spec=importlib.util.spec_from_file_location('weight_supervisor', ROOT/'tools/native-moe-overlap/layer7_bench.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -908,14 +925,22 @@ class NativeHotExperts(unittest.TestCase):
     def test_matched_batch_sweep_negative_controls_still_refuse(self):
         """Omission/bad-partition controls must refuse under batched widths too."""
         executable = self.build / 'bin/native-layer7-bench'
-        for control in ('missing-expert', 'bad-partition'):
-            with self.subTest(control=control), self.worker() as proxy:
+        for tokens, control in ((t, c) for t in (2, 4)
+                                for c in ('missing-expert', 'missing-shared', 'bad-partition')):
+            with self.subTest(tokens=tokens, control=control), self.worker() as proxy:
                 failed = subprocess.run([str(executable), '--endpoint', f'127.0.0.1:{proxy.port}',
-                    '--work-dir', str(self.root / ('batch-' + control)), '--small-test', '--warmup', '0',
-                    '--pairs', '1', '--tokens', '1,2', '--comparison-mode', 'cpu-cuda',
+                    '--work-dir', str(self.root / (f'batch-{tokens}-' + control)), '--small-test', '--warmup', '0',
+                    '--pairs', '1', '--tokens', str(tokens), '--comparison-mode', 'cpu-cuda',
                     '--control', control], capture_output=True, text=True, timeout=60)
-                self.assertNotEqual(failed.returncode, 0)
-                self.assertFalse(json.loads(failed.stdout.splitlines()[-1])['valid'])
+                self.assertEqual(failed.returncode, 2, failed.stderr[-4000:])
+                rows = [json.loads(line) for line in failed.stdout.splitlines()]
+                self.assertFalse(rows[-1]['valid'])
+                if control != 'bad-partition':
+                    pair = next(r for r in rows if r['type'] == 'pair')
+                    self.assertEqual(pair['tokens'], tokens)
+                    self.assertTrue(pair['correctness']['finite'])
+                    self.assertFalse(pair['correctness']['pass'])
+                    self.assertGreater(pair['correctness']['max_ratio'], 1)
 
     def test_matched_default_native_router_keeps_source_behavior(self):
         with self.worker() as proxy:
@@ -928,6 +953,13 @@ class NativeHotExperts(unittest.TestCase):
         self.assertTrue(rows[-1]['valid'])
         self.assertEqual({r['routing_label'] for r in rows if r['type']=='pair'}, {'native-router-regression'})
         self.assertTrue(all(r['correctness']['pass'] for r in rows if r['type']=='pair'))
+        import hashlib
+        for row in (r for r in rows if r['type'] == 'pair'):
+            routing = struct.pack('<10i', *row['ids']) + b''.join(
+                struct.pack('<I', int(bits, 16)) for bits in row['weight_bits'])
+            self.assertEqual(hashlib.sha256(routing).hexdigest(), row['routing_sha256'])
+            self.assertEqual(row['routing_sha256'], row['A']['routing_sha256'])
+            self.assertEqual(row['routing_sha256'], row['B']['routing_sha256'])
 
     def test_matched_supervisor_records_actual_candidate_and_timeout(self):
         path = ROOT / 'tools/native-moe-overlap/layer7_bench.py'

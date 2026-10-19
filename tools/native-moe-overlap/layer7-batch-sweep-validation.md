@@ -5,6 +5,11 @@ This record concerns local synthetic CPU-loopback development only. It does not
 change the completed H5 experiments, accepted native identities, project status,
 or hardware authorization.
 
+Correction (2026-10-19): the initial batched comparator and omission-coverage
+claims below were found defective at head `1299f8e3`. They are retained as
+development history, not qualification of the corrected head. The focused
+corrections and new regression evidence are recorded below.
+
 ## What was built
 
 The batched sweep extends the existing matched layer-7 benchmark along the
@@ -91,6 +96,51 @@ pin the mutated-row refusals and the hash re-derivation; the historical
 single-token contract fixture was updated to the same packing. No unrelated
 hardening or broad refactors were added. Full transcript retained at
 `/home/zutfen/data/is346-batch-sweep/reviews/scoped-review-transcript.log`.
+
+## Focused review corrections (2026-10-19)
+
+The follow-up review reproduced a material comparator defect: the tolerance
+scale indexed `[d,10,T]` planes as if each expert held the whole `[d,T]`
+output. A small token could borrow another token's large scale and pass an
+error outside its frozen tolerance. `diagnostic` now receives embedding width
+`d` and reads `(t*10+slot)*d+c` for output coordinate `t*d+c`. The formula,
+constants, zero-plane fallback, finite checks and single-token indexing are
+unchanged.
+
+The existing small-test comparator probe now checks two asymmetric tokens
+with three differently scaled coordinates each, in both comparator modes.
+Before the fix, excess errors at token/coordinate `(0,0)`, `(0,2)` and `(1,1)`
+were accepted in both modes (six failing assertions). After the fix, errors
+inside each coordinate's frozen tolerance pass and excess errors fail.
+
+The missing-expert control now zeros the first slot of each token in B's
+actual width-specific routing tensor. Separate invocations at widths **2**
+and **4** exercise missing-expert, missing-shared and bad-partition controls;
+width 1 or an earlier failing width cannot substitute for later coverage.
+Before the fix, missing-expert incorrectly completed successfully at both
+widths. Omission checks require an emitted pair of the requested width with
+finite arithmetic and `max_ratio > 1`, rather than accepting setup failure.
+
+Native-router control readback now refreshes the displayed IDs and weight
+bits before emission. A regression reconstructs routing bytes from those
+fields and checks the row and both arms' hashes. This failed before the fix.
+
+The three focused regression methods reproduced nine assertion failures
+before correction. Local validation uses the canonical Python 3.12 environment,
+the existing authenticated source archive, a portable CPU fixture build and
+loopback RPC only. The benchmark executable is rebuilt incrementally after
+the fixes; composed library sources are unchanged by these corrections.
+The environment doctor passed. **35/35 focused tests passed** across
+`NativeHotExperts`, `Layer7BenchContracts`, `Layer7BatchSweepContracts` and
+`test_cross_cutting_smoke`, including the new regressions, single-token
+behavior, all-cold transitions, graph reuse, synchronization, wire contracts
+and owned cleanup. `finalize_repository.py --check` passed.
+
+The Hermes benchmark recipe in `layer7-cpu05.sh` is unchanged: rebuild with
+`hot-build-composed.py --benchmark-only` from the corrected tree, then sweep
+`--tokens 1,2,4,8,16 --comparison-mode cpu-cuda` using the existing bounded
+CPU05/GPU03 recipe and its cleanup. This session does not execute that recipe.
+No batch hardware gain or numerical backend qualification is established.
 
 ## Remaining limitations
 

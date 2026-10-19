@@ -310,12 +310,13 @@ json comparison_contract(const std::string & mode) {
         {"zero_plane_fallback",ASSOC},{"plane_source","A weighted slots"}};
 }
 json diagnostic(const std::vector<float> & a,const std::vector<float> & b,
-        const std::vector<float> & planes,const std::vector<float> & shared,bool cross_backend) {
-    require(!a.empty() && a.size()==b.size() && planes.size()==K*a.size() && shared.size()==a.size(),"comparison shape mismatch");
+        const std::vector<float> & planes,const std::vector<float> & shared,size_t d,bool cross_backend) {
+    require(d>0 && !a.empty() && a.size()%d==0 && a.size()==b.size() && planes.size()==K*a.size() && shared.size()==a.size(),"comparison shape mismatch");
     bool finite=true,equal=true,pass=true;double max_abs=0,max_ratio=0,squared=0,ref=0;
     for (size_t e=0;e<a.size();++e) {
         double l1=0;
-        for (int i=0;i<K;++i) { double p=planes[e+i*a.size()];finite &= std::isfinite(p);l1+=std::fabs(p); }
+        // weighted slots are [d,K,T], while outputs are [d,T].
+        for (int i=0;i<K;++i) { double p=planes[((e/d)*K+i)*d+e%d];finite &= std::isfinite(p);l1+=std::fabs(p); }
         double tol=ASSOC*l1+(cross_backend?QUANT_HEADROOM:0.0)*l1;
         if (tol<=0.0) tol=ASSOC;
         finite &= std::isfinite(a[e]) && std::isfinite(b[e]) && std::isfinite(shared[e]);equal &= a[e]==b[e];
@@ -328,12 +329,29 @@ json diagnostic(const std::vector<float> & a,const std::vector<float> & b,
 }
 json comparator_probe(bool cross_backend) {
     std::vector<float> a={1},b={std::nextafter(1.0f,2.0f)},planes(K,0),shared={0.1f};planes[0]=1;
-    json out;out["adjacent"]=diagnostic(a,b,planes,shared,cross_backend);
-    b[0]=1.02f;out["excess"]=diagnostic(a,b,planes,shared,cross_backend);
-    planes[0]=0;b[0]=std::nextafter(1.0f,2.0f);out["zero_planes"]=diagnostic(a,b,planes,shared,cross_backend);
-    b[0]=INFINITY;out["nonfinite_output"]=diagnostic(a,b,planes,shared,cross_backend);b=a;
-    planes[0]=NAN;out["nonfinite_plane"]=diagnostic(a,b,planes,shared,cross_backend);planes[0]=1;
-    shared[0]=INFINITY;out["nonfinite_shared"]=diagnostic(a,b,planes,shared,cross_backend);return out;
+    json out;out["adjacent"]=diagnostic(a,b,planes,shared,1,cross_backend);
+    b[0]=1.02f;out["excess"]=diagnostic(a,b,planes,shared,1,cross_backend);
+    planes[0]=0;b[0]=std::nextafter(1.0f,2.0f);out["zero_planes"]=diagnostic(a,b,planes,shared,1,cross_backend);
+    b[0]=INFINITY;out["nonfinite_output"]=diagnostic(a,b,planes,shared,1,cross_backend);b=a;
+    planes[0]=NAN;out["nonfinite_plane"]=diagnostic(a,b,planes,shared,1,cross_backend);planes[0]=1;
+    shared[0]=INFINITY;out["nonfinite_shared"]=diagnostic(a,b,planes,shared,1,cross_backend);
+    // Asymmetric [d,K,T] planes: each coordinate must use its own token's
+    // scale, including small coordinates beside large ones in either token.
+    constexpr size_t d=3,tokens=2;
+    const float scales[tokens][d]={{0.125f,128.0f,0.25f},{256.0f,0.5f,512.0f}};
+    a.assign(d*tokens,1.0f);shared.assign(d*tokens,0.1f);planes.resize(d*K*tokens);
+    for (size_t t=0;t<tokens;++t) for (int slot=0;slot<K;++slot)
+        for (size_t c=0;c<d;++c) planes[(t*K+slot)*d+c]=scales[t][c];
+    out["batch_coordinates"]=json::array();
+    for (size_t e=0;e<a.size();++e) {
+        double tol=(ASSOC+(cross_backend?QUANT_HEADROOM:0.0))*K*scales[e/d][e%d];
+        b=a;b[e]+=float(tol/2);
+        auto within=diagnostic(a,b,planes,shared,d,cross_backend);
+        b=a;b[e]+=float(2*tol);
+        out["batch_coordinates"].push_back({{"token",e/d},{"coordinate",e%d},
+            {"within",within},{"excess",diagnostic(a,b,planes,shared,d,cross_backend)}});
+    }
+    return out;
 }
 // #346 per-token/throughput derived distributions: plain per-sample transforms
 // of the SAME retained pair times, never separately re-measured quantities.
@@ -443,7 +461,11 @@ int main(int argc,char ** argv) {
                                 ggml_backend_tensor_set(x->routing.weights,rows[0].weights.data(),0,K*4);
                             }
                         }
-                        if (o.control=="missing-expert" && tokens==1) { auto w=rows[0].weights;w[0]=0;ggml_backend_tensor_set(s.b.routing.weights,w.data(),0,K*4); }
+                        if (o.control=="missing-expert") {
+                            auto w=weights_flat;for (int t=0;t<tokens;++t) w[t*K]=0;
+                            auto target=tokens>1?s.b.routing_batch.at(tokens).weights:s.b.routing.weights;
+                            ggml_backend_tensor_set(target,w.data(),0,w.size()*4);
+                        }
                         bool ab=pair%2==0;double am,bm;
                         if (ab) { am=s.execute(s.a,false,a);bm=s.execute(s.b,true,b); }
                         else { bm=s.execute(s.b,true,b);am=s.execute(s.a,false,a); }
@@ -452,14 +474,19 @@ int main(int argc,char ** argv) {
                             // top-k must produce a valid partition; relabel on success.
                             ggml_backend_tensor_get(s.a.native_ids,ids_flat.data(),0,K*tokens*4);
                             ggml_backend_tensor_get(s.a.native_weights,weights_flat.data(),0,K*tokens*4);
-                            for (auto & r:rows) r.label="native-router-regression";
+                            for (int t=0;t<tokens;++t) {
+                                for (int i=0;i<K;++i) {
+                                    rows[t].ids[i]=ids_flat[t*K+i];rows[t].weights[i]=weights_flat[t*K+i];
+                                }
+                                rows[t].label="native-router-regression";validate(rows[t]);
+                            }
                         }
                         auto stats=llama_hot_get_stats(s.b.result.hot_experts.at(0));
                         ggml_backend_tensor_get(s.a.shared,shared.data(),0,shared.size()*4);
                         ggml_backend_tensor_get(s.a.weighted,weighted.data(),0,weighted.size()*4);
                         bool shared_nonzero=std::any_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x) && x!=0;});
                         bool experts_nonzero=true;for (size_t i=0;i<size_t(K)*tokens;++i) experts_nonzero &= std::any_of(weighted.begin()+i*o.d,weighted.begin()+(i+1)*o.d,[](float x){return std::isfinite(x) && x!=0;});
-                        auto metrics=diagnostic(a,b,weighted,shared,o.comparison_mode=="cpu-cuda");
+                        auto metrics=diagnostic(a,b,weighted,shared,o.d,o.comparison_mode=="cpu-cuda");
                         bool valid=metrics["pass"] && shared_nonzero && experts_nonzero && stats.hot==(name=="mixed"?5:0) && stats.cold==K-(name=="mixed"?5:0) && stats.tokens==unsigned(tokens);
                         std::vector<uint8_t> route_bytes(K*tokens*8);
                         std::memcpy(route_bytes.data(),ids_flat.data(),K*tokens*4);
