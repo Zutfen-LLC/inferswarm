@@ -417,10 +417,12 @@ llama_hot_observation llama_hot_get_observation(const std::shared_ptr<llama_hot_
     // Fast-path intermediates are not retained. Never expose the last mixed
     // step's slots/shared as observations of an all-cold step.
     if (!s.stats.hot) return out;
-    out.weighted=s.slots; out.shared=s.shared.output;
+    out.weighted_shape=s.slots; out.shared=s.shared.output;
     auto & h=s.hot[s.stats.hot];
+    out.hot_weighted=h.output;
     out.hot_input=h.input; out.hot_ids=h.ids; out.hot_weights=h.weights;
     if (s.stats.cold) {
+        out.cold_weighted=s.cold[s.stats.cold].output;
         out.cold_ids=s.cold[s.stats.cold].ids;
         out.cold_weights=s.cold[s.stats.cold].weights;
     }

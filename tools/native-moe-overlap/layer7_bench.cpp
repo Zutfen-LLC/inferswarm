@@ -375,6 +375,36 @@ json comparator_probe(bool cross_backend) {
     out["different_maxima"]=diagnostic(a,b,planes,shared,d,cross_backend,true);
     return out;
 }
+// The reduction allocator can reuse slot staging once its final view dies.
+// Restore a capture from the retained branch outputs, without reading that
+// expired staging or changing the executor's graph/liveness/timed work.
+std::vector<uint8_t> captured_weighted(const llama_hot_observation & observation) {
+    const auto * shape=observation.weighted_shape;
+    require(shape && observation.hot_weighted,"mixed capture branch outputs missing");
+    const size_t d=shape->ne[0],tokens=shape->ne[2];
+    std::vector<uint8_t> restored(ggml_nbytes(shape)),hot,cold;
+    auto read=[&](ggml_tensor * t,std::vector<uint8_t> & bytes) {
+        if (!t) return size_t(0);
+        require(t->type==GGML_TYPE_F32 && ggml_is_contiguous(t) && size_t(t->ne[0])==d &&
+            size_t(t->ne[2])==tokens && t->ne[3]==1,"capture branch layout mismatch");
+        bytes.resize(ggml_nbytes(t));ggml_backend_tensor_get(t,bytes.data(),0,bytes.size());
+        return size_t(t->ne[1]);
+    };
+    const auto nh=read(observation.hot_weighted,hot),nc=read(observation.cold_weighted,cold);
+    require(shape->type==GGML_TYPE_F32 && shape->ne[1]==K && shape->ne[3]==1 && nh+nc==K,"capture slot layout mismatch");
+    std::vector<int32_t> ids(K*tokens);ggml_backend_tensor_get(observation.ids,ids.data(),0,ids.size()*sizeof(int32_t));
+    for (size_t t=0;t<tokens;++t) {
+        size_t h=0,c=0;
+        for (size_t slot=0;slot<K;++slot) {
+            const bool is_hot=std::find(HOT.begin(),HOT.end(),ids[t*K+slot])!=HOT.end();
+            require(is_hot?h<nh:c<nc,"capture branch partition mismatch");
+            const auto * src=is_hot?hot.data()+(t*nh+h++)*d*4:cold.data()+(t*nc+c++)*d*4;
+            std::memcpy(restored.data()+(t*K+slot)*d*4,src,d*4);
+        }
+        require(h==nh && c==nc,"capture branch partition mismatch");
+    }
+    return restored;
+}
 // All reads occur after execute() synchronized both arms, outside the timers.
 // One capture per run, at most 16 MiB payload plus 64 KiB metadata. A partial
 // directory never has a successful manifest and never changes the comparator.
@@ -391,7 +421,7 @@ json capture(bench & s,const json & row) {
         {"A.ids",ai},{"A.weights",aw},{"B.ids",observation.ids},{"B.weights",observation.weights},
         {"A.output",s.a.output},{"B.output",s.b.output},
         {"A.weighted",s.a.weighted},{"A.shared",s.a.shared},
-        {"B.weighted",observation.weighted},{"B.shared",observation.shared},
+        {"B.weighted",observation.weighted_shape},{"B.shared",observation.shared},
         {"B.hot.input",observation.hot_input},{"B.hot.ids",observation.hot_ids},{"B.hot.weights",observation.hot_weights},
         {"B.cold.ids",observation.cold_ids},{"B.cold.weights",observation.cold_weights}};
     size_t total=0;
@@ -402,15 +432,17 @@ json capture(bench & s,const json & row) {
     }
     const auto directory=std::filesystem::path(s.o.work)/"capture";
     require(std::filesystem::create_directory(directory),"capture path must be fresh");
-    json manifest={{"schema","h5-layer7-capture/1"},{"byte_order","little"},{"payload_bytes",total},
+    json manifest={{"schema","h5-layer7-capture/2"},{"byte_order","little"},{"payload_bytes",total},
         {"payload_limit_bytes",s.o.dump_max_bytes},{"pair_record",row},{"tensors",json::object()},
         {"weighted_layout","[coordinate,original_slot,token]; coordinate fastest"},
+        {"B_weighted_source","retained-branch-outputs/1"},
         {"output_layout","[coordinate,token]; coordinate fastest"},
-        {"B_unavailable",observation.weighted?json::array():json({"weighted/shared: zero-hot fast graph intermediates not retained"})}};
+        {"B_unavailable",observation.weighted_shape?json::array():json({"weighted/shared: zero-hot fast graph intermediates not retained"})}};
     std::map<std::string,std::vector<uint8_t>> bytes;
     for (const auto & entry:tensors) if (auto * t=entry.second) {
         auto & data=bytes[entry.first];data.resize(ggml_nbytes(t));
-        ggml_backend_tensor_get(t,data.data(),0,data.size());
+        if (entry.first=="B.weighted") data=captured_weighted(observation);
+        else ggml_backend_tensor_get(t,data.data(),0,data.size());
         const auto filename=entry.first+".bin";
         std::ofstream file(directory/filename,std::ios::binary);file.exceptions(std::ios::badbit|std::ios::failbit);
         file.write(reinterpret_cast<const char *>(data.data()),data.size());file.close();

@@ -18,7 +18,7 @@ Both options pass through to `native-layer7-bench`. Use the bounded supervisor
 for execution because the pinned RPC transport has no socket deadline.
 
 The one fresh `native/capture/` directory contains raw little-endian tensors and
-`manifest.json`. Each tensor entry has its GGML type and name, four dimensions,
+`manifest.json` (`h5-layer7-capture/2`). Each tensor entry has its GGML type and name, four dimensions,
 byte strides, length and SHA-256. Float files preserve all F32 bits, including
 nonfinite values. The payload limit is 16 MiB; metadata is limited to 64 KiB.
 `--dump-max-bytes` can lower the payload limit. A refused or incomplete capture
@@ -29,7 +29,7 @@ Capture reads run after both arms synchronize and outside the total timers.
 There is no extra graph computation, allocation flag, arithmetic, scheduling,
 or synchronization change in the executor. A read-only accessor exposes the
 existing mixed-path tensors before the next step or graph rebuild. Remote
-hot-input/routing reads add untimed GETs only when a capture is selected.
+hot-input/routing/weighted-output reads add untimed GETs only when a capture is selected.
 
 The capture contains:
 
@@ -37,7 +37,7 @@ The capture contains:
 - A and B consumed IDs and F32 routing weights. Raw files retain weight bits.
 - B hot compact IDs/weights and cold global IDs/weights.
 - A and B output vectors, A's ten weighted planes, B's ten weighted planes
-  after the existing slot restoration, and A/B shared outputs.
+  restored from retained hot/cold branch outputs, and A/B shared outputs.
 - Original token/slot to global expert, hot/cold branch slot and compact hot
   expert mapping. Weighted tensors use `[d,10,T,1]`, coordinate fastest.
 - Separate `max_abs_at` and `max_ratio_at` records from the actual comparator:
@@ -46,8 +46,12 @@ The capture contains:
 - The original pair row and hashes of `weights.json`, `spec.json` and
   `assigned.txt`. The supervisor retains those files and candidate provenance.
 
-B weighted planes are the exact host staging slots consumed by the native
-reduction. The original slot mapping distinguishes hot and cold planes. This
+B weighted planes use the retained branch output bytes that populate the native
+reduction's staging slots. Capture restores their original slot order with byte
+copies after synchronization. It does not read staging after reduction, because
+the allocator can reuse that memory for the final output. The manifest records
+`B_weighted_source=retained-branch-outputs/1`. The original slot mapping distinguishes
+hot and cold planes. This
 supports an offline per-expert/shared/reduction decomposition. It does not
 capture CUDA operands before matmul or independently qualify the arithmetic.
 B's all-cold fast graph does not retain weighted/shared intermediates. Those
@@ -168,3 +172,48 @@ worker reaped. The scoped independent code/documentation review was GO with no
 material findings. These results are local development checks. No hardware
 host was contacted, and no GPU workload, performance qualification, push, PR,
 or merge occurred.
+
+
+## Correction to the initial capture
+
+Commit `17820cea` read B slot staging after the reduction finished. That memory
+is scratch: its INPUT flag does not keep it live after its last view is consumed.
+The pinned allocator can free it and allocate the final packed output there.
+The original CPU capture shows the leading B weighted bytes equal the packed
+B output exactly. At T=2, this overwrites token 0 slots 0 and 1 with final output
+tokens 0 and 1. Both AB and BA CPU probes reproduce the defect. It is a capture
+lifetime defect, not evidence of a bad FFN result or a CUDA kernel-stage cause.
+The earlier tests and GO review missed all-plane output reconstruction.
+
+The correction reads the existing retained hot/cold weighted branch outputs and
+restores original token/slot order during capture. Those branch outputs already
+have OUTPUT lifetime. It changes no executor allocation flags, computation,
+synchronization, scheduling, comparator, tolerance or timed work. Capture schema
+2 identifies the corrected source. The validator refuses schema 1 so the old
+weighted dump cannot silently pass as a corrected observation. Historical raw
+captures and verdicts are preserved.
+
+The physical bundle reported by Hermes was absent locally:
+`/home/zutfen/data/is346-diag-pair13/pair13-evidence.tar.gz`, expected SHA-256
+`b8109fb238fe39455bfd0b86fbcc3c3085e62110f881a05fc80127746ebba5a7`.
+Its reported numerical decomposition has not been independently re-derived here.
+Use zero-based token/slot indexes and the captured comparator location records;
+do not adopt reversed hot/cold labels or an inconsistent tolerance from prose.
+
+No physical run is needed to establish or test this capture correction. The
+existing reported token-1 weighted deltas can support its two failing-coordinate
+decompositions once the bundle is available. The lost token-0 plane values cannot
+be recovered uniquely from final outputs. If a complete physical per-token,
+per-expert capture is needed, one corrected bounded capture is needed for those
+missing values. That is a separate operations decision, not a prerequisite for
+this local fix. Neither final weighted planes nor final outputs uniquely recover
+upstream activations or establish a specific GPU kernel-stage cause.
+
+Correction validation: the new reconstruction regressions failed against the
+old CPU candidate (2 tests, 137 subtest failures). All 22 focused tests passed
+against the corrected CPU candidate. The saved BA pair-13 comparison changes
+only `B.weighted.bin`; all other 16 tensor files, including A/B outputs, are
+byte-identical. Corrected A/B planes match for every CPU token/slot and each
+captured F32 source reduction reconstructs the actual output exactly. The
+scoped correction review was GO with no material findings. No hardware, push,
+PR or hosted CI was used for this correction.

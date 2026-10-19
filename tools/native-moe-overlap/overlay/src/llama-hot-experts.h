@@ -42,7 +42,9 @@ llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & gra
 // step or graph rebuild. This accessor does not retain tensors or run work.
 struct llama_hot_observation {
     ggml_tensor * input=nullptr, * ids=nullptr, * weights=nullptr;
-    ggml_tensor * weighted=nullptr, * shared=nullptr;
+    // Slot staging may be recycled by reduction. Use its metadata only;
+    // retained branch outputs provide the values for an untimed restoration.
+    ggml_tensor * weighted_shape=nullptr, * hot_weighted=nullptr, * cold_weighted=nullptr, * shared=nullptr;
     ggml_tensor * hot_input=nullptr, * hot_ids=nullptr, * hot_weights=nullptr;
     ggml_tensor * cold_ids=nullptr, * cold_weights=nullptr;
 };

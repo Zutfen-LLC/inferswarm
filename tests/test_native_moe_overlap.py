@@ -854,6 +854,47 @@ class NativeHotExperts(unittest.TestCase):
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         return module
 
+    def assert_captured_plane_reconstruction(self, work, tokens, omitted_slot=None):
+        root = work/'capture'
+        def values(name):
+            data = (root/(name+'.bin')).read_bytes()
+            return struct.unpack('<'+'f'*(len(data)//4), data)
+        def f32(value):
+            return struct.unpack('<f', struct.pack('<f', value))[0]
+        a, b = values('A.weighted'), values('B.weighted')
+        d = len(values('A.output'))//tokens
+        for token in range(tokens):
+            for slot in range(10):
+                start = (token*10+slot)*d
+                with self.subTest(token=token, slot=slot, check='weighted-plane'):
+                    expected = (0.0,)*d if slot == omitted_slot else a[start:start+d]
+                    self.assertEqual(b[start:start+d], expected)
+        for arm in ('A', 'B'):
+            weighted, shared, output = values(arm+'.weighted'), values(arm+'.shared'), values(arm+'.output')
+            for token in range(tokens):
+                for coordinate in range(d):
+                    total = weighted[token*10*d+coordinate]
+                    for slot in range(1, 10):
+                        total = f32(total+weighted[(token*10+slot)*d+coordinate])
+                    total = f32(total+shared[token*d+coordinate])
+                    with self.subTest(arm=arm, token=token, coordinate=coordinate, check='source-reduction'):
+                        self.assertEqual(total, output[token*d+coordinate])
+
+    def test_failure_dump_planes_cover_all_tokens_and_slots(self):
+        for tokens in (1, 2, 4):
+            work = self.root/('plane-reconstruction-t'+str(tokens))
+            with self.worker() as proxy:
+                result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
+                    '--work-dir', str(work), '--small-test', '--threads', '2', '--tokens', str(tokens),
+                    '--warmup', '0', '--pairs', '1', '--failure-dump', '--control', 'missing-expert'],
+                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 2, result.stderr[-2000:])
+            pair = next(json.loads(line) for line in result.stdout.splitlines() if json.loads(line).get('type') == 'pair')
+            self.assertEqual(pair['order'], 'AB')
+            self.assertFalse(pair['correctness']['pass'])
+            self.assertEqual(pair['capture']['status'], 'complete')
+            self.assert_captured_plane_reconstruction(work, tokens, omitted_slot=0)
+
     def test_diagnostic_pair13_prefix_capture_roundtrip_and_selection(self):
         import hashlib
         tool = self.diagnostic_tool()
@@ -888,6 +929,8 @@ class NativeHotExperts(unittest.TestCase):
             values.append(f32(f32(f32((state % 2001 - 1000)/f32(1000))*f32(.8))+f32(.1)))
         self.assertEqual(hashlib.sha256(struct.pack('<64f', *values)).hexdigest(), target['input_sha256'])
         manifest = tool.validate_capture(work)
+        self.assertEqual(manifest['schema'], 'h5-layer7-capture/2')
+        self.assertEqual(manifest['B_weighted_source'], 'retained-branch-outputs/1')
         self.assertTrue(manifest['consumed_identity_matches_pair'])
         self.assertEqual(manifest['B_unavailable'], [])
         tensors = manifest['tensors']
@@ -907,12 +950,19 @@ class NativeHotExperts(unittest.TestCase):
         for key in ('max_abs_at', 'max_ratio_at'):
             at = target['correctness'][key]; t,c = at['token'],at['coordinate']
             self.assertEqual(at['scale_l1'], sum(abs(planes[(t*10+i)*32+c]) for i in range(10)))
+        self.assert_captured_plane_reconstruction(work, 2)
         # Raw bytes include their actual type/stride/identity. Corruption refuses.
         path = work/'capture/A.output.bin'; original = path.read_bytes()
         path.write_bytes(bytes([original[0]^1])+original[1:])
         with self.assertRaisesRegex(ValueError, 'identity'):
             tool.validate_capture(work)
         path.write_bytes(original)
+        metadata = work/'capture/manifest.json'; original_metadata = metadata.read_text()
+        old_manifest = json.loads(original_metadata); old_manifest['schema'] = 'h5-layer7-capture/1'
+        metadata.write_text(json.dumps(old_manifest))
+        with self.assertRaisesRegex(ValueError, 'schema'):
+            tool.validate_capture(work)
+        metadata.write_text(original_metadata)
         bad = [dict(r) for r in rows]
         index = next(i for i,r in enumerate(bad) if r.get('type') == 'pair')
         bad[index]['pair'] = 0

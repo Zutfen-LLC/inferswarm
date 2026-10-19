@@ -286,8 +286,10 @@ def validate_capture(native):
     if manifest_path.stat().st_size > 65536:
         raise ValueError('capture metadata budget exceeded')
     manifest = json.loads(manifest_path.read_text())
-    if manifest['schema'] != 'h5-layer7-capture/1' or manifest['byte_order'] != 'little':
+    if manifest['schema'] != 'h5-layer7-capture/2' or manifest['byte_order'] != 'little':
         raise ValueError('capture schema/byte order mismatch')
+    if manifest.get('B_weighted_source') != 'retained-branch-outputs/1':
+        raise ValueError('capture weighted source mismatch')
     limit = manifest['payload_limit_bytes']
     if type(limit) is not int or not 1 <= limit <= 16*1024*1024:
         raise ValueError('capture payload limit invalid')
