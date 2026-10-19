@@ -38,7 +38,7 @@ uint32_t next(uint32_t & state) { state^=state<<13; state^=state>>17; state^=sta
 float sample(uint32_t & state) { return (int(next(state)%2001)-1000)/1000.0f; }
 struct options {
     int d=2560,f=640,threads=8,warmup=5,pairs=20; uint32_t seed=314159;
-    bool small=false, failure_dump=false, diagnostic_pair13=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
+    bool small=false, failure_dump=false, diagnostic_pair13=false, capture_stages=false; size_t dump_max_bytes=16*1024*1024; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
     std::string tokens_list="1";
 };
 int number(const std::string & text,int low,int high) {
@@ -67,6 +67,7 @@ options parse(int argc,char ** argv) {
     options o;
     for (int i=1;i<argc;++i) {
         std::string a=argv[i];
+        if (a=="--capture-stages") { o.capture_stages=true;continue; }
         if (a=="--failure-dump") { o.failure_dump=true;continue; }
         if (a=="--diagnostic-pair13") { o.diagnostic_pair13=true;continue; }
         if (a=="--small-test") { o.d=32;o.f=32;o.small=true;continue; }
@@ -81,13 +82,15 @@ options parse(int argc,char ** argv) {
         else throw std::runtime_error("unknown option: "+a);
     }
     require(!o.endpoint.empty() && !o.work.empty(),"--endpoint and fresh --work-dir required");
-    require(o.control.empty() || o.control=="fixture-probe" || (o.small && (o.control=="missing-shared" || o.control=="missing-expert" || o.control=="bad-partition" || o.control=="native-routing" || o.control=="comparator-probe" || o.control=="fixture-probe")),"negative controls require --small-test");
+    require(o.control.empty() || o.control=="fixture-probe" || (o.small && (o.control=="missing-shared" || o.control=="missing-expert" || o.control=="bad-partition" || o.control=="native-routing" || o.control=="comparator-probe" || o.control=="fixture-probe" || o.control=="stage-probe")),"negative controls require --small-test");
     require(o.comparison_mode=="cpu-loopback" || o.comparison_mode=="cpu-cuda","explicit comparison mode required: cpu-loopback|cpu-cuda");
     if (o.diagnostic_pair13) {
         require(o.seed==314159 && o.warmup==5 && o.pairs==20 && o.routing.empty() && o.control.empty(),"pair13 diagnostic requires frozen seed/warmup/pairs/synthetic routing");
         require(o.tokens_list=="1" || o.tokens_list=="1,2,4,8,16","pair13 diagnostic requires original width allocation");
         o.tokens_list="1,2,4,8,16";
     }
+    require(!o.capture_stages || o.diagnostic_pair13 || (o.small && o.control=="stage-probe"),"stage capture requires frozen diagnostic or small stage-probe");
+    if (o.control=="stage-probe") require(o.tokens_list=="2" && o.warmup==0 && o.pairs<=2,"stage-probe requires T=2, no warmup, one or two pairs");
     for (auto key:{"IS309_MOE","IS309_CAPTURE","IS314_HOT_SPEC","IS311_ASSIGNED"}) require(!std::getenv(key),std::string("refuse inherited ")+key);
     return o;
 }
@@ -129,6 +132,7 @@ struct arm {
     llm_graph_result result{8192}; ggml_gallocr_t alloc=nullptr;
     ggml_tensor * input=nullptr,* output=nullptr,* shared=nullptr,* weighted=nullptr,* native_ids=nullptr,* native_weights=nullptr;
     llama_hot_routing routing;
+    llama_hot_stages stages{};
     std::map<int,llama_hot_routing_batch> routing_batch;
     ~arm() { ggml_gallocr_free(alloc); }
 };
@@ -254,6 +258,7 @@ struct bench {
         auto selected=layer;if (hot && omitted_shared_down) selected.ffn_down_shexp=omitted_shared_down;
         if (hot) {
             auto cfg=llama_hot_config(9);
+            cfg.benchmark_stages=o.capture_stages && tokens==2;
             if (o.control!="native-routing") {
                 if (tokens>1) cfg.benchmark_routing_batch=&x.routing_batch.at(tokens);
                 else cfg.benchmark_routing=&x.routing;
@@ -267,6 +272,7 @@ struct bench {
             }
             x.shared=x.output->src[1];ggml_set_output(x.shared);
             x.weighted=ggml_get_tensor(x.result.get_ctx(),"ffn_moe_weighted-7");ggml_set_output(x.weighted);
+            if (o.capture_stages && tokens==2) x.stages=llama_hot_retain_stages(x.weighted);
             if (o.control=="native-routing") {
                 x.native_ids=ggml_cont(x.result.get_ctx(),x.weighted->src[0]->src[2]);ggml_set_output(x.native_ids);
                 x.native_weights=x.weighted->src[1];ggml_set_output(x.native_weights);
@@ -479,6 +485,76 @@ json capture(bench & s,const json & row) {
     std::ofstream file(directory/"manifest.json");file.exceptions(std::ios::badbit|std::ios::failbit);file<<text;file.close();
     return {{"status","complete"},{"manifest","capture/manifest.json"},{"payload_bytes",total},{"consumed_identity_matches_pair",identity}};
 }
+// Separate stage budget includes exact selected Q8_0 banks (~26 MiB at the
+// frozen geometry). Default capture keeps its existing 16 MiB payload limit.
+json capture_stages(bench & s,const json & row) {
+    constexpr size_t limit=32*1024*1024;
+    const auto directory=std::filesystem::path(s.o.work)/"stages";
+    const auto b=llama_hot_get_stages(s.b.result.hot_experts.at(0));
+    require(s.a.stages[0] && b[0] && row.at("tokens")==2,"executed stages unavailable");
+    require(std::filesystem::create_directory(directory),"stage directory must be fresh");
+    const std::array<std::string,5> names={"gate","up","swiglu","down","weighted"};
+    json manifest={{"schema","h5-layer7-stages/1"},{"byte_order","little"},{"threads",s.o.threads},
+        {"pair_record",row},{"payload_limit_bytes",limit},{"files",json::object()},
+        {"execution","existing executed graphs with OUTPUT retention; no recomputation"},
+        {"perturbation","T=2 A stages and B five-hot stages retained; allocator reuse and eligible fusion may change"},
+        {"performance_claim",false},{"compact_expert_order",HOT}};
+    size_t total=0;
+    auto save=[&](const std::string & name,const std::vector<uint8_t> & bytes,json metadata) {
+        require(bytes.size()<=limit-total,"stage payload budget exceeded");total+=bytes.size();
+        std::ofstream file(directory/name,std::ios::binary);file.exceptions(std::ios::badbit|std::ios::failbit);
+        file.write(reinterpret_cast<const char *>(bytes.data()),bytes.size());file.close();
+        metadata["byte_length"]=bytes.size();metadata["sha256"]=sha(bytes.data(),bytes.size());manifest["files"][name]=metadata;
+    };
+    auto metadata=[](ggml_tensor * t) { return json{{"tensor_name",t->name},{"ggml_type",int(t->type)},
+        {"type_name",ggml_type_name(t->type)},{"shape",{t->ne[0],t->ne[1],t->ne[2],t->ne[3]}},
+        {"strides_bytes",{t->nb[0],t->nb[1],t->nb[2],t->nb[3]}},{"op",ggml_op_name(t->op)},{"flags",t->flags}}; };
+    for (int arm=0;arm<2;++arm) {
+        const auto & stages=arm?b:s.a.stages;
+        for (size_t i=0;i<stages.size();++i) {
+            auto * t=stages[i];
+            require(t && t->type==GGML_TYPE_F32 && ggml_is_contiguous(t) &&
+                t->ne[0]==(i<3?s.o.f:s.o.d) && t->ne[1]==(arm?5:10) && t->ne[2]==2 &&
+                t->ne[3]==1 && (t->flags&GGML_TENSOR_FLAG_OUTPUT),"retained stage shape/lifetime mismatch");
+            std::vector<uint8_t> bytes(ggml_nbytes(t));ggml_backend_tensor_get(t,bytes.data(),0,bytes.size());
+            save(std::string(arm?"B.":"A.")+names[i]+".bin",bytes,metadata(t));
+        }
+    }
+    std::ifstream spec_file(s.o.work+"/spec.json");json spec;spec_file>>spec;
+    const std::array<ggml_tensor *,3> source={s.layer.ffn_gate_exps,s.layer.ffn_up_exps,s.layer.ffn_down_exps};
+    const std::array<ggml_tensor *,3> actual={b[0]->src[0],b[1]->src[0],b[3]->src[0]};
+    for (size_t bank=0;bank<3;++bank) {
+        auto * a=source[bank];auto * remote=actual[bank];
+        require(a->type==GGML_TYPE_Q8_0 && remote->type==a->type && ggml_is_contiguous(a) &&
+            ggml_is_contiguous(remote) && remote->ne[0]==a->ne[0] && remote->ne[1]==a->ne[1] &&
+            remote->ne[2]==5 && remote->ne[3]==1 && remote->nb[2]==a->nb[2],"stage bank layout mismatch");
+        std::vector<uint8_t> selected(a->nb[2]*HOT.size()),observed(ggml_nbytes(remote));
+        for (size_t i=0;i<HOT.size();++i) ggml_backend_tensor_get(a,selected.data()+i*a->nb[2],HOT[i]*a->nb[2],a->nb[2]);
+        ggml_backend_tensor_get(remote,observed.data(),0,observed.size());
+        require(selected==observed,"stage CPU/CUDA encoded weight mismatch");
+        auto meta=metadata(remote);meta["source_tensor"]=a->name;
+        meta["source_shape"]={a->ne[0],a->ne[1],a->ne[2],a->ne[3]};
+        meta["B_actual_sha256"]=sha(observed.data(),observed.size());
+        meta["block_elements"]=32;meta["block_bytes"]=34;
+        meta["provenance"]="A encoded whole expert slices; byte-equal B actual compact bank readback";
+        bool matched=false;
+        for (const auto & tensor:spec.at("tensors")) if (tensor.at("source_name")==std::string(a->name)) {
+            require(tensor.at("compact_sha256").get<std::string>()==meta["B_actual_sha256"].get<std::string>(),"stage spec bank identity mismatch");
+            meta["source_sha256"]=tensor.at("source_sha256");matched=true;
+        }
+        require(matched,"stage source bank identity missing");
+        save(names[bank==2?3:bank]+".q8_0.bin",selected,meta);
+    }
+    std::ifstream captured_file(s.o.work+"/capture/manifest.json");json captured;captured_file>>captured;
+    std::ifstream raw_capture(s.o.work+"/capture/manifest.json");const std::string capture_bytes((std::istreambuf_iterator<char>(raw_capture)),{});
+    manifest["capture_manifest_sha256"]=sha(capture_bytes.data(),capture_bytes.size());
+    manifest["slot_map"]=captured.at("slot_map");manifest["input_sha256"]=row.at("input_sha256");
+    manifest["routing_sha256"]=row.at("routing_sha256");manifest["payload_bytes"]=total;
+    manifest["reference_scope"]="dequantized mathematical matmuls are not backend activation quantization/rounding";
+    const auto text=manifest.dump(2)+"\n";require(text.size()<=65536,"stage metadata budget exceeded");
+    std::ofstream file(directory/"manifest.json");file.exceptions(std::ios::badbit|std::ios::failbit);file<<text;file.close();
+    return {{"status","complete"},{"manifest","stages/manifest.json"},{"payload_bytes",total}};
+}
 // #346 per-token/throughput derived distributions: plain per-sample transforms
 // of the SAME retained pair times, never separately re-measured quantities.
 bool used_replacement(const std::vector<route> & rows,int candidate) {
@@ -660,27 +736,34 @@ int main(int argc,char ** argv) {
                             row[arm_name]["input_sha256"]=input_hash;row[arm_name]["routing_sha256"]=route_hash;
                             row[arm_name]["hot"]=arm_name=="A"?0:stats.hot;row[arm_name]["cold"]=arm_name=="A"?K:stats.cold;
                         }
-                        const bool target=o.diagnostic_pair13 && tokens==2 && name=="mixed" && variant==0 && !warm && pair==13;
-                        if (o.diagnostic_pair13) { row["type"]=target?"pair":"diagnostic-prime";row["performance_claim"]=false; }
+                        const bool target=tokens==2 && name=="mixed" && variant==0 && !warm &&
+                            ((o.diagnostic_pair13 && pair==13) || (o.control=="stage-probe" && pair==o.pairs-1));
+                        if (o.diagnostic_pair13 || o.control=="stage-probe") { row["type"]=target?"pair":"diagnostic-prime";row["performance_claim"]=false; }
                         bool capture_ok=true;
                         if (target || (o.failure_dump && !valid)) {
-                            try { row["capture"]=capture(s,row);capture_ok=row["capture"]["consumed_identity_matches_pair"]; }
+                            try {
+                                row["capture"]=capture(s,row);capture_ok=row["capture"]["consumed_identity_matches_pair"];
+                            }
                             catch (const std::exception & error) { capture_ok=false;row["capture"]={{"status","failed"},{"error",error.what()}}; }
+                            if (capture_ok && o.capture_stages && tokens==2) {
+                                try { row["stages"]=capture_stages(s,row); }
+                                catch (const std::exception & error) { capture_ok=false;row["stages"]={{"status","failed"},{"error",error.what()}}; }
+                            }
                         }
                         std::cout<<row.dump()<<std::endl;
                         require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
                         require(capture_ok,"diagnostic capture failed or consumed identity mismatch");
                         if (target) {
-                            require(primed==68,"diagnostic prefix count mismatch");
+                            require(o.control=="stage-probe" || primed==68,"diagnostic prefix count mismatch");
                             std::cout<<json({{"type","summary"},{"valid",true},{"timing_comparison_valid",false},
                                 {"diagnostic_complete",true},{"performance_claim",false},{"priming_pairs",primed},
                                 {"target_pairs",1},{"measured_pairs",0},{"cases",nullptr}}).dump()<<std::endl;
                             return 0;
                         }
-                        if (o.diagnostic_pair13) { ++primed;continue; }
+                        if (o.diagnostic_pair13 || o.control=="stage-probe") { ++primed;continue; }
                         if (!warm) {ta.push_back(am);tb.push_back(bm);delta.push_back(bm-am);++measured;}
                     }
-                    if (!o.diagnostic_pair13) summaries[case_name+"@t"+std::to_string(tokens)]={{"tokens",tokens},{"expert_set",tokens>1?(shared_set?"shared":"varied"):"single"},
+                    if (!o.diagnostic_pair13 && o.control!="stage-probe") summaries[case_name+"@t"+std::to_string(tokens)]={{"tokens",tokens},{"expert_set",tokens>1?(shared_set?"shared":"varied"):"single"},
                         {"A_ms",distribution(ta)},{"B_ms",distribution(tb)},{"B_minus_A_ms",distribution(delta)},
                         {"A_ms_per_token",distribution(divided(ta,tokens))},{"B_ms_per_token",distribution(divided(tb,tokens))},
                         {"A_tokens_per_s",distribution(rate(ta,tokens))},{"B_tokens_per_s",distribution(rate(tb,tokens))},

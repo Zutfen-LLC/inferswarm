@@ -215,6 +215,18 @@ struct hot_branch {
     ggml_gallocr_t alloc = nullptr;
     ggml_tensor * input = nullptr, * ids = nullptr, * weights = nullptr, * output = nullptr;
 };
+llama_hot_stages llama_hot_retain_stages(ggml_tensor * weighted) {
+    if (weighted->op==GGML_OP_CONT) weighted=weighted->src[0];
+    check(weighted->op==GGML_OP_MUL,"benchmark weighted stage mismatch");
+    auto * down=weighted->src[0];
+    check(down->op==GGML_OP_MUL_MAT_ID,"benchmark down stage mismatch");
+    auto * swiglu=down->src[1];
+    check(swiglu->op==GGML_OP_GLU && ggml_get_glu_op(swiglu)==GGML_GLU_OP_SWIGLU,"benchmark SwiGLU stage mismatch");
+    llama_hot_stages stages={swiglu->src[0],swiglu->src[1],swiglu,down,weighted};
+    check(stages[0]->op==GGML_OP_MUL_MAT_ID && stages[1]->op==GGML_OP_MUL_MAT_ID,"benchmark projection stage mismatch");
+    for (auto * tensor:stages) ggml_set_output(tensor);
+    return stages;
+}
 class llama_hot_graph {
 public:
     llama_hot_experts * owner = nullptr;
@@ -226,6 +238,7 @@ public:
     ggml_tensor * bound_ids = nullptr;
     std::vector<float> remote_result;
     llama_hot_stats stats;
+    llama_hot_stages stages{};
     const int * phase = nullptr;
     int layer = -1;
     size_t last_remote_uid = 0;
@@ -409,6 +422,10 @@ public:
     }
 };
 llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & graph) { return graph->stats; }
+llama_hot_stages llama_hot_get_stages(const std::shared_ptr<llama_hot_graph> & graph) {
+    return graph && graph->stats.hot==5 ? graph->stages : llama_hot_stages{};
+}
+
 llama_hot_observation llama_hot_get_observation(const std::shared_ptr<llama_hot_graph> & graph) {
     if (!graph || !graph->stats.steps) return {};
     auto & s=*graph;
@@ -520,6 +537,10 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
             std::unordered_map<ggml_tensor *,ggml_tensor *> branch_cuts={{s->input,b.input},{w->src[0]->src[2],b.ids},{w->src[1],b.weights}};
             if (remote) for (size_t i=0;i<3;++i) branch_cuts[owner.original[i]]=owner.compact[i];
             b.output=ggml_cont(s->ctx,clone(s->ctx,w,branch_cuts)); ggml_set_output(b.output);
+            if (cfg.benchmark_stages && remote && count==5) {
+                check(cfg.benchmark_routing_batch && s->built_tokens==2,"stage retention requires bound T=2 benchmark");
+                s->stages=llama_hot_retain_stages(b.output);
+            }
             b.graph=ggml_new_graph_custom(s->ctx,nodes,false); ggml_build_forward_expand(b.graph,b.output);
             s->allocate(b,remote?owner.rpc:s->cpu);
             if (remote) {

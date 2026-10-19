@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstdint>
 #include <memory>
 struct llama_context;
@@ -49,3 +50,10 @@ struct llama_hot_observation {
     ggml_tensor * cold_ids=nullptr, * cold_weights=nullptr;
 };
 llama_hot_observation llama_hot_get_observation(const std::shared_ptr<llama_hot_graph> & graph);
+
+// Constructor-only benchmark retention. These are existing executed nodes:
+// gate, up, SwiGLU, unweighted down, weighted output. OUTPUT prevents reuse
+// and may inhibit backend fusion; it is not a serving/runtime toggle.
+using llama_hot_stages = std::array<ggml_tensor *,5>;
+llama_hot_stages llama_hot_retain_stages(ggml_tensor * weighted);
+llama_hot_stages llama_hot_get_stages(const std::shared_ptr<llama_hot_graph> & graph);

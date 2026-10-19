@@ -463,7 +463,7 @@ class Layer7BenchContracts(unittest.TestCase):
                 with log.open('w') as stream:
                     child=subprocess.Popen(['bash',str(ROOT/'tools/native-moe-overlap/layer7-cpu05.sh'),
                         str(ROOT),str(archive),str(root/'build'),str(root/'result'),
-                        *(['--diagnostic-pair13'] if mode == 'success' else [])],env=env,stdout=stream,stderr=stream,start_new_session=True)
+                        *(['--diagnostic-stages'] if mode == 'success' else [])],env=env,stdout=stream,stderr=stream,start_new_session=True)
                     try:
                         if mode in ('TERM','INT'):
                             deadline=time.monotonic()+8
@@ -482,6 +482,7 @@ class Layer7BenchContracts(unittest.TestCase):
                 if (state/'benchmark').exists():self.assertIn('--comparison-mode cpu-cuda',(state/'benchmark').read_text())
                 if mode == 'success':
                     self.assertIn('--diagnostic-pair13 --failure-dump', (state/'benchmark').read_text())
+                    self.assertIn('--capture-stages', (state/'benchmark').read_text())
                     self.assertNotIn('--tokens', (state/'benchmark').read_text())
                 calls=(state/'calls').read_text();self.assertEqual(calls.count("'-L'"),1);self.assertNotIn("'-R'",calls)
                 self.assertIn('H5_LAYER7_OWNER_TOKEN',(state/'cleanup-requested').read_text())
@@ -664,6 +665,9 @@ class Layer7BatchSweepContracts(unittest.TestCase):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 self.tool.run('absent-receipt', 'absent-output', loopback=True,
                               diagnostic_pair13=True, **kwargs)
+        with self.assertRaisesRegex(ValueError, 'stage capture requires'):
+            self.tool.run('absent-receipt', 'absent-output', loopback=True,
+                          capture_stages=True)
 
     def test_retained_pair13_hash_precedes_archive_reads(self):
         from unittest import mock
@@ -968,6 +972,91 @@ class NativeHotExperts(unittest.TestCase):
         bad[index]['pair'] = 0
         with self.assertRaisesRegex(ValueError, 'prefix'):
             tool.validate_result(bad, 20, 5, tokens_list=(1,2,4,8,16), diagnostic_pair13=True)
+
+    def test_executed_stage_retention_lifetimes_mapping_and_output_invariance(self):
+        spec = importlib.util.spec_from_file_location('stage_analysis', ROOT/'tools/native-moe-overlap/layer7_stages.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        f32 = lambda value: struct.unpack('<f', struct.pack('<f',value))[0]
+        for pairs in (1,2):  # target pair0 is AB; pair1 is BA after one prime.
+            runs = []
+            for enabled in (False,True):
+                root = self.root/('stages-'+str(pairs)+'-'+str(enabled)); root.mkdir()
+                with self.worker() as proxy:
+                    result = subprocess.run([str(self.build/'bin/native-layer7-bench'), '--endpoint', f'127.0.0.1:{proxy.port}',
+                        '--work-dir', str(root/'native'), '--small-test', '--threads', '2', '--tokens', '2',
+                        '--warmup', '0', '--pairs', str(pairs), '--control', 'stage-probe',
+                        *(['--capture-stages'] if enabled else [])],capture_output=True,text=True,timeout=30)
+                self.assertEqual(result.returncode,0,result.stderr[-3000:])
+                rows = [json.loads(line) for line in result.stdout.splitlines()]
+                target, = [r for r in rows if r['type']=='pair']
+                self.assertEqual(target['order'],'AB' if pairs==1 else 'BA')
+                self.assertFalse(rows[-1]['timing_comparison_valid'])
+                self.assertEqual((root/'native/stages').exists(),enabled)
+                if enabled: self.assertEqual(target['stages']['status'],'complete')
+                runs.append((root,target))
+            baseline, current = runs[0][0], runs[1][0]
+            for arm in ('A','B'):
+                self.assertEqual(runs[0][1][arm]['output_sha256'],runs[1][1][arm]['output_sha256'])
+                self.assertEqual((baseline/'native/capture'/f'{arm}.output.bin').read_bytes(),
+                                 (current/'native/capture'/f'{arm}.output.bin').read_bytes())
+            self.assert_captured_plane_reconstruction(current/'native',2)
+            stage = current/'native/stages'
+            m = module.load_capture(stage)
+            self.assertEqual(set(m['files']),{a+'.'+s+'.bin' for a in ('A','B') for s in module.STAGES}|
+                             {b+'.q8_0.bin' for b in ('gate','up','down')})
+            self.assertEqual(len(m['slot_map']),20)
+            values = {a+'.'+s:module.floats((stage/(a+'.'+s+'.bin')).read_bytes()) for a in ('A','B') for s in module.STAGES}
+            boundary = struct.unpack('<20f',(current/'native/capture/A.weights.bin').read_bytes())
+            for entry in m['slot_map']:
+                if entry['branch']!='hot':continue
+                t,s,h=entry['token'],entry['original_slot'],entry['branch_slot']
+                for name in module.STAGES:
+                    with self.subTest(order=runs[1][1]['order'],token=t,slot=s,stage=name):
+                        self.assertEqual(values['A.'+name][(t*10+s)*32:(t*10+s+1)*32],
+                                         values['B.'+name][(t*5+h)*32:(t*5+h+1)*32])
+                for c in range(32):
+                    gate=values['B.gate'][(t*5+h)*32+c]; up=values['B.up'][(t*5+h)*32+c]
+                    swiglu=values['B.swiglu'][(t*5+h)*32+c]
+                    # Sanity check for expired/reused gate/up buffers, not a benchmark comparator.
+                    expected=gate/(1+math.exp(-gate))*up
+                    self.assertTrue(math.isclose(swiglu,expected,rel_tol=5e-6,abs_tol=1e-12))
+                    down=values['B.down'][(t*5+h)*32+c]
+                    self.assertEqual(f32(down*boundary[t*10+s]),values['B.weighted'][(t*5+h)*32+c])
+            report = module.analyze(stage,baseline,reference=True)
+            self.assertTrue(report['baseline']['final_hashes_equal'])
+            self.assertEqual(report['first_differing_boundaries'],{'0':[],'1':[]})
+            # A different supplied output must prevent attribution to the old run,
+            # even when that baseline has an internally consistent identity.
+            old_manifest_path = baseline/'native/capture/manifest.json'
+            old_manifest = json.loads(old_manifest_path.read_text())
+            old_output_path = baseline/'native/capture/B.output.bin'
+            old_output = old_output_path.read_bytes()
+            changed_output = bytes([old_output[0]^1])+old_output[1:]
+            old_output_path.write_bytes(changed_output)
+            old_manifest['pair_record']['B']['output_sha256'] = module.digest(changed_output)
+            old_manifest_path.write_text(json.dumps(old_manifest))
+            changed_report = module.analyze(stage,baseline)
+            self.assertFalse(changed_report['baseline']['final_hashes_equal'])
+            self.assertIn('do not attribute',changed_report['baseline']['interpretation'])
+            for name in ('gate','up','down'):
+                for token in range(2):
+                    reference=report['stages'][name][token]['mathematical_dequantized_reference']
+                    self.assertEqual(reference['A']['decimal'],reference['B']['decimal'])
+            file=stage/'B.gate.bin'; original=file.read_bytes()
+            file.write_bytes(bytes([original[0]^1])+original[1:])
+            with self.assertRaisesRegex(ValueError,'identity'):
+                module.load_capture(stage)
+            file.write_bytes(original)
+            manifest_path=stage/'manifest.json'; original_manifest=manifest_path.read_bytes()
+            manifest_path.write_bytes(original_manifest+b' '*(65537-len(original_manifest)))
+            with self.assertRaisesRegex(ValueError,'metadata budget'):
+                module.load_capture(stage)
+            oversized=json.loads(original_manifest)
+            oversized['files']['A.gate.bin']['shape'][0]=module.LIMIT
+            manifest_path.write_text(json.dumps(oversized))
+            with self.assertRaisesRegex(ValueError,'budget'):
+                module.load_capture(stage)
+            manifest_path.write_bytes(original_manifest)
 
     def test_diagnostic_supervisor_refuses_capture_error_after_comparator_pass(self):
         tool = self.diagnostic_tool()

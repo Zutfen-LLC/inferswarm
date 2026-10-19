@@ -16,6 +16,10 @@ existing result fields and comparison behavior. `--diagnostic-pair13` selects
 the fixed original prefix and captures its target even if the target passes.
 Both options pass through to `native-layer7-bench`. Use the bounded supervisor
 for execution because the pinned RPC transport has no socket deadline.
+The optional [executed-stage extension](layer7-stages.md) adds
+`--capture-stages` to the frozen selector. Its retention changes allocator and
+fusion eligibility; the statements below about unchanged allocation flags apply
+to the base capture without that extension.
 
 The one fresh `native/capture/` directory contains raw little-endian tensors and
 `manifest.json` (`h5-layer7-capture/2`). Each tensor entry has its GGML type and name, four dimensions,
@@ -105,8 +109,10 @@ input   20b7d9a7d7e4e23ac7cc3f1038481aae242fb98978a974fa22e2906f1889de7e
 routing 8010b05f2f320ac067d2f4fd696f84d5358f7ffe97b5319003976cd02cbe73a8
 ```
 
-The historical archive and `is346-t2-diag/REPORT.md` were absent on this computer.
-These hashes have not been compared with those retained artifacts here.
+The historical archive and `is346-t2-diag/REPORT.md` were absent during the initial
+implementation. The subsequently supplied physical pair-13 capture independently
+confirmed these consumed-input and routing identities. No missing original
+output values were reconstructed.
 `--retained-run ARCHIVE` authenticates SHA-256
 `89c148c31c222580375ff768b35124be2cbbf267eb739000fd830b4c0a7e1331`,
 selects the one original pair 13 row, then compares input/routing hashes,
@@ -193,21 +199,22 @@ synchronization, scheduling, comparator, tolerance or timed work. Capture schema
 weighted dump cannot silently pass as a corrected observation. Historical raw
 captures and verdicts are preserved.
 
-The physical bundle reported by Hermes was absent locally:
+The physical bundle reported by Hermes was initially absent locally:
 `/home/zutfen/data/is346-diag-pair13/pair13-evidence.tar.gz`, expected SHA-256
 `b8109fb238fe39455bfd0b86fbcc3c3085e62110f881a05fc80127746ebba5a7`.
-Its reported numerical decomposition has not been independently re-derived here.
+The subsequently supplied bundle with that digest was downloaded and its tensor
+and artifact hashes checked. Its token-1 numerical decomposition was independently
+re-derived; token-0 slots 0 and 1 in the old weighted dump are overwritten scratch.
 Use zero-based token/slot indexes and the captured comparator location records;
 do not adopt reversed hot/cold labels or an inconsistent tolerance from prose.
 
 No physical run is needed to establish or test this capture correction. The
-existing reported token-1 weighted deltas can support its two failing-coordinate
-decompositions once the bundle is available. The lost token-0 plane values cannot
-be recovered uniquely from final outputs. If a complete physical per-token,
-per-expert capture is needed, one corrected bounded capture is needed for those
-missing values. That is a separate operations decision, not a prerequisite for
-this local fix. Neither final weighted planes nor final outputs uniquely recover
-upstream activations or establish a specific GPU kernel-stage cause.
+retained token-1 hot weighted planes differ while the cold planes and shared
+output match. This motivates the separately opt-in executed-stage extension,
+rather than another plane-only run. The lost token-0 plane values cannot be
+recovered uniquely from final outputs. Neither final weighted planes nor final
+outputs uniquely recover upstream activations or establish a specific GPU
+kernel-stage cause.
 
 Correction validation: the new reconstruction regressions failed against the
 old CPU candidate (2 tests, 137 subtest failures). All 22 focused tests passed

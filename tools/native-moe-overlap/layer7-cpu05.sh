@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # FUTURE CPU05 dispatch only, inside the established ssh -A controller.
 set -euo pipefail
-if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && $5 == --diagnostic-pair13 ) ]]; then
-  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13 [RETAINED_RUN_ARCHIVE]]\n' "$0" >&2
+if [[ $# != 4 && ! ( ( $# == 5 || $# == 6 ) && ( $5 == --diagnostic-pair13 || $5 == --diagnostic-stages ) ) ]]; then
+  printf 'usage: bash %s REPO AUTHENTICATED_SOURCE_ARCHIVE FRESH_BUILD FRESH_RESULT [--diagnostic-pair13|--diagnostic-stages [RETAINED_RUN_ARCHIVE]]\n' "$0" >&2
   exit 2
 fi
 repo=$(realpath "$1")
@@ -10,8 +10,9 @@ archive=$(realpath "$2")
 build=$3
 result=$4
 benchmark_args=(--tokens 1,2,4,8,16)
-if [[ ${5:-} == --diagnostic-pair13 ]]; then
+if [[ ${5:-} == --diagnostic-pair13 || ${5:-} == --diagnostic-stages ]]; then
   benchmark_args=(--diagnostic-pair13 --failure-dump)
+  if [[ ${5:-} == --diagnostic-stages ]]; then benchmark_args+=(--capture-stages); fi
   if [[ $# == 6 ]]; then benchmark_args+=(--retained-run "$(realpath "$6")"); fi
 fi
 [[ $(hostname -s) == inferswarm05 ]] || { printf 'requires CPU05\n' >&2; exit 2; }

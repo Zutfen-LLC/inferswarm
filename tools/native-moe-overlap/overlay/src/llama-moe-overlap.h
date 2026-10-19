@@ -19,6 +19,7 @@ struct llama_moe_overlap_config {
     // Batches apply to tokens available together (prefill or independent
     // requests); dependent decode steps of one sequence stay one token each.
     const llama_hot_routing_batch * benchmark_routing_batch = nullptr;
+    bool benchmark_stages = false; // retain executed T=2 hot-stage outputs only
     static llama_moe_overlap_config from_env(int n_layer);
 };
 
