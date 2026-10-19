@@ -196,8 +196,11 @@ single-node engine sets the baseline matters, so this comes first.
 Strata's requirements:
 
 - an x86-64 CPU with AVX2 (`docs/INSTALL.md:26` in Strata);
-- an NVIDIA card of RTX 20 series or newer, or one of the AMD HIP targets
-  gfx1100, gfx1101, gfx1200, gfx1201 or gfx1030 (`docs/AMD_HIP.md` in Strata);
+- an NVIDIA card of RTX 20 series or newer, or an AMD card reached through
+  **ROCm/HIP**, not Vulkan. Setup builds the HIP backend for gfx1100, gfx1101,
+  gfx1200, gfx1201 and gfx1030. Hand builds documented in Strata cover RDNA1
+  (gfx1010/1011/1012) and wave64 gfx906 (`docs/AMD_HIP.md` and
+  `docs/OLDER_GPUS.md` in Strata). See section 4.3 for the fleet's AMD cards;
 - RAM of at least the expert size plus about 10 GB, or the low-RAM mode instead.
 
 | Host | What it has (from [pcie-slot-ledger](../hardware/pcie-slot-ledger.md) and the cited records) | Strata on this host alone |
@@ -206,8 +209,8 @@ Strata's requirements:
 | inferswarm03 | Tiger Lake-H. About 15 GiB RAM. 2x RTX 3060, the second at x4. 2.5 GbE. | Low-RAM mode, with most expert misses read from the SSD. It runs, but slower. **SPECULATIVE: single-digit to low tens of tok/s.** |
 | inferswarm04 | Haswell desktop. RTX 3090 24 GB in a PCIe Gen2 slot. RAM not recorded in this repository. | The large VRAM gives a high cache hit rate. The Gen2 link slows prompt reading, which streams experts over PCIe. The result depends on RAM, which is unknown. |
 | Valinor | B550 board with a Zen 2-class CPU (inferred from the root-complex name). RX 6800 XT 16 GB (gfx1030). RAM not recorded. | For gfx1030, Strata says the RX 6800 series "builds and runs too, reported by a community machine and not yet validated by the maintainers" (Strata `docs/AMD_HIP.md:7`). |
-| inferswarm05 | HP Z440. 125.6 GiB RAM. V340L (gfx900) and a GTX 1060 3 GB. | **Not a Strata host today.** gfx900 is not a Strata HIP target. The 1060 3 GB is below the 4 GB floor in Strata's card-selection rule, and Pascal support is experimental. It has the largest RAM pool in the fleet but no GPU Strata can use. |
-| inferswarm02 | Celeron G3900 (2 cores). 16 GiB RAM. V340L on an x1 link. | Not a Strata host. |
+| inferswarm05 | HP Z440. 125.6 GiB RAM. V340L (gfx900, two 8 GB dies) and a GTX 1060 3 GB. | **Possible, untested.** gfx900 is not on Strata's list, but Strata's wave64 build for gfx906 (Vega 20) is a close fit for this Vega 10 card (section 4.3). The 1060 3 GB is below the 4 GB floor in Strata's card-selection rule. If the gfx900 build works, this host combines the largest RAM pool in the fleet with 16 GB of HBM2. |
+| inferswarm02 | Celeron G3900 (2 cores). 16 GiB RAM. V340L on an x1 link. | Weak even if the gfx900 build works. Two CPU cores are too few to compute missed experts at a useful speed (ESTIMATED), and the x1 link starves prompt reading. |
 
 **Why "tens of tok/s" for inferswarm01 (ESTIMATED).** The nearest measured
 machine had the same GPU but a much newer CPU. On the Strata maintainers' RTX
@@ -227,8 +230,23 @@ follows:
 - Its second 3060 roughly doubles the VRAM cache through the layer split, which
   removes CPU work.
 
-The net effect is ESTIMATED at a few tens of tok/s. This has to be measured;
-section 9, Step 0 covers it.
+**A closer match: the same CPU class and the same RAM size.** Strata has a
+community benchmark (STRATA-REPORTED) from a near-twin of inferswarm01's
+platform:
+
+- Hardware: a Xeon E5-2666 v3 (Haswell, 10 cores, AVX2), 125.7 GiB of RAM, and
+  one 16 GB Radeon Pro VII (gfx906) on PCIe 3.0 x16.
+- Build: Strata's wave64 gfx906 build, on the distribution's ROCm 6.2.
+- Result with Flash-Next IQ2_XS at 128K context: **about 24 tok/s decode**,
+  steady from 4K to 128K prompts, and **284-350 tok/s prompt reading**.
+
+Source: Strata `bench/results/2026-10-09-community-radeon-pro-vii-16gb/`.
+inferswarm01 has 4 more cores and 24 GB of VRAM across two 3060s instead of
+16 GB on one card. Its VRAM bandwidth per card is lower (360 GB/s against about
+1 TB/s).
+
+The net effect for inferswarm01 is ESTIMATED at roughly **20-35 tok/s decode**.
+This has to be measured; section 9, Step 0 covers it.
 
 ### 4.2 What this does to InferSwarm's Flash-Next story
 
@@ -262,12 +280,53 @@ Stronger candidates for the capability claim:
 
 - **Flash-Next Q8_0.** It needs about 136 GB of RAM (Strata `docs/MODELS.md`,
   STRATA-REPORTED), which is more than any single host's 125 GiB. RAM pooled
-  across 01 and 05 would hold it, but 05 cannot be a Strata stage today; see
-  section 10.
+  across 01 and 05 would hold it. 05 can be a Strata stage only if the untested
+  gfx900 build for its V340L works (section 4.3).
 - **Larger MoE models.** DeepSeek-V4-Flash has about 137 GB of experts at FP4,
   and GLM-5.2 about 407 GB (CALCULATED and CODE in
   [multi_gpu_moe_feasibility.md](multi_gpu_moe_feasibility.md)).
 - **Dense 70B-class models**, covered in section 7.
+
+### 4.3 The fleet's AMD cards: Strata uses ROCm/HIP, not Vulkan
+
+InferSwarm has driven its AMD cards through llama.cpp's Vulkan backend. Strata
+does not use Vulkan. It reaches AMD through **ROCm/HIP**: the CUDA engine is
+compiled for AMD through a small compatibility layer. Whether a card can be a
+Strata stage therefore turns on two questions:
+
+1. Does a ROCm runtime and BLAS library exist for the card's instruction set?
+2. Do Strata's kernels compile and run for that instruction set?
+
+It is not about Vulkan.
+
+Strata has two AMD builds:
+
+- **The wave32 backend** (`STRATA_ENABLE_HIP`) covers RDNA1, RDNA2, RDNA3 and
+  RDNA4.
+- **A separate opt-in wave64 build** (`STRATA_HIP_GFX906`) covers the older
+  GCN-style cards. It runs each CUDA warp of 32 lanes as one half of a 64-lane
+  AMD wavefront (Strata `docs/AMD_HIP.md`, "gfx906").
+
+| Card | ISA | Strata path | Status in Strata | What it would take | Verdict |
+|---|---|---|---|---|---|
+| RX 6800 XT (Valinor) | gfx1030, RDNA2, wave32 | Standard HIP backend; `setup.sh --backend hip`; ROCm 7 (system ROCm 7 is the tested route; the `gfx103X-all` wheels are unvalidated) | "Builds and runs too", community-reported, not maintainer-validated | Setup only | **Ready to test** |
+| RX 5600 XT 6 GB (named in #281) | gfx1010, RDNA1, wave32 | Standard HIP backend built by hand: `-DCMAKE_HIP_ARCHITECTURES=gfx1010`, on ROCm 7.14's `gfx101X-dgpu` wheels | Listed: "RX 5700 and the 6 GB RX 5600 ... the same build". Measured on an RX 5700 XT (Strata `docs/OLDER_GPUS.md:29-31`) | A hand build | **Runs, but small.** Strata says 6 GB "leaves ~50 expert slots" and expects the RX 5500 XT's range (15.3 tok/s on that 8 GB card, STRATA-REPORTED). More useful as a pipeline stage holding a few layers than on its own. |
+| Radeon Pro V340L (inferswarm05; two 8 GB HBM2 dies) | gfx900, Vega 10 (GCN5), wave64 | Not listed. The closest path is the wave64 gfx906 build (Vega 20, the same GCN5 family) compiled with `-DCMAKE_HIP_ARCHITECTURES=gfx900` | **Untested on gfx900** | (a) A ROCm runtime plus rocBLAS/hipBLAS with gfx900 kernels. AMD's current ROCm ships neither gfx900 nor gfx906, and gfx906 users rely on a community ROCm image or an older distribution ROCm. (b) The compile. The one gfx906-only instruction the compatibility layer uses, the 8-bit dot product `sdot4`, already falls back to a portable byte-wise version on other targets (`include/strata/platform/hip_compat/strata_hip.h:233-240` in Strata). That is correct but slower for the i-quant kernels. | **Plausible, SPECULATIVE.** A compile-and-parity test is cheap. The two dies are two 8 GB devices, so a layer split across them is the natural layout, and Strata supports layer splits on AMD. |
+| RX 580 8 GB (named in #281) | gfx803, Polaris (GCN4), wave64 | None | Not listed | InferSwarm already showed that the packaged ROCm runtime exposes no device on gfx803 (`NATIVE_BACKEND_UNAVAILABLE`, [vulkan-v0-a](vulkan-v0-a/RESULTS.md)). It would need a community gfx803 ROCm build plus the wave64 build compiled for gfx803. GCN4 also lacks GCN5's packed FP16 math. | **Lowest priority.** Keep it on llama.cpp/Vulkan. |
+
+Strata's gfx906 community results are relevant beyond the V340L question. They
+show the wave64 build serving Flash-Next on older AMD hardware attached to
+Haswell Xeon hosts:
+
+- one Radeon Pro VII 16 GB: about 24 tok/s with IQ2_XS (section 4.1);
+- 2x MI50 16 GB: about 50 tok/s with the Coder IQ1_M, all experts in VRAM
+  across both cards (Strata `docs/OLDER_GPUS.md:33`).
+
+Both are STRATA-REPORTED.
+
+Either way, mixing AMD and NVIDIA *within one request* still needs Option A's
+networked split (section 5.1). Strata refuses mixed vendors inside one engine
+process.
 
 ---
 
@@ -729,7 +788,7 @@ Promote a result to accepted evidence once it is worth defending.
 | **0. Single-node baseline** | What does Strata alone do on the fleet? | 01 (2x3060, 125 GiB); 04 (3090); 03 (low-RAM mode) | Decode and prompt tok/s per node and quant, with the cache hit rate, recorded as MEASURED for this fleet | Small (install and benchmark; Strata ships `BENCH`) |
 | **1. Networked split, same GPU model** | Does Option A work, and is it exact? | 01 → 03 (3060 → 3060), then 01 → 04 | Same token IDs as the in-process split on 01; boundary overhead per window MEASURED | Moderate (transport, stage mode, commit messages in a fork branch) |
 | **2. Capacity that one node lacks** | Can stages hold what no single host can without SSD streaming? | 03 + 04 (+ Valinor). Small-RAM hosts whose combined VRAM may hold a whole Q2_0 model | The model GPU-resident across hosts. Compare with Step 0's low-RAM single-node result on the same hosts. **This is GPU-residency expansion, not whole-model feasibility, unless the envelope excludes SSD streaming** | Small once Step 1 exists |
-| **3. Mixed vendor** | Can a HIP stage join CUDA stages? | Valinor RX 6800 XT (gfx1030) with an NVIDIA host | ADR 0010 qualification passes on a frozen subject | Moderate (qualification work) |
+| **3. Mixed vendor** | Can a HIP stage join CUDA stages? Can the V340L be one? | Valinor RX 6800 XT (gfx1030) with an NVIDIA host. Separately, a compile-and-parity test of the wave64 build for gfx900 on inferswarm05's V340L | ADR 0010 qualification passes on a frozen subject. The gfx900 build passes Strata's parity tests on the card | Moderate (qualification work); the gfx900 test is small but needs a ROCm with gfx900 libraries |
 | **4. Model pack** | Is the product separable from Flash-Next? | Any node | A second MoE family through the descriptor and tier runtime; parity with llama.cpp on the same box | Large |
 | **Parallel track: dense** | Is distributed dense usable? | 01 + 04 (48 GB VRAM), then add 03 | 70B Q4 MEASURED at "usable" with speculation and bandwidth-sized placement through the llama.cpp operator path | Moderate |
 
@@ -751,14 +810,19 @@ much weight Flash-Next should carry in InferSwarm's capability claim.
   and 05 are Haswell with AVX2 only, so the CPU half of each window will be
   slower. Tiger Lake-H (03) has AVX-512 (background), but only about 15 GiB of
   RAM.
-- **AMD coverage.** The V340L (gfx900), RX 580 (gfx803) and RX 5600 XT (gfx1010)
-  are outside Strata's HIP targets, and Strata has no Vulkan backend. Those
-  cards cannot be Strata stages. They stay llama.cpp/Vulkan participants. Only
-  Valinor's RX 6800 XT is a plausible AMD Strata stage, and it is
-  community-reported, not maintainer-validated.
-- **inferswarm05's RAM** is the largest pool in the fleet, but the host has no
-  GPU Strata can use. Making it a stage would need a CPU-only stage mode, which
-  Strata does not have (SPECULATIVE effort), or a supported GPU.
+- **AMD coverage depends on ROCm, not Vulkan** (section 4.3). Card by card:
+  - The RX 6800 XT (gfx1030) is supported through setup, though not
+    maintainer-validated.
+  - The RX 5600 XT (gfx1010) runs from a documented hand build, but its 6 GB
+    leaves little room for experts.
+  - The V340L (gfx900) needs an untested compile of the wave64 build and a ROCm
+    with gfx900 libraries. AMD's current releases do not ship these.
+  - The RX 580 (gfx803) has no ROCm runtime on the fleet's packaged stack. It
+    stays a llama.cpp/Vulkan participant.
+- **inferswarm05's RAM** is the largest pool in the fleet. Whether that host can
+  be a Strata stage depends on the gfx900 build. Without it, the host would need
+  a CPU-only stage mode, which Strata does not have (SPECULATIVE effort), or a
+  supported GPU.
 - **Links.** inferswarm04's GPU sits in a PCIe Gen2 slot, which slows Strata's
   prompt path because experts stream over PCIe. 1 GbE latency jitter matters
   more than its bandwidth.
