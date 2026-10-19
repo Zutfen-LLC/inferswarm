@@ -88,8 +88,8 @@ def composition_check(weighted, shared, output, d):
                     weighted[(token*10+slot)*d:(token*10+slot+1)*d])
             detected = exact(original, changed)['status'] == 'mismatch'
             controls.append(dict(token=token, omitted='shared' if slot == 10 else slot,
-                status=('rejected' if detected else 'insensitive-zero-mass' if
-                        all(v == 0 for v in mass) else 'insensitive-rounding')))
+                status=('insensitive-zero-mass' if all(v == 0 for v in mass) else
+                        'rejected' if detected else 'insensitive-rounding')))
         other = output[(1-token)*d:(2-token)*d]
         controls.append(dict(token=token, omitted='stale-other-token-output',
             status='rejected' if exact(original, other)['status'] == 'mismatch'

@@ -116,6 +116,9 @@ class BoundaryControls(unittest.TestCase):
         report = check.composition_check([0.]*20, [0.]*2, [0.]*2, 1)
         self.assertTrue(all(c['status'] == 'insensitive-zero-mass' for c in
                             report['negative_controls'] if isinstance(c['omitted'], int) or c['omitted'] == 'shared'))
+        signed = check.composition_check([-0.]*20, [-0.]*2, [-0.]*2, 1)
+        self.assertTrue(all(c['status'] == 'insensitive-zero-mass' for c in
+                           signed['negative_controls'] if c['omitted'] != 'stale-other-token-output'))
         # Nonzero omitted work can also round away; never label this a rejection.
         planes = [1., 2**-30]+[0.]*8
         report = check.composition_check(planes*2, [0.]*2, [1.]*2, 1)
