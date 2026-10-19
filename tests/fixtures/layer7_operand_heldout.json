@@ -1,0 +1,14 @@
+{
+  "schema": "layer7-operand-heldout-inputs/1",
+  "seed": 1597463007,
+  "d": 64,
+  "f": 3,
+  "tokens": 2,
+  "partitions": [
+    [0, 54, 1, 290, 2, 74, 3, 136, 4, 394],
+    [394, 5, 136, 6, 74, 7, 290, 8, 54, 9]
+  ],
+  "input_generation": "random.Random(seed); per-token randint(-64,64)/64; first entry in each block=1",
+  "bank_generation": "same RNG after inputs; row scale=1/32; each byte randint(-3,3)",
+  "frozen_before_evaluation": true
+}

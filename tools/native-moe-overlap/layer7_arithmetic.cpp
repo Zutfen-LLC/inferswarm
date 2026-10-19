@@ -1,9 +1,16 @@
 // Offline x86 CPU helper only. No GGML execution, CUDA, network or model load.
 // Equations follow llama.cpp b29c606e, not a replacement benchmark comparator.
 #include <cmath>
+#include <cfenv>
 #include <cstdint>
 #include <cstring>
 #include <immintrin.h>
+
+// Read-only guard for the exact operand-check profile. Existing reconstruction
+// entry points retain their historical behavior.
+extern "C" int l7_environment_ok() {
+    return std::fegetround()==FE_TONEAREST && (_mm_getcsr() & 0xe040)==0;
+}
 
 static float scale(const uint8_t * p) {
     uint16_t h; std::memcpy(&h,p,2); return _cvtsh_ss(h);
