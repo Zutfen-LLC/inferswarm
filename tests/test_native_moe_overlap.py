@@ -768,6 +768,51 @@ class NativeHotExperts(unittest.TestCase):
                 dispatches = sum(c in (10,16) for c,_ in proxy.frames)
                 self.assertEqual(dispatches, sum(r['hot']>0 for r in rows))
 
+    @staticmethod
+    def expected_graph_commands(hot_counts):
+        """Derive wire commands from step hot counts.
+
+        Each prebuilt remote branch (one per hot count) carries a distinct
+        nonzero graph uid. A dispatch whose uid matches the device's previously
+        dispatched graph takes the pinned client's GRAPH_RECOMPUTE reuse frame
+        (cmd 16, packed 4-byte request); any mismatch — including a different
+        hot count on the previous dispatched step — falls back to the full
+        GRAPH_COMPUTE (cmd 10). All-cold steps dispatch nothing.
+        """
+        commands = []
+        last = None
+        for hot in hot_counts:
+            if hot == 0:
+                continue
+            commands.append(16 if hot == last else 10)
+            last = hot
+        return commands
+
+    def test_mixed_steps_reuse_remote_graph_after_first_dispatch(self):
+        """Repeated steps on the same remote branch reuse the worker graph.
+
+        The first dispatch of each hot count sends the full GRAPH_COMPUTE
+        (cmd 10); a following step dispatched against the same prebuilt branch
+        sends the 4-byte GRAPH_RECOMPUTE reuse frame (cmd 16) instead of the
+        multi-kilobyte serialized graph, while outputs stay bitwise identical
+        to the ordinary all-CPU path.
+        """
+        with self.worker() as proxy: ordinary = self.rows(self.run_hot(proxy))
+        with self.worker() as proxy:
+            result = self.run_hot(proxy, 5)
+            frames = list(proxy.frames)
+        rows = self.rows(result)
+        self.assertEqual([r['output'] for r in rows], [r['output'] for r in ordinary])
+        graph_frames = [(c, size) for c, size in frames if c in (10, 16)]
+        commands = [c for c, _ in graph_frames]
+        expected = self.expected_graph_commands([r['hot'] for r in rows])
+        self.assertEqual(commands, expected, (commands, expected))
+        self.assertIn(16, commands)
+        reuse_sizes = {size for c, size in graph_frames if c == 16}
+        self.assertEqual(reuse_sizes, {4}, reuse_sizes)
+        full_sizes = [size for c, size in graph_frames if c == 10]
+        self.assertTrue(all(size > 20 for size in full_sizes), full_sizes)
+
     def test_zero_hot_fast_path_transitions_and_no_steady_upload(self):
         """Mixed -> all-cold -> mixed reuses one ordinary CPU graph with no RPC.
 
@@ -792,11 +837,14 @@ class NativeHotExperts(unittest.TestCase):
         self.assertEqual(proxy.connections,1)
         weights = [r for r in requests if r.get('tensor','').startswith('is314.')]
         self.assertEqual(len(weights),3)  # setup-only compact upload, never per-step
-        dispatches = [c for c,_ in frames if c == 10]
-        # runs 1 and 4 each execute (mixed, all-cold, mixed); all-cold dispatches nothing
-        self.assertEqual(dispatches, [10,10,10,10])
+        # runs 1 and 4 each execute (mixed, all-cold, mixed); all-cold dispatches
+        # nothing, and the second mixed step of each run reuses the branch graph
+        # already resident on the worker (GRAPH_RECOMPUTE, cmd 16).
         import re
         steps = re.findall(r'IS314_STEP .*?hot=(\d+) cold=(\d+)', result.stderr)
+        steps_hot = [int(h) for h, _ in steps]
+        dispatches = [c for c, _ in frames if c in (10, 16)]
+        self.assertEqual(dispatches, self.expected_graph_commands(steps_hot))
         self.assertEqual([(int(h),int(c)) for h,c in steps],[(1,9),(0,10),(1,9)]*2)
 
     def test_routing_changes_keep_exact_hot_cold_partitions(self):

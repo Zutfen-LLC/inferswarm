@@ -80,10 +80,10 @@ B additionally records the existing production intervals from
 
 | Field | Exact existing boundaries / included work |
 |---|---|
-| `dispatch_ms` | `dispatch_start` through `dispatched`: async input, compact-ID and routing-weight setters plus `graph_compute_async` return; not remote compute completion. Zero-hot steps report 0 (no dispatch). |
-| `cold_ms` | `dispatched` through `cold_done`: cold IDs/weights setters and synchronous CPU cold-branch compute. Zero-hot steps report 0. |
+| `dispatch_ms` | Submission span measured **inside the dispatch thread**: acknowledged input/compact-ID/routing-weight setters plus `graph_compute_async` return. The submit runs concurrently with the CPU cold/shared branches, so this is submission cost, not main-thread serial time; remote compute completion is not included. Zero-hot steps report 0 (no dispatch). |
+| `cold_ms` | Main thread from dispatch-thread launch through cold-branch completion: cold IDs/weights setters and synchronous CPU cold-branch compute (overlapped with remote submission). Zero-hot steps report 0. |
 | `shared_ms` | `cold_done` through `shared_done`: synchronous CPU shared-branch graph. Zero-hot steps report 0. |
-| `join_ms` | `shared_done` through `joined`: response-bearing remote output `GET_TENSOR` plus RPC synchronization, after shared compute. Residual remote wait/result transfer/client work, **not pure GPU or network time**. Zero-hot steps report 0. |
+| `join_ms` | `shared_done` through `joined`: dispatch-thread join (when submission outlives the local branches), then the response-bearing remote output `GET_TENSOR` plus RPC synchronization. Residual remote wait/result transfer/client work, **not pure GPU or network time**. Zero-hot steps report 0. |
 | `fast_ms` | Zero-hot steps only: the single synchronous CPU compute of the reusable ordinary source FFN graph (see below). Mixed steps report 0. |
 | `h5_layer_ms` | Inner `start` through stats capture: input snapshot, routing-boundary copy (empty router execution when routing is native-computed; a direct boundary read in bound mode), partition, dispatch/cold/shared/join or the single fast compute, slot restoration and native reduction/shared add where applicable, and output copy. Ends **before** production `IS314_STEP` telemetry emission. |
 | B `total_layer_ms` | Outer compute call plus scheduler synchronization/completion; includes production telemetry/logging overhead and graph scheduling around the inner layer. A has the same outer compute-through-synchronization boundary. Both exclude output readback/diagnostics. |
@@ -98,8 +98,24 @@ reduction order as the ordinary CPU arm, so an all-cold step performs the
 ordinary CPU work plus only the input snapshot and boundary read. The
 `cold[10]` split branch is no longer built. There is no per-step allocation,
 weight upload or RPC frame; transitions between mixed and all-cold steps
-reuse both paths within one graph lifetime. Mixed steps are unchanged:
-hot-RPC/cold-CPU overlap, join and reduction stay exactly as before.
+reuse both paths within one graph lifetime. Mixed steps keep the
+hot-RPC/cold-CPU overlap, join and reduction.
+
+**Mixed-step submission overlap and remote graph reuse.** The three per-step
+input/routing setters plus the graph dispatch run on a short-lived dispatch
+thread while the main thread computes the cold and shared branches; the thread
+is joined (on every path) before the response-bearing `GET_TENSOR`, so the
+dispatcher's ordered queue still places SET,SET,SET,GRAPH ahead of the GET.
+Each prebuilt remote branch graph carries a distinct nonzero graph uid. When
+the branch dispatched this step matches the RPC device's previously dispatched
+graph, the pinned client sends its 4-byte `GRAPH_RECOMPUTE` frame and the
+worker recomputes its stored graph; any mismatch — a different hot count, or
+another graph using the same connection in between — falls back to the full
+`GRAPH_COMPUTE` serialization, so correctness never depends on reuse. The
+per-step wire traffic drops from a serialized graph (about 3.9 KiB at the
+benchmark dimensions) to 4 bytes in steady state; the three acknowledged
+setter round trips remain protocol-level costs (they are what the dispatch
+thread overlaps, not eliminates).
 
 **Do not add stages to infer total.** Overlap is intentional; join need not equal
 remote execution time. Existing input/routing/result hooks report logical
