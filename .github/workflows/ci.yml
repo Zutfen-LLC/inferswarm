@@ -487,7 +487,7 @@ jobs:
         # Offline prototype plus the actual #309 native model FFN seam.
         # Builds the pinned CPU ggml/llama closure, then small synthetic
         # fixtures with loopback RPC; no GPU or full-model inference.
-        run: python3 -m scripts.ci_unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache tests.test_moe_native_cache tests.test_factorial_check tests.test_factorial_rpc_transport tests.test_factorial_run tests.test_factorial_native -v
+        run: python3 -m scripts.ci_unittest tests.test_moe_overlap_prototype tests.test_native_moe_overlap tests.test_native_cache tests.test_moe_native_cache tests.test_reduction tests.test_factorial_check tests.test_factorial_rpc_transport tests.test_factorial_run tests.test_factorial_native -v
 
       - name: Retain unittest outcomes for compatible final validation
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

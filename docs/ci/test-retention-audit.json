@@ -6114,6 +6114,27 @@
       "replacement": null,
       "test_count_at_audit": 20
     },
+    "test_reduction": {
+      "baseline_group": "moe-overlap-prototype",
+      "baseline_serial_seconds": null,
+      "baseline_test_count": 5,
+      "category": "CURRENT_CONTRACT",
+      "disposition": "retain",
+      "group": "moe-overlap-prototype",
+      "invariant": "Default-off ordered remote weighted sum, exact F32 grouping and omission/mapping/token controls, unchanged input traffic, reduced timed GET bytes and balanced paired fixture blocks.",
+      "lineage": "Bounded remote-output reduction successor of pinned factorial3bbecbfdb495",
+      "named_by_evidence": [],
+      "owned_surfaces": {
+        "evidence_read": [],
+        "scripts_imported": [
+          "tools/native-moe-overlap/"
+        ]
+      },
+      "pinned_by_evidence": [],
+      "rationale": "Focused local CPU/loopback contracts for an unmerged diagnostic candidate; no CUDA, whole-model, numerical qualification, acceptance or hardware authorization claim.",
+      "replacement": null,
+      "test_count_at_audit": 5
+    },
     "test_run_full_cpu_suite": {
       "baseline_group": "repo-integrity",
       "baseline_serial_seconds": 22.33,

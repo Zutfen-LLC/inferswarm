@@ -164,6 +164,7 @@
     "test_native_moe_overlap",
     "test_native_cache",
     "test_moe_native_cache",
+    "test_reduction",
     "test_factorial_check",
     "test_factorial_rpc_transport",
     "test_factorial_run",
@@ -1976,6 +1977,9 @@
   ],
   "tests/test_q8_experiment.py": [
    "issue-99-103"
+  ],
+  "tests/test_reduction.py": [
+   "moe-overlap-prototype"
   ],
   "tools/issue255_mvp/": [
    "issue-99-103"
