@@ -21,6 +21,7 @@ extern "C" {
 #include <fstream>
 #include <set>
 #include <stdexcept>
+#include <thread>
 #include <unordered_map>
 
 namespace {
@@ -266,23 +267,49 @@ public:
             return;
         }
         auto & h=s.hot[nh]; auto & c=s.cold[nc];
-        const auto dispatch_start=clock::now();
-        if (nh) {
-            ggml_backend_tensor_set_async(s.owner->rpc,h.input,s.input->data,0,ggml_nbytes(h.input));
-            ggml_backend_tensor_set_async(s.owner->rpc,h.ids,hi.data(),0,nh*sizeof(int32_t));
-            ggml_backend_tensor_set_async(s.owner->rpc,h.weights,hw.data(),0,nh*sizeof(float));
-            if (ggml_backend_graph_compute_async(s.owner->rpc,h.graph)!=GGML_STATUS_SUCCESS) GGML_ABORT("IS314 remote dispatch failed");
+        // Routing partitions travel by value into the dispatch thread: their
+        // stack arrays must outlive the synchronous acknowledged transfers.
+        const std::array<int32_t,10> hot_ids=hi; const std::array<float,10> hot_weights=hw;
+        double dispatch_span=0;
+        // Submit the remote branch concurrently with the CPU cold/shared
+        // branches. Each composed-RPC-v7 setter is an acknowledged round trip
+        // (bounded staging, caller-owned buffers), so a serial submission
+        // merely idles the main thread for three network round trips before
+        // any local work starts. The dispatch thread only touches the RPC
+        // backend; the CPU branches never use it, so the dispatcher's ordered
+        // queue keeps the wire sequence SET,SET,SET,GRAPH intact.
+        // The join MUST precede the result GET: the dispatcher queue is
+        // ordered, but only after the dispatch thread has actually queued the
+        // GRAPH_COMPUTE. Joining first keeps SET,SET,SET,GRAPH strictly ahead
+        // of the response-bearing GET on the wire on every path.
+        double cold_ms=0, shared_ms=0;
+        clock::time_point shared_done_outer{};
+        {
+            std::thread dispatch_thread([&](){
+                const auto submit=clock::now();
+                ggml_backend_tensor_set_async(s.owner->rpc,h.input,s.input->data,0,ggml_nbytes(h.input));
+                ggml_backend_tensor_set_async(s.owner->rpc,h.ids,hot_ids.data(),0,nh*sizeof(int32_t));
+                ggml_backend_tensor_set_async(s.owner->rpc,h.weights,hot_weights.data(),0,nh*sizeof(float));
+                if (ggml_backend_graph_compute_async(s.owner->rpc,h.graph)!=GGML_STATUS_SUCCESS) GGML_ABORT("IS314 remote dispatch failed");
+                dispatch_span=elapsed(submit,clock::now());
+            });
+            // Join on every path inside this scope: a joinable std::thread
+            // destroyed mid-flight would call std::terminate.
+            struct dispatch_joiner { std::thread & t; ~dispatch_joiner() { t.join(); } } join_on_exit{dispatch_thread};
+            const auto submitted=clock::now();
+            if (nc) {
+                ggml_backend_tensor_set(c.ids,ci.data(),0,nc*sizeof(int32_t));
+                ggml_backend_tensor_set(c.weights,cw.data(),0,nc*sizeof(float)); compute(s.cpu,c.graph);
+            }
+            const auto cold_done=clock::now();
+            compute(s.cpu,s.shared.graph);
+            const auto shared_done=clock::now();
+            cold_ms=elapsed(submitted,cold_done); shared_ms=elapsed(cold_done,shared_done);
+            shared_done_outer=shared_done;
         }
-        const auto dispatched=clock::now();
-        if (nc) {
-            ggml_backend_tensor_set(c.ids,ci.data(),0,nc*sizeof(int32_t));
-            ggml_backend_tensor_set(c.weights,cw.data(),0,nc*sizeof(float)); compute(s.cpu,c.graph);
-        }
-        const auto cold_done=clock::now();
-        compute(s.cpu,s.shared.graph);
-        const auto shared_done=clock::now();
         if (nh) {
-            // GET is the response-bearing join. Synchronize alone only drains the client queue.
+            // GET is the response-bearing join (the dispatch thread has already
+            // been joined above). Synchronize alone only drains the client queue.
             ggml_backend_tensor_get(h.output,s.remote_result.data(),0,ggml_nbytes(h.output));
             ggml_backend_synchronize(s.owner->rpc);
         }
@@ -293,8 +320,12 @@ public:
         // Execute the cloned SOURCE reduction, including its view/add order and shared add.
         compute(s.cpu,s.reduce.graph); std::memcpy(dst->data,s.reduce.output->data,ggml_nbytes(dst));
         ++s.stats.steps; s.stats.hot=nh; s.stats.cold=nc; s.stats.compact_owner=reinterpret_cast<uintptr_t>(s.owner);
-        s.stats.dispatch_ms=elapsed(dispatch_start,dispatched); s.stats.cold_ms=elapsed(dispatched,cold_done);
-        s.stats.shared_ms=elapsed(cold_done,shared_done); s.stats.join_ms=elapsed(shared_done,joined); s.stats.fast_ms=0; s.stats.layer_ms=elapsed(start,clock::now());
+        // dispatch_ms is the submission span measured inside the dispatch
+        // thread (acknowledged transfers + graph dispatch). With the concurrent
+        // submit it is no longer main-thread serial time; layer_ms carries the
+        // wall-clock effect. cold/shared/join remain main-thread intervals.
+        s.stats.dispatch_ms=dispatch_span; s.stats.cold_ms=cold_ms;
+        s.stats.shared_ms=shared_ms; s.stats.join_ms=elapsed(shared_done_outer,joined); s.stats.fast_ms=0; s.stats.layer_ms=elapsed(start,clock::now());
         s.stats.input_bytes=nh?ggml_nbytes(h.input):0; s.stats.routing_bytes=nh*(sizeof(int32_t)+sizeof(float)); s.stats.result_bytes=nh?ggml_nbytes(h.output):0;
         std::fprintf(stderr,"IS314_STEP layer=%d phase=%s step=%llu hot=%u cold=%u dispatch_ms=%.6f cold_ms=%.6f shared_ms=%.6f join_ms=%.6f layer_ms=%.6f input_bytes=%llu routing_bytes=%llu result_bytes=%llu ids=",
             s.layer,s.stats.phase==1?"prefill":"decode",(unsigned long long)s.stats.steps,nh,nc,s.stats.dispatch_ms,s.stats.cold_ms,s.stats.shared_ms,s.stats.join_ms,s.stats.layer_ms,
@@ -389,6 +420,19 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
             b.output=ggml_cont(s->ctx,clone(s->ctx,w,branch_cuts)); ggml_set_output(b.output);
             b.graph=ggml_new_graph_custom(s->ctx,nodes,false); ggml_build_forward_expand(b.graph,b.output);
             s->allocate(b,remote?owner.rpc:s->cpu);
+            if (remote) {
+                // A prebuilt remote branch is structurally immutable across steps:
+                // per-step routing and activations reach it through in-place
+                // SET_TENSOR writes into the same allocated input tensors. Give
+                // each distinct remote graph a nonzero uid so the pinned RPC
+                // client's existing GRAPH_RECOMPUTE path (uid match against the
+                // device's last dispatched graph) can skip per-step client
+                // serialization and server-side graph reconstruction. A uid
+                // mismatch — any other graph dispatched in between, including
+                // scheduler splits in a full model — falls back to the ordinary
+                // full GRAPH_COMPUTE, so correctness never depends on reuse.
+                b.graph->uid=ggml_graph_next_uid();
+            }
         }
         s->remote_result.resize(cur->ne[0]*10);
         size_t local_bytes=0,remote_bytes=0;
