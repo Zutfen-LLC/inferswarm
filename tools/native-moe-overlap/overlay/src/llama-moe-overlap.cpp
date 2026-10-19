@@ -252,7 +252,10 @@ static ggml_tensor * clone_routed(ggml_context * ctx, ggml_tensor * tensor,
 ggml_tensor * llm_graph_context::build_qwen4exp_ffn(ggml_tensor * cur, const llama_layer & layer, int il,
                                                  const llama_moe_overlap_config & cfg) {
     if (cfg.hot_spec) {
-        if (cfg.layer != il || n_tokens != 1 || cparams.warmup) return build_qwen4exp_ffn_native(cur, layer, il);
+        // #346: the batched benchmark cut admits multi-token batches; every
+        // other hot-spec use keeps the unchanged single-token decode gate.
+        const bool batched_bench = cfg.benchmark_routing_batch && n_tokens > 1;
+        if (cfg.layer != il || (!batched_bench && n_tokens != 1) || cparams.warmup) return build_qwen4exp_ffn_native(cur, layer, il);
         return build_qwen4exp_ffn_hot(cur, layer, il, cfg);
     }
     if (cfg.layer != il) {

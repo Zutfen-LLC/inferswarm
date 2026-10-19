@@ -90,10 +90,15 @@ while time.monotonic()<deadline:
 else:raise SystemExit('owned worker readiness absent; stop without benchmark/retry')
 PY
 # Defaults: production dimensions, 5 warm + 20 measured pairs per case.
-# Freeze the existing cross-backend legacy criterion BEFORE execution.
+# #346 batch sweep: widths 1,2,4,8,16, both set variants per width>1. Width 1
+# is the historical single-token compatibility case. Bounded time budget:
+# 18 cases x 25 pairs at these dimensions fit well inside the 300-second cap
+# measured at T<=16 on loopback (about 0.2-2 ms per pair; the tunnel adds the
+# 05->03 dispatch cost per step, still bounded by the worker's external cap).
 setsid python3 "$repo/tools/native-moe-overlap/layer7_bench.py" \
   --build-receipt "$build/hot-candidate-receipt.json" \
   --output "$result/benchmark" --endpoint 127.0.0.1:50060 --threads 14 --timeout 300 \
+  --tokens 1,2,4,8,16 \
   --comparison-mode cpu-cuda &
 benchmark=$!
 wait "$benchmark"

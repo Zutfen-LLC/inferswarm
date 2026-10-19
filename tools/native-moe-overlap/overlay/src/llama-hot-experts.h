@@ -17,13 +17,23 @@ struct llama_hot_routing {
 // Bind source routing cuts before allocation. Arithmetic and slot order stay native.
 void llama_hot_bind_routing(ggml_context * ctx, ggml_tensor * combined, int layer,
                             const llama_hot_routing & routing);
+// #346 batched break-even sweep: per-token routing boundary the executor reads
+// directly (same cut and arithmetic as llama_hot_bind_routing, T tokens tall).
+// Count fields describe the per-token partition; all tokens in one step must
+// share one hot count (one prebuilt branch graph executes the whole batch).
+struct llama_hot_routing_batch {
+    ggml_tensor * ids = nullptr;      // I32 [K, T]
+    ggml_tensor * weights = nullptr;  // F32 [1, K, T]
+};
+void llama_hot_bind_routing_batch(ggml_context * ctx, ggml_tensor * combined, int layer,
+                                  const llama_hot_routing_batch & routing);
 llama_moe_overlap_config llama_hot_config(int n_layer);
 struct llama_hot_stats {
     double dispatch_ms=0, cold_ms=0, shared_ms=0, join_ms=0, layer_ms=0, fast_ms=0;
     uint64_t input_bytes=0, routing_bytes=0, result_bytes=0;
     int phase = 0;
-    uint64_t steps = 0;
-    unsigned hot = 0, cold = 0;
+    uint64_t steps = 0, graph_dispatches = 0, graph_recompute_reuse = 0;
+    unsigned hot = 0, cold = 0, tokens = 1;
     uintptr_t compact_owner = 0;
 };
 llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & graph);

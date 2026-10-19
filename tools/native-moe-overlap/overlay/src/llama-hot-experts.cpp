@@ -71,6 +71,35 @@ void llama_hot_bind_routing(ggml_context * ctx, ggml_tensor * combined, int laye
     }
     weighted->src[1]=routing.weights;
 }
+void llama_hot_bind_routing_batch(ggml_context * ctx, ggml_tensor * combined, int layer,
+                                  const llama_hot_routing_batch & routing) {
+    // Same cut as llama_hot_bind_routing, extended to a [K,T] per-token
+    // boundary. The source builder is token-generic: mul_mat_id consumes
+    // ids [n_expert_used, T] and weights [1, n_expert_used, T], so only the
+    // bind-time shape checks change.
+    auto * weighted=ggml_get_tensor(ctx,("ffn_moe_weighted-"+std::to_string(layer)).c_str());
+    check(weighted && weighted->src[0]->op==GGML_OP_MUL_MAT_ID,"batch benchmark source routing cut missing");
+    auto * ids=weighted->src[0]->src[2];
+    check(routing.ids && routing.weights && routing.ids->buffer && routing.weights->buffer,
+          "batch benchmark routing leaves must be allocated");
+    const int64_t T=routing.ids->ne[1];
+    check(routing.ids->type==GGML_TYPE_I32 && routing.ids->ne[0]==10 && T>=1 &&
+          routing.weights->type==GGML_TYPE_F32 && routing.weights->ne[0]==1 &&
+          routing.weights->ne[1]==10 && routing.weights->ne[2]==T &&
+          ggml_is_contiguous(routing.ids) && ggml_is_contiguous(routing.weights),
+          "batch benchmark ten routing slots per token required");
+    std::set<ggml_tensor *> visited;
+    std::vector<ggml_tensor *> pending={combined};
+    while (!pending.empty()) {
+        auto * t=pending.back(); pending.pop_back();
+        if (!visited.insert(t).second) continue;
+        for (auto & source:t->src) {
+            if (source==ids) source=routing.ids;
+            if (source) pending.push_back(source);
+        }
+    }
+    weighted->src[1]=routing.weights;
+}
 void llama_hot_set_phase(llama_context * ctx,int phase) { ctx->synchronize(); ctx->set_hot_phase(phase); }
 struct llama_hot_spec { nlohmann::json document; };
 llama_moe_overlap_config llama_hot_config(int n_layer) {
@@ -199,6 +228,11 @@ public:
     llama_hot_stats stats;
     const int * phase = nullptr;
     int layer = -1;
+    size_t last_remote_uid = 0;
+    // #346: one prebuilt graph set per token-batch width. Batch width is fixed
+    // per llama_hot_graph; a sweep across widths builds one graph set per
+    // width through the owner's shared compact experts and RPC connection.
+    unsigned built_tokens = 1;
     ~llama_hot_graph() {
         for (auto * b : {&router,&shared,&reduce,&fast}) ggml_gallocr_free(b->alloc);
         for (auto & b : hot) ggml_gallocr_free(b.alloc);
@@ -225,20 +259,51 @@ public:
         // Benchmark routing is bound to already-stable caller tensors: read the
         // boundary directly instead of dispatching an empty router graph whose
         // only work is copying those bytes. Native routing still computes the
-        // real router graph below.
+        // real router graph below. #346: T>1 reads the [10,T] batch boundary.
         if (!s.bound_ids) compute(s.cpu,s.router.graph);
         const auto * ids=static_cast<const int32_t *>(s.bound_ids?s.bound_ids->data:s.ids->data);
         const auto * weights=static_cast<const float *>(s.weights->data);
-        std::array<int32_t,10> hi={},ci={},hs={},cs={}; std::array<float,10> hw={},cw={};
+        // Bound routing is [10,T]; the native-router path packs [10,T] too.
+        // The bound benchmark tensor is allocated once at the sweep's maximum
+        // width; the active step's width is the caller graph's built width.
+        const unsigned tokens = unsigned(s.bound_ids ? s.built_tokens : s.ids->ne[1]);
+        if (tokens<1 || tokens>256) GGML_ABORT("IS314 unsupported token batch");
+        std::vector<int32_t> hi{},ci{},hs{},cs{}; std::vector<float> hw{},cw{};
         unsigned nh=0,nc=0;
-        for (int slot=0;slot<10;++slot) {
-            if (ids[slot]<0 || ids[slot]>=(int)s.owner->dense.size()) GGML_ABORT("IS314 invalid source routing");
-            for (int seen=0;seen<slot;++seen) if (ids[seen]==ids[slot]) GGML_ABORT("IS314 invalid source routing");
-            const int dense=s.owner->dense[ids[slot]];
-            if (dense>=0) { hi[nh]=dense; hs[nh]=slot; std::memcpy(&hw[nh++],&weights[slot],sizeof(float)); }
-            else { ci[nc]=ids[slot]; cs[nc]=slot; std::memcpy(&cw[nc++],&weights[slot],sizeof(float)); }
+        for (unsigned t=0;t<tokens;++t) {
+            unsigned th=0,tc=0;
+            for (int slot=0;slot<10;++slot) {
+                const int32_t id=ids[t*10+slot];
+                if (id<0 || id>=(int)s.owner->dense.size()) GGML_ABORT("IS314 invalid source routing");
+                const int dense=s.owner->dense[id];
+                if (dense>=0) ++th; else ++tc;
+            }
+            if (t==0) { nh=th; nc=tc; }
+            // One prebuilt branch graph (one mul_mat_id) executes the whole
+            // batch, so every token must carry the same hot count. The bound
+            // caller enforces this before the step; abort otherwise.
+            else if (th!=nh) GGML_ABORT("IS314 mixed hot counts within one batch unsupported");
         }
-        if (auto demand=is312::active()) demand->record(s.layer,ids,10,1,0.0);
+        hi.resize(nh*tokens);ci.resize(nc*tokens);hs.resize(nh*tokens);cs.resize(nc*tokens);hw.resize(nh*tokens);cw.resize(nc*tokens);
+        for (unsigned t=0;t<tokens;++t) {
+            // Fill offsets are batch-strided: token t's hot entries occupy
+            // hi[t*nh .. t*nh+nh-1] (the [C,T] ids/weights layout mul_mat_id
+            // and the branch tensors expect), likewise cold at t*nc.
+            unsigned h=t*nh,c=t*nc;
+            for (int slot=0;slot<10;++slot) {
+                const int32_t id=ids[t*10+slot];
+                // Uniqueness is per token: the same expert may legitimately
+                // serve several tokens of one batch (that reuse is the point
+                // of batching). Only duplicates WITHIN one token's ten slots
+                // are invalid routing.
+                for (int seen=0;seen<slot;++seen)
+                    if (ids[t*10+seen]==id) GGML_ABORT("IS314 invalid source routing");
+                const int dense=s.owner->dense[id];
+                if (dense>=0) { hs[h]=t*10+slot; hi[h]=dense; std::memcpy(&hw[h++],&weights[t*10+slot],sizeof(float)); }
+                else { cs[c]=t*10+slot; ci[c]=id; std::memcpy(&cw[c++],&weights[t*10+slot],sizeof(float)); }
+            }
+        }
+        if (auto demand=is312::active()) demand->record(s.layer,ids,10,tokens,0.0);
         if (!nh) {
             // Zero-hot step: the reusable ordinary CPU graph is exactly the
             // source FFN for this routing (same banks, slot order, weighting,
@@ -247,13 +312,14 @@ public:
             // dispatch, allocation or upload occurs. Mixed steps below keep
             // the heterogeneous hot-RPC/cold-CPU path and its overlap.
             if (!s.fast.graph) GGML_ABORT("IS314 zero-hot fast graph missing");
-            ggml_backend_tensor_set(s.fast.ids,ids,0,10*sizeof(int32_t));
-            ggml_backend_tensor_set(s.fast.weights,weights,0,10*sizeof(float));
+            ggml_backend_tensor_set(s.fast.ids,ids,0,10*tokens*sizeof(int32_t));
+            ggml_backend_tensor_set(s.fast.weights,weights,0,10*tokens*sizeof(float));
             const auto fast_start=clock::now();
             compute(s.cpu,s.fast.graph);
             const auto fast_done=clock::now();
             std::memcpy(dst->data,s.fast.output->data,ggml_nbytes(dst));
             ++s.stats.steps; s.stats.hot=nh; s.stats.cold=nc; s.stats.compact_owner=reinterpret_cast<uintptr_t>(s.owner);
+            s.stats.tokens=tokens;
             s.stats.dispatch_ms=0; s.stats.cold_ms=0; s.stats.shared_ms=0; s.stats.join_ms=0;
             s.stats.fast_ms=elapsed(fast_start,fast_done); s.stats.layer_ms=elapsed(start,clock::now());
             s.stats.input_bytes=0; s.stats.routing_bytes=0; s.stats.result_bytes=0;
@@ -268,8 +334,9 @@ public:
         }
         auto & h=s.hot[nh]; auto & c=s.cold[nc];
         // Routing partitions travel by value into the dispatch thread: their
-        // stack arrays must outlive the synchronous acknowledged transfers.
-        const std::array<int32_t,10> hot_ids=hi; const std::array<float,10> hot_weights=hw;
+        // buffers must outlive the synchronous acknowledged transfers. #346:
+        // [C,T] ids and weights for every token of the batch.
+        const std::vector<int32_t> hot_ids=hi; const std::vector<float> hot_weights=hw;
         double dispatch_span=0;
         // Submit the remote branch concurrently with the CPU cold/shared
         // branches. Each composed-RPC-v7 setter is an acknowledged round trip
@@ -288,8 +355,8 @@ public:
             std::thread dispatch_thread([&](){
                 const auto submit=clock::now();
                 ggml_backend_tensor_set_async(s.owner->rpc,h.input,s.input->data,0,ggml_nbytes(h.input));
-                ggml_backend_tensor_set_async(s.owner->rpc,h.ids,hot_ids.data(),0,nh*sizeof(int32_t));
-                ggml_backend_tensor_set_async(s.owner->rpc,h.weights,hot_weights.data(),0,nh*sizeof(float));
+                ggml_backend_tensor_set_async(s.owner->rpc,h.ids,hot_ids.data(),0,nh*tokens*sizeof(int32_t));
+                ggml_backend_tensor_set_async(s.owner->rpc,h.weights,hot_weights.data(),0,nh*tokens*sizeof(float));
                 if (ggml_backend_graph_compute_async(s.owner->rpc,h.graph)!=GGML_STATUS_SUCCESS) GGML_ABORT("IS314 remote dispatch failed");
                 dispatch_span=elapsed(submit,clock::now());
             });
@@ -298,8 +365,8 @@ public:
             struct dispatch_joiner { std::thread & t; ~dispatch_joiner() { t.join(); } } join_on_exit{dispatch_thread};
             const auto submitted=clock::now();
             if (nc) {
-                ggml_backend_tensor_set(c.ids,ci.data(),0,nc*sizeof(int32_t));
-                ggml_backend_tensor_set(c.weights,cw.data(),0,nc*sizeof(float)); compute(s.cpu,c.graph);
+                ggml_backend_tensor_set(c.ids,ci.data(),0,nc*tokens*sizeof(int32_t));
+                ggml_backend_tensor_set(c.weights,cw.data(),0,nc*tokens*sizeof(float)); compute(s.cpu,c.graph);
             }
             const auto cold_done=clock::now();
             compute(s.cpu,s.shared.graph);
@@ -315,45 +382,58 @@ public:
         }
         const auto joined=clock::now();
         const size_t width=src->ne[0]; auto * slots=static_cast<float *>(s.slots->data);
-        for (unsigned i=0;i<nh;++i) std::memcpy(slots+hs[i]*width,s.remote_result.data()+i*width,width*sizeof(float));
-        if (nc) for (unsigned i=0;i<nc;++i) std::memcpy(slots+cs[i]*width,static_cast<float *>(c.output->data)+i*width,width*sizeof(float));
+        // #346: slot rows scale with the batch: expert i of token t writes
+        // slots[t, i] (row t*10+i of the [width,10,T] slot staging).
+        for (unsigned i=0;i<nh*tokens;++i) std::memcpy(slots+hs[i]*width,s.remote_result.data()+i*width,width*sizeof(float));
+        if (nc) for (unsigned i=0;i<nc*tokens;++i) std::memcpy(slots+cs[i]*width,static_cast<float *>(c.output->data)+i*width,width*sizeof(float));
         // Execute the cloned SOURCE reduction, including its view/add order and shared add.
         compute(s.cpu,s.reduce.graph); std::memcpy(dst->data,s.reduce.output->data,ggml_nbytes(dst));
         ++s.stats.steps; s.stats.hot=nh; s.stats.cold=nc; s.stats.compact_owner=reinterpret_cast<uintptr_t>(s.owner);
+        s.stats.tokens=tokens; ++s.stats.graph_dispatches;
+        if (h.graph->uid && s.last_remote_uid==h.graph->uid) ++s.stats.graph_recompute_reuse;
+        s.last_remote_uid=h.graph->uid;
         // dispatch_ms is the submission span measured inside the dispatch
         // thread (acknowledged transfers + graph dispatch). With the concurrent
         // submit it is no longer main-thread serial time; layer_ms carries the
         // wall-clock effect. cold/shared/join remain main-thread intervals.
         s.stats.dispatch_ms=dispatch_span; s.stats.cold_ms=cold_ms;
         s.stats.shared_ms=shared_ms; s.stats.join_ms=elapsed(shared_done_outer,joined); s.stats.fast_ms=0; s.stats.layer_ms=elapsed(start,clock::now());
-        s.stats.input_bytes=nh?ggml_nbytes(h.input):0; s.stats.routing_bytes=nh*(sizeof(int32_t)+sizeof(float)); s.stats.result_bytes=nh?ggml_nbytes(h.output):0;
-        std::fprintf(stderr,"IS314_STEP layer=%d phase=%s step=%llu hot=%u cold=%u dispatch_ms=%.6f cold_ms=%.6f shared_ms=%.6f join_ms=%.6f layer_ms=%.6f input_bytes=%llu routing_bytes=%llu result_bytes=%llu ids=",
-            s.layer,s.stats.phase==1?"prefill":"decode",(unsigned long long)s.stats.steps,nh,nc,s.stats.dispatch_ms,s.stats.cold_ms,s.stats.shared_ms,s.stats.join_ms,s.stats.layer_ms,
+        s.stats.input_bytes=nh?ggml_nbytes(h.input):0; s.stats.routing_bytes=nh*tokens*(sizeof(int32_t)+sizeof(float)); s.stats.result_bytes=nh?ggml_nbytes(h.output):0;
+        std::fprintf(stderr,"IS314_STEP layer=%d phase=%s step=%llu hot=%u cold=%u tokens=%u dispatch_ms=%.6f cold_ms=%.6f shared_ms=%.6f join_ms=%.6f layer_ms=%.6f input_bytes=%llu routing_bytes=%llu result_bytes=%llu ids=",
+            s.layer,s.stats.phase==1?"prefill":"decode",(unsigned long long)s.stats.steps,nh,nc,tokens,s.stats.dispatch_ms,s.stats.cold_ms,s.stats.shared_ms,s.stats.join_ms,s.stats.layer_ms,
             (unsigned long long)s.stats.input_bytes,(unsigned long long)s.stats.routing_bytes,(unsigned long long)s.stats.result_bytes);
-        for (int i=0;i<10;++i) std::fprintf(stderr,"%s%d",i?",":"",ids[i]);
+        for (unsigned i=0;i<10*tokens;++i) std::fprintf(stderr,"%s%d",i?",":"",ids[i]);
         std::fprintf(stderr," weight_bits=");
-        for (int i=0;i<10;++i) { uint32_t bits; std::memcpy(&bits,&weights[i],sizeof(bits)); std::fprintf(stderr,"%s%08x",i?",":"",bits); }
+        for (unsigned i=0;i<10*tokens;++i) { uint32_t bits; std::memcpy(&bits,&weights[i],sizeof(bits)); std::fprintf(stderr,"%s%08x",i?",":"",bits); }
         std::fprintf(stderr,"\n");
     }
 };
 llama_hot_stats llama_hot_get_stats(const std::shared_ptr<llama_hot_graph> & graph) { return graph->stats; }
 
 ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const llama_layer & layer,int il,const llama_moe_overlap_config & cfg) {
-    check(n_expert_used==10 && n_tokens==1,"requires ten slots and single token");
+    check(n_expert_used==10 && n_tokens>=1,"requires ten slots and at least one token");
     check(cur->type==GGML_TYPE_F32 && ggml_is_contiguous(cur),"contiguous F32 activation required");
     check(loras && loras->empty(),"LoRA unsupported");
     check(cparams.cb_eval==nullptr || is312::dedicated_callback(cparams.cb_eval),"unsupported eval callback");
     check(hot_owner,"context lifetime owner missing");
     if (!*hot_owner) { auto owner=std::make_shared<llama_hot_experts>(); owner->setup(cfg,layer,sched); *hot_owner=std::move(owner); }
     auto & owner=**hot_owner;
-    check(owner.spec==cfg.hot_spec,"immutable hot configuration changed");
+    // The owner's spec document is identity across rebuilds: each build parses
+    // the same frozen spec.json file, so compare the retained document rather
+    // than the shared_ptr produced by this build's parse.
+    check(owner.spec->document==cfg.hot_spec->document,"immutable hot configuration changed");
     check(owner.original[0]==layer.ffn_gate_exps && owner.original[1]==layer.ffn_up_exps && owner.original[2]==layer.ffn_down_exps,"source bank identity changed");
+    // #346: the cached graph is fixed-width. A batch-width change retires it
+    // (the caller has already reset the graph results that referenced it) and
+    // builds a fresh graph over the same owner, compact weights and RPC link.
+    if (owner.graph && owner.graph->built_tokens!=unsigned(n_tokens)) owner.graph.reset();
     if (!owner.graph) {
         auto s=std::make_shared<llama_hot_graph>(); s->owner=&owner; s->layer=il; s->phase=hot_phase;
         constexpr size_t nodes=1024;
         s->ctx=ggml_init({ggml_tensor_overhead()*8192+ggml_graph_overhead_custom(nodes,false)*24,nullptr,true}); check(s->ctx,"private metadata allocation");
         s->cpu=ggml_backend_cpu_init(); check(s->cpu,"private CPU backend"); ggml_backend_cpu_set_n_threads(s->cpu,std::max(1,cparams.n_threads));
         s->input=ggml_dup_tensor(s->ctx,cur); ggml_set_input(s->input); ggml_set_output(s->input);
+        s->built_tokens=unsigned(n_tokens);
         auto * outer_ctx=ctx0; auto * outer_gf=gf;
         ctx0=s->ctx; gf=ggml_new_graph_custom(ctx0,nodes,false); moe_overlap_building=true;
         ggml_tensor * combined=nullptr;
@@ -361,7 +441,8 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         catch (...) { ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false; throw; }
         ctx0=outer_ctx; gf=outer_gf; moe_overlap_building=false;
         check(combined->op==GGML_OP_ADD && layer.ffn_up_shexp,"gated shared branch required");
-        if (cfg.benchmark_routing) { llama_hot_bind_routing(s->ctx,combined,il,*cfg.benchmark_routing); s->bound_ids=cfg.benchmark_routing->ids; }
+        if (cfg.benchmark_routing_batch) { llama_hot_bind_routing_batch(s->ctx,combined,il,*cfg.benchmark_routing_batch); s->bound_ids=cfg.benchmark_routing_batch->ids; }
+        else if (cfg.benchmark_routing) { llama_hot_bind_routing(s->ctx,combined,il,*cfg.benchmark_routing); s->bound_ids=cfg.benchmark_routing->ids; }
         auto * weighted=ggml_get_tensor(s->ctx,("ffn_moe_weighted-"+std::to_string(il)).c_str()); check(weighted,"source weighted cut missing");
         auto * down=weighted->src[0]; check(down->op==GGML_OP_MUL_MAT_ID,"source expert cut mismatch");
         s->ids=ggml_cont(s->ctx,down->src[2]); s->weights=weighted->src[1];
@@ -390,8 +471,8 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
         // all-cold step, with no RPC dispatch, allocation or upload. Mixed
         // steps never touch it, so the heterogeneous path and its overlap
         // are unchanged.
-        s->fast.ids=ggml_new_tensor_2d(s->ctx,GGML_TYPE_I32,10,1);
-        s->fast.weights=ggml_new_tensor_3d(s->ctx,GGML_TYPE_F32,1,10,1);
+        s->fast.ids=ggml_new_tensor_2d(s->ctx,GGML_TYPE_I32,10,s->built_tokens);
+        s->fast.weights=ggml_new_tensor_3d(s->ctx,GGML_TYPE_F32,1,10,s->built_tokens);
         ggml_set_input(s->fast.ids); ggml_set_input(s->fast.weights);
         std::unordered_map<ggml_tensor *,ggml_tensor *> fast_cuts={{s->input,s->input},{down->src[2],s->fast.ids},{weighted->src[1],s->fast.weights}};
         s->fast.output=ggml_cont(s->ctx,clone(s->ctx,combined,fast_cuts)); ggml_set_output(s->fast.output);
@@ -413,7 +494,8 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
             check(w && w->src[0]->op==GGML_OP_MUL_MAT_ID,"source branch weighted cut");
             auto & b=remote?s->hot[count]:s->cold[count];
             b.input=remote?ggml_dup_tensor(s->ctx,s->input):s->input;
-            b.ids=ggml_new_tensor_2d(s->ctx,GGML_TYPE_I32,count,1); b.weights=ggml_new_tensor_3d(s->ctx,GGML_TYPE_F32,1,count,1);
+            b.ids=ggml_new_tensor_2d(s->ctx,GGML_TYPE_I32,count,s->built_tokens);
+            b.weights=ggml_new_tensor_3d(s->ctx,GGML_TYPE_F32,1,count,s->built_tokens);
             ggml_set_input(b.input); ggml_set_input(b.ids); ggml_set_input(b.weights);
             std::unordered_map<ggml_tensor *,ggml_tensor *> branch_cuts={{s->input,b.input},{w->src[0]->src[2],b.ids},{w->src[1],b.weights}};
             if (remote) for (size_t i=0;i<3;++i) branch_cuts[owner.original[i]]=owner.compact[i];
@@ -434,12 +516,12 @@ ggml_tensor * llm_graph_context::build_qwen4exp_ffn_hot(ggml_tensor * cur,const 
                 b.graph->uid=ggml_graph_next_uid();
             }
         }
-        s->remote_result.resize(cur->ne[0]*10);
+        s->remote_result.resize(cur->ne[0]*10*s->built_tokens);
         size_t local_bytes=0,remote_bytes=0;
         for (auto * b : {&s->router,&s->shared,&s->reduce,&s->fast}) local_bytes+=ggml_gallocr_get_buffer_size(b->alloc,0);
         for (auto & b:s->cold) if (b.alloc) local_bytes+=ggml_gallocr_get_buffer_size(b.alloc,0);
         for (auto & b:s->hot) if (b.alloc) remote_bytes+=ggml_gallocr_get_buffer_size(b.alloc,0);
-        std::fprintf(stderr,"IS314_SETUP layer=%d compact_bytes=%zu staging_peak=%zu retained_staging=0 cpu_arena_bytes=%zu rpc_arena_bytes=%zu result_workspace_bytes=%zu metadata_bytes=%zu\n",il,owner.resident,owner.staging_peak,local_bytes,remote_bytes,s->remote_result.size()*sizeof(float),ggml_used_mem(s->ctx));
+        std::fprintf(stderr,"IS314_SETUP layer=%d tokens=%u compact_bytes=%zu staging_peak=%zu retained_staging=0 cpu_arena_bytes=%zu rpc_arena_bytes=%zu result_workspace_bytes=%zu metadata_bytes=%zu\n",il,s->built_tokens,owner.resident,owner.staging_peak,local_bytes,remote_bytes,s->remote_result.size()*sizeof(float),ggml_used_mem(s->ctx));
         owner.graph=std::move(s);
     }
     auto * output=ggml_map_custom1(ctx0,cur,llama_hot_graph::execute,1,owner.graph.get());

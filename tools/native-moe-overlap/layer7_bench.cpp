@@ -22,6 +22,7 @@ extern "C" {
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 using nlohmann::json;
 namespace {
 using clock_type=std::chrono::steady_clock;
@@ -38,10 +39,29 @@ float sample(uint32_t & state) { return (int(next(state)%2001)-1000)/1000.0f; }
 struct options {
     int d=2560,f=640,threads=8,warmup=5,pairs=20; uint32_t seed=314159;
     bool small=false; std::string endpoint,work,routing,control,comparison_mode="cpu-loopback";
+    std::string tokens_list="1";
 };
 int number(const std::string & text,int low,int high) {
     require(!text.empty() && text.size()<11 && text.find_first_not_of("0123456789")==std::string::npos,"invalid bounded integer");
     auto v=std::stoll(text); require(v>=low && v<=high,"integer outside benchmark budget"); return int(v);
+}
+std::vector<int> parse_tokens(const std::string & text) {
+    // Bounded ascending batch widths for the #346 break-even sweep.
+    require(text.size()<=63,"token list too long");
+    std::vector<int> widths; std::set<int> seen;
+    size_t begin=0;
+    while (begin<=text.size()) {
+        const size_t end=text.find(',',begin);
+        const std::string item=text.substr(begin,end==std::string::npos?text.size()-begin:end-begin);
+        const int v=number(item,1,256);
+        require(seen.insert(v).second,"duplicate token batch width");
+        widths.push_back(v);
+        if (end==std::string::npos) break;
+        begin=end+1;
+    }
+    require(!widths.empty(),"empty token list");
+    std::sort(widths.begin(),widths.end());
+    return widths;
 }
 options parse(int argc,char ** argv) {
     options o;
@@ -53,6 +73,7 @@ options parse(int argc,char ** argv) {
         else if (a=="--routing") o.routing=v; else if (a=="--threads") o.threads=number(v,1,128);
         else if (a=="--warmup") o.warmup=number(v,0,20); else if (a=="--pairs") o.pairs=number(v,1,100);
         else if (a=="--seed") o.seed=number(v,1,2147483647); else if (a=="--control") o.control=v;
+        else if (a=="--tokens") o.tokens_list=v;
         else if (a=="--comparison-mode") o.comparison_mode=v;
         else throw std::runtime_error("unknown option: "+a);
     }
@@ -64,6 +85,12 @@ options parse(int argc,char ** argv) {
 }
 struct route {
     std::array<int32_t,K> ids; std::array<float,K> weights; std::string label;
+};
+// #346: one routing row per token of a batch. shared_set=true gives every
+// token the same expert set (ideal expert reuse); false gives distinct
+// per-token sets within the resident cold pool (general workload behavior).
+struct batch_route {
+    int tokens=1; bool shared_set=false; std::vector<route> rows; std::string label;
 };
 void validate(const route & r) {
     std::set<int32_t> ids;
@@ -94,12 +121,15 @@ struct arm {
     llm_graph_result result{8192}; ggml_gallocr_t alloc=nullptr;
     ggml_tensor * input=nullptr,* output=nullptr,* shared=nullptr,* weighted=nullptr,* native_ids=nullptr,* native_weights=nullptr;
     llama_hot_routing routing;
+    std::map<int,llama_hot_routing_batch> routing_batch;
     ~arm() { ggml_gallocr_free(alloc); }
 };
 struct bench {
     options o; llama_layer layer; ggml_tensor * omitted_shared_down=nullptr; ggml_context * ctx=nullptr; ggml_backend_buffer_t buffer=nullptr;
     ggml_backend_t cpu=nullptr,rpc=nullptr; ggml_backend_sched_t sched=nullptr;
     std::shared_ptr<llama_hot_experts> owner; int phase=2; arm a,b;
+    int max_tokens=1;
+    std::vector<int> token_widths{1};
     bench(options opts):o(std::move(opts)) {}
     ~bench() {
         if (sched) { ggml_backend_sched_synchronize(sched);ggml_backend_sched_reset(sched); }
@@ -131,6 +161,12 @@ struct bench {
         for (auto * x:{&a,&b}) {
             x->routing.ids=ggml_new_tensor_2d(ctx,GGML_TYPE_I32,K,1);
             x->routing.weights=ggml_new_tensor_3d(ctx,GGML_TYPE_F32,1,K,1);
+        }
+        // #346: one routing-boundary leaf pair per swept width. The executor
+        // and the bound graphs read the exact-width tensor, never a wider one.
+        for (int t:token_widths) if (t>1) for (auto * x:{&a,&b}) {
+            x->routing_batch[t].ids=ggml_new_tensor_2d(ctx,GGML_TYPE_I32,K,t);
+            x->routing_batch[t].weights=ggml_new_tensor_3d(ctx,GGML_TYPE_F32,1,K,t);
         }
         if (o.control=="missing-shared") {
             omitted_shared_down=ggml_dup_tensor(ctx,layer.ffn_down_shexp);
@@ -194,27 +230,33 @@ struct bench {
         setenv("IS314_HOT_SPEC",(o.work+"/spec.json").c_str(),1);setenv("IS311_ASSIGNED",(o.work+"/assigned.txt").c_str(),1);
         rpc=ggml_backend_rpc_init(o.endpoint.c_str(),0);require(rpc,"RPC backend unavailable");
         ggml_backend_t backends[]={rpc,cpu};sched=ggml_backend_sched_new(backends,nullptr,2,8192,false,false);require(sched,"scheduler unavailable");
-        build(a,false);build(b,true);
+        build(a,false,1);build(b,true,1);
     }
-    void build(arm & x,bool hot) {
+    void build(arm & x,bool hot,int tokens) {
         llama_adapter_loras loras;llm_graph_params p={};
         p.arch=LLM_ARCH_QWEN4EXP;p.hparams.n_layer_all=9;p.hparams.n_embd=o.d;p.hparams.n_expert=E;p.hparams.n_expert_used_arr.fill(K);
         p.hparams.n_head_arr.fill(1);p.hparams.n_head_kv_arr.fill(1);p.hparams.n_embd_head_k_full=o.d;p.hparams.n_embd_head_v_full=o.d;p.hparams.n_rot_full=o.d;
-        p.hparams.expert_weights_scale=1;p.cparams.n_threads=o.threads;p.cparams.n_threads_batch=o.threads;p.ubatch.n_tokens=1;
+        p.hparams.expert_weights_scale=1;p.cparams.n_threads=o.threads;p.cparams.n_threads_batch=o.threads;p.ubatch.n_tokens=tokens;
         p.sched=sched;p.backend_cpu=cpu;p.loras=&loras;p.res=&x.result;p.hot_owner=&owner;p.hot_phase=&phase;
         p.cb=[](const llama_ubatch &,ggml_tensor * t,const char * name,int il){ggml_format_name(t,"%s-%d",name,il);};
         llm_graph_context builder(p);
-        x.input=ggml_new_tensor_2d(x.result.get_ctx(),GGML_TYPE_F32,o.d,1);ggml_set_input(x.input);
+        x.input=ggml_new_tensor_2d(x.result.get_ctx(),GGML_TYPE_F32,o.d,tokens);ggml_set_input(x.input);
         // A complete valid H5 graph with zero B-only shared down projection:
         // numerical omission sensitivity, not merely constructor refusal.
         auto selected=layer;if (hot && omitted_shared_down) selected.ffn_down_shexp=omitted_shared_down;
         if (hot) {
             auto cfg=llama_hot_config(9);
-            if (o.control!="native-routing") cfg.benchmark_routing=&x.routing;
+            if (o.control!="native-routing") {
+                if (tokens>1) cfg.benchmark_routing_batch=&x.routing_batch.at(tokens);
+                else cfg.benchmark_routing=&x.routing;
+            }
             x.output=builder.build_qwen4exp_ffn(x.input,selected,7,cfg);
         } else {
             x.output=builder.build_qwen4exp_ffn_native(x.input,selected,7);
-            if (o.control!="native-routing") llama_hot_bind_routing(x.result.get_ctx(),x.output,7,x.routing);
+            if (o.control!="native-routing") {
+                if (tokens>1) llama_hot_bind_routing_batch(x.result.get_ctx(),x.output,7,x.routing_batch.at(tokens));
+                else llama_hot_bind_routing(x.result.get_ctx(),x.output,7,x.routing);
+            }
             x.shared=x.output->src[1];ggml_set_output(x.shared);
             x.weighted=ggml_get_tensor(x.result.get_ctx(),"ffn_moe_weighted-7");ggml_set_output(x.weighted);
             if (o.control=="native-routing") {
@@ -229,6 +271,18 @@ struct bench {
             x.alloc=ggml_gallocr_new(ggml_backend_get_default_buffer_type(cpu));
             require(x.alloc && ggml_gallocr_alloc_graph(x.alloc,x.result.get_gf()),"CPU graph allocation failed");
         }
+    }
+    // Rebuild both arms at a new batch width. The owner, compact weights and
+    // RPC connection persist; a new llama_hot_graph is built per width. The
+    // previous arms' graphs are released before rebuilding, and the shared
+    // scheduler is reset so the new graph's splits allocate cleanly.
+    void rebuild(int tokens) {
+        require(tokens>=1 && tokens<=max_tokens,"token width outside sweep");
+        ggml_backend_sched_synchronize(sched);
+        b.result.reset();a.result.reset();
+        ggml_backend_sched_reset(sched);
+        ggml_gallocr_free(a.alloc);a.alloc=nullptr;
+        build(a,false,tokens);build(b,true,tokens);
     }
     double execute(arm & x,bool hot,std::vector<float> & out) {
         auto start=clock_type::now();
@@ -281,76 +335,167 @@ json comparator_probe(bool cross_backend) {
     planes[0]=NAN;out["nonfinite_plane"]=diagnostic(a,b,planes,shared,cross_backend);planes[0]=1;
     shared[0]=INFINITY;out["nonfinite_shared"]=diagnostic(a,b,planes,shared,cross_backend);return out;
 }
+// #346 per-token/throughput derived distributions: plain per-sample transforms
+// of the SAME retained pair times, never separately re-measured quantities.
+bool used_replacement(const std::vector<route> & rows,int candidate) {
+    for (auto & r:rows) for (auto id:r.ids) if (id==candidate) return true;
+    return false;
+}
+std::vector<double> divided(const std::vector<double> & v,int tokens) {
+    std::vector<double> out;out.reserve(v.size());
+    for (auto x:v) out.push_back(x/tokens);
+    return out;
+}
+std::vector<double> rate(const std::vector<double> & v,int tokens) {
+    std::vector<double> out;out.reserve(v.size());
+    for (auto x:v) out.push_back(tokens/(x/1000.0));
+    return out;
+}
+std::vector<double> ratio(const std::vector<double> & a,const std::vector<double> & b) {
+    require(a.size()==b.size(),"paired ratio shape mismatch");
+    std::vector<double> out;out.reserve(a.size());
+    for (size_t i=0;i<a.size();++i) out.push_back(a[i]/b[i]);
+    return out;
+}
 }
 int main(int argc,char ** argv) {
     try {
         const auto o=parse(argc,argv);const auto contract=comparison_contract(o.comparison_mode);
         if (o.control=="comparator-probe") { std::cout<<comparator_probe(o.comparison_mode=="cpu-cuda").dump()<<std::endl;return 0; }
-        auto routing=routes(o);bench s(o);auto setup=clock_type::now();s.setup();
+        const auto widths=parse_tokens(o.tokens_list);
+        auto routing=routes(o);bench s(o);s.token_widths=widths;s.max_tokens=widths.back();auto setup=clock_type::now();s.setup();
         std::ifstream spec_file(o.work+"/spec.json");const std::string spec_bytes((std::istreambuf_iterator<char>(spec_file)),{});
         std::ifstream weights_file(o.work+"/weights.json");const std::string weights_bytes((std::istreambuf_iterator<char>(weights_file)),{});
         std::cout<<json({{"type","setup"},{"schema","h5-layer7-matched/1"},{"setup_ms",ms(setup)},
             {"dimensions",{o.d,o.f,E,K}},{"small_test",o.small},{"seed",o.seed},{"threads",o.threads},
+            {"tokens_list",widths},
             {"representation","Q8_0"},{"routing_boundary_cut",o.control!="native-routing"},{"routing_scope","provided routing boundary; synthetic activations, not activation replay"},
             {"comparator",contract},{"comparison_mode",o.comparison_mode},{"weights_sha256",sha(weights_bytes.data(),weights_bytes.size())},{"weight_spec_sha256",sha(spec_bytes.data(),spec_bytes.size())}}).dump()<<std::endl;
         // The complete spec and assigned encoded-weight identities are retained in work-dir.
         json summaries=json::object();int measured=0;
-        for (const std::string name:{"mixed","all-cold"}) {
-            std::vector<double> ta,tb,delta;
-            for (int n=0;n<o.warmup+o.pairs;++n) {
-                bool warm=n<o.warmup;int pair=warm?n:n-o.warmup;
-                auto r=routing[(size_t(pair)*routing.size()/o.pairs)%routing.size()];
-                if (o.routing.empty()) {
-                    std::rotate(r.ids.begin(),r.ids.begin()+pair%K,r.ids.end());
-                    std::rotate(r.weights.begin(),r.weights.begin()+pair%K,r.weights.end());
+        for (int tokens:widths) {
+            if (tokens!=1) { const auto rebuild_start=clock_type::now();s.rebuild(tokens);
+                std::cout<<json({{"type","rebuild"},{"tokens",tokens},{"rebuild_ms",ms(rebuild_start)}}).dump()<<std::endl; }
+            for (const std::string name:{"mixed","all-cold"}) {
+                // Batched widths run two labeled variants: distinct per-token
+                // expert sets (general workload behavior) and the same set for
+                // every token (ideal expert reuse). The single-token
+                // compatibility case runs once with the historical name.
+                const int variants=tokens>1?2:1;
+                for (int variant=0;variant<variants;++variant) {
+                    const bool shared_set=variant==1;
+                    const std::string case_name=name+(tokens>1?(shared_set?"-shared-set":"-varied-set"):"");
+                    std::vector<double> ta,tb,delta;
+                    for (int n=0;n<o.warmup+o.pairs;++n) {
+                        bool warm=n<o.warmup;int pair=warm?n:n-o.warmup;
+                        // Deterministic distinct routing row per token. Slot
+                        // order rotates per (pair,token). Varied sets replace
+                        // COLD slots with distinct unused globals per token —
+                        // the five hot experts are the fixed resident set, so
+                        // only non-resident slots can differ across tokens.
+                        std::vector<route> rows;
+                        for (int t=0;t<tokens;++t) {
+                            auto &src_row=routing[(size_t(pair)*routing.size()/o.pairs+size_t(t)*(shared_set?0:1))%routing.size()];
+                            route r=src_row; r.label=src_row.label;
+                            if (o.routing.empty()) {
+                                std::rotate(r.ids.begin(),r.ids.begin()+(pair+t*(shared_set?0:1))%K,r.ids.end());
+                                std::rotate(r.weights.begin(),r.weights.begin()+(pair+t*(shared_set?0:1))%K,r.weights.end());
+                            }
+                            for (auto & id:r.ids) {
+                                const bool is_hot=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
+                                // shared-set rows repeat token 0's replacements verbatim;
+                                // varied-set rows must not reuse an earlier token's experts.
+                                const bool block_reuse=!shared_set;
+                                if (name=="all-cold" && is_hot) {
+                                    int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
+                                            std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
+                                            (block_reuse && used_replacement(rows,replacement))) ++replacement;
+                                    id=replacement;
+                                } else if (name=="mixed" && !shared_set && !is_hot) {
+                                    int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() ||
+                                            std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end() ||
+                                            used_replacement(rows,replacement)) ++replacement;
+                                    id=replacement;
+                                }
+                            }
+                            if (o.control=="bad-partition") r.ids[1]=r.ids[0];
+                            validate(r);rows.push_back(r);
+                        }
+                        // mixed requires exactly five hot slots per token; all-cold zero.
+                        unsigned hot=0;
+                        for (auto & r:rows) for (auto id:r.ids) hot+=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
+                        require(hot==size_t(name=="mixed"?5:0)*size_t(tokens),"invalid five-hot/ten-slot partition");
+                        uint32_t state=o.seed+uint32_t(pair+1)*7919+uint32_t(tokens)*104729;
+                        std::vector<float> input(o.d*tokens),a(o.d*tokens),b(o.d*tokens),shared(o.d*tokens),weighted(o.d*K*tokens);
+                        for (auto & v:input) v=sample(state)*0.8f+0.1f;
+                        if (o.control=="native-routing") input[0]=(name=="mixed"?1.0f:-1.0f)*(0.4f+pair/32.0f);
+                        // Pack the [K,T] boundary both arms read.
+                        std::vector<int32_t> ids_flat;std::vector<float> weights_flat;
+                        for (auto & r:rows) for (int i=0;i<K;++i) { ids_flat.push_back(r.ids[i]);weights_flat.push_back(r.weights[i]); }
+                        for (auto * x:{&s.a,&s.b}) {
+                            ggml_backend_tensor_set(x->input,input.data(),0,input.size()*4);
+                            if (tokens>1) {
+                                auto & rb=x->routing_batch.at(tokens);
+                                ggml_backend_tensor_set(rb.ids,ids_flat.data(),0,K*tokens*4);
+                                ggml_backend_tensor_set(rb.weights,weights_flat.data(),0,K*tokens*4);
+                            } else {
+                                ggml_backend_tensor_set(x->routing.ids,rows[0].ids.data(),0,K*4);
+                                ggml_backend_tensor_set(x->routing.weights,rows[0].weights.data(),0,K*4);
+                            }
+                        }
+                        if (o.control=="missing-expert" && tokens==1) { auto w=rows[0].weights;w[0]=0;ggml_backend_tensor_set(s.b.routing.weights,w.data(),0,K*4); }
+                        bool ab=pair%2==0;double am,bm;
+                        if (ab) { am=s.execute(s.a,false,a);bm=s.execute(s.b,true,b); }
+                        else { bm=s.execute(s.b,true,b);am=s.execute(s.a,false,a); }
+                        if (o.control=="native-routing") {
+                            // Regression readback after compute: the native router's own
+                            // top-k must produce a valid partition; relabel on success.
+                            ggml_backend_tensor_get(s.a.native_ids,ids_flat.data(),0,K*tokens*4);
+                            ggml_backend_tensor_get(s.a.native_weights,weights_flat.data(),0,K*tokens*4);
+                            for (auto & r:rows) r.label="native-router-regression";
+                        }
+                        auto stats=llama_hot_get_stats(s.b.result.hot_experts.at(0));
+                        ggml_backend_tensor_get(s.a.shared,shared.data(),0,shared.size()*4);
+                        ggml_backend_tensor_get(s.a.weighted,weighted.data(),0,weighted.size()*4);
+                        bool shared_nonzero=std::any_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x) && x!=0;});
+                        bool experts_nonzero=true;for (size_t i=0;i<size_t(K)*tokens;++i) experts_nonzero &= std::any_of(weighted.begin()+i*o.d,weighted.begin()+(i+1)*o.d,[](float x){return std::isfinite(x) && x!=0;});
+                        auto metrics=diagnostic(a,b,weighted,shared,o.comparison_mode=="cpu-cuda");
+                        bool valid=metrics["pass"] && shared_nonzero && experts_nonzero && stats.hot==(name=="mixed"?5:0) && stats.cold==K-(name=="mixed"?5:0) && stats.tokens==unsigned(tokens);
+                        std::vector<uint8_t> route_bytes(K*tokens*8);
+                        std::memcpy(route_bytes.data(),ids_flat.data(),K*tokens*4);
+                        std::memcpy(route_bytes.data()+K*tokens*4,weights_flat.data(),K*tokens*4);
+                        const auto input_hash=sha(input.data(),input.size()*4),route_hash=sha(route_bytes.data(),route_bytes.size());
+                        json ids_json=json::array();json weight_bits=json::array();json labels=json::array();
+                        for (auto & r:rows) { ids_json.push_back(r.ids);weight_bits.push_back(bits(r));labels.push_back(r.label); }
+                        // tokens==1 keeps the historical flat fields for compatibility.
+                        json row={{"type","pair"},{"case",case_name},{"tokens",tokens},{"pair",pair},{"warmup",warm},{"order",ab?"AB":"BA"},
+                            {"routing_labels",labels},{"input_sha256",input_hash},{"routing_sha256",route_hash},
+                            {"ids",ids_json},{"weight_bits",weight_bits},{"hot",stats.hot},{"cold",stats.cold},{"shared_nonzero",shared_nonzero},{"experts_nonzero",experts_nonzero},
+                            {"correctness",metrics},{"valid",valid},{"A",{{"arm","A"},{"order",ab?0:1},{"total_layer_ms",am},{"output_sha256",sha(a.data(),a.size()*4)}}},
+                            {"B",{{"arm","B"},{"order",ab?1:0},{"total_layer_ms",bm},{"output_sha256",sha(b.data(),b.size()*4)},
+                                {"h5_layer_ms",stats.layer_ms},{"dispatch_ms",stats.dispatch_ms},{"cold_ms",stats.cold_ms},{"shared_ms",stats.shared_ms},{"join_ms",stats.join_ms},{"fast_ms",stats.fast_ms},
+                                {"input_bytes",stats.input_bytes},{"routing_bytes",stats.routing_bytes},{"result_bytes",stats.result_bytes},{"wire_bytes",nullptr},{"owner",stats.compact_owner},{"step",stats.steps},
+                                {"graph_dispatches",stats.graph_dispatches},{"graph_recompute_reuse",stats.graph_recompute_reuse},{"tokens",stats.tokens}}},
+                            {"B_minus_A_ms",bm-am}};
+                        if (tokens==1) {
+                            row["routing_label"]=rows[0].label;
+                            row["ids"]=rows[0].ids;
+                            row["weight_bits"]=bits(rows[0]);
+                        }
+                        for (const std::string arm_name:{"A","B"}) {
+                            row[arm_name]["input_sha256"]=input_hash;row[arm_name]["routing_sha256"]=route_hash;
+                            row[arm_name]["hot"]=arm_name=="A"?0:stats.hot;row[arm_name]["cold"]=arm_name=="A"?K:stats.cold;
+                        }
+                        std::cout<<row.dump()<<std::endl;require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
+                        if (!warm) {ta.push_back(am);tb.push_back(bm);delta.push_back(bm-am);++measured;}
+                    }
+                    summaries[case_name+"@t"+std::to_string(tokens)]={{"tokens",tokens},{"expert_set",tokens>1?(shared_set?"shared":"varied"):"single"},
+                        {"A_ms",distribution(ta)},{"B_ms",distribution(tb)},{"B_minus_A_ms",distribution(delta)},
+                        {"A_ms_per_token",distribution(divided(ta,tokens))},{"B_ms_per_token",distribution(divided(tb,tokens))},
+                        {"A_tokens_per_s",distribution(rate(ta,tokens))},{"B_tokens_per_s",distribution(rate(tb,tokens))},
+                        {"speedup_B_over_A",distribution(ratio(ta,tb))}};
                 }
-                if (name=="all-cold") for (auto & id:r.ids) if (std::find(HOT.begin(),HOT.end(),id)!=HOT.end()) {
-                    int replacement=0;while (std::find(HOT.begin(),HOT.end(),replacement)!=HOT.end() || std::find(r.ids.begin(),r.ids.end(),replacement)!=r.ids.end()) ++replacement;id=replacement;
-                }
-                if (o.control=="bad-partition") r.ids[1]=r.ids[0];validate(r);
-                unsigned hot=0;for (auto id:r.ids) hot+=std::find(HOT.begin(),HOT.end(),id)!=HOT.end();
-                require(hot==(name=="mixed"?5:0),"invalid five-hot/ten-slot partition");
-                uint32_t state=o.seed+uint32_t(pair+1)*7919;std::vector<float> input(o.d),a(o.d),b(o.d),shared(o.d),weighted(o.d*K);
-                for (auto & v:input) v=sample(state)*0.8f+0.1f;
-                if (o.control=="native-routing") input[0]=(name=="mixed"?1.0f:-1.0f)*(0.4f+pair/32.0f);
-                for (auto * x:{&s.a,&s.b}) {
-                    ggml_backend_tensor_set(x->input,input.data(),0,input.size()*4);
-                    ggml_backend_tensor_set(x->routing.ids,r.ids.data(),0,K*4);
-                    ggml_backend_tensor_set(x->routing.weights,r.weights.data(),0,K*4);
-                }
-                if (o.control=="missing-expert") { auto w=r.weights;w[0]=0;ggml_backend_tensor_set(s.b.routing.weights,w.data(),0,K*4); }
-                bool ab=pair%2==0;double am,bm;
-                if (ab) { am=s.execute(s.a,false,a);bm=s.execute(s.b,true,b); }
-                else { bm=s.execute(s.b,true,b);am=s.execute(s.a,false,a); }
-                if (o.control=="native-routing") {
-                    ggml_backend_tensor_get(s.a.native_ids,r.ids.data(),0,K*4);
-                    ggml_backend_tensor_get(s.a.native_weights,r.weights.data(),0,K*4);
-                    r.label="native-router-regression";validate(r);
-                }
-                auto stats=llama_hot_get_stats(s.b.result.hot_experts.at(0));
-                ggml_backend_tensor_get(s.a.shared,shared.data(),0,shared.size()*4);
-                ggml_backend_tensor_get(s.a.weighted,weighted.data(),0,weighted.size()*4);
-                bool shared_nonzero=std::any_of(shared.begin(),shared.end(),[](float x){return std::isfinite(x) && x!=0;});
-                bool experts_nonzero=true;for (int i=0;i<K;++i) experts_nonzero &= std::any_of(weighted.begin()+i*o.d,weighted.begin()+(i+1)*o.d,[](float x){return std::isfinite(x) && x!=0;});
-                auto metrics=diagnostic(a,b,weighted,shared,o.comparison_mode=="cpu-cuda");bool valid=metrics["pass"] && shared_nonzero && experts_nonzero && stats.hot==hot && stats.cold==K-hot;
-                std::array<uint8_t,K*8> route_bytes;std::memcpy(route_bytes.data(),r.ids.data(),K*4);std::memcpy(route_bytes.data()+K*4,r.weights.data(),K*4);
-                const auto input_hash=sha(input.data(),input.size()*4),route_hash=sha(route_bytes.data(),route_bytes.size());
-                json row={{"type","pair"},{"case",name},{"pair",pair},{"warmup",warm},{"order",ab?"AB":"BA"},
-                    {"routing_label",r.label},{"input_sha256",input_hash},{"routing_sha256",route_hash},
-                    {"ids",r.ids},{"weight_bits",bits(r)},{"hot",stats.hot},{"cold",stats.cold},{"shared_nonzero",shared_nonzero},{"experts_nonzero",experts_nonzero},
-                    {"correctness",metrics},{"valid",valid},{"A",{{"arm","A"},{"order",ab?0:1},{"total_layer_ms",am},{"output_sha256",sha(a.data(),a.size()*4)}}},
-                    {"B",{{"arm","B"},{"order",ab?1:0},{"total_layer_ms",bm},{"output_sha256",sha(b.data(),b.size()*4)},
-                        {"h5_layer_ms",stats.layer_ms},{"dispatch_ms",stats.dispatch_ms},{"cold_ms",stats.cold_ms},{"shared_ms",stats.shared_ms},{"join_ms",stats.join_ms},{"fast_ms",stats.fast_ms},
-                        {"input_bytes",stats.input_bytes},{"routing_bytes",stats.routing_bytes},{"result_bytes",stats.result_bytes},{"wire_bytes",nullptr},{"owner",stats.compact_owner},{"step",stats.steps}}},
-                    {"B_minus_A_ms",bm-am}};
-                for (const std::string arm_name:{"A","B"}) {
-                    row[arm_name]["input_sha256"]=input_hash;row[arm_name]["routing_sha256"]=route_hash;
-                    row[arm_name]["hot"]=arm_name=="A"?0:stats.hot;row[arm_name]["cold"]=arm_name=="A"?K:stats.cold;
-                }
-                std::cout<<row.dump()<<std::endl;require(valid,"invalid comparison: numerical/partition/shared/expert check failed");
-                if (!warm) {ta.push_back(am);tb.push_back(bm);delta.push_back(bm-am);++measured;}
             }
-            summaries[name]={{"A_ms",distribution(ta)},{"B_ms",distribution(tb)},{"B_minus_A_ms",distribution(delta)}};
         }
         std::cout<<json({{"type","summary"},{"valid",true},{"timing_comparison_valid",true},{"measured_pairs",measured},{"cases",summaries}}).dump()<<std::endl;
         return 0;
