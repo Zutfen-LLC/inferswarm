@@ -1,4 +1,5 @@
 //! Isolated synthetic SEW1 transport experiment. No inference or production integration.
+mod tcp_info;
 use quinn::{
     crypto::rustls::{QuicClientConfig, QuicServerConfig},
     Endpoint,
@@ -549,8 +550,12 @@ async fn run(c: Config) -> Result<()> {
     let mut start_cpu = (0., 0.);
     let mut wall = Instant::now();
     let mut before_stats = None;
+    let mut tcp_start = None;
     for chain in 0..c.warmup + c.chains {
         if chain == c.warmup {
+            if let Transport::Tcp(tcp) = &tr {
+                tcp_start = Some(tcp_info::Snapshot::capture(tcp._socket.as_raw_fd()));
+            }
             start_cpu = cpu();
             wall = Instant::now();
             if let Transport::Quic(q) = &tr {
@@ -603,6 +608,11 @@ async fn run(c: Config) -> Result<()> {
     }
     let elapsed = wall.elapsed().as_nanos() as u64;
     let end_cpu = cpu();
+    let tcp_end = if let Transport::Tcp(tcp) = &tr {
+        Some(tcp_info::Snapshot::capture(tcp._socket.as_raw_fd()))
+    } else {
+        None
+    };
     let quic_stats = if let Transport::Quic(q) = &tr {
         let a = before_stats.unwrap();
         let b = q.connection.stats();
@@ -612,7 +622,7 @@ async fn run(c: Config) -> Result<()> {
     } else {
         Value::Null
     };
-    let report = json!({"schema":1,"role":if c.server{"server"}else{"client"},"transport":if c.quic{"quinn"}else{"strata-openssl"},
+    let mut report = json!({"schema":1,"role":if c.server{"server"}else{"client"},"transport":if c.quic{"quinn"}else{"strata-openssl"},
         "strata_sha":"45d0493640b43e6264bd6d52da02a0ae5bf061cf","setup_ready_ns":setup_ns,
         "tokens":c.tokens,"rows":c.rows,"request_frame_bytes":req.len(),"reply_frame_bytes":rep.len(),
         "chains":c.chains,"exchanges_per_chain":52,"warmup_chains":c.warmup,"connections":1,"streams":1,"outstanding":1,
@@ -622,6 +632,12 @@ async fn run(c: Config) -> Result<()> {
         "rpc":summary(&rpc),"chain":summary(&chains),"rpc_samples_ns":rpc,"chain_samples_ns":chains,
         "completed_application_frame_bytes":(req.len()+rep.len())*c.chains*52,
         "tcp_wire_bytes":Value::Null,"tcp_retransmits":Value::Null,"quic_stats":quic_stats});
+    if let (Some(start), Some(end)) = (&tcp_start, &tcp_end) {
+        let info = tcp_info::report(start, end);
+        report["tcp_retransmits"] =
+            info["cumulative_deltas"]["tcpi_total_retrans"]["value"].clone();
+        report["tcp_info"] = info;
+    }
     // The client has validated the last reply. One final authenticated acknowledgment
     // lets the server close without discarding queued QUIC data; excluded from metrics.
     tokio::time::timeout(DEADLINE, tr.ready(c.server)).await??;

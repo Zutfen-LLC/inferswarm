@@ -4,8 +4,29 @@
 #include <openssl/err.h>
 #include <openssl/sslerr.h>
 #include <new>
+#include <cerrno>
+#ifdef __linux__
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <linux/tcp.h>
+#endif
 namespace { thread_local int last_verify_failure = 0; }
 extern "C" {
+// Read-only diagnostic on the caller-owned descriptor. Raw ABI bytes avoid
+// silently treating fields absent from an older kernel's tcp_info as zeros.
+int bench_tcp_info(int fd, unsigned char* data, size_t capacity, size_t* length) {
+    *length = 0;
+#ifdef __linux__
+    socklen_t n = static_cast<socklen_t>(capacity);
+    if (static_cast<size_t>(n) != capacity) return EINVAL;
+    if (getsockopt(fd, IPPROTO_TCP, TCP_INFO, data, &n) != 0) return errno;
+    *length = n;
+    return 0;
+#else
+    (void)fd; (void)data; (void)capacity;
+    return ENOTSUP;
+#endif
+}
 int bench_tls_verify_failure() { return last_verify_failure; }
 bool bench_validate(const char* ca,const char* cert,const char* key,const char* peer) {
     strata::worker::TlsConfig c{ca,cert,key,peer};std::string err;return c.validate(err);

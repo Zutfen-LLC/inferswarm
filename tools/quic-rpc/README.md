@@ -210,9 +210,64 @@ acknowledgment, close and endpoint drain; cleanup and late-ACK CPU work are excl
 explicitly rather than calling it total process CPU cost.
 
 QUIC UDP payload byte/loss counters are warm snapshot deltas; they exclude IP/Ethernet overhead and
-late ACKs. TCP wire bytes/retransmits are explicitly null. If an existing authorized per-flow observer
-can capture comparable wire/retransmission counters, retain them privately with scope; otherwise mark
-unavailable. Never call application frame bytes wire bytes or lost packets application retries.
+late ACKs. TCP wire bytes remain null. TCP now has the read-only per-socket diagnostics described below;
+unavailable fields remain null. Never call application/TCP payload bytes wire bytes or lost packets
+application retries. No additional packets, peer messages, sleeps or socket-option writes are used.
+
+### TCP_INFO diagnostic snapshots (Linux)
+
+Both TCP roles call `getsockopt(IPPROTO_TCP, TCP_INFO)` on their existing owned `TcpStream` descriptor,
+through the existing C++ FFI seam. The start snapshot is taken after warmup, **before** `getrusage` and
+the warm wall-clock start. The end snapshot is taken **after** the warm wall-clock and CPU counters stop,
+before report generation, final acknowledgment and socket close. Snapshot/decoder/serialization CPU
+and wall cost are excluded from the measured scopes. QUIC code, timing and report fields are unchanged.
+
+`tcp_info.start` and `.end` retain availability, errno, requested/returned byte lengths, raw native-endian
+hex and each decoded field's offset, width, unit, kind, support and value. TCP_INFO has no explicit
+kernel ABI version: `abi_version` is null, kernel release and native byte order are recorded, and the
+decoder identifies its known 248-byte Linux UAPI prefix. Every complete field must fit the actual
+returned length. Older kernels' absent fields are **null**, not zero-filled observations. Newer kernel
+suffix bytes are preserved raw. A returned length beyond the 1024-byte request is marked truncated.
+An unsupported/failed syscall retains errno and no invented length, raw bytes or field values.
+
+`tcp_info.cumulative_deltas` contains end minus start only for cumulative counters present at both
+snapshots: total retransmitted segments, retransmitted payload bytes, segment/byte/delivery counts,
+DSACK/reordering/out-of-order counters, busy/receive-window-limited/send-buffer-limited time and newer
+total-RTO/recovery/time counters where available. Counter decreases or possible wraps produce null
+with `counter_decreased_or_wrapped`; no wrap count is guessed. Top-level `tcp_retransmits` aliases the
+supported **`tcpi_total_retrans` delta**, otherwise null. These Linux segment counts are not physical
+Ethernet-frame counts; TCP byte counters include TLS records and are not application or wire bytes.
+
+Do **not** difference snapshot gauges as event counts. In particular, `tcpi_lost` is current inferred
+lost/outstanding segments; `tcpi_retrans` is retransmitted segments currently outstanding;
+`tcpi_retransmits` is the current RTO-retry state, not lifetime total retransmissions. RTT/RTT variance,
+RTO/ATO (microseconds), congestion window/threshold (segments), MSS/path MTU, current scaled advertised
+windows, not-sent bytes, pacing/delivery estimates and state/backoff are raw start/end observations.
+`tcpi_rcv_space` is a receive-space estimate, not the advertised receive window; use `tcpi_rcv_wnd`
+when available. `tcpi_min_rtt` is a connection-lifetime minimum and may include setup/warmup. Rates,
+sentinels and enum/bitmask values remain raw. Reference layout: Linux `include/uapi/linux/tcp.h`.
+
+The snapshot interval slightly surrounds the local measured interval; it does not synchronize hosts
+or wait for final ACKs. A server's last full write can finish before its last reply is delivered, and
+retransmissions/ACK work after its end snapshot are excluded. In-flight warmup work can cross the start
+boundary. These diagnostics attribute observations to this connection and local window, not a claim
+that every loss/retransmission on the physical path or complete final flight was counted. Failed
+fixtures retain their existing STOP output; a successful start/end pair is emitted only on completion.
+
+Focused pure tests cover unavailable/error responses, field-length boundaries, truncated buffers,
+cumulative versus instantaneous classification, decreasing counters and invalid descriptors. The
+additional deterministic Linux control uses one owned ephemeral loopback TCP pair and two fixed
+64-byte transfers, with one-second connect/I/O bounds and no TLS credentials. Run it separately where
+local sockets are permitted:
+
+```sh
+cargo test --offline --locked --bin inferswarm-quic-rpc \
+  tcp_info::tests::bounded_loopback_control_both_roles -- --ignored --exact
+```
+
+In the development sandbox, its bind was refused with EPERM before any listener opened; it is **NOT RUN
+to completion here**, not a passing control. The non-socket decoder tests and build checks are separate
+evidence. This diagnostic addition makes no performance or fleet-result claim.
 
 For both matched TCP/QUIC pairs, report client RPC and full-chain distributions, setup separately,
 client/server CPU, errors/retries, integrity and cleanup. Keep both repeats, including slower ones;
