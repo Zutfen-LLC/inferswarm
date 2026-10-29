@@ -19,6 +19,7 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const DEADLINE: Duration = Duration::from_secs(10);
 const ALPN: &[u8] = b"inferswarm-synthetic-rpc-v1";
 extern "C" {
+    fn bench_tls_verify_failure() -> i32;
     fn bench_validate(ca: *const i8, cert: *const i8, key: *const i8, peer: *const i8) -> bool;
     fn bench_tls(
         fd: i32,
@@ -33,6 +34,65 @@ extern "C" {
     fn bench_recv(s: *mut c_void, p: *mut u8, n: usize, ms: i32) -> bool;
     fn bench_free(s: *mut c_void);
     fn bench_san(der: *const u8, n: usize, peer: *const i8) -> bool;
+}
+
+fn mono_ns() -> u64 {
+    let mut ts = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    assert_eq!(
+        unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut ts) },
+        0
+    );
+    ts.tv_sec as u64 * 1_000_000_000 + ts.tv_nsec as u64
+}
+fn stage(event: &str, server: bool, name: &str) {
+    eprintln!(
+        "{}",
+        json!({"event":event,"role":if server{"server"}else{"client"},"stage":name,"mono_ns":mono_ns()})
+    );
+}
+fn rejection(server: bool, kind: &str) {
+    eprintln!(
+        "{}",
+        json!({"event":"peer_verification_rejected","role":if server{"server"}else{"client"},"kind":kind,"mono_ns":mono_ns()})
+    );
+}
+fn quic_certificate_failure(e: &quinn::ConnectionError) -> Option<&'static str> {
+    if let quinn::ConnectionError::TransportError(t) = e {
+        // Only locally detected certificate-related TLS alerts. A remote
+        // ConnectionClosed alert, setup error or timeout does not qualify.
+        return match u64::from(t.code) {
+            0x174 => Some("missing_certificate"),
+            0x12a..=0x12e | 0x130 | 0x131 => Some("invalid_certificate"),
+            _ => None,
+        };
+    }
+    None
+}
+fn quic_handshake_error(e: quinn::ConnectionError, server: bool) -> quinn::ConnectionError {
+    if let Some(kind) = quic_certificate_failure(&e) {
+        rejection(server, kind);
+    }
+    e
+}
+fn is_timeout(e: &(dyn Error + 'static)) -> bool {
+    if e.is::<tokio::time::error::Elapsed>() {
+        return true;
+    }
+    if let Some(io) = e.downcast_ref::<std::io::Error>() {
+        if let Some(q) = io
+            .get_ref()
+            .and_then(|inner| inner.downcast_ref::<quinn::ReadError>())
+        {
+            return matches!(
+                q,
+                quinn::ReadError::ConnectionLost(quinn::ConnectionError::TimedOut)
+            );
+        }
+    }
+    false
 }
 
 struct Config {
@@ -209,6 +269,7 @@ impl Tcp {
         let socket = if c.server {
             let listener = TcpListener::bind(c.local)?;
             listener.set_nonblocking(true)?;
+            eprintln!("{}", json!({"event":"listening","transport":"tcp"}));
             let start = Instant::now();
             loop {
                 match listener.accept() {
@@ -232,6 +293,8 @@ impl Tcp {
             socket2_connect(c.local, c.address)?
         };
         socket.set_nodelay(!c.server || c.nodelay)?;
+        stage("handshake_attempt", c.server, "handshake");
+        let handshake_start = Instant::now();
         let tls = unsafe {
             bench_tls(
                 socket.as_raw_fd(),
@@ -244,6 +307,15 @@ impl Tcp {
             )
         };
         if tls.is_null() {
+            match unsafe { bench_tls_verify_failure() } {
+                1 => rejection(c.server, "invalid_certificate"),
+                2 => rejection(c.server, "missing_certificate"),
+                _ => {
+                    if handshake_start.elapsed() >= DEADLINE {
+                        stage("stage_timeout", c.server, "handshake");
+                    }
+                }
+            }
             return Err("production Strata mTLS handshake rejected".into());
         }
         Ok(Self {
@@ -319,12 +391,14 @@ impl Quic {
             cfg.transport_config(Arc::new(transport));
             cfg.migration(false);
             let ep = Endpoint::server(cfg, c.local)?;
+            eprintln!("{}", json!({"event":"listening","transport":"quic"}));
             let incoming = ep.accept().await.ok_or("QUIC listener closed")?;
             if incoming.remote_address().ip() != c.peer_ip {
                 incoming.refuse();
                 return Err("unexpected QUIC peer".into());
             }
-            let conn = incoming.await?;
+            stage("handshake_attempt", true, "handshake");
+            let conn = incoming.await.map_err(|e| quic_handshake_error(e, true))?;
             (ep, conn)
         } else {
             let mut tls = rustls::ClientConfig::builder()
@@ -337,7 +411,11 @@ impl Quic {
             cfg.transport_config(Arc::new(transport));
             let mut ep = Endpoint::client(c.local)?;
             ep.set_default_client_config(cfg);
-            let conn = ep.connect(c.address, &c.peer)?.await?;
+            let connecting = ep.connect(c.address, &c.peer)?;
+            stage("handshake_attempt", false, "handshake");
+            let conn = connecting
+                .await
+                .map_err(|e| quic_handshake_error(e, false))?;
             (ep, conn)
         };
         let identity = connection
@@ -349,6 +427,7 @@ impl Quic {
         let leaf = chain.first().ok_or("empty peer chain")?;
         let name = CString::new(c.peer.as_str())?;
         if !unsafe { bench_san(leaf.as_ptr(), leaf.len(), name.as_ptr()) } {
+            rejection(c.server, "exact_san");
             connection.close(1u32.into(), b"identity");
             return Err("QUIC exact peer SAN rejected".into());
         }
@@ -460,6 +539,7 @@ async fn run(c: Config) -> Result<()> {
         Transport::Tcp(Tcp::establish(&c)?)
     };
     tokio::time::timeout(DEADLINE, tr.ready(c.server)).await??;
+    stage("authenticated_ready", c.server, "frame_read");
     let setup_ns = setup.elapsed().as_nanos() as u64;
     let mut req = request(c.tokens, c.rows);
     let mut rep = reply(c.tokens, c.rows);
@@ -480,6 +560,9 @@ async fn run(c: Config) -> Result<()> {
         let chain_start = Instant::now();
         for layer in 0..52 {
             sequence(&mut req, &mut rep, (chain * 52 + layer) as u64);
+            if c.server && chain == 0 && layer == 0 {
+                stage("frame_read_start", true, "frame_read");
+            }
             let start = Instant::now();
             let exchange = async {
                 if c.server {
@@ -495,6 +578,14 @@ async fn run(c: Config) -> Result<()> {
             }
             .await;
             if let Err(e) = exchange {
+                if c.server
+                    && (is_timeout(e.as_ref())
+                        || (!c.quic
+                            && e.to_string() == "TCP header short/deadline"
+                            && start.elapsed() >= DEADLINE))
+                {
+                    stage("stage_timeout", true, "frame_read");
+                }
                 eprintln!(
                     "{}",
                     json!({"status":"STOP","completed_warm_rpcs":rpc.len(),"completed_all_rpcs":chain*52+layer,
@@ -574,6 +665,33 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn certificate_failure_is_local_and_typed() {
+        let local =
+            quinn::ConnectionError::TransportError(quinn::TransportErrorCode::crypto(48).into());
+        assert_eq!(
+            quic_certificate_failure(&local),
+            Some("invalid_certificate")
+        );
+        assert_eq!(
+            quic_certificate_failure(&quinn::ConnectionError::TimedOut),
+            None
+        );
+        let absent =
+            quinn::ConnectionError::TransportError(quinn::TransportErrorCode::crypto(116).into());
+        assert_eq!(
+            quic_certificate_failure(&absent),
+            Some("missing_certificate")
+        );
+        let io = std::io::Error::from(quinn::ReadError::ConnectionLost(
+            quinn::ConnectionError::TimedOut,
+        ));
+        assert!(is_timeout(&io));
+        let io = std::io::Error::from(quinn::ReadError::ConnectionLost(
+            quinn::ConnectionError::Reset,
+        ));
+        assert!(!is_timeout(&io));
+    }
     #[test]
     fn shapes_and_sequence() {
         for t in 1..=8 {

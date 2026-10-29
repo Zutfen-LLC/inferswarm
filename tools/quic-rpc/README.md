@@ -94,6 +94,43 @@ and nearest-rank percentile reduction. They do not establish TLS handshakes, QUI
 network cleanup. Those gates require verified existing authorized test credentials; no certificate is
 generated here. Missing cached dependencies or credentials are explicit prerequisites.
 
+The prepared [local-smoke procedure](SMOKE.md) and `smoke.py`/`smoke_peer` provide a finite loopback
+execution path once the parent supplies and releases the approved test setup. They are not a permission
+to launch listeners; the actual authenticated cases below remain pending.
+
+## Authenticated interoperability gate — all cases pending
+
+Independent source review found no source blocker for a local authenticated smoke. That is not
+handshake, LAN or performance qualification. **Do not launch even loopback listeners until the parent
+supplies the approved certificate/test setup and bounded local-smoke dispatch.** Do not issue, renew,
+modify or generate certificates, or change the system clock to manufacture an expiry test.
+
+Before declaring the producer ready for LAN, retain the following actual socket/stream cases for
+**both TCP and QUIC**. Every case below is **NOT RUN**; unit tests and missing-file CLI failures do not
+satisfy any handshake or real-network failure case.
+
+| Case | Required observation / prerequisite |
+|---|---|
+| Valid mutual authentication | Both roles verify the peer, complete exact-byte exchanges, finish once and exit 0; same role credentials and dedicated CA trust across transports. |
+| Wrong server SAN | Client rejects the actual presented server certificate's identity; no successful exchange. |
+| Wrong client SAN | Server rejects the actual presented client certificate's identity; no successful exchange. |
+| Untrusted peer, each direction | Actual presented peer chains to a retained untrusted test CA; verifier rejects it. Requires approved existing negative fixtures. |
+| Expired peer, each direction | Actual presented peer is expired at the unchanged current clock; verifier rejects it. Requires an approved existing expired fixture and a presenting test peer able to send it. |
+| No client certificate | An actual certificate-free TLS/QUIC test client reaches the server handshake and is rejected. Passing a missing filename to this benchmark only proves CLI/configuration refusal and does not test this case. |
+| Wrong EKU, each direction | Actual presented peer has an unsuitable serverAuth/clientAuth purpose and is rejected. Requires approved existing negative fixtures. |
+| Incomplete chain, each direction | Required intermediate is omitted from the presented chain and is absent from dedicated verifier trust; handshake is rejected. An absent root alone is not an incomplete-chain test. |
+| Disconnect / truncation | Close the owned connection/stream during a header and during a payload; observe finite failure, no accepted partial exchange and owned cleanup. |
+| No progress / timeout | Stalled handshake, frame read and frame write reach their finite bounds and clean up. This requires actual peers/streams and bounded backpressure, not just the in-memory read-timeout unit test. |
+| Final close | Repeated valid exchanges deliver the final full reply and final acknowledgment/FIN, then both roles exit cleanly with no lingering listener/process. |
+
+The current benchmark intentionally requires a local certificate and key in both roles. It is therefore
+not itself a certificate-free test client. Negative certificate cases may also need a dedicated existing
+test peer that can present the approved invalid fixture. Those test adapters and fixtures must be
+identified with the parent's setup; they are prerequisites, not implemented or silently waived here.
+Expected authentication refusals count as passing negative cases only when the intended handshake was
+actually reached and the verifier's rejection is retained. Missing fixtures, access or a presenting-peer
+capability leave the named case pending. No fallback to plaintext or relaxed verification is allowed.
+
 ## Minimal two-host Hermes recipe — prepare now, run separately
 
 Do not SSH to or run this on fleet hosts under this PR. Do not overlap the active CUDA/Vulkan work.
@@ -119,11 +156,12 @@ the exact required access/credential action for approval. Do not bypass mTLS.
    whole four-pair limit**. Each setup/read/write has a 10-second internal bound (TCP header/payload are
    separate production operations). Kill only the pair's recorded PIDs on deadline/failure; retain all
    logs/exits and verify their listeners/descriptors are gone. No retries or count/timeout extensions.
-4. With existing verified test credentials, first perform one local correctness pair per transport,
-   T=1/R=5, 1 measured chain and 0 warmup. Then perform one negative pair for each transport with a
-   deliberately wrong peer DNS name; both roles must exit nonzero and no success receipt may exist.
-   No new credentials are needed. These are correctness gates, not timings. Stop on any failure.
-   The exact same executable then runs on both selected hosts; no production worker replacement.
+4. Complete the separately dispatched authenticated interoperability gate above with the approved
+   existing certificate/test setup. Use T=1/R=5, 1 measured chain and 0 warmup for the positive smoke;
+   bound every negative case separately in that dispatch. No local smoke is authorized by this recipe
+   alone. All required cases must have actual passing receipts before the LAN slot; missing negative
+   fixtures or test-peer capability remain pending. These are correctness gates, not timings. Stop on
+   an unexpected outcome. Use the same executable on both hosts; no production worker replacement.
 5. Freeze one actual source-compatible T/R shape using retained size metadata. Run **TCP, QUIC, QUIC,
    TCP** in that order, same direction, shape, counts and affinity. Each pair has **2 warmup chains**
    (104 exchanges, discarded) and **16 measured chains** (832 exchanges), always 52 dependent exchanges
@@ -165,6 +203,11 @@ handshake-only latency. Client per-RPC p50/p95/p99 includes full send, full rece
 Each 52-exchange chain is timed directly, not estimated as 52 times a percentile. Raw bounded samples,
 chain samples and CPU user/system deltas are emitted for both roles. Server RPC timing includes waiting
 for the next request and must not be subtracted from client RTT across unsynchronized clocks.
+OpenSSL's synchronous full write and Quinn's event-driven write acceptance have different completion
+semantics: a successful Quinn write can still have queued data. Compare the client's **full-response**
+timing and directly measured chains, not server send completion. CPU deltas end before the final
+acknowledgment, close and endpoint drain; cleanup and late-ACK CPU work are excluded. Report that scope
+explicitly rather than calling it total process CPU cost.
 
 QUIC UDP payload byte/loss counters are warm snapshot deltas; they exclude IP/Ethernet overhead and
 late ACKs. TCP wire bytes/retransmits are explicitly null. If an existing authorized per-flow observer
