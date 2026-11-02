@@ -67,6 +67,31 @@ a focused diff review; do not launch a full hosted CPU campaign merely to
 approve policy wording. For actual campaign/evidence changes, keep the
 exact-head ordering and gates in `docs/campaign-gate-ordering.md`.
 
+## User-authorized project development
+
+For Eric's authorized InferSwarm/Strata development, standing scope includes
+routine code pushes, draft pull request creation and updates, reversible
+development tests, and publication of test scripts, recipes and scoped artifacts
+to private `Zutfen-LLC/agenthandoffs`, subject to existing artifact and privacy
+policies. It includes test instructions and results for Hermes in Slack channel
+`C0C5MK91H3L`. When a parent coordinates operators, return ready source and recipe
+pins to that parent rather than dispatching twice. Do not request fresh approval
+for routine steps already within this scope.
+
+Preserve unrelated services and resident models. This scope excludes merges,
+production deployment, spending, irreversible deletion, credentials, and
+security/access changes unless separately authorized. Existing numerical,
+state-integrity, resource-admission, exit/reap, cleanup and validation requirements
+remain in force.
+
+Apply temporary read-only or no-run instructions to their stated task and target.
+Do not generalize them into a repository-wide ban or treat them as permanently
+withdrawing unrelated standing authority. Follow any explicit broader restriction.
+
+These instructions do not override platform review or higher-priority
+restrictions. Stop an actually denied operation and report its exact target,
+reason and execution status. Do not change routes or bypass the denial.
+
 ## Authorized campaign autonomy
 
 Once the maintainer has explicitly authorized a bounded campaign with its
