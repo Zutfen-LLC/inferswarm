@@ -84,9 +84,11 @@ cd tools/quic-rpc
 cargo test --offline --locked
 cargo clippy --offline --locked --all-targets -- -D warnings
 cargo fmt --check
-cargo build --offline --locked --release -j2
+cargo build --offline --locked --release -j "$BUILD_JOBS"
 sha256sum target/release/inferswarm-quic-rpc
 ```
+
+Choose and record `BUILD_JOBS` for the host's current load, memory headroom and concurrent work.
 
 Focused tests cover all supported T and selected R frame lengths, sequence offsets, finite F32 bytes,
 single-bit corruption, malformed magic/type/status/length, fragmented reads, truncation, finite timeout
@@ -94,20 +96,24 @@ and nearest-rank percentile reduction. They do not establish TLS handshakes, QUI
 network cleanup. Those gates require verified existing authorized test credentials; no certificate is
 generated here. Missing cached dependencies or credentials are explicit prerequisites.
 
-The prepared [local-smoke procedure](SMOKE.md) and `smoke.py`/`smoke_peer` provide a finite loopback
-execution path once the parent supplies and releases the approved test setup. They are not a permission
-to launch listeners; the actual authenticated cases below remain pending.
+The [local-smoke procedure](SMOKE.md) and `smoke.py`/`smoke_peer` provide a finite loopback execution
+path with an authorized test setup. A bounded local run on producer head
+`6e3cd19460f86a6a7420334d8d7dabd4119512be` plus the fault-adapter patch observed 36 selected pairs
+passing, including supplied negative fixtures and the new timeout cases; receipts remain private.
+This observation is not acceptance or LAN authorization.
 
-## Authenticated interoperability gate — all cases pending
+## Authenticated interoperability — local cases observed
 
-Independent source review found no source blocker for a local authenticated smoke. That is not
-handshake, LAN or performance qualification. **Do not launch even loopback listeners until the parent
-supplies the approved certificate/test setup and bounded local-smoke dispatch.** Do not issue, renew,
-modify or generate certificates, or change the system clock to manufacture an expiry test.
+The local observation above applies to the tested build and loopback host, not LAN or performance
+qualification. The serial positive workload is T1/R5 with 52 exchanges; the write fault uses a
+separate pipelined T8/R80 workload. The source applicability caveat above still requires reconciliation
+before LAN. A run requires an authorized certificate/test setup and bounded local-smoke dispatch.
+Do not change the system clock to manufacture an expiry test.
 
 Before declaring the producer ready for LAN, retain the following actual socket/stream cases for
-**both TCP and QUIC**. Every case below is **NOT RUN**; unit tests and missing-file CLI failures do not
-satisfy any handshake or real-network failure case.
+**both TCP and QUIC**. The selected local run covered the listed cases, including stalled handshake,
+read and write faults. Unit tests and missing-file CLI failures do not satisfy any handshake or
+real-network failure case; a local observation does not automatically qualify another build or host.
 
 | Case | Required observation / prerequisite |
 |---|---|
@@ -123,10 +129,12 @@ satisfy any handshake or real-network failure case.
 | No progress / timeout | Stalled handshake, frame read and frame write reach their finite bounds and clean up. This requires actual peers/streams and bounded backpressure, not just the in-memory read-timeout unit test. |
 | Final close | Repeated valid exchanges deliver the final full reply and final acknowledgment/FIN, then both roles exit cleanly with no lingering listener/process. |
 
-The current benchmark intentionally requires a local certificate and key in both roles. It is therefore
-not itself a certificate-free test client. Negative certificate cases may also need a dedicated existing
-test peer that can present the approved invalid fixture. Those test adapters and fixtures must be
-identified with the parent's setup; they are prerequisites, not implemented or silently waived here.
+The benchmark intentionally requires a local certificate and key in both roles, so it is not itself a
+certificate-free test client. The smoke helper supplies certificate-free TCP and QUIC clients and
+supports supplied negative certificate fixtures. Their actual socket behavior was observed in the
+bounded local run on the tested build with authorized test-only inputs; this does not establish behavior
+for different builds, fixtures or hosts. Missing approved fixtures or presenting-peer capability remain
+prerequisites, not silently waived.
 Expected authentication refusals count as passing negative cases only when the intended handshake was
 actually reached and the verifier's rejection is retained. Missing fixtures, access or a presenting-peer
 capability leave the named case pending. No fallback to plaintext or relaxed verification is allowed.
@@ -265,9 +273,10 @@ cargo test --offline --locked --bin inferswarm-quic-rpc \
   tcp_info::tests::bounded_loopback_control_both_roles -- --ignored --exact
 ```
 
-In the development sandbox, its bind was refused with EPERM before any listener opened; it is **NOT RUN
-to completion here**, not a passing control. The non-socket decoder tests and build checks are separate
-evidence. This diagnostic addition makes no performance or fleet-result claim.
+In the development sandbox, its bind was refused with EPERM before any listener opened. A subsequent
+separate bounded loopback control was observed passing on the selected build host; it used no TLS and
+is not authenticated-interoperability evidence. The non-socket decoder tests and build checks are
+separate evidence. This diagnostic addition makes no performance or fleet-result claim.
 
 For both matched TCP/QUIC pairs, report client RPC and full-chain distributions, setup separately,
 client/server CPU, errors/retries, integrity and cleanup. Keep both repeats, including slower ones;

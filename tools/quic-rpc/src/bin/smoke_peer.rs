@@ -52,10 +52,37 @@ fn cut(mode: &str) -> Result<Vec<u8>> {
             head.extend_from_slice(&[0; 7]);
             Ok(head)
         }
-        "disconnect" | "stall-frame" => Ok(vec![]),
+        "disconnect" | "stall-frame" | "block-write" => Ok(vec![]),
         _ => Err("unsupported fault mode".into()),
     }
 }
+// Exact T=8/R=80 source-shaped requests, pipelined only by the fault helper.
+fn fault_request(seq: u64) -> Vec<u8> {
+    let mut p = Vec::new();
+    for x in [1u64, 2, 3, seq] {
+        p.extend_from_slice(&x.to_le_bytes());
+    }
+    p.extend_from_slice(&0u16.to_le_bytes());
+    p.extend([8, 10]);
+    p.extend([1u8; 80]);
+    for i in 0..80u16 {
+        p.extend_from_slice(&i.to_le_bytes());
+    }
+    for _ in 0..80 {
+        p.extend_from_slice(&0.1f32.to_le_bytes());
+    }
+    for i in 0..8 * 2560u32 {
+        let x = i.wrapping_mul(1664525).wrapping_add(1013904223 ^ 17);
+        p.extend_from_slice(&((x & 0x807fffff) | 0x3f000000).to_le_bytes());
+    }
+    let mut frame = b"SEW1".to_vec();
+    frame.extend_from_slice(&20u16.to_le_bytes());
+    frame.extend_from_slice(&0u16.to_le_bytes());
+    frame.extend_from_slice(&(p.len() as u64).to_le_bytes());
+    frame.extend_from_slice(&p);
+    frame
+}
+
 struct Tcp {
     tls: *mut c_void,
     _fd: TcpStream,
@@ -70,6 +97,21 @@ impl Drop for Tcp {
 fn tcp(args: &[String], addr: SocketAddr) -> Result<()> {
     let mode = &args[4];
     let fd = TcpStream::connect_timeout(&addr, Duration::from_secs(5))?;
+    if mode == "block-write" {
+        let size: libc::c_int = 4096;
+        if unsafe {
+            libc::setsockopt(
+                fd.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_RCVBUF,
+                (&size as *const libc::c_int).cast(),
+                std::mem::size_of_val(&size) as libc::socklen_t,
+            )
+        } != 0
+        {
+            return Err(std::io::Error::last_os_error().into());
+        }
+    }
     println!("{}", json!({"event":"connected","transport":"tcp"}));
     if mode == "stall-handshake" {
         std::thread::sleep(Duration::from_millis(11500));
@@ -105,6 +147,17 @@ fn tcp(args: &[String], addr: SocketAddr) -> Result<()> {
         return Err("ready failed".into());
     }
     println!("{}", json!({"event":"authenticated_ready"}));
+    if mode == "block-write" {
+        let start = std::time::Instant::now();
+        for seq in 0..64 {
+            let request = fault_request(seq);
+            if !unsafe { bench_send(p.tls, request.as_ptr(), request.len(), 10000) } {
+                break;
+            }
+        }
+        std::thread::sleep(Duration::from_secs(13).saturating_sub(start.elapsed()));
+        return Ok(());
+    }
     let payload = cut(mode)?;
     if !payload.is_empty() && !unsafe { bench_send(p.tls, payload.as_ptr(), payload.len(), 10000) }
     {
@@ -134,9 +187,33 @@ async fn quic(args: &[String], addr: SocketAddr) -> Result<()> {
     tls.enable_early_data = false;
     tls.resumption = rustls::client::Resumption::disabled();
     let mut ep = Endpoint::client("127.0.0.1:0".parse()?)?;
-    ep.set_default_client_config(quinn::ClientConfig::new(Arc::new(
-        QuicClientConfig::try_from(tls)?,
-    )));
+    let mut config = quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(tls)?));
+    if mode == "block-write" {
+        let mut transport = quinn::TransportConfig::default();
+        transport
+            .stream_receive_window(65536u32.into())
+            .receive_window(65536u32.into())
+            .keep_alive_interval(Some(Duration::from_secs(1)));
+        config.transport_config(Arc::new(transport));
+    }
+    ep.set_default_client_config(config);
+    if mode == "stall-handshake" {
+        let relay = tokio::net::UdpSocket::bind("127.0.0.1:0").await?;
+        let connecting = ep.connect(relay.local_addr()?, &args[3])?;
+        let task = tokio::spawn(async move {
+            let _ = connecting.await;
+        });
+        let mut packet = [0u8; 65536];
+        let (n, source) = relay.recv_from(&mut packet).await?;
+        if !source.ip().is_loopback() || n < 1200 {
+            return Err("invalid initial datagram".into());
+        }
+        relay.send_to(&packet[..n], addr).await?;
+        println!("{}", json!({"event":"initial_forwarded","bytes":n}));
+        tokio::time::sleep(Duration::from_millis(11500)).await;
+        task.abort();
+        return Ok(());
+    }
     println!(
         "{}",
         json!({"event":"handshake_attempt","certificate_configured":!no_cert,"transport":"quic"})
@@ -165,6 +242,18 @@ async fn quic(args: &[String], addr: SocketAddr) -> Result<()> {
     );
     if no_cert {
         return Err("BUG: certificate-free client reached application-ready state".into());
+    }
+    if mode == "block-write" {
+        let writer = tokio::spawn(async move {
+            for seq in 0..64 {
+                if send.write_all(&fault_request(seq)).await.is_err() {
+                    break;
+                }
+            }
+        });
+        tokio::time::sleep(Duration::from_secs(13)).await;
+        writer.abort();
+        return Ok(());
     }
     let bytes = cut(mode)?;
     if !bytes.is_empty() {
@@ -211,9 +300,6 @@ fn main() {
         match args[0].as_str() {
             "tcp" => tcp(&args, addr),
             "quic" => {
-                if mode == "stall-handshake" {
-                    return Err("QUIC handshake stall requires a separately scoped drop adapter; not implemented".into());
-                }
                 rustls::crypto::ring::default_provider()
                     .install_default()
                     .map_err(|_| "provider")?;
@@ -242,5 +328,8 @@ mod tests {
         assert_eq!(&p[..4], b"SEW1");
         assert_eq!(u64::from_le_bytes(p[8..16].try_into().unwrap()), 10346);
         assert!(cut("bad").is_err());
+        let request = fault_request(37);
+        assert_eq!(request.len(), 16 + 36 + 80 * 7 + 8 * 2560 * 4);
+        assert_eq!(&request[40..48], &37u64.to_le_bytes());
     }
 }

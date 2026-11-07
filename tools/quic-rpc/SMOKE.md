@@ -1,14 +1,17 @@
 # Local authenticated smoke on the selected build host
 
-**Prepared, NOT RUN.** Use this only after the parent releases the separate local-smoke slot.
-Certificate preparation/build approval alone does not release listeners or traffic. This is a finite
-loopback test, not the LAN ABBA arm, an inference run or transport qualification. No credential creation,
-renewal, clock change, firewall/NIC change, model action or off-host connection is performed here.
+A bounded local run on producer head `6e3cd19460f86a6a7420334d8d7dabd4119512be` plus the
+fault-adapter patch observed all 36 selected pairs passing; receipts remain private. This is a finite
+loopback test, not the LAN ABBA arm, an inference run or transport qualification. Run only within an
+authorized local test setup; do not change the clock, firewall/NIC, models or off-host connections.
 
 ## Inputs Hermes supplies privately
 
-* Exact published base `496a066060cb57b9a9cfcd43145a4ba76739b4d7` plus the parent-reviewed combined
-  local patch/manifest reported with this handoff. The helper changes are not yet published.
+* The exact parent-reviewed candidate commit and any reviewed local patch, recorded with the run.
+  Historical provenance: `496a066060cb57b9a9cfcd43145a4ba76739b4d7` was the initial producer
+  base, not a sufficient source pin for this smoke helper or the TCP_INFO diagnostic. The prepared
+  checkout's initial head was `6e3cd19460f86a6a7420334d8d7dabd4119512be`; do not substitute it
+  for a later reviewed candidate.
 * Verified retained Strata source `45d0493640b43e6264bd6d52da02a0ae5bf061cf`; build.rs verifies its
   actual TLS/socket inputs. Existing Rust/C++/OpenSSL dependencies compatible with Cargo.lock.
 * The approved short-lived test CA PEM, and **locally authorized** server and client certificate-chain
@@ -21,9 +24,8 @@ renewal, clock change, firewall/NIC change, model action or off-host connection 
 * Fresh private output directories, an inherited reserved CPU/resource envelope (no competing
   benchmark), 256 MiB memory per child/no swap, and the existing health/ownership supervisor.
   The runner uses at most one server/client pair at a time; no GPU or model.
-* Optional approved existing negative certificate/key inputs below. Do not issue invalid fixtures or
-  reuse unrelated credentials. The new 24-hour valid certificates do not provide expired/EKU/chain
-  negative fixtures by themselves.
+* Approved test-only negative certificate/key inputs below. Do not reuse unrelated credentials.
+  Positive certificates do not by themselves provide expired/EKU/chain negative fixtures.
 
 Positive identities are checked with `openssl verify -purpose sslserver|sslclient -verify_hostname`,
 dedicated CA trust and the unchanged current clock. Public-key DER is compared without emitting the
@@ -35,16 +37,18 @@ private key. For intermediate chains, `cert` is the actual leaf-first presented 
 ```sh
 cd "$SRC/tools/quic-rpc"
 export STRATA_SOURCE="$VERIFIED_STRATA_SOURCE"
+export CARGO_TARGET_DIR="$PRIVATE_BUILD_DIR"
 cargo test --offline --locked
 cargo clippy --offline --locked --all-targets -- -D warnings
 cargo fmt --check
 python3 -m unittest -v test_smoke.py
-cargo build --offline --locked --release --bins -j2
-sha256sum target/release/inferswarm-quic-rpc target/release/smoke_peer Cargo.lock
+cargo build --offline --locked --release --bins -j "$BUILD_JOBS"
+sha256sum "$CARGO_TARGET_DIR/release/inferswarm-quic-rpc" "$CARGO_TARGET_DIR/release/smoke_peer" Cargo.lock
 ```
 
-Resolve `SRC` to the exact approved candidate source and preserve the hashes privately. Missing
-dependencies are a STOP; this command does not fetch or install them. The Python tests only inspect
+Resolve `SRC` to the exact approved candidate source and preserve the hashes privately. Choose and
+record `BUILD_JOBS` for the host's current load, memory and concurrent work. Missing dependencies are
+a STOP; this command does not fetch or install them. The Python tests only inspect
 command construction/result classification; they do not launch listeners or prove authentication.
 
 ## Manifest
@@ -77,10 +81,13 @@ loopback inside the runner; there is no manifest address/route override.
 }
 ```
 
-The complete initial selection above runs **17 pairs**: eight cases on both TCP and QUIC, and one
-TCP stalled-handshake case. Every positive pair performs exactly 52 exchanges (T1/R5, one chain,
-zero warmups), validating full payload bytes and final acknowledgment/close. There are no latency
-acceptance gates or retries. Wrong expected SAN is exercised separately at client and server.
+The initial selection above runs **17 pairs**: eight cases on both TCP and QUIC, plus the TCP
+stalled-handshake case. To select the full **36 pairs**, append `stall-handshake-quic` and `block-write`
+to `cases`, and add and select all eight `(kind, role)` negative declarations described below. The
+additional fault cases contribute three pairs; the eight negative declarations contribute 16. Every
+positive pair performs exactly 52 exchanges (T1/R5, one chain, zero warmups), validating full payload
+bytes and final acknowledgment/close. There are no latency acceptance gates or retries. Wrong expected
+SAN is exercised separately at client and server.
 
 The missing-client case is real:
 
@@ -120,16 +127,20 @@ Use separate entries for each available `(kind, role)` pair:
 | Kind | Required additional existing inputs |
 |---|---|
 | `untrusted` | A matching-key peer with the correct SAN and role EKU, signed by a CA absent from the dedicated verifier trust. |
-| `expired` | A matching-key peer already expired at the unchanged current clock, with the correct SAN/purpose; no clock manipulation or new certificate issuance. |
+| `expired` | An approved matching-key peer expired at the unchanged current clock, with the correct SAN/purpose. Certificate issuance requires explicit authorization; never manipulate the clock. |
 | `wrong-eku` | A matching-key peer with the correct SAN/trusted chain but unsuitable serverAuth/clientAuth purpose for its role. |
 | `incomplete-chain` | A trusted-chain peer requiring an intermediate omitted from its presented chain; the verifier trust must contain only the authorized root, not the missing intermediate. Omitting the root alone is not this test. Retain the complete chain's successful reference verification receipt. |
 
 Missing inputs stay **PENDING** in the final summary; they are not waived or claimed as tested.
 Certificate presentation failures before listener readiness are STOP, not passing negative handshakes.
-This helper is not a general PKI test framework. QUIC stalled-handshake injection and a forced blocked
-**write** (both transports) remain pending separate fault adapters; the implemented `stall-frame`
-case proves a stalled-read/idle path, not write backpressure. Final-close behavior is exercised by
-the positive pair. All successful/negative actual socket outcomes remain NOT RUN until Hermes runs them.
+This helper is not a general PKI test framework. `stall-handshake-quic` forwards one genuine client
+Initial datagram through an owned loopback relay and suppresses subsequent traffic. `block-write` uses
+an authenticated non-consuming client and finite pipelined T8/R80 exact requests, with a constrained
+TCP receive buffer or QUIC receive credit and keepalive. It is fault injection, **not** the serial
+performance workload. Its opt-in server diagnostics require an independently timed frame-write
+failure, not a read timeout or outer kill. The `stall-frame` case separately tests read/idle failure;
+final close is exercised by the positive pair. Local observations do not qualify a different build or
+environment.
 
 ## Commands
 
@@ -140,7 +151,7 @@ python3 "$SRC/tools/quic-rpc/smoke.py" --manifest "$PRIVATE_MANIFEST" \
   --out "$PRIVATE_PREFLIGHT_OUT" --preflight-only
 ```
 
-After the parent's separate local-smoke release, use the inherited health/resource supervisor and
+Within the authorized local-smoke scope, use the inherited health/resource supervisor and
 an additional **660-second outer bound** for the runner (600 internal plus owned cleanup):
 
 ```sh
@@ -166,9 +177,9 @@ If the installed stack supplies no unambiguous local rejection diagnostic, prese
 rather than inferring verification from a timeout. No verification policy is relaxed for these events.
 
 The runner polls both children independently and retains their first observed exit timestamps. Stall
-cases require the server's explicit timeout event at the intended handshake or frame-read stage, with
-9.5..20 seconds from its connection/handshake-start or authenticated-ready event to both timeout and
-independently observed server exit (same-host CLOCK_MONOTONIC). The helper's 11.5-second hold and total
+cases require the server's explicit timeout event at the intended handshake, frame-read or frame-write
+stage, with 9.5..20 seconds from its handshake-start, authenticated-ready or most recent write-start
+event to both timeout and independently observed server exit (same-host CLOCK_MONOTONIC). The helper's 11.5-second hold and total
 pair duration cannot satisfy this check if the server fails immediately. Those wide observation bounds
 do not extend any 10-second internal deadline or the existing pair/whole-run budget.
 

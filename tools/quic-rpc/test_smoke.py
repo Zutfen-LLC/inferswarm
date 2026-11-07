@@ -99,6 +99,21 @@ class SmokeTest(unittest.TestCase):
         right_stage = wrong_stage.replace('frame_read', 'handshake')
         self.assertTrue(smoke.timeout_evidence("stall-handshake-tcp", smoke.events(attempt+'\n'+right_stage), timing))
 
+    def test_new_fault_commands_and_write_timeout_evidence(self):
+        c = smoke.command(config(), "server", "tcp", "127.0.0.1:12345", "block-write")
+        self.assertEqual(c[10:12], ["8", "80"])
+        c = smoke.peer_command(config(), "quic", "127.0.0.1:12345", "stall-handshake-quic")
+        self.assertEqual(c[5], "stall-handshake")
+        ready = json.dumps({"event": "authenticated_ready", "role": "server"})
+        start = json.dumps({"event": "frame_write_start", "role": "server", "mono_ns": 1_000_000_000})
+        expired = json.dumps({"event": "stage_timeout", "role": "server", "stage": "frame_write", "mono_ns": 11_000_000_000})
+        timing = {"server_exit_ns": 11_010_000_000}
+        self.assertTrue(smoke.evaluate("block-write", "tcp", 1, 0, "", '\n'.join([ready, start, expired]), ready, "", timing=timing)[0])
+        self.assertFalse(smoke.evaluate("block-write", "tcp", 1, 0, "", '\n'.join([ready, start, expired.replace('frame_write', 'frame_read')]), ready, "", timing=timing)[0])
+        self.assertFalse(smoke.evaluate("block-write", "tcp", 1, 0, "", '\n'.join([ready, start, expired]), ready, "", timing={"server_exit_ns": 1_010_000_000})[0])
+        self.assertFalse(smoke.evaluate("block-write", "tcp", 1, 0, "", "setup failed", "", "", timing=timing)[0])
+        self.assertFalse(smoke.evaluate("stall-handshake-quic", "quic", 1, 0, "", "setup failed", '{"event":"initial_forwarded","bytes":1200}', "", timing=timing)[0])
+
     def test_exit_monitor_observes_early_server_while_helper_keeps_running(self):
         class Clock:
             now = 0.0

@@ -45,7 +45,8 @@ def command(config, role, transport, address, case):
     return [config["benchmark"], role, transport, address,
             address if role == "server" else "127.0.0.1:0", "127.0.0.1",
             config["ca"], identity["cert"], identity["key"], expected,
-            "1", "5", "1", "0", "0", "1"]
+            *( ["8", "80"] if case == "block-write" else ["1", "5"] ),
+            "1", "0", "0", "1"]
 
 
 def peer_command(config, transport, address, case):
@@ -57,7 +58,7 @@ def peer_command(config, transport, address, case):
                     "-verify_return_error", "-tls1_3", "-no_ticket", "-quiet"]
         return [config["peer"], "quic", address, config["ca"],
                 config["server"]["dns"], "no-client-cert"]
-    mode = "stall-handshake" if case == "stall-handshake-tcp" else case
+    mode = "stall-handshake" if case in ("stall-handshake-tcp", "stall-handshake-quic") else case
     return [config["peer"], transport, address, config["ca"], config["server"]["dns"],
             mode, config["client"]["cert"], config["client"]["key"]]
 
@@ -77,7 +78,7 @@ def validate(config):
         if not name or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-" for c in name):
             raise ValueError("require explicit SAN DNS name")
     for case in cases:
-        if case in BASE or case == "stall-handshake-tcp":
+        if case in BASE or case in ("stall-handshake-tcp", "stall-handshake-quic", "block-write"):
             continue
         n = config.get("negative", {}).get(case)
         if not n or n.get("role") not in ("client", "server") or n.get("kind") not in KINDS:
@@ -127,13 +128,18 @@ def stop_owned(child):
 
 
 def timeout_evidence(case, server_events, timing):
-    stage_name = "handshake" if case == "stall-handshake-tcp" else "frame_read"
-    anchor_event = "handshake_attempt" if stage_name == "handshake" else "authenticated_ready"
-    anchor = next((e.get("mono_ns") for e in server_events
-                   if e.get("event") == anchor_event and e.get("role") == "server"), None)
+    stage_name = ("handshake" if case.startswith("stall-handshake-") else
+                  "frame_write" if case == "block-write" else "frame_read")
+    anchor_event = {"handshake": "handshake_attempt", "frame_write": "frame_write_start",
+                    "frame_read": "authenticated_ready"}[stage_name]
     expired = next((e.get("mono_ns") for e in server_events
                     if e.get("event") == "stage_timeout" and e.get("role") == "server"
                     and e.get("stage") == stage_name), None)
+    anchors = [e.get("mono_ns") for e in server_events
+               if e.get("event") == anchor_event and e.get("role") == "server"
+               and isinstance(e.get("mono_ns"), int) and isinstance(expired, int)
+               and e["mono_ns"] <= expired]
+    anchor = max(anchors, default=None)
     exit_ns = (timing or {}).get("server_exit_ns")
     if not all(isinstance(v, int) for v in (anchor, expired, exit_ns)):
         return False
@@ -158,7 +164,7 @@ def evaluate(case, transport, server_rc, client_rc, server_out, server_err, clie
                     r.get("chains"), r.get("warmup_chains")) != (52, 0, "all bytes exact", 1, 1, 0):
                 return False, "positive count/integrity mismatch"
         return ready_s and ready_c, "positive full exchange and final close"
-    if success_s or (case not in ("header-cut", "payload-cut", "disconnect", "stall-frame", "stall-handshake-tcp") and success_c):
+    if success_s or (case not in ("header-cut", "payload-cut", "disconnect", "stall-frame", "stall-handshake-tcp", "stall-handshake-quic", "block-write") and success_c):
         return False, "negative case produced a success receipt"
     if server_rc == 0 or server_rc == -signal.SIGKILL or client_rc == -signal.SIGKILL:
         return False, "negative peer not rejected or outer timeout"
@@ -172,9 +178,13 @@ def evaluate(case, transport, server_rc, client_rc, server_out, server_err, clie
         if case == "stall-frame" and not timeout_evidence(case, se, timing):
             return False, "missing intended server read/idle timeout stage and independent duration"
         return True, "authenticated injected stream fault caused bounded failure"
-    if case == "stall-handshake-tcp":
-        return (client_rc == 0 and not ready_s and '"event":"connected"' in client_out
-                and timeout_evidence(case, se, timing)), "connected TCP peer stalled before TLS progress"
+    if case in ("stall-handshake-tcp", "stall-handshake-quic"):
+        injected = ('"event":"connected"' in client_out if transport == "tcp" else
+                    any(e.get("event") == "initial_forwarded" and e.get("bytes", 0) >= 1200 for e in ce))
+        return (client_rc == 0 and not ready_s and injected
+                and timeout_evidence(case, se, timing)), "real handshake stalled before authentication"
+    if case == "block-write":
+        return (ready_s and ready_c and client_rc == 0 and timeout_evidence(case, se, timing)), "authenticated non-consuming peer; require server frame-write deadline"
     if ready_s or client_rc == 0:
         return False, "negative authentication reached ready or client did not fail"
     if case == "missing-client-cert":
@@ -224,7 +234,11 @@ def run_pair(config, root, transport, case, total_deadline):
         out = open(directory / f"{role}.stdout", "w", encoding="utf-8")
         err = open(directory / f"{role}.stderr", "w", encoding="utf-8")
         handles.extend([out, err])
-        child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=out, stderr=err, start_new_session=True)
+        env = os.environ.copy()
+        env.pop("INFERSWARM_SMOKE_WRITE_DIAGNOSTIC", None)
+        if case == "block-write" and role == "server":
+            env["INFERSWARM_SMOKE_WRITE_DIAGNOSTIC"] = "1"
+        child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=out, stderr=err, start_new_session=True, env=env)
         children.append(child)
         processes[role] = {"pid": child.pid, "argv": argv}
         (directory / "processes.json").write_text(json.dumps(processes, indent=2) + "\n")
@@ -242,7 +256,7 @@ def run_pair(config, root, transport, case, total_deadline):
             time.sleep(0.02)
         else:
             raise RuntimeError("listener readiness deadline")
-        fault = case in ("header-cut", "payload-cut", "disconnect", "stall-frame", "stall-handshake-tcp", "missing-client-cert")
+        fault = case in ("header-cut", "payload-cut", "disconnect", "stall-frame", "stall-handshake-tcp", "stall-handshake-quic", "block-write", "missing-client-cert")
         argv = peer_command(config, transport, address, case) if fault else command(config, "client", transport, address, case)
         client = launch("client", argv)
         # Poll both children independently; never let helper sleep inflate the
@@ -297,13 +311,13 @@ def main():
                "cases": [], "pending": [f"{kind}-{role}" for kind in KINDS for role in ("server", "client")
                                          if not any(v["kind"] == kind and v["role"] == role and name in config["cases"]
                                                     for name, v in config.get("negative", {}).items())]
-               + [name for name in BASE + ("stall-handshake-tcp",) if name not in config["cases"]]
-               + ["QUIC stalled handshake", "forced blocked frame write (both transports)"]}
+               + [name for name in BASE + ("stall-handshake-tcp", "stall-handshake-quic", "block-write") if name not in config["cases"]]}
     try:
         if not a.preflight_only:
             deadline = time.monotonic() + 600
             for case in config["cases"]:
-                for transport in (("tcp",) if case == "stall-handshake-tcp" else ("tcp", "quic")):
+                for transport in (("tcp",) if case == "stall-handshake-tcp" else
+                                  ("quic",) if case == "stall-handshake-quic" else ("tcp", "quic")):
                     if time.monotonic() >= deadline:
                         raise RuntimeError("whole local smoke 600-second budget expired")
                     summary["cases"].append(run_pair(config, a.out, transport, case, deadline))

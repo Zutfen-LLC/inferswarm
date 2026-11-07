@@ -367,7 +367,7 @@ struct Quic {
     recv: quinn::RecvStream,
 }
 impl Quic {
-    async fn establish(c: &Config) -> Result<Self> {
+    async fn establish(c: &Config, handshake_started: &mut bool) -> Result<Self> {
         let mut roots = rustls::RootCertStore::empty();
         for cert in certs(&c.ca)? {
             roots.add(cert)?;
@@ -398,8 +398,10 @@ impl Quic {
                 incoming.refuse();
                 return Err("unexpected QUIC peer".into());
             }
+            *handshake_started = true;
             stage("handshake_attempt", true, "handshake");
             let conn = incoming.await.map_err(|e| quic_handshake_error(e, true))?;
+            *handshake_started = false;
             (ep, conn)
         } else {
             let mut tls = rustls::ClientConfig::builder()
@@ -535,7 +537,16 @@ fn summary(v: &[u64]) -> Value {
 async fn run(c: Config) -> Result<()> {
     let setup = Instant::now();
     let mut tr = if c.quic {
-        Transport::Quic(tokio::time::timeout(DEADLINE, Quic::establish(&c)).await??)
+        let mut handshake_started = false;
+        match tokio::time::timeout(DEADLINE, Quic::establish(&c, &mut handshake_started)).await {
+            Ok(result) => Transport::Quic(result?),
+            Err(e) => {
+                if c.server && handshake_started {
+                    stage("stage_timeout", true, "handshake");
+                }
+                return Err(e.into());
+            }
+        }
     } else {
         Transport::Tcp(Tcp::establish(&c)?)
     };
@@ -551,6 +562,8 @@ async fn run(c: Config) -> Result<()> {
     let mut wall = Instant::now();
     let mut before_stats = None;
     let mut tcp_start = None;
+    let diagnose_write =
+        c.server && std::env::var_os("INFERSWARM_SMOKE_WRITE_DIAGNOSTIC").is_some();
     for chain in 0..c.warmup + c.chains {
         if chain == c.warmup {
             if let Transport::Tcp(tcp) = &tr {
@@ -569,11 +582,25 @@ async fn run(c: Config) -> Result<()> {
                 stage("frame_read_start", true, "frame_read");
             }
             let start = Instant::now();
+            let mut reading = true;
             let exchange = async {
                 if c.server {
                     tr.recv(&mut received, &req).await?;
                     integrity(&received, &req)?;
-                    tr.send(&rep).await?;
+                    reading = false;
+                    if diagnose_write {
+                        stage("frame_write_start", true, "frame_write");
+                        let started = Instant::now();
+                        if let Err(e) = tr.send(&rep).await {
+                            if is_timeout(e.as_ref()) || (!c.quic && started.elapsed() >= DEADLINE)
+                            {
+                                stage("stage_timeout", true, "frame_write");
+                            }
+                            return Err(e);
+                        }
+                    } else {
+                        tr.send(&rep).await?;
+                    }
                 } else {
                     tr.send(&req).await?;
                     tr.recv(&mut received, &rep).await?;
@@ -584,6 +611,7 @@ async fn run(c: Config) -> Result<()> {
             .await;
             if let Err(e) = exchange {
                 if c.server
+                    && reading
                     && (is_timeout(e.as_ref())
                         || (!c.quic
                             && e.to_string() == "TCP header short/deadline"
